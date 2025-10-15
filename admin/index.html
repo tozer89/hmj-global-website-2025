@@ -20,6 +20,30 @@
     .hide{display:none}
   </style>
 </head>
+
+<!-- Netlify Identity (silent loader so invite/confirm links work) -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  // Auto-handle invite/confirm links and send to /admin once logged in
+  if (window.netlifyIdentity) {
+    // If coming from an invite/confirmation link, the widget needs to exist on this page
+    netlifyIdentity.on('init', (user) => {
+      // If already logged in, go straight to the CMS
+      if (user) return (window.location.href = '/admin/');
+
+      // After accepting the invite and logging in, go to CMS
+      netlifyIdentity.on('login', () => {
+        window.location.href = '/admin/';
+      });
+    });
+
+    // Optional: if user clicks “Log in” somewhere else on site
+    // and arrives here already authenticated, bounce to admin.
+    netlifyIdentity.init();
+  }
+</script>
+
+
 <body>
   <header>
     <img src="/images/logo.png" alt="HMJ-Global" />
