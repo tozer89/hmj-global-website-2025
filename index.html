@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HMJ-Global | Data Centre & Pharma Recruitment Partner</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ========= Base / Variables (augment what you already have) ========= */
+    :root{ --ink:#1A1A2E; --accent:#3A66B3; --muted:#6b7280; }
+
+    /* ========= Header / Nav (fully responsive, accessible) ========= */
+    .hmj-header{position:sticky;top:0;z-index:1000;background:#0f1322;color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
+    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+    .hmj-logo img{height:40px;display:block}
+
+    /* desktop menu */
+    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
+    .hmj-menu a{
+      display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;
+      color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s;
+    }
+    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
+    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
+
+    /* burger */
+    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
+    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
+
+    /* mobile panel */
+    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
+    @media (max-width:900px){
+      .hmj-burger{display:inline-block}
+      .hmj-menu{
+        position:fixed;right:12px;left:12px;top:64px;
+        background:#0f1322;border:1px solid rgba(255,255,255,.12);border-radius:14px;
+        box-shadow:0 16px 40px rgba(0,0,0,.35);
+        display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;
+        transition:max-height .28s ease, padding .2s ease;
+      }
+      .hmj-menu.open{max-height:70vh;padding:10px}
+      .hmj-menu a{padding:14px 12px;width:100%}
+      .hmj-scrim[hidden]{display:none}
+    }
+    /* burger -> X animation when open */
+    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
+    .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+
+    /* ========= Hero ========= */
+    .hero{
+      min-height:64vh; display:grid; place-items:center; padding:130px 20px 120px;
+      text-align:center; color:#fff; position:relative;
+      background:url('images/hero.jpg') center/cover no-repeat;
+    }
+    .hero::before{ content:""; position:absolute; inset:0;
+      background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55)); }
+    .hero>*{ position:relative; z-index:1; }
+    .hero h1{ font-size:clamp(28px,4.2vw,46px); margin:0 0 10px; line-height:1.15;}
+    .hero p.lead{ opacity:.96; margin:0 0 16px; font-size:clamp(16px,2.2vw,18px); }
+    .hero .cta-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+    .subtle{ color:#d9def2; opacity:.9; }
+
+    /* animated “power line” underline for H1 (industry-flavoured, subtle) */
+    .power-underline{width:min(88vw,760px); height:14px; margin:12px auto 0; opacity:.85}
+    .power-underline path{stroke:#5f86ff; stroke-width:2; fill:none; stroke-linecap:round;
+      stroke-dasharray:6 8; animation:flow 2.8s linear infinite;}
+    @keyframes flow { to { stroke-dashoffset:-280; } }
+
+    /* ========= Sections / Cards / Grids ========= */
+    .section{ padding:36px 20px; }
+    .wrap{ max-width:1100px; margin:0 auto; }
+    .card{ background:#fff; border:1px solid rgba(26,26,46,.14); border-radius:16px; padding:18px 20px;
+      box-shadow:0 6px 18px rgba(0,0,0,.08); }
+    .soft{ background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%), #fff; }
+
+    .grid{ display:grid; gap:18px; }
+    .grid-2{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .grid-3{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .grid-4{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+    @media (max-width:960px){ .grid-4{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:720px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
+
+    .kpi{ text-align:center; padding:22px 14px; }
+    .kpi h3{ margin:0; font-size:28px; }
+    .kpi p{ margin:6px 0 0; color:#555; }
+
+    .sector-card:hover,
+    .service-card:hover,
+    .case-card:hover{ transform:translateY(-3px); box-shadow:0 10px 26px rgba(0,0,0,.14); border-color:rgba(58,102,179,.35); }
+    .sector-card,.service-card,.case-card{ transition:transform .15s ease, box-shadow .2s ease, border-color .2s ease; }
+
+    .timeline{ position:relative; }
+    .timeline::before{ content:""; position:absolute; left:18px; top:0; bottom:0; width:2px; background:#e5e9ff; }
+    .step{ position:relative; padding-left:48px; margin-bottom:16px; }
+    .step::before{ content:""; position:absolute; left:9px; top:2px; width:18px; height:18px; border-radius:50%;
+      background:#3A66B3; box-shadow:0 0 0 4px rgba(58,102,179,.18); }
+
+    .tag{ display:inline-block; padding:4px 8px; border-radius:10px; font-weight:700; font-size:.75rem;
+      background:rgba(58,102,179,.12); color:#3A66B3; margin-left:6px; }
+
+    .jobs-mini{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; }
+    .job-mini{ background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%), #fff; border:1px solid rgba(26,26,46,.14);
+      border-radius:16px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,.08); }
+    .pill{ display:inline-block; padding:4px 10px; border-radius:999px; font-weight:700; font-size:.78rem; border:1px solid rgba(0,0,0,.06); }
+    .pill.live{ background:rgba(40,167,69,.14); color:#1f7e39; border-color:rgba(40,167,69,.35); }
+
+    details{ background:#fff; border:1px solid rgba(26,26,46,.14); border-radius:12px; padding:12px 14px; }
+    details + details{ margin-top:10px; }
+    details summary{ cursor:pointer; font-weight:700; }
+
+    /* ========= CTA + Footer ========= */
+    .cta{ text-align:center; padding:48px 20px; background:
+      radial-gradient(1200px 300px at 50% -50px, rgba(58,102,179,.22), transparent 60%),
+      #0f1322; color:#eaf0ff; }
+    .cta .btn-primary,.cta .btn-secondary{ margin:6px }
+
+    footer{ text-align:center; padding:28px 16px; background:#0f1322; color:#cfd7ff; border-top:1px solid rgba(255,255,255,.06) }
+
+    /* ========= Reveal-on-scroll (tiny utility) ========= */
+    .reveal{opacity:0; transform:translateY(12px); transition:opacity .5s ease, transform .5s ease}
+    .reveal.revealed{opacity:1; transform:none}
+  </style>
+</head>
+
+<body>
+  <!-- ===== Header / Navbar ===== -->
+  <header class="hmj-header">
+    <nav class="hmj-nav" aria-label="Main">
+      <a class="hmj-logo" href="index.html">
+        <img src="images/logo.png" alt="HMJ-Global Logo" />
+      </a>
+
+      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <ul id="hmj-menu" class="hmj-menu">
+        <li><a href="index.html" data-page="index">Home</a></li>
+        <li><a href="about.html" data-page="about">About</a></li>
+        <li><a href="clients.html" data-page="clients">Clients</a></li>
+        <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
+        <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
+      </ul>
+      <div class="hmj-scrim" hidden></div>
+    </nav>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div>
+      <h1>Specialist Data Centre & Pharmaceutical Recruitment</h1>
+
+      <!-- animated underline (power/cable line) -->
+      <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
+        <path d="M2 7 C 100 7, 140 7, 180 7
+                 C 220 7, 240 2, 260 7
+                 C 280 12, 300 7, 340 7
+                 C 380 7, 420 7, 460 7
+                 C 500 7, 520 2, 540 7
+                 C 560 12, 580 7, 620 7
+                 C 660 7, 720 7, 798 7" />
+      </svg>
+
+      <p class="lead">Mission-critical people for hyperscale builds, cleanrooms and live-environment operations across the UK & Europe.</p>
+      <div class="cta-row">
+        <a href="jobs.html" class="btn-primary">Search Jobs</a>
+        <a href="clients.html" class="btn-secondary">Hire Talent</a>
+      </div>
+      <p class="subtle">From design and construction to commissioning, operations and maintenance.</p>
+    </div>
+  </section>
+
+  <!-- ===== STATS / CREDIBILITY ===== -->
+  <section class="section">
+    <div class="wrap grid grid-4">
+      <div class="card kpi soft reveal"><h3>500+</h3><p>Specialists placed across DC & Life Sciences</p></div>
+      <div class="card kpi soft reveal"><h3>12</h3><p>EU countries covered with payroll & compliance</p></div>
+      <div class="card kpi soft reveal"><h3>48 hrs</h3><p>Typical shortlist turnaround</p></div>
+      <div class="card kpi soft reveal"><h3>97%</h3><p>Assignment completion rate</p></div>
+    </div>
+  </section>
+
+  <!-- ===== WHO WE ARE ===== -->
+  <section class="section">
+    <div class="wrap">
+      <div class="card reveal">
+        <h2 style="margin:0 0 8px;">Who We Are</h2>
+        <p style="margin:0; line-height:1.8;">
+          HMJ-Global is a specialist talent partner for mission-critical environments. We support
+          <strong>data centre construction</strong>, <strong>commissioning</strong>, <strong>substations & power</strong>,
+          and <strong>pharmaceutical manufacturing & cleanroom projects</strong>. Our model is built on pace, precision and compliance:
+          rapid shortlists, rigorous vetting, and smooth cross-border mobilisation including payroll, right-to-work checks and
+          H&S onboarding. We partner with tier-one contractors, systems integrators and operators to de-risk delivery and keep programmes on track.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SPECIALISMS (expanded) ===== -->
+  <section class="section">
+    <div class="wrap">
+      <h2 style="text-align:center;">Our Specialisms</h2>
+      <p class="trust-line" style="text-align:center; margin-bottom:18px;">
+        From greenfield builds to brownfield upgrades and live operational sites.
+      </p>
+      <div class="grid grid-3">
+        <div class="card sector-card soft reveal">
+          <h3>Data Centre Construction <span class="tag">Design–Go-Live</span></h3>
+          <p>Project Directors, Package Managers (CSA/MEP), Planners, Commercial (QS/Cost), Site Engineers, Supervisors, Safety & Quality. Fit-out through commissioning and handover.</p>
+        </div>
+        <div class="card sector-card soft reveal">
+          <h3>MEP & Commissioning</h3>
+          <p>Electrical & Mechanical Engineers, Commissioning Managers, QA/QC, BMS/EPMS, HVAC specialists, Authorised Persons (HV/LV). Integrated testing to IST and Black-Start.</p>
+        </div>
+        <div class="card sector-card soft reveal">
+          <h3>Security & Cabling</h3>
+          <p>Access control, CCTV, IDS and structured cabling for campus deployments. Project Leads, Installers, Testers and Commissioning Engineers with DC experience.</p>
+        </div>
+        <div class="card sector-card soft reveal">
+          <h3>Substations & Power</h3>
+          <p>HV civils and electrical for utility connections and on-site substations: SAPs, Protection Engineers, Cable Jointers, Civils Supervisors and Commissioning.</p>
+        </div>
+        <div class="card sector-card soft reveal">
+          <h3>Pharma & Cleanrooms</h3>
+          <p>Electrical & Instrumentation, CQV Engineers, Process & Utilities, Black/White utilities, GMP documentation, and validated turnover to operations.</p>
+        </div>
+        <div class="card sector-card soft reveal">
+          <h3>Critical Facilities Operations</h3>
+          <p>Shift Technicians, Facilities Managers, CMMS/PPM specialists, and reliability engineers to keep live environments safe, compliant and available 24/7.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SERVICES ===== -->
+  <section class="section" style="background:#f7f8ff;">
+    <div class="wrap">
+      <h2 style="text-align:center;">How We Help</h2>
+      <div class="grid grid-3" style="margin-top:12px;">
+        <div class="card service-card reveal">
+          <h3>Permanent Recruitment</h3>
+          <p>Executive to site-level hiring with market mapping, competency screening and precise shortlists. Offer management and onboarding handled end-to-end.</p>
+        </div>
+        <div class="card service-card reveal">
+          <h3>Contract & Interim</h3>
+          <p>Rapid deployment of vetted contractors aligned to programme milestones. Weekly payroll, compliant cross-border setups and timesheet management.</p>
+        </div>
+        <div class="card service-card reveal">
+          <h3>Project Teams</h3>
+          <p>Mobilise multi-disciplinary squads (CSA, MEP, Commissioning, CQV) to hit critical path. One supplier, one invoice, clear KPIs.</p>
+        </div>
+        <div class="card service-card reveal">
+          <h3>Compliance & Payroll</h3>
+          <p>Right-to-work, insurances, HS&E onboarding, IR35 guidance, A1/PD portability and country-specific payroll in 12 EU markets.</p>
+        </div>
+        <div class="card service-card reveal">
+          <h3>Market Intelligence</h3>
+          <p>Pay benchmarking, availability heatmaps and programme risk insights to support bids and executive decision-making.</p>
+        </div>
+        <div class="card service-card reveal">
+          <h3>Candidate Care</h3>
+          <p>Transparent comms, interview prep, relocation support and post-placement check-ins to ensure retention and project stability.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HIRING PROCESS ===== -->
+  <section class="section">
+    <div class="wrap">
+      <h2>Our Hiring Process</h2>
+      <div class="card timeline reveal">
+        <div class="step">
+          <h3 style="margin:0 0 4px;">1. Brief & Success Profile</h3>
+          <p>We capture scope, outcomes and culture, then define a success profile with must-have competencies and compliance needs.</p>
+        </div>
+        <div class="step">
+          <h3 style="margin:0 0 4px;">2. Targeted Search</h3>
+          <p>Proactive outreach into our DC & Life-Sciences networks, referrals and project alumni. Diversity and location filters built in.</p>
+        </div>
+        <div class="step">
+          <h3 style="margin:0 0 4px;">3. Shortlist in 48 Hours</h3>
+          <p>3–5 verified profiles with availability, day rates/salary expectations, location, and compliance status.</p>
+        </div>
+        <div class="step">
+          <h3 style="margin:0 0 4px;">4. Interviews & Technical Checks</h3>
+          <p>Structured interviews, reference checks, and (where required) technical assessments. Feedback loop to refine quickly.</p>
+        </div>
+        <div class="step">
+          <h3 style="margin:0 0 4px;">5. Mobilisation</h3>
+          <p>Offers, contracts, site inductions, PPE, right-to-work and payroll. We align start dates to programme critical path.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REGIONS ===== -->
+  <section class="section" style="background:#f7f8ff;">
+    <div class="wrap">
+      <h2>Where We Operate</h2>
+      <div class="grid grid-4" style="margin-top:12px;">
+        <div class="card reveal"><strong>Ireland & UK</strong><p>Hyperscale and pharma hubs: Dublin, London Corridor, North-West, Midlands.</p></div>
+        <div class="card reveal"><strong>Nordics</strong><p>Finland, Sweden and Denmark for green energy data centres and clean manufacturing.</p></div>
+        <div class="card reveal"><strong>Benelux & DACH</strong><p>Netherlands, Belgium, Germany—campus builds, substations and life-sciences.</p></div>
+        <div class="card reveal"><strong>Southern Europe</strong><p>Spain, Portugal, Italy—new DC regions with strong power projects pipeline.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CASE STUDIES ===== -->
+  <section class="section">
+    <div class="wrap">
+      <h2>Recent Engagements</h2>
+      <div class="grid grid-3" style="margin-top:12px;">
+        <div class="card case-card soft reveal">
+          <h3>Campus Build – Northern Europe</h3>
+          <p>Deployed a blended team (MEP, CSA and Commissioning) across three phases. Achieved on-time energisation and zero lost-time incidents.</p>
+        </div>
+        <div class="card case-card soft reveal">
+          <h3>Cleanroom Expansion – UK</h3>
+          <p>Delivered E&I and CQV contractors under weekly payroll with full GMP documentation support. Handover completed to schedule.</p>
+        </div>
+        <div class="card case-card soft reveal">
+          <h3>Substation & Grid Tie-In – EU</h3>
+          <p>Provided SAPs, Protection Engineers and Civils Supervisors for a 110kV utility connection feeding a new data hall.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== NEWS / INSIGHTS ===== -->
+  <section class="section" style="background:#f7f8ff;">
+    <div class="wrap">
+      <h2>News & Insights</h2>
+      <div class="grid grid-3" style="margin-top:12px;">
+        <div class="card reveal">
+          <h3>EU Data Centre Growth & Skills</h3>
+          <p>Power availability and planning remain key constraints. Skilled commissioning and HV talent are the pinch-points for 2025–26 programmes.</p>
+        </div>
+        <div class="card reveal">
+          <h3>Pharma: CQV Demand Rising</h3>
+          <p>Validation engineers with clean utilities experience continue to command premium rates as expansion and tech-transfer projects accelerate.</p>
+        </div>
+        <div class="card reveal">
+          <h3>Mobility & Compliance</h3>
+          <p>We manage A1/PD forms, insurances and in-country payroll so cross-border hires remain fast, compliant and stress-free.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== LATEST ROLES TEASER ===== -->
+  <section class="section">
+    <div class="wrap">
+      <h2>Latest Roles</h2>
+      <p class="trust-line" style="text-align:center; margin-bottom:18px;">A snapshot of what we’re hiring for right now.</p>
+      <div class="jobs-mini">
+        <div class="job-mini reveal">
+          <span class="pill live">Live</span>
+          <h3 style="margin:8px 0 6px;">CSA Package Manager — Data Centre</h3>
+          <p style="margin:0 0 8px;"><strong>Location:</strong> Dublin, Ireland</p>
+          <a href="jobs.html" class="btn-tertiary">View on Jobs</a>
+        </div>
+        <div class="job-mini reveal">
+          <span class="pill live">Live</span>
+          <h3 style="margin:8px 0 6px;">MEP Senior Quantity Surveyor</h3>
+          <p style="margin:0 0 8px;"><strong>Location:</strong> Eemshaven, Netherlands</p>
+          <a href="jobs.html" class="btn-tertiary">View on Jobs</a>
+        </div>
+        <div class="job-mini reveal">
+          <span class="pill live">Live</span>
+          <h3 style="margin:8px 0 6px;">Mechanical Construction Manager</h3>
+          <p style="margin:0 0 8px;"><strong>Location:</strong> Helsinki, Finland</p>
+          <a href="jobs.html" class="btn-tertiary">View on Jobs</a>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:16px;">
+        <a href="jobs.html" class="btn-primary">Browse All Jobs</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section class="section" style="background:#f7f8ff;">
+    <div class="wrap">
+      <h2>FAQs</h2>
+      <details class="reveal">
+        <summary>What roles do you cover?</summary>
+        <p>Construction (CSA/MEP), Commissioning, CQV, HV/Substations, Security & Cabling, and Critical Facilities Operations from manager to site-level.</p>
+      </details>
+      <details class="reveal">
+        <summary>How fast can you supply?</summary>
+        <p>Shortlists within 48 hours for most roles, with mobilisation aligned to programme dates and compliance completed ahead of site start.</p>
+      </details>
+      <details class="reveal">
+        <summary>Do you operate cross-border?</summary>
+        <p>Yes. We handle A1/PD, insurances and in-country payroll in 12 EU markets so teams can move quickly and compliantly.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="cta">
+    <h2>Ready to Get Started?</h2>
+    <p>Looking for your next project or your next hire? Talk to us today.</p>
+    <a href="jobs.html" class="btn-primary">Search Jobs</a>
+    <a href="contact.html" class="btn-secondary">Apply / Hire Talent</a>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
+    <br><br><br>
+    <p>HMJ-Global is a trading name of HMJ-Global Ltd, registered in England & Wales, company number 16029938.</p>
+    <p>Registered office: 905 Lightbox Blue, Media City, UK.</p>
+  </footer>
+
+  <!-- ===== Scripts ===== -->
+  <script>
+    (function(){
+      const burger = document.querySelector('.hmj-burger');
+      const menu   = document.getElementById('hmj-menu');
+      const scrim  = document.querySelector('.hmj-scrim');
+
+      // highlight current page
+      const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+      menu.querySelectorAll('a').forEach(a=>{
+        const file = a.getAttribute('href').toLowerCase();
+        if(file === path){ a.setAttribute('aria-current','page'); }
+      });
+
+      function openMenu(open){
+        burger.setAttribute('aria-expanded', String(open));
+        menu.classList.toggle('open', open);
+        scrim.hidden = !open;
+        document.documentElement.style.overflow = open ? 'hidden' : '';
+      }
+
+      burger.addEventListener('click', ()=>openMenu(burger.getAttribute('aria-expanded') !== 'true'));
+      scrim.addEventListener('click', ()=>openMenu(false));
+      // Close the panel *after* the browser handles link navigation.
+      // Using rAF prevents rare iOS/Safari cases where DOM changes interrupt the click.
+      menu.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if(!link) return;
+        requestAnimationFrame(() => openMenu(false));
+      });
+
+
+      // Close on Escape
+      document.addEventListener('keydown', (e)=>{
+        if(e.key === 'Escape') openMenu(false);
+      });
+
+      // Reveal-on-scroll (IntersectionObserver)
+      const toReveal = document.querySelectorAll('.reveal');
+      if('IntersectionObserver' in window){
+        const io = new IntersectionObserver((entries)=>{
+          entries.forEach(ent=>{
+            if(ent.isIntersecting){
+              ent.target.classList.add('revealed');
+              io.unobserve(ent.target);
+            }
+          });
+        },{threshold:0.14});
+        toReveal.forEach(el=>io.observe(el));
+      } else {
+        // fallback: show immediately
+        toReveal.forEach(el=>el.classList.add('revealed'));
+      }
+    })();
+  </script>
+</body>
+</html>

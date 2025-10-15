@@ -1,0 +1,357 @@
+{
+  "jobs": [
+    {
+      "id": "qs-london-dc",
+      "published": true,
+      "title": "Quantity Surveyor — Data Centre",
+      "status": "live",
+      "section": "commercial",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "london",
+      "locationText": "London, UK",
+      "keywords": "quantity surveyor qs london dc commercial nec fidic",
+      "overview": "Join a leading DC contractor in London, managing commercial delivery across fast-paced build/fit-out packages: change, cost control and subcontract management.",
+      "responsibilities": [],
+      "requirements": [
+        "QS background on data centre or mission-critical projects.",
+        "NEC/FIDIC experience and robust reporting."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "mep-sqs-eem",
+      "published": true,
+      "title": "MEP Senior Quantity Surveyor — Data Centre",
+      "status": "live",
+      "section": "commercial",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "eemshaven",
+      "locationText": "Eemshaven, Netherlands",
+      "keywords": "mep senior quantity surveyor dc nec fidic commercial",
+      "overview": "Lead MEP commercial delivery on a hyperscale DC build: cost control, procurement, change, forecasting, and subcontract administration.",
+      "responsibilities": [],
+      "requirements": [
+        "Senior QS background with strong MEP package exposure on DC/mission-critical projects.",
+        "NEC/FIDIC familiarity; stakeholder & supply chain leadership.",
+        "Accurate monthly reporting and value engineering capability."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "csa-sqs-eem",
+      "published": true,
+      "title": "CSA Senior Quantity Surveyor — Data Centre",
+      "status": "interviewing",
+      "section": "commercial",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "eemshaven",
+      "locationText": "Eemshaven, Netherlands",
+      "keywords": "csa senior quantity surveyor envelope civils structure fit-out change claims",
+      "overview": "Commercial lead across CSA packages (civils, structure, architecture) on a large data centre campus.",
+      "responsibilities": [],
+      "requirements": [
+        "Senior QS with CSA fit-out/envelope experience on complex builds.",
+        "Change management, claims preparation, subcontract negotiation.",
+        "EV, cash-flow and robust commercial reporting."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "sqs-dublin",
+      "published": true,
+      "title": "Senior Quantity Surveyor — Data Centre",
+      "status": "interviewing",
+      "section": "commercial",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "dublin",
+      "locationText": "Dublin, Ireland",
+      "keywords": "senior quantity surveyor data centre commercial",
+      "overview": "Commercial lead on a major DC build—cost control, procurement, change management & subcontract oversight.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    },
+
+
+    {
+      "id": "planner-dublin",
+      "published": true,
+      "title": "Project Planner — Data Centre",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "dublin",
+      "locationText": "Dublin, Ireland",
+      "keywords": "project planner scheduler p6 primavera data centre dublin",
+      "overview": "Develop & maintain integrated Primavera P6 schedules for a hyperscale data centre programme. Interface with package managers, commissioning & commercial teams.",
+      "responsibilities": [],
+      "requirements": [
+        "P6 expertise with large-scale build environments (DC/mission-critical preferred).",
+        "Progress measurement, risk/change controls, stakeholder reporting."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "electrician-amsterdam",
+      "published": true,
+      "title": "Electrician — Data Centre Construction",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "contract",
+      "locationCode": "amsterdam",
+      "locationText": "Amsterdam, Netherlands",
+      "keywords": "electrician installer lv mv testing commissioning amsterdam data centre",
+      "overview": "Hands-on installation, test & commissioning of LV/MV systems on a DC build in Amsterdam. Work safely to programme with QA documentation.",
+      "responsibilities": [],
+      "requirements": [
+        "NVQ3 (or EU equivalent); ECS/JIB or VCA; 18th Edition/equivalent.",
+        "Containment, wiring, terminations and testing experience."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "epm-frankfurt",
+      "published": true,
+      "title": "Electrical Project Manager — Data Centre",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "frankfurt",
+      "locationText": "Frankfurt, Germany",
+      "keywords": "electrical project manager frankfurt installation power lighting contractor dc",
+      "overview": "Lead an electrical installation contractor delivering power and lighting across a Frankfurt data centre project—programme, subcontractors, QA and client interface.",
+      "responsibilities": [],
+      "requirements": [
+        "PM experience on electrical install (power/lighting) within DC or mission-critical projects.",
+        "Strong safety, quality and commercial awareness."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "proj-dir-eu",
+      "published": true,
+      "title": "Project Director — Data Centre (Europe)",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "dublin",
+      "locationText": "Dublin, Ireland",
+      "keywords": "project director europe hyperscale programme leadership p&l",
+      "overview": "Executive ownership for multi-site DC delivery across Europe: strategy, client leadership, P&L, program, and team performance.",
+      "responsibilities": [],
+      "requirements": [
+        "Director-level track record delivering hyperscale/mission-critical builds.",
+        "Commercial acumen and supply chain leadership.",
+        "Safety, quality and commissioning governance."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "bms-eng-dub",
+      "published": true,
+      "title": "BMS Engineer (Building Management Systems) — Data Centre",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "dublin",
+      "locationText": "Dublin, Ireland",
+      "keywords": "bms engineer epms niagara trend jci siemens commissioning",
+      "overview": "Deliver BMS/EPMS integration & commissioning, interfacing with mechanical/electrical systems and controls contractors.",
+      "responsibilities": [],
+      "requirements": [
+        "Niagara/Trend/JCI/Siemens or similar.",
+        "Cause-and-effect testing; documentation & handover."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "csa-fit-dub",
+      "published": true,
+      "title": "CSA Package Manager (Fit-Out) — Data Centre",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "dublin",
+      "locationText": "Dublin, Ireland",
+      "keywords": "csa package manager fit out subcontractor qa programme handover",
+      "overview": "Lead CSA fit-out delivery: subcontractor management, QA, programme and handover.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    },
+    {
+      "id": "ofci-espoo",
+      "published": true,
+      "title": "OFCI Package Manager — Data Centre",
+      "status": "interviewing",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "espoo",
+      "locationText": "Espoo, Finland",
+      "keywords": "ofci package manager procurement logistics commissioning interface",
+      "overview": "Own owner-furnished, contractor-installed scope: procurement, logistics, integration & commissioning interface.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    },
+    {
+      "id": "ecm-hel",
+      "published": true,
+      "title": "Electrical Construction Manager — Data Centre",
+      "status": "closed",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "helsinki",
+      "locationText": "Helsinki, Finland",
+      "keywords": "electrical construction manager finland",
+      "overview": "Recently closed—register to be notified of the next Electrical CM opening in Finland.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    },
+    {
+      "id": "mcm-hel",
+      "published": true,
+      "title": "Mechanical Construction Manager — Data Centre",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "helsinki",
+      "locationText": "Helsinki, Finland",
+      "keywords": "mechanical construction manager chilled water crah crac bms interfaces",
+      "overview": "Manage mechanical install/commissioning (chilled water, CRAH/CRAC, pumps, BMS interfaces) to handover.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    },
+    {
+      "id": "elec-gron",
+      "published": true,
+      "title": "Electrical Engineer / Electrician — Data Centre Construction",
+      "status": "live",
+      "section": "dc",
+      "discipline": "Data Centre",
+      "type": "contract",
+      "locationCode": "groningen",
+      "locationText": "Groningen, Netherlands",
+      "keywords": "electrician lv mv install test commission",
+      "overview": "Hands-on install, test & commission LV/MV systems on a hyperscale DC build. Coordinate with supervisors to maintain programme & QA.",
+      "responsibilities": [
+        "Install, test & commission LV/MV; interpret SLDs & drawings.",
+        "Support QA/QC, red-lines, snagging & technical reporting.",
+        "Maintain safety standards and permit-to-work compliance."
+      ],
+      "requirements": [
+        "NVQ3 (or EU equivalent) with DC/mission-critical experience.",
+        "18th Edition / EU equivalent; ECS/JIB or VCA; IPAF a plus."
+      ],
+      "applyUrl": ""
+    },
+
+
+    {
+      "id": "permit-eng-eu",
+      "published": true,
+      "title": "Permit Engineer / Permitting Specialist — Substations",
+      "status": "live",
+      "section": "substations",
+      "discipline": "Substation",
+      "type": "permanent",
+      "locationCode": "europe",
+      "locationText": "Europe (Travel)",
+      "keywords": "permit engineer permitting specialist grid dco planning",
+      "overview": "Support grid-connection projects with permitting, stakeholder engagement, and local authority liaison for substation builds.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    },
+    {
+      "id": "estimator-uk",
+      "published": true,
+      "title": "MEP Cost Estimator / QS — Substation & BESS",
+      "status": "live",
+      "section": "substations",
+      "discipline": "Substation",
+      "type": "permanent",
+      "locationCode": "uk",
+      "locationText": "UK (Hybrid)",
+      "keywords": "mep cost estimator qs substation bess tender",
+      "overview": "Own estimating/QS for substation & battery storage packages: take-offs, tendering, value engineering, and supplier engagement.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    },
+
+    {
+      "id": "planner-macc",
+      "published": true,
+      "title": "Senior Planner — Life Sciences",
+      "status": "interviewing",
+      "section": "pharma",
+      "discipline": "Life Sciences",
+      "type": "permanent",
+      "locationCode": "macclesfield",
+      "locationText": "Macclesfield, UK",
+      "keywords": "senior planner p6 pharma clean rooms risk change",
+      "overview": "Lead planning for a major pharma clean-room programme: P6 schedules, progress measurement and interface management.",
+      "responsibilities": [],
+      "requirements": [
+        "Primavera P6 expert; clean-room/pharma project background.",
+        "Risk & change controls; strong reporting and stakeholder comms."
+      ],
+      "applyUrl": ""
+    },
+    {
+      "id": "elec-pharma",
+      "published": true,
+      "title": "Electrician — Pharmaceutical Construction",
+      "status": "interviewing",
+      "section": "pharma",
+      "discipline": "Pharma",
+      "type": "contract",
+      "locationCode": "macclesfield",
+      "locationText": "Hull (commutable), UK",
+      "keywords": "electrician pharmaceutical clean room ecs jib containment",
+      "overview": "Electricians to support a regulated pharma/clean-room build with high compliance standards and QA/QC documentation.",
+      "responsibilities": [
+        "Install, terminate, test & commission to clean-room standards.",
+        "Containment (tray, trunking, conduit), cable pulling, drawings."
+      ],
+      "requirements": [
+        "NVQ3; 18th Edition; valid ECS/JIB (gold preferred).",
+        "Industrial/pharma/clean-room experience desirable; IPAF/PASMA beneficial."
+      ],
+      "applyUrl": ""
+    },
+
+    {
+      "id": "bms-cm-uk",
+      "published": true,
+      "title": "BMS Commissioning Manager — Data Centre",
+      "status": "live",
+      "section": "ict",
+      "discipline": "Data Centre",
+      "type": "permanent",
+      "locationCode": "uk",
+      "locationText": "UK (Various / Travel)",
+      "keywords": "bms commissioning manager epms niagara trend jci",
+      "overview": "Lead integrated BMS/EPMS commissioning, cause-and-effect, FAT/SAT, and performance verification across hyperscale DCs.",
+      "responsibilities": [],
+      "requirements": [],
+      "applyUrl": ""
+    }
+  ]
+}

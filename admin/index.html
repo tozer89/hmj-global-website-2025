@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>HMJ Portal</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root{--ink:#0f1322;--accent:#3A66B3}
+    body{margin:0;min-height:100vh;background:#0b1223;color:#eaf0ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:#0f1322;position:sticky;top:0}
+    header img{height:30px}
+    header h1{font-size:16px;margin:0;font-weight:800;letter-spacing:.02em}
+    .wrap{max-width:1100px;margin:20px auto;padding:0 16px}
+    .card{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:#0f1322;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+    .card .inner{padding:18px}
+    .notice{margin:12px 0;color:#cfd7ff}
+    .btn{display:inline-block;background:#1d2747;border:1px solid rgba(255,255,255,.18);padding:10px 14px;border-radius:10px;color:#fff;text-decoration:none;font-weight:800}
+    .btn:hover{background:#22305a}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="/images/logo.png" alt="HMJ-Global" />
+    <h1>HMJ Portal</h1>
+  </header>
+
+  <div class="wrap">
+    <!-- Identity login helper panel -->
+    <div class="card" id="authPanel">
+      <div class="inner">
+        <h2 style="margin:0 0 8px">Sign in</h2>
+        <p class="notice">Use your HMJ-Global Portal account to access the job editor.</p>
+        <p>
+          <a class="btn" href="#" id="btnLogin">Log in</a>
+          <a class="btn" href="#" id="btnSignup">Sign up</a>
+          <a class="btn hide" href="#" id="btnLogout">Log out</a>
+        </p>
+        <p class="notice">After you log in, the editor will appear below.</p>
+      </div>
+    </div>
+
+    <!-- Netlify CMS mounts itself here -->
+    <div id="nc-root"></div>
+  </div>
+
+  <!-- Netlify Identity widget (handles login/signup UI) -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <!-- Netlify CMS -->
+  <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
+
+  <script>
+    // Identity helpers for a simple login/logout panel
+    const loginBtn  = document.getElementById('btnLogin');
+    const signupBtn = document.getElementById('btnSignup');
+    const logoutBtn = document.getElementById('btnLogout');
+
+    loginBtn.addEventListener('click', (e) => { e.preventDefault(); netlifyIdentity.open('login'); });
+    signupBtn.addEventListener('click', (e) => { e.preventDefault(); netlifyIdentity.open('signup'); });
+    logoutBtn.addEventListener('click', (e) => { e.preventDefault(); netlifyIdentity.logout(); });
+
+    function refreshButtons(user){
+      loginBtn.classList.toggle('hide', !!user);
+      signupBtn.classList.toggle('hide', !!user);
+      logoutBtn.classList.toggle('hide', !user);
+    }
+    netlifyIdentity.on('init', user => refreshButtons(user));
+    netlifyIdentity.on('login', user => { refreshButtons(user); netlifyIdentity.close(); location.reload(); });
+    netlifyIdentity.on('logout', () => { refreshButtons(null); location.reload(); });
+    netlifyIdentity.init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Client Contact | HMJ-Global</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <img src="images/logo.png" alt="HMJ-Global Logo" />
+    <div class="hamburger">&#9776;</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="clients.html">Clients</a></li>
+      <li><a href="candidates.html">Candidates</a></li>
+      <li><a href="jobs.html">Jobs</a></li>
+      <li><a href="contact.html">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- Page header -->
+  <section class="page-header">
+    <h1>Submit a Vacancy</h1>
+  </section>
+
+  <!-- Contact form content -->
+  <section class="contact-content">
+    <p>Have a role to fill? Submit your vacancy below and our team will be in touch to help you find the right specialist talent fast.</p>
+
+    <div class="contact-phone-box">
+      <p><strong>Call Us:</strong><br>
+      0808 808 0000</p>
+    </div>
+
+    <form name="vacancy" method="POST" data-netlify="true" enctype="multipart/form-data" class="contact-form">
+      <input type="hidden" name="form-name" value="vacancy" />
+
+      <label for="name">Your Name:</label><br>
+      <input type="text" id="name" name="name" required><br>
+
+      <label for="company">Company Name:</label><br>
+      <input type="text" id="company" name="company" required><br>
+
+      <label for="email">Email:</label><br>
+      <input type="email" id="email" name="email" required><br>
+
+      <label for="phone">Telephone:</label><br>
+      <input type="tel" id="phone" name="phone" required><br>
+
+      <label for="role_title">Role Title:</label><br>
+      <input type="text" id="role_title" name="role_title" required><br>
+
+      <label for="role_details">Role Details:</label><br>
+      <textarea id="role_details" name="role_details" rows="5" placeholder="Tell us about the vacancy requirements..."></textarea><br>
+
+      <label for="job_spec">Attach Job Spec:</label><br>
+      <input type="file" id="job_spec" name="attachment" accept=".pdf,.doc,.docx"><br>
+
+      <button type="submit" class="btn-primary">Submit Vacancy</button>
+    </form>
+    <p>We will review your submission and get back to you within 24 hours.</p>
+
+    <p>Or call us directly on <strong>0808 808 0000</strong> to discuss your hiring needs.</p>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <p><strong>HMJ-Global Ltd</strong><br>
+      Data Centre & Infrastructure Recruitment Specialists</p>
+
+      <p>Email: <a href="mailto:info@HMJ-Global.com">info@HMJ-Global.com</a></p>
+      <p>WhatsApp: <a href="https://wa.me/447842550187" target="_blank">Message Us</a></p>
+      <p>LinkedIn: <a href="https://www.linkedin.com/company/hmj-global/" target="_blank">Connect</a></p>
+    </div>
+    <div class="footer-bottom">
+
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    const hamburger = document.querySelector('.hamburger');
+    const navLinks = document.querySelector('.nav-links');
+    hamburger.addEventListener('click', () => {
+      navLinks.classList.toggle('active');
+    });
+  </script>
+
+
+  <footer>
+    
+  <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
+    <br>
+    <br>
+      <br>
+    <p>HMJ-Global is a trading name of HMJ-Global Ltd, registered in England & Wales, company number 16029938.</p>
+    <p>Registered office: 905 Lightbox Blue, Media City, UK.</p>
+  </footer>
+
+</body>
+</html>
