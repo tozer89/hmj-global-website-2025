@@ -49,10 +49,34 @@
     .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
     .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 
-    /* ========= Announcement bar (bonus) ========= */
-    .announce{background:linear-gradient(90deg, rgba(58,102,179,.25), rgba(58,102,179,.05)); color:#eaf0ff}
-    .announce .inner{max-width:1200px;margin:0 auto;padding:8px 16px;display:flex;gap:10px;align-items:center;justify-content:center;font-weight:700}
-    .announce .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);font-size:.78rem}
+    /* ========= Announcement bar (royal blue) ========= */
+    .announce{
+      background: var(--accent);          /* #3A66B3 */
+      color: #ffffff;                     /* strong contrast on blue */
+    }
+    .announce a{
+      color:#ffffff;                      /* ensure links are white */
+      text-decoration: underline;
+    }
+    .announce .inner{
+      max-width:1200px;
+      margin:0 auto;
+      padding:8px 16px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+    }
+    .announce .badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.18);  /* subtle pill on blue */
+      border:1px solid rgba(255,255,255,0.35);
+      color:#ffffff;                      /* readable text inside pill */
+      font-size:.78rem;
+    }
 
     /* ========= Hero ========= */
     .hero{
