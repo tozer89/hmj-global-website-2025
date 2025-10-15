@@ -8,13 +8,8 @@
 
   <style>
     :root{
-      --ink:#eaf0ff;
-      --muted:#cfd7ff;
-      --bg:#0b1223;
-      --panel:#0f1322;
-      --accent:#3A66B3;
-      --line:rgba(255,255,255,.12);
-      --line2:rgba(255,255,255,.08);
+      --ink:#eaf0ff; --muted:#cfd7ff; --bg:#0b1223; --panel:#0f1322;
+      --accent:#3A66B3; --line:rgba(255,255,255,.12); --line2:rgba(255,255,255,.08);
       --good:#22c55e;
     }
     *{box-sizing:border-box}
@@ -25,20 +20,23 @@
       -webkit-font-smoothing:antialiased;
     }
 
+    /* Portal chrome */
     header{
-      display:flex;align-items:center;gap:10px;
-      padding:14px 16px;background:var(--panel);
-      border-bottom:1px solid var(--line2);position:sticky;top:0;z-index:10;
+      display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--panel);
+      border-bottom:1px solid var(--line2);position:sticky;top:0;z-index:5;
     }
     header img{height:30px}
     header h1{font-size:16px;margin:0;font-weight:800;letter-spacing:.02em}
     header .chip{
       margin-left:auto;background:rgba(34,197,94,.12);
-      border:1px solid rgba(34,197,94,.35);
-      color:#a7f3d0;font-weight:800;font-size:12px;padding:6px 10px;border-radius:999px
+      border:1px solid rgba(34,197,94,.35);color:#a7f3d0;
+      font-weight:800;font-size:12px;padding:6px 10px;border-radius:999px
     }
 
     .wrap{max-width:1100px;margin:22px auto;padding:0 16px}
+    .grid{display:grid;gap:14px}
+    @media(min-width:860px){ .grid-2{grid-template-columns:1fr 1fr} }
+
     .card{border:1px solid var(--line);border-radius:14px;background:var(--panel);
       box-shadow:0 18px 40px rgba(0,0,0,.35);overflow:hidden}
     .card .inner{padding:18px}
@@ -51,23 +49,22 @@
     .btn.secondary{background:transparent}
     .btn.secondary:hover{background:rgba(255,255,255,.06)}
     .btnrow{display:flex;gap:8px;flex-wrap:wrap}
-
-    .grid{display:grid;gap:14px}
-    @media(min-width:860px){ .grid-2{grid-template-columns:1fr 1fr} }
-
+    .hr{height:1px;background:var(--line2);margin:14px -18px}
     .list{margin:8px 0 0 0;padding-left:18px}
     .list li{margin:6px 0;color:var(--muted)}
-
-    .hr{height:1px;background:var(--line2);margin:14px -18px}
-
     .hide{display:none}
 
-    /* helpful little “loading” indicator below the sign-in box before CMS mounts */
+    /* When CMS is active, hide portal chrome so the CMS toolbar can sit at the very top */
+    body.cms-active header,
+    body.cms-active #authPanel { display:none !important; }
+    body.cms-active #nc-root { margin-top:0 !important; }
+
+    /* Friendly loader hint */
     #cms-loader{display:flex;align-items:center;gap:8px;color:#bed0ff;font-weight:600}
     #cms-loader .dot{width:6px;height:6px;border-radius:50%;background:#9fb5ff;animation:b 1s infinite alternate}
     #cms-loader .dot:nth-child(2){animation-delay:.2s}
     #cms-loader .dot:nth-child(3){animation-delay:.4s}
-    @keyframes b{to{transform:translateY(-3px);opacity:.6}}
+    @keyframes b{to{transform:translateY(-3px);opacity:.6)}
   </style>
 </head>
 
@@ -81,7 +78,7 @@
   <div class="wrap">
     <div class="grid grid-2">
       <!-- Identity / Actions -->
-      <div class="card">
+      <div class="card" id="authPanel">
         <div class="inner">
           <h2 style="margin:0 0 6px">Sign in</h2>
           <p class="notice">Use your HMJ-Global Portal account to access the job editor.</p>
@@ -90,54 +87,53 @@
             <a class="btn" href="#" id="btnSignup">Sign up</a>
             <a class="btn hide" href="#" id="btnLogout">Log out</a>
           </div>
-
           <div class="hr"></div>
           <div id="cms-loader" class="notice">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
             <span>CMS will appear below after login…</span>
           </div>
-
           <ul class="list">
-            <li>Problems with invites in Safari? Temporarily disable “Prevent cross-site tracking” during signup, or use Chrome.</li>
-            <li>Need help? Email <a href="mailto:info@hmj-global.com" class="btn secondary" style="padding:4px 8px">info@hmj-global.com</a></li>
+            <li>Safari invite issues? Temporarily disable “Prevent cross-site tracking”, or use Chrome.</li>
+            <li>Need help? <a href="mailto:info@hmj-global.com" class="btn secondary" style="padding:4px 8px">info@hmj-global.com</a></li>
           </ul>
         </div>
       </div>
 
-      <!-- Quick links / Help -->
+      <!-- How to use -->
       <div class="card">
         <div class="inner">
-          <h2 style="margin:0 0 6px">Quick links</h2>
-          <div class="btnrow" style="margin-bottom:8px">
+          <h2 style="margin:0 0 6px">How to use the Jobs editor</h2>
+          <ol class="list" style="list-style:decimal;padding-left:18px">
+            <li>Open <strong>Contents → Jobs → All Jobs</strong>.</li>
+            <li>Click a job to expand. Update <em>Status</em>, <em>Section</em>, <em>Discipline</em>, <em>Location</em>, etc.</li>
+            <li>Use the “+ Add Jobs” button at the bottom to create new roles.</li>
+            <li>Click <strong>Save</strong>. In <strong>Workflow</strong>, move from Draft → In Review → Publish.</li>
+            <li>Uploads go to <code>images/uploads/</code>. Live site reads from <code>data/jobs.json</code>.</li>
+          </ol>
+          <div class="btnrow">
             <a class="btn secondary" href="/jobs.html">View Jobs page</a>
-            <a class="btn secondary" href="https://app.netlify.com/">Open Netlify</a>
-            <a class="btn secondary" href="https://github.com/">Open GitHub</a>
+            <a class="btn secondary" href="https://app.netlify.com/">Netlify</a>
+            <a class="btn secondary" href="https://github.com/">GitHub</a>
           </div>
-          <p class="notice" style="margin-top:6px">Edits here create PRs (Editorial Workflow). Publish from the CMS when ready.</p>
-          <ul class="list">
-            <li>Uploads go to <code>images/uploads/</code>.</li>
-            <li>Jobs are stored in <code>data/jobs.json</code>.</li>
-            <li>Fields: status, board section, discipline, location filter, overview, responsibilities & requirements.</li>
-          </ul>
         </div>
       </div>
     </div>
 
-    <!-- Where Netlify CMS renders -->
+    <!-- CMS mounts here -->
     <div id="nc-root" style="margin-top:16px"></div>
   </div>
 
   <!-- Netlify Identity -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
-  <!-- Tell CMS we’re going to init it manually (so we don't fetch /admin/config.yml) -->
+  <!-- We will init CMS manually (prevents fetching /admin/config.yml) -->
   <script>window.CMS_MANUAL_INIT = true;</script>
 
   <!-- Netlify CMS core -->
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
 
   <script>
-    // --- Identity helpers (login buttons + status) ---
+    // --- Identity: buttons + visual status, and toggle portal chrome ---
     const loginBtn  = document.getElementById('btnLogin');
     const signupBtn = document.getElementById('btnSignup');
     const logoutBtn = document.getElementById('btnLogout');
@@ -149,6 +145,9 @@
       signupBtn.classList.toggle('hide', loggedIn);
       logoutBtn.classList.toggle('hide', !loggedIn);
       chip.classList.toggle('hide', !loggedIn);
+
+      // When logged in, let CMS own the screen (prevents header/toolbars overlap)
+      document.body.classList.toggle('cms-active', loggedIn);
     }
 
     loginBtn.addEventListener('click', (e)=>{ e.preventDefault(); netlifyIdentity.open('login'); });
@@ -160,7 +159,7 @@
     netlifyIdentity.on('logout', ()=>{ setButtons(null); location.reload(); });
     netlifyIdentity.init();
 
-    // --- Inline CMS config & initialization (no external fetch) ---
+    // --- Inline CMS config (no external fetch; eliminates spinner/404) ---
     CMS.init({
       config: {
         backend: { name: 'git-gateway', branch: 'main' },
@@ -192,8 +191,7 @@
                       { label: 'ID (unique, used as anchor)', name: 'id', widget: 'string' },
                       { label: 'Published', name: 'published', widget: 'boolean', default: true },
                       { label: 'Title', name: 'title', widget: 'string' },
-                      {
-                        label: 'Status', name: 'status', widget: 'select',
+                      { label: 'Status', name: 'status', widget: 'select',
                         options: [
                           { label: 'Live', value: 'live' },
                           { label: 'Interviewing', value: 'interviewing' },
@@ -201,8 +199,7 @@
                         ],
                         default: 'live'
                       },
-                      {
-                        label: 'Section (Board)', name: 'section', widget: 'select',
+                      { label: 'Section (Board)', name: 'section', widget: 'select',
                         options: [
                           { label: 'Data Centre — Commercial', value: 'commercial' },
                           { label: 'Data Centre — Engineering & Management', value: 'dc' },
@@ -212,21 +209,18 @@
                         ],
                         default: 'dc'
                       },
-                      {
-                        label: 'Discipline', name: 'discipline', widget: 'select',
+                      { label: 'Discipline', name: 'discipline', widget: 'select',
                         options: ['Data Centre','Life Sciences','Pharma','Substation'],
                         default: 'Data Centre'
                       },
-                      {
-                        label: 'Employment Type', name: 'type', widget: 'select',
+                      { label: 'Employment Type', name: 'type', widget: 'select',
                         options: [
                           { label: 'Permanent', value: 'permanent' },
                           { label: 'Contract', value: 'contract' }
                         ],
                         default: 'permanent'
                       },
-                      {
-                        label: 'Location Code (filter)', name: 'locationCode', widget: 'select',
+                      { label: 'Location Code (filter)', name: 'locationCode', widget: 'select',
                         options: [
                           { label: 'All (not for jobs)', value: 'all' },
                           { label: 'Amsterdam, Netherlands', value: 'amsterdam' },
@@ -246,14 +240,10 @@
                       { label: 'Location Text (shown)', name: 'locationText', widget: 'string' },
                       { label: 'Keywords (searchable)', name: 'keywords', widget: 'text', required: false },
                       { label: 'Overview', name: 'overview', widget: 'text', required: false },
-                      {
-                        label: 'Responsibilities', name: 'responsibilities', widget: 'list', required: false,
-                        field: { label: 'Item', name: 'item', widget: 'string' }
-                      },
-                      {
-                        label: 'Requirements', name: 'requirements', widget: 'list', required: false,
-                        field: { label: 'Item', name: 'item', widget: 'string' }
-                      },
+                      { label: 'Responsibilities', name: 'responsibilities', widget: 'list', required: false,
+                        field: { label: 'Item', name: 'item', widget: 'string' } },
+                      { label: 'Requirements', name: 'requirements', widget: 'list', required: false,
+                        field: { label: 'Item', name: 'item', widget: 'string' } },
                       { label: 'Apply URL (optional)', name: 'applyUrl', widget: 'string', required: false }
                     ]
                   }
