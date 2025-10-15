@@ -170,7 +170,7 @@
       <h2>Application form</h2>
       <p id="applyingFor" class="helper" style="margin-top:-4px;"></p>
 
-      <!-- Netlify form — same name/fields, success redirect to jobs -->
+      <!-- Netlify form -->
       <form name="contact"
             method="POST"
             action="/jobs.html?submitted=1"
@@ -179,10 +179,15 @@
             enctype="multipart/form-data"
             id="applyForm"
             novalidate>
+        <!-- REQUIRED for Netlify detection -->
         <input type="hidden" name="form-name" value="contact" />
+
+        <!-- Honeypot -->
         <p style="position:absolute;left:-9999px;visibility:hidden;height:0;overflow:hidden;">
           <label>Don’t fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
         </p>
+
+        <!-- Subject filled from ?role= -->
         <input type="hidden" id="subject" name="subject" />
 
         <div class="apply-grid">
@@ -218,7 +223,7 @@
             <label for="salary">Salary expectation (annual) *</label>
           </div>
 
-          <!-- Notice / RTW (selects fixed) -->
+          <!-- Notice / RTW -->
           <div class="field select">
             <select id="notice" name="notice_period" required>
               <option value="">Select…</option>
@@ -264,7 +269,8 @@
             <div id="drop" class="drop">
               <strong>Attach CV (PDF/DOC/DOCX) *</strong><br>
               <small>Drag &amp; drop here or click to choose.</small>
-              <input id="cv" name="attachment" type="file" accept=".pdf,.doc,.docx" required>
+              <!-- IMPORTANT: keep a stable field name for Zapier -->
+              <input id="cv" name="cv" type="file" accept=".pdf,.doc,.docx" required>
             </div>
           </div>
 
@@ -358,24 +364,6 @@
     document.querySelectorAll('.field.select').forEach(w => w.classList.add('filled'));
   </script>
 
-  <!-- OPTIONAL (tiny): paste this toast snippet into jobs.html bottom once
-       to show a “job submission sent” popup when redirected to jobs.html?submitted=1:
-
-  <script>
-    (function(){
-      const p=new URLSearchParams(location.search);
-      if(p.get('submitted')==='1'){
-        const t=document.createElement('div');
-        t.textContent='Job submission sent';
-        Object.assign(t.style,{
-          position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'22px',background:'#0f1322',
-          color:'#eaf0ff',padding:'12px 16px',border:'1px solid rgba(95,134,255,.5)',borderRadius:'12px',
-          boxShadow:'0 10px 26px rgba(0,0,0,.25)',zIndex:9999,fontWeight:800
-        });
-        document.body.appendChild(t); setTimeout(()=>t.remove(), 3800);
-      }
-    })();
-  </script>
-  -->
+  <!-- OPTIONAL toast for jobs.html?submitted=1 is the same as before -->
 </body>
 </html>
