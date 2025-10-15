@@ -4,74 +4,266 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>HMJ Portal</title>
-  <meta name="robots" content="noindex">
+  <meta name="robots" content="noindex" />
+
   <style>
-    :root{--ink:#0f1322;--accent:#3A66B3}
-    body{margin:0;min-height:100vh;background:#0b1223;color:#eaf0ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:#0f1322;position:sticky;top:0}
+    :root{
+      --ink:#eaf0ff;
+      --muted:#cfd7ff;
+      --bg:#0b1223;
+      --panel:#0f1322;
+      --accent:#3A66B3;
+      --line:rgba(255,255,255,.12);
+      --line2:rgba(255,255,255,.08);
+      --good:#22c55e;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    header{
+      display:flex;align-items:center;gap:10px;
+      padding:14px 16px;background:var(--panel);
+      border-bottom:1px solid var(--line2);position:sticky;top:0;z-index:10;
+    }
     header img{height:30px}
     header h1{font-size:16px;margin:0;font-weight:800;letter-spacing:.02em}
-    .wrap{max-width:1100px;margin:20px auto;padding:0 16px}
-    .card{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:#0f1322;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+    header .chip{
+      margin-left:auto;background:rgba(34,197,94,.12);
+      border:1px solid rgba(34,197,94,.35);
+      color:#a7f3d0;font-weight:800;font-size:12px;padding:6px 10px;border-radius:999px
+    }
+
+    .wrap{max-width:1100px;margin:22px auto;padding:0 16px}
+    .card{border:1px solid var(--line);border-radius:14px;background:var(--panel);
+      box-shadow:0 18px 40px rgba(0,0,0,.35);overflow:hidden}
     .card .inner{padding:18px}
-    .notice{margin:12px 0;color:#cfd7ff}
-    .btn{display:inline-block;background:#1d2747;border:1px solid rgba(255,255,255,.18);padding:10px 14px;border-radius:10px;color:#fff;text-decoration:none;font-weight:800}
+    .notice{margin:12px 0;color:var(--muted)}
+    .btn{
+      display:inline-block;background:#1d2747;border:1px solid var(--line);
+      padding:10px 14px;border-radius:10px;color:#fff;text-decoration:none;font-weight:800
+    }
     .btn:hover{background:#22305a}
+    .btn.secondary{background:transparent}
+    .btn.secondary:hover{background:rgba(255,255,255,.06)}
+    .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+
+    .grid{display:grid;gap:14px}
+    @media(min-width:860px){ .grid-2{grid-template-columns:1fr 1fr} }
+
+    .list{margin:8px 0 0 0;padding-left:18px}
+    .list li{margin:6px 0;color:var(--muted)}
+
+    .hr{height:1px;background:var(--line2);margin:14px -18px}
+
     .hide{display:none}
+
+    /* helpful little “loading” indicator below the sign-in box before CMS mounts */
+    #cms-loader{display:flex;align-items:center;gap:8px;color:#bed0ff;font-weight:600}
+    #cms-loader .dot{width:6px;height:6px;border-radius:50%;background:#9fb5ff;animation:b 1s infinite alternate}
+    #cms-loader .dot:nth-child(2){animation-delay:.2s}
+    #cms-loader .dot:nth-child(3){animation-delay:.4s}
+    @keyframes b{to{transform:translateY(-3px);opacity:.6}}
   </style>
 </head>
-
-
 
 <body>
   <header>
     <img src="/images/logo.png" alt="HMJ-Global" />
     <h1>HMJ Portal</h1>
+    <span id="statusChip" class="chip hide">Logged in</span>
   </header>
 
   <div class="wrap">
-    <!-- Identity login helper panel -->
-    <div class="card" id="authPanel">
-      <div class="inner">
-        <h2 style="margin:0 0 8px">Sign in</h2>
-        <p class="notice">Use your HMJ-Global Portal account to access the job editor.</p>
-        <p>
-          <a class="btn" href="#" id="btnLogin">Log in</a>
-          <a class="btn" href="#" id="btnSignup">Sign up</a>
-          <a class="btn hide" href="#" id="btnLogout">Log out</a>
-        </p>
-        <p class="notice">After you log in, the editor will appear below.</p>
+    <div class="grid grid-2">
+      <!-- Identity / Actions -->
+      <div class="card">
+        <div class="inner">
+          <h2 style="margin:0 0 6px">Sign in</h2>
+          <p class="notice">Use your HMJ-Global Portal account to access the job editor.</p>
+          <div class="btnrow">
+            <a class="btn" href="#" id="btnLogin">Log in</a>
+            <a class="btn" href="#" id="btnSignup">Sign up</a>
+            <a class="btn hide" href="#" id="btnLogout">Log out</a>
+          </div>
+
+          <div class="hr"></div>
+          <div id="cms-loader" class="notice">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span>CMS will appear below after login…</span>
+          </div>
+
+          <ul class="list">
+            <li>Problems with invites in Safari? Temporarily disable “Prevent cross-site tracking” during signup, or use Chrome.</li>
+            <li>Need help? Email <a href="mailto:info@hmj-global.com" class="btn secondary" style="padding:4px 8px">info@hmj-global.com</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Quick links / Help -->
+      <div class="card">
+        <div class="inner">
+          <h2 style="margin:0 0 6px">Quick links</h2>
+          <div class="btnrow" style="margin-bottom:8px">
+            <a class="btn secondary" href="/jobs.html">View Jobs page</a>
+            <a class="btn secondary" href="https://app.netlify.com/">Open Netlify</a>
+            <a class="btn secondary" href="https://github.com/">Open GitHub</a>
+          </div>
+          <p class="notice" style="margin-top:6px">Edits here create PRs (Editorial Workflow). Publish from the CMS when ready.</p>
+          <ul class="list">
+            <li>Uploads go to <code>images/uploads/</code>.</li>
+            <li>Jobs are stored in <code>data/jobs.json</code>.</li>
+            <li>Fields: status, board section, discipline, location filter, overview, responsibilities & requirements.</li>
+          </ul>
+        </div>
       </div>
     </div>
 
-    <!-- Netlify CMS mounts itself here -->
-    <div id="nc-root"></div>
+    <!-- Where Netlify CMS renders -->
+    <div id="nc-root" style="margin-top:16px"></div>
   </div>
 
-  <!-- Netlify Identity widget (handles login/signup UI) -->
+  <!-- Netlify Identity -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <!-- Netlify CMS -->
+
+  <!-- Tell CMS we’re going to init it manually (so we don't fetch /admin/config.yml) -->
+  <script>window.CMS_MANUAL_INIT = true;</script>
+
+  <!-- Netlify CMS core -->
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
 
   <script>
-    // Identity helpers for a simple login/logout panel
+    // --- Identity helpers (login buttons + status) ---
     const loginBtn  = document.getElementById('btnLogin');
     const signupBtn = document.getElementById('btnSignup');
     const logoutBtn = document.getElementById('btnLogout');
+    const chip      = document.getElementById('statusChip');
 
-    loginBtn.addEventListener('click', (e) => { e.preventDefault(); netlifyIdentity.open('login'); });
-    signupBtn.addEventListener('click', (e) => { e.preventDefault(); netlifyIdentity.open('signup'); });
-    logoutBtn.addEventListener('click', (e) => { e.preventDefault(); netlifyIdentity.logout(); });
-
-    function refreshButtons(user){
-      loginBtn.classList.toggle('hide', !!user);
-      signupBtn.classList.toggle('hide', !!user);
-      logoutBtn.classList.toggle('hide', !user);
+    function setButtons(user){
+      const loggedIn = !!user;
+      loginBtn.classList.toggle('hide', loggedIn);
+      signupBtn.classList.toggle('hide', loggedIn);
+      logoutBtn.classList.toggle('hide', !loggedIn);
+      chip.classList.toggle('hide', !loggedIn);
     }
-    netlifyIdentity.on('init', user => refreshButtons(user));
-    netlifyIdentity.on('login', user => { refreshButtons(user); netlifyIdentity.close(); location.reload(); });
-    netlifyIdentity.on('logout', () => { refreshButtons(null); location.reload(); });
+
+    loginBtn.addEventListener('click', (e)=>{ e.preventDefault(); netlifyIdentity.open('login'); });
+    signupBtn.addEventListener('click', (e)=>{ e.preventDefault(); netlifyIdentity.open('signup'); });
+    logoutBtn.addEventListener('click', (e)=>{ e.preventDefault(); netlifyIdentity.logout(); });
+
+    netlifyIdentity.on('init', setButtons);
+    netlifyIdentity.on('login', (user)=>{ setButtons(user); netlifyIdentity.close(); location.reload(); });
+    netlifyIdentity.on('logout', ()=>{ setButtons(null); location.reload(); });
     netlifyIdentity.init();
+
+    // --- Inline CMS config & initialization (no external fetch) ---
+    CMS.init({
+      config: {
+        backend: { name: 'git-gateway', branch: 'main' },
+        media_folder: 'images/uploads',
+        public_folder: '/images/uploads',
+        publish_mode: 'editorial_workflow',
+        site_url: 'https://www.hmj-global.com',
+        logo_url: '/images/logo.png',
+        collections: [
+          {
+            name: 'jobs',
+            label: 'Jobs',
+            label_singular: 'Job',
+            editor: { preview: false },
+            files: [
+              {
+                file: 'data/jobs.json',
+                label: 'All Jobs',
+                name: 'jobsfile',
+                description: 'Edit all job entries here. This file powers jobs.html.',
+                fields: [
+                  {
+                    label: 'Jobs',
+                    name: 'jobs',
+                    widget: 'list',
+                    collapsed: true,
+                    summary: '{{fields.title}} — {{fields.locationText}} ({{fields.status}})',
+                    fields: [
+                      { label: 'ID (unique, used as anchor)', name: 'id', widget: 'string' },
+                      { label: 'Published', name: 'published', widget: 'boolean', default: true },
+                      { label: 'Title', name: 'title', widget: 'string' },
+                      {
+                        label: 'Status', name: 'status', widget: 'select',
+                        options: [
+                          { label: 'Live', value: 'live' },
+                          { label: 'Interviewing', value: 'interviewing' },
+                          { label: 'Closed', value: 'closed' }
+                        ],
+                        default: 'live'
+                      },
+                      {
+                        label: 'Section (Board)', name: 'section', widget: 'select',
+                        options: [
+                          { label: 'Data Centre — Commercial', value: 'commercial' },
+                          { label: 'Data Centre — Engineering & Management', value: 'dc' },
+                          { label: 'Substations, Power & Energy', value: 'substations' },
+                          { label: 'Life Sciences & Pharma', value: 'pharma' },
+                          { label: 'ICT & Commissioning', value: 'ict' }
+                        ],
+                        default: 'dc'
+                      },
+                      {
+                        label: 'Discipline', name: 'discipline', widget: 'select',
+                        options: ['Data Centre','Life Sciences','Pharma','Substation'],
+                        default: 'Data Centre'
+                      },
+                      {
+                        label: 'Employment Type', name: 'type', widget: 'select',
+                        options: [
+                          { label: 'Permanent', value: 'permanent' },
+                          { label: 'Contract', value: 'contract' }
+                        ],
+                        default: 'permanent'
+                      },
+                      {
+                        label: 'Location Code (filter)', name: 'locationCode', widget: 'select',
+                        options: [
+                          { label: 'All (not for jobs)', value: 'all' },
+                          { label: 'Amsterdam, Netherlands', value: 'amsterdam' },
+                          { label: 'Dublin, Ireland', value: 'dublin' },
+                          { label: 'Eemshaven, Netherlands', value: 'eemshaven' },
+                          { label: 'Espoo, Finland', value: 'espoo' },
+                          { label: 'Frankfurt, Germany', value: 'frankfurt' },
+                          { label: 'Groningen, Netherlands', value: 'groningen' },
+                          { label: 'Helsinki, Finland', value: 'helsinki' },
+                          { label: 'London, UK', value: 'london' },
+                          { label: 'Macclesfield, UK', value: 'macclesfield' },
+                          { label: 'UK (Various)', value: 'uk' },
+                          { label: 'Europe (Travel)', value: 'europe' }
+                        ],
+                        default: 'uk'
+                      },
+                      { label: 'Location Text (shown)', name: 'locationText', widget: 'string' },
+                      { label: 'Keywords (searchable)', name: 'keywords', widget: 'text', required: false },
+                      { label: 'Overview', name: 'overview', widget: 'text', required: false },
+                      {
+                        label: 'Responsibilities', name: 'responsibilities', widget: 'list', required: false,
+                        field: { label: 'Item', name: 'item', widget: 'string' }
+                      },
+                      {
+                        label: 'Requirements', name: 'requirements', widget: 'list', required: false,
+                        field: { label: 'Item', name: 'item', widget: 'string' }
+                      },
+                      { label: 'Apply URL (optional)', name: 'applyUrl', widget: 'string', required: false }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    });
   </script>
 </body>
 </html>
