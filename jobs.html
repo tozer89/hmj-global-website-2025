@@ -887,5 +887,19 @@
     };
   })();
   </script>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  const portalLink = document.querySelector('a[href="/admin/"]');
+  if (portalLink) {
+    portalLink.style.display = 'none';
+    function toggle() { portalLink.style.display = netlifyIdentity.currentUser() ? '' : 'none'; }
+    netlifyIdentity.on('init', toggle);
+    netlifyIdentity.on('login', toggle);
+    netlifyIdentity.on('logout', toggle);
+    netlifyIdentity.init();
+  }
+</script>
+
+
 </body>
 </html>
