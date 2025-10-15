@@ -98,10 +98,23 @@
     .field.select::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:16px;color:#7a8bb2;pointer-events:none}
     .field.select label{top:-10px !important;font-size:.85rem !important;color:var(--muted)}
 
-    /* Drag & drop */
-    .drop{border:2px dashed rgba(26,26,46,.2);border-radius:12px;padding:18px 14px;text-align:center;color:var(--muted);transition:border-color .2s ease, background .2s ease}
+    /* Drag & drop — fixed: make input cover zone so browser handles click & drop natively */
+    .drop{
+      position:relative;
+      border:2px dashed rgba(26,26,46,.2);
+      border-radius:12px;
+      padding:18px 14px;
+      text-align:center;color:var(--muted);
+      transition:border-color .2s ease, background .2s ease;
+    }
     .drop.dragover{border-color:#5f86ff;background:#f6f8ff}
-    .drop input{display:none}
+    .drop input[type="file"]{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      opacity:0;
+      cursor:pointer;
+    }
+    .file-note{margin-top:6px;font-size:.9rem;color:var(--muted)}
 
     /* Row actions */
     .form-actions{margin-top:14px;display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
@@ -272,6 +285,7 @@
               <!-- IMPORTANT: keep a stable field name for Zapier -->
               <input id="cv" name="cv" type="file" accept=".pdf,.doc,.docx" required>
             </div>
+            <div id="fileNote" class="file-note" aria-live="polite"></div>
           </div>
 
           <!-- Consent -->
@@ -344,13 +358,25 @@
     const updateCount = () => counter.textContent = (msg.value||'').length;
     msg.addEventListener('input', updateCount); updateCount();
 
-    /* ---------- Drag & drop CV ---------- */
+    /* ---------- Drag & drop CV (native handling) ---------- */
     const drop = document.getElementById('drop');
     const cvInput = document.getElementById('cv');
-    drop.addEventListener('click', ()=>cvInput.click());
-    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{e.preventDefault();e.stopPropagation();drop.classList.add('dragover');}));
-    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('dragover');}));
-    drop.addEventListener('drop', (e)=>{ if(e.dataTransfer?.files?.length){ cvInput.files = e.dataTransfer.files; setFilled(cvInput); }});
+    const fileNote = document.getElementById('fileNote');
+
+    // just visuals for drag state
+    ['dragenter','dragover'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.add('dragover'); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; })
+    );
+    ['dragleave','drop'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragover'); })
+    );
+
+    // show selected file name
+    cvInput.addEventListener('change', () => {
+      const f = cvInput.files && cvInput.files[0];
+      fileNote.textContent = f ? `Selected: ${f.name}` : '';
+      setFilled(cvInput);
+    });
 
     /* ---------- Guard invalid submit (preserves Netlify) ---------- */
     document.getElementById('applyForm').addEventListener('submit', (e)=>{
