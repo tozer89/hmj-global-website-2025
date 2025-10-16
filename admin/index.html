@@ -76,6 +76,25 @@
     window.CMS_MANUAL_INIT = true;
   </script>
   <script src="https://unpkg.com/decap-cms@^3.8.4/dist/decap-cms.js"></script>
+
+  <style>
+  /* Badges used in diagnostics and mini-HUD */
+  .badge { display:inline-block; padding:.2rem .5rem; border-radius:.5rem; font-size:.78rem; line-height:1; }
+  .badge-live{ background:#10b98122; color:#10b981; border:1px solid #10b98155 }
+  .badge-hold{ background:#f59e0b22; color:#f59e0b; border:1px solid #f59e0b55 }
+  .badge-closed{ background:#ef444422; color:#ef4444; border:1px solid #ef444455 }
+
+  /* Keep the floating tools anchored bottom-right and clickable over CMS */
+  #hmj-floating-tools{ position:fixed; right:16px; bottom:16px; z-index:9999; }
+  #hmj-floating-tools .card{ background:#0f172a; color:#cbd5e1; border:1px solid #233044; border-radius:14px; padding:10px 12px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+  #hmj-floating-tools .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+  #hmj-floating-tools button, #hmj-floating-tools .ghost { background:#1f2937; color:#e5e7eb; border:1px solid #334155; padding:7px 10px; border-radius:9px; font-size:.84rem; cursor:pointer }
+  #hmj-floating-tools button:hover{ background:#243042 }
+  #hmj-floating-tools .ghost{ border-style:dashed; opacity:.9 }
+  #hmj-hud{ position:fixed; left:16px; bottom:16px; background:#0b1020; color:#cbd5e1; border:1px solid #233044; border-radius:12px; padding:10px 12px; z-index:9998; font-size:.85rem }
+  #hmj-hud b{ color:#fff }
+</style>
+
 </head>
 <body>
   <div class="topbar">
@@ -287,5 +306,237 @@
     });
 
   </script>
+  <script>
+(function () {
+  // -------- utilities --------
+  const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
+  const slug = (s)=> (s||'')
+      .toLowerCase()
+      .normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/&/g,' and ')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')
+      .slice(0,80);
+
+  // Single source of truth for collection + file
+  const JOBS_COLLECTION = 'jobsData';    // leave as-is
+  const JOBS_FILE = 'data/jobs.json';    // leave as-is
+
+  // -------- floating tools (bottom-right) --------
+  const tools = document.createElement('div');
+  tools.id = 'hmj-floating-tools';
+  tools.innerHTML = `
+    <div class="card">
+      <div class="row" style="margin-bottom:6px">
+        <strong>Quick tools</strong>
+        <span class="ghost" id="hmj-anchor">Copy anchor</span>
+        <button id="hmj-duplicate">Duplicate</button>
+        <button id="hmj-validate">Validate</button>
+        <button id="hmj-export">Export JSON</button>
+        <button id="hmj-import">Import JSON</button>
+      </div>
+      <div class="row">
+        <button id="hmj-backup">Backup to browser</button>
+        <button id="hmj-restore">Restore backup</button>
+        <button id="hmj-clear">Clear CMS cache</button>
+        <span class="ghost" title="⌘/Ctrl+S saves, ⌘/Ctrl+K validates, ⌘/Ctrl+D duplicates">Shortcuts</span>
+      </div>
+    </div>`;
+  document.body.appendChild(tools);
+
+  // Mini HUD (bottom-left): live/halt counts etc.
+  const hud = document.createElement('div');
+  hud.id = 'hmj-hud';
+  hud.innerHTML = `Jobs: <b id="hudTotal">—</b> ·
+    <span class="badge badge-live" id="hudLive">live —</span> 
+    <span class="badge badge-hold" id="hudHold">hold —</span>
+    <span class="badge badge-closed" id="hudClosed">closed —</span>`;
+  document.body.appendChild(hud);
+
+  // -------- Decap hooks --------
+  function whenCMSReady(fn){
+    const tryNow = ()=> window.CMS ? fn() : setTimeout(tryNow, 300);
+    tryNow();
+  }
+
+  // Update HUD from latest JSON
+  async function refreshHUD(){
+    try {
+      const res = await fetch(`/${JOBS_FILE}?_=${Date.now()}`);
+      const data = await res.json();
+      const arr = Array.isArray(data.jobs) ? data.jobs : [];
+      document.getElementById('hudTotal').textContent = arr.length;
+      const live = arr.filter(j=> (j.status||'').toLowerCase()==='live').length;
+      const hold = arr.filter(j=> (j.status||'').toLowerCase().includes('hold')).length;
+      const closed = arr.filter(j=> (j.status||'').toLowerCase()==='closed').length;
+      document.getElementById('hudLive').textContent = `live ${live}`;
+      document.getElementById('hudHold').textContent = `hold ${hold}`;
+      document.getElementById('hudClosed').textContent = `closed ${closed}`;
+    } catch(e){
+      // silent
+    }
+  }
+
+  // Local backup
+  async function backupToLocal(){
+    const res = await fetch(`/${JOBS_FILE}?_=${Date.now()}`);
+    const txt = await res.text();
+    localStorage.setItem('hmj-jobs-backup', txt);
+    alert('Backup saved in this browser.');
+  }
+  function restoreFromLocal(){
+    const raw = localStorage.getItem('hmj-jobs-backup');
+    if(!raw){ alert('No backup found in this browser.'); return; }
+    try {
+      const json = JSON.parse(raw);
+      downloadAs('jobs-restore.json', JSON.stringify(json,null,2));
+    } catch(e){ alert('Backup is unreadable.'); }
+  }
+  function downloadAs(name, content){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], {type:'application/json'}));
+    a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  // Import JSON (validates shape before letting you commit via CMS UI)
+  async function importJSON(){
+    const input = document.createElement('input');
+    input.type='file'; input.accept='.json,application/json';
+    input.onchange = async () => {
+      const file = input.files[0]; if(!file) return;
+      const text = await file.text();
+      try {
+        const json = JSON.parse(text);
+        if(!json || !Array.isArray(json.jobs)) throw new Error('Expected { jobs: [] }');
+        // hand off by downloading a normalized copy user can paste/commit
+        downloadAs('jobs-normalized.json', JSON.stringify(json,null,2));
+        alert('Imported OK. Open the file and paste into data/jobs.json (or commit through Git).');
+      } catch(e){
+        alert('Invalid format: ' + e.message);
+      }
+    };
+    input.click();
+  }
+
+  // Validate current entry (in-editor) against minimal schema
+  function validateEntry(data){
+    const errs = [];
+    const must = ['id','title','status','locationText'];
+    must.forEach(k => { if(!data[k]) errs.push(`Missing required: ${k}`); });
+    if(data.id && !/^[a-z0-9-]{3,}$/.test(data.id)) errs.push('id must be URL-safe (a–z, 0–9, dash)');
+    return errs;
+  }
+
+  // Duplicate: copies current entry with new id/status=on-hold
+  function duplicateEntry(entry, collection){
+    const data = entry.get('data').toJS();
+    const nextId = slug(`${data.title||'job'}-${Date.now().toString(36).slice(-5)}`);
+    const clone = { ...data, id: nextId, status: 'on-hold', published: false };
+    // open as new entry in the same collection
+    window.location.hash = `#/collections/${collection.get('name')}/new`;
+    // wait a tick for editor to mount, then set values via the store API
+    setTimeout(()=>{
+      const store = window.reduxStore;
+      if(!store) return;
+      store.dispatch({ type: 'ENTRY_LOAD_SUCCESS', payload: {
+        collection: collection, entry: window.immutable.Map({
+          collection: collection.get('name'),
+          data: window.immutable.fromJS(clone)
+        })
+      }});
+    }, 300);
+  }
+
+  // Copy anchor for jobs.html
+  function copyAnchorFromEntry(entry){
+    const data = entry.get('data').toJS();
+    if(!data.id){ alert('No id yet. Save or type a title to generate.'); return; }
+    const url = `/jobs.html#${data.id}`;
+    navigator.clipboard.writeText(url).then(()=> alert(`Copied: ${url}`));
+  }
+
+  // Clear CMS cache quickly
+  function clearCMSCache(){
+    try { localStorage.clear(); sessionStorage.clear(); caches && caches.keys().then(k=>k.forEach(c=>caches.delete(c))); }
+    catch(e){}
+    alert('Local cache cleared. Reloading…'); location.reload();
+  }
+
+  // -------- Bind to Decap --------
+  whenCMSReady(()=>{
+    const CMS = window.CMS;
+
+    // Auto-derive ID from Title + Location (only if id is blank)
+    CMS.registerEventListener({
+      name: 'preSave',
+      handler: ({ entry, collection }) => {
+        if (collection.get('name') !== JOBS_COLLECTION) return;
+        const data = entry.get('data').toJS();
+        if (!data.id) {
+          const base = [data.title, data.locationCode || data.locationText].filter(Boolean).join('-');
+          data.id = slug(base || 'role');
+        }
+        // light normalization
+        if (typeof data.published === 'undefined') data.published = true;
+        if (data.status) data.status = String(data.status).toLowerCase();
+        // minimal validation
+        const errs = validateEntry(data);
+        if (errs.length) {
+          alert('Fix before saving:\n\n• ' + errs.join('\n• '));
+          // cancel save by returning the original entry unchanged
+          return { error: true };
+        }
+        return { entry: entry.set('data', window.immutable.fromJS(data)) };
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e)=>{
+      const mod = e.metaKey || e.ctrlKey;
+      if(mod && e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('hmj-validate').click(); }
+      if(mod && e.key.toLowerCase()==='d'){ e.preventDefault(); document.getElementById('hmj-duplicate').click(); }
+    });
+
+    // Floating tool actions (these try to act on the currently open entry)
+    const getCurrent = ()=>{
+      const st = window.reduxStore?.getState?.();
+      if(!st) return {};
+      const collName = st.entry?.get('collection');
+      const collection = st.collections?.get(collName || JOBS_COLLECTION) || st.collections?.first();
+      const entry = st.entry;
+      return { entry, collection };
+    };
+
+    document.getElementById('hmj-validate').onclick = ()=>{
+      const { entry } = getCurrent();
+      if(!entry){ alert('Open an entry first.'); return; }
+      const data = entry.get('data').toJS();
+      const errs = validateEntry(data);
+      alert(errs.length ? ('Issues:\n\n• ' + errs.join('\n• ')) : 'Looks good ✅');
+    };
+    document.getElementById('hmj-duplicate').onclick = ()=>{
+      const { entry, collection } = getCurrent();
+      if(!entry || !collection){ alert('Open an entry first.'); return; }
+      duplicateEntry(entry, collection);
+    };
+    document.getElementById('hmj-anchor').onclick = ()=>{
+      const { entry } = getCurrent();
+      if(!entry){ alert('Open an entry first.'); return; }
+      copyAnchorFromEntry(entry);
+    };
+    document.getElementById('hmj-export').onclick = async ()=>{
+      const res = await fetch(`/${JOBS_FILE}?_=${Date.now()}`); const text = await res.text();
+      downloadAs('jobs-export.json', text);
+    };
+    document.getElementById('hmj-import').onclick = importJSON;
+    document.getElementById('hmj-backup').onclick = backupToLocal;
+    document.getElementById('hmj-restore').onclick = restoreFromLocal;
+    document.getElementById('hmj-clear').onclick = clearCMSCache;
+
+    // initial HUD + refresh occasionally
+    refreshHUD(); setInterval(refreshHUD, 8000);
+  });
+})();
+</script>
+
 </body>
 </html>

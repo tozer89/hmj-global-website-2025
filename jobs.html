@@ -901,5 +901,31 @@
 </script>
 
 
+<!-- add before </body> on jobs.html -->
+<script>
+(function(){
+  // Copy anchor on hash change (gives feedback)
+  function feedback(msg){
+    const b = document.createElement('div');
+    b.textContent = msg;
+    Object.assign(b.style, {position:'fixed',right:'16px',bottom:'16px',background:'#0b1020',color:'#cbd5e1',padding:'8px 10px',border:'1px solid #223',borderRadius:'10px',zIndex:9999});
+    document.body.appendChild(b); setTimeout(()=>b.remove(), 1600);
+  }
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a[href^="#"]'); if(!a) return;
+    const url = location.pathname + a.getAttribute('href');
+    navigator.clipboard?.writeText(url); feedback('Anchor copied');
+  });
+
+  // Persist last used search/filter in localStorage (if your page has them)
+  const q = document.querySelector('input[type="search"], input[name="q"]');
+  if(q){
+    q.value = localStorage.getItem('hmj-jobs-q')||'';
+    q.addEventListener('input', ()=> localStorage.setItem('hmj-jobs-q', q.value));
+  }
+})();
+</script>
+
+
 </body>
 </html>
