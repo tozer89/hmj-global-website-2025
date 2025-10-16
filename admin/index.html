@@ -5,16 +5,16 @@
   <title>HMJ Global — CMS Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Perf preconnects -->
+  <!-- perf -->
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
-  <!-- ===================== INLINE CMS CONFIG ===================== -->
-  <script>
-    /* Stop auto-fetch of /admin/config.yml */
-    window.CMS_MANUAL_INIT = true;
+  <!-- Stop auto config fetch; we’ll inline config -->
+  <script>window.CMS_MANUAL_INIT = true;</script>
 
-    /* Inline config (single JSON file) */
+  <!-- ================== INLINE NETLIFY CMS CONFIG ================== -->
+  <script>
+    /* Single-file JSON backend */
     window.CMS_CONFIG = {
       backend: { name: "git-gateway", branch: "main" },
       publish_mode: "editorial_workflow",
@@ -41,7 +41,7 @@
                   summary: "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
                   fields: [
                     { label: "ID (URL anchor)", name: "id", widget: "string",
-                      pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only."] },
+                      pattern: ["^[a-z0-9-]+$", "Lowercase letters, numbers and hyphens only."] },
                     { label: "Published", name: "published", widget: "boolean", default: true },
                     { label: "Title", name: "title", widget: "string" },
                     { label: "Status", name: "status", widget: "select",
@@ -99,12 +99,11 @@
     };
   </script>
 
-  <!-- Identity (non-blocking) -->
+  <!-- Identity + CMS -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
-  <!-- Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
 
-  <!-- ============================ STYLES ============================ -->
+  <!-- =============================== UI =============================== -->
   <style>
     :root{
       --ink:#0f1322; --bg:#0b0f1c; --panel:#0f162c; --accent:#3A66B3;
@@ -121,7 +120,7 @@
     .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
     #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
 
-    /* Dock pinned bottom-right */
+    /* bottom-right dock */
     .dock{
       position:fixed; right:14px; bottom:14px; z-index:60;
       background:var(--panel); border:1px solid var(--border);
@@ -131,13 +130,14 @@
     .dock input,.dock select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:10px;padding:10px 12px}
     .dock .btn{background:#0f1831}
 
+    /* polish the CMS chrome */
     .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
     .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
     .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
   </style>
 </head>
 <body>
-  <!-- ============================ TOP BAR ============================ -->
+  <!-- top nav -->
   <div class="top">
     <div class="in">
       <div class="brand"><span class="dot"></span> HMJ Global — CMS Portal</div>
@@ -155,7 +155,7 @@
   <!-- CMS mount -->
   <div id="nc-root" role="region" aria-label="Netlify CMS"></div>
 
-  <!-- ============================= DOCK ============================= -->
+  <!-- quick dock (bottom-right) -->
   <div class="dock" aria-label="Quick actions">
     <input id="q" type="search" placeholder="Search jobs (title, location, status)…" />
     <select id="tpl">
@@ -172,86 +172,81 @@
     <button class="btn" id="copyBtn" type="button">Copy</button>
   </div>
 
-  <!-- ========================== BOOT SCRIPT ========================= -->
+  <!-- ============================ BOOTSTRAP ============================ -->
   <script>
     (function(){
+      const SAFE_HOME = "#/";                               // CMS home
       const ENTRY_HASH = "#/collections/jobsData/entries/jobs";
-      let pendingDeepLink = null;
 
-      /* Init CMS as soon as script is ready */
+      // Hard guard: if a deep link is present before the CMS store is up, force #/ immediately.
+      (function hardGuard(){
+        if (/^#\/collections\//.test(location.hash)) {
+          // remember where the user wanted to go; we’ll jump there after hydration
+          sessionStorage.setItem("__pending_deep_link", location.hash);
+          if (location.hash !== SAFE_HOME) location.replace(SAFE_HOME);
+        }
+      })();
+
       function initCMS(){
         try { window.CMS.init({ config: window.CMS_CONFIG }); }
         catch(e){ console.error("CMS init failed:", e); }
       }
-      if (window.CMS) initCMS();
-      else window.addEventListener("load", initCMS);
+      if (window.CMS) initCMS(); else window.addEventListener("load", initCMS);
 
-      /* Helper: is the Redux store populated with collections? */
-      function cmsStoreReady(){
+      // Store readiness check
+      function storeReady(){
         try{
           const st = window.CMS && window.CMS.getState && window.CMS.getState();
-          return !!(st && st.get && st.get("collections") && st.get("collections").size);
+          const colls = st && st.get && st.get("collections");
+          return !!(colls && colls.size && colls.get("jobsData")); // ensure our collection exists
         }catch(_){ return false; }
       }
-      function waitForStore(maxMs=7000){
-        return new Promise((resolve,reject)=>{
+      function waitForStore(timeout=10000){
+        return new Promise((res, rej)=>{
           const t0 = Date.now();
-          const tick = () => {
-            if (cmsStoreReady()) return resolve();
-            if (Date.now()-t0 > maxMs) return reject(new Error("CMS store not ready"));
-            setTimeout(tick, 120);
-          };
-          tick();
+          (function tick(){
+            if (storeReady()) return res();
+            if (Date.now()-t0 > timeout) return rej(new Error("CMS store still starting"));
+            setTimeout(tick, 100);
+          })();
         });
       }
 
-      /* ---------- ROUTE GUARD (prevents deep-link crash) ---------- */
-      function isCmsDeepLink(h){ return /^#\/collections\//.test(h || location.hash); }
-      async function guardHashNavigation(h){
-        const wantsDeep = isCmsDeepLink(h);
-        if (!wantsDeep) return;                 // normal hash
-        if (cmsStoreReady()) return;            // store already there
+      // After store is ready, if we captured a deep link earlier, go there now (once).
+      async function honorPendingDeepLink(){
+        const wanted = sessionStorage.getItem("__pending_deep_link");
+        if (wanted && /^#\/collections\//.test(wanted)) {
+          sessionStorage.removeItem("__pending_deep_link");
+          location.hash = wanted;
+        }
+      }
 
-        // hold the deep link until store is ready
-        pendingDeepLink = h;
-        if (location.hash !== "#/") location.hash = "#/";
+      // Button: open jobs editor safely
+      document.getElementById("btnOpenEditor")?.addEventListener("click", async () => {
         try{
           await waitForStore();
-          if (pendingDeepLink) {
-            const jump = pendingDeepLink; pendingDeepLink = null;
-            location.hash = jump;
-          }
+          location.hash = ENTRY_HASH;
         }catch(e){
           alert("CMS is still starting—try again in a second.");
           console.warn(e);
         }
-      }
-      // Guard initial load and any manual address-bar changes
-      window.addEventListener("load", () => guardHashNavigation(location.hash));
-      window.addEventListener("hashchange", (e) => guardHashNavigation(location.hash));
-
-      /* Button -> open Jobs editor AFTER store is ready */
-      document.getElementById("btnOpenEditor")?.addEventListener("click", async () => {
-        try{
-          await waitForStore();
-          if (location.hash !== ENTRY_HASH) location.hash = ENTRY_HASH;
-          setTimeout(() => { if (location.hash !== ENTRY_HASH) location.hash = ENTRY_HASH; }, 250);
-        }catch(e){
-          alert("CMS is still starting—try again in a second.");
-          console.error(e);
-        }
       });
 
-      /* Optional sign-out */
+      // Auto-honor deep links when hydration completes
+      (async () => {
+        try { await waitForStore(); await honorPendingDeepLink(); }
+        catch(e){ /* show nothing; user can click button; avoid crash */ }
+      })();
+
+      // Sign out helper
       document.getElementById("btnSignOut")?.addEventListener("click", () => {
         try { window.netlifyIdentity && window.netlifyIdentity.logout(); } catch {}
         try { localStorage.clear(); sessionStorage.clear(); } catch {}
         location.reload();
       });
 
-      /* Dock helpers */
-      document.getElementById("topBtn").onclick = () =>
-        window.scrollTo({ top: 0, behavior: "smooth" });
+      // Dock helpers
+      document.getElementById("topBtn").onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
       document.getElementById("openAnchor").onclick = () => {
         const id = (document.getElementById("anchor").value || "").trim();
         if (id) window.open("/jobs.html#" + encodeURIComponent(id), "_blank", "noopener");
@@ -264,6 +259,14 @@
       document.getElementById("dupBtn").onclick = () => {
         alert("Use “Add item” inside Jobs to create a new role.\n(JSON mode doesn’t auto-duplicate the block.)");
       };
+
+      // Safety: If user manually types a deep link *after* load but before hydration completes, hold it.
+      window.addEventListener("hashchange", () => {
+        if (!storeReady() && /^#\/collections\//.test(location.hash)) {
+          sessionStorage.setItem("__pending_deep_link", location.hash);
+          if (location.hash !== SAFE_HOME) location.replace(SAFE_HOME);
+        }
+      });
     })();
   </script>
 </body>
