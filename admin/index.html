@@ -732,9 +732,11 @@
         ni.init(); // ensure widget initialises even if auto-loaded
       }
 
-      // -------- Hardening for the error you hit:
-      // The stack trace showed openEditor -> CMS not ready.
-      // We now only call startPortal() after ensureCMSLoaded() resolves.
+      // -------- Hardening for your “logged in but nothing shows” case:
+      // 1) We don't auto-open the editor — we show the Dashboard/Guide first.
+      // 2) Editor only mounts via the "Open Jobs in Editor" buttons -> startPortal() -> ensureCMSLoaded() -> CMS.init().
+      // 3) If Identity was slow to init, we poll and then update the UI.
+
       async function main() {
         bindDock();
         bindDiagnostics();
