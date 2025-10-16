@@ -11,8 +11,10 @@
 
   <!-- ===================== INLINE CMS CONFIG ===================== -->
   <script>
-    // Netlify CMS: manual init with inline config to avoid /admin/config.yml fetch.
+    /* Prevent auto-fetch of /admin/config.yml */
     window.CMS_MANUAL_INIT = true;
+
+    /* CRITICAL: inline config */
     window.CMS_CONFIG = {
       backend: { name: "git-gateway", branch: "main" },
       publish_mode: "editorial_workflow",
@@ -24,10 +26,12 @@
           name: "jobsData",
           files: [
             {
-              /* IMPORTANT: name must match the expected entry slug. */
+              /* Single JSON file editor */
               label: "Jobs Data",
-              name: "jobs",                 /* <-- FIXED (was jobsFile) */
+              name: "jobs",                 /* entry slug used in the route */
               file: "data/jobs.json",
+              format: "json",
+              editor: { preview: false },
               description: "Single JSON file powering /jobs.html.",
               fields: [
                 {
@@ -37,7 +41,7 @@
                   collapsed: true,
                   summary: "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
                   fields: [
-                    { label: "ID", name: "id", widget: "string",
+                    { label: "ID (URL anchor)", name: "id", widget: "string",
                       pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only."] },
                     { label: "Published", name: "published", widget: "boolean", default: true },
                     { label: "Title", name: "title", widget: "string" },
@@ -99,12 +103,21 @@
         }
       ]
     };
+
+    /* Force the correct route BEFORE CMS renders to avoid undefined collection */
+    (function ensureHashEarly(){
+      var TARGET = "#/collections/jobsData/entries/jobs";
+      if (location.hash !== TARGET) {
+        // use replace so back button isn't polluted with intermediate hashes
+        location.replace(TARGET);
+      }
+    })();
   </script>
 
-  <!-- Identity (optional – we don't wait on it) -->
+  <!-- Identity (optional; we don't block on it) -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
-  <!-- Netlify CMS (same version you were using) -->
+  <!-- Netlify CMS (the version you've been on) -->
   <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
 
   <!-- =========================== STYLES =========================== -->
@@ -124,12 +137,17 @@
     .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
     #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
 
-    /* Dock bottom-right so it never obscures CMS header */
-    .dock{position:fixed;right:14px;bottom:14px;z-index:60;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    /* Dock pinned bottom-right */
+    .dock{
+      position:fixed; right:14px; bottom:14px; z-index:60;
+      background:var(--panel); border:1px solid var(--border);
+      border-radius:16px; padding:10px; box-shadow:var(--shadow);
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap
+    }
     .dock input,.dock select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:10px;padding:10px 12px}
     .dock .btn{background:#0f1831}
 
-    /* Small CMS theme tweak */
+    /* Light CMS chrome tweaks */
     .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
     .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
     .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
@@ -173,26 +191,27 @@
   <!-- ========================= BOOT SCRIPT ========================= -->
   <script>
     (function(){
-      // 1) Mount CMS immediately with inline config.
-      try { window.CMS.init({ config: window.CMS_CONFIG }); }
-      catch(e){ console.error("CMS init failed:", e); }
-
-      // 2) Force the route to the single-file entry (must match file "name": "jobs").
       const TARGET = "#/collections/jobsData/entries/jobs";
-      const forceHash = () => { if (location.hash !== TARGET) location.hash = TARGET; };
-      setTimeout(forceHash, 60);
-      setTimeout(forceHash, 300);
-      setTimeout(forceHash, 900);
 
-      // 3) Optional sign-out via Netlify Identity.
-      const signOutBtn = document.getElementById("btnSignOut");
-      if (signOutBtn) {
-        signOutBtn.addEventListener("click", () => {
-          try { window.netlifyIdentity && window.netlifyIdentity.logout(); } catch {}
-          try { localStorage.clear(); sessionStorage.clear(); } catch {}
-          location.reload();
-        });
+      function initCMS(){
+        try { window.CMS.init({ config: window.CMS_CONFIG }); }
+        catch(e){ console.error("CMS init failed:", e); }
       }
+
+      // Mount as soon as the script is available
+      if (window.CMS) initCMS();
+      else window.addEventListener("load", initCMS);
+
+      // Nudge to our entry a couple times after init too
+      const nudge = () => { if (location.hash !== TARGET) location.replace(TARGET); };
+      setTimeout(nudge, 80); setTimeout(nudge, 400); setTimeout(nudge, 1200);
+
+      // Optional sign-out
+      document.getElementById("btnSignOut")?.addEventListener("click", () => {
+        try { window.netlifyIdentity && window.netlifyIdentity.logout(); } catch {}
+        try { localStorage.clear(); sessionStorage.clear(); } catch {}
+        location.reload();
+      });
 
       // Dock helpers
       document.getElementById("topBtn").onclick = () =>
