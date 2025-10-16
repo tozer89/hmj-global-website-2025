@@ -17,6 +17,7 @@
     (function () {
       const cmsConfig = {
         backend: { name: "git-gateway", branch: "main" },
+        // Avoid workflow edge-cases with files-based JSON
         publish_mode: "simple",
         media_folder: "images/uploads",
         public_folder: "/images/uploads",
@@ -29,17 +30,19 @@
               {
                 label: "Jobs",
                 name: "jobsFile",
-                file: "data/jobs.json",          // your repo path
+                file: "data/jobs.json",
                 description: "Powers the public Jobs page (/jobs.html).",
-                format: "json",                  // force JSON parser
-                editor: { preview: false },      // avoid preview hydration crashes
+                /* Stability: force JSON, disable preview (hydration crashes) */
+                format: "json",
+                editor: { preview: false },
                 fields: [
                   {
                     label: "Jobs",
                     name: "jobs",
                     widget: "list",
                     collapsed: true,
-                    summary: "{{title}} — {{locationText}} ({{status}}, {{section}}, {{type}})",
+                    /* Stability: make summary non-templated to avoid renderer bug */
+                    summary: "Job entry",
                     fields: [
                       {
                         label: "ID (unique, used as URL anchor)",
@@ -188,6 +191,7 @@
       window.CMS_MANUAL_INIT = true;
       window.CMS_CONFIG = cmsConfig;
 
+      // State for diagnostics & flow
       window.__HMJ_STATE__ = {
         cmsLoaded: false,
         user: null,
@@ -230,12 +234,6 @@
     .btn-ghost{background:transparent; color:#eaf0ff}
     .btn[disabled]{opacity:.55; cursor:not-allowed; filter:grayscale(.25)}
 
-    /* ======================= NOTICES ======================== */
-    .notice{max-width:1200px;margin:12px auto 0;padding:12px 14px;border-radius:12px; display:none}
-    .notice.err{background:#2b0e13;border:1px solid rgba(255,0,51,.35);color:#ffd8df}
-    .notice.ok{background:#0e2b18;border:1px solid rgba(0,255,102,.25);color:#c7ffd8}
-    .notice.warn{background:#272006;border:1px solid rgba(255,204,0,.35);color:#ffeab2}
-
     /* ==================== DIAGNOSTICS ======================= */
     .drawer{max-width:1200px;margin:12px auto;padding:0 12px}
     .drawer .panel{border:1px solid var(--border);background:var(--panel);border-radius:12px;overflow:hidden}
@@ -246,7 +244,7 @@
     .drawer td{padding:6px 10px;border-bottom:1px dashed var(--borderSoft)}
     .drawer .tools{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
 
-    /* ==================== HERO / GUIDE ====================== */
+    /* ==================== HERO / GUIDE (visible) ====================== */
     .hmj-hero{border-bottom:1px solid var(--borderSoft);
       background: radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
                  radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
@@ -331,7 +329,7 @@
     </details>
   </div>
 
-  <!-- ==================== GUIDE ===================== -->
+  <!-- ==================== GUIDE (always visible) ===================== -->
   <section id="guide" class="hmj-hero" aria-label="CMS issues resolution">
     <div class="inner">
       <div class="card">
@@ -378,10 +376,10 @@
   <!-- =================== RUNTIME / BOOT ==================== -->
   <script>
     (function () {
-      const $ = (sel) => document.querySelector(sel);
+      const $  = (sel) => document.querySelector(sel);
       const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
       const state = window.__HMJ_STATE__;
+
       const el = {
         ncRoot: $("#nc-root"),
         dock: $("#dock"),
@@ -428,7 +426,7 @@
         if (el.errStack) el.errStack.textContent = String(err && err.stack || err);
       }
 
-      // -------- Script loader
+      // -------- Script loader (Decap first, then Netlify as fallback)
       const ScriptCache = new Map();
       function loadScript(src) {
         if (ScriptCache.has(src)) return ScriptCache.get(src);
@@ -440,6 +438,23 @@
           document.head.appendChild(s);
         });
         ScriptCache.set(src, p); return p;
+      }
+
+      async function ensureCMSLoaded() {
+        if (state.cmsLoaded && (window.CMS || window.DecapCMS)) {
+          setText(el.dg.cms, "✓ loaded"); return;
+        }
+        // Try Decap CMS first (maintained fork with bug fixes)
+        try {
+          await loadScript("https://unpkg.com/decap-cms@^3/dist/decap-cms.js");
+          window.CMS = window.CMS || window.DecapCMS; // normalise API
+        } catch (e) {
+          // Fallback to legacy Netlify CMS
+          await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
+        }
+        if (!window.CMS && window.DecapCMS) window.CMS = window.DecapCMS;
+        state.cmsLoaded = true;
+        setText(el.dg.cms, (window.DecapCMS ? "✓ Decap" : "✓ Netlify") + " loaded");
       }
 
       // -------- Identity helpers
@@ -460,12 +475,6 @@
       }
 
       // -------- CMS boot
-      async function ensureCMSLoaded() {
-        if (state.cmsLoaded && window.CMS) { setText(el.dg.cms, "✓ loaded"); return; }
-        await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
-        state.cmsLoaded = true; setText(el.dg.cms, "✓ loaded");
-      }
-
       async function initCMS() {
         try {
           await ensureCMSLoaded();
@@ -473,8 +482,7 @@
           el.ncRoot.classList.add("show");
           window.CMS.init({ config: window.CMS_CONFIG });
         } catch (e) {
-          captureError(e);
-          throw e;
+          captureError(e); throw e;
         }
       }
 
