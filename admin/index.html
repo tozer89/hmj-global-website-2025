@@ -29,7 +29,7 @@
             files: [
               {
                 label: "Jobs",
-                /* IMPORTANT: entry slug is this 'name' value ('jobs') */
+                /* IMPORTANT: entry slug equals this 'name' value */
                 name: "jobs",
                 file: "data/jobs.json",
                 description: "Powers the public Jobs page (/jobs.html).",
@@ -120,7 +120,7 @@
                       { label: "Keywords (searchable)", name: "keywords", widget: "text", required: false },
                       { label: "Overview", name: "overview", widget: "text", required: false },
 
-                      /* Match your JSON: arrays of strings */
+                      /* Match your JSON: arrays of plain strings */
                       {
                         label: "Responsibilities",
                         name: "responsibilities",
@@ -152,7 +152,7 @@
       window.CMS_MANUAL_INIT = true;
       window.CMS_CONFIG = cmsConfig;
 
-      // A tiny global state for diagnostics
+      // Global state for diagnostics
       window.__HMJ_STATE__ = {
         cmsLoaded: false,
         identityLoaded: false,
@@ -162,7 +162,7 @@
     })();
   </script>
 
-  <!-- Netlify Identity for login -->
+  <!-- Netlify Identity for login (optional; safe if unused) -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
   <style>
@@ -388,14 +388,12 @@
 
       const state = window.__HMJ_STATE__;
       const el = {
-        gate: $("#gate"),
         guide: $("#guide"),
         ncRoot: $("#nc-root"),
         dock: $("#dock"),
         err: $("#err"),
         errDetails: $("#errDetails"),
         errStack: $("#errStack"),
-        domainWarn: $("#domainWarn"),
         statusText: $("#statusText"),
         btnOpenEditor: $("#btnOpenEditor"),
         btnOpenEditor2: $("#btnOpenEditor2"),
@@ -412,12 +410,10 @@
         }
       };
 
-      function show(elm) { elm && (elm.style.display = ""); }
-      function hide(elm) { elm && (elm.style.display = "none"); }
       function setText(elm, txt) { if (elm) elm.textContent = txt; }
       function captureError(err) {
         state.errors.push(err);
-        show(el.errDetails);
+        if (el.errDetails) el.errDetails.open = true;
         if (el.errStack) el.errStack.textContent = String(err && err.stack || err);
       }
 
@@ -453,56 +449,39 @@
         return null;
       }
 
-      function closeIdentity() {
-        try { window.netlifyIdentity && window.netlifyIdentity.close && window.netlifyIdentity.close(); } catch {}
-        ['.netlify-identity-modal','.netlify-identity-overlay','[data-reach-dialog-overlay]','[data-reach-dialog-content]']
-          .forEach(sel => $$(sel).forEach(n => { try { n.remove(); } catch {} }));
-      }
-
-      // Robust router-jump:
-      // 1) go to the collection first, 2) then hop to the entry
-      function jumpToJobsEntry() {
-        const routeCollection = "#/collections/jobsData";
-        const routeEntry      = "#/collections/jobsData/entries/jobs";
+      // Safer routing: open the collection only (no file deep-link)
+      function openCollectionOnly() {
+        const route = "#/collections/jobsData";
         let tries = 0;
-        const maxTries = 12; // ~6s
+        const maxTries = 20; // ~10s
+
         function tick() {
           tries++;
-          if (tries === 1) {
-            location.hash = routeCollection;
-          } else {
-            location.hash = routeEntry;
-          }
-          // detect router mount by DOM
-          const ok =
+          if (location.hash !== route) location.hash = route;
+
+          const ready =
             document.querySelector('[data-testid="collection-container"]') ||
-            document.querySelector('.nc-collectionPage-root') ||
-            document.querySelector('.nc-entryEditor-root');
-          if (ok && location.hash === routeEntry) return;
+            document.querySelector('.nc-collectionPage-root');
+
+          if (ready) return;                 // stop once mounted
           if (tries < maxTries) setTimeout(tick, 500);
         }
         tick();
       }
 
-      async function initCMSAndJump() {
+      async function initCMSAndOpen() {
         await ensureCMSLoaded();
         if (!window.CMS) throw new Error("CMS global not available after load.");
         el.ncRoot.classList.add("show");
         window.CMS.init({ config: window.CMS_CONFIG });
-        jumpToJobsEntry();
+        openCollectionOnly();
       }
 
       async function openEditor() {
         setText(el.statusText, "opening editor…");
-        const u = currentUser();
-        if (!u) {
-          // If you re-enable Netlify Identity flows in future, we can prompt here.
-          // For now we proceed (Git Gateway will still use your site token).
-        }
-        closeIdentity();
-        setText(el.dg.user, u ? "✓ signed in" : "— (no identity, proceeding)");
+        setText(el.dg.user, currentUser() ? "✓ signed in" : "— (no identity, proceeding)");
         try {
-          await initCMSAndJump();
+          await initCMSAndOpen();
           setText(el.statusText, "editor ready");
           window.scrollTo({ top: 0, behavior: "smooth" });
         } catch (e) {
@@ -525,6 +504,7 @@
         setText(el.dg.id, window.netlifyIdentity ? "✓ loaded" : "—");
         setText(el.dg.user, currentUser() ? "✓ signed in" : "— signed out");
         checkJobsJSON().catch(() => {});
+
         document.getElementById("btnOpenEditor").addEventListener("click", openEditor);
         document.getElementById("btnOpenEditor2").addEventListener("click", openEditor);
         document.getElementById("btnShowDiag").addEventListener("click", () => {
@@ -533,7 +513,7 @@
         document.getElementById("btnReloadCMS").addEventListener("click", async () => {
           state.cmsLoaded = false;
           try { window.CMS && window.CMS.__reset && window.CMS.__reset(); } catch {}
-          await initCMSAndJump();
+          await initCMSAndOpen();
         });
         document.getElementById("btnReloadIdentity").addEventListener("click", async () => {
           try { window.netlifyIdentity && window.netlifyIdentity.init && window.netlifyIdentity.init(); } catch {}
@@ -541,6 +521,7 @@
         document.getElementById("btnClearLocal").addEventListener("click", () => {
           try { localStorage.clear(); sessionStorage.clear(); location.reload(); } catch {}
         });
+
         window.addEventListener("error", (e) => { captureError(e.error || e.message || e); });
         window.addEventListener("unhandledrejection", (e) => { captureError(e.reason || e); });
       }
@@ -551,9 +532,6 @@
     })();
   </script>
 
-  <!-- Pin Netlify CMS v2 (stable) -->
-  <script>
-    // Load on demand from JS above via ensureCMSLoaded()
-  </script>
+  <!-- CMS script is injected on demand by ensureCMSLoaded() -->
 </body>
 </html>
