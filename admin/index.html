@@ -7,20 +7,22 @@
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
-  <!-- We will init CMS manually after we purge its cached route -->
+  <!-- We will init CMS manually after we purge its cache -->
   <script>window.CMS_MANUAL_INIT = true;</script>
 
-  <!-- ================== INLINE CMS CONFIG (single JSON file) ================== -->
+  <!-- ================== INLINE CMS CONFIG ================== -->
   <script>
     window.CMS_CONFIG = {
       backend: { name: "git-gateway", branch: "main" },
       publish_mode: "editorial_workflow",
       media_folder: "images/uploads",
       public_folder: "/images/uploads",
+      // adding sortable_fields avoids older Netlify-CMS trying to derive from fields too early
       collections: [
         {
           label: "Jobs Data",
           name: "jobsData",
+          sortable_fields: [],
           files: [
             {
               label: "Jobs Data",
@@ -110,6 +112,9 @@
     .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--b);background:#0f162c;color:#fff;text-decoration:none;font-weight:700}
     .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
     #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
+    /* Hide CMS until ready to prevent “Error” pane flashes */
+    body.cms-wait #nc-root{visibility:hidden}
+    body.cms-ready #nc-root{visibility:visible}
     /* dock bottom-right */
     .dock{position:fixed;right:14px;bottom:14px;z-index:60;background:var(--panel);border:1px solid var(--b);border-radius:16px;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .dock input,.dock select{background:#0f1831;border:1px solid var(--b);color:#fff;border-radius:10px;padding:10px 12px}
@@ -120,7 +125,7 @@
     .nc-primary{background:var(--accent)!important;color:#fff!important;border:1px solid rgba(58,102,179,.9)!important}
   </style>
 </head>
-<body>
+<body class="cms-wait">
   <!-- top nav -->
   <div class="top">
     <div class="in">
@@ -157,82 +162,81 @@
       const SAFE_HOME = "#/";
       const ENTRY_HASH = "#/collections/jobsData/entries/jobs";
 
-      /* 1) PURGE any saved CMS state so it can’t restore a deep route */
-      function purgeCmsCache() {
+      /* Remove any persisted CMS state so it can't restore a deep route */
+      function purgeStorage() {
         try {
-          const keys = Object.keys(localStorage);
-          for (const k of keys) {
-            if (/^netlify-cms/i.test(k) || /^cms\./i.test(k) || /^editorialWorkflow/i.test(k)) {
-              localStorage.removeItem(k);
-            }
-          }
-          // hold at #/
-          if (location.hash !== SAFE_HOME) location.replace(SAFE_HOME);
+          const drop = k =>
+            /^netlify-cms/i.test(k) ||
+            /^cms\./i.test(k) ||
+            /^editorialWorkflow/i.test(k) ||
+            /^redux/i.test(k) ||
+            /^persist:/i.test(k);
+          for (const k of Object.keys(localStorage))  if (drop(k)) localStorage.removeItem(k);
+          for (const k of Object.keys(sessionStorage)) if (drop(k)) sessionStorage.removeItem(k);
         } catch(_) {}
+        if (location.hash !== SAFE_HOME) location.replace(SAFE_HOME);
       }
 
-      /* 2) tiny helper to load CMS script after purge */
       function loadScript(src){
         return new Promise((res, rej)=>{
-          const s = document.createElement("script");
-          s.src = src; s.onload = res; s.onerror = rej;
+          const s=document.createElement("script");
+          s.src=src; s.onload=res; s.onerror=rej;
           document.head.appendChild(s);
         });
       }
 
-      /* 3) identity ready (not strictly required, but nice) */
       function identityReady(){
         return new Promise(resolve=>{
           if (!window.netlifyIdentity) return resolve();
-          if (window.netlifyIdentity.currentUser()) return resolve();
           window.netlifyIdentity.on && window.netlifyIdentity.on("init", resolve);
-          // trigger init
           window.netlifyIdentity.init && window.netlifyIdentity.init();
-          // safety timeout
-          setTimeout(resolve, 1200);
+          setTimeout(resolve, 1000);
         });
       }
 
-      /* 4) when CMS state has collections */
       function storeReady(){
         try{
           const st = window.CMS && window.CMS.getState && window.CMS.getState();
-          const colls = st && st.get && st.get("collections");
-          return !!(colls && colls.size && colls.get("jobsData"));
+          return !!(st && st.get && st.get("collections") && st.get("collections").get("jobsData"));
         }catch(_){ return false; }
       }
-      function waitForStore(timeout=10000){
+      function waitForStore(ms=10000){
         return new Promise((res, rej)=>{
           const t0 = Date.now();
-          (function tick(){
+          (function loop(){
             if (storeReady()) return res();
-            if (Date.now()-t0 > timeout) return rej(new Error("CMS is still starting—try again in a second."));
-            // while waiting, keep the hash at #/ so it can’t deep route
+            if (Date.now()-t0>ms) return rej(new Error("CMS is still starting—try again in a second."));
             if (/^#\/collections\//.test(location.hash)) location.replace(SAFE_HOME);
-            setTimeout(tick, 100);
+            setTimeout(loop, 80);
           })();
         });
       }
 
-      /* 5) boot sequence */
       (async function boot(){
-        purgeCmsCache();                     // stop restore of old route
-        await identityReady();               // (optional) wait briefly for identity
+        purgeStorage();
+        await identityReady();
         await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
+
         window.CMS && window.CMS.init({ config: window.CMS_CONFIG });
 
-        // only after hydration, allow navigation
         try { await waitForStore(); }
         catch(e){ alert(e.message); }
 
-        // Wire UI controls
-        document.getElementById("btnOpenEditor")?.addEventListener("click", async ()=>{
+        // safe to show UI now
+        document.body.classList.remove("cms-wait");
+        document.body.classList.add("cms-ready");
+
+        // go straight to the file entry editor
+        if (location.hash !== ENTRY_HASH) location.replace(ENTRY_HASH);
+
+        // buttons
+        document.getElementById("btnOpenEditor")?.addEventListener("click", ()=>{
           if (!storeReady()) { alert("CMS is still starting—try again in a second."); return; }
-          location.hash = ENTRY_HASH;
+          location.replace(ENTRY_HASH);
         });
       })();
 
-      /* Extras */
+      // misc ui helpers
       document.getElementById("btnSignOut")?.addEventListener("click", ()=>{
         try{ window.netlifyIdentity && window.netlifyIdentity.logout(); }catch{}
         try{ localStorage.clear(); sessionStorage.clear(); }catch{}
@@ -251,7 +255,7 @@
         alert("Use “Add item” inside Jobs to create a new role.\n(JSON mode doesn’t auto-duplicate the block.)");
       };
 
-      // If someone manually navigates during boot, keep them at #/
+      // if someone changes the hash too early, keep it at home
       window.addEventListener("hashchange", ()=>{
         if (!storeReady() && /^#\/collections\//.test(location.hash)) location.replace(SAFE_HOME);
       });
