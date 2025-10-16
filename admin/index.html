@@ -35,14 +35,22 @@
                     name: "jobs",
                     widget: "list",
                     collapsed: true,
+                    label_singular: "Job",
                     summary: "Job entry",
                     fields: [
-                      { label: "ID (anchor)", name: "id", widget: "string",
+                      {
+                        label: "ID (anchor)",
+                        name: "id",
+                        widget: "string",
                         hint: "Lowercase, numbers, hyphens only (e.g. mep-qs-dublin)",
-                        pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only."] },
+                        pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only."]
+                      },
                       { label: "Published", name: "published", widget: "boolean", default: true },
                       { label: "Title", name: "title", widget: "string" },
-                      { label: "Status", name: "status", widget: "select",
+                      {
+                        label: "Status",
+                        name: "status",
+                        widget: "select",
                         options: [
                           { label: "Live — Taking Candidates", value: "live" },
                           { label: "Interviewing — Shortlist in Review", value: "interviewing" },
@@ -50,7 +58,10 @@
                         ],
                         default: "live"
                       },
-                      { label: "Section", name: "section", widget: "select",
+                      {
+                        label: "Section",
+                        name: "section",
+                        widget: "select",
                         options: [
                           { label: "Data Centre — Commercial", value: "commercial" },
                           { label: "Data Centre — Engineering & Management", value: "dc" },
@@ -60,12 +71,27 @@
                         ],
                         default: "dc"
                       },
-                      { label: "Discipline", name: "discipline", widget: "select",
-                        options: ["Data Centre", "Life Sciences", "Pharma", "Substation"], default: "Data Centre" },
-                      { label: "Employment Type", name: "type", widget: "select",
-                        options: [{label:"Permanent",value:"permanent"},{label:"Contract",value:"contract"}],
-                        default: "permanent" },
-                      { label: "Location Code", name: "locationCode", widget: "select",
+                      {
+                        label: "Discipline",
+                        name: "discipline",
+                        widget: "select",
+                        options: ["Data Centre", "Life Sciences", "Pharma", "Substation"],
+                        default: "Data Centre"
+                      },
+                      {
+                        label: "Employment Type",
+                        name: "type",
+                        widget: "select",
+                        options: [
+                          { label: "Permanent", value: "permanent" },
+                          { label: "Contract", value: "contract" }
+                        ],
+                        default: "permanent"
+                      },
+                      {
+                        label: "Location Code",
+                        name: "locationCode",
+                        widget: "select",
                         options: [
                           { label: "Amsterdam, Netherlands", value: "amsterdam" },
                           { label: "Dublin, Ireland", value: "dublin" },
@@ -84,10 +110,26 @@
                       { label: "Location Text", name: "locationText", widget: "string", required: false },
                       { label: "Keywords", name: "keywords", widget: "text", required: false },
                       { label: "Overview", name: "overview", widget: "text", required: false },
-                      { label: "Responsibilities", name: "responsibilities", widget: "list", required: false,
-                        field: { label: "Item", name: "item", widget: "string" } },
-                      { label: "Requirements", name: "requirements", widget: "list", required: false,
-                        field: { label: "Item", name: "item", widget: "string" } },
+
+                      /* KEY FIX: your JSON stores these as arrays of strings,
+                         so use a simple list (no nested field object). */
+                      {
+                        label: "Responsibilities",
+                        name: "responsibilities",
+                        widget: "list",
+                        required: false,
+                        collapsed: false,
+                        hint: "Bulleted list. Leave empty to hide."
+                      },
+                      {
+                        label: "Requirements",
+                        name: "requirements",
+                        widget: "list",
+                        required: false,
+                        collapsed: false,
+                        hint: "Bulleted list. Leave empty to hide."
+                      },
+
                       { label: "Apply URL (optional)", name: "applyUrl", widget: "string", required: false }
                     ]
                   }
@@ -108,12 +150,10 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
   <style>
-    :root{--ink:#0f1322;--bg:#0b0f1c;--panel:#0f162c;--panelAlt:#111833;--accent:#3A66B3;
-      --muted:#9aa5c4;--border:rgba(255,255,255,.12);--borderSoft:rgba(255,255,255,.08);
-      --ok:#1f7e39;--warn:#7a5b00;--danger:#8a1f2b;--shadow:0 10px 30px rgba(0,0,0,.35);
-      --round:14px;--roundLg:18px;--roundXl:22px;--dockH:68px}
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    :root{--ink:#0f1322;--bg:#0b0f1c;--panel:#0f162c;--panelAlt:#111833;--accent:#3A66B3;--muted:#9aa5c4;
+      --border:rgba(255,255,255,.12);--borderSoft:rgba(255,255,255,.08);--ok:#1f7e39;--warn:#7a5b00;--danger:#8a1f2b;
+      --shadow:0 10px 30px rgba(0,0,0,.35);--round:14px;--roundLg:18px;--roundXl:22px;--dockH:68px}
+    *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;color:#eaf0ff;font-family:Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;background:var(--ink);
       -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     a{color:#cfe0ff} code,.kbd{font-family:ui-monospace,Menlo,Consolas,"SF Mono","Cascadia Code",monospace}
@@ -280,15 +320,8 @@
         if(!window.CMS) throw new Error("CMS global missing after load");
         el.ncRoot.classList.add("show");
         window.CMS.init({ config: window.CMS_CONFIG });
-
-        // *** KEY FIX: jump straight into the file editor route ***
         const target = "#/collections/jobsData/entries/jobsFile";
-        if (location.hash !== target) {
-          location.hash = target;
-        } else {
-          // If hash already set (second open), force internal navigation too:
-          try { window.CMS && window.CMS.getState && window.CMS.getState(); } catch {}
-        }
+        if (location.hash !== target) location.hash = target;
       }
 
       async function waitForLogin(ms=15000){
@@ -305,8 +338,8 @@
         catch(e){ captureError(e); setText(el.statusText,"error — see Diagnostics"); }
       }
 
-      // diagnostics + bindings
       async function checkJSON(){ try{ const r=await fetch("/data/jobs.json",{cache:"no-store"}); setText(el.dg.json, r.ok ? "✓ reachable" : ("✗ "+r.status)); }catch{ setText(el.dg.json,"✗ fetch failed"); } }
+
       function main(){
         setText(el.dg.host,location.hostname);
         setText(el.dg.id, window.netlifyIdentity ? "✓ loaded" : "—");
