@@ -23,22 +23,30 @@
         public_folder: "/images/uploads",
         load_config_file: false,
 
-        /* IMPORTANT: explicitly provide an empty sortable_fields list
-           so Netlify CMS doesn't try to call .toArray() on undefined */
         collections: [
           {
             label: "Jobs Data",
             name: "jobsData",
-            sortable_fields: [],            /* <-- key fix */
+
+            /* Harden Netlify CMS selectors that assume Immutable lists/maps */
+            sortable_fields: [],      /* prevents selectSortableFields .toArray() error */
+            view_filters: [],         /* prevents selectViewFilters .toJS() error */
+            view_groups: [],          /* prevents selectViewGroups .toJS() error */
+
+            description: "Single JSON file powering /jobs.html.",
             files: [
               {
                 label: "Jobs",
-                name: "jobs",               /* entry slug */
+                name: "jobs",                 /* entry slug */
                 file: "data/jobs.json",
-                description: "Powers the public Jobs page (/jobs.html).",
                 format: "json",
                 editor: { preview: false },
-                sortable_fields: [],        /* <-- extra safety */
+
+                /* Apply the same hardening at file-level for safety */
+                sortable_fields: [],
+                view_filters: [],
+                view_groups: [],
+
                 fields: [
                   {
                     label: "Jobs",
@@ -46,20 +54,17 @@
                     widget: "list",
                     label_singular: "Job",
                     collapsed: true,
-                    summary: "Job entry",
+                    summary: "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
                     fields: [
                       {
                         label: "ID (unique, used as URL anchor)",
                         name: "id",
                         widget: "string",
                         hint: "Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
-                        pattern: [
-                          "^[a-z0-9-]+$",
-                          "Use lowercase letters, numbers, and hyphens only."
-                        ]
+                        pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only."]
                       },
-                      { label: "Published", name: "published", widget: "boolean", default: true },
-                      { label: "Title", name: "title", widget: "string" },
+                      { label: "Published", name: "published", widget: "boolean", default: true, hint: "Turn OFF to hide this role." },
+                      { label: "Title", name: "title", widget: "string", hint: "Shown as the card heading." },
                       {
                         label: "Status (badge shown on card)",
                         name: "status",
@@ -69,7 +74,8 @@
                           { label: "Interviewing — Shortlist in Review", value: "interviewing" },
                           { label: "Closed — Not Accepting New Applicants", value: "closed" }
                         ],
-                        default: "live"
+                        default: "live",
+                        hint: "Also used by the Status filter on the Jobs page."
                       },
                       {
                         label: "Section (which board/column to show in)",
@@ -82,14 +88,16 @@
                           { label: "Life Sciences & Pharma", value: "pharma" },
                           { label: "ICT & Commissioning", value: "ict" }
                         ],
-                        default: "dc"
+                        default: "dc",
+                        hint: "Matches the big section headings on the Jobs page."
                       },
                       {
                         label: "Discipline (shown as a tag)",
                         name: "discipline",
                         widget: "select",
                         options: ["Data Centre", "Life Sciences", "Pharma", "Substation"],
-                        default: "Data Centre"
+                        default: "Data Centre",
+                        hint: "Appears as the tag and powers the Discipline filter."
                       },
                       {
                         label: "Employment Type (filter chip)",
@@ -99,7 +107,8 @@
                           { label: "Permanent", value: "permanent" },
                           { label: "Contract", value: "contract" }
                         ],
-                        default: "permanent"
+                        default: "permanent",
+                        hint: "Used by the Employment filter on the Jobs page."
                       },
                       {
                         label: "Location Code (drives the Location filter)",
@@ -118,17 +127,32 @@
                           { label: "UK (Various)", value: "uk" },
                           { label: "Europe (Travel)", value: "europe" }
                         ],
-                        default: "uk"
+                        default: "uk",
+                        hint: "Must match site Location filter codes."
                       },
-                      { label: "Location Text", name: "locationText", widget: "string", required: false },
-                      { label: "Keywords", name: "keywords", widget: "text", required: false },
-                      { label: "Overview", name: "overview", widget: "text", required: false },
+                      { label: "Location Text (what candidates see)", name: "locationText", widget: "string", required: false, hint: "e.g., “Frankfurt, Germany”. Auto-filled by site if blank." },
+                      { label: "Keywords (searchable)", name: "keywords", widget: "text", required: false, hint: "Comma/space-separated, e.g. “P6, commissioning, NEC”." },
+                      { label: "Overview", name: "overview", widget: "text", required: false, hint: "2–4 lines introducing the role." },
 
-                      /* Match your JSON: arrays of plain strings */
-                      { label: "Responsibilities", name: "responsibilities", widget: "list", required: false, collapsed: false },
-                      { label: "Requirements",     name: "requirements",     widget: "list", required: false, collapsed: false },
+                      /* Arrays of plain strings to match your JSON */
+                      {
+                        label: "Responsibilities",
+                        name: "responsibilities",
+                        widget: "list",
+                        required: false,
+                        collapsed: false,
+                        hint: "Bulleted list. Leave empty to hide."
+                      },
+                      {
+                        label: "Requirements",
+                        name: "requirements",
+                        widget: "list",
+                        required: false,
+                        collapsed: false,
+                        hint: "Bulleted list. Leave empty to hide."
+                      },
 
-                      { label: "Apply URL (optional)", name: "applyUrl", widget: "string", required: false }
+                      { label: "Apply URL (optional)", name: "applyUrl", widget: "string", required: false, hint: "Leave blank to use the default HMJ apply form." }
                     ]
                   }
                 ]
@@ -141,11 +165,16 @@
       window.CMS_MANUAL_INIT = true;
       window.CMS_CONFIG = cmsConfig;
 
-      window.__HMJ_STATE__ = { cmsLoaded:false, identityLoaded:false, user:null, errors:[] };
+      window.__HMJ_STATE__ = {
+        cmsLoaded: false,
+        identityLoaded: false,
+        user: null,
+        errors: [],
+      };
     })();
   </script>
 
-  <!-- Netlify Identity (optional; harmless if unused) -->
+  <!-- Netlify Identity (email login) -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
   <style>
@@ -156,25 +185,44 @@
       --ok:#1f7e39; --warn:#7a5b00; --danger:#8a1f2b; --shadow:0 10px 30px rgba(0,0,0,.35);
       --round:14px; --roundLg:18px; --roundXl:22px; --dockH:68px;
     }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;color:#eaf0ff;font-family: Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;background: var(--ink);
-      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-    a{color:#cfe0ff} code,.kbd{font-family:ui-monospace,Menlo,Consolas,"SF Mono","Cascadia Code",monospace}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;color:#eaf0ff;
+      font-family: Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
+      background: var(--ink);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    a{color:#cfe0ff}
+    code,.kbd{font-family:ui-monospace,Menlo,Consolas,"SF Mono","Cascadia Code",monospace}
 
     /* ======================= TOP BAR ======================== */
-    .hmj-topbar{position:sticky; top:0; z-index:5000;
+    .hmj-topbar{
+      position:sticky; top:0; z-index:5000;
       background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));
-      border-bottom:1px solid var(--borderSoft); backdrop-filter:blur(6px)}
-    .hmj-topbar .inner{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between}
-    .hmj-brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#eaf0ff;letter-spacing:.2px}
+      border-bottom:1px solid var(--borderSoft);
+      backdrop-filter:blur(6px);
+    }
+    .hmj-topbar .inner{
+      max-width:1200px; margin:0 auto; padding:12px 16px;
+      display:flex; align-items:center; gap:12px; justify-content:space-between;
+    }
+    .hmj-brand{display:flex; align-items:center; gap:10px; font-weight:800; color:#eaf0ff; letter-spacing:.2px}
     .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
     .hmj-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;text-decoration:none;font-weight:700;
-      border:1px solid var(--border);background:transparent;color:#eaf0ff;white-space:nowrap;cursor:pointer;transition:transform .15s, box-shadow .15s, background .15s, border-color .15s}
-    .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
-    .btn-blue{background:var(--accent);color:#fff;border-color:rgba(58,102,179,.85)}
-    .btn-dark{background:#0f162c;color:#fff}.btn-ghost{background:transparent;color:#eaf0ff}
-    .btn[disabled]{opacity:.55;cursor:not-allowed;filter:grayscale(.25)}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 14px;border-radius:12px;
+      text-decoration:none; font-weight:700;
+      border:1px solid var(--border); background:transparent; color:#eaf0ff;
+      white-space:nowrap; cursor:pointer; transition:transform .15s, box-shadow .15s, background .15s, border-color .15s;
+    }
+    .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
+    .btn-blue{background:var(--accent); color:#fff; border-color:rgba(58,102,179,.85)}
+    .btn-dark{background:#0f162c; color:#fff}
+    .btn-ghost{background:transparent; color:#eaf0ff}
+    .btn[disabled]{opacity:.55; cursor:not-allowed; filter:grayscale(.25)}
 
     /* ======================= NOTICES ======================== */
     .notice{max-width:1200px;margin:12px auto 0;padding:12px 14px;border-radius:12px; display:none}
@@ -193,21 +241,37 @@
     .drawer .tools{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
 
     /* ==================== HERO / GUIDE ====================== */
-    .hmj-hero{border-bottom:1px solid var(--borderSoft);
-      background:radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
-                 radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
-                 linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
-    .hmj-hero .inner{max-width:1200px;margin:0 auto;padding:26px 16px 8px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    .hmj-hero{
+      border-bottom:1px solid var(--borderSoft);
+      background:
+        radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
+        radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+    }
+    .hmj-hero .inner{
+      max-width:1200px;margin:0 auto;padding:26px 16px 8px;
+      display:grid;grid-template-columns:1.1fr .9fr;gap:18px;
+    }
     .card{background:rgba(255,255,255,.04);border:1px solid var(--borderSoft);border-radius:18px;padding:18px}
-    .hero-title{margin:0 0 8px 0;font-size:1.38rem;line-height:1.3}.hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
-    .hero-list{margin:0;padding:0 0 0 18px;line-height:1.5}.kbd{font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid var(--border)}
+    .hero-title{margin:0 0 8px 0;font-size:1.38rem;line-height:1.3}
+    .hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
+    .hero-list{margin:0;padding:0 0 0 18px;line-height:1.5}
+    .kbd{font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid var(--border)}
+    .note{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--border);font-size:.8rem;color:#dce6ff;margin-top:2px}
 
     /* ==================== ACTION DOCK ======================= */
-    .dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:4500;background:var(--panel);border:1px solid var(--border);
-      border-radius:16px;padding:10px;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .dock{
+      position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+      z-index:4500; background:var(--panel); border:1px solid var(--border);
+      border-radius:16px; padding:10px; box-shadow:var(--shadow);
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    }
     .dock .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
-    .dock input[type="search"],.dock input[type="text"]{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px}
-    .dock .tiny{font-size:.85rem;color:#bcd0ff}.dock .divider{height:30px;width:1px;background:var(--borderSoft);margin:0 2px}
+    .dock input[type="search"], .dock input[type="text"]{
+      background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px
+    }
+    .dock .tiny{font-size:.85rem;color:#bcd0ff}
+    .dock .divider{height:30px;width:1px;background:var(--borderSoft);margin:0 2px}
 
     /* Spacing so dock never covers CMS controls */
     .cms-frame{max-width:1200px;margin:12px auto calc(28px + var(--dockH)); padding:0 12px}
@@ -221,7 +285,8 @@
     .nc-entryCard:hover{box-shadow:0 10px 26px rgba(0,0,0,.25)}
 
     /* CMS mount (only shown when editor is opened) */
-    #nc-root{display:none} #nc-root.show{display:block}
+    #nc-root{display:none}
+    #nc-root.show{display:block}
   </style>
 </head>
 <body>
@@ -323,6 +388,7 @@
   <script>
     (function () {
       const $ = (sel) => document.querySelector(sel);
+
       const state = window.__HMJ_STATE__;
       const el = {
         ncRoot: $("#nc-root"),
@@ -401,8 +467,7 @@
         el.ncRoot.classList.add("show");
         window.CMS.init({ config: window.CMS_CONFIG });
 
-        // Hold at neutral root to avoid rendering the collection list (which
-        // is where selectSortableFields normally explodes for files collections)
+        // Hold at neutral root while internal state hydrates
         if (!location.hash || location.hash.startsWith("#/collections")) {
           location.hash = "#/";
         }
@@ -424,7 +489,8 @@
       function main(){
         setText(el.dg.host, location.hostname);
         setText(el.dg.id, window.netlifyIdentity ? "✓ loaded" : "—");
-        setText(el.dg.user, "— (proceeding)");
+        // We won’t block on identity here; Git Gateway handles auth for CMS.
+        setText(el.dg.user, localStorage.getItem('gotrue.user') ? "✓ signed in" : "— (proceeding)");
 
         checkJobsJSON().catch(()=>{});
 
