@@ -24,7 +24,7 @@
             files: [
               {
                 label: "Jobs",
-                name: "jobsFile",
+                name: "jobsFile",            /* internal name (not the entry slug) */
                 file: "data/jobs.json",
                 description: "Powers the public Jobs page (/jobs.html).",
                 format: "json",
@@ -34,8 +34,8 @@
                     label: "Jobs",
                     name: "jobs",
                     widget: "list",
-                    collapsed: true,
                     label_singular: "Job",
+                    collapsed: true,
                     summary: "Job entry",
                     fields: [
                       {
@@ -111,8 +111,7 @@
                       { label: "Keywords", name: "keywords", widget: "text", required: false },
                       { label: "Overview", name: "overview", widget: "text", required: false },
 
-                      /* KEY FIX: your JSON stores these as arrays of strings,
-                         so use a simple list (no nested field object). */
+                      /* Match your JSON: arrays of strings (no nested field object) */
                       {
                         label: "Responsibilities",
                         name: "responsibilities",
@@ -150,47 +149,94 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
   <style>
-    :root{--ink:#0f1322;--bg:#0b0f1c;--panel:#0f162c;--panelAlt:#111833;--accent:#3A66B3;--muted:#9aa5c4;
-      --border:rgba(255,255,255,.12);--borderSoft:rgba(255,255,255,.08);--ok:#1f7e39;--warn:#7a5b00;--danger:#8a1f2b;
-      --shadow:0 10px 30px rgba(0,0,0,.35);--round:14px;--roundLg:18px;--roundXl:22px;--dockH:68px}
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;color:#eaf0ff;font-family:Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;background:var(--ink);
-      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-    a{color:#cfe0ff} code,.kbd{font-family:ui-monospace,Menlo,Consolas,"SF Mono","Cascadia Code",monospace}
-    .hmj-topbar{position:sticky;top:0;z-index:5000;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));
-      border-bottom:1px solid var(--borderSoft);backdrop-filter:blur(6px)}
-    .hmj-topbar .inner{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between}
-    .hmj-brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#eaf0ff;letter-spacing:.2px}
+    :root{--ink:#0f1322;--bg:#0b0f1c;--panel:#0f162c;--panelAlt:#111833;--accent:#3A66B3;
+      --muted:#9aa5c4;--border:rgba(255,255,255,.12);--borderSoft:rgba(255,255,255,.08);
+      --ok:#1f7e39;--warn:#7a5b00;--danger:#8a1f2b;--shadow:0 10px 30px rgba(0,0,0,.35);
+      --round:14px;--roundLg:18px;--roundXl:22px;--dockH:68px}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;color:#eaf0ff;
+      font-family: Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
+      background: var(--ink);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    a{color:#cfe0ff}
+    code,.kbd{font-family:ui-monospace,Menlo,Consolas,"SF Mono","Cascadia Code",monospace}
+
+    .hmj-topbar{
+      position:sticky; top:0; z-index:5000;
+      background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));
+      border-bottom:1px solid var(--borderSoft);
+      backdrop-filter:blur(6px);
+    }
+    .hmj-topbar .inner{
+      max-width:1200px; margin:0 auto; padding:12px 16px;
+      display:flex; align-items:center; gap:12px; justify-content:space-between;
+    }
+    .hmj-brand{display:flex; align-items:center; gap:10px; font-weight:800; color:#eaf0ff; letter-spacing:.2px}
     .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
     .hmj-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;text-decoration:none;font-weight:700;border:1px solid var(--border);
-      background:transparent;color:#eaf0ff;white-space:nowrap;cursor:pointer;transition:.15s}
-    .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
-    .btn-blue{background:var(--accent);color:#fff;border-color:rgba(58,102,179,.85)}
-    .btn-dark{background:#0f162c;color:#fff}.btn-ghost{background:transparent;color:#eaf0ff}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 14px;border-radius:12px;
+      text-decoration:none; font-weight:700;
+      border:1px solid var(--border); background:transparent; color:#eaf0ff;
+      white-space:nowrap; cursor:pointer; transition:transform .15s, box-shadow .15s, background .15s, border-color .15s;
+    }
+    .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
+    .btn-blue{background:var(--accent); color:#fff; border-color:rgba(58,102,179,.85)}
+    .btn-dark{background:#0f162c; color:#fff}
+    .btn-ghost{background:transparent; color:#eaf0ff}
+    .btn[disabled]{opacity:.55; cursor:not-allowed; filter:grayscale(.25)}
+
     .drawer{max-width:1200px;margin:12px auto;padding:0 12px}
     .drawer .panel{border:1px solid var(--border);background:var(--panel);border-radius:12px;overflow:hidden}
     .drawer summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:800}
     .drawer summary::-webkit-details-marker{display:none}
     .drawer .content{padding:12px 14px;border-top:1px solid var(--borderSoft);font-size:.95rem;color:#cfe3ff;line-height:1.45}
-    .drawer table{border-collapse:collapse;width:100%;max-width:800px}.drawer td{padding:6px 10px;border-bottom:1px dashed var(--borderSoft)}
-    .hmj-hero{border-bottom:1px solid var(--borderSoft);
-      background:radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
-               radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
-               linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
-    .hmj-hero .inner{max-width:1200px;margin:0 auto;padding:26px 16px 8px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    .drawer table{border-collapse:collapse;width:100%;max-width:800px}
+    .drawer td{padding:6px 10px;border-bottom:1px dashed var(--borderSoft)}
+    .drawer .tools{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+
+    .hmj-hero{
+      border-bottom:1px solid var(--borderSoft);
+      background:
+        radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
+        radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+    }
+    .hmj-hero .inner{
+      max-width:1200px;margin:0 auto;padding:26px 16px 8px;
+      display:grid;grid-template-columns:1.1fr .9fr;gap:18px;
+    }
     .card{background:rgba(255,255,255,.04);border:1px solid var(--borderSoft);border-radius:18px;padding:18px}
-    .hero-title{margin:0 0 8px 0;font-size:1.38rem;line-height:1.3}.hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
-    .hero-list{margin:0;padding:0 0 0 18px;line-height:1.5}.kbd{font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid var(--border)}
-    .dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:4500;background:var(--panel);border:1px solid var(--border);
-      border-radius:16px;padding:10px;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .hero-title{margin:0 0 8px 0;font-size:1.38rem;line-height:1.3}
+    .hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
+    .hero-list{margin:0;padding:0 0 0 18px;line-height:1.5}
+    .kbd{font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid var(--border)}
+
+    .dock{
+      position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+      z-index:4500; background:var(--panel); border:1px solid var(--border);
+      border-radius:16px; padding:10px; box-shadow:var(--shadow);
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    }
     .dock .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
-    .dock input[type="search"],.dock input[type="text"]{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px}
-    .cms-frame{max-width:1200px;margin:12px auto calc(28px + var(--dockH));padding:0 12px}
+    .dock input[type="search"], .dock input[type="text"]{
+      background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px
+    }
+    .cms-frame{max-width:1200px;margin:12px auto calc(28px + var(--dockH)); padding:0 12px}
+
+    /* CMS chrome tweaks */
     .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
     .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
     .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
-    #nc-root{display:none} #nc-root.show{display:block}
+    .nc-button{border-radius:12px !important;font-weight:700 !important}
+    .nc-entryCard, .nc-widgetControl, .nc-widgetPreview{border-radius:14px !important;border-color:rgba(26,26,46,.2) !important}
+    .nc-entryCard:hover{box-shadow:0 10px 26px rgba(0,0,0,.25)}
+    #nc-root{display:none}
+    #nc-root.show{display:block}
   </style>
 </head>
 <body>
@@ -209,11 +255,13 @@
     </div>
   </div>
 
+  <!-- Diagnostics -->
   <div class="drawer" id="diagWrap">
     <details class="panel" id="diagPanel" open>
       <summary>⚙ Diagnostics & tools</summary>
       <div class="content">
-        <table><tbody>
+        <table>
+          <tbody>
           <tr><td>Host</td><td><code id="dg-host"></code></td></tr>
           <tr><td>Identity widget loaded</td><td id="dg-id">—</td></tr>
           <tr><td>Login state</td><td id="dg-user">—</td></tr>
@@ -221,19 +269,23 @@
           <tr><td>Jobs JSON reachable</td><td id="dg-json">—</td></tr>
           <tr><td>Backend / branch</td><td><code>git-gateway @ main</code></td></tr>
           <tr><td>Jobs file</td><td><code>data/jobs.json</code></td></tr>
-        </tbody></table>
+          </tbody>
+        </table>
         <div class="tools">
           <button id="btnDiagRun" class="btn btn-dark" type="button">Run checks</button>
-          <button id="btnReloadCMS" class="btn btn-dark" type="button">Reload CMS script</button>
-          <button id="btnReloadIdentity" class="btn btn-dark" type="button">Reload Identity</button>
-          <button id="btnClearLocal" class="btn btn-dark" type="button">Clear local cache</button>
+          <button id="btnReloadCMS" class="btn btn-dark" type="button" title="Re-inject CMS script if blocked">Reload CMS script</button>
+          <button id="btnReloadIdentity" class="btn btn-dark" type="button" title="Reload Netlify Identity">Reload Identity</button>
+          <button id="btnClearLocal" class="btn btn-dark" type="button" title="Clear CMS cache & localStorage">Clear local cache</button>
         </div>
-        <details id="errDetails" style="margin-top:12px;"><summary>Error</summary>
-          <pre id="errStack" style="white-space:pre-wrap;"></pre></details>
+        <details id="errDetails" style="margin-top:12px;">
+          <summary>Error</summary>
+          <pre id="errStack" style="white-space:pre-wrap;"></pre>
+        </details>
       </div>
     </details>
   </div>
 
+  <!-- Guide -->
   <section id="guide" class="hmj-hero" aria-label="CMS issues resolution">
     <div class="inner">
       <div class="card">
@@ -255,106 +307,180 @@
     </div>
   </section>
 
+  <!-- CMS mount -->
   <div id="nc-root" class="cms-frame" role="region" aria-label="Netlify CMS"></div>
 
+  <!-- Quick-action dock -->
   <div id="dock" class="dock" role="region" aria-label="Quick actions">
     <input id="q" type="search" placeholder="Search jobs (title, location, status)…" />
-    <div class="divider"></div>
-    <select id="tpl" class="select"><option value="">Templates:</option><option>BMS Engineer</option><option>CSA QS</option><option>Planner</option></select>
+    <div class="divider" aria-hidden="true"></div>
+    <select id="tpl" class="select" aria-label="Templates">
+      <option value="">Templates:</option>
+      <option>BMS Engineer</option>
+      <option>CSA QS</option>
+      <option>Planner</option>
+    </select>
     <button id="btnPreview" class="btn">Preview</button>
     <button id="btnTop" class="btn">↑ Top</button>
     <button id="btnDuplicate" class="btn">Duplicate current</button>
-    <input id="anchor" type="text" placeholder="anchor-id (e.g., mep-qs-dublin)" />
+    <input id="anchor" type="text" placeholder="anchor-id (e.g., mep-qs-dublin)" aria-label="Anchor id" />
     <button id="btnOpenAnchor" class="btn">Open anchor</button>
     <button id="btnCopy" class="btn">Copy</button>
     <span class="tiny">Anchors look like <code>/jobs.html#electrical-supervisor-uk</code></span>
   </div>
 
+  <!-- Runtime -->
   <script>
     (function () {
-      const $  = (s) => document.querySelector(s);
+      const $ = (s) => document.querySelector(s);
       const $$ = (s) => Array.from(document.querySelectorAll(s));
+
       const state = window.__HMJ_STATE__;
       const el = {
         ncRoot: $("#nc-root"),
-        errDetails: $("#errDetails"), errStack: $("#errStack"),
+        errDetails: $("#errDetails"),
+        errStack: $("#errStack"),
         statusText: $("#statusText"),
-        btnOpenEditor: $("#btnOpenEditor"), btnOpenEditor2: $("#btnOpenEditor2"),
-        btnLogout: $("#btnLogout"), btnShowDiag: $("#btnShowDiag"),
+        btnOpenEditor: $("#btnOpenEditor"),
+        btnOpenEditor2: $("#btnOpenEditor2"),
+        btnShowDiag: $("#btnShowDiag"),
         diagWrap: $("#diagWrap"),
-        dg: { host: $("#dg-host"), id: $("#dg-id"), user: $("#dg-user"), cms: $("#dg-cms"), json: $("#dg-json") },
+        dg: {
+          host: $("#dg-host"), id: $("#dg-id"), user: $("#dg-user"), cms: $("#dg-cms"), json: $("#dg-json")
+        }
       };
 
-      function setText(n,t){ if(n) n.textContent=t; }
-      function show(n){ if(n) n.style.display=""; }
-      function captureError(e){ state.errors.push(e); show(el.errDetails); if(el.errStack) el.errStack.textContent=String((e&&e.stack)||e); }
-
-      // load Decap first, fallback to Netlify
-      const cache=new Map();
-      function loadScript(src){
-        if(cache.has(src)) return cache.get(src);
-        const p=new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.async=true;
-          s.onload=()=>res(); s.onerror=()=>rej(new Error("Failed loading script: "+src)); document.head.appendChild(s);});
-        cache.set(src,p); return p;
+      function setText(n, t) { if (n) n.textContent = t; }
+      function show(n) { if (n) n.style.display = ""; }
+      function captureError(err) {
+        state.errors.push(err);
+        show(el.errDetails);
+        if (el.errStack) el.errStack.textContent = String(err && err.stack || err);
       }
-      async function ensureCMSLoaded(){
-        if(state.cmsLoaded && (window.CMS||window.DecapCMS)){ setText(el.dg.cms,"✓ loaded"); return; }
-        try{
-          await loadScript("https://unpkg.com/decap-cms@^3/dist/decap-cms.js");
-          window.CMS=window.CMS||window.DecapCMS;
-          setText(el.dg.cms,"✓ Decap loaded");
-        }catch(_){
-          await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
-          setText(el.dg.cms,"✓ Netlify loaded");
+
+      // Script loader with cache
+      const ScriptCache = new Map();
+      function loadScript(src) {
+        if (ScriptCache.has(src)) return ScriptCache.get(src);
+        const p = new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = src; s.async = true;
+          s.onload = () => resolve();
+          s.onerror = () => reject(new Error("Failed loading script: " + src));
+          document.head.appendChild(s);
+        });
+        ScriptCache.set(src, p);
+        return p;
+      }
+
+      async function ensureCMSLoaded() {
+        if (state.cmsLoaded && (window.CMS || window.DecapCMS)) {
+          setText(el.dg.cms, "✓ loaded");
+          return;
         }
-        state.cmsLoaded=true;
+        try {
+          await loadScript("https://unpkg.com/decap-cms@^3/dist/decap-cms.js");
+          window.CMS = window.CMS || window.DecapCMS;
+          setText(el.dg.cms, "✓ Decap loaded");
+        } catch (_) {
+          await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
+          setText(el.dg.cms, "✓ Netlify loaded");
+        }
+        state.cmsLoaded = true;
       }
 
-      const identity=()=>window.netlifyIdentity||null;
-      function storedUser(){ try{const a=localStorage.getItem('gotrue.user'); if(a) return JSON.parse(a);}catch{} try{const b=localStorage.getItem('netlify-cms-user'); if(b) return JSON.parse(b);}catch{} return null; }
-      function currentUser(){ const ni=identity(); return (ni&&ni.currentUser&&ni.currentUser())||storedUser(); }
-      function closeIdentity(){ try{identity()&&identity().close&&identity().close();}catch{} ['.netlify-identity-modal','.netlify-identity-overlay','[data-reach-dialog-overlay]','[data-reach-dialog-content]'].forEach(sel=> $$(sel).forEach(n=>{try{n.remove()}catch{}})); }
+      const identity = () => window.netlifyIdentity || null;
+      function storedUser() {
+        try { const a = localStorage.getItem('gotrue.user'); if (a) return JSON.parse(a); } catch {}
+        try { const b = localStorage.getItem('netlify-cms-user'); if (b) return JSON.parse(b); } catch {}
+        return null;
+      }
+      function currentUser() { const ni = identity(); return (ni && ni.currentUser && ni.currentUser()) || storedUser(); }
+      function closeIdentity() {
+        try { identity() && identity().close && identity().close(); } catch {}
+        ['.netlify-identity-modal','.netlify-identity-overlay','[data-reach-dialog-overlay]','[data-reach-dialog-content]']
+          .forEach(sel => $$(sel).forEach(n => { try { n.remove(); } catch {} }));
+      }
 
-      async function initCMSAndJump(){
+      // Open editor and jump to the file entry
+      function jumpToJobsEntry(retries = 1) {
+        // IMPORTANT: for file collections the entry slug is the **file name** (jobs),
+        // not the file's config "name" (jobsFile).
+        const target = "#/collections/jobsData/entries/jobs";
+        if (location.hash !== target) {
+          location.hash = target;
+        } else if (retries > 0) {
+          // Router might not be mounted yet; retry once on the next tick.
+          setTimeout(() => jumpToJobsEntry(0), 50);
+        }
+      }
+
+      async function initCMSAndJump() {
         await ensureCMSLoaded();
-        if(!window.CMS) throw new Error("CMS global missing after load");
+        if (!window.CMS) throw new Error("CMS global missing after load");
         el.ncRoot.classList.add("show");
         window.CMS.init({ config: window.CMS_CONFIG });
-        const target = "#/collections/jobsData/entries/jobsFile";
-        if (location.hash !== target) location.hash = target;
+        jumpToJobsEntry(1);
       }
 
-      async function waitForLogin(ms=15000){
-        const t0=Date.now(); while(Date.now()-t0<ms){ const u=currentUser(); if(u) return u; await new Promise(r=>setTimeout(r,150)); } return null;
+      async function waitForLogin(ms = 15000) {
+        const t0 = Date.now();
+        while (Date.now() - t0 < ms) {
+          const u = currentUser();
+          if (u) return u;
+          await new Promise(r => setTimeout(r, 150));
+        }
+        return null;
       }
-      async function openEditor(){
-        setText(el.statusText,"opening editor…");
-        let u=currentUser();
-        if(!u){ identity()&&identity().open&&identity().open("login"); u=await waitForLogin(); }
-        if(!u){ setText(el.statusText,"login required"); return; }
+
+      async function openEditor() {
+        setText(el.statusText, "opening editor…");
+        let u = currentUser();
+        if (!u) { identity() && identity().open && identity().open("login"); u = await waitForLogin(); }
+        if (!u) { setText(el.statusText, "login required"); return; }
         closeIdentity();
-        setText(el.dg.user,"✓ signed in"); setText(el.statusText,"loading CMS…");
-        try{ await initCMSAndJump(); setText(el.statusText,"editor ready"); window.scrollTo({top:0,behavior:"smooth"}); }
-        catch(e){ captureError(e); setText(el.statusText,"error — see Diagnostics"); }
+        setText(el.dg.user, "✓ signed in"); setText(el.statusText, "loading CMS…");
+        try { await initCMSAndJump(); setText(el.statusText, "editor ready"); window.scrollTo({ top: 0, behavior: "smooth" }); }
+        catch (e) { captureError(e); setText(el.statusText, "error — see Diagnostics"); }
       }
 
-      async function checkJSON(){ try{ const r=await fetch("/data/jobs.json",{cache:"no-store"}); setText(el.dg.json, r.ok ? "✓ reachable" : ("✗ "+r.status)); }catch{ setText(el.dg.json,"✗ fetch failed"); } }
+      async function checkJSON() {
+        try {
+          const res = await fetch("/data/jobs.json", { cache: "no-store" });
+          el.dg.json && (el.dg.json.textContent = res.ok ? "✓ reachable" : "✗ " + res.status);
+        } catch {
+          el.dg.json && (el.dg.json.textContent = "✗ fetch failed");
+        }
+      }
 
-      function main(){
-        setText(el.dg.host,location.hostname);
+      function main() {
+        setText(el.dg.host, location.hostname);
         setText(el.dg.id, window.netlifyIdentity ? "✓ loaded" : "—");
         setText(el.dg.user, currentUser() ? "✓ signed in" : "— signed out");
-        checkJSON().catch(()=>{});
-        $("#btnOpenEditor").addEventListener("click", openEditor);
-        $("#btnOpenEditor2").addEventListener("click", openEditor);
-        $("#btnShowDiag").addEventListener("click", ()=>$("#diagWrap").scrollIntoView({behavior:"smooth"}));
-        $("#btnReloadCMS").addEventListener("click", async ()=>{ state.cmsLoaded=false; try{ window.CMS && window.CMS.__reset && window.CMS.__reset(); }catch{} await initCMSAndJump(); });
-        $("#btnReloadIdentity").addEventListener("click", ()=>{ try{ identity()&&identity().init&&identity().init(); }catch{} });
-        $("#btnClearLocal").addEventListener("click", ()=>{ try{ localStorage.clear(); sessionStorage.clear(); location.reload(); }catch{} });
-        window.addEventListener("error",(e)=>captureError(e.error||e.message||e));
-        window.addEventListener("unhandledrejection",(e)=>captureError(e.reason||e));
+        checkJSON().catch(() => {});
+        document.getElementById("btnOpenEditor").addEventListener("click", openEditor);
+        document.getElementById("btnOpenEditor2").addEventListener("click", openEditor);
+        document.getElementById("btnShowDiag").addEventListener("click", () => {
+          document.getElementById("diagWrap").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        document.getElementById("btnReloadCMS").addEventListener("click", async () => {
+          state.cmsLoaded = false;
+          try { window.CMS && window.CMS.__reset && window.CMS.__reset(); } catch {}
+          await initCMSAndJump();
+        });
+        document.getElementById("btnReloadIdentity").addEventListener("click", () => {
+          try { identity() && identity().init && identity().init(); } catch {}
+        });
+        document.getElementById("btnClearLocal").addEventListener("click", () => {
+          try { localStorage.clear(); sessionStorage.clear(); location.reload(); } catch {}
+        });
+        window.addEventListener("error", (e) => { captureError(e.error || e.message || e); });
+        window.addEventListener("unhandledrejection", (e) => { captureError(e.reason || e); });
       }
-      document.readyState==="loading" ? document.addEventListener("DOMContentLoaded",main) : main();
+
+      document.readyState === "loading"
+        ? document.addEventListener("DOMContentLoaded", main)
+        : main();
     })();
   </script>
 </body>
