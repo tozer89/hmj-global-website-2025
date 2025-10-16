@@ -5,11 +5,11 @@
   <title>HMJ Global — CMS Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Preconnect to CDNs for speed -->
+  <!-- Speed up first load -->
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-  <!-- Netlify Identity (auth). We enable the login button only after this loads. -->
+  <!-- Netlify Identity (auth) -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
   <style>
@@ -34,13 +34,10 @@
     .btn-ghost{background:transparent;color:#eaf0ff}
     .btn[disabled]{opacity:.5;cursor:not-allowed;filter:grayscale(.2)}
 
-    /* Warnings / gate */
     .warn{max-width:1200px;margin:12px auto 0;padding:12px 14px;background:#2b0e13;border:1px solid rgba(255,0,51,.35);border-radius:12px;color:#ffd8df;display:none}
     .gate{max-width:900px;margin:60px auto;padding:28px;background:#0f162c;border:1px solid rgba(255,255,255,.12);border-radius:16px;text-align:center}
-    .gate h1{margin:0 0 10px 0}
-    .gate p{color:#c9d6ff}
+    .gate h1{margin:0 0 10px 0} .gate p{color:#c9d6ff}
 
-    /* Help / Hero (after login) */
     .hmj-hero{border-bottom:1px solid rgba(255,255,255,.08);background:
       radial-gradient(1200px 400px at 20% -10%, rgba(58,102,179,.22), transparent 60%),
       radial-gradient(900px 400px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
@@ -53,18 +50,13 @@
     .kbd{font-family:ui-monospace,Menlo,monospace;font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
     .note{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:.8rem;color:#dce6ff;margin-top:2px}
 
-    /* CMS frame & footer */
     .cms-frame{max-width:1200px;margin:12px auto 26px;padding:0 12px}
-    .hmj-footer{max-width:1200px;margin:24px auto 36px;padding:0 16px;color:#bfc9ff}
-    .hmj-footer a{color:#eaf0ff}
-
-    /* Quick actions toolbar */
     .qa{position:sticky;top:60px;z-index:999;background:#0f162c;border:1px solid rgba(255,255,255,.12);border-radius:12px;margin:14px 0;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .qa input[type="search"]{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:240px}
     .qa .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
     .qa .tiny{font-size:.85rem;color:#bcd0ff}
 
-    /* Brand the CMS chrome */
+    /* Branded CMS chrome */
     .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid rgba(255,255,255,.08) !important}
     .nc-toolbar{background:#0f1322 !important;border-top:1px solid rgba(255,255,255,.08) !important}
     .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
@@ -80,9 +72,9 @@
       <div class="hmj-brand"><span class="dot" aria-hidden="true"></span> HMJ Global — CMS Portal</div>
       <div class="hmj-actions">
         <a class="btn btn-blue" href="/">⟵ Return to Homepage</a>
-        <a id="btnJobsPublic" class="btn btn-dark" href="/jobs.html" target="_blank" rel="noopener" title="Open public Jobs page" style="display:none">View Jobs Page</a>
-        <a id="btnOpenEditor" class="btn btn-dark" href="#/collections/jobsData/entries/jobsFile" title="Open Jobs in the editor" style="display:none">Open Jobs in Editor</a>
-        <button id="btnLogout" class="btn btn-ghost" type="button" title="Sign out" style="display:none">Sign out</button>
+        <a id="btnJobsPublic" class="btn btn-dark" href="/jobs.html" target="_blank" rel="noopener" style="display:none">View Jobs Page</a>
+        <a id="btnOpenEditor" class="btn btn-dark" href="#/collections/jobsData/entries/jobsFile" style="display:none">Open Jobs in Editor</a>
+        <button id="btnLogout" class="btn btn-ghost" type="button" style="display:none">Sign out</button>
         <a class="btn btn-ghost" href="https://app.netlify.com" target="_blank" rel="noopener">Netlify</a>
         <a class="btn btn-ghost" href="https://github.com" target="_blank" rel="noopener">GitHub</a>
       </div>
@@ -93,7 +85,7 @@
   <div id="err" class="warn"></div>
   <div id="domainWarn" class="warn"></div>
 
-  <!-- Login gate (only thing visible pre-auth) -->
+  <!-- Login gate -->
   <div id="gate" class="gate">
     <h1>Sign in to HMJ CMS</h1>
     <p>Protected admin. Sign in with <b>Joe@HMJ-Global.com</b>.</p>
@@ -103,119 +95,103 @@
     </p>
   </div>
 
-  <!-- Help panel (only after auth) -->
-  <section id="hero" class="hmj-hero" role="region" aria-label="Jobs editor guide" style="display:none">
+  <!-- Help (after login) -->
+  <section id="hero" class="hmj-hero" style="display:none">
     <div class="inner">
       <div class="hero-card">
         <h1 class="hero-title">How to use the Jobs editor</h1>
-        <p class="hero-sub">This portal writes to <span class="kbd">data/jobs.json</span>. Your public Jobs page reads that file to render cards, filters, and anchors.</p>
+        <p class="hero-sub">This portal writes to <span class="kbd">data/jobs.json</span>. Your Jobs page reads that file.</p>
         <ol class="hero-list">
-          <li>Click <b>Open Jobs in Editor</b> (top bar) or go to <b>Content → Jobs Data → Jobs</b>.</li>
-          <li>Each list item is one role. Save → Workflow: <span class="kbd">Draft → In Review → Publish</span>.</li>
-          <li><b>ID (unique)</b> becomes <span class="kbd">/jobs.html#your-id</span>. Keep lowercase/kebab-case and don’t change it later.</li>
+          <li>Click <b>Open Jobs in Editor</b> or go to <b>Content → Jobs Data → Jobs</b>.</li>
+          <li>Each list item is a role. Save → Workflow: <span class="kbd">Draft → In Review → Publish</span>.</li>
+          <li><b>ID</b> becomes <span class="kbd">/jobs.html#your-id</span> (lowercase, unique, stable).</li>
           <li>Uploads go to <span class="kbd">images/uploads/</span>.</li>
         </ol>
-        <p class="note">Tip: open <span class="kbd">/jobs.html#the-id-you-set</span> to jump to a card.</p>
+        <p class="note">Tip: test with <span class="kbd">/jobs.html#the-id-you-set</span>.</p>
       </div>
       <div class="hero-card">
         <p><b>Quick tips</b></p>
         <ul class="hero-list">
-          <li><b>Status</b> shows a badge & drives filters (Live / Interviewing / Closed).</li>
-          <li><b>Section (Board)</b> controls which column/group on the Jobs page.</li>
-          <li><b>Location Code</b> drives the filter. <b>Location Text</b> is what candidates see.</li>
-          <li>Leave <b>Apply URL</b> blank to use the default HMJ apply form; add a full URL to send to an ATS.</li>
+          <li><b>Status</b> = badge & filter (Live / Interviewing / Closed).</li>
+          <li><b>Section</b> controls which board/column.</li>
+          <li><b>Location Code</b> drives the filter; <b>Location Text</b> is what candidates see.</li>
+          <li>Leave <b>Apply URL</b> blank to use HMJ default form.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- Quick Actions toolbar -->
+  <!-- Quick actions -->
   <div id="qa" class="cms-frame" style="display:none">
-    <div class="qa" aria-label="Quick actions">
+    <div class="qa">
       <input id="qaSearch" type="search" placeholder="Search jobs (title, location, status)…" aria-label="Search jobs">
       <select id="qaSort" class="select" aria-label="Sort jobs">
-        <option value="">Sort by…</option>
-        <option value="title">Title (A→Z)</option>
-        <option value="location">Location (A→Z)</option>
-        <option value="status">Status</option>
+        <option value="">Sort by…</option><option value="title">Title (A→Z)</option><option value="location">Location (A→Z)</option><option value="status">Status</option>
       </select>
-      <button id="qaPreview" class="btn btn-dark" type="button" title="Open your public Jobs page">Preview Jobs Page</button>
-      <button id="qaTop" class="btn btn-ghost" type="button" title="Scroll to top">⬆︎ Top</button>
+      <button id="qaPreview" class="btn btn-dark" type="button">Preview Jobs Page</button>
+      <button id="qaTop" class="btn btn-ghost" type="button">⬆︎ Top</button>
       <span class="tiny">Templates:</span>
-      <button data-template="bms" class="btn btn-blue" type="button" title="Copy a BMS Engineer template to clipboard">BMS Engineer</button>
-      <button data-template="csaqs" class="btn btn-blue" type="button" title="Copy a CSA QS template to clipboard">CSA QS</button>
-      <button data-template="planner" class="btn btn-blue" type="button" title="Copy a Planner template to clipboard">Planner</button>
-      <button id="qaDuplicate" class="btn btn-dark" type="button" title="Copies a JSON of the currently open job to your clipboard.">Duplicate current (to clipboard)</button>
+      <button data-template="bms" class="btn btn-blue" type="button">BMS Engineer</button>
+      <button data-template="csaqs" class="btn btn-blue" type="button">CSA QS</button>
+      <button data-template="planner" class="btn btn-blue" type="button">Planner</button>
+      <button id="qaDuplicate" class="btn btn-dark" type="button" title="Copy the expanded job to clipboard.">Duplicate current</button>
     </div>
   </div>
 
-  <!-- CMS mount (renders after auth + CMS load) -->
-  <div id="cmsRoot" class="cms-frame" style="display:none">
-    <div id="nc-root"></div>
-  </div>
-
-  <div class="hmj-footer" id="footer" style="display:none">
+  <!-- CMS mount -->
+  <div id="cmsRoot" class="cms-frame" style="display:none"><div id="nc-root"></div></div>
+  <div class="cms-frame" id="footer" style="display:none;color:#bfc9ff">
     Need help? <a href="mailto:info@hmj-global.com">info@hmj-global.com</a> · Anchors look like <span class="kbd">/jobs.html#electrical-supervisor-uk</span>
   </div>
 
   <script>
-    // ---------- short DOM helpers ----------
+    // ---------- helpers ----------
     const $ = id => document.getElementById(id);
     const gate=$('gate'), hero=$('hero'), qa=$('qa'), cmsRoot=$('cmsRoot'), footer=$('footer');
     const btnLogin=$('btnLogin'), loginHint=$('loginHint'), btnLogout=$('btnLogout');
     const btnJobsPublic=$('btnJobsPublic'), btnOpenEditor=$('btnOpenEditor');
     const domainWarn=$('domainWarn'), errBox=$('err');
-
     const showGate=()=>{ gate.style.display='block'; hero.style.display='none'; qa.style.display='none'; cmsRoot.style.display='none'; footer.style.display='none'; btnLogout.style.display='none'; btnJobsPublic.style.display='none'; btnOpenEditor.style.display='none'; };
     const showPortal=()=>{ gate.style.display='none'; hero.style.display='block'; qa.style.display='block'; cmsRoot.style.display='block'; footer.style.display='block'; btnLogout.style.display='inline-flex'; btnJobsPublic.style.display='inline-flex'; btnOpenEditor.style.display='inline-flex'; };
 
     showGate();
 
-    // ---------- Identity widget wiring ----------
+    // ---------- Identity gate ----------
     (function waitForIdentity(){
-      const tick = setInterval(()=>{
+      const tick=setInterval(()=>{
         if (window.netlifyIdentity){
           clearInterval(tick);
-          // enable button
-          btnLogin.disabled = false;
-          loginHint.textContent = 'Invite-only access';
-          // init & handlers
+          btnLogin.disabled=false; loginHint.textContent='Invite-only access';
           window.netlifyIdentity.on('init', user => { user ? startPortal() : showGate(); });
           window.netlifyIdentity.init();
-          btnLogin.addEventListener('click', () => window.netlifyIdentity.open('login'));
-          window.netlifyIdentity.on('login', () => { window.netlifyIdentity.close(); startPortal(); });
-          window.netlifyIdentity.on('logout', () => window.location.reload());
-          btnLogout.addEventListener('click', () => window.netlifyIdentity.logout());
+          btnLogin.addEventListener('click', ()=> window.netlifyIdentity.open('login'));
+          window.netlifyIdentity.on('login', ()=>{ window.netlifyIdentity.close(); startPortal(); });
+          window.netlifyIdentity.on('logout', ()=> window.location.reload());
+          btnLogout.addEventListener('click', ()=> window.netlifyIdentity.logout());
         }
-      }, 100);
-      // after 6s, if still not loaded, show hint
+      },100);
       setTimeout(()=>{
-        if (!window.netlifyIdentity){
-          btnLogin.disabled = true;
-          loginHint.textContent = 'Identity failed to load (network blocker). Allow identity.netlify.com and refresh.';
+        if(!window.netlifyIdentity){
+          btnLogin.disabled=true; loginHint.textContent='Identity failed to load (allow identity.netlify.com and refresh).';
         }
-      }, 6000);
+      },6000);
     })();
 
-    // ---------- robust CMS loader ----------
-    function loadScript(src){
-      return new Promise((resolve, reject)=>{
-        const s=document.createElement('script');
-        s.src=src; s.async=true; s.defer=true; s.onload=resolve; s.onerror=()=>reject(new Error('Failed to load '+src));
-        document.head.appendChild(s);
-      });
-    }
+    // ---------- robust CMS loader (prefer stable Netlify CMS v2) ----------
+    function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.defer=true; s.onload=res; s.onerror=()=>rej(new Error('Failed to load '+src)); document.head.appendChild(s); }); }
     async function ensureCMSLoaded(){
-      // Try Decap CMS v3 first; then Netlify CMS v2; then jsDelivr mirror.
       const candidates = [
-        'https://unpkg.com/decap-cms@^3/dist/decap-cms.js',
-        'https://unpkg.com/netlify-cms@^2/dist/netlify-cms.js',
-        'https://cdn.jsdelivr.net/npm/decap-cms@^3/dist/decap-cms.js'
+        // Pinned stable Netlify CMS v2
+        'https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js',
+        // Fallback: jsDelivr mirror
+        'https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/netlify-cms.js',
+        // Last resort: Decap v3 (if v2 blocked)
+        'https://unpkg.com/decap-cms@3/dist/decap-cms.js'
       ];
       for (const url of candidates){
-        try { await loadScript(url); if (window.CMS) return; } catch(_) { /* try next */ }
+        try{ await loadScript(url); if (window.CMS) return; }catch(e){/* try next */ }
       }
-      throw new Error('CMS library could not be loaded from CDNs. Allow unpkg.com or jsdelivr.net and refresh.');
+      throw new Error('CMS script blocked by network. Allow unpkg.com or jsdelivr.net and refresh.');
     }
 
     function slugify(s){ return (s||'').toString().trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
@@ -223,12 +199,12 @@
     async function startPortal(){
       showPortal();
 
-      // Help if the domain isn't the Identity site (URL-forwarding problem)
+      // Domain help — avoid URL forwarding
       try{
         const idUrl='https://hmjg.netlify.app/.netlify/identity';
         const host=new URL(idUrl).host;
         if (location.host!==host && !location.host.endsWith('.netlify.app')) {
-          domainWarn.textContent='⚠ Identity domain mismatch: open the portal at https://hmjg.netlify.app/admin/ or connect your custom domain to this Netlify site (no URL forwarding).';
+          domainWarn.textContent='⚠ Identity domain mismatch: open at https://hmjg.netlify.app/admin/ or connect your custom domain to this Netlify site (no URL forwarding).';
           domainWarn.style.display='block';
         }
       }catch(e){}
@@ -236,10 +212,10 @@
       try{
         await ensureCMSLoaded();
 
-        // Light brand in CMS preview
+        // Brand links in preview (light touch)
         CMS.registerPreviewStyle(`:root{--accent:#3A66B3} a{color:var(--accent)}`, { raw:true });
 
-        // ---- Initialize CMS
+        // Initialize CMS
         CMS.init({
           config:{
             backend:{ name:"git-gateway", branch:"main" },
@@ -255,7 +231,7 @@
                     label:"Jobs",
                     name:"jobsFile",
                     file:"data/jobs.json",
-                    description:"This file powers the Jobs page (/jobs.html).",
+                    description:"Powers the Jobs page (/jobs.html).",
                     fields:[
                       {
                         label:"Jobs",
@@ -266,18 +242,15 @@
                         fields:[
                           { label:"ID (unique, used as URL anchor)", name:"id", widget:"string",
                             hint:"Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
-                            pattern:["^[a-z0-9-]+$","Use lowercase letters, numbers, and hyphens only (e.g., mep-qs-dublin)"] },
-                          { label:"Published", name:"published", widget:"boolean", default:true,
-                            hint:"Turn OFF to hide this role from the site." },
-                          { label:"Title", name:"title", widget:"string",
-                            hint:"Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”)." },
+                            pattern:["^[a-z0-9-]+$","Use lowercase letters, numbers, and hyphens only."] },
+                          { label:"Published", name:"published", widget:"boolean", default:true, hint:"Turn OFF to hide this role from the site." },
+                          { label:"Title", name:"title", widget:"string", hint:"Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”)." },
                           { label:"Status (badge shown on card)", name:"status", widget:"select",
                             options:[
                               {label:"Live — Taking Candidates", value:"live"},
                               {label:"Interviewing — Shortlist in Review", value:"interviewing"},
                               {label:"Closed — Not Accepting New Applicants", value:"closed"}
-                            ], default:"live",
-                            hint:"Also used by the Status filter on the Jobs page." },
+                            ], default:"live", hint:"Also used by the Status filter on the Jobs page." },
                           { label:"Section (which board/column to show in)", name:"section", widget:"select",
                             options:[
                               {label:"Data Centre — Commercial", value:"commercial"},
@@ -285,11 +258,10 @@
                               {label:"Substations, Power & Energy", value:"substations"},
                               {label:"Life Sciences & Pharma", value:"pharma"},
                               {label:"ICT & Commissioning", value:"ict"}
-                            ], default:"dc",
-                            hint:"Matches the big section headings on the Jobs page." },
+                            ], default:"dc", hint:"Matches the big section headings on the Jobs page." },
                           { label:"Discipline (shown as a tag)", name:"discipline", widget:"select",
                             options:["Data Centre","Life Sciences","Pharma","Substation"], default:"Data Centre",
-                            hint:"Appears as the blue tag on each card and powers the Discipline filter." },
+                            hint:"Appears as the tag and powers the Discipline filter." },
                           { label:"Employment Type (filter chip)", name:"type", widget:"select",
                             options:[ {label:"Permanent", value:"permanent"}, {label:"Contract", value:"contract"} ],
                             default:"permanent", hint:"Used by the Employment filter on the Jobs page." },
@@ -306,22 +278,13 @@
                               {label:"Macclesfield, UK", value:"macclesfield"},
                               {label:"UK (Various)", value:"uk"},
                               {label:"Europe (Travel)", value:"europe"}
-                            ], default:"uk",
-                            hint:"Must match the site Location filter codes so filtering works." },
-                          { label:"Location Text (what candidates see)", name:"locationText", widget:"string",
-                            hint:"Human-friendly place shown on the card (e.g., “Frankfurt, Germany”)." },
-                          { label:"Keywords (searchable)", name:"keywords", widget:"text", required:false,
-                            hint:"Comma/space-separated skills or terms to improve on-page search (e.g., “P6, commissioning, NEC”)." },
-                          { label:"Overview", name:"overview", widget:"text", required:false,
-                            hint:"2–4 lines introducing the role." },
-                          { label:"Responsibilities", name:"responsibilities", widget:"list", required:false,
-                            field:{label:"Item", name:"item", widget:"string"},
-                            hint:"Bulleted list. Leave empty to hide." },
-                          { label:"Requirements", name:"requirements", widget:"list", required:false,
-                            field:{label:"Item", name:"item", widget:"string"},
-                            hint:"Bulleted list. Leave empty to hide." },
-                          { label:"Apply URL (optional)", name:"applyUrl", widget:"string", required:false,
-                            hint:"Leave blank to use the default HMJ apply flow. Add a full URL to send candidates to an external ATS." }
+                            ], default:"uk", hint:"Must match the site Location filter codes." },
+                          { label:"Location Text (what candidates see)", name:"locationText", widget:"string", hint:"e.g., “Frankfurt, Germany”." },
+                          { label:"Keywords (searchable)", name:"keywords", widget:"text", required:false, hint:"Comma/space-separated terms (e.g., “P6, commissioning, NEC”)." },
+                          { label:"Overview", name:"overview", widget:"text", required:false, hint:"2–4 lines introducing the role." },
+                          { label:"Responsibilities", name:"responsibilities", widget:"list", required:false, field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
+                          { label:"Requirements", name:"requirements", widget:"list", required:false, field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
+                          { label:"Apply URL (optional)", name:"applyUrl", widget:"string", required:false, hint:"Leave blank to use the default HMJ apply form." }
                         ]
                       }
                     ]
@@ -332,7 +295,7 @@
           }
         });
 
-        // ---- Validation guard: Title + ID (ID auto from Title if missing) + unique IDs
+        // ---- Validation guard (auto-fill ID from Title if blank; ensure unique IDs)
         CMS.registerEventListener({
           name:'preSave',
           handler: ({ entry }) => {
@@ -340,8 +303,8 @@
             const ids = new Set();
             const fixed = jobs.map((j, i)=>{
               if (!j) return j;
-              let id=(j.get('id')||'').trim();
-              const title=(j.get('title')||'').trim();
+              let id = (j.get('id')||'').trim();
+              const title = (j.get('title')||'').trim();
               if (!id && title) id = slugify(title);
               if (!title || !id){ alert(`Job #${i+1}: set Title and ID (ID auto-fills from Title).`); throw new Error('Missing Title/ID'); }
               if (ids.has(id)){ alert(`Duplicate ID "${id}" — IDs must be unique (#anchor).`); throw new Error('Duplicate ID'); }
@@ -354,49 +317,38 @@
 
         // ---- Quick actions (DOM helpers)
         const qaSearch=$('qaSearch'), qaSort=$('qaSort'), qaPreview=$('qaPreview'), qaTop=$('qaTop'), qaDuplicate=$('qaDuplicate');
-        qaPreview.onclick = ()=> window.open('/jobs.html','_blank','noopener');
-        qaTop.onclick = ()=> window.scrollTo({top:0,behavior:'smooth'});
-        qaSearch.oninput = ()=>{
+        qaPreview.onclick=()=> window.open('/jobs.html','_blank','noopener');
+        qaTop.onclick=()=> window.scrollTo({top:0,behavior:'smooth'});
+        qaSearch.oninput=()=>{
           const q=(qaSearch.value||'').toLowerCase();
-          document.querySelectorAll('.nc-entryCard').forEach(card=>{
-            card.style.display = ((card.innerText||'').toLowerCase().includes(q) ? '' : 'none');
-          });
+          document.querySelectorAll('.nc-entryCard').forEach(c=>{ c.style.display=((c.innerText||'').toLowerCase().includes(q)?'':'none'); });
         };
-        qaSort.onchange = ()=>{
+        qaSort.onchange=()=>{
           const list=document.querySelector('.nc-entryListing-entries'); if(!list) return;
           const cards=[...list.children];
-          const key=el=>{
-            const t=(el.innerText||'').toLowerCase();
-            if (qaSort.value==='location') return t.match(/—\s([^(\n]+)\s\(/)?.[1] || t;
-            if (qaSort.value==='status') return t.match(/\(\s*([a-z]+)\s*\|/i)?.[1] || t;
-            return t;
-          };
+          const key=el=>{ const t=(el.innerText||'').toLowerCase(); if(qaSort.value==='location') return t.match(/—\s([^(\n]+)\s\(/)?.[1]||t; if(qaSort.value==='status') return t.match(/\(\s*([a-z]+)\s*\|/i)?.[1]||t; return t; };
           cards.sort((a,b)=> key(a)>key(b)?1:-1).forEach(c=>list.appendChild(c));
         };
 
-        // Templates and Duplicate current
         const templates={
           bms:{id:"bms-engineer-city",published:true,title:"BMS Engineer — Data Centre",status:"live",section:"ict",discipline:"Data Centre",type:"permanent",locationCode:"uk",locationText:"UK (Various)",keywords:"BMS, EPMS, Commissioning, Trend, Tridium",overview:"Support BMS/EPMS commissioning on hyperscale DC sites. Liaise with vendors, assure QA, and drive handover.",responsibilities:["Commission BMS/EPMS systems","Interface with MEP & OEM vendors","Produce test documentation"],requirements:["BMS platforms experience (Trend/Tridium/Siemens)","Data centre or mission-critical exposure"],applyUrl:""},
           csaqs:{id:"csa-qs-dublin",published:true,title:"CSA Quantity Surveyor — Data Centre",status:"live",section:"commercial",discipline:"Data Centre",type:"permanent",locationCode:"dublin",locationText:"Dublin, Ireland",keywords:"CSA, Quantity Surveyor, NEC, Data Centre",overview:"Own CSA packages on a hyperscale build. Cost control, contracts, and subcontractor management.",responsibilities:["Manage CSA packages","Cost reporting & forecasting","Change management"],requirements:["NEC contract experience","Tier-1 GC or DC exposure"],applyUrl:""},
-          planner:{id:"senior-planner-frankfurt",published:true,title:"Senior Planner — Data Centre",status:"interviewing",section:"dc",discipline:"Data Centre",type:"contract",locationCode:"frankfurt",locationText:"Frankfurt, Germany",keywords:"Primavera P6, Planning, MEP, Data Centre",overview:"Plan multi-discipline delivery on a live DC programme. Interface with project leadership and trade partners.",responsibilities:["Develop & maintain level-4 schedules","Progress measurement & reporting","Interface with trades"],requirements:["Strong P6 background","Major construction (DC preferred)"],applyUrl:""}
+          planner:{id:"senior-planner-frankfurt",published:true,title:"Senior Planner — Data Centre",status:"interviewing",section:"dc",discipline:"Data Centre",type:"contract",locationCode:"frankfurt",locationText:"Frankfurt, Germany",keywords:"Primavera P6, Planning, MEP, Data Centre",overview:"Plan multi-discipline delivery on a live DC programme.",responsibilities:["Develop & maintain level-4 schedules","Progress measurement & reporting","Interface with trades"],requirements:["Strong P6 background","Major construction (DC preferred)"],applyUrl:""}
         };
-        document.querySelectorAll('button[data-template]').forEach(btn=>{
-          btn.onclick = async e=>{
-            const key=e.currentTarget.getAttribute('data-template');
-            await navigator.clipboard.writeText(JSON.stringify(templates[key], null, 2));
-            alert('Template copied. Click “Add Jobs”, then paste to prefill.');
-          };
+        document.querySelectorAll('button[data-template]').forEach(b=>b.onclick=async e=>{
+          const t=e.currentTarget.getAttribute('data-template');
+          await navigator.clipboard.writeText(JSON.stringify(templates[t],null,2));
+          alert('Template copied. Click “Add Jobs”, then paste.');
         });
-        qaDuplicate.onclick = async ()=>{
+
+        qaDuplicate.onclick=async()=>{
           try{
-            const state=CMS.store.getState();
-            const entry=state.entryDraft.getIn(['entry','data']);
-            const jobs=entry && entry.get('jobs');
-            if (!jobs || jobs.size===0){ alert('Open a Jobs entry and expand an item before duplicating.'); return; }
-            let picked=null; jobs.forEach(j=>{ if (j && j.get('title') && !picked) picked=j.toJS(); });
-            if (!picked){ alert('Please expand a job item to duplicate.'); return; }
+            const state=CMS.store.getState(); const entry=state.entryDraft.getIn(['entry','data']); const jobs=entry && entry.get('jobs');
+            if(!jobs || jobs.size===0){ alert('Open a Jobs entry and expand an item before duplicating.'); return; }
+            let picked=null; jobs.forEach(j=>{ if(j && j.get('title') && !picked) picked=j.toJS(); });
+            if(!picked){ alert('Please expand a job item to duplicate.'); return; }
             picked.id = slugify(picked.title)+'-copy';
-            await navigator.clipboard.writeText(JSON.stringify(picked, null, 2));
+            await navigator.clipboard.writeText(JSON.stringify(picked,null,2));
             alert('Copied. Click “Add Jobs”, then paste and edit.');
           }catch(e){ alert('Could not duplicate the current job.'); }
         };
