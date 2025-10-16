@@ -10,73 +10,138 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
-  <!-- Identity (auth) — we also inject a fallback at runtime if needed -->
+  <!-- Identity (auth) — allows Netlify Identity login -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
   <style>
+    /* === Brand & global === */
     :root{
-      --ink:#1A1A2E; --bg:#0f1322; --accent:#3A66B3; --muted:#9aa5c4;
-      --card:#111833; --cardBorder:rgba(255,255,255,.12);
+      --ink:#0f1322;              /* page background ink */
+      --bg:#0b0f1c;               /* deep background */
+      --panel:#0f162c;            /* card background */
+      --panelAlt:#111833;
+      --accent:#3A66B3;           /* HMJ blue */
+      --muted:#9aa5c4;            /* secondary text */
+      --border:rgba(255,255,255,.12);
+      --borderSoft:rgba(255,255,255,.08);
       --ok:#1f7e39; --warn:#7a5b00; --danger:#8a1f2b;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --round:14px; --roundLg:18px; --roundXl:22px;
+      --dockH:68px;               /* action dock height for spacing */
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#0f1322;color:#eaf0ff}
 
-    /* Top bar */
-    .hmj-topbar{position:sticky;top:0;z-index:9999;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px)}
-    .hmj-topbar .inner{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between}
-    .hmj-brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#eaf0ff}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      color:#eaf0ff;
+      /* Calibri first, with sensible fallbacks */
+      font-family: Calibri, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+      background: var(--ink);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    a{color:#cfe0ff}
+    code,.kbd{
+      font-family: ui-monospace, Menlo, Consolas, "SF Mono", "Cascadia Code", monospace;
+    }
+
+    /* === Top bar === */
+    .hmj-topbar{
+      position:sticky; top:0; z-index:5000;
+      background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));
+      border-bottom:1px solid var(--borderSoft);
+      backdrop-filter:blur(6px);
+    }
+    .hmj-topbar .inner{
+      max-width:1200px; margin:0 auto; padding:12px 16px;
+      display:flex; align-items:center; gap:12px; justify-content:space-between;
+    }
+    .hmj-brand{display:flex; align-items:center; gap:10px; font-weight:800; color:#eaf0ff; letter-spacing:.2px}
     .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
     .hmj-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;text-decoration:none;font-weight:700;border:1px solid rgba(255,255,255,.14);transition:transform .15s,box-shadow .15s,background .15s;white-space:nowrap;cursor:pointer}
-    .btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.22)}
-    .btn-blue{background:var(--accent);color:#fff;border-color:rgba(58,102,179,.8)}
-    .btn-dark{background:#0f162c;color:#fff}
-    .btn-ghost{background:transparent;color:#eaf0ff}
-    .btn[disabled]{opacity:.55;cursor:not-allowed;filter:grayscale(.2)}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 14px;border-radius:12px;
+      text-decoration:none; font-weight:700;
+      border:1px solid var(--border); background:transparent; color:#eaf0ff;
+      white-space:nowrap; cursor:pointer; transition:transform .15s, box-shadow .15s, background .15s, border-color .15s;
+    }
+    .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
+    .btn-blue{background:var(--accent); color:#fff; border-color:rgba(58,102,179,.85)}
+    .btn-dark{background:#0f162c; color:#fff}
+    .btn-ghost{background:transparent; color:#eaf0ff}
+    .btn[disabled]{opacity:.55; cursor:not-allowed; filter:grayscale(.25)}
 
-    /* Notices / drawers */
-    .warn{max-width:1200px;margin:12px auto 0;padding:12px 14px;background:#2b0e13;border:1px solid rgba(255,0,51,.35);border-radius:12px;color:#ffd8df;display:none}
-    .ok{background:#0e2b18;border:1px solid rgba(0,255,102,.25);color:#c7ffd8}
+    /* === Notices === */
+    .notice{max-width:1200px;margin:12px auto 0;padding:12px 14px;border-radius:12px; display:none}
+    .notice.err{background:#2b0e13;border:1px solid rgba(255,0,51,.35);color:#ffd8df}
+    .notice.ok{background:#0e2b18;border:1px solid rgba(0,255,102,.25);color:#c7ffd8}
+    .notice.warn{background:#272006;border:1px solid rgba(255,204,0,.35);color:#ffeab2}
+
+    /* === Diagnostics drawer === */
     .drawer{max-width:1200px;margin:12px auto;padding:0 12px}
-    .drawer .panel{border:1px solid rgba(255,255,255,.12);background:#0f162c;border-radius:12px;overflow:hidden}
-    .drawer summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:700}
-    .drawer summary::marker{display:none}
-    .drawer .content{padding:12px 14px;border-top:1px solid rgba(255,255,255,.1);font-size:.95rem;color:#cfe3ff;line-height:1.4}
-    .drawer table{border-collapse:collapse}
-    .drawer td{padding:6px 10px;border-bottom:1px dashed rgba(255,255,255,.08)}
+    .drawer .panel{border:1px solid var(--border);background:var(--panel);border-radius:12px;overflow:hidden}
+    .drawer summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:800}
+    .drawer summary::-webkit-details-marker{display:none}
+    .drawer .content{padding:12px 14px;border-top:1px solid var(--borderSoft);font-size:.95rem;color:#cfe3ff;line-height:1.45}
+    .drawer table{border-collapse:collapse;width:100%;max-width:800px}
+    .drawer td{padding:6px 10px;border-bottom:1px dashed var(--borderSoft)}
+    .drawer .tools{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
 
-    /* Gate */
-    .gate{max-width:900px;margin:60px auto;padding:28px;background:#0f162c;border:1px solid rgba(255,255,255,.12);border-radius:16px;text-align:center}
+    /* === Gate === */
+    .gate{max-width:920px;margin:52px auto 28px;padding:28px;background:var(--panel);border:1px solid var(--border);border-radius:16px;text-align:center}
     .gate h1{margin:0 0 10px 0}
     .gate p{color:#c9d6ff}
 
-    /* Guide / hero */
-    .hmj-hero{border-bottom:1px solid rgba(255,255,255,.08);background:
-      radial-gradient(1200px 400px at 20% -10%, rgba(58,102,179,.22), transparent 60%),
-      radial-gradient(900px 400px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
-      linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
-    .hmj-hero .inner{max-width:1200px;margin:0 auto;padding:28px 16px 8px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
-    .hero-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px}
-    .hero-title{margin:0 0 8px 0;font-size:1.35rem;line-height:1.25}
+    /* === Hero/Guide === */
+    .hmj-hero{
+      border-bottom:1px solid var(--borderSoft);
+      background:
+        radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
+        radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+    }
+    .hmj-hero .inner{
+      max-width:1200px;margin:0 auto;padding:26px 16px 8px;
+      display:grid;grid-template-columns:1.1fr .9fr;gap:18px;
+    }
+    .card{background:rgba(255,255,255,.04);border:1px solid var(--borderSoft);border-radius:18px;padding:18px}
+    .hero-title{margin:0 0 8px 0;font-size:1.38rem;line-height:1.3}
     .hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
-    .hero-list{margin:0;padding:0 0 0 18px;line-height:1.45}
-    .kbd{font-family:ui-monospace,Menlo,monospace;font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
-    .note{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:.8rem;color:#dce6ff;margin-top:2px}
+    .hero-list{margin:0;padding:0 0 0 18px;line-height:1.5}
+    .kbd{font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid var(--border)}
+    .note{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--border);font-size:.8rem;color:#dce6ff;margin-top:2px}
 
-    /* Frame & toolbar */
-    .cms-frame{max-width:1200px;margin:12px auto 26px;padding:0 12px}
-    .qa{position:sticky;top:60px;z-index:999;background:#0f162c;border:1px solid rgba(255,255,255,.12);border-radius:12px;margin:14px 0;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .qa input[type="search"]{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:240px}
-    .qa .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
-    .qa .tiny{font-size:.85rem;color:#bcd0ff}
+    /* === Action Dock (fixed; resolves “sticky in middle” issue) === */
+    .dock{
+      position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+      z-index:4500; background:var(--panel); border:1px solid var(--border);
+      border-radius:16px; padding:10px; box-shadow:var(--shadow);
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    .dock .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
+    .dock input[type="search"], .dock input[type="text"]{
+      background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px
+    }
+    .dock .tiny{font-size:.85rem;color:#bcd0ff}
+    .dock .divider{height:30px;width:1px;background:var(--borderSoft);margin:0 2px}
 
-    /* Branded CMS chrome */
-    .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid rgba(255,255,255,.08) !important}
-    .nc-toolbar{background:#0f1322 !important;border-top:1px solid rgba(255,255,255,.08) !important}
+    /* Provide bottom breathing room so the dock never covers CMS controls */
+    .cms-frame{max-width:1200px;margin:12px auto calc(28px + var(--dockH)); padding:0 12px}
+
+    /* === CMS chrome tweaks === */
+    .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
+    .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
     .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
     .nc-button{border-radius:12px !important;font-weight:700 !important}
     .nc-entryCard, .nc-widgetControl, .nc-widgetPreview{border-radius:14px !important;border-color:rgba(26,26,46,.2) !important}
+    .nc-entryCard:hover{box-shadow:0 10px 26px rgba(0,0,0,.25)}
+
+    /* === keyboard hint badge === */
+    .kbd-badge{
+      display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:.84rem;color:#bcd0ff
+    }
   </style>
 </head>
 <body>
@@ -87,8 +152,9 @@
       <div class="hmj-brand"><span class="dot" aria-hidden="true"></span> HMJ Global — CMS Portal</div>
       <div class="hmj-actions">
         <a class="btn btn-blue" href="/">⟵ Return to Homepage</a>
+        <button id="btnDashboard" class="btn btn-dark" type="button" style="display:none" title="Back to the guide & quick tips">← Dashboard</button>
         <a id="btnJobsPublic" class="btn btn-dark" href="/jobs.html" target="_blank" rel="noopener" style="display:none">View Jobs Page</a>
-        <a id="btnOpenEditor" class="btn btn-dark" href="#/collections/jobsData/entries/jobsFile" style="display:none" title="Open Jobs in the editor">Open Jobs in Editor</a>
+        <button id="btnOpenEditor" class="btn btn-dark" type="button" style="display:none" title="Open Jobs in the editor">Open Jobs in Editor</button>
         <button id="btnLogout" class="btn btn-ghost" type="button" style="display:none">Sign out</button>
         <a class="btn btn-ghost" href="https://app.netlify.com" target="_blank" rel="noopener">Netlify</a>
         <a class="btn btn-ghost" href="https://github.com" target="_blank" rel="noopener">GitHub</a>
@@ -96,39 +162,49 @@
     </div>
   </div>
 
-  <!-- Error banners -->
-  <div id="err" class="warn"></div>
-  <div id="domainWarn" class="warn"></div>
+  <!-- Notices -->
+  <div id="err" class="notice err" role="alert"></div>
+  <div id="domainWarn" class="notice warn" role="alert"></div>
 
-  <!-- Diagnostics -->
+  <!-- Diagnostics drawer -->
   <div class="drawer" id="diagWrap" style="display:none">
     <details class="panel" id="diagPanel">
       <summary>⚙ Diagnostics & tools</summary>
       <div class="content">
-        <p>Quick checks to confirm everything is wired correctly.</p>
+        <p>Quick checks to confirm everything is wired correctly. Calibri is the preferred font; on non-Windows devices we fall back to similar UI fonts.</p>
         <table>
           <tbody>
-            <tr><td>Host</td><td><code id="dg-host"></code></td></tr>
-            <tr><td>Identity widget loaded</td><td id="dg-id">—</td></tr>
-            <tr><td>Login state</td><td id="dg-user">—</td></tr>
-            <tr><td>CMS script loaded</td><td id="dg-cms">—</td></tr>
-            <tr><td>Jobs JSON reachable</td><td id="dg-json">—</td></tr>
-            <tr><td>Backend / branch</td><td><code>git-gateway @ main</code></td></tr>
-            <tr><td>Jobs file</td><td><code>data/jobs.json</code></td></tr>
+          <tr><td>Host</td><td><code id="dg-host"></code></td></tr>
+          <tr><td>Identity widget loaded</td><td id="dg-id">—</td></tr>
+          <tr><td>Login state</td><td id="dg-user">—</td></tr>
+          <tr><td>CMS script loaded</td><td id="dg-cms">—</td></tr>
+          <tr><td>Jobs JSON reachable</td><td id="dg-json">—</td></tr>
+          <tr><td>Backend / branch</td><td><code>git-gateway @ main</code></td></tr>
+          <tr><td>Jobs file</td><td><code>data/jobs.json</code></td></tr>
           </tbody>
         </table>
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <div class="tools">
           <button id="btnDiagRun" class="btn btn-dark" type="button">Run checks</button>
           <button id="btnReloadCMS" class="btn btn-dark" type="button" title="Re-inject CMS script if blocked">Reload CMS script</button>
           <button id="btnReloadIdentity" class="btn btn-dark" type="button" title="Re-inject Identity script if blocked">Reload Identity</button>
           <a class="btn btn-ghost" href="/data/jobs.json" target="_blank" rel="noopener">Open jobs.json</a>
         </div>
+        <p style="margin-top:10px">
+          <span class="kbd-badge" title="Shortcuts you can use anywhere on this page">
+            Shortcuts:
+            <span class="kbd">g</span><span class="kbd">h</span> Dashboard
+            <span class="kbd">g</span><span class="kbd">j</span> Jobs
+            <span class="kbd">/</span> Search
+            <span class="kbd">p</span> Preview
+            <span class="kbd">t</span> Top
+          </span>
+        </p>
       </div>
     </details>
   </div>
 
   <!-- Login gate -->
-  <div id="gate" class="gate">
+  <div id="gate" class="gate" aria-live="polite">
     <h1>Sign in to HMJ CMS</h1>
     <p>Protected admin. Sign in with <b>Joe@HMJ-Global.com</b>.</p>
     <p>
@@ -141,344 +217,421 @@
     </div>
   </div>
 
-  <!-- Guide -->
+  <!-- Hero/Guide -->
   <section id="hero" class="hmj-hero" role="region" aria-label="Jobs editor guide" style="display:none">
     <div class="inner">
-      <div class="hero-card">
+      <div class="card">
         <h1 class="hero-title">How to use the Jobs editor</h1>
         <p class="hero-sub">This portal writes to <span class="kbd">data/jobs.json</span>. Your public Jobs page reads that file to render cards, filters, and anchors.</p>
         <ol class="hero-list">
-          <li>Click <b>Open Jobs in Editor</b> (top bar) or go to <b>Content → Jobs Data → Jobs</b>.</li>
+          <li>Click <b>Open Jobs in Editor</b> or go to <b>Content → Jobs Data → Jobs</b>.</li>
           <li>Each list item is one role. Save → Workflow: <span class="kbd">Draft → In Review → Publish</span>.</li>
-          <li><b>ID (unique)</b> becomes <span class="kbd">/jobs.html#your-id</span>. Keep lowercase/kebab-case and don’t change it later.</li>
+          <li><b>ID</b> becomes <span class="kbd">/jobs.html#your-id</span> (lowercase, unique, stable).</li>
           <li>Uploads go to <span class="kbd">images/uploads/</span>.</li>
         </ol>
-        <p class="note">Tip: open <span class="kbd">/jobs.html#the-id-you-set</span> to jump to a card.</p>
+        <p class="note">Tip: test an anchor via <span class="kbd">/jobs.html#the-id-you-set</span>.</p>
       </div>
-      <div class="hero-card">
+      <div class="card">
         <p><b>Quick tips</b></p>
         <ul class="hero-list">
-          <li><b>Status</b> shows a badge & drives filters (Live / Interviewing / Closed).</li>
-          <li><b>Section (Board)</b> controls which column/group on the Jobs page.</li>
-          <li><b>Location Code</b> drives the filter. <b>Location Text</b> is what candidates see.</li>
-          <li>Leave <b>Apply URL</b> blank to use the default HMJ apply form; add a full URL to send to an ATS.</li>
+          <li><b>Status</b> = badge & filter (Live / Interviewing / Closed).</li>
+          <li><b>Section</b> controls which board/column.</li>
+          <li><b>Location Code</b> drives the filter; <b>Location Text</b> is what candidates see.</li>
+          <li>Leave <b>Apply URL</b> blank to use HMJ default form.</li>
         </ul>
+        <p style="margin-top:10px">Everything uses Calibri (with system fallbacks where Calibri isn’t available).</p>
       </div>
     </div>
   </section>
 
-  <!-- Toolbar -->
-  <div id="qa" class="cms-frame" style="display:none">
-    <div class="qa" aria-label="Quick actions">
-      <input id="qaSearch" type="search" placeholder="Search jobs (title, location, status)…" aria-label="Search jobs">
-      <select id="qaSort" class="select" aria-label="Sort">
-        <option value="">Sort by…</option>
-        <option value="title">Title (A→Z)</option>
-        <option value="status">Status</option>
-        <option value="location">Location (A→Z)</option>
-      </select>
-      <button id="qaPreview" class="btn btn-dark" type="button" title="Open your public Jobs page">Preview Jobs Page</button>
-      <button id="qaTop" class="btn btn-ghost" type="button" title="Scroll to top">⬆︎ Top</button>
-      <span class="tiny">Templates:</span>
-      <button data-template="bms" class="btn btn-blue" type="button" title="Copy a BMS Engineer template to clipboard">BMS Engineer</button>
-      <button data-template="csaqs" class="btn btn-blue" type="button" title="Copy a CSA QS template to clipboard">CSA QS</button>
-      <button data-template="planner" class="btn btn-blue" type="button" title="Copy a Planner template to clipboard">Planner</button>
-      <button id="qaDuplicate" class="btn btn-dark" type="button" title="Copies a JSON of the currently open job to your clipboard.">Duplicate current</button>
-    </div>
+  <!-- Floating Action Dock (fixed; never “sticks” mid-screen) -->
+  <div id="dock" class="dock" style="display:none" role="region" aria-label="Quick actions">
+    <input id="qaSearch" type="search" placeholder="Search jobs (title, location, status)…" aria-label="Search jobs">
+    <select id="qaSort" class="select" aria-label="Sort">
+      <option value="">Sort by…</option>
+      <option value="title">Title (A→Z)</option>
+      <option value="status">Status</option>
+      <option value="location">Location (A→Z)</option>
+    </select>
+    <span class="divider" aria-hidden="true"></span>
+    <button id="qaPreview" class="btn btn-dark" type="button" title="Open your public Jobs page">Preview</button>
+    <button id="qaTop" class="btn btn-ghost" type="button" title="Scroll to top">⬆︎ Top</button>
+    <span class="tiny">Templates:</span>
+    <button data-template="bms" class="btn btn-blue" type="button" title="Copy a BMS Engineer template to clipboard">BMS Engineer</button>
+    <button data-template="csaqs" class="btn btn-blue" type="button" title="Copy a CSA QS template to clipboard">CSA QS</button>
+    <button data-template="planner" class="btn btn-blue" type="button" title="Copy a Planner template to clipboard">Planner</button>
+    <button id="qaDuplicate" class="btn btn-dark" type="button" title="Copy JSON of current job">Duplicate current</button>
+    <span class="divider" aria-hidden="true"></span>
+    <input id="anchorInput" type="text" placeholder="anchor-id (e.g., mep-qs-dublin)" aria-label="Anchor ID">
+    <button id="anchorOpen" class="btn btn-dark" type="button" title="Open /jobs.html#anchor-id">Open anchor</button>
+    <button id="anchorCopy" class="btn btn-ghost" type="button" title="Copy anchor link">Copy</button>
   </div>
 
   <!-- CMS mount -->
-  <div id="cmsRoot" class="cms-frame" style="display:none"><div id="nc-root"></div></div>
+  <div id="cmsFrame" class="cms-frame" style="display:none"><div id="nc-root"></div></div>
   <div class="cms-frame" id="footer" style="display:none;color:#bfc9ff">
     Need help? <a href="mailto:info@hmj-global.com">info@hmj-global.com</a> · Anchors look like <span class="kbd">/jobs.html#electrical-supervisor-uk</span>
   </div>
 
   <script>
-    // ---------- helpers ----------
+    /* ===========================
+       Helper utilities
+    ============================ */
     const $ = id => document.getElementById(id);
-    const gate=$('gate'), hero=$('hero'), qa=$('qa'), cmsRoot=$('cmsRoot'), footer=$('footer');
+    const gate=$('gate'), hero=$('hero'), dock=$('dock'), cmsFrame=$('cmsFrame'), footer=$('footer');
     const btnLogin=$('btnLogin'), loginHint=$('loginHint'), btnLogout=$('btnLogout');
-    const btnJobsPublic=$('btnJobsPublic'), btnOpenEditor=$('btnOpenEditor');
-    const errBox=$('err'), domainWarn=$('domainWarn');
-    const diagWrap=$('diagWrap'), diagPanel=$('diagPanel');
+    const btnJobsPublic=$('btnJobsPublic'), btnOpenEditor=$('btnOpenEditor'), btnDashboard=$('btnDashboard');
+    const errBox=$('err'), domainWarn=$('domainWarn'), diagWrap=$('diagWrap'), diagPanel=$('diagPanel');
     const dgHost=$('dg-host'), dgId=$('dg-id'), dgUser=$('dg-user'), dgCms=$('dg-cms'), dgJson=$('dg-json');
 
-    const showGate=()=>{ gate.style.display='block'; hero.style.display='none'; qa.style.display='none'; cmsRoot.style.display='none'; footer.style.display='none'; btnLogout.style.display='none'; btnJobsPublic.style.display='none'; btnOpenEditor.style.display='none'; diagWrap.style.display='block'; };
-    const showPortal=()=>{ gate.style.display='none'; hero.style.display='block'; qa.style.display='block'; cmsRoot.style.display='block'; footer.style.display='block'; btnLogout.style.display='inline-flex'; btnJobsPublic.style.display='inline-flex'; btnOpenEditor.style.display='inline-flex'; diagWrap.style.display='block'; };
+    const showGate=()=>{ gate.style.display='block'; hero.style.display='none'; dock.style.display='none'; cmsFrame.style.display='none'; footer.style.display='none'; btnLogout.style.display='none'; btnJobsPublic.style.display='none'; btnOpenEditor.style.display='none'; btnDashboard.style.display='none'; diagWrap.style.display='block';};
+    const showDashboard=()=>{ gate.style.display='none'; hero.style.display='block'; dock.style.display='none'; cmsFrame.style.display='none'; footer.style.display='block'; btnLogout.style.display='inline-flex'; btnJobsPublic.style.display='inline-flex'; btnOpenEditor.style.display='inline-flex'; btnDashboard.style.display='none'; diagWrap.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); };
+    const showEditor=()=>{ gate.style.display='none'; hero.style.display='none'; dock.style.display='flex'; cmsFrame.style.display='block'; footer.style.display='block'; btnLogout.style.display='inline-flex'; btnJobsPublic.style.display='inline-flex'; btnOpenEditor.style.display='none'; btnDashboard.style.display='inline-flex'; diagWrap.style.display='block'; };
+
+    // Start on gate
     showGate();
 
-    // ---------- Identity robust loader ----------
+    /* ===========================
+       Identity robust loader
+    ============================ */
     function injectIdentity(){
-      const existing = [...document.scripts].some(s => (s.src||'').includes('identity.netlify.com/v1/netlify-identity-widget.js'));
-      if (existing) return;
-      const s=document.createElement('script');
-      s.src='https://identity.netlify.com/v1/netlify-identity-widget.js';
-      s.async=true; s.defer=true;
-      document.head.appendChild(s);
+      const existing=[...document.scripts].some(s=>(s.src||'').includes('identity.netlify.com/v1/netlify-identity-widget.js'));
+      if(existing) return;
+      const s=document.createElement('script'); s.src='https://identity.netlify.com/v1/netlify-identity-widget.js'; s.async=true; s.defer=true; document.head.appendChild(s);
     }
-
     function identityReady(){
-      return new Promise((res)=> {
-        if (window.netlifyIdentity) return res(true);
+      return new Promise(res=>{
+        if(window.netlifyIdentity) return res(true);
         let tries=0;
-        const iv=setInterval(()=>{
-          tries++;
-          if (window.netlifyIdentity){ clearInterval(iv); res(true); }
-          if (tries>100){ clearInterval(iv); res(false); }
-        },100);
+        const iv=setInterval(()=>{ tries++; if(window.netlifyIdentity){clearInterval(iv);res(true)} if(tries>100){clearInterval(iv);res(false)} },100);
       });
     }
-
     async function initIdentity(){
-      const ok = await identityReady();
-      if (!ok){
-        btnLogin.disabled = true;
-        loginHint.textContent = 'Identity failed to load. Allow identity.netlify.com and click “Try alternate Identity loader”.';
-        return;
-      }
+      const ok=await identityReady();
+      if(!ok){ btnLogin.disabled=true; loginHint.textContent='Identity failed to load. Allow identity.netlify.com and click “Try alternate Identity loader”.'; return; }
       btnLogin.disabled=false; loginHint.textContent='Invite-only access';
-      window.netlifyIdentity.on('init', user => { user ? startPortal() : showGate(); });
+      window.netlifyIdentity.on('init', user=>{ user ? startPortal() : showGate(); });
       window.netlifyIdentity.init();
       btnLogin.addEventListener('click', ()=> window.netlifyIdentity.open('login'));
       window.netlifyIdentity.on('login', ()=>{ window.netlifyIdentity.close(); startPortal(); });
       window.netlifyIdentity.on('logout', ()=> window.location.reload());
       btnLogout.addEventListener('click', ()=> window.netlifyIdentity.logout());
     }
+    $('btnManualIdentity').addEventListener('click', ()=>{ injectIdentity(); setTimeout(initIdentity,800); });
+    $('btnDiagShow').addEventListener('click', ()=>{ diagWrap.style.display='block'; if(!diagPanel.open) diagPanel.open=true; });
 
-    // Allow manual retry if blocked
-    $('btnManualIdentity').addEventListener('click', ()=>{
-      injectIdentity();
-      setTimeout(initIdentity, 800);
-    });
-
-    $('btnDiagShow').addEventListener('click', ()=>{
-      diagWrap.style.display='block';
-      if (!diagPanel.open) diagPanel.open = true;
-    });
-
-    // Start Identity init after DOM
     document.addEventListener('DOMContentLoaded', ()=>{
-      // auto-refresh identity if blockers delayed it
-      setTimeout(()=>{ if(!window.netlifyIdentity){ injectIdentity(); setTimeout(initIdentity, 800); } }, 900);
+      setTimeout(()=>{ if(!window.netlifyIdentity){ injectIdentity(); setTimeout(initIdentity,800); } }, 900);
       initIdentity();
     });
 
-    // ---------- robust CMS loader (Netlify CMS v2 pinned) ----------
+    /* ===========================
+       CMS loader (pinned v2)
+    ============================ */
     function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.defer=true; s.onload=res; s.onerror=()=>rej(new Error('Failed to load '+src)); document.head.appendChild(s); }); }
     async function ensureCMSLoaded(){
-      const urls=[
-        'https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js',
-        'https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/netlify-cms.js'
-      ];
-      for(const u of urls){
-        try{ await loadScript(u); if (window.CMS) return true; }catch(e){}
-      }
+      const urls=['https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js','https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/netlify-cms.js'];
+      for(const u of urls){ try{ await loadScript(u); if(window.CMS) return true; }catch(e){} }
       throw new Error('CMS script blocked by network. Allow unpkg.com or jsdelivr.net, then press “Reload CMS script”.');
     }
 
-    // ---------- utilities ----------
-    function slugify(s){ return (s||'').toString().trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
-    function cmsSearchBox(){ return document.querySelector('.nc-search-input input'); }
-    function cmsSortSelect(){ return document.querySelector('.nc-sort-control select'); }
+    /* ===========================
+       Small helpers
+    ============================ */
+    const slugify = s => (s||'').toString().trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    const cmsSearchBox = ()=> document.querySelector('.nc-search-input input');
+    const cmsSortSelect = ()=> document.querySelector('.nc-sort-control select');
 
-    // ---------- diagnostics ----------
+    // Anchor tools
+    $('anchorOpen').onclick=()=>{ const id=$('anchorInput').value.trim(); if(!id) return alert('Enter an anchor ID, e.g. mep-qs-dublin'); window.open('/jobs.html#'+id,'_blank','noopener'); };
+    $('anchorCopy').onclick=async()=>{ const id=$('anchorInput').value.trim(); if(!id) return alert('Enter an anchor ID first'); await navigator.clipboard.writeText(location.origin+'/jobs.html#'+id); alert('Anchor copied'); };
+
+    /* ===========================
+       Diagnostics
+    ============================ */
     async function runDiagnostics(){
-      dgHost.textContent = location.host;
-      dgId.textContent = window.netlifyIdentity ? '✅ loaded' : '❌ not found';
-      try{ dgUser.textContent = (window.netlifyIdentity && window.netlifyIdentity.currentUser()) ? '✅ logged in' : 'ℹ not logged in'; }catch(_){ dgUser.textContent='—'; }
-      dgCms.textContent = window.CMS ? '✅ loaded' : '❌ not loaded';
-      try{
-        const r = await fetch('/data/jobs.json',{cache:'no-store'});
-        dgJson.textContent = r.ok ? '✅ 200 OK' : `❌ ${r.status}`;
-      }catch(e){ dgJson.textContent='❌ fetch failed'; }
+      dgHost.textContent=location.host;
+      dgId.textContent=window.netlifyIdentity?'✅ loaded':'❌ not found';
+      try{ dgUser.textContent=(window.netlifyIdentity && window.netlifyIdentity.currentUser())?'✅ logged in':'ℹ not logged in'; }catch(_){ dgUser.textContent='—'; }
+      dgCms.textContent=window.CMS?'✅ loaded':'❌ not loaded';
+      try{ const r=await fetch('/data/jobs.json',{cache:'no-store'}); dgJson.textContent=r.ok?'✅ 200 OK':`❌ ${r.status}`; }catch(e){ dgJson.textContent='❌ fetch failed'; }
     }
     $('btnDiagRun').addEventListener('click', runDiagnostics);
-    $('btnReloadCMS').addEventListener('click', async ()=>{
-      try{ await ensureCMSLoaded(); errBox.style.display='none'; runDiagnostics(); }catch(e){ errBox.textContent='CMS load error: '+e.message; errBox.style.display='block'; }
-    });
-    $('btnReloadIdentity').addEventListener('click', ()=>{
-      injectIdentity();
-      setTimeout(initIdentity, 800);
-    });
+    $('btnReloadCMS').addEventListener('click', async()=>{ try{ await ensureCMSLoaded(); errBox.style.display='none'; runDiagnostics(); }catch(e){ errBox.textContent='CMS load error: '+e.message; errBox.style.display='block'; } });
+    $('btnReloadIdentity').addEventListener('click', ()=>{ injectIdentity(); setTimeout(initIdentity,800); });
 
-    // ---------- main portal ----------
+    /* ===========================
+       Portal start
+    ============================ */
     async function startPortal(){
-      showPortal();
+      // show dashboard first, with Editor available
+      showDashboard();
 
-      // Warning if domain mismatch (URL forwarding breaks Identity)
+      // URL forwarding warning (Identity must be same site)
       try{
         const idHost = new URL('https://hmjg.netlify.app/.netlify/identity').host;
-        if (location.host!==idHost && !location.host.endsWith('.netlify.app')) {
+        if(location.host!==idHost && !location.host.endsWith('.netlify.app')){
           domainWarn.textContent='⚠ Identity domain mismatch: open at https://hmjg.netlify.app/admin/ or connect your custom domain directly (no URL forwarding).';
           domainWarn.style.display='block';
         }
       }catch(e){}
 
-      try{
-        if (!window.CMS){ await ensureCMSLoaded(); }
+      // Load CMS on demand (only when Editor opened)
+      btnOpenEditor.addEventListener('click', async ()=>{
+        try{
+          if(!window.CMS){ await ensureCMSLoaded(); }
+          await initCMS();   // initialize once
+          showEditor();
+          // Jump to the file route
+          location.hash = '#/collections/jobsData/entries/jobsFile';
+        }catch(e){
+          errBox.textContent='CMS failed to initialize: '+(e && e.message?e.message:e);
+          errBox.style.display='block';
+        }
+      });
 
-        // Small brand touch inside previews
-        CMS.registerPreviewStyle(`:root{--accent:#3A66B3} a{color:var(--accent)}`, { raw:true });
+      // Dashboard ↔ Editor toggle
+      btnDashboard.addEventListener('click', showDashboard);
 
-        // Initialize CMS
-        CMS.init({
-          config:{
-            backend:{ name:"git-gateway", branch:"main" },
-            publish_mode:"editorial_workflow",
-            media_folder:"images/uploads",
-            public_folder:"/images/uploads",
-            collections:[
-              {
-                label:"Jobs Data",
-                name:"jobsData",
-                files:[
-                  {
-                    label:"Jobs",
-                    name:"jobsFile",
-                    file:"data/jobs.json",
-                    description:"Powers the public Jobs page (/jobs.html).",
-                    fields:[
-                      {
-                        label:"Jobs",
-                        name:"jobs",
-                        widget:"list",
-                        collapsed:true,
-                        summary:"{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
-                        fields:[
-                          { label:"ID (unique, used as URL anchor)", name:"id", widget:"string",
-                            hint:"Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
-                            pattern:["^[a-z0-9-]+$","Use lowercase letters, numbers, and hyphens only."] },
-                          { label:"Published", name:"published", widget:"boolean", default:true, hint:"Turn OFF to hide this role." },
-                          { label:"Title", name:"title", widget:"string", hint:"Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”)." },
-                          { label:"Status (badge shown on card)", name:"status", widget:"select",
-                            options:[
-                              {label:"Live — Taking Candidates", value:"live"},
-                              {label:"Interviewing — Shortlist in Review", value:"interviewing"},
-                              {label:"Closed — Not Accepting New Applicants", value:"closed"}
-                            ], default:"live",
-                            hint:"Also used by the Status filter on the Jobs page." },
-                          { label:"Section (which board/column to show in)", name:"section", widget:"select",
-                            options:[
-                              {label:"Data Centre — Commercial", value:"commercial"},
-                              {label:"Data Centre — Engineering & Management", value:"dc"},
-                              {label:"Substations, Power & Energy", value:"substations"},
-                              {label:"Life Sciences & Pharma", value:"pharma"},
-                              {label:"ICT & Commissioning", value:"ict"}
-                            ], default:"dc",
-                            hint:"Matches the big section headings on the Jobs page." },
-                          { label:"Discipline (shown as a tag)", name:"discipline", widget:"select",
-                            options:["Data Centre","Life Sciences","Pharma","Substation"], default:"Data Centre",
-                            hint:"Appears as the tag and powers the Discipline filter." },
-                          { label:"Employment Type (filter chip)", name:"type", widget:"select",
-                            options:[ {label:"Permanent", value:"permanent"}, {label:"Contract", value:"contract"} ],
-                            default:"permanent", hint:"Used by the Employment filter on the Jobs page." },
-                          { label:"Location Code (drives the Location filter)", name:"locationCode", widget:"select",
-                            options:[
-                              {label:"Amsterdam, Netherlands", value:"amsterdam"},
-                              {label:"Dublin, Ireland", value:"dublin"},
-                              {label:"Eemshaven, Netherlands", value:"eemshaven"},
-                              {label:"Espoo, Finland", value:"espoo"},
-                              {label:"Frankfurt, Germany", value:"frankfurt"},
-                              {label:"Groningen, Netherlands", value:"groningen"},
-                              {label:"Helsinki, Finland", value:"helsinki"},
-                              {label:"London, UK", value:"london"},
-                              {label:"Macclesfield, UK", value:"macclesfield"},
-                              {label:"UK (Various)", value:"uk"},
-                              {label:"Europe (Travel)", value:"europe"}
-                            ], default:"uk",
-                            hint:"Must match the site Location filter codes." },
-                          { label:"Location Text (what candidates see)", name:"locationText", widget:"string",
-                            hint:"e.g., “Frankfurt, Germany”." },
-                          { label:"Keywords (searchable)", name:"keywords", widget:"text", required:false,
-                            hint:"Comma/space-separated skills or terms (e.g., “P6, commissioning, NEC”)." },
-                          { label:"Overview", name:"overview", widget:"text", required:false, hint:"2–4 lines introducing the role." },
-                          { label:"Responsibilities", name:"responsibilities", widget:"list", required:false,
-                            field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
-                          { label:"Requirements", name:"requirements", widget:"list", required:false,
-                            field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
-                          { label:"Apply URL (optional)", name:"applyUrl", widget:"string", required:false,
-                            hint:"Leave blank to use the default HMJ apply form." }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        });
+      // Quick links
+      $('qaPreview').onclick=()=> window.open('/jobs.html','_blank','noopener');
+      $('qaTop').onclick = ()=> window.scrollTo({top:0,behavior:'smooth'});
 
-        // Validation guard — auto ID & unique IDs
-        CMS.registerEventListener({
-          name:'preSave',
-          handler: ({ entry }) => {
-            const jobs = entry.getIn(['data','jobs']); if (!jobs) return;
-            const ids = new Set();
-            const fixed = jobs.map((j, i)=>{
-              if (!j) return j;
-              let id=(j.get('id')||'').trim();
-              const title=(j.get('title')||'').trim();
-              if (!id && title) id = slugify(title);
-              if (!title || !id){ alert(`Job #${i+1}: set Title and ID (ID auto-fills from Title).`); throw new Error('Missing Title/ID'); }
-              if (ids.has(id)){ alert(`Duplicate ID "${id}" — IDs must be unique (#anchor).`); throw new Error('Duplicate ID'); }
-              ids.add(id);
-              return j.set('id', id);
-            });
-            return entry.setIn(['data','jobs'], fixed);
-          }
-        });
-
-        // Safe toolbar helpers (use CMS' own controls)
-        $('qaPreview').onclick=()=> window.open('/jobs.html','_blank','noopener');
-        $('qaTop').onclick = ()=> window.scrollTo({top:0,behavior:'smooth'});
-
-        $('qaSearch').addEventListener('input', ()=>{
-          const t=cmsSearchBox(); if(!t) return;
-          t.value = $('qaSearch').value;
-          t.dispatchEvent(new Event('input', { bubbles:true }));
-        });
-
-        $('qaSort').addEventListener('change', ()=>{
-          const dd=cmsSortSelect();
-          if(dd){ dd.value = $('qaSort').value || ''; dd.dispatchEvent(new Event('change',{bubbles:true})); }
-        });
-
-        // Templates + duplicate current
-        const templates={
-          bms:{id:"bms-engineer-city",published:true,title:"BMS Engineer — Data Centre",status:"live",section:"ict",discipline:"Data Centre",type:"permanent",locationCode:"uk",locationText:"UK (Various)",keywords:"BMS, EPMS, Commissioning, Trend, Tridium",overview:"Support BMS/EPMS commissioning on hyperscale DC sites.",responsibilities:["Commission BMS/EPMS systems","Interface with MEP & OEM vendors","Produce test documentation"],requirements:["BMS platforms experience","Mission-critical exposure"],applyUrl:""},
-          csaqs:{id:"csa-qs-dublin",published:true,title:"CSA Quantity Surveyor — Data Centre",status:"live",section:"commercial",discipline:"Data Centre",type:"permanent",locationCode:"dublin",locationText:"Dublin, Ireland",keywords:"CSA, Quantity Surveyor, NEC, Data Centre",overview:"Own CSA packages on a hyperscale build.",responsibilities:["Manage CSA packages","Cost reporting & forecasting","Change management"],requirements:["NEC contract experience","Tier-1 GC or DC exposure"],applyUrl:""},
-          planner:{id:"senior-planner-frankfurt",published:true,title:"Senior Planner — Data Centre",status:"interviewing",section:"dc",discipline:"Data Centre",type:"contract",locationCode:"frankfurt",locationText:"Frankfurt, Germany",keywords:"Primavera P6, Planning, MEP, Data Centre",overview:"Plan multi-discipline delivery on a live DC programme.",responsibilities:["Develop & maintain level-4 schedules","Progress measurement & reporting","Interface with trades"],requirements:["Strong P6","Major construction (DC preferred)"],applyUrl:""}
-        };
-        document.querySelectorAll('button[data-template]').forEach(btn=>{
-          btn.onclick = async e=>{
-            const key=e.currentTarget.getAttribute('data-template');
-            await navigator.clipboard.writeText(JSON.stringify(templates[key], null, 2));
-            alert('Template copied. Click “Add Jobs”, then paste to prefill.');
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e)=>{
+        if (e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey)) return;
+        if (e.key==='/'){ e.preventDefault(); if(showingEditor()){ const t=cmsSearchBox(); if(t){ t.focus(); t.select(); } } else { $('qaSearch').focus(); } }
+        if (e.key==='p'){ window.open('/jobs.html','_blank','noopener'); }
+        if (e.key==='t'){ window.scrollTo({top:0,behavior:'smooth'}); }
+        if (e.key==='g'){ // wait for next key
+          let once=true;
+          const h=(ev)=>{ if(!once) return; once=false;
+            document.removeEventListener('keydown',h,true);
+            if(ev.key==='h'){ showDashboard(); }
+            if(ev.key==='j'){ btnOpenEditor.click(); }
           };
-        });
+          document.addEventListener('keydown',h,true);
+          setTimeout(()=>{ try{document.removeEventListener('keydown',h,true);}catch(_){}} ,900);
+        }
+      });
 
-        $('qaDuplicate').onclick = async ()=>{
-          try{
-            const state=CMS.store.getState();
-            const entry=state.entryDraft.getIn(['entry','data']);
-            const jobs=entry && entry.get('jobs');
-            if (!jobs || jobs.size===0){ alert('Open a Jobs entry and expand an item before duplicating.'); return; }
-            let picked=null; jobs.forEach(j=>{ if(j && j.get('title') && !picked) picked=j.toJS(); });
-            if (!picked){ alert('Please expand a job item to duplicate.'); return; }
-            picked.id = slugify(picked.title)+'-copy';
-            await navigator.clipboard.writeText(JSON.stringify(picked, null, 2));
-            alert('Copied. Click “Add Jobs”, then paste and edit.');
-          }catch(e){ alert('Could not duplicate the current job.'); }
-        };
-
-        // First diagnostics snapshot after init
-        runDiagnostics();
-
-      }catch(e){
-        errBox.textContent='CMS failed to initialize: ' + (e && e.message ? e.message : e);
-        errBox.style.display='block';
-      }
+      // Diagnostics snapshot
+      runDiagnostics();
     }
+
+    const showingEditor = ()=> cmsFrame.style.display === 'block';
+
+    /* ===========================
+       Initialize CMS (one time)
+    ============================ */
+    let cmsInitialized=false;
+    async function initCMS(){
+      if(cmsInitialized) return;
+      CMS.registerPreviewStyle(`:root{--accent:#3A66B3} a{color:var(--accent)}`, { raw:true });
+
+      // Netlify CMS config — categories are locked down with selects.
+      CMS.init({
+        config:{
+          backend:{ name:"git-gateway", branch:"main" },
+          publish_mode:"editorial_workflow",
+          media_folder:"images/uploads",
+          public_folder:"/images/uploads",
+          collections:[
+            {
+              label:"Jobs Data",
+              name:"jobsData",
+              files:[
+                {
+                  label:"Jobs",
+                  name:"jobsFile",
+                  file:"data/jobs.json",
+                  description:"Powers the public Jobs page (/jobs.html).",
+                  fields:[
+                    {
+                      label:"Jobs",
+                      name:"jobs",
+                      widget:"list",
+                      collapsed:true,
+                      summary:"{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
+                      fields:[
+                        { label:"ID (unique, used as URL anchor)", name:"id", widget:"string",
+                          hint:"Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
+                          pattern:["^[a-z0-9-]+$","Use lowercase letters, numbers, and hyphens only."] },
+                        { label:"Published", name:"published", widget:"boolean", default:true, hint:"Turn OFF to hide this role." },
+                        { label:"Title", name:"title", widget:"string", hint:"Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”)." },
+                        { label:"Status (badge shown on card)", name:"status", widget:"select",
+                          options:[
+                            {label:"Live — Taking Candidates", value:"live"},
+                            {label:"Interviewing — Shortlist in Review", value:"interviewing"},
+                            {label:"Closed — Not Accepting New Applicants", value:"closed"}
+                          ], default:"live",
+                          hint:"Also used by the Status filter on the Jobs page." },
+                        { label:"Section (which board/column to show in)", name:"section", widget:"select",
+                          options:[
+                            {label:"Data Centre — Commercial", value:"commercial"},
+                            {label:"Data Centre — Engineering & Management", value:"dc"},
+                            {label:"Substations, Power & Energy", value:"substations"},
+                            {label:"Life Sciences & Pharma", value:"pharma"},
+                            {label:"ICT & Commissioning", value:"ict"}
+                          ], default:"dc",
+                          hint:"Matches the big section headings on the Jobs page." },
+                        { label:"Discipline (shown as a tag)", name:"discipline", widget:"select",
+                          options:["Data Centre","Life Sciences","Pharma","Substation"], default:"Data Centre",
+                          hint:"Appears as the tag and powers the Discipline filter." },
+                        { label:"Employment Type (filter chip)", name:"type", widget:"select",
+                          options:[ {label:"Permanent", value:"permanent"}, {label:"Contract", value:"contract"} ],
+                          default:"permanent", hint:"Used by the Employment filter on the Jobs page." },
+                        { label:"Location Code (drives the Location filter)", name:"locationCode", widget:"select",
+                          options:[
+                            {label:"Amsterdam, Netherlands", value:"amsterdam"},
+                            {label:"Dublin, Ireland", value:"dublin"},
+                            {label:"Eemshaven, Netherlands", value:"eemshaven"},
+                            {label:"Espoo, Finland", value:"espoo"},
+                            {label:"Frankfurt, Germany", value:"frankfurt"},
+                            {label:"Groningen, Netherlands", value:"groningen"},
+                            {label:"Helsinki, Finland", value:"helsinki"},
+                            {label:"London, UK", value:"london"},
+                            {label:"Macclesfield, UK", value:"macclesfield"},
+                            {label:"UK (Various)", value:"uk"},
+                            {label:"Europe (Travel)", value:"europe"}
+                          ], default:"uk",
+                          hint:"Must match the site Location filter codes." },
+                        { label:"Location Text (what candidates see)", name:"locationText", widget:"string",
+                          hint:"e.g., “Frankfurt, Germany”. If left blank, we’ll auto-fill based on Location Code & Discipline." },
+                        { label:"Keywords (searchable)", name:"keywords", widget:"text", required:false,
+                          hint:"Comma/space-separated skills or terms (e.g., “P6, commissioning, NEC”)." },
+                        { label:"Overview", name:"overview", widget:"text", required:false, hint:"2–4 lines introducing the role." },
+                        { label:"Responsibilities", name:"responsibilities", widget:"list", required:false,
+                          field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
+                        { label:"Requirements", name:"requirements", widget:"list", required:false,
+                          field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
+                        { label:"Apply URL (optional)", name:"applyUrl", widget:"string", required:false,
+                          hint:"Leave blank to use the default HMJ apply form." }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      });
+
+      /* ====== Content helpers & safety net ====== */
+      // Map for location label auto-fill
+      const locationMap = {
+        amsterdam:"Amsterdam, Netherlands",
+        dublin:"Dublin, Ireland",
+        eemshaven:"Eemshaven, Netherlands",
+        espoo:"Espoo, Finland",
+        frankfurt:"Frankfurt, Germany",
+        groningen:"Groningen, Netherlands",
+        helsinki:"Helsinki, Finland",
+        london:"London, UK",
+        macclesfield:"Macclesfield, UK",
+        uk:"UK (Various / Travel)",
+        europe:"Europe (Travel)"
+      };
+      const disciplineSuffix = (disc)=> {
+        if(!disc) return "";
+        const map={
+          "Data Centre":" Data Centre",
+          "Substation":" Substation",
+          "Life Sciences":" Life Sciences",
+          "Pharma":" Pharma"
+        };
+        return map[disc] || "";
+      };
+
+      // Pre-save: auto ID, enforce unique, auto locationText if blank
+      CMS.registerEventListener({
+        name:'preSave',
+        handler: ({ entry }) => {
+          const jobs = entry.getIn(['data','jobs']); if (!jobs) return;
+          const ids = new Set();
+          const fixed = jobs.map((j, i)=>{
+            if (!j) return j;
+            let id=(j.get('id')||'').trim();
+            const title=(j.get('title')||'').trim();
+            if(!id && title) id = slugify(title);
+            if(!title || !id){ alert(`Job #${i+1}: set Title and ID (ID auto-fills from Title).`); throw new Error('Missing Title/ID'); }
+            if(ids.has(id)){ alert(`Duplicate ID "${id}" — IDs must be unique (#anchor).`); throw new Error('Duplicate ID'); }
+            ids.add(id);
+
+            // Location text helper
+            let locText=(j.get('locationText')||'').trim();
+            const code=(j.get('locationCode')||'').trim();
+            const disc=(j.get('discipline')||'').trim();
+            if(!locText && code){
+              const base = locationMap[code] || code;
+              locText = base + disciplineSuffix(disc);
+              j = j.set('locationText', locText);
+            }
+            // When we change ID, also populate anchor tester field for convenience
+            if(i===0){ try{ document.getElementById('anchorInput').value = id; }catch(_){ } }
+            return j.set('id', id);
+          });
+          return entry.setIn(['data','jobs'], fixed);
+        }
+      });
+
+      // Hook our search/sort inputs to CMS native ones (safe; no DOM reordering)
+      $('qaSearch').addEventListener('input', ()=>{
+        const t=cmsSearchBox(); if(!t) return;
+        t.value=$('qaSearch').value; t.dispatchEvent(new Event('input',{bubbles:true}));
+      });
+      $('qaSort').addEventListener('change', ()=>{
+        const dd=cmsSortSelect(); if(dd){ dd.value=$('qaSort').value || ''; dd.dispatchEvent(new Event('change',{bubbles:true})); }
+      });
+
+      // Templates & Duplicate helpers
+      const templates={
+        bms:{id:"bms-engineer-city",published:true,title:"BMS Engineer — Data Centre",status:"live",section:"ict",discipline:"Data Centre",type:"permanent",locationCode:"uk",locationText:"UK (Various / Travel) Data Centre",keywords:"BMS, EPMS, Commissioning, Trend, Tridium",overview:"Support BMS/EPMS commissioning on hyperscale DC sites.",responsibilities:["Commission BMS/EPMS systems","Interface with MEP & OEM vendors","Produce test documentation"],requirements:["BMS platforms experience","Mission-critical exposure"],applyUrl:""},
+        csaqs:{id:"csa-qs-dublin",published:true,title:"CSA Quantity Surveyor — Data Centre",status:"live",section:"commercial",discipline:"Data Centre",type:"permanent",locationCode:"dublin",locationText:"Dublin, Ireland Data Centre",keywords:"CSA, Quantity Surveyor, NEC, Data Centre",overview:"Own CSA packages on a hyperscale build.",responsibilities:["Manage CSA packages","Cost reporting & forecasting","Change management"],requirements:["NEC contract experience","Tier-1 GC or DC exposure"],applyUrl:""},
+        planner:{id:"senior-planner-frankfurt",published:true,title:"Senior Planner — Data Centre",status:"interviewing",section:"dc",discipline:"Data Centre",type:"contract",locationCode:"frankfurt",locationText:"Frankfurt, Germany Data Centre",keywords:"Primavera P6, Planning, MEP, Data Centre",overview:"Plan multi-discipline delivery on a live DC programme.",responsibilities:["Develop & maintain level-4 schedules","Progress measurement & reporting","Interface with trades"],requirements:["Strong P6","Major construction (DC preferred)"],applyUrl:""}
+      };
+      document.querySelectorAll('button[data-template]').forEach(btn=>{
+        btn.onclick=async e=>{
+          const key=e.currentTarget.getAttribute('data-template');
+          await navigator.clipboard.writeText(JSON.stringify(templates[key],null,2));
+          alert('Template copied. Click “Add Jobs”, then paste to prefill.');
+        };
+      });
+
+      $('qaDuplicate').onclick=async ()=>{
+        try{
+          const state=CMS.store.getState();
+          const entry=state.entryDraft.getIn(['entry','data']);
+          const jobs=entry && entry.get('jobs');
+          if(!jobs || jobs.size===0){ alert('Open a Jobs entry and expand an item before duplicating.'); return; }
+          let picked=null; jobs.forEach(j=>{ if(j && j.get('title') && !picked) picked=j.toJS(); });
+          if(!picked){ alert('Please expand a job item to duplicate.'); return; }
+          picked.id = slugify(picked.title)+'-copy';
+          await navigator.clipboard.writeText(JSON.stringify(picked,null,2));
+          alert('Copied. Click “Add Jobs”, then paste and edit.');
+        }catch(e){ alert('Could not duplicate the current job.'); }
+      };
+
+      cmsInitialized=true;
+    }
+
+    /* ===========================
+       Extra UX polish
+    ============================ */
+    // Keep dock visible only in editor view
+    const observer = new MutationObserver(()=>{
+      const inEditor = location.hash.includes('/collections/jobsData');
+      if (inEditor && cmsInitialized) { dock.style.display='flex'; btnDashboard.style.display='inline-flex'; btnOpenEditor.style.display='none'; }
+    });
+    observer.observe(document.body,{subtree:true,childList:true});
+
+    // Init Identity immediately
+    (function bootstrap(){
+      // Show diagnostics drawer by default for first-time users
+      diagWrap.style.display='block';
+      // initial run details
+      runDiagnostics();
+    })();
   </script>
 </body>
 </html>
