@@ -4,55 +4,91 @@
   <meta charset="utf-8" />
   <title>HMJ Global — CMS Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Pre-connects (snappier first load) -->
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
-  <!-- Identity (auth) -->
+  <!-- Identity (auth) — we also inject a fallback at runtime if needed -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
   <style>
-    :root{ --ink:#1A1A2E; --bg:#0f1322; --accent:#3A66B3; --muted:#9aa5c4; --card:#111833; --cardBorder:rgba(255,255,255,.12) }
-    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#0f1322;color:#eaf0ff}
+    :root{
+      --ink:#1A1A2E; --bg:#0f1322; --accent:#3A66B3; --muted:#9aa5c4;
+      --card:#111833; --cardBorder:rgba(255,255,255,.12);
+      --ok:#1f7e39; --warn:#7a5b00; --danger:#8a1f2b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#0f1322;color:#eaf0ff}
+
+    /* Top bar */
     .hmj-topbar{position:sticky;top:0;z-index:9999;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px)}
     .hmj-topbar .inner{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between}
     .hmj-brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#eaf0ff}
-    .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:#3A66B3}
+    .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
     .hmj-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;text-decoration:none;font-weight:700;border:1px solid rgba(255,255,255,.14);transition:transform .15s;white-space:nowrap;cursor:pointer}
-    .btn:hover{transform:translateY(-1px)}
-    .btn-blue{background:#3A66B3;color:#fff;border-color:rgba(58,102,179,.8)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;text-decoration:none;font-weight:700;border:1px solid rgba(255,255,255,.14);transition:transform .15s,box-shadow .15s,background .15s;white-space:nowrap;cursor:pointer}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.22)}
+    .btn-blue{background:var(--accent);color:#fff;border-color:rgba(58,102,179,.8)}
     .btn-dark{background:#0f162c;color:#fff}
     .btn-ghost{background:transparent;color:#eaf0ff}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .btn[disabled]{opacity:.55;cursor:not-allowed;filter:grayscale(.2)}
+
+    /* Notices / drawers */
     .warn{max-width:1200px;margin:12px auto 0;padding:12px 14px;background:#2b0e13;border:1px solid rgba(255,0,51,.35);border-radius:12px;color:#ffd8df;display:none}
+    .ok{background:#0e2b18;border:1px solid rgba(0,255,102,.25);color:#c7ffd8}
+    .drawer{max-width:1200px;margin:12px auto;padding:0 12px}
+    .drawer .panel{border:1px solid rgba(255,255,255,.12);background:#0f162c;border-radius:12px;overflow:hidden}
+    .drawer summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:700}
+    .drawer summary::marker{display:none}
+    .drawer .content{padding:12px 14px;border-top:1px solid rgba(255,255,255,.1);font-size:.95rem;color:#cfe3ff;line-height:1.4}
+    .drawer table{border-collapse:collapse}
+    .drawer td{padding:6px 10px;border-bottom:1px dashed rgba(255,255,255,.08)}
+
+    /* Gate */
     .gate{max-width:900px;margin:60px auto;padding:28px;background:#0f162c;border:1px solid rgba(255,255,255,.12);border-radius:16px;text-align:center}
-    .gate h1{margin:0 0 10px 0}.gate p{color:#c9d6ff}
-    .hmj-hero{border-bottom:1px solid rgba(255,255,255,.08);background:radial-gradient(1200px 400px at 20% -10%, rgba(58,102,179,.22), transparent 60%),radial-gradient(900px 400px at 80% 0%, rgba(58,102,179,.18), transparent 60%),linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
+    .gate h1{margin:0 0 10px 0}
+    .gate p{color:#c9d6ff}
+
+    /* Guide / hero */
+    .hmj-hero{border-bottom:1px solid rgba(255,255,255,.08);background:
+      radial-gradient(1200px 400px at 20% -10%, rgba(58,102,179,.22), transparent 60%),
+      radial-gradient(900px 400px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
+      linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
     .hmj-hero .inner{max-width:1200px;margin:0 auto;padding:28px 16px 8px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
     .hero-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px}
-    .hero-title{margin:0 0 8px 0;font-size:1.35rem}.hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
+    .hero-title{margin:0 0 8px 0;font-size:1.35rem;line-height:1.25}
+    .hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
     .hero-list{margin:0;padding:0 0 0 18px;line-height:1.45}
     .kbd{font-family:ui-monospace,Menlo,monospace;font-size:.88rem;background:rgba(0,0,0,.4);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
     .note{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:.8rem;color:#dce6ff;margin-top:2px}
+
+    /* Frame & toolbar */
     .cms-frame{max-width:1200px;margin:12px auto 26px;padding:0 12px}
     .qa{position:sticky;top:60px;z-index:999;background:#0f162c;border:1px solid rgba(255,255,255,.12);border-radius:12px;margin:14px 0;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .qa input[type="search"]{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:240px}
     .qa .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
-    .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid rgba(255,255,255,.08)!important}
-    .nc-toolbar{background:#0f1322 !important;border-top:1px solid rgba(255,255,255,.08)!important}
-    .nc-primary{background:#3A66B3 !important;color:#fff !important;border:1px solid rgba(58,102,179,.9)!important}
-    .nc-button{border-radius:12px!important;font-weight:700!important}
-    .nc-entryCard,.nc-widgetControl,.nc-widgetPreview{border-radius:14px!important;border-color:rgba(26,26,46,.2)!important}
+    .qa .tiny{font-size:.85rem;color:#bcd0ff}
+
+    /* Branded CMS chrome */
+    .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid rgba(255,255,255,.08) !important}
+    .nc-toolbar{background:#0f1322 !important;border-top:1px solid rgba(255,255,255,.08) !important}
+    .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
+    .nc-button{border-radius:12px !important;font-weight:700 !important}
+    .nc-entryCard, .nc-widgetControl, .nc-widgetPreview{border-radius:14px !important;border-color:rgba(26,26,46,.2) !important}
   </style>
 </head>
 <body>
-  <div class="hmj-topbar">
+
+  <!-- Top bar -->
+  <div class="hmj-topbar" role="navigation" aria-label="HMJ CMS Topbar">
     <div class="inner">
       <div class="hmj-brand"><span class="dot" aria-hidden="true"></span> HMJ Global — CMS Portal</div>
       <div class="hmj-actions">
         <a class="btn btn-blue" href="/">⟵ Return to Homepage</a>
         <a id="btnJobsPublic" class="btn btn-dark" href="/jobs.html" target="_blank" rel="noopener" style="display:none">View Jobs Page</a>
-        <a id="btnOpenEditor" class="btn btn-dark" href="#/collections/jobsData/entries/jobsFile" style="display:none">Open Jobs in Editor</a>
+        <a id="btnOpenEditor" class="btn btn-dark" href="#/collections/jobsData/entries/jobsFile" style="display:none" title="Open Jobs in the editor">Open Jobs in Editor</a>
         <button id="btnLogout" class="btn btn-ghost" type="button" style="display:none">Sign out</button>
         <a class="btn btn-ghost" href="https://app.netlify.com" target="_blank" rel="noopener">Netlify</a>
         <a class="btn btn-ghost" href="https://github.com" target="_blank" rel="noopener">GitHub</a>
@@ -60,9 +96,38 @@
     </div>
   </div>
 
+  <!-- Error banners -->
   <div id="err" class="warn"></div>
   <div id="domainWarn" class="warn"></div>
 
+  <!-- Diagnostics -->
+  <div class="drawer" id="diagWrap" style="display:none">
+    <details class="panel" id="diagPanel">
+      <summary>⚙ Diagnostics & tools</summary>
+      <div class="content">
+        <p>Quick checks to confirm everything is wired correctly.</p>
+        <table>
+          <tbody>
+            <tr><td>Host</td><td><code id="dg-host"></code></td></tr>
+            <tr><td>Identity widget loaded</td><td id="dg-id">—</td></tr>
+            <tr><td>Login state</td><td id="dg-user">—</td></tr>
+            <tr><td>CMS script loaded</td><td id="dg-cms">—</td></tr>
+            <tr><td>Jobs JSON reachable</td><td id="dg-json">—</td></tr>
+            <tr><td>Backend / branch</td><td><code>git-gateway @ main</code></td></tr>
+            <tr><td>Jobs file</td><td><code>data/jobs.json</code></td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button id="btnDiagRun" class="btn btn-dark" type="button">Run checks</button>
+          <button id="btnReloadCMS" class="btn btn-dark" type="button" title="Re-inject CMS script if blocked">Reload CMS script</button>
+          <button id="btnReloadIdentity" class="btn btn-dark" type="button" title="Re-inject Identity script if blocked">Reload Identity</button>
+          <a class="btn btn-ghost" href="/data/jobs.json" target="_blank" rel="noopener">Open jobs.json</a>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Login gate -->
   <div id="gate" class="gate">
     <h1>Sign in to HMJ CMS</h1>
     <p>Protected admin. Sign in with <b>Joe@HMJ-Global.com</b>.</p>
@@ -70,197 +135,326 @@
       <button id="btnLogin" class="btn btn-blue" type="button" disabled>Sign in with Netlify Identity</button>
       <span id="loginHint" class="note" style="margin-left:8px">Loading Identity…</span>
     </p>
+    <div style="margin-top:10px">
+      <button id="btnManualIdentity" class="btn btn-dark" type="button" title="Try reloading the Identity widget">Try alternate Identity loader</button>
+      <button id="btnDiagShow" class="btn btn-ghost" type="button">Show diagnostics</button>
+    </div>
   </div>
 
-  <section id="hero" class="hmj-hero" style="display:none">
+  <!-- Guide -->
+  <section id="hero" class="hmj-hero" role="region" aria-label="Jobs editor guide" style="display:none">
     <div class="inner">
       <div class="hero-card">
         <h1 class="hero-title">How to use the Jobs editor</h1>
         <p class="hero-sub">This portal writes to <span class="kbd">data/jobs.json</span>. Your public Jobs page reads that file to render cards, filters, and anchors.</p>
         <ol class="hero-list">
-          <li>Click <b>Open Jobs in Editor</b> or go to <b>Content → Jobs Data → Jobs</b>.</li>
+          <li>Click <b>Open Jobs in Editor</b> (top bar) or go to <b>Content → Jobs Data → Jobs</b>.</li>
           <li>Each list item is one role. Save → Workflow: <span class="kbd">Draft → In Review → Publish</span>.</li>
-          <li><b>ID</b> becomes <span class="kbd">/jobs.html#your-id</span> (lowercase, unique, stable).</li>
+          <li><b>ID (unique)</b> becomes <span class="kbd">/jobs.html#your-id</span>. Keep lowercase/kebab-case and don’t change it later.</li>
           <li>Uploads go to <span class="kbd">images/uploads/</span>.</li>
         </ol>
-        <p class="note">Tip: test via <span class="kbd">/jobs.html#the-id-you-set</span>.</p>
+        <p class="note">Tip: open <span class="kbd">/jobs.html#the-id-you-set</span> to jump to a card.</p>
       </div>
       <div class="hero-card">
         <p><b>Quick tips</b></p>
         <ul class="hero-list">
-          <li><b>Status</b> = badge & filter (Live / Interviewing / Closed).</li>
-          <li><b>Section</b> controls which board/column on Jobs page.</li>
-          <li><b>Location Code</b> drives the filter; <b>Location Text</b> is what candidates see.</li>
-          <li>Leave <b>Apply URL</b> blank to use HMJ default form.</li>
+          <li><b>Status</b> shows a badge & drives filters (Live / Interviewing / Closed).</li>
+          <li><b>Section (Board)</b> controls which column/group on the Jobs page.</li>
+          <li><b>Location Code</b> drives the filter. <b>Location Text</b> is what candidates see.</li>
+          <li>Leave <b>Apply URL</b> blank to use the default HMJ apply form; add a full URL to send to an ATS.</li>
         </ul>
       </div>
     </div>
   </section>
 
+  <!-- Toolbar -->
   <div id="qa" class="cms-frame" style="display:none">
-    <div class="qa">
+    <div class="qa" aria-label="Quick actions">
       <input id="qaSearch" type="search" placeholder="Search jobs (title, location, status)…" aria-label="Search jobs">
-      <select id="qaSort" class="select" aria-label="Sort (uses CMS built-in)">
+      <select id="qaSort" class="select" aria-label="Sort">
         <option value="">Sort by…</option>
         <option value="title">Title (A→Z)</option>
         <option value="status">Status</option>
         <option value="location">Location (A→Z)</option>
       </select>
-      <button id="qaPreview" class="btn btn-dark" type="button">Preview Jobs Page</button>
-      <button id="qaTop" class="btn btn-ghost" type="button">⬆︎ Top</button>
-      <span class="note">Use CMS search & sort (safe)</span>
-      <button data-template="bms" class="btn btn-blue" type="button">BMS Engineer</button>
-      <button data-template="csaqs" class="btn btn-blue" type="button">CSA QS</button>
-      <button data-template="planner" class="btn btn-blue" type="button">Planner</button>
-      <button id="qaDuplicate" class="btn btn-dark" type="button" title="Copy current job JSON">Duplicate current</button>
+      <button id="qaPreview" class="btn btn-dark" type="button" title="Open your public Jobs page">Preview Jobs Page</button>
+      <button id="qaTop" class="btn btn-ghost" type="button" title="Scroll to top">⬆︎ Top</button>
+      <span class="tiny">Templates:</span>
+      <button data-template="bms" class="btn btn-blue" type="button" title="Copy a BMS Engineer template to clipboard">BMS Engineer</button>
+      <button data-template="csaqs" class="btn btn-blue" type="button" title="Copy a CSA QS template to clipboard">CSA QS</button>
+      <button data-template="planner" class="btn btn-blue" type="button" title="Copy a Planner template to clipboard">Planner</button>
+      <button id="qaDuplicate" class="btn btn-dark" type="button" title="Copies a JSON of the currently open job to your clipboard.">Duplicate current</button>
     </div>
   </div>
 
+  <!-- CMS mount -->
   <div id="cmsRoot" class="cms-frame" style="display:none"><div id="nc-root"></div></div>
-  <div class="cms-frame" id="footer" style="display:none;color:#bfc9ff">Need help? <a href="mailto:info@hmj-global.com">info@hmj-global.com</a> · Anchors look like <span class="kbd">/jobs.html#electrical-supervisor-uk</span></div>
+  <div class="cms-frame" id="footer" style="display:none;color:#bfc9ff">
+    Need help? <a href="mailto:info@hmj-global.com">info@hmj-global.com</a> · Anchors look like <span class="kbd">/jobs.html#electrical-supervisor-uk</span>
+  </div>
 
   <script>
-    const $=id=>document.getElementById(id);
+    // ---------- helpers ----------
+    const $ = id => document.getElementById(id);
     const gate=$('gate'), hero=$('hero'), qa=$('qa'), cmsRoot=$('cmsRoot'), footer=$('footer');
     const btnLogin=$('btnLogin'), loginHint=$('loginHint'), btnLogout=$('btnLogout');
     const btnJobsPublic=$('btnJobsPublic'), btnOpenEditor=$('btnOpenEditor');
     const errBox=$('err'), domainWarn=$('domainWarn');
+    const diagWrap=$('diagWrap'), diagPanel=$('diagPanel');
+    const dgHost=$('dg-host'), dgId=$('dg-id'), dgUser=$('dg-user'), dgCms=$('dg-cms'), dgJson=$('dg-json');
 
-    const showGate=()=>{ gate.style.display='block'; hero.style.display='none'; qa.style.display='none'; cmsRoot.style.display='none'; footer.style.display='none'; btnLogout.style.display='none'; btnJobsPublic.style.display='none'; btnOpenEditor.style.display='none'; };
-    const showPortal=()=>{ gate.style.display='none'; hero.style.display='block'; qa.style.display='block'; cmsRoot.style.display='block'; footer.style.display='block'; btnLogout.style.display='inline-flex'; btnJobsPublic.style.display='inline-flex'; btnOpenEditor.style.display='inline-flex'; };
-
+    const showGate=()=>{ gate.style.display='block'; hero.style.display='none'; qa.style.display='none'; cmsRoot.style.display='none'; footer.style.display='none'; btnLogout.style.display='none'; btnJobsPublic.style.display='none'; btnOpenEditor.style.display='none'; diagWrap.style.display='block'; };
+    const showPortal=()=>{ gate.style.display='none'; hero.style.display='block'; qa.style.display='block'; cmsRoot.style.display='block'; footer.style.display='block'; btnLogout.style.display='inline-flex'; btnJobsPublic.style.display='inline-flex'; btnOpenEditor.style.display='inline-flex'; diagWrap.style.display='block'; };
     showGate();
 
-    // Identity
-    (function waitForIdentity(){
-      const tick=setInterval(()=>{
-        if(window.netlifyIdentity){
-          clearInterval(tick);
-          btnLogin.disabled=false; loginHint.textContent='Invite-only access';
-          window.netlifyIdentity.on('init', user => { user ? startPortal() : showGate(); });
-          window.netlifyIdentity.init();
-          btnLogin.addEventListener('click', ()=> window.netlifyIdentity.open('login'));
-          window.netlifyIdentity.on('login', ()=>{ window.netlifyIdentity.close(); startPortal(); });
-          window.netlifyIdentity.on('logout', ()=> window.location.reload());
-          btnLogout.addEventListener('click', ()=> window.netlifyIdentity.logout());
-        }
-      },100);
-      setTimeout(()=>{ if(!window.netlifyIdentity){ btnLogin.disabled=true; loginHint.textContent='Identity failed to load. Allow identity.netlify.com & refresh.'; }},6000);
-    })();
+    // ---------- Identity robust loader ----------
+    function injectIdentity(){
+      const existing = [...document.scripts].some(s => (s.src||'').includes('identity.netlify.com/v1/netlify-identity-widget.js'));
+      if (existing) return;
+      const s=document.createElement('script');
+      s.src='https://identity.netlify.com/v1/netlify-identity-widget.js';
+      s.async=true; s.defer=true;
+      document.head.appendChild(s);
+    }
 
-    // Only Netlify CMS v2 (pinned)
+    function identityReady(){
+      return new Promise((res)=> {
+        if (window.netlifyIdentity) return res(true);
+        let tries=0;
+        const iv=setInterval(()=>{
+          tries++;
+          if (window.netlifyIdentity){ clearInterval(iv); res(true); }
+          if (tries>100){ clearInterval(iv); res(false); }
+        },100);
+      });
+    }
+
+    async function initIdentity(){
+      const ok = await identityReady();
+      if (!ok){
+        btnLogin.disabled = true;
+        loginHint.textContent = 'Identity failed to load. Allow identity.netlify.com and click “Try alternate Identity loader”.';
+        return;
+      }
+      btnLogin.disabled=false; loginHint.textContent='Invite-only access';
+      window.netlifyIdentity.on('init', user => { user ? startPortal() : showGate(); });
+      window.netlifyIdentity.init();
+      btnLogin.addEventListener('click', ()=> window.netlifyIdentity.open('login'));
+      window.netlifyIdentity.on('login', ()=>{ window.netlifyIdentity.close(); startPortal(); });
+      window.netlifyIdentity.on('logout', ()=> window.location.reload());
+      btnLogout.addEventListener('click', ()=> window.netlifyIdentity.logout());
+    }
+
+    // Allow manual retry if blocked
+    $('btnManualIdentity').addEventListener('click', ()=>{
+      injectIdentity();
+      setTimeout(initIdentity, 800);
+    });
+
+    $('btnDiagShow').addEventListener('click', ()=>{
+      diagWrap.style.display='block';
+      if (!diagPanel.open) diagPanel.open = true;
+    });
+
+    // Start Identity init after DOM
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // auto-refresh identity if blockers delayed it
+      setTimeout(()=>{ if(!window.netlifyIdentity){ injectIdentity(); setTimeout(initIdentity, 800); } }, 900);
+      initIdentity();
+    });
+
+    // ---------- robust CMS loader (Netlify CMS v2 pinned) ----------
     function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.defer=true; s.onload=res; s.onerror=()=>rej(new Error('Failed to load '+src)); document.head.appendChild(s); }); }
     async function ensureCMSLoaded(){
       const urls=[
         'https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js',
         'https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/netlify-cms.js'
       ];
-      for(const u of urls){ try{ await loadScript(u); if(window.CMS) return; }catch(e){} }
-      throw new Error('CMS script blocked by network. Allow unpkg.com or jsdelivr.net and refresh.');
+      for(const u of urls){
+        try{ await loadScript(u); if (window.CMS) return true; }catch(e){}
+      }
+      throw new Error('CMS script blocked by network. Allow unpkg.com or jsdelivr.net, then press “Reload CMS script”.');
     }
 
-    function slugify(s){ return (s||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+    // ---------- utilities ----------
+    function slugify(s){ return (s||'').toString().trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+    function cmsSearchBox(){ return document.querySelector('.nc-search-input input'); }
+    function cmsSortSelect(){ return document.querySelector('.nc-sort-control select'); }
 
+    // ---------- diagnostics ----------
+    async function runDiagnostics(){
+      dgHost.textContent = location.host;
+      dgId.textContent = window.netlifyIdentity ? '✅ loaded' : '❌ not found';
+      try{ dgUser.textContent = (window.netlifyIdentity && window.netlifyIdentity.currentUser()) ? '✅ logged in' : 'ℹ not logged in'; }catch(_){ dgUser.textContent='—'; }
+      dgCms.textContent = window.CMS ? '✅ loaded' : '❌ not loaded';
+      try{
+        const r = await fetch('/data/jobs.json',{cache:'no-store'});
+        dgJson.textContent = r.ok ? '✅ 200 OK' : `❌ ${r.status}`;
+      }catch(e){ dgJson.textContent='❌ fetch failed'; }
+    }
+    $('btnDiagRun').addEventListener('click', runDiagnostics);
+    $('btnReloadCMS').addEventListener('click', async ()=>{
+      try{ await ensureCMSLoaded(); errBox.style.display='none'; runDiagnostics(); }catch(e){ errBox.textContent='CMS load error: '+e.message; errBox.style.display='block'; }
+    });
+    $('btnReloadIdentity').addEventListener('click', ()=>{
+      injectIdentity();
+      setTimeout(initIdentity, 800);
+    });
+
+    // ---------- main portal ----------
     async function startPortal(){
       showPortal();
 
-      // Warn on domain mismatch (URL forwarding causes Identity issues)
+      // Warning if domain mismatch (URL forwarding breaks Identity)
       try{
         const idHost = new URL('https://hmjg.netlify.app/.netlify/identity').host;
-        if(location.host!==idHost && !location.host.endsWith('.netlify.app')){
-          domainWarn.textContent='⚠ Use https://hmjg.netlify.app/admin/ or connect your custom domain directly (no URL forwarding).';
+        if (location.host!==idHost && !location.host.endsWith('.netlify.app')) {
+          domainWarn.textContent='⚠ Identity domain mismatch: open at https://hmjg.netlify.app/admin/ or connect your custom domain directly (no URL forwarding).';
           domainWarn.style.display='block';
         }
       }catch(e){}
 
       try{
-        await ensureCMSLoaded();
+        if (!window.CMS){ await ensureCMSLoaded(); }
 
-        CMS.registerPreviewStyle(`:root{--accent:#3A66B3} a{color:var(--accent)}`,{raw:true});
+        // Small brand touch inside previews
+        CMS.registerPreviewStyle(`:root{--accent:#3A66B3} a{color:var(--accent)}`, { raw:true });
 
+        // Initialize CMS
         CMS.init({
           config:{
             backend:{ name:"git-gateway", branch:"main" },
             publish_mode:"editorial_workflow",
             media_folder:"images/uploads",
             public_folder:"/images/uploads",
-            collections:[{
-              label:"Jobs Data",
-              name:"jobsData",
-              files:[{
-                label:"Jobs",
-                name:"jobsFile",
-                file:"data/jobs.json",
-                description:"This file powers the Jobs page (/jobs.html).",
-                fields:[{
-                  label:"Jobs", name:"jobs", widget:"list", collapsed:true,
-                  summary:"{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
-                  fields:[
-                    {label:"ID (unique, used as URL anchor)",name:"id",widget:"string",hint:"Becomes /jobs.html#your-id (e.g., mep-qs-dublin).",pattern:["^[a-z0-9-]+$","Use lowercase letters, numbers, and hyphens only."]},
-                    {label:"Published",name:"published",widget:"boolean",default:true,hint:"Turn OFF to hide this role."},
-                    {label:"Title",name:"title",widget:"string",hint:"Card heading."},
-                    {label:"Status (badge)",name:"status",widget:"select",options:[{label:"Live — Taking Candidates",value:"live"},{label:"Interviewing — Shortlist in Review",value:"interviewing"},{label:"Closed — Not Accepting New Applicants",value:"closed"}],default:"live"},
-                    {label:"Section (board/column)",name:"section",widget:"select",options:[{label:"Data Centre — Commercial",value:"commercial"},{label:"Data Centre — Engineering & Management",value:"dc"},{label:"Substations, Power & Energy",value:"substations"},{label:"Life Sciences & Pharma",value:"pharma"},{label:"ICT & Commissioning",value:"ict"}],default:"dc"},
-                    {label:"Discipline (tag)",name:"discipline",widget:"select",options:["Data Centre","Life Sciences","Pharma","Substation"],default:"Data Centre"},
-                    {label:"Employment Type",name:"type",widget:"select",options:[{label:"Permanent",value:"permanent"},{label:"Contract",value:"contract"}],default:"permanent"},
-                    {label:"Location Code (filter)",name:"locationCode",widget:"select",options:[{label:"Amsterdam, Netherlands",value:"amsterdam"},{label:"Dublin, Ireland",value:"dublin"},{label:"Eemshaven, Netherlands",value:"eemshaven"},{label:"Espoo, Finland",value:"espoo"},{label:"Frankfurt, Germany",value:"frankfurt"},{label:"Groningen, Netherlands",value:"groningen"},{label:"Helsinki, Finland",value:"helsinki"},{label:"London, UK",value:"london"},{label:"Macclesfield, UK",value:"macclesfield"},{label:"UK (Various)",value:"uk"},{label:"Europe (Travel)",value:"europe"}],default:"uk"},
-                    {label:"Location Text (shown)",name:"locationText",widget:"string"},
-                    {label:"Keywords (searchable)",name:"keywords",widget:"text",required:false},
-                    {label:"Overview",name:"overview",widget:"text",required:false},
-                    {label:"Responsibilities",name:"responsibilities",widget:"list",required:false,field:{label:"Item",name:"item",widget:"string"}},
-                    {label:"Requirements",name:"requirements",widget:"list",required:false,field:{label:"Item",name:"item",widget:"string"}},
-                    {label:"Apply URL (optional)",name:"applyUrl",widget:"string",required:false}
-                  ]
-                }]}
-              ]}]
-            }
+            collections:[
+              {
+                label:"Jobs Data",
+                name:"jobsData",
+                files:[
+                  {
+                    label:"Jobs",
+                    name:"jobsFile",
+                    file:"data/jobs.json",
+                    description:"Powers the public Jobs page (/jobs.html).",
+                    fields:[
+                      {
+                        label:"Jobs",
+                        name:"jobs",
+                        widget:"list",
+                        collapsed:true,
+                        summary:"{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
+                        fields:[
+                          { label:"ID (unique, used as URL anchor)", name:"id", widget:"string",
+                            hint:"Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
+                            pattern:["^[a-z0-9-]+$","Use lowercase letters, numbers, and hyphens only."] },
+                          { label:"Published", name:"published", widget:"boolean", default:true, hint:"Turn OFF to hide this role." },
+                          { label:"Title", name:"title", widget:"string", hint:"Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”)." },
+                          { label:"Status (badge shown on card)", name:"status", widget:"select",
+                            options:[
+                              {label:"Live — Taking Candidates", value:"live"},
+                              {label:"Interviewing — Shortlist in Review", value:"interviewing"},
+                              {label:"Closed — Not Accepting New Applicants", value:"closed"}
+                            ], default:"live",
+                            hint:"Also used by the Status filter on the Jobs page." },
+                          { label:"Section (which board/column to show in)", name:"section", widget:"select",
+                            options:[
+                              {label:"Data Centre — Commercial", value:"commercial"},
+                              {label:"Data Centre — Engineering & Management", value:"dc"},
+                              {label:"Substations, Power & Energy", value:"substations"},
+                              {label:"Life Sciences & Pharma", value:"pharma"},
+                              {label:"ICT & Commissioning", value:"ict"}
+                            ], default:"dc",
+                            hint:"Matches the big section headings on the Jobs page." },
+                          { label:"Discipline (shown as a tag)", name:"discipline", widget:"select",
+                            options:["Data Centre","Life Sciences","Pharma","Substation"], default:"Data Centre",
+                            hint:"Appears as the tag and powers the Discipline filter." },
+                          { label:"Employment Type (filter chip)", name:"type", widget:"select",
+                            options:[ {label:"Permanent", value:"permanent"}, {label:"Contract", value:"contract"} ],
+                            default:"permanent", hint:"Used by the Employment filter on the Jobs page." },
+                          { label:"Location Code (drives the Location filter)", name:"locationCode", widget:"select",
+                            options:[
+                              {label:"Amsterdam, Netherlands", value:"amsterdam"},
+                              {label:"Dublin, Ireland", value:"dublin"},
+                              {label:"Eemshaven, Netherlands", value:"eemshaven"},
+                              {label:"Espoo, Finland", value:"espoo"},
+                              {label:"Frankfurt, Germany", value:"frankfurt"},
+                              {label:"Groningen, Netherlands", value:"groningen"},
+                              {label:"Helsinki, Finland", value:"helsinki"},
+                              {label:"London, UK", value:"london"},
+                              {label:"Macclesfield, UK", value:"macclesfield"},
+                              {label:"UK (Various)", value:"uk"},
+                              {label:"Europe (Travel)", value:"europe"}
+                            ], default:"uk",
+                            hint:"Must match the site Location filter codes." },
+                          { label:"Location Text (what candidates see)", name:"locationText", widget:"string",
+                            hint:"e.g., “Frankfurt, Germany”." },
+                          { label:"Keywords (searchable)", name:"keywords", widget:"text", required:false,
+                            hint:"Comma/space-separated skills or terms (e.g., “P6, commissioning, NEC”)." },
+                          { label:"Overview", name:"overview", widget:"text", required:false, hint:"2–4 lines introducing the role." },
+                          { label:"Responsibilities", name:"responsibilities", widget:"list", required:false,
+                            field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
+                          { label:"Requirements", name:"requirements", widget:"list", required:false,
+                            field:{label:"Item", name:"item", widget:"string"}, hint:"Bulleted list. Leave empty to hide." },
+                          { label:"Apply URL (optional)", name:"applyUrl", widget:"string", required:false,
+                            hint:"Leave blank to use the default HMJ apply form." }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
           }
         });
 
-        // Validation: Title + ID (auto from Title), unique IDs
+        // Validation guard — auto ID & unique IDs
         CMS.registerEventListener({
           name:'preSave',
           handler: ({ entry }) => {
-            const jobs=entry.getIn(['data','jobs']); if(!jobs) return;
-            const ids=new Set();
-            const fixed=jobs.map((j,i)=>{
-              if(!j) return j;
-              let id=(j.get('id')||'').trim(); const title=(j.get('title')||'').trim();
-              if(!id && title) id=slugify(title);
-              if(!title || !id){ alert(`Job #${i+1}: set Title and ID (ID auto-fills from Title).`); throw new Error('Missing Title/ID'); }
-              if(ids.has(id)){ alert(`Duplicate ID "${id}" — must be unique.`); throw new Error('Duplicate ID'); }
-              ids.add(id); return j.set('id',id);
+            const jobs = entry.getIn(['data','jobs']); if (!jobs) return;
+            const ids = new Set();
+            const fixed = jobs.map((j, i)=>{
+              if (!j) return j;
+              let id=(j.get('id')||'').trim();
+              const title=(j.get('title')||'').trim();
+              if (!id && title) id = slugify(title);
+              if (!title || !id){ alert(`Job #${i+1}: set Title and ID (ID auto-fills from Title).`); throw new Error('Missing Title/ID'); }
+              if (ids.has(id)){ alert(`Duplicate ID "${id}" — IDs must be unique (#anchor).`); throw new Error('Duplicate ID'); }
+              ids.add(id);
+              return j.set('id', id);
             });
-            return entry.setIn(['data','jobs'],fixed);
+            return entry.setIn(['data','jobs'], fixed);
           }
         });
 
-        // Safe helpers (no DOM reordering)
-        const cmsSearchInput = ()=> document.querySelector('.nc-search-input input');
-        $('qaPreview').onclick = ()=> window.open('/jobs.html','_blank','noopener');
+        // Safe toolbar helpers (use CMS' own controls)
+        $('qaPreview').onclick=()=> window.open('/jobs.html','_blank','noopener');
         $('qaTop').onclick = ()=> window.scrollTo({top:0,behavior:'smooth'});
 
         $('qaSearch').addEventListener('input', ()=>{
-          const t=cmsSearchInput(); if(!t) return;
+          const t=cmsSearchBox(); if(!t) return;
           t.value = $('qaSearch').value;
           t.dispatchEvent(new Event('input', { bubbles:true }));
         });
 
         $('qaSort').addEventListener('change', ()=>{
-          // Use CMS's toolbar sort dropdown if present (no DOM moves from our side)
-          const dd=document.querySelector('.nc-sort-control select');
+          const dd=cmsSortSelect();
           if(dd){ dd.value = $('qaSort').value || ''; dd.dispatchEvent(new Event('change',{bubbles:true})); }
         });
 
+        // Templates + duplicate current
         const templates={
-          bms:{id:"bms-engineer-city",published:true,title:"BMS Engineer — Data Centre",status:"live",section:"ict",discipline:"Data Centre",type:"permanent",locationCode:"uk",locationText:"UK (Various)",keywords:"BMS, EPMS, Commissioning, Trend, Tridium",overview:"Support BMS/EPMS commissioning on hyperscale DC sites.",responsibilities:["Commission BMS/EPMS systems","Interface with MEP & OEM vendors","Produce test documentation"],requirements:["BMS platforms experience","Mission-critical experience"],applyUrl:""},
-          csaqs:{id:"csa-qs-dublin",published:true,title:"CSA Quantity Surveyor — Data Centre",status:"live",section:"commercial",discipline:"Data Centre",type:"permanent",locationCode:"dublin",locationText:"Dublin, Ireland",keywords:"CSA, QS, NEC, Data Centre",overview:"Own CSA packages on a hyperscale build.",responsibilities:["Manage CSA packages","Cost reporting","Change management"],requirements:["NEC experience","Tier-1/DC exposure"],applyUrl:""},
-          planner:{id:"senior-planner-frankfurt",published:true,title:"Senior Planner — Data Centre",status:"interviewing",section:"dc",discipline:"Data Centre",type:"contract",locationCode:"frankfurt",locationText:"Frankfurt, Germany",keywords:"P6, Planning, MEP",overview:"Plan multi-discipline delivery on a live DC programme.",responsibilities:["Maintain level-4 schedules","Progress reporting","Interface with trades"],requirements:["Strong P6","Major construction"],applyUrl:""}
+          bms:{id:"bms-engineer-city",published:true,title:"BMS Engineer — Data Centre",status:"live",section:"ict",discipline:"Data Centre",type:"permanent",locationCode:"uk",locationText:"UK (Various)",keywords:"BMS, EPMS, Commissioning, Trend, Tridium",overview:"Support BMS/EPMS commissioning on hyperscale DC sites.",responsibilities:["Commission BMS/EPMS systems","Interface with MEP & OEM vendors","Produce test documentation"],requirements:["BMS platforms experience","Mission-critical exposure"],applyUrl:""},
+          csaqs:{id:"csa-qs-dublin",published:true,title:"CSA Quantity Surveyor — Data Centre",status:"live",section:"commercial",discipline:"Data Centre",type:"permanent",locationCode:"dublin",locationText:"Dublin, Ireland",keywords:"CSA, Quantity Surveyor, NEC, Data Centre",overview:"Own CSA packages on a hyperscale build.",responsibilities:["Manage CSA packages","Cost reporting & forecasting","Change management"],requirements:["NEC contract experience","Tier-1 GC or DC exposure"],applyUrl:""},
+          planner:{id:"senior-planner-frankfurt",published:true,title:"Senior Planner — Data Centre",status:"interviewing",section:"dc",discipline:"Data Centre",type:"contract",locationCode:"frankfurt",locationText:"Frankfurt, Germany",keywords:"Primavera P6, Planning, MEP, Data Centre",overview:"Plan multi-discipline delivery on a live DC programme.",responsibilities:["Develop & maintain level-4 schedules","Progress measurement & reporting","Interface with trades"],requirements:["Strong P6","Major construction (DC preferred)"],applyUrl:""}
         };
-        document.querySelectorAll('button[data-template]').forEach(b=>b.onclick=async e=>{
-          const key=e.currentTarget.getAttribute('data-template');
-          await navigator.clipboard.writeText(JSON.stringify(templates[key],null,2));
-          alert('Template copied. Click “Add Jobs”, then paste.');
+        document.querySelectorAll('button[data-template]').forEach(btn=>{
+          btn.onclick = async e=>{
+            const key=e.currentTarget.getAttribute('data-template');
+            await navigator.clipboard.writeText(JSON.stringify(templates[key], null, 2));
+            alert('Template copied. Click “Add Jobs”, then paste to prefill.');
+          };
         });
 
         $('qaDuplicate').onclick = async ()=>{
@@ -268,18 +462,21 @@
             const state=CMS.store.getState();
             const entry=state.entryDraft.getIn(['entry','data']);
             const jobs=entry && entry.get('jobs');
-            if(!jobs || jobs.size===0){ alert('Open a Jobs entry and expand an item before duplicating.'); return; }
+            if (!jobs || jobs.size===0){ alert('Open a Jobs entry and expand an item before duplicating.'); return; }
             let picked=null; jobs.forEach(j=>{ if(j && j.get('title') && !picked) picked=j.toJS(); });
-            if(!picked){ alert('Please expand a job item to duplicate.'); return; }
+            if (!picked){ alert('Please expand a job item to duplicate.'); return; }
             picked.id = slugify(picked.title)+'-copy';
-            await navigator.clipboard.writeText(JSON.stringify(picked,null,2));
+            await navigator.clipboard.writeText(JSON.stringify(picked, null, 2));
             alert('Copied. Click “Add Jobs”, then paste and edit.');
           }catch(e){ alert('Could not duplicate the current job.'); }
         };
 
+        // First diagnostics snapshot after init
+        runDiagnostics();
+
       }catch(e){
-        errBox.textContent = 'CMS failed to initialize: ' + (e && e.message ? e.message : e);
-        errBox.style.display = 'block';
+        errBox.textContent='CMS failed to initialize: ' + (e && e.message ? e.message : e);
+        errBox.style.display='block';
       }
     }
   </script>
