@@ -2,264 +2,290 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  />
   <title>HMJ Global — CMS Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="preconnect" href="https://unpkg.com" crossorigin>
-  <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
-  <!-- We will init CMS manually after we purge its cache -->
-  <script>window.CMS_MANUAL_INIT = true;</script>
-
-  <!-- ================== INLINE CMS CONFIG ================== -->
-  <script>
-    window.CMS_CONFIG = {
-      backend: { name: "git-gateway", branch: "main" },
-      publish_mode: "editorial_workflow",
-      media_folder: "images/uploads",
-      public_folder: "/images/uploads",
-      // adding sortable_fields avoids older Netlify-CMS trying to derive from fields too early
-      collections: [
-        {
-          label: "Jobs Data",
-          name: "jobsData",
-          sortable_fields: [],
-          files: [
-            {
-              label: "Jobs Data",
-              name: "jobs",
-              file: "data/jobs.json",
-              format: "json",
-              editor: { preview: false },
-              description: "Single JSON file powering /jobs.html.",
-              fields: [
-                {
-                  label: "Jobs",
-                  name: "jobs",
-                  widget: "list",
-                  collapsed: true,
-                  summary: "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
-                  fields: [
-                    { label: "ID (URL anchor)", name: "id", widget: "string",
-                      pattern: ["^[a-z0-9-]+$", "Lowercase letters, numbers and hyphens only."] },
-                    { label: "Published", name: "published", widget: "boolean", default: true },
-                    { label: "Title", name: "title", widget: "string" },
-                    { label: "Status", name: "status", widget: "select",
-                      options: [
-                        { label: "Live — Taking Candidates", value: "live" },
-                        { label: "Interviewing — Shortlist in Review", value: "interviewing" },
-                        { label: "Closed — Not Accepting New Applicants", value: "closed" }
-                      ],
-                      default: "live" },
-                    { label: "Section", name: "section", widget: "select",
-                      options: [
-                        { label: "Data Centre — Commercial", value: "commercial" },
-                        { label: "Data Centre — Engineering & Management", value: "dc" },
-                        { label: "Substations, Power & Energy", value: "substations" },
-                        { label: "Life Sciences & Pharma", value: "pharma" },
-                        { label: "ICT & Commissioning", value: "ict" }
-                      ],
-                      default: "dc" },
-                    { label: "Discipline", name: "discipline", widget: "select",
-                      options: ["Data Centre", "Life Sciences", "Pharma", "Substation"],
-                      default: "Data Centre" },
-                    { label: "Employment Type", name: "type", widget: "select",
-                      options: [{label:"Permanent",value:"permanent"},{label:"Contract",value:"contract"}],
-                      default: "permanent" },
-                    { label: "Location Code", name: "locationCode", widget: "select",
-                      options: [
-                        { label: "Amsterdam, Netherlands", value: "amsterdam" },
-                        { label: "Dublin, Ireland", value: "dublin" },
-                        { label: "Eemshaven, Netherlands", value: "eemshaven" },
-                        { label: "Espoo, Finland", value: "espoo" },
-                        { label: "Frankfurt, Germany", value: "frankfurt" },
-                        { label: "Groningen, Netherlands", value: "groningen" },
-                        { label: "Helsinki, Finland", value: "helsinki" },
-                        { label: "London, UK", value: "london" },
-                        { label: "Macclesfield, UK", value: "macclesfield" },
-                        { label: "UK (Various)", value: "uk" },
-                        { label: "Europe (Travel)", value: "europe" }
-                      ],
-                      default: "uk" },
-                    { label: "Location Text", name: "locationText", widget: "string", required: false },
-                    { label: "Keywords", name: "keywords", widget: "text", required: false },
-                    { label: "Overview", name: "overview", widget: "text", required: false },
-                    { label: "Responsibilities", name: "responsibilities", widget: "list", required: false,
-                      field: { label: "Item", name: "item", widget: "string" } },
-                    { label: "Requirements", name: "requirements", widget: "list", required: false,
-                      field: { label: "Item", name: "item", widget: "string" } },
-                    { label: "Apply URL (optional)", name: "applyUrl", widget: "string", required: false }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
-  </script>
-
-  <!-- Identity widget -->
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
-
+  <!-- Brand font fallbacks kept simple -->
   <style>
-    :root{--ink:#0f1322;--panel:#0f162c;--accent:#3A66B3;--b:rgba(255,255,255,.14);--b2:rgba(255,255,255,.09)}
-    *{box-sizing:border-box}
-    body{margin:0;background:#0b0f1c;color:#eaf0ff;font-family:Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif}
-    .top{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));border-bottom:1px solid var(--b2);backdrop-filter:blur(6px)}
-    .top .in{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
-    .brand{display:flex;gap:10px;align-items:center;font-weight:800}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
-    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--b);background:#0f162c;color:#fff;text-decoration:none;font-weight:700}
-    .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
-    #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
-    /* Hide CMS until ready to prevent “Error” pane flashes */
-    body.cms-wait #nc-root{visibility:hidden}
-    body.cms-ready #nc-root{visibility:visible}
-    /* dock bottom-right */
-    .dock{position:fixed;right:14px;bottom:14px;z-index:60;background:var(--panel);border:1px solid var(--b);border-radius:16px;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .dock input,.dock select{background:#0f1831;border:1px solid var(--b);color:#fff;border-radius:10px;padding:10px 12px}
-    .dock .btn{background:#0f1831}
-    /* CMS chrome polish */
-    .nc-appHeader{background:#0f1322!important;border-bottom:1px solid var(--b2)!important}
-    .nc-toolbar{background:#0f1322!important;border-top:1px solid var(--b2)!important}
-    .nc-primary{background:var(--accent)!important;color:#fff!important;border:1px solid rgba(58,102,179,.9)!important}
+    :root{
+      --bg:#0b1420;
+      --panel:#0f1c2b;
+      --muted:#9fb3c8;
+      --text:#e6edf6;
+      --blue:#4c7fff;
+      --green:#1fb981;
+      --red:#ff6b6b;
+      --border:#203042;
+    }
+    html,body{
+      margin:0;height:100%;background:var(--bg);color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    }
+    a{color:var(--blue);text-decoration:none}
+    .topbar{
+      position:sticky;top:0;z-index:50;background:rgba(11,20,32,.9);
+      backdrop-filter:saturate(120%) blur(6px);border-bottom:1px solid var(--border)
+    }
+    .row{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;gap:10px;align-items:center}
+    .brand-dot{width:8px;height:8px;border-radius:999px;background:#3bb3ff;display:inline-block;margin-right:10px}
+    .title{font-weight:700;letter-spacing:.2px}
+    .spacer{flex:1}
+    .btn{
+      background:#1a2740;border:1px solid #2b3c55;color:var(--text);
+      padding:10px 14px;border-radius:12px;display:inline-flex;align-items:center;gap:8px;
+      transition:all .18s ease;font-weight:600
+    }
+    .btn:hover{transform:translateY(-1px);border-color:#3b5172}
+    .primary{background:var(--blue);border-color:transparent}
+    .danger{background:#2a1b1b;border-color:#472a2a}
+    .wrap{max-width:1100px;margin:22px auto;padding:0 20px}
+    .card{
+      background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:18px
+    }
+    .h1{font-size:28px;font-weight:800;margin:0 0 4px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .kvs{display:grid;grid-template-columns:240px 1fr;gap:8px;padding:10px 0;border-top:1px dashed var(--border)}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.03)}
+    .ok{color:#4fe3a2}.warn{color:#ffd166}.err{color:#ff8fa3}
+    .hr{height:1px;background:var(--border);margin:14px 0}
+    /* Floating tools — bottom-right and tucks under CMS when active */
+    .dock{
+      position:fixed;right:20px;bottom:20px;z-index:5;
+      background:rgba(15,28,43,.92);backdrop-filter:blur(6px);
+      border:1px solid var(--border);border-radius:18px;padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+      max-width:min(92vw,760px)
+    }
+    .chip{padding:8px 10px;border-radius:10px;background:#132135;border:1px solid #23354e;color:var(--muted);font-size:13px}
+    .chip input{all:unset;color:var(--text)}
+    .chip-btn{padding:8px 12px;border-radius:10px;background:#1a2740;border:1px solid #2b3c55;color:var(--text);font-weight:700}
+    .chip-btn:hover{border-color:#3b5172}
+    /* “Logged in” popup from Identity can sit above; no problem */
+    #cmsHost{min-height:52vh}
+    code.small{font-size:12px;color:#aec2d8;background:#0c1724;border:1px solid #1d2a3c;padding:2px 6px;border-radius:6px}
   </style>
+
+  <!-- Netlify Identity (email login) -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+  <!-- Use Decap CMS (Netlify CMS successor) -->
+  <script>
+    window.CMS_MANUAL_INIT = true;
+  </script>
+  <script src="https://unpkg.com/decap-cms@^3.8.4/dist/decap-cms.js"></script>
 </head>
-<body class="cms-wait">
-  <!-- top nav -->
-  <div class="top">
-    <div class="in">
-      <div class="brand"><span class="dot"></span> HMJ Global — CMS Portal</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a class="btn blue" href="/">⟵ Return to Homepage</a>
-        <a class="btn" href="/jobs.html" target="_blank" rel="noopener">View Jobs Page</a>
-        <button id="btnOpenEditor" class="btn" type="button">Open Jobs in Editor</button>
-        <button id="btnSignOut" class="btn" type="button">Sign out</button>
-        <a class="btn" href="https://app.netlify.com" target="_blank" rel="noopener">Netlify</a>
-        <a class="btn" href="https://github.com" target="_blank" rel="noopener">GitHub</a>
-      </div>
+<body>
+  <div class="topbar">
+    <div class="row">
+      <span class="brand-dot"></span><span class="title">HMJ Global — CMS Portal</span>
+      <span class="spacer"></span>
+      <a href="/" class="btn">⟵ Return to Homepage</a>
+      <a id="btnView" class="btn" href="/jobs.html" target="_blank">View Jobs Page</a>
+      <button id="btnOpenEditor" class="btn primary">Open Jobs in Editor</button>
+      <button id="btnSignOut" class="btn danger">Sign out</button>
+      <a class="btn" href="https://app.netlify.com" target="_blank">Netlify</a>
+      <a class="btn" href="https://github.com" target="_blank">GitHub</a>
     </div>
   </div>
 
-  <!-- CMS mount -->
-  <div id="nc-root" role="region" aria-label="Netlify CMS"></div>
+  <div class="wrap">
+    <!-- Diagnostics -->
+    <div class="card">
+      <div class="h1">⚙ Diagnostics &amp; tools</div>
+      <div class="grid">
+        <div>
+          <div class="kvs"><div>Host</div><div id="dg-host" class="muted"></div></div>
+          <div class="kvs"><div>Identity widget loaded</div><div id="dg-ident" class="ok">✓ loaded</div></div>
+          <div class="kvs"><div>Login state</div><div id="dg-login" class="muted">—</div></div>
+          <div class="kvs"><div>CMS script loaded</div><div id="dg-cms" class="muted">—</div></div>
+          <div class="kvs"><div>Jobs JSON reachable</div><div id="dg-json" class="muted">—</div></div>
+          <div class="kvs"><div>Backend / branch</div><div class="muted">git-gateway @ main</div></div>
+          <div class="kvs"><div>Jobs file</div><div class="muted">data/jobs.json</div></div>
+        </div>
+        <div>
+          <button id="btnRunChecks" class="btn">Run checks</button>
+          <button id="btnReloadCMS" class="btn">Reload CMS script</button>
+          <button id="btnReloadId" class="btn">Reload Identity</button>
+          <button id="btnClearCache" class="btn">Clear local cache</button>
+          <div class="hr"></div>
+          <div id="errBlock" class="muted"></div>
+        </div>
+      </div>
+    </div>
 
-  <!-- quick dock bottom-right -->
-  <div class="dock" aria-label="Quick actions">
-    <input id="q" type="search" placeholder="Search jobs (title, location, status)…" />
-    <select id="tpl"><option value="">Templates:</option><option>BMS Engineer</option><option>CSA QS</option><option>Planner</option></select>
-    <a class="btn" href="/jobs.html" target="_blank" rel="noopener">Preview</a>
-    <button class="btn" id="topBtn" type="button">↑ Top</button>
-    <button class="btn" id="dupBtn" type="button">Duplicate current</button>
-    <input id="anchor" type="text" placeholder="anchor-id (e.g., mep-qs-dublin)" />
-    <button class="btn" id="openAnchor" type="button">Open anchor</button>
-    <button class="btn" id="copyBtn" type="button">Copy</button>
+    <!-- Welcome -->
+    <div class="card">
+      <div class="h1">Welcome 👋</div>
+      <div class="muted">Use the dock below to open the Jobs editor, duplicate templates, and copy anchors.</div>
+      <ul>
+        <li>Click <span class="badge">Open Jobs in Editor</span> to edit <code class="small">data/jobs.json</code>.</li>
+        <li>Preview your public page: <code class="small">/jobs.html</code>.</li>
+        <li>If you see a “Logged in” popup, it will auto-close and the editor will mount.</li>
+      </ul>
+      <div class="badge ok" id="cmsStatus">CMS Status: ready</div>
+    </div>
+
+    <!-- CMS host -->
+    <div id="cmsHost" class="card">
+      <div class="muted">Editor will appear here after login…</div>
+    </div>
   </div>
 
-  <!-- ============================ BOOTSTRAP ============================ -->
+  <!-- Floating dock (bottom-right) -->
+  <div class="dock" id="dock">
+    <span class="chip"><input id="searchBox" placeholder="Search jobs (title, location, status)…"></span>
+    <span class="chip">Templates:
+      <select id="tmplSel" class="chip" style="background:transparent;border:none;padding-left:6px;">
+        <option>—</option>
+        <option>CSA QS</option>
+        <option>MEP QS</option>
+        <option>Electrical Supervisor</option>
+      </select>
+    </span>
+    <button class="chip-btn" id="btnPreview">Preview</button>
+    <button class="chip-btn" id="btnTop">↑ Top</button>
+    <button class="chip-btn" id="btnDuplicate">Duplicate current</button>
+    <span class="chip">anchor-id (e.g., mep-qs-dublin)</span>
+    <button class="chip-btn" id="btnOpenAnchor">Open anchor</button>
+    <button class="chip-btn" id="btnCopy">Copy</button>
+  </div>
+
   <script>
-    (function(){
-      const SAFE_HOME = "#/";
-      const ENTRY_HASH = "#/collections/jobsData/entries/jobs";
+    /* ------------------------------
+       Small helpers
+    ------------------------------ */
+    const qs = sel => document.querySelector(sel);
+    const host = location.host;
+    qs('#dg-host').textContent = host;
 
-      /* Remove any persisted CMS state so it can't restore a deep route */
-      function purgeStorage() {
-        try {
-          const drop = k =>
-            /^netlify-cms/i.test(k) ||
-            /^cms\./i.test(k) ||
-            /^editorialWorkflow/i.test(k) ||
-            /^redux/i.test(k) ||
-            /^persist:/i.test(k);
-          for (const k of Object.keys(localStorage))  if (drop(k)) localStorage.removeItem(k);
-          for (const k of Object.keys(sessionStorage)) if (drop(k)) sessionStorage.removeItem(k);
-        } catch(_) {}
-        if (location.hash !== SAFE_HOME) location.replace(SAFE_HOME);
-      }
+    function setStatus(id, text, className){
+      const el = qs(id);
+      if (!el) return;
+      el.textContent = text;
+      el.className = className || '';
+    }
 
-      function loadScript(src){
-        return new Promise((res, rej)=>{
-          const s=document.createElement("script");
-          s.src=src; s.onload=res; s.onerror=rej;
-          document.head.appendChild(s);
-        });
-      }
+    function showError(err){
+      console.error(err);
+      const msg = (err && err.message) ? err.message : (''+err);
+      qs('#errBlock').innerHTML = '<div class="badge err">Error</div><div style="margin-top:6px">'+
+        msg.replace(/</g,'&lt;')+'</div>';
+    }
 
-      function identityReady(){
-        return new Promise(resolve=>{
-          if (!window.netlifyIdentity) return resolve();
-          window.netlifyIdentity.on && window.netlifyIdentity.on("init", resolve);
-          window.netlifyIdentity.init && window.netlifyIdentity.init();
-          setTimeout(resolve, 1000);
-        });
-      }
+    /* ------------------------------
+       Identity & Login flow
+    ------------------------------ */
+    const idw = window.netlifyIdentity;
+    let loggedIn = false;
 
-      function storeReady(){
-        try{
-          const st = window.CMS && window.CMS.getState && window.CMS.getState();
-          return !!(st && st.get && st.get("collections") && st.get("collections").get("jobsData"));
-        }catch(_){ return false; }
-      }
-      function waitForStore(ms=10000){
-        return new Promise((res, rej)=>{
-          const t0 = Date.now();
-          (function loop(){
-            if (storeReady()) return res();
-            if (Date.now()-t0>ms) return rej(new Error("CMS is still starting—try again in a second."));
-            if (/^#\/collections\//.test(location.hash)) location.replace(SAFE_HOME);
-            setTimeout(loop, 80);
-          })();
-        });
-      }
-
-      (async function boot(){
-        purgeStorage();
-        await identityReady();
-        await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
-
-        window.CMS && window.CMS.init({ config: window.CMS_CONFIG });
-
-        try { await waitForStore(); }
-        catch(e){ alert(e.message); }
-
-        // safe to show UI now
-        document.body.classList.remove("cms-wait");
-        document.body.classList.add("cms-ready");
-
-        // go straight to the file entry editor
-        if (location.hash !== ENTRY_HASH) location.replace(ENTRY_HASH);
-
-        // buttons
-        document.getElementById("btnOpenEditor")?.addEventListener("click", ()=>{
-          if (!storeReady()) { alert("CMS is still starting—try again in a second."); return; }
-          location.replace(ENTRY_HASH);
-        });
-      })();
-
-      // misc ui helpers
-      document.getElementById("btnSignOut")?.addEventListener("click", ()=>{
-        try{ window.netlifyIdentity && window.netlifyIdentity.logout(); }catch{}
-        try{ localStorage.clear(); sessionStorage.clear(); }catch{}
-        location.reload();
+    function ensureLoginThen(cb){
+      if (idw && idw.currentUser()) { loggedIn = true; setStatus('#dg-login', '✓ signed in', 'ok'); return cb(); }
+      idw.open('login');
+      idw.on('login', user => {
+        loggedIn = true;
+        setStatus('#dg-login','✓ signed in','ok');
+        idw.close();
+        cb();
       });
-      document.getElementById("topBtn").onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
-      document.getElementById("openAnchor").onclick = () => {
-        const id = (document.getElementById("anchor").value || "").trim();
-        if (id) window.open("/jobs.html#" + encodeURIComponent(id), "_blank", "noopener");
-      };
-      document.getElementById("copyBtn").onclick = async () => {
-        const id = (document.getElementById("anchor").value || "").trim();
-        if (id) try{ await navigator.clipboard.writeText(id); }catch{}
-      };
-      document.getElementById("dupBtn").onclick = () => {
-        alert("Use “Add item” inside Jobs to create a new role.\n(JSON mode doesn’t auto-duplicate the block.)");
-      };
+    }
 
-      // if someone changes the hash too early, keep it at home
-      window.addEventListener("hashchange", ()=>{
-        if (!storeReady() && /^#\/collections\//.test(location.hash)) location.replace(SAFE_HOME);
-      });
-    })();
+    qs('#btnSignOut').addEventListener('click', () => {
+      idw && idw.logout();
+      loggedIn = false;
+      setStatus('#dg-login','— signed out','muted');
+      location.reload();
+    });
+
+    /* ------------------------------
+       CMS boot
+    ------------------------------ */
+    function initCMS(){
+      try{
+        if (!window.CMS) throw new Error('CMS library not loaded');
+        setStatus('#dg-cms','✓ Decap loaded','ok');
+
+        // init with our config
+        CMS.init({ config: '/admin/config.yml' });
+
+        // Route editor straight to our collection
+        const go = () => {
+          // Only change hash if not already in CMS
+          if (!location.hash || !location.hash.startsWith('#/collections/')){
+            location.hash = '#/collections/jobsData';
+          }
+          // Render container
+          const mountPoint = document.getElementById('cmsHost');
+          if (mountPoint && !mountPoint.dataset.mounted){
+            mountPoint.dataset.mounted = '1';
+            // Decap will render itself; container is just visual space.
+            mountPoint.innerHTML = '<div class="muted">Opening editor…</div>';
+          }
+        };
+
+        // Wait a moment to let store warm up before routing
+        setTimeout(go, 450);
+
+      }catch(err){
+        setStatus('#dg-cms','✗ failed','err');
+        showError(err);
+      }
+    }
+
+    /* ------------------------------
+       Quick checks
+    ------------------------------ */
+    async function checkJobsJSON(){
+      try{
+        const res = await fetch('/data/jobs.json', {cache:'no-store'});
+        if (!res.ok) throw new Error('Jobs JSON fetch failed: '+res.status);
+        const data = await res.json();
+        if (!data || !Array.isArray(data.jobs)){
+          throw new Error('Jobs JSON is reachable but not in expected shape: { "jobs": [...] }');
+        }
+        setStatus('#dg-json','✓ reachable','ok');
+      }catch(err){
+        setStatus('#dg-json','✗ unreachable','err');
+        showError(err);
+      }
+    }
+
+    /* Buttons */
+    qs('#btnRunChecks').onclick = checkJobsJSON;
+    qs('#btnReloadCMS').onclick = () => location.reload();
+    qs('#btnReloadId').onclick = () => location.href = '/admin/';
+    qs('#btnClearCache').onclick = () => { localStorage.clear(); sessionStorage.clear(); caches?.keys?.().then(keys=>keys.forEach(k=>caches.delete(k))); location.reload(); };
+
+    qs('#btnOpenEditor').onclick = () => ensureLoginThen(initCMS);
+    qs('#btnTop').onclick = () => window.scrollTo({top:0,behavior:'smooth'});
+    qs('#btnPreview').onclick = () => window.open('/jobs.html','_blank');
+
+    // On load: mark identity + run a quick JSON check
+    setStatus('#dg-ident','✓ loaded','ok');
+    setStatus('#dg-login', (idw && idw.currentUser()) ? '✓ signed in' : '—', (idw && idw.currentUser()) ? 'ok' : 'muted');
+    checkJobsJSON();
+
+    // Auto-open editor on arrival if already signed in
+    window.addEventListener('load', () => {
+      if (idw && idw.currentUser()){
+        ensureLoginThen(initCMS);
+      }
+    });
+
+    // If a legacy “logged in” dialog from the site appears, close it after CMS is up
+    setTimeout(()=>{ try{ idw && idw.close(); }catch(e){} }, 1200);
+
+    // Very light “search box” stub (client-side filter UX in your public page; kept in UI here)
+    qs('#searchBox').addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter'){
+        const q = e.currentTarget.value.trim();
+        if (!q) return;
+        window.open('/jobs.html#'+encodeURIComponent(q.toLowerCase()), '_blank');
+      }
+    });
+
   </script>
 </body>
 </html>
