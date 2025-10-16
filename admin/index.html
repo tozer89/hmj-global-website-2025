@@ -5,11 +5,13 @@
   <title>HMJ Global — CMS Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Performance preconnects -->
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
-  <!-- 1) Inline CMS config (single JSON file) -->
+  <!-- ===================== INLINE CMS CONFIG ===================== -->
   <script>
+    // Netlify CMS: manual init with inline config to avoid /admin/config.yml fetch.
     window.CMS_MANUAL_INIT = true;
     window.CMS_CONFIG = {
       backend: { name: "git-gateway", branch: "main" },
@@ -22,37 +24,44 @@
           name: "jobsData",
           files: [
             {
+              /* IMPORTANT: name must match the expected entry slug. */
               label: "Jobs Data",
-              name: "jobsFile",
+              name: "jobs",                 /* <-- FIXED (was jobsFile) */
               file: "data/jobs.json",
+              description: "Single JSON file powering /jobs.html.",
               fields: [
                 {
                   label: "Jobs",
                   name: "jobs",
                   widget: "list",
                   collapsed: true,
-                  summary:
-                    "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
+                  summary: "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
                   fields: [
-                    { label: "ID", name: "id", widget: "string", pattern: ["^[a-z0-9-]+$", "lowercase-hyphen id only"] },
+                    { label: "ID", name: "id", widget: "string",
+                      pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only."] },
                     { label: "Published", name: "published", widget: "boolean", default: true },
                     { label: "Title", name: "title", widget: "string" },
                     { label: "Status", name: "status", widget: "select",
-                      options: [{label:"Live",value:"live"},{label:"Interviewing",value:"interviewing"},{label:"Closed",value:"closed"}],
+                      options: [
+                        { label: "Live — Taking Candidates", value: "live" },
+                        { label: "Interviewing — Shortlist in Review", value: "interviewing" },
+                        { label: "Closed — Not Accepting New Applicants", value: "closed" }
+                      ],
                       default: "live"
                     },
                     { label: "Section", name: "section", widget: "select",
                       options: [
-                        {label:"Data Centre — Commercial",value:"commercial"},
-                        {label:"Data Centre — Engineering & Management",value:"dc"},
-                        {label:"Substations, Power & Energy",value:"substations"},
-                        {label:"Life Sciences & Pharma",value:"pharma"},
-                        {label:"ICT & Commissioning",value:"ict"},
+                        { label: "Data Centre — Commercial", value: "commercial" },
+                        { label: "Data Centre — Engineering & Management", value: "dc" },
+                        { label: "Substations, Power & Energy", value: "substations" },
+                        { label: "Life Sciences & Pharma", value: "pharma" },
+                        { label: "ICT & Commissioning", value: "ict" }
                       ],
                       default: "dc"
                     },
                     { label: "Discipline", name: "discipline", widget: "select",
-                      options: ["Data Centre","Life Sciences","Pharma","Substation"], default: "Data Centre"
+                      options: ["Data Centre", "Life Sciences", "Pharma", "Substation"],
+                      default: "Data Centre"
                     },
                     { label: "Employment Type", name: "type", widget: "select",
                       options: [{label:"Permanent",value:"permanent"},{label:"Contract",value:"contract"}],
@@ -60,17 +69,17 @@
                     },
                     { label: "Location Code", name: "locationCode", widget: "select",
                       options: [
-                        {label:"Amsterdam, Netherlands",value:"amsterdam"},
-                        {label:"Dublin, Ireland",value:"dublin"},
-                        {label:"Eemshaven, Netherlands",value:"eemshaven"},
-                        {label:"Espoo, Finland",value:"espoo"},
-                        {label:"Frankfurt, Germany",value:"frankfurt"},
-                        {label:"Groningen, Netherlands",value:"groningen"},
-                        {label:"Helsinki, Finland",value:"helsinki"},
-                        {label:"London, UK",value:"london"},
-                        {label:"Macclesfield, UK",value:"macclesfield"},
-                        {label:"UK (Various)",value:"uk"},
-                        {label:"Europe (Travel)",value:"europe"},
+                        { label: "Amsterdam, Netherlands", value: "amsterdam" },
+                        { label: "Dublin, Ireland", value: "dublin" },
+                        { label: "Eemshaven, Netherlands", value: "eemshaven" },
+                        { label: "Espoo, Finland", value: "espoo" },
+                        { label: "Frankfurt, Germany", value: "frankfurt" },
+                        { label: "Groningen, Netherlands", value: "groningen" },
+                        { label: "Helsinki, Finland", value: "helsinki" },
+                        { label: "London, UK", value: "london" },
+                        { label: "Macclesfield, UK", value: "macclesfield" },
+                        { label: "UK (Various)", value: "uk" },
+                        { label: "Europe (Travel)", value: "europe" }
                       ],
                       default: "uk"
                     },
@@ -78,10 +87,10 @@
                     { label: "Keywords", name: "keywords", widget: "text", required: false },
                     { label: "Overview", name: "overview", widget: "text", required: false },
                     { label: "Responsibilities", name: "responsibilities", widget: "list", required: false,
-                      field: {label:"Item", name:"item", widget:"string"} },
+                      field: { label: "Item", name: "item", widget: "string" } },
                     { label: "Requirements", name: "requirements", widget: "list", required: false,
-                      field: {label:"Item", name:"item", widget:"string"} },
-                    { label: "Apply URL", name: "applyUrl", widget: "string", required: false }
+                      field: { label: "Item", name: "item", widget: "string" } },
+                    { label: "Apply URL (optional)", name: "applyUrl", widget: "string", required: false }
                   ]
                 }
               ]
@@ -92,36 +101,42 @@
     };
   </script>
 
-  <!-- Identity (optional; we won't wait for it) -->
+  <!-- Identity (optional – we don't wait on it) -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
 
-  <!-- 2) Load Netlify CMS (exact version you were using) -->
+  <!-- Netlify CMS (same version you were using) -->
   <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
 
+  <!-- =========================== STYLES =========================== -->
   <style>
     :root{
-      --ink:#0f1322; --panel:#0f162c; --border:rgba(255,255,255,.12);
-      --accent:#3A66B3; --muted:#b6c3e6;
+      --ink:#0f1322; --bg:#0b0f1c; --panel:#0f162c; --accent:#3A66B3;
+      --border:rgba(255,255,255,.12); --borderSoft:rgba(255,255,255,.08);
       --shadow:0 10px 30px rgba(0,0,0,.35);
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--ink);color:#eaf0ff;font-family:Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif}
-    .top{position:sticky;top:0;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px);z-index:10}
+    .top{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));border-bottom:1px solid var(--borderSoft);backdrop-filter:blur(6px)}
     .top .in{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .brand{display:flex;gap:10px;align-items:center;font-weight:800}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
-    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:#0b1326;color:#fff;text-decoration:none;font-weight:700}
+    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:#0f162c;color:#fff;text-decoration:none;font-weight:700}
     .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
-    /* CMS mount */
-    #nc-root{max-width:1200px;margin:14px auto 100px;padding:0 12px}
-    /* floating dock to bottom-right */
-    .dock{position:fixed;right:14px;bottom:14px;z-index:20;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
+
+    /* Dock bottom-right so it never obscures CMS header */
+    .dock{position:fixed;right:14px;bottom:14px;z-index:60;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .dock input,.dock select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:10px;padding:10px 12px}
     .dock .btn{background:#0f1831}
+
+    /* Small CMS theme tweak */
+    .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
+    .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
+    .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
   </style>
 </head>
 <body>
-  <!-- Top bar (branding & links) -->
+  <!-- =========================== TOP BAR =========================== -->
   <div class="top">
     <div class="in">
       <div class="brand"><span class="dot"></span> HMJ Global — CMS Portal</div>
@@ -135,11 +150,11 @@
     </div>
   </div>
 
-  <!-- CMS mount point -->
+  <!-- ========================= CMS MOUNT ========================== -->
   <div id="nc-root" role="region" aria-label="Netlify CMS"></div>
 
-  <!-- Floating quick actions dock (bottom-right) -->
-  <div class="dock">
+  <!-- ======================== QUICK DOCK ========================== -->
+  <div class="dock" aria-label="Quick actions">
     <input id="q" type="search" placeholder="Search jobs (title, location, status)…" />
     <select id="tpl">
       <option value="">Templates:</option>
@@ -155,34 +170,25 @@
     <button class="btn" id="copyBtn" type="button">Copy</button>
   </div>
 
-  <!-- 3) Boot CMS immediately, then force the files-entry route -->
+  <!-- ========================= BOOT SCRIPT ========================= -->
   <script>
     (function(){
-      // Mount CMS right away
-      try {
-        window.CMS.init({ config: window.CMS_CONFIG });
-      } catch (e) {
-        console.error("CMS init failed:", e);
-      }
+      // 1) Mount CMS immediately with inline config.
+      try { window.CMS.init({ config: window.CMS_CONFIG }); }
+      catch(e){ console.error("CMS init failed:", e); }
 
-      // Force route to the single JSON "files" entry (prevents folder-view crashes)
-      const targetHash = "#/collections/jobsData/entries/jobsFile";
-      function forceHash(){
-        if (!location.hash.includes(targetHash)) location.hash = targetHash;
-      }
-      // Try a few times in case the router isn't ready yet
+      // 2) Force the route to the single-file entry (must match file "name": "jobs").
+      const TARGET = "#/collections/jobsData/entries/jobs";
+      const forceHash = () => { if (location.hash !== TARGET) location.hash = TARGET; };
       setTimeout(forceHash, 60);
       setTimeout(forceHash, 300);
       setTimeout(forceHash, 900);
 
-      // Identity (optional) — let user sign out from the top bar
-      const btnSignOut = document.getElementById("btnSignOut");
-      if (btnSignOut) {
-        btnSignOut.addEventListener("click", function(){
-          if (window.netlifyIdentity) {
-            try { window.netlifyIdentity.logout(); } catch {}
-          }
-          // Also clear any CMS local state
+      // 3) Optional sign-out via Netlify Identity.
+      const signOutBtn = document.getElementById("btnSignOut");
+      if (signOutBtn) {
+        signOutBtn.addEventListener("click", () => {
+          try { window.netlifyIdentity && window.netlifyIdentity.logout(); } catch {}
           try { localStorage.clear(); sessionStorage.clear(); } catch {}
           location.reload();
         });
@@ -201,8 +207,7 @@
         try { await navigator.clipboard.writeText(id); } catch {}
       };
       document.getElementById("dupBtn").onclick = () => {
-        // Placeholder – in JSON mode duplication is manual; leave the button for UI parity.
-        alert("Use the CMS list controls to add a new job (this JSON mode does not auto-duplicate).");
+        alert("Use “Add item” inside Jobs to create a new role.\n(JSON mode doesn’t auto-duplicate the block.)");
       };
     })();
   </script>
