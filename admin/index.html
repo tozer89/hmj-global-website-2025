@@ -1,250 +1,359 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>HMJ Portal</title>
-  <meta name="robots" content="noindex" />
+  <meta charset="utf-8">
+  <title>HMJ Global — CMS Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Identity + CMS -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="https://unpkg.com/netlify-cms@^2/dist/netlify-cms.js"></script>
 
+  <!-- HMJ Portal Styles -->
   <style>
     :root{
-      --ink:#eaf0ff; --muted:#cfd7ff; --bg:#0b1223; --panel:#0f1322;
-      --accent:#3A66B3; --line:rgba(255,255,255,.12); --line2:rgba(255,255,255,.08);
-      --good:#22c55e;
+      --ink:#1A1A2E;             /* HMJ deep ink */
+      --bg:#0f1322;              /* HMJ night blue */
+      --accent:#3A66B3;          /* HMJ royal blue */
+      --muted:#6b7280;
+      --card:#ffffff;
+      --border:rgba(26,26,46,.14);
+      --ok:#1f7e39;
+      --warn:#7a5b00;
+      --chip:#eef3ff;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
     body{
-      margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
-      -webkit-font-smoothing:antialiased;
+      margin:0; font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background:linear-gradient(180deg, #0d1223, #0f1322 45%, #0f1322);
+      color:#eaf0ff;
     }
-
-    /* Portal chrome */
-    header{
-      display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--panel);
-      border-bottom:1px solid var(--line2);position:sticky;top:0;z-index:5;
+    /* Top bar */
+    .hmj-topbar{
+      position:sticky; top:0; z-index:9999;
+      background:linear-gradient(90deg, rgba(58,102,179,.12), rgba(58,102,179,.05));
+      border-bottom:1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(6px);
     }
-    header img{height:30px}
-    header h1{font-size:16px;margin:0;font-weight:800;letter-spacing:.02em}
-    header .chip{
-      margin-left:auto;background:rgba(34,197,94,.12);
-      border:1px solid rgba(34,197,94,.35);color:#a7f3d0;
-      font-weight:800;font-size:12px;padding:6px 10px;border-radius:999px
+    .hmj-topbar .inner{
+      max-width:1200px; margin:0 auto; padding:12px 16px;
+      display:flex; align-items:center; gap:12px; justify-content:space-between;
     }
-
-    .wrap{max-width:1100px;margin:22px auto;padding:0 16px}
-    .grid{display:grid;gap:14px}
-    @media(min-width:860px){ .grid-2{grid-template-columns:1fr 1fr} }
-
-    .card{border:1px solid var(--line);border-radius:14px;background:var(--panel);
-      box-shadow:0 18px 40px rgba(0,0,0,.35);overflow:hidden}
-    .card .inner{padding:18px}
-    .notice{margin:12px 0;color:var(--muted)}
+    .hmj-brand{
+      display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px;
+      color:#eaf0ff;
+    }
+    .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block}
+    .hmj-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
     .btn{
-      display:inline-block;background:#1d2747;border:1px solid var(--line);
-      padding:10px 14px;border-radius:10px;color:#fff;text-decoration:none;font-weight:800
+      display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px;
+      text-decoration:none; font-weight:700; border:1px solid rgba(255,255,255,.14);
+      transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+      white-space:nowrap;
     }
-    .btn:hover{background:#22305a}
-    .btn.secondary{background:transparent}
-    .btn.secondary:hover{background:rgba(255,255,255,.06)}
-    .btnrow{display:flex;gap:8px;flex-wrap:wrap}
-    .hr{height:1px;background:var(--line2);margin:14px -18px}
-    .list{margin:8px 0 0 0;padding-left:18px}
-    .list li{margin:6px 0;color:var(--muted)}
-    .hide{display:none}
+    .btn:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.2)}
+    .btn-blue{background:var(--accent); color:#fff; border-color:rgba(58,102,179,.8)}
+    .btn-dark{background:#0f162c; color:#fff;}
+    .btn-ghost{background:transparent; color:#eaf0ff;}
 
-    /* When CMS is active, hide portal chrome so the CMS toolbar can sit at the very top */
-    body.cms-active header,
-    body.cms-active #authPanel { display:none !important; }
-    body.cms-active #nc-root { margin-top:0 !important; }
+    /* Help / Hero panel */
+    .hmj-hero{
+      position:relative; overflow:hidden;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background:
+        radial-gradient(1200px 400px at 20% -10%, rgba(58,102,179,.22), transparent 60%),
+        radial-gradient(900px 400px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+    }
+    .hmj-hero .inner{
+      max-width:1200px; margin:0 auto; padding:28px 16px 8px;
+      display:grid; grid-template-columns: 1.1fr .9fr; gap:18px;
+    }
+    .hero-card{
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:18px; padding:18px; color:#eaf0ff;
+    }
+    .hero-title{margin:0 0 8px 0; font-size:1.35rem; line-height:1.25}
+    .hero-sub{margin:0 0 12px 0; color:#bfc9ff; font-weight:600}
+    .hero-list{margin:0; padding:0 0 0 18px; line-height:1.45}
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size:.88rem; background:rgba(0,0,0,.4); color:#fff; padding:2px 6px; border-radius:6px; border:1px solid rgba(255,255,255,.12)
+    }
+    .note{
+      display:inline-block; padding:4px 8px; border-radius:999px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+      font-size:.8rem; color:#dce6ff; margin-top:2px
+    }
+    .chip{
+      display:inline-block; padding:4px 10px; border-radius:999px; background:var(--chip);
+      color:#1a2b55; font-weight:700; font-size:.78rem; border:1px solid rgba(58,102,179,.35)
+    }
 
-    /* Friendly loader hint */
-    #cms-loader{display:flex;align-items:center;gap:8px;color:#bed0ff;font-weight:600}
-    #cms-loader .dot{width:6px;height:6px;border-radius:50%;background:#9fb5ff;animation:b 1s infinite alternate}
-    #cms-loader .dot:nth-child(2){animation-delay:.2s}
-    #cms-loader .dot:nth-child(3){animation-delay:.4s}
-    @keyframes b { to { transform:translateY(-3px); opacity:.6; } }
+    /* CMS container shim (so CMS UI breathes) */
+    .cms-frame{max-width:1200px; margin:12px auto 26px; padding:0 12px}
+    .cms-help{
+      display:flex; gap:12px; flex-wrap:wrap; margin:6px 0 0 0
+    }
+    .help-card{
+      background:#0f162c; border:1px solid rgba(255,255,255,.12); color:#eaf0ff;
+      padding:12px 14px; border-radius:14px; flex:1 1 260px
+    }
+    .help-card b{color:#fff}
+    .help-card .small{color:#bcd0ff; font-size:.92rem}
+
+    /* Make Netlify CMS panels feel branded */
+    .nc-appHeader{background:#0f1322 !important; border-bottom:1px solid rgba(255,255,255,.08) !important}
+    .nc-appHeader .nc-appHeader-main{color:#eaf0ff !important}
+    .nc-collectionPage-header{background:linear-gradient(180deg, rgba(58,102,179,.08), rgba(255,255,255,0)) !important}
+    .nc-toolbar{background:#0f1322 !important; border-top:1px solid rgba(255,255,255,.08) !important}
+    .nc-button, .nc-collectionPage-sidebar-toggle{border-radius:12px !important}
+    .nc-entryCard, .nc-widgetPreview, .nc-widgetControl, .nc-collectionPage-sidebar{
+      border-radius:14px !important; border-color: rgba(26,26,46,.2) !important
+    }
+    .nc-entryListing-card{border-radius:16px !important}
+    .nc-button{font-weight:700 !important}
+    .nc-primary{background:var(--accent) !important; color:#fff !important; border:1px solid rgba(58,102,179,.9) !important}
+    .nc-secondary{background:#101a36 !important; color:#fff !important}
+    .nc-link{color:#cfe0ff !important}
+    .nc-badge{border-radius:10px !important}
+
+    /* Footer helper */
+    .hmj-footer{max-width:1200px;margin:24px auto 36px;padding:0 16px;color:#bfc9ff}
+    .hmj-footer a{color:#eaf0ff}
   </style>
 </head>
-
 <body>
-  <header>
-    <img src="/images/logo.png" alt="HMJ-Global" />
-    <h1>HMJ Portal</h1>
-    <span id="statusChip" class="chip hide">Logged in</span>
-  </header>
 
-  <div class="wrap">
-    <div class="grid grid-2">
-      <!-- Identity / Actions -->
-      <div class="card" id="authPanel">
-        <div class="inner">
-          <h2 style="margin:0 0 6px">Sign in</h2>
-          <p class="notice">Use your HMJ-Global Portal account to access the job editor.</p>
-          <div class="btnrow">
-            <a class="btn" href="#" id="btnLogin">Log in</a>
-            <a class="btn" href="#" id="btnSignup">Sign up</a>
-            <a class="btn hide" href="#" id="btnLogout">Log out</a>
-          </div>
-          <div class="hr"></div>
-          <div id="cms-loader" class="notice">
-            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span>CMS will appear below after login…</span>
-          </div>
-          <ul class="list">
-            <li>Safari invite issues? Temporarily disable “Prevent cross-site tracking”, or use Chrome.</li>
-            <li>Need help? <a href="mailto:info@hmj-global.com" class="btn secondary" style="padding:4px 8px">info@hmj-global.com</a></li>
-          </ul>
-        </div>
+  <!-- Top bar with Return to homepage -->
+  <div class="hmj-topbar" role="navigation" aria-label="HMJ CMS Topbar">
+    <div class="inner">
+      <div class="hmj-brand">
+        <span class="dot" aria-hidden="true"></span>
+        HMJ Global — CMS Portal
+      </div>
+      <div class="hmj-actions">
+        <a class="btn btn-blue" href="/" title="Go back to the live homepage">⟵ Return to Homepage</a>
+        <a class="btn btn-dark" href="/jobs.html" title="Open public Jobs page in a new tab" target="_blank" rel="noopener">View Jobs Page</a>
+        <a class="btn btn-ghost" href="https://app.netlify.com" target="_blank" rel="noopener" title="Open your Netlify dashboard">Netlify</a>
+        <a class="btn btn-ghost" href="https://github.com" target="_blank" rel="noopener" title="Open GitHub">GitHub</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Friendly “How it works” help panel -->
+  <section class="hmj-hero" role="region" aria-label="How to use the Jobs editor">
+    <div class="inner">
+      <div class="hero-card">
+        <h1 class="hero-title">How to use the Jobs editor</h1>
+        <p class="hero-sub">This portal writes to <span class="kbd">data/jobs.json</span>. Your public Jobs page reads that file to render cards, filters, and anchors.</p>
+        <ol class="hero-list">
+          <li>Open <b>Content → Jobs Data → Jobs</b>. Click a role to expand its fields.</li>
+          <li>Fill in: <b>Title</b>, <b>Status</b>, <b>Section</b>, <b>Discipline</b>, <b>Employment Type</b>, <b>Location</b>, etc.</li>
+          <li><b>ID (unique)</b> becomes the URL anchor: <span class="kbd">/jobs.html#your-id</span>. Keep it lowercase/kebab-case and don’t change it later.</li>
+          <li>Click <b>Save</b>. In the <b>Workflow</b> panel move <span class="chip">Draft → In Review → Publish</span>.</li>
+          <li>Image uploads go to <span class="kbd">images/uploads/</span>. (Use this folder for any role imagery.)</li>
+        </ol>
+        <p class="note">Tip: Test an anchor by opening <span class="kbd">/jobs.html#the-id-you-set</span> in a new tab. It should jump to the correct card.</p>
       </div>
 
-      <!-- How to use -->
-      <div class="card">
-        <div class="inner">
-          <h2 style="margin:0 0 6px">How to use the Jobs editor</h2>
-          <ol class="list" style="list-style:decimal;padding-left:18px">
-            <li>Open <strong>Contents → Jobs → All Jobs</strong>.</li>
-            <li>Click a job to expand. Update <em>Status</em>, <em>Section</em>, <em>Discipline</em>, <em>Location</em>, etc.</li>
-            <li>Use the “+ Add Jobs” button at the bottom to create new roles.</li>
-            <li>Click <strong>Save</strong>. In <strong>Workflow</strong>, move from Draft → In Review → Publish.</li>
-            <li>Uploads go to <code>images/uploads/</code>. Live site reads from <code>data/jobs.json</code>.</li>
-          </ol>
-          <div class="btnrow">
-            <a class="btn secondary" href="/jobs.html">View Jobs page</a>
-            <a class="btn secondary" href="https://app.netlify.com/">Netlify</a>
-            <a class="btn secondary" href="https://github.com/">GitHub</a>
-          </div>
+      <div class="cms-help">
+        <div class="help-card">
+          <b>Status</b><br>
+          <span class="small">Badge on the card & filter option. Choose <i>Live</i>, <i>Interviewing</i>, or <i>Closed</i>.</span>
+        </div>
+        <div class="help-card">
+          <b>Section (Board)</b><br>
+          <span class="small">Which board/column the role sits in (e.g., Data Centre, Pharma, Substations).</span>
+        </div>
+        <div class="help-card">
+          <b>Location Code vs Text</b><br>
+          <span class="small"><i>Code</i> drives filters; <i>Text</i> is what candidates see (e.g., “Frankfurt, Germany”).</span>
+        </div>
+        <div class="help-card">
+          <b>Apply URL (optional)</b><br>
+          <span class="small">Leave blank to use the default HMJ apply flow. Add a full link to send candidates to a client ATS.</span>
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- CMS mounts here -->
-    <div id="nc-root" style="margin-top:16px"></div>
+  <!-- CMS mounts itself here -->
+  <div class="cms-frame">
+    <div id="nc-root"></div>
   </div>
 
-  <!-- Netlify Identity -->
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-  <!-- Init CMS manually (prevents fetching /admin/config.yml) -->
-  <script>window.CMS_MANUAL_INIT = true;</script>
-
-  <!-- Netlify CMS core -->
-  <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
+  <div class="hmj-footer">
+    Need help? Ping us: <a href="mailto:info@hmj-global.com">info@hmj-global.com</a>.  ·  Anchors look like <span class="kbd">/jobs.html#electrical-supervisor-uk</span>
+  </div>
 
   <script>
-    // Identity: buttons + visual status, and toggle portal chrome
-    const loginBtn  = document.getElementById('btnLogin');
-    const signupBtn = document.getElementById('btnSignup');
-    const logoutBtn = document.getElementById('btnLogout');
-    const chip      = document.getElementById('statusChip');
-
-    function setButtons(user){
-      const loggedIn = !!user;
-      loginBtn.classList.toggle('hide', loggedIn);
-      signupBtn.classList.toggle('hide', loggedIn);
-      logoutBtn.classList.toggle('hide', !loggedIn);
-      chip.classList.toggle('hide', !loggedIn);
-
-      // When logged in, let CMS own the screen (prevents header/toolbars overlap)
-      document.body.classList.toggle('cms-active', loggedIn);
+    // Optional: redirect to the CMS entry list immediately after login.
+    if (window.netlifyIdentity) {
+      window.netlifyIdentity.on('init', user => {
+        if (!user) { window.netlifyIdentity.on('login', () => { window.location.reload(); }); }
+      });
     }
 
-    loginBtn.addEventListener('click', (e)=>{ e.preventDefault(); netlifyIdentity.open('login'); });
-    signupBtn.addEventListener('click', (e)=>{ e.preventDefault(); netlifyIdentity.open('signup'); });
-    logoutBtn.addEventListener('click', (e)=>{ e.preventDefault(); netlifyIdentity.logout(); });
+    // Branded tweaks to the CMS (preview styles are minimal to avoid clashing with widget layout)
+    CMS.registerPreviewStyle(`
+      :root { --accent: #3A66B3; }
+      a { color: var(--accent); }
+    `, { raw: true });
 
-    netlifyIdentity.on('init', setButtons);
-    netlifyIdentity.on('login', (user)=>{ setButtons(user); netlifyIdentity.close(); /* no reload */ });
-    netlifyIdentity.on('logout', ()=>{ setButtons(null); /* no reload */ });
-    netlifyIdentity.init();
-
-    // Inline CMS config (no external fetch; eliminates spinner/404)
+    // ---- Netlify CMS Inline Config ----
     CMS.init({
       config: {
-        backend: { name: 'git-gateway', branch: 'main' },
-        media_folder: 'images/uploads',
-        public_folder: '/images/uploads',
-        publish_mode: 'editorial_workflow',
-        site_url: 'https://www.hmj-global.com',
-        logo_url: '/images/logo.png',
+        backend: { name: "git-gateway", branch: "main" },
+        media_folder: "images/uploads",
+        public_folder: "/images/uploads",
+        publish_mode: "editorial_workflow",
+
         collections: [
           {
-            name: 'jobs',
-            label: 'Jobs',
-            label_singular: 'Job',
-            editor: { preview: false },
+            label: "Jobs Data",
+            name: "jobsData",
             files: [
               {
-                file: 'data/jobs.json',
-                label: 'All Jobs',
-                name: 'jobsfile',
-                description: 'Edit all job entries here. This file powers jobs.html.',
+                label: "Jobs",
+                name: "jobsFile",
+                file: "data/jobs.json",
+                description: "This file powers the Jobs page (/jobs.html).",
                 fields: [
                   {
-                    label: 'Jobs',
-                    name: 'jobs',
-                    widget: 'list',
+                    label: "Jobs",
+                    name: "jobs",
+                    widget: "list",
                     collapsed: true,
-                    summary: '{{fields.title}} — {{fields.locationText}} ({{fields.status}})',
+                    summary: "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
                     fields: [
-                      { label: 'ID (unique, used as anchor)', name: 'id', widget: 'string' },
-                      { label: 'Published', name: 'published', widget: 'boolean', default: true },
-                      { label: 'Title', name: 'title', widget: 'string' },
-                      { label: 'Status', name: 'status', widget: 'select',
+                      {
+                        label: "ID (unique, used as URL anchor)",
+                        name: "id",
+                        widget: "string",
+                        hint: "Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
+                        pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only (e.g., mep-qs-dublin)"]
+                      },
+                      {
+                        label: "Published",
+                        name: "published",
+                        widget: "boolean",
+                        default: true,
+                        hint: "Turn OFF to hide this role from the site."
+                      },
+                      {
+                        label: "Title",
+                        name: "title",
+                        widget: "string",
+                        hint: "Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”)."
+                      },
+                      {
+                        label: "Status (badge shown on card)",
+                        name: "status",
+                        widget: "select",
                         options: [
-                          { label: 'Live', value: 'live' },
-                          { label: 'Interviewing', value: 'interviewing' },
-                          { label: 'Closed', value: 'closed' }
+                          { label: "Live — Taking Candidates", value: "live" },
+                          { label: "Interviewing — Shortlist in Review", value: "interviewing" },
+                          { label: "Closed — Not Accepting New Applicants", value: "closed" }
                         ],
-                        default: 'live'
+                        default: "live",
+                        hint: "Also used by the Status filter on the Jobs page."
                       },
-                      { label: 'Section (Board)', name: 'section', widget: 'select',
+                      {
+                        label: "Section (which board/column to show in)",
+                        name: "section",
+                        widget: "select",
                         options: [
-                          { label: 'Data Centre — Commercial', value: 'commercial' },
-                          { label: 'Data Centre — Engineering & Management', value: 'dc' },
-                          { label: 'Substations, Power & Energy', value: 'substations' },
-                          { label: 'Life Sciences & Pharma', value: 'pharma' },
-                          { label: 'ICT & Commissioning', value: 'ict' }
+                          { label: "Data Centre — Commercial", value: "commercial" },
+                          { label: "Data Centre — Engineering & Management", value: "dc" },
+                          { label: "Substations, Power & Energy", value: "substations" },
+                          { label: "Life Sciences & Pharma", value: "pharma" },
+                          { label: "ICT & Commissioning", value: "ict" }
                         ],
-                        default: 'dc'
+                        default: "dc",
+                        hint: "Matches the big section headings on the Jobs page."
                       },
-                      { label: 'Discipline', name: 'discipline', widget: 'select',
-                        options: ['Data Centre','Life Sciences','Pharma','Substation'],
-                        default: 'Data Centre'
+                      {
+                        label: "Discipline (shown as a tag)",
+                        name: "discipline",
+                        widget: "select",
+                        options: ["Data Centre","Life Sciences","Pharma","Substation"],
+                        default: "Data Centre",
+                        hint: "Appears as the blue tag on each card and powers the Discipline filter."
                       },
-                      { label: 'Employment Type', name: 'type', widget: 'select',
+                      {
+                        label: "Employment Type (filter chip)",
+                        name: "type",
+                        widget: "select",
                         options: [
-                          { label: 'Permanent', value: 'permanent' },
-                          { label: 'Contract', value: 'contract' }
+                          { label: "Permanent", value: "permanent" },
+                          { label: "Contract", value: "contract" }
                         ],
-                        default: 'permanent'
+                        default: "permanent",
+                        hint: "Used by the Employment filter on the Jobs page."
                       },
-                      { label: 'Location Code (filter)', name: 'locationCode', widget: 'select',
+                      {
+                        label: "Location Code (drives the Location filter)",
+                        name: "locationCode",
+                        widget: "select",
                         options: [
-                          { label: 'All (not for jobs)', value: 'all' },
-                          { label: 'Amsterdam, Netherlands', value: 'amsterdam' },
-                          { label: 'Dublin, Ireland', value: 'dublin' },
-                          { label: 'Eemshaven, Netherlands', value: 'eemshaven' },
-                          { label: 'Espoo, Finland', value: 'espoo' },
-                          { label: 'Frankfurt, Germany', value: 'frankfurt' },
-                          { label: 'Groningen, Netherlands', value: 'groningen' },
-                          { label: 'Helsinki, Finland', value: 'helsinki' },
-                          { label: 'London, UK', value: 'london' },
-                          { label: 'Macclesfield, UK', value: 'macclesfield' },
-                          { label: 'UK (Various)', value: 'uk' },
-                          { label: 'Europe (Travel)', value: 'europe' }
+                          { label: "Amsterdam, Netherlands", value: "amsterdam" },
+                          { label: "Dublin, Ireland", value: "dublin" },
+                          { label: "Eemshaven, Netherlands", value: "eemshaven" },
+                          { label: "Espoo, Finland", value: "espoo" },
+                          { label: "Frankfurt, Germany", value: "frankfurt" },
+                          { label: "Groningen, Netherlands", value: "groningen" },
+                          { label: "Helsinki, Finland", value: "helsinki" },
+                          { label: "London, UK", value: "london" },
+                          { label: "Macclesfield, UK", value: "macclesfield" },
+                          { label: "UK (Various)", value: "uk" },
+                          { label: "Europe (Travel)", value: "europe" }
                         ],
-                        default: 'uk'
+                        default: "uk",
+                        hint: "Must match the site Location filter codes so filtering works."
                       },
-                      { label: 'Location Text (shown)', name: 'locationText', widget: 'string' },
-                      { label: 'Keywords (searchable)', name: 'keywords', widget: 'text', required: false },
-                      { label: 'Overview', name: 'overview', widget: 'text', required: false },
-                      { label: 'Responsibilities', name: 'responsibilities', widget: 'list', required: false,
-                        field: { label: 'Item', name: 'item', widget: 'string' } },
-                      { label: 'Requirements', name: 'requirements', widget: 'list', required: false,
-                        field: { label: 'Item', name: 'item', widget: 'string' } },
-                      { label: 'Apply URL (optional)', name: 'applyUrl', widget: 'string', required: false }
+                      {
+                        label: "Location Text (what candidates see)",
+                        name: "locationText",
+                        widget: "string",
+                        hint: "Human-friendly place shown on the card (e.g., “Frankfurt, Germany”)."
+                      },
+                      {
+                        label: "Keywords (searchable)",
+                        name: "keywords",
+                        widget: "text",
+                        required: false,
+                        hint: "Comma/space-separated skills or terms to improve on-page search (e.g., “P6, commissioning, NEC”)."
+                      },
+                      {
+                        label: "Overview",
+                        name: "overview",
+                        widget: "text",
+                        required: false,
+                        hint: "2–4 lines introducing the role."
+                      },
+                      {
+                        label: "Responsibilities",
+                        name: "responsibilities",
+                        widget: "list",
+                        required: false,
+                        field: { label: "Item", name: "item", widget: "string" },
+                        hint: "Bulleted list. Leave empty to hide."
+                      },
+                      {
+                        label: "Requirements",
+                        name: "requirements",
+                        widget: "list",
+                        required: false,
+                        field: { label: "Item", name: "item", widget: "string" },
+                        hint: "Bulleted list. Leave empty to hide."
+                      },
+                      {
+                        label: "Apply URL (optional)",
+                        name: "applyUrl",
+                        widget: "string",
+                        required: false,
+                        hint: "Leave blank to use the default HMJ apply flow. Add a full URL to send candidates to an external ATS."
+                      }
                     ]
                   }
                 ]
@@ -252,6 +361,29 @@
             ]
           }
         ]
+      }
+    });
+
+    // Optional guardrail: gentle warning if Title is blank when Published
+    CMS.registerEventListener({
+      name: 'preSave',
+      handler: ({ entry }) => {
+        try{
+          const jobs = entry.getIn(['data','jobs']);
+          if (!jobs) return;
+          jobs.forEach((j, idx) => {
+            const published = j && j.get('published');
+            const title = j && (j.get('title')||'').trim();
+            const id = j && (j.get('id')||'').trim();
+            if (published && (!title || !id)){
+              alert(`Job #${idx+1}: Please set both Title and ID before publishing.`);
+              throw new Error('Missing required fields for published item');
+            }
+          });
+        }catch(e){
+          // Throwing stops the save; the alert explains why.
+          throw e;
+        }
       }
     });
   </script>
