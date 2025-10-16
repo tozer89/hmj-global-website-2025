@@ -40,80 +40,36 @@
                     summary:
                       "{{fields.title}} — {{fields.locationText}} ({{fields.status}} | {{fields.section}} | {{fields.type}})",
                     fields: [
-                      {
-                        label: "ID (unique, used as URL anchor)",
-                        name: "id",
-                        widget: "string",
-                        hint:
-                          "Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
-                        pattern: [
-                          "^[a-z0-9-]+$",
-                          "Use lowercase letters, numbers, and hyphens only.",
-                        ],
-                      },
-                      {
-                        label: "Published",
-                        name: "published",
-                        widget: "boolean",
-                        default: true,
-                        hint: "Turn OFF to hide this role.",
-                      },
-                      {
-                        label: "Title",
-                        name: "title",
-                        widget: "string",
-                        hint:
-                          "Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”).",
-                      },
-                      {
-                        label: "Status (badge shown on card)",
-                        name: "status",
-                        widget: "select",
+                      { label: "ID (unique, used as URL anchor)", name: "id", widget: "string",
+                        hint: "Becomes /jobs.html#your-id (e.g., mep-qs-dublin). Keep stable once published.",
+                        pattern: ["^[a-z0-9-]+$", "Use lowercase letters, numbers, and hyphens only."] },
+                      { label: "Published", name: "published", widget: "boolean", default: true,
+                        hint: "Turn OFF to hide this role." },
+                      { label: "Title", name: "title", widget: "string",
+                        hint: "Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”)." },
+                      { label: "Status (badge shown on card)", name: "status", widget: "select",
                         options: [
                           { label: "Live — Taking Candidates", value: "live" },
                           { label: "Interviewing — Shortlist in Review", value: "interviewing" },
                           { label: "Closed — Not Accepting New Applicants", value: "closed" },
-                        ],
-                        default: "live",
-                        hint: "Also used by the Status filter on the Jobs page.",
-                      },
-                      {
-                        label: "Section (which board/column to show in)",
-                        name: "section",
-                        widget: "select",
+                        ], default: "live",
+                        hint: "Also used by the Status filter on the Jobs page." },
+                      { label: "Section (which board/column to show in)", name: "section", widget: "select",
                         options: [
                           { label: "Data Centre — Commercial", value: "commercial" },
                           { label: "Data Centre — Engineering & Management", value: "dc" },
                           { label: "Substations, Power & Energy", value: "substations" },
                           { label: "Life Sciences & Pharma", value: "pharma" },
                           { label: "ICT & Commissioning", value: "ict" },
-                        ],
-                        default: "dc",
-                        hint: "Matches the big section headings on the Jobs page.",
-                      },
-                      {
-                        label: "Discipline (shown as a tag)",
-                        name: "discipline",
-                        widget: "select",
-                        options: ["Data Centre", "Life Sciences", "Pharma", "Substation"],
-                        default: "Data Centre",
-                        hint: "Appears as the tag and powers the Discipline filter.",
-                      },
-                      {
-                        label: "Employment Type (filter chip)",
-                        name: "type",
-                        widget: "select",
-                        options: [
-                          { label: "Permanent", value: "permanent" },
-                          { label: "Contract", value: "contract" },
-                        ],
-                        default: "permanent",
-                        hint: "Used by the Employment filter on the Jobs page.",
-                      },
-                      {
-                        label: "Location Code (drives the Location filter)",
-                        name: "locationCode",
-                        widget: "select",
+                        ], default: "dc",
+                        hint: "Matches the big section headings on the Jobs page." },
+                      { label: "Discipline (shown as a tag)", name: "discipline", widget: "select",
+                        options: ["Data Centre", "Life Sciences", "Pharma", "Substation"], default: "Data Centre",
+                        hint: "Appears as the tag and powers the Discipline filter." },
+                      { label: "Employment Type (filter chip)", name: "type", widget: "select",
+                        options: [{ label: "Permanent", value: "permanent" }, { label: "Contract", value: "contract" }],
+                        default: "permanent", hint: "Used by the Employment filter on the Jobs page." },
+                      { label: "Location Code (drives the Location filter)", name: "locationCode", widget: "select",
                         options: [
                           { label: "Amsterdam, Netherlands", value: "amsterdam" },
                           { label: "Dublin, Ireland", value: "dublin" },
@@ -126,55 +82,21 @@
                           { label: "Macclesfield, UK", value: "macclesfield" },
                           { label: "UK (Various)", value: "uk" },
                           { label: "Europe (Travel)", value: "europe" },
-                        ],
-                        default: "uk",
-                        hint: "Must match site Location filter codes.",
-                      },
-                      {
-                        label: "Location Text (what candidates see)",
-                        name: "locationText",
-                        widget: "string",
-                        required: false,
-                        hint:
-                          "e.g., “Frankfurt, Germany”. Auto-filled by site if blank.",
-                      },
-                      {
-                        label: "Keywords (searchable)",
-                        name: "keywords",
-                        widget: "text",
-                        required: false,
-                        hint: "Comma/space-separated, e.g. “P6, commissioning, NEC”.",
-                      },
-                      {
-                        label: "Overview",
-                        name: "overview",
-                        widget: "text",
-                        required: false,
-                        hint: "2–4 lines introducing the role.",
-                      },
-                      {
-                        label: "Responsibilities",
-                        name: "responsibilities",
-                        widget: "list",
-                        required: false,
+                        ], default: "uk", hint: "Must match site Location filter codes." },
+                      { label: "Location Text (what candidates see)", name: "locationText", widget: "string",
+                        required: false, hint: "e.g., “Frankfurt, Germany”. Auto-filled by site if blank." },
+                      { label: "Keywords (searchable)", name: "keywords", widget: "text", required: false,
+                        hint: "Comma/space-separated, e.g. “P6, commissioning, NEC”." },
+                      { label: "Overview", name: "overview", widget: "text", required: false,
+                        hint: "2–4 lines introducing the role." },
+                      { label: "Responsibilities", name: "responsibilities", widget: "list", required: false,
                         field: { label: "Item", name: "item", widget: "string" },
-                        hint: "Bulleted list. Leave empty to hide.",
-                      },
-                      {
-                        label: "Requirements",
-                        name: "requirements",
-                        widget: "list",
-                        required: false,
+                        hint: "Bulleted list. Leave empty to hide." },
+                      { label: "Requirements", name: "requirements", widget: "list", required: false,
                         field: { label: "Item", name: "item", widget: "string" },
-                        hint: "Bulleted list. Leave empty to hide.",
-                      },
-                      {
-                        label: "Apply URL (optional)",
-                        name: "applyUrl",
-                        widget: "string",
-                        required: false,
-                        hint: "Leave blank to use the default HMJ apply form.",
-                      },
+                        hint: "Bulleted list. Leave empty to hide." },
+                      { label: "Apply URL (optional)", name: "applyUrl", widget: "string", required: false,
+                        hint: "Leave blank to use the default HMJ apply form." },
                     ],
                   },
                 ],
@@ -194,8 +116,8 @@
         identityLoaded: false,
         user: null,
         errors: [],
-        intentOpen: false,          // set true when user clicks Sign in here
-        autoOpened: false           // guard to open editor once per session
+        intentOpen: false,
+        autoOpened: false
       };
     })();
   </script>
@@ -206,52 +128,28 @@
   <style>
     /* ==================== BRAND & GLOBAL ==================== */
     :root{
-      --ink:#0f1322;            /* page background */
-      --bg:#0b0f1c;             /* deep background */
-      --panel:#0f162c;          /* card bg */
-      --panelAlt:#111833;
-      --accent:#3A66B3;         /* HMJ blue */
-      --muted:#9aa5c4;          /* secondary text */
-      --border:rgba(255,255,255,.12);
-      --borderSoft:rgba(255,255,255,.08);
-      --ok:#1f7e39; --warn:#7a5b00; --danger:#8a1f2b;
-      --shadow:0 10px 30px rgba(0,0,0,.35);
-      --round:14px; --roundLg:18px; --roundXl:22px;
-      --dockH:68px;             /* bottom dock height */
+      --ink:#0f1322; --bg:#0b0f1c; --panel:#0f162c; --panelAlt:#111833;
+      --accent:#3A66B3; --muted:#9aa5c4; --border:rgba(255,255,255,.12); --borderSoft:rgba(255,255,255,.08);
+      --ok:#1f7e39; --warn:#7a5b00; --danger:#8a1f2b; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --round:14px; --roundLg:18px; --roundXl:22px; --dockH:68px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0;color:#eaf0ff;
-      font-family: Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
-      background: var(--ink);
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
+    body{margin:0;color:#eaf0ff;font-family: Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;background: var(--ink);
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     a{color:#cfe0ff}
     code,.kbd{font-family:ui-monospace,Menlo,Consolas,"SF Mono","Cascadia Code",monospace}
 
     /* ======================= TOP BAR ======================== */
-    .hmj-topbar{
-      position:sticky; top:0; z-index:5000;
+    .hmj-topbar{position:sticky; top:0; z-index:5000;
       background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));
-      border-bottom:1px solid var(--borderSoft);
-      backdrop-filter:blur(6px);
-    }
-    .hmj-topbar .inner{
-      max-width:1200px; margin:0 auto; padding:12px 16px;
-      display:flex; align-items:center; gap:12px; justify-content:space-between;
-    }
+      border-bottom:1px solid var(--borderSoft); backdrop-filter:blur(6px)}
+    .hmj-topbar .inner{max-width:1200px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px; justify-content:space-between}
     .hmj-brand{display:flex; align-items:center; gap:10px; font-weight:800; color:#eaf0ff; letter-spacing:.2px}
     .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
     .hmj-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:10px 14px;border-radius:12px;
-      text-decoration:none; font-weight:700;
-      border:1px solid var(--border); background:transparent; color:#eaf0ff;
-      white-space:nowrap; cursor:pointer; transition:transform .15s, box-shadow .15s, background .15s, border-color .15s;
-    }
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;text-decoration:none;font-weight:700;
+      border:1px solid var(--border); background:transparent; color:#eaf0ff;white-space:nowrap; cursor:pointer; transition:.15s}
     .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
     .btn-blue{background:var(--accent); color:#fff; border-color:rgba(58,102,179,.85)}
     .btn-dark{background:#0f162c; color:#fff}
@@ -280,17 +178,11 @@
     .gate p{color:#c9d6ff}
 
     /* ==================== HERO / GUIDE ====================== */
-    .hmj-hero{
-      border-bottom:1px solid var(--borderSoft);
-      background:
-        radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
-        radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.02), transparent);
-    }
-    .hmj-hero .inner{
-      max-width:1200px;margin:0 auto;padding:26px 16px 8px;
-      display:grid;grid-template-columns:1.1fr .9fr;gap:18px;
-    }
+    .hmj-hero{border-bottom:1px solid var(--borderSoft);
+      background: radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
+                 radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
+                 linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
+    .hmj-hero .inner{max-width:1200px;margin:0 auto;padding:26px 16px 8px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
     .card{background:rgba(255,255,255,.04);border:1px solid var(--borderSoft);border-radius:18px;padding:18px}
     .hero-title{margin:0 0 8px 0;font-size:1.38rem;line-height:1.3}
     .hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
@@ -299,16 +191,10 @@
     .note{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--border);font-size:.8rem;color:#dce6ff;margin-top:2px}
 
     /* ==================== ACTION DOCK ======================= */
-    .dock{
-      position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
-      z-index:4500; background:var(--panel); border:1px solid var(--border);
-      border-radius:16px; padding:10px; box-shadow:var(--shadow);
-      display:none; align-items:center; gap:10px; flex-wrap:wrap;
-    }
+    .dock{position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:4500; background:var(--panel); border:1px solid var(--border);
+      border-radius:16px; padding:10px; box-shadow:var(--shadow); display:none; align-items:center; gap:10px; flex-wrap:wrap}
     .dock .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
-    .dock input[type="search"], .dock input[type="text"]{
-      background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px
-    }
+    .dock input[type="search"], .dock input[type="text"]{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px}
     .dock .tiny{font-size:.85rem;color:#bcd0ff}
     .dock .divider{height:30px;width:1px;background:var(--borderSoft);margin:0 2px}
 
@@ -324,9 +210,7 @@
     .nc-entryCard:hover{box-shadow:0 10px 26px rgba(0,0,0,.25)}
 
     /* little badge */
-    .kbd-badge{
-      display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:.84rem;color:#bcd0ff
-    }
+    .kbd-badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:.84rem;color:#bcd0ff}
 
     /* CMS mount (only shown when editor is opened) */
     #nc-root{display:none}
@@ -414,7 +298,6 @@
   </section>
 
   <!-- ====================== CMS ROOT ======================= -->
-  <!-- Netlify CMS will mount into this element once loaded -->
   <div id="nc-root" class="cms-frame" role="region" aria-label="Netlify CMS"></div>
 
   <!-- ======================== DOCK ======================== -->
@@ -492,9 +375,7 @@
       function setText(elm, txt) { if (elm) elm.textContent = txt; }
       function notice(type, msg) {
         const node = type === "err" ? el.err : el.domainWarn;
-        if (!node) return;
-        node.innerHTML = msg;
-        node.style.display = "";
+        if (!node) return; node.innerHTML = msg; node.style.display = "";
       }
       function clearNotice() {
         [el.err, el.domainWarn].forEach(n => { if (n) { n.innerHTML = ""; n.style.display = "none"; } });
@@ -511,14 +392,60 @@
         if (ScriptCache.has(src)) return ScriptCache.get(src);
         const p = new Promise((resolve, reject) => {
           const s = document.createElement("script");
-          s.src = src;
-          s.async = true;
+          s.src = src; s.async = true;
           s.onload = () => resolve();
           s.onerror = () => reject(new Error("Failed loading script: " + src));
           document.head.appendChild(s);
         });
         ScriptCache.set(src, p);
         return p;
+      }
+
+      // -------- Identity helpers
+      function getIdentity() { return window.netlifyIdentity || null; }
+
+      function stripIdentityUI() {
+        // Remove any leftover modal/overlay the widget creates
+        const selectors = [
+          '.netlify-identity-modal',
+          '.netlify-identity-overlay',
+          '.netlify-identity-widget',
+          '[data-reach-dialog-overlay]',
+          '[data-reach-dialog-content]'
+        ];
+        selectors.forEach(sel => $$(sel).forEach(n => {
+          try { n.style.display = 'none'; n.remove(); } catch {}
+        }));
+      }
+
+      function forceCloseIdentityUI() {
+        try { const ni = getIdentity(); if (ni && ni.close) ni.close(); } catch {}
+        stripIdentityUI();
+      }
+
+      function restoreStoredUser() {
+        // Try to recover a session from localStorage (Identity / Decap CMS both write here)
+        try {
+          const a = localStorage.getItem('gotrue.user');
+          if (a) { try { return JSON.parse(a); } catch {} }
+          const b = localStorage.getItem('netlify-cms-user');
+          if (b) { try { return JSON.parse(b); } catch {} }
+        } catch {}
+        return null;
+      }
+
+      function isLoggedIn() {
+        try {
+          const ni = getIdentity();
+          if (ni && ni.currentUser && ni.currentUser()) return true;
+          const st = restoreStoredUser();
+          return !!st;
+        } catch { return false; }
+      }
+
+      function getUserSafe() {
+        const ni = getIdentity();
+        return (ni && ni.currentUser && ni.currentUser()) || restoreStoredUser();
       }
 
       // -------- Boot sequence
@@ -550,111 +477,32 @@
         try {
           const res = await fetch("/data/jobs.json", { cache: "no-store" });
           if (el.dg && el.dg.json) el.dg.json.textContent = res.ok ? "✓ reachable" : "✗ " + res.status;
-        } catch {
-          if (el.dg && el.dg.json) el.dg.json.textContent = "✗ fetch failed";
-        }
+        } catch { if (el.dg && el.dg.json) el.dg.json.textContent = "✗ fetch failed"; }
       }
 
       async function ensureCMSLoaded() {
-        if (state.cmsLoaded && window.CMS) {
-          if (el.dg && el.dg.cms) setText(el.dg.cms, "✓ loaded");
-          return;
-        }
+        if (state.cmsLoaded && window.CMS) { if (el.dg && el.dg.cms) setText(el.dg.cms, "✓ loaded"); return; }
         await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
-        state.cmsLoaded = true;
-        if (el.dg && el.dg.cms) setText(el.dg.cms, "✓ loaded");
+        state.cmsLoaded = true; if (el.dg && el.dg.cms) setText(el.dg.cms, "✓ loaded");
       }
 
       function updateUIForUser(user) {
         state.user = user;
         if (user) {
-          hide(el.gate);
-          show(el.guide);
-          show(el.btnLogout);
-          show(el.btnJobsPublic);
-          show(el.btnOpenEditor);
-          show(el.diagWrap);
-          show(el.dock);
-          if (el.statusText) setText(el.statusText, "signed in");
+          hide(el.gate); show(el.guide); show(el.btnLogout); show(el.btnJobsPublic); show(el.btnOpenEditor);
+          show(el.diagWrap); show(el.dock); if (el.statusText) setText(el.statusText, "signed in");
         } else {
-          show(el.gate);
-          hide(el.guide);
-          hide(el.btnLogout);
-          hide(el.btnJobsPublic);
-          hide(el.btnOpenEditor);
-          hide(el.diagWrap);
-          hide(el.dock);
-          hide(el.ncRoot);
-          if (el.statusText) setText(el.statusText, "signed out");
+          show(el.gate); hide(el.guide); hide(el.btnLogout); hide(el.btnJobsPublic); hide(el.btnOpenEditor);
+          hide(el.diagWrap); hide(el.dock); hide(el.ncRoot); if (el.statusText) setText(el.statusText, "signed out");
         }
-      }
-
-      // --- Identity helpers (robust close + user detection) ---
-      const HEARTBEAT_MS = 400;
-      function getIdentity() { return window.netlifyIdentity || null; }
-
-      function forceCloseIdentityUI() {
-        try {
-          const ni = getIdentity();
-          if (ni && typeof ni.close === "function") ni.close();
-          // The modal is in our DOM; hide if stuck
-          const modal = document.querySelector('.netlify-identity-modal');
-          if (modal && modal.style) modal.style.display = 'none';
-        } catch {}
-      }
-
-      // Poll for a valid currentUser() (with gotrue fallback)
-      function waitForUser(timeoutMs = 8000) {
-        return new Promise((resolve, reject) => {
-          const start = Date.now();
-          const tick = () => {
-            const ni = getIdentity();
-            let user = ni && ni.currentUser && ni.currentUser();
-            if (!user) {
-              try {
-                const raw = localStorage.getItem('gotrue.user');
-                if (raw) {
-                  const parsed = JSON.parse(raw);
-                  if (parsed && (parsed.user || parsed.token)) user = parsed;
-                }
-              } catch {}
-            }
-            if (user) return resolve(user);
-            if (Date.now() - start > timeoutMs) return reject(new Error("Identity user not ready (timeout)"));
-            setTimeout(tick, 120);
-          };
-          tick();
-        });
-      }
-
-      // Keep Identity ↔ UI in sync even if events don’t fire
-      let heartbeatTimer = null;
-      function startIdentityHeartbeat() {
-        if (heartbeatTimer) return;
-        heartbeatTimer = setInterval(() => {
-          try {
-            const ni = getIdentity();
-            const user = ni && ni.currentUser && ni.currentUser();
-            if (user && !state.user) {
-              updateUIForUser(user);
-              forceCloseIdentityUI();
-              // Auto-open editor once if user intended to edit
-              const hintedOpen = state.intentOpen || /[?#]open\b|[?&]open=1/i.test(location.href);
-              if (hintedOpen && !state.autoOpened) {
-                state.autoOpened = true;
-                startPortal();
-              }
-            }
-          } catch {}
-        }, HEARTBEAT_MS);
       }
 
       async function initCMS() {
         try {
           await ensureCMSLoaded();
           if (!window.CMS) throw new Error("CMS global not available after load.");
-          el.ncRoot.classList.add("show");       // Mount target
-          window.CMS.init({ config: window.CMS_CONFIG }); // Manual init
+          el.ncRoot.classList.add("show");
+          window.CMS.init({ config: window.CMS_CONFIG });
         } catch (e) {
           captureError(e);
           notice("err", "<strong>Error</strong><br>There’s been an error initialising the CMS. See <em>Diagnostics → Error</em> for details.");
@@ -668,185 +516,123 @@
         try {
           await bootIdentity();
           const ni = getIdentity();
-          let user = ni && ni.currentUser && ni.currentUser();
-          if (!user) {
-            if (ni && ni.open) ni.open("login");
-            user = await waitForUser(12000);
+          let user = getUserSafe();
+          if (!user) { if (ni && ni.open) ni.open("login"); }
+          // Wait up to 12s for a user to appear
+          const start = Date.now();
+          while (!user && Date.now() - start < 12000) {
+            await new Promise(r => setTimeout(r, 150));
+            user = getUserSafe();
           }
+          if (!user) throw new Error("Login did not complete.");
           forceCloseIdentityUI();
           updateUIForUser(user);
           await initCMS();
           window.scrollTo({ top: 0, behavior: "smooth" });
-        } catch {
-          // Errors already captured
-        }
+        } catch (e) { captureError(e); }
       }
 
       function bindDock() {
         el.dock.top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
         el.dock.copy.addEventListener("click", async () => {
-          const val = el.dock.anchor.value.trim();
-          if (!val) return;
-          try {
-            await navigator.clipboard.writeText(val);
-            el.dock.copy.textContent = "Copied!";
-            setTimeout(() => (el.dock.copy.textContent = "Copy"), 1000);
-          } catch {}
+          const val = el.dock.anchor.value.trim(); if (!val) return;
+          try { await navigator.clipboard.writeText(val); el.dock.copy.textContent = "Copied!"; setTimeout(()=>el.dock.copy.textContent="Copy",1000);} catch {}
         });
         el.dock.openAnchor.addEventListener("click", () => {
-          const id = el.dock.anchor.value.trim();
-          if (id) window.open("/jobs.html#" + encodeURIComponent(id), "_blank", "noopener");
+          const id = el.dock.anchor.value.trim(); if (id) window.open("/jobs.html#" + encodeURIComponent(id), "_blank", "noopener");
         });
         el.dock.preview.addEventListener("click", () => window.open("/jobs.html", "_blank", "noopener"));
-        el.dock.tpl.addEventListener("change", () => {
-          // (Template logic placeholder – preserved from your UI)
-        });
-        el.dock.q.addEventListener("input", () => {
-          // (Search in CMS UI is handled internally; this is a helper box)
-        });
-        el.dock.anchor.addEventListener("input", () => { /* no-op */ });
-        el.dock.anchor.placeholder = "anchor-id (e.g., mep-qs-dublin)";
       }
 
       function bindDiagnostics() {
-        el.tools.run.addEventListener("click", async () => {
-          await checkJobsJSON();
-          detectHostWarnings();
-        });
+        el.tools.run.addEventListener("click", async () => { await checkJobsJSON(); detectHostWarnings(); });
         el.tools.reloadCms.addEventListener("click", async () => {
-          state.cmsLoaded = false;
-          if (window.CMS && window.CMS.__reset) {
-            try { window.CMS.__reset(); } catch {}
-          }
-          await initCMS();
+          state.cmsLoaded = false; try { if (window.CMS && window.CMS.__reset) window.CMS.__reset(); } catch {} await initCMS();
         });
         el.tools.reloadIdentity.addEventListener("click", async () => {
-          try {
-            const ni = getIdentity();
-            if (ni && ni.init) ni.init();
-          } catch (e) {
-            captureError(e);
-            notice("err", "Identity reload failed.");
-          }
+          try { const ni = getIdentity(); if (ni && ni.init) ni.init(); } catch (e) { captureError(e); notice("err","Identity reload failed."); }
         });
         el.tools.clearLocal.addEventListener("click", () => {
-          try {
-            localStorage.clear();
-            sessionStorage.clear();
-            notice("ok", "Local cache cleared.");
-          } catch (e) {
-            captureError(e);
-            notice("err", "Failed clearing cache.");
-          }
+          try { localStorage.clear(); sessionStorage.clear(); notice("ok","Local cache cleared."); } catch (e) { captureError(e); notice("err","Failed clearing cache."); }
         });
-        $("#btnShowDiag").addEventListener("click", () => {
-          el.diagWrap.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
+        $("#btnShowDiag").addEventListener("click", () => el.diagWrap.scrollIntoView({ behavior: "smooth", block: "start" }));
       }
 
       function bindTopbar() {
         el.btnOpenEditor.addEventListener("click", startPortal);
         el.btnOpenEditor2.addEventListener("click", startPortal);
-        el.btnDashboard.addEventListener("click", () => {
-          hide(el.ncRoot);
-          show(el.guide);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-        el.btnJobsPublic.addEventListener("click", () => {});
-        el.btnLogin.addEventListener("click", () => {
-          const ni = getIdentity();
-          state.intentOpen = true; // remember user’s intent to edit
-          if (ni && ni.open) ni.open("login");
-        });
-        el.btnLogout.addEventListener("click", () => {
-          const ni = getIdentity();
-          if (ni && ni.logout) ni.logout();
-        });
+        el.btnDashboard.addEventListener("click", () => { hide(el.ncRoot); show(el.guide); window.scrollTo({ top: 0, behavior: "smooth" }); });
+        el.btnLogin.addEventListener("click", () => { const ni = getIdentity(); state.intentOpen = true; if (ni && ni.open) ni.open("login"); });
+        el.btnLogout.addEventListener("click", () => { const ni = getIdentity(); if (ni && ni.logout) ni.logout(); });
       }
 
-      // -------- Identity lifecycle (hardened)
-      function hookIdentity() {
-        const ni = getIdentity();
-        if (!ni) return;
+      // -------- Identity lifecycle with heartbeat + storage recovery
+      const HEARTBEAT_MS = 400;
+      function startIdentityHeartbeat() {
+        setInterval(() => {
+          try {
+            const logged = isLoggedIn();
+            if (logged && !state.user) {
+              updateUIForUser(getUserSafe()); forceCloseIdentityUI();
+              const hintedOpen = state.intentOpen || /[?#]open\b|[?&]open=1/i.test(location.href);
+              if (hintedOpen && !state.autoOpened) { state.autoOpened = true; startPortal(); }
+            }
+          } catch {}
+        }, HEARTBEAT_MS);
+      }
 
-        // Register listeners BEFORE init
+      function hookIdentity() {
+        const ni = getIdentity(); if (!ni) return;
+
         ni.on("init", (user) => {
           if (el.dg && el.dg.id) setText(el.dg.id, "✓ loaded");
           if (el.dg && el.dg.user) el.dg.user.textContent = user ? "✓ signed in" : "— signed out";
-          updateUIForUser(user || null);
-          show(el.btnDashboard);
-          if (user) forceCloseIdentityUI();
+          updateUIForUser(user || restoreStoredUser() || null);
+          show(el.btnDashboard); if (user) forceCloseIdentityUI();
         });
 
         ni.on("login", (user) => {
           if (el.dg && el.dg.user) el.dg.user.textContent = "✓ signed in";
-          updateUIForUser(user || null);
-          forceCloseIdentityUI();
+          updateUIForUser(user || getUserSafe()); forceCloseIdentityUI();
           if ((state.intentOpen || /[?#]open\b|[?&]open=1/i.test(location.href)) && !state.autoOpened) {
-            state.autoOpened = true;
-            startPortal();
+            state.autoOpened = true; startPortal();
           }
         });
 
-        ni.on("logout", () => {
-          if (el.dg && el.dg.user) el.dg.user.textContent = "— signed out";
-          updateUIForUser(null);
-        });
+        ni.on("logout", () => { if (el.dg && el.dg.user) el.dg.user.textContent = "— signed out"; updateUIForUser(null); });
 
-        ni.on("error", (err) => {
-          captureError(err);
-          notice("err", "<strong>Identity error</strong><br>Please try again or reload.");
-        });
+        ni.on("error", (err) => { captureError(err); notice("err", "<strong>Identity error</strong><br>Please try again or reload."); });
 
-        ni.init();               // kick the widget
-        startIdentityHeartbeat(); // and keep it honest
+        ni.init();
+        startIdentityHeartbeat();
       }
 
       // -------- Main
       async function main() {
-        bindDock();
-        bindDiagnostics();
-        bindTopbar();
+        bindDock(); bindDiagnostics(); bindTopbar();
 
         // Initial UI
-        show(el.gate); // shown until we detect login
-        hide(el.guide);
-        hide(el.ncRoot);
-        hide(el.dock);
-        hide(el.btnLogout);
-        hide(el.btnOpenEditor);
-        hide(el.btnJobsPublic);
-        hide(el.btnDashboard);
+        show(el.gate); hide(el.guide); hide(el.ncRoot); hide(el.dock);
+        hide(el.btnLogout); hide(el.btnOpenEditor); hide(el.btnJobsPublic); hide(el.btnDashboard);
+
+        // If a stored session exists, use it immediately (even before widget events)
+        const stored = restoreStoredUser();
+        if (stored) { updateUIForUser(stored); forceCloseIdentityUI(); show(el.btnDashboard); }
 
         // Boot identity and hooks
-        await bootIdentity();
-        hookIdentity();
+        await bootIdentity(); hookIdentity();
 
-        // Populate diagnostics immediately
-        detectHostWarnings();
-        checkJobsJSON().catch(() => {});
-
-        // Also mark CMS unloaded at start
-        if (el.dg && el.dg.cms) setText(el.dg.cms, "—");
-        if (el.dg && el.dg.json) setText(el.dg.json, "—");
+        // Diagnostics
+        detectHostWarnings(); checkJobsJSON().catch(() => {});
+        if (el.dg && el.dg.cms) setText(el.dg.cms, "—"); if (el.dg && el.dg.json) setText(el.dg.json, "—");
       }
 
-      // Global error boundary
-      window.addEventListener("error", (e) => {
-        captureError(e.error || e.message || e);
-        notice("err", "<strong>Error</strong><br>There’s been an error — see Diagnostics for details.");
-      });
-      window.addEventListener("unhandledrejection", (e) => {
-        captureError(e.reason || e);
-        notice("err", "<strong>Error</strong><br>There’s been an error — see Diagnostics for details.");
-      });
+      // Error boundary
+      window.addEventListener("error", (e) => { captureError(e.error || e.message || e); notice("err","<strong>Error</strong><br>There’s been an error — see Diagnostics for details."); });
+      window.addEventListener("unhandledrejection", (e) => { captureError(e.reason || e); notice("err","<strong>Error</strong><br>There’s been an error — see Diagnostics for details."); });
 
-      // Start when DOM is ready so elements are guaranteed to exist
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", main);
-      } else {
-        main();
-      }
+      // Start when DOM is ready
+      if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", main); } else { main(); }
     })();
   </script>
 </body>
