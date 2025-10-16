@@ -2,99 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>HMJ Global — CMS Portal</title>
 
-  <!-- Brand font fallbacks kept simple -->
   <style>
     :root{
-      --bg:#0b1420;
-      --panel:#0f1c2b;
-      --muted:#9fb3c8;
-      --text:#e6edf6;
-      --blue:#4c7fff;
-      --green:#1fb981;
-      --red:#ff6b6b;
-      --border:#203042;
+      --bg:#0b1420; --panel:#0f1c2b; --muted:#9fb3c8; --text:#e6edf6;
+      --blue:#4c7fff; --green:#1fb981; --red:#ff6b6b; --border:#203042;
     }
-    html,body{
-      margin:0;height:100%;background:var(--bg);color:var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-    }
-    a{color:var(--blue);text-decoration:none}
-    .topbar{
-      position:sticky;top:0;z-index:50;background:rgba(11,20,32,.9);
-      backdrop-filter:saturate(120%) blur(6px);border-bottom:1px solid var(--border)
-    }
-    .row{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;gap:10px;align-items:center}
-    .brand-dot{width:8px;height:8px;border-radius:999px;background:#3bb3ff;display:inline-block;margin-right:10px}
-    .title{font-weight:700;letter-spacing:.2px}
-    .spacer{flex:1}
-    .btn{
-      background:#1a2740;border:1px solid #2b3c55;color:var(--text);
-      padding:10px 14px;border-radius:12px;display:inline-flex;align-items:center;gap:8px;
-      transition:all .18s ease;font-weight:600
-    }
-    .btn:hover{transform:translateY(-1px);border-color:#3b5172}
-    .primary{background:var(--blue);border-color:transparent}
-    .danger{background:#2a1b1b;border-color:#472a2a}
-    .wrap{max-width:1100px;margin:22px auto;padding:0 20px}
-    .card{
-      background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:18px
-    }
-    .h1{font-size:28px;font-weight:800;margin:0 0 4px}
-    .muted{color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .kvs{display:grid;grid-template-columns:240px 1fr;gap:8px;padding:10px 0;border-top:1px dashed var(--border)}
-    .badge{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.03)}
-    .ok{color:#4fe3a2}.warn{color:#ffd166}.err{color:#ff8fa3}
-    .hr{height:1px;background:var(--border);margin:14px 0}
-    /* Floating tools — bottom-right and tucks under CMS when active */
-    .dock{
-      position:fixed;right:20px;bottom:20px;z-index:5;
-      background:rgba(15,28,43,.92);backdrop-filter:blur(6px);
-      border:1px solid var(--border);border-radius:18px;padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
-      max-width:min(92vw,760px)
-    }
-    .chip{padding:8px 10px;border-radius:10px;background:#132135;border:1px solid #23354e;color:var(--muted);font-size:13px}
-    .chip input{all:unset;color:var(--text)}
-    .chip-btn{padding:8px 12px;border-radius:10px;background:#1a2740;border:1px solid #2b3c55;color:var(--text);font-weight:700}
-    .chip-btn:hover{border-color:#3b5172}
-    /* “Logged in” popup from Identity can sit above; no problem */
-    #cmsHost{min-height:52vh}
-    code.small{font-size:12px;color:#aec2d8;background:#0c1724;border:1px solid #1d2a3c;padding:2px 6px;border-radius:6px}
+    html,body{ margin:0;height:100%;background:var(--bg);color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
+    a{ color:var(--blue); text-decoration:none }
+
+    .topbar{ position:sticky; top:0; z-index:50; background:rgba(11,20,32,.9);
+      backdrop-filter:saturate(120%) blur(6px); border-bottom:1px solid var(--border) }
+    .row{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:10px; align-items:center }
+    .brand-dot{ width:8px; height:8px; border-radius:999px; background:#3bb3ff; display:inline-block; margin-right:10px }
+    .title{ font-weight:700; letter-spacing:.2px }
+    .spacer{ flex:1 }
+    .btn{ background:#1a2740; border:1px solid #2b3c55; color:var(--text);
+      padding:10px 14px; border-radius:12px; display:inline-flex; align-items:center; gap:8px; transition:all .18s ease; font-weight:600 }
+    .btn:hover{ transform:translateY(-1px); border-color:#3b5172 }
+    .primary{ background:var(--blue); border-color:transparent }
+    .danger{ background:#2a1b1b; border-color:#472a2a }
+
+    .wrap{ max-width:1100px; margin:22px auto; padding:0 20px }
+    .card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px 20px; margin-bottom:18px }
+    .h1{ font-size:28px; font-weight:800; margin:0 0 4px }
+    .muted{ color:var(--muted) }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px }
+    .kvs{ display:grid; grid-template-columns:240px 1fr; gap:8px; padding:10px 0; border-top:1px dashed var(--border) }
+    .badge{ display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:rgba(255,255,255,.03) }
+    .ok{ color:#4fe3a2 } .warn{ color:#ffd166 } .err{ color:#ff8fa3 }
+    .hr{ height:1px; background:var(--border); margin:14px 0 }
+
+    /* floating Quick Tools (bottom-right) */
+    #hmj-floating-tools{ position:fixed; right:16px; bottom:16px; z-index:9999; }
+    #hmj-floating-tools .card{ background:#0f172a; color:#cbd5e1; border:1px solid #233044; border-radius:14px; padding:10px 12px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    #hmj-floating-tools .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+    #hmj-floating-tools button, #hmj-floating-tools .ghost{ background:#1f2937; color:#e5e7eb; border:1px solid #334155; padding:7px 10px; border-radius:9px; font-size:.84rem; cursor:pointer }
+    #hmj-floating-tools button:hover{ background:#243042 }
+    #hmj-floating-tools .ghost{ border-style:dashed; opacity:.9 }
+
+    /* bottom-left HUD */
+    #hmj-hud{ position:fixed; left:16px; bottom:16px; background:#0b1020; color:#cbd5e1;
+      border:1px solid #233044; border-radius:12px; padding:10px 12px; z-index:9998; font-size:.85rem }
+    #hmj-hud b{ color:#fff }
   </style>
 
-  <!-- Netlify Identity (email login) -->
+  <!-- Netlify Identity -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
-  <!-- Use Decap CMS (Netlify CMS successor) -->
-  <script>
-    window.CMS_MANUAL_INIT = true;
-  </script>
+  <!-- Decap CMS (successor to Netlify CMS) -->
+  <script>window.CMS_MANUAL_INIT = true;</script>
   <script src="https://unpkg.com/decap-cms@^3.8.4/dist/decap-cms.js"></script>
-
-  <style>
-  /* Badges used in diagnostics and mini-HUD */
-  .badge { display:inline-block; padding:.2rem .5rem; border-radius:.5rem; font-size:.78rem; line-height:1; }
-  .badge-live{ background:#10b98122; color:#10b981; border:1px solid #10b98155 }
-  .badge-hold{ background:#f59e0b22; color:#f59e0b; border:1px solid #f59e0b55 }
-  .badge-closed{ background:#ef444422; color:#ef4444; border:1px solid #ef444455 }
-
-  /* Keep the floating tools anchored bottom-right and clickable over CMS */
-  #hmj-floating-tools{ position:fixed; right:16px; bottom:16px; z-index:9999; }
-  #hmj-floating-tools .card{ background:#0f172a; color:#cbd5e1; border:1px solid #233044; border-radius:14px; padding:10px 12px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
-  #hmj-floating-tools .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
-  #hmj-floating-tools button, #hmj-floating-tools .ghost { background:#1f2937; color:#e5e7eb; border:1px solid #334155; padding:7px 10px; border-radius:9px; font-size:.84rem; cursor:pointer }
-  #hmj-floating-tools button:hover{ background:#243042 }
-  #hmj-floating-tools .ghost{ border-style:dashed; opacity:.9 }
-  #hmj-hud{ position:fixed; left:16px; bottom:16px; background:#0b1020; color:#cbd5e1; border:1px solid #233044; border-radius:12px; padding:10px 12px; z-index:9998; font-size:.85rem }
-  #hmj-hud b{ color:#fff }
-</style>
-
 </head>
 <body>
   <div class="topbar">
@@ -111,7 +72,6 @@
   </div>
 
   <div class="wrap">
-    <!-- Diagnostics -->
     <div class="card">
       <div class="h1">⚙ Diagnostics &amp; tools</div>
       <div class="grid">
@@ -135,408 +95,208 @@
       </div>
     </div>
 
-    <!-- Welcome -->
     <div class="card">
       <div class="h1">Welcome 👋</div>
       <div class="muted">Use the dock below to open the Jobs editor, duplicate templates, and copy anchors.</div>
       <ul>
-        <li>Click <span class="badge">Open Jobs in Editor</span> to edit <code class="small">data/jobs.json</code>.</li>
-        <li>Preview your public page: <code class="small">/jobs.html</code>.</li>
+        <li>Click <span class="badge">Open Jobs in Editor</span> to edit <code>data/jobs.json</code>.</li>
+        <li>Preview your public page: <code>/jobs.html</code>.</li>
         <li>If you see a “Logged in” popup, it will auto-close and the editor will mount.</li>
       </ul>
       <div class="badge ok" id="cmsStatus">CMS Status: ready</div>
     </div>
-
-    <!-- CMS host -->
-    <div id="cmsHost" class="card">
-      <div class="muted">Editor will appear here after login…</div>
-    </div>
   </div>
 
-  <!-- Floating dock (bottom-right) -->
-  <div class="dock" id="dock">
-    <span class="chip"><input id="searchBox" placeholder="Search jobs (title, location, status)…"></span>
-    <span class="chip">Templates:
-      <select id="tmplSel" class="chip" style="background:transparent;border:none;padding-left:6px;">
-        <option>—</option>
-        <option>CSA QS</option>
-        <option>MEP QS</option>
-        <option>Electrical Supervisor</option>
-      </select>
-    </span>
-    <button class="chip-btn" id="btnPreview">Preview</button>
-    <button class="chip-btn" id="btnTop">↑ Top</button>
-    <button class="chip-btn" id="btnDuplicate">Duplicate current</button>
-    <span class="chip">anchor-id (e.g., mep-qs-dublin)</span>
-    <button class="chip-btn" id="btnOpenAnchor">Open anchor</button>
-    <button class="chip-btn" id="btnCopy">Copy</button>
-  </div>
+  <!-- Quick Tools (bottom-right) + HUD (bottom-left) are created by JS -->
 
   <script>
-    /* ------------------------------
-       Small helpers
-    ------------------------------ */
-    const qs = sel => document.querySelector(sel);
-    const host = location.host;
-    qs('#dg-host').textContent = host;
+    // --- helpers & diagnostics ---
+    const qs = s => document.querySelector(s);
+    qs('#dg-host').textContent = location.host;
+    function setStatus(sel, text, cls){ const el = qs(sel); if(!el) return; el.textContent = text; el.className = cls||''; }
+    function showError(err){ console.error(err); qs('#errBlock').innerHTML =
+      '<div class="badge err">Error</div><div style="margin-top:6px">'+String(err?.message||err).replace(/</g,'&lt;')+'</div>'; }
 
-    function setStatus(id, text, className){
-      const el = qs(id);
-      if (!el) return;
-      el.textContent = text;
-      el.className = className || '';
-    }
-
-    function showError(err){
-      console.error(err);
-      const msg = (err && err.message) ? err.message : (''+err);
-      qs('#errBlock').innerHTML = '<div class="badge err">Error</div><div style="margin-top:6px">'+
-        msg.replace(/</g,'&lt;')+'</div>';
-    }
-
-    /* ------------------------------
-       Identity & Login flow
-    ------------------------------ */
+    // Identity
     const idw = window.netlifyIdentity;
-    let loggedIn = false;
+    if (idw) setStatus('#dg-ident','✓ loaded','ok');
 
     function ensureLoginThen(cb){
-      if (idw && idw.currentUser()) { loggedIn = true; setStatus('#dg-login', '✓ signed in', 'ok'); return cb(); }
-      idw.open('login');
-      idw.on('login', user => {
-        loggedIn = true;
-        setStatus('#dg-login','✓ signed in','ok');
-        idw.close();
-        cb();
-      });
+      if (idw && idw.currentUser()){ setStatus('#dg-login','✓ signed in','ok'); cb(); return; }
+      idw?.open('login');
+      idw?.on('login', ()=>{ setStatus('#dg-login','✓ signed in','ok'); idw.close(); cb(); });
     }
+    document.getElementById('btnSignOut').onclick = ()=>{
+      idw?.logout(); setStatus('#dg-login','— signed out','muted'); location.reload();
+    };
 
-    qs('#btnSignOut').addEventListener('click', () => {
-      idw && idw.logout();
-      loggedIn = false;
-      setStatus('#dg-login','— signed out','muted');
-      location.reload();
-    });
-
-    /* ------------------------------
-       CMS boot
-    ------------------------------ */
-    function initCMS(){
-      try{
-        if (!window.CMS) throw new Error('CMS library not loaded');
-        setStatus('#dg-cms','✓ Decap loaded','ok');
-
-        // init with our config
-        CMS.init({ config: '/admin/config.yml' });
-
-        // Route editor straight to our collection
-        const go = () => {
-          // Only change hash if not already in CMS
-          if (!location.hash || !location.hash.startsWith('#/collections/')){
-            location.hash = '#/collections/jobsData';
-          }
-          // Render container
-          const mountPoint = document.getElementById('cmsHost');
-          if (mountPoint && !mountPoint.dataset.mounted){
-            mountPoint.dataset.mounted = '1';
-            // Decap will render itself; container is just visual space.
-            mountPoint.innerHTML = '<div class="muted">Opening editor…</div>';
-          }
-        };
-
-        // Wait a moment to let store warm up before routing
-        setTimeout(go, 450);
-
-      }catch(err){
-        setStatus('#dg-cms','✗ failed','err');
-        showError(err);
-      }
-    }
-
-    /* ------------------------------
-       Quick checks
-    ------------------------------ */
+    // JSON reachability quick check
     async function checkJobsJSON(){
       try{
-        const res = await fetch('/data/jobs.json', {cache:'no-store'});
-        if (!res.ok) throw new Error('Jobs JSON fetch failed: '+res.status);
-        const data = await res.json();
-        if (!data || !Array.isArray(data.jobs)){
-          throw new Error('Jobs JSON is reachable but not in expected shape: { "jobs": [...] }');
-        }
+        const r = await fetch('/data/jobs.json', {cache:'no-store'});
+        if(!r.ok) throw new Error('Jobs JSON fetch failed: '+r.status);
+        const j = await r.json();
+        if(!j || !Array.isArray(j.jobs)) throw new Error('Expected { "jobs": [...] }');
         setStatus('#dg-json','✓ reachable','ok');
-      }catch(err){
-        setStatus('#dg-json','✗ unreachable','err');
-        showError(err);
-      }
+      }catch(e){ setStatus('#dg-json','✗ unreachable','err'); showError(e); }
     }
-
-    /* Buttons */
-    qs('#btnRunChecks').onclick = checkJobsJSON;
-    qs('#btnReloadCMS').onclick = () => location.reload();
-    qs('#btnReloadId').onclick = () => location.href = '/admin/';
-    qs('#btnClearCache').onclick = () => { localStorage.clear(); sessionStorage.clear(); caches?.keys?.().then(keys=>keys.forEach(k=>caches.delete(k))); location.reload(); };
-
-    qs('#btnOpenEditor').onclick = () => ensureLoginThen(initCMS);
-    qs('#btnTop').onclick = () => window.scrollTo({top:0,behavior:'smooth'});
-    qs('#btnPreview').onclick = () => window.open('/jobs.html','_blank');
-
-    // On load: mark identity + run a quick JSON check
-    setStatus('#dg-ident','✓ loaded','ok');
-    setStatus('#dg-login', (idw && idw.currentUser()) ? '✓ signed in' : '—', (idw && idw.currentUser()) ? 'ok' : 'muted');
+    document.getElementById('btnRunChecks').onclick = checkJobsJSON;
+    document.getElementById('btnReloadCMS').onclick = ()=>location.reload();
+    document.getElementById('btnReloadId').onclick = ()=>location.href='/admin/';
+    document.getElementById('btnClearCache').onclick = ()=>{
+      try{ localStorage.clear(); sessionStorage.clear(); caches?.keys?.().then(k=>k.forEach(c=>caches.delete(c))); }catch(e){}
+      location.reload();
+    };
     checkJobsJSON();
 
-    // Auto-open editor on arrival if already signed in
-    window.addEventListener('load', () => {
-      if (idw && idw.currentUser()){
-        ensureLoginThen(initCMS);
-      }
-    });
-
-    // If a legacy “logged in” dialog from the site appears, close it after CMS is up
-    setTimeout(()=>{ try{ idw && idw.close(); }catch(e){} }, 1200);
-
-    // Very light “search box” stub (client-side filter UX in your public page; kept in UI here)
-    qs('#searchBox').addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter'){
-        const q = e.currentTarget.value.trim();
-        if (!q) return;
-        window.open('/jobs.html#'+encodeURIComponent(q.toLowerCase()), '_blank');
-      }
-    });
-
-  </script>
-  <script>
-(function () {
-  // -------- utilities --------
-  const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
-  const slug = (s)=> (s||'')
-      .toLowerCase()
-      .normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
-      .replace(/&/g,' and ')
-      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')
-      .slice(0,80);
-
-  // Single source of truth for collection + file
-  const JOBS_COLLECTION = 'jobsData';    // leave as-is
-  const JOBS_FILE = 'data/jobs.json';    // leave as-is
-
-  // -------- floating tools (bottom-right) --------
-  const tools = document.createElement('div');
-  tools.id = 'hmj-floating-tools';
-  tools.innerHTML = `
-    <div class="card">
-      <div class="row" style="margin-bottom:6px">
-        <strong>Quick tools</strong>
-        <span class="ghost" id="hmj-anchor">Copy anchor</span>
-        <button id="hmj-duplicate">Duplicate</button>
-        <button id="hmj-validate">Validate</button>
-        <button id="hmj-export">Export JSON</button>
-        <button id="hmj-import">Import JSON</button>
-      </div>
-      <div class="row">
-        <button id="hmj-backup">Backup to browser</button>
-        <button id="hmj-restore">Restore backup</button>
-        <button id="hmj-clear">Clear CMS cache</button>
-        <span class="ghost" title="⌘/Ctrl+S saves, ⌘/Ctrl+K validates, ⌘/Ctrl+D duplicates">Shortcuts</span>
-      </div>
-    </div>`;
-  document.body.appendChild(tools);
-
-  // Mini HUD (bottom-left): live/halt counts etc.
-  const hud = document.createElement('div');
-  hud.id = 'hmj-hud';
-  hud.innerHTML = `Jobs: <b id="hudTotal">—</b> ·
-    <span class="badge badge-live" id="hudLive">live —</span> 
-    <span class="badge badge-hold" id="hudHold">hold —</span>
-    <span class="badge badge-closed" id="hudClosed">closed —</span>`;
-  document.body.appendChild(hud);
-
-  // -------- Decap hooks --------
-  function whenCMSReady(fn){
-    const tryNow = ()=> window.CMS ? fn() : setTimeout(tryNow, 300);
-    tryNow();
-  }
-
-  // Update HUD from latest JSON
-  async function refreshHUD(){
-    try {
-      const res = await fetch(`/${JOBS_FILE}?_=${Date.now()}`);
-      const data = await res.json();
-      const arr = Array.isArray(data.jobs) ? data.jobs : [];
-      document.getElementById('hudTotal').textContent = arr.length;
-      const live = arr.filter(j=> (j.status||'').toLowerCase()==='live').length;
-      const hold = arr.filter(j=> (j.status||'').toLowerCase().includes('hold')).length;
-      const closed = arr.filter(j=> (j.status||'').toLowerCase()==='closed').length;
-      document.getElementById('hudLive').textContent = `live ${live}`;
-      document.getElementById('hudHold').textContent = `hold ${hold}`;
-      document.getElementById('hudClosed').textContent = `closed ${closed}`;
-    } catch(e){
-      // silent
+    // --- CMS init (single boot guard) ---
+    let CMS_BOOTED = false;
+    function initCMS(){
+      if (CMS_BOOTED) return; // guard
+      if (!window.CMS){ setStatus('#dg-cms','✗ failed','err'); showError(new Error('CMS library not loaded')); return; }
+      setStatus('#dg-cms','✓ Decap loaded','ok');
+      CMS.init({ config: '/admin/config.yml' }); // B1 config
+      CMS_BOOTED = true;
+      // route to our collection after store warms up
+      setTimeout(()=>{
+        if (!location.hash.startsWith('#/collections/')) location.hash = '#/collections/jobsData';
+      }, 450);
     }
-  }
+    document.getElementById('btnOpenEditor').onclick = ()=>ensureLoginThen(initCMS);
+    window.addEventListener('load', ()=>{ if (idw?.currentUser()) ensureLoginThen(initCMS); });
 
-  // Local backup
-  async function backupToLocal(){
-    const res = await fetch(`/${JOBS_FILE}?_=${Date.now()}`);
-    const txt = await res.text();
-    localStorage.setItem('hmj-jobs-backup', txt);
-    alert('Backup saved in this browser.');
-  }
-  function restoreFromLocal(){
-    const raw = localStorage.getItem('hmj-jobs-backup');
-    if(!raw){ alert('No backup found in this browser.'); return; }
-    try {
-      const json = JSON.parse(raw);
-      downloadAs('jobs-restore.json', JSON.stringify(json,null,2));
-    } catch(e){ alert('Backup is unreadable.'); }
-  }
-  function downloadAs(name, content){
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([content], {type:'application/json'}));
-    a.download = name; a.click(); URL.revokeObjectURL(a.href);
-  }
+    // --- Quick Tools + HUD (guards so they never duplicate) ---
+    (function installToolsOnce(){
+      if (document.getElementById('hmj-floating-tools')) return;
 
-  // Import JSON (validates shape before letting you commit via CMS UI)
-  async function importJSON(){
-    const input = document.createElement('input');
-    input.type='file'; input.accept='.json,application/json';
-    input.onchange = async () => {
-      const file = input.files[0]; if(!file) return;
-      const text = await file.text();
-      try {
-        const json = JSON.parse(text);
-        if(!json || !Array.isArray(json.jobs)) throw new Error('Expected { jobs: [] }');
-        // hand off by downloading a normalized copy user can paste/commit
-        downloadAs('jobs-normalized.json', JSON.stringify(json,null,2));
-        alert('Imported OK. Open the file and paste into data/jobs.json (or commit through Git).');
-      } catch(e){
-        alert('Invalid format: ' + e.message);
+      const JOBS_FILE = 'data/jobs.json';
+      const JOBS_COLLECTION = 'jobsData';
+      const slug = s => (s||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80);
+
+      // Tools
+      const tools = document.createElement('div');
+      tools.id = 'hmj-floating-tools';
+      tools.innerHTML = `
+        <div class="card">
+          <div class="row" style="margin-bottom:6px">
+            <strong>Quick tools</strong>
+            <span class="ghost" id="hmj-anchor">Copy anchor</span>
+            <button id="hmj-duplicate">Duplicate</button>
+            <button id="hmj-validate">Validate</button>
+            <button id="hmj-export">Export JSON</button>
+            <button id="hmj-import">Import JSON</button>
+          </div>
+          <div class="row">
+            <button id="hmj-backup">Backup to browser</button>
+            <button id="hmj-restore">Restore backup</button>
+            <button id="hmj-clear">Clear CMS cache</button>
+            <span class="ghost" title="⌘/Ctrl+K validate · ⌘/Ctrl+D duplicate">Shortcuts</span>
+          </div>
+        </div>`;
+      document.body.appendChild(tools);
+
+      // HUD
+      if (!document.getElementById('hmj-hud')){
+        const hud = document.createElement('div');
+        hud.id = 'hmj-hud';
+        hud.innerHTML = `Jobs: <b id="hudTotal">—</b> ·
+          <span class="badge" id="hudLive">live —</span>
+          <span class="badge" id="hudHold">hold —</span>
+          <span class="badge" id="hudClosed">closed —</span>`;
+        document.body.appendChild(hud);
       }
-    };
-    input.click();
-  }
 
-  // Validate current entry (in-editor) against minimal schema
-  function validateEntry(data){
-    const errs = [];
-    const must = ['id','title','status','locationText'];
-    must.forEach(k => { if(!data[k]) errs.push(`Missing required: ${k}`); });
-    if(data.id && !/^[a-z0-9-]{3,}$/.test(data.id)) errs.push('id must be URL-safe (a–z, 0–9, dash)');
-    return errs;
-  }
+      async function refreshHUD(){
+        try{
+          const r = await fetch(`/${JOBS_FILE}?_=${Date.now()}`); const d = await r.json();
+          const arr = Array.isArray(d.jobs)?d.jobs:[];
+          const live = arr.filter(j=>(j.status||'').toLowerCase()==='live').length;
+          const hold = arr.filter(j=>(j.status||'').toLowerCase().includes('hold')).length;
+          const closed = arr.filter(j=>(j.status||'').toLowerCase()==='closed').length;
+          document.getElementById('hudTotal').textContent = arr.length;
+          document.getElementById('hudLive').textContent = `live ${live}`;
+          document.getElementById('hudHold').textContent = `hold ${hold}`;
+          document.getElementById('hudClosed').textContent = `closed ${closed}`;
+        }catch{}
+      }
+      refreshHUD(); setInterval(refreshHUD, 8000);
 
-  // Duplicate: copies current entry with new id/status=on-hold
-  function duplicateEntry(entry, collection){
-    const data = entry.get('data').toJS();
-    const nextId = slug(`${data.title||'job'}-${Date.now().toString(36).slice(-5)}`);
-    const clone = { ...data, id: nextId, status: 'on-hold', published: false };
-    // open as new entry in the same collection
-    window.location.hash = `#/collections/${collection.get('name')}/new`;
-    // wait a tick for editor to mount, then set values via the store API
-    setTimeout(()=>{
-      const store = window.reduxStore;
-      if(!store) return;
-      store.dispatch({ type: 'ENTRY_LOAD_SUCCESS', payload: {
-        collection: collection, entry: window.immutable.Map({
-          collection: collection.get('name'),
-          data: window.immutable.fromJS(clone)
-        })
-      }});
-    }, 300);
-  }
+      // helpers
+      function downloadAs(name, content){
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([content],{type:'application/json'})); a.download=name; a.click(); URL.revokeObjectURL(a.href);
+      }
+      function validateEntry(data){
+        const errs=[]; ['id','title','status','locationText'].forEach(k=>{ if(!data[k]) errs.push(`Missing required: ${k}`); });
+        if(data.id && !/^[a-z0-9-]{3,}$/.test(data.id)) errs.push('id must be URL-safe (a–z, 0–9, -)');
+        return errs;
+      }
+      function getCurrent(){
+        const st = window.reduxStore?.getState?.(); if(!st) return {};
+        const collName = st.entry?.get('collection');
+        const collection = st.collections?.get(collName || JOBS_COLLECTION) || st.collections?.first();
+        const entry = st.entry;
+        return { entry, collection };
+      }
 
-  // Copy anchor for jobs.html
-  function copyAnchorFromEntry(entry){
-    const data = entry.get('data').toJS();
-    if(!data.id){ alert('No id yet. Save or type a title to generate.'); return; }
-    const url = `/jobs.html#${data.id}`;
-    navigator.clipboard.writeText(url).then(()=> alert(`Copied: ${url}`));
-  }
-
-  // Clear CMS cache quickly
-  function clearCMSCache(){
-    try { localStorage.clear(); sessionStorage.clear(); caches && caches.keys().then(k=>k.forEach(c=>caches.delete(c))); }
-    catch(e){}
-    alert('Local cache cleared. Reloading…'); location.reload();
-  }
-
-  // -------- Bind to Decap --------
-  whenCMSReady(()=>{
-    const CMS = window.CMS;
-
-    // Auto-derive ID from Title + Location (only if id is blank)
-    CMS.registerEventListener({
-      name: 'preSave',
-      handler: ({ entry, collection }) => {
-        if (collection.get('name') !== JOBS_COLLECTION) return;
+      // actions
+      document.getElementById('hmj-validate').onclick = ()=>{
+        const { entry } = getCurrent(); if(!entry){ alert('Open an entry first.'); return; }
+        const errs = validateEntry(entry.get('data').toJS());
+        alert(errs.length ? ('Issues:\n\n• '+errs.join('\n• ')) : 'Looks good ✅');
+      };
+      document.getElementById('hmj-duplicate').onclick = ()=>{
+        const { entry, collection } = getCurrent(); if(!entry||!collection){ alert('Open an entry first.'); return; }
         const data = entry.get('data').toJS();
-        if (!data.id) {
-          const base = [data.title, data.locationCode || data.locationText].filter(Boolean).join('-');
-          data.id = slug(base || 'role');
-        }
-        // light normalization
-        if (typeof data.published === 'undefined') data.published = true;
-        if (data.status) data.status = String(data.status).toLowerCase();
-        // minimal validation
-        const errs = validateEntry(data);
-        if (errs.length) {
-          alert('Fix before saving:\n\n• ' + errs.join('\n• '));
-          // cancel save by returning the original entry unchanged
-          return { error: true };
-        }
-        return { entry: entry.set('data', window.immutable.fromJS(data)) };
-      }
-    });
+        const nextId = slug(`${data.title||'job'}-${Date.now().toString(36).slice(-5)}`);
+        const clone = { ...data, id: nextId, status:'on-hold', published:false };
+        window.location.hash = `#/collections/${collection.get('name')}/new`;
+        setTimeout(()=>{
+          const store = window.reduxStore; if(!store) return;
+          store.dispatch({ type:'ENTRY_LOAD_SUCCESS', payload:{
+            collection, entry: window.immutable.Map({ collection: collection.get('name'), data: window.immutable.fromJS(clone) })
+          }});
+        }, 300);
+      };
+      document.getElementById('hmj-anchor').onclick = ()=>{
+        const { entry } = getCurrent(); if(!entry){ alert('Open an entry first.'); return; }
+        const id = entry.get('data').get('id'); if(!id){ alert('No id yet.'); return; }
+        const url = `/jobs.html#${id}`; navigator.clipboard.writeText(url).then(()=>alert(`Copied: ${url}`));
+      };
+      document.getElementById('hmj-export').onclick = async ()=>{
+        const t = await (await fetch(`/${JOBS_FILE}?_=${Date.now()}`)).text(); downloadAs('jobs-export.json', t);
+      };
+      document.getElementById('hmj-import').onclick = ()=>{
+        const i=document.createElement('input'); i.type='file'; i.accept='.json,application/json';
+        i.onchange=async()=>{ const f=i.files[0]; if(!f) return; const txt=await f.text();
+          try{ const j=JSON.parse(txt); if(!Array.isArray(j.jobs)) throw new Error('Expected { jobs: [] }');
+            downloadAs('jobs-normalized.json', JSON.stringify(j,null,2));
+            alert('Imported OK. Open the file and paste into data/jobs.json (or commit in Git).');
+          }catch(e){ alert('Invalid format: '+e.message); } };
+        i.click();
+      };
+      document.getElementById('hmj-backup').onclick = async ()=>{
+        const t = await (await fetch(`/${JOBS_FILE}?_=${Date.now()}`)).text();
+        localStorage.setItem('hmj-jobs-backup', t); alert('Backup saved in this browser.');
+      };
+      document.getElementById('hmj-restore').onclick = ()=>{
+        const raw = localStorage.getItem('hmj-jobs-backup'); if(!raw){ alert('No backup found.'); return; }
+        try{ const j=JSON.parse(raw); downloadAs('jobs-restore.json', JSON.stringify(j,null,2)); }
+        catch{ alert('Backup unreadable.'); }
+      };
+      document.getElementById('hmj-clear').onclick = ()=>{
+        try{ localStorage.clear(); sessionStorage.clear(); caches?.keys?.().then(k=>k.forEach(c=>caches.delete(c))); }catch{}
+        alert('Local cache cleared. Reloading…'); location.reload();
+      };
 
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e)=>{
-      const mod = e.metaKey || e.ctrlKey;
-      if(mod && e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('hmj-validate').click(); }
-      if(mod && e.key.toLowerCase()==='d'){ e.preventDefault(); document.getElementById('hmj-duplicate').click(); }
-    });
-
-    // Floating tool actions (these try to act on the currently open entry)
-    const getCurrent = ()=>{
-      const st = window.reduxStore?.getState?.();
-      if(!st) return {};
-      const collName = st.entry?.get('collection');
-      const collection = st.collections?.get(collName || JOBS_COLLECTION) || st.collections?.first();
-      const entry = st.entry;
-      return { entry, collection };
-    };
-
-    document.getElementById('hmj-validate').onclick = ()=>{
-      const { entry } = getCurrent();
-      if(!entry){ alert('Open an entry first.'); return; }
-      const data = entry.get('data').toJS();
-      const errs = validateEntry(data);
-      alert(errs.length ? ('Issues:\n\n• ' + errs.join('\n• ')) : 'Looks good ✅');
-    };
-    document.getElementById('hmj-duplicate').onclick = ()=>{
-      const { entry, collection } = getCurrent();
-      if(!entry || !collection){ alert('Open an entry first.'); return; }
-      duplicateEntry(entry, collection);
-    };
-    document.getElementById('hmj-anchor').onclick = ()=>{
-      const { entry } = getCurrent();
-      if(!entry){ alert('Open an entry first.'); return; }
-      copyAnchorFromEntry(entry);
-    };
-    document.getElementById('hmj-export').onclick = async ()=>{
-      const res = await fetch(`/${JOBS_FILE}?_=${Date.now()}`); const text = await res.text();
-      downloadAs('jobs-export.json', text);
-    };
-    document.getElementById('hmj-import').onclick = importJSON;
-    document.getElementById('hmj-backup').onclick = backupToLocal;
-    document.getElementById('hmj-restore').onclick = restoreFromLocal;
-    document.getElementById('hmj-clear').onclick = clearCMSCache;
-
-    // initial HUD + refresh occasionally
-    refreshHUD(); setInterval(refreshHUD, 8000);
-  });
-})();
-</script>
-
+      // shortcuts
+      document.addEventListener('keydown',(e)=>{
+        const mod=e.metaKey||e.ctrlKey;
+        if(mod && e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('hmj-validate').click(); }
+        if(mod && e.key.toLowerCase()==='d'){ e.preventDefault(); document.getElementById('hmj-duplicate').click(); }
+      });
+    })();
+  </script>
 </body>
 </html>
