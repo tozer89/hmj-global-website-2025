@@ -27,7 +27,7 @@
           files: [
             {
               label: "Jobs Data",
-              name: "jobs",                      /* entry slug */
+              name: "jobs",
               file: "data/jobs.json",
               format: "json",
               editor: { preview: false },
@@ -101,7 +101,7 @@
 
   <!-- Identity (non-blocking) -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
-  <!-- Netlify CMS (same version you’ve been on) -->
+  <!-- Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
 
   <!-- ============================ STYLES ============================ -->
@@ -121,7 +121,7 @@
     .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
     #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
 
-    /* Dock pinned bottom-right (out of the way) */
+    /* Dock pinned bottom-right */
     .dock{
       position:fixed; right:14px; bottom:14px; z-index:60;
       background:var(--panel); border:1px solid var(--border);
@@ -131,7 +131,6 @@
     .dock input,.dock select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:10px;padding:10px 12px}
     .dock .btn{background:#0f1831}
 
-    /* CMS chrome tweaks */
     .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
     .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
     .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
@@ -177,6 +176,7 @@
   <script>
     (function(){
       const ENTRY_HASH = "#/collections/jobsData/entries/jobs";
+      let pendingDeepLink = null;
 
       /* Init CMS as soon as script is ready */
       function initCMS(){
@@ -193,7 +193,7 @@
           return !!(st && st.get && st.get("collections") && st.get("collections").size);
         }catch(_){ return false; }
       }
-      function waitForStore(maxMs=6000){
+      function waitForStore(maxMs=7000){
         return new Promise((resolve,reject)=>{
           const t0 = Date.now();
           const tick = () => {
@@ -205,12 +205,36 @@
         });
       }
 
+      /* ---------- ROUTE GUARD (prevents deep-link crash) ---------- */
+      function isCmsDeepLink(h){ return /^#\/collections\//.test(h || location.hash); }
+      async function guardHashNavigation(h){
+        const wantsDeep = isCmsDeepLink(h);
+        if (!wantsDeep) return;                 // normal hash
+        if (cmsStoreReady()) return;            // store already there
+
+        // hold the deep link until store is ready
+        pendingDeepLink = h;
+        if (location.hash !== "#/") location.hash = "#/";
+        try{
+          await waitForStore();
+          if (pendingDeepLink) {
+            const jump = pendingDeepLink; pendingDeepLink = null;
+            location.hash = jump;
+          }
+        }catch(e){
+          alert("CMS is still starting—try again in a second.");
+          console.warn(e);
+        }
+      }
+      // Guard initial load and any manual address-bar changes
+      window.addEventListener("load", () => guardHashNavigation(location.hash));
+      window.addEventListener("hashchange", (e) => guardHashNavigation(location.hash));
+
       /* Button -> open Jobs editor AFTER store is ready */
       document.getElementById("btnOpenEditor")?.addEventListener("click", async () => {
         try{
           await waitForStore();
           if (location.hash !== ENTRY_HASH) location.hash = ENTRY_HASH;
-          // one more nudge after a tick
           setTimeout(() => { if (location.hash !== ENTRY_HASH) location.hash = ENTRY_HASH; }, 250);
         }catch(e){
           alert("CMS is still starting—try again in a second.");
@@ -225,7 +249,7 @@
         location.reload();
       });
 
-      /* Dock helpers (unchanged UX) */
+      /* Dock helpers */
       document.getElementById("topBtn").onclick = () =>
         window.scrollTo({ top: 0, behavior: "smooth" });
       document.getElementById("openAnchor").onclick = () => {
