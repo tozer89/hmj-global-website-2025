@@ -4,17 +4,14 @@
   <meta charset="utf-8" />
   <title>HMJ Global — CMS Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- perf -->
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
-  <!-- Stop auto config fetch; we’ll inline config -->
+  <!-- We will init CMS manually after we purge its cached route -->
   <script>window.CMS_MANUAL_INIT = true;</script>
 
-  <!-- ================== INLINE NETLIFY CMS CONFIG ================== -->
+  <!-- ================== INLINE CMS CONFIG (single JSON file) ================== -->
   <script>
-    /* Single-file JSON backend */
     window.CMS_CONFIG = {
       backend: { name: "git-gateway", branch: "main" },
       publish_mode: "editorial_workflow",
@@ -99,41 +96,28 @@
     };
   </script>
 
-  <!-- Identity + CMS -->
+  <!-- Identity widget -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
-  <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
 
-  <!-- =============================== UI =============================== -->
   <style>
-    :root{
-      --ink:#0f1322; --bg:#0b0f1c; --panel:#0f162c; --accent:#3A66B3;
-      --border:rgba(255,255,255,.12); --borderSoft:rgba(255,255,255,.08);
-      --shadow:0 10px 30px rgba(0,0,0,.35);
-    }
+    :root{--ink:#0f1322;--panel:#0f162c;--accent:#3A66B3;--b:rgba(255,255,255,.14);--b2:rgba(255,255,255,.09)}
     *{box-sizing:border-box}
-    body{margin:0;background:var(--ink);color:#eaf0ff;font-family:Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif}
-    .top{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));border-bottom:1px solid var(--borderSoft);backdrop-filter:blur(6px)}
+    body{margin:0;background:#0b0f1c;color:#eaf0ff;font-family:Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif}
+    .top{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));border-bottom:1px solid var(--b2);backdrop-filter:blur(6px)}
     .top .in{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
     .brand{display:flex;gap:10px;align-items:center;font-weight:800}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
-    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:#0f162c;color:#fff;text-decoration:none;font-weight:700}
+    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--b);background:#0f162c;color:#fff;text-decoration:none;font-weight:700}
     .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
     #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
-
-    /* bottom-right dock */
-    .dock{
-      position:fixed; right:14px; bottom:14px; z-index:60;
-      background:var(--panel); border:1px solid var(--border);
-      border-radius:16px; padding:10px; box-shadow:var(--shadow);
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap
-    }
-    .dock input,.dock select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:10px;padding:10px 12px}
+    /* dock bottom-right */
+    .dock{position:fixed;right:14px;bottom:14px;z-index:60;background:var(--panel);border:1px solid var(--b);border-radius:16px;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .dock input,.dock select{background:#0f1831;border:1px solid var(--b);color:#fff;border-radius:10px;padding:10px 12px}
     .dock .btn{background:#0f1831}
-
-    /* polish the CMS chrome */
-    .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
-    .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
-    .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
+    /* CMS chrome polish */
+    .nc-appHeader{background:#0f1322!important;border-bottom:1px solid var(--b2)!important}
+    .nc-toolbar{background:#0f1322!important;border-top:1px solid var(--b2)!important}
+    .nc-primary{background:var(--accent)!important;color:#fff!important;border:1px solid rgba(58,102,179,.9)!important}
   </style>
 </head>
 <body>
@@ -155,15 +139,10 @@
   <!-- CMS mount -->
   <div id="nc-root" role="region" aria-label="Netlify CMS"></div>
 
-  <!-- quick dock (bottom-right) -->
+  <!-- quick dock bottom-right -->
   <div class="dock" aria-label="Quick actions">
     <input id="q" type="search" placeholder="Search jobs (title, location, status)…" />
-    <select id="tpl">
-      <option value="">Templates:</option>
-      <option>BMS Engineer</option>
-      <option>CSA QS</option>
-      <option>Planner</option>
-    </select>
+    <select id="tpl"><option value="">Templates:</option><option>BMS Engineer</option><option>CSA QS</option><option>Planner</option></select>
     <a class="btn" href="/jobs.html" target="_blank" rel="noopener">Preview</a>
     <button class="btn" id="topBtn" type="button">↑ Top</button>
     <button class="btn" id="dupBtn" type="button">Duplicate current</button>
@@ -175,30 +154,51 @@
   <!-- ============================ BOOTSTRAP ============================ -->
   <script>
     (function(){
-      const SAFE_HOME = "#/";                               // CMS home
+      const SAFE_HOME = "#/";
       const ENTRY_HASH = "#/collections/jobsData/entries/jobs";
 
-      // Hard guard: if a deep link is present before the CMS store is up, force #/ immediately.
-      (function hardGuard(){
-        if (/^#\/collections\//.test(location.hash)) {
-          // remember where the user wanted to go; we’ll jump there after hydration
-          sessionStorage.setItem("__pending_deep_link", location.hash);
+      /* 1) PURGE any saved CMS state so it can’t restore a deep route */
+      function purgeCmsCache() {
+        try {
+          const keys = Object.keys(localStorage);
+          for (const k of keys) {
+            if (/^netlify-cms/i.test(k) || /^cms\./i.test(k) || /^editorialWorkflow/i.test(k)) {
+              localStorage.removeItem(k);
+            }
+          }
+          // hold at #/
           if (location.hash !== SAFE_HOME) location.replace(SAFE_HOME);
-        }
-      })();
-
-      function initCMS(){
-        try { window.CMS.init({ config: window.CMS_CONFIG }); }
-        catch(e){ console.error("CMS init failed:", e); }
+        } catch(_) {}
       }
-      if (window.CMS) initCMS(); else window.addEventListener("load", initCMS);
 
-      // Store readiness check
+      /* 2) tiny helper to load CMS script after purge */
+      function loadScript(src){
+        return new Promise((res, rej)=>{
+          const s = document.createElement("script");
+          s.src = src; s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+
+      /* 3) identity ready (not strictly required, but nice) */
+      function identityReady(){
+        return new Promise(resolve=>{
+          if (!window.netlifyIdentity) return resolve();
+          if (window.netlifyIdentity.currentUser()) return resolve();
+          window.netlifyIdentity.on && window.netlifyIdentity.on("init", resolve);
+          // trigger init
+          window.netlifyIdentity.init && window.netlifyIdentity.init();
+          // safety timeout
+          setTimeout(resolve, 1200);
+        });
+      }
+
+      /* 4) when CMS state has collections */
       function storeReady(){
         try{
           const st = window.CMS && window.CMS.getState && window.CMS.getState();
           const colls = st && st.get && st.get("collections");
-          return !!(colls && colls.size && colls.get("jobsData")); // ensure our collection exists
+          return !!(colls && colls.size && colls.get("jobsData"));
         }catch(_){ return false; }
       }
       function waitForStore(timeout=10000){
@@ -206,46 +206,38 @@
           const t0 = Date.now();
           (function tick(){
             if (storeReady()) return res();
-            if (Date.now()-t0 > timeout) return rej(new Error("CMS store still starting"));
+            if (Date.now()-t0 > timeout) return rej(new Error("CMS is still starting—try again in a second."));
+            // while waiting, keep the hash at #/ so it can’t deep route
+            if (/^#\/collections\//.test(location.hash)) location.replace(SAFE_HOME);
             setTimeout(tick, 100);
           })();
         });
       }
 
-      // After store is ready, if we captured a deep link earlier, go there now (once).
-      async function honorPendingDeepLink(){
-        const wanted = sessionStorage.getItem("__pending_deep_link");
-        if (wanted && /^#\/collections\//.test(wanted)) {
-          sessionStorage.removeItem("__pending_deep_link");
-          location.hash = wanted;
-        }
-      }
+      /* 5) boot sequence */
+      (async function boot(){
+        purgeCmsCache();                     // stop restore of old route
+        await identityReady();               // (optional) wait briefly for identity
+        await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
+        window.CMS && window.CMS.init({ config: window.CMS_CONFIG });
 
-      // Button: open jobs editor safely
-      document.getElementById("btnOpenEditor")?.addEventListener("click", async () => {
-        try{
-          await waitForStore();
+        // only after hydration, allow navigation
+        try { await waitForStore(); }
+        catch(e){ alert(e.message); }
+
+        // Wire UI controls
+        document.getElementById("btnOpenEditor")?.addEventListener("click", async ()=>{
+          if (!storeReady()) { alert("CMS is still starting—try again in a second."); return; }
           location.hash = ENTRY_HASH;
-        }catch(e){
-          alert("CMS is still starting—try again in a second.");
-          console.warn(e);
-        }
-      });
-
-      // Auto-honor deep links when hydration completes
-      (async () => {
-        try { await waitForStore(); await honorPendingDeepLink(); }
-        catch(e){ /* show nothing; user can click button; avoid crash */ }
+        });
       })();
 
-      // Sign out helper
-      document.getElementById("btnSignOut")?.addEventListener("click", () => {
-        try { window.netlifyIdentity && window.netlifyIdentity.logout(); } catch {}
-        try { localStorage.clear(); sessionStorage.clear(); } catch {}
+      /* Extras */
+      document.getElementById("btnSignOut")?.addEventListener("click", ()=>{
+        try{ window.netlifyIdentity && window.netlifyIdentity.logout(); }catch{}
+        try{ localStorage.clear(); sessionStorage.clear(); }catch{}
         location.reload();
       });
-
-      // Dock helpers
       document.getElementById("topBtn").onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
       document.getElementById("openAnchor").onclick = () => {
         const id = (document.getElementById("anchor").value || "").trim();
@@ -253,19 +245,15 @@
       };
       document.getElementById("copyBtn").onclick = async () => {
         const id = (document.getElementById("anchor").value || "").trim();
-        if (!id) return;
-        try { await navigator.clipboard.writeText(id); } catch {}
+        if (id) try{ await navigator.clipboard.writeText(id); }catch{}
       };
       document.getElementById("dupBtn").onclick = () => {
         alert("Use “Add item” inside Jobs to create a new role.\n(JSON mode doesn’t auto-duplicate the block.)");
       };
 
-      // Safety: If user manually types a deep link *after* load but before hydration completes, hold it.
-      window.addEventListener("hashchange", () => {
-        if (!storeReady() && /^#\/collections\//.test(location.hash)) {
-          sessionStorage.setItem("__pending_deep_link", location.hash);
-          if (location.hash !== SAFE_HOME) location.replace(SAFE_HOME);
-        }
+      // If someone manually navigates during boot, keep them at #/
+      window.addEventListener("hashchange", ()=>{
+        if (!storeReady() && /^#\/collections\//.test(location.hash)) location.replace(SAFE_HOME);
       });
     })();
   </script>
