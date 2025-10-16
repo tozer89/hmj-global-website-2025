@@ -11,15 +11,17 @@
   <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
   <!-- ============================================================
-       CRITICAL: Manual CMS init with inline config
+       CRITICAL: Manual CMS init with inline config (no config.yml fetch)
        ============================================================ -->
   <script>
     (function () {
       const cmsConfig = {
         backend: { name: "git-gateway", branch: "main" },
-        publish_mode: "editorial_workflow",
+        // Using simple mode avoids workflow edge-cases with files-based JSON
+        publish_mode: "simple",
         media_folder: "images/uploads",
         public_folder: "/images/uploads",
+        load_config_file: false,
         collections: [
           {
             label: "Jobs Data",
@@ -30,6 +32,11 @@
                 name: "jobsFile",
                 file: "data/jobs.json",
                 description: "Powers the public Jobs page (/jobs.html).",
+                /* ------- STABILITY FIXES ------- */
+                format: "json",                 // Force JSON parsing
+                editor: { preview: false },     // Avoid preview hydration race
+                identifier_field: "id",         // Help list & summary rendering
+                /* ------------------------------ */
                 fields: [
                   {
                     label: "Jobs",
@@ -50,8 +57,20 @@
                           "Use lowercase letters, numbers, and hyphens only.",
                         ],
                       },
-                      { label: "Published", name: "published", widget: "boolean", default: true },
-                      { label: "Title", name: "title", widget: "string" },
+                      {
+                        label: "Published",
+                        name: "published",
+                        widget: "boolean",
+                        default: true,
+                        hint: "Turn OFF to hide this role.",
+                      },
+                      {
+                        label: "Title",
+                        name: "title",
+                        widget: "string",
+                        hint:
+                          "Shown as the card heading (e.g., “Electrical Project Manager — Data Centre”).",
+                      },
                       {
                         label: "Status (badge shown on card)",
                         name: "status",
@@ -62,6 +81,7 @@
                           { label: "Closed — Not Accepting New Applicants", value: "closed" },
                         ],
                         default: "live",
+                        hint: "Also used by the Status filter on the Jobs page.",
                       },
                       {
                         label: "Section (which board/column to show in)",
@@ -75,6 +95,7 @@
                           { label: "ICT & Commissioning", value: "ict" },
                         ],
                         default: "dc",
+                        hint: "Matches the big section headings on the Jobs page.",
                       },
                       {
                         label: "Discipline (shown as a tag)",
@@ -82,9 +103,10 @@
                         widget: "select",
                         options: ["Data Centre", "Life Sciences", "Pharma", "Substation"],
                         default: "Data Centre",
+                        hint: "Appears as the tag and powers the Discipline filter.",
                       },
                       {
-                        label: "Employment Type",
+                        label: "Employment Type (filter chip)",
                         name: "type",
                         widget: "select",
                         options: [
@@ -92,9 +114,10 @@
                           { label: "Contract", value: "contract" },
                         ],
                         default: "permanent",
+                        hint: "Used by the Employment filter on the Jobs page.",
                       },
                       {
-                        label: "Location Code",
+                        label: "Location Code (drives the Location filter)",
                         name: "locationCode",
                         widget: "select",
                         options: [
@@ -111,16 +134,37 @@
                           { label: "Europe (Travel)", value: "europe" },
                         ],
                         default: "uk",
+                        hint: "Must match site Location filter codes.",
                       },
-                      { label: "Location Text", name: "locationText", widget: "string", required: false },
-                      { label: "Keywords", name: "keywords", widget: "text", required: false },
-                      { label: "Overview", name: "overview", widget: "text", required: false },
+                      {
+                        label: "Location Text (what candidates see)",
+                        name: "locationText",
+                        widget: "string",
+                        required: false,
+                        hint:
+                          "e.g., “Frankfurt, Germany”. Auto-filled by site if blank.",
+                      },
+                      {
+                        label: "Keywords (searchable)",
+                        name: "keywords",
+                        widget: "text",
+                        required: false,
+                        hint: "Comma/space-separated, e.g. “P6, commissioning, NEC”.",
+                      },
+                      {
+                        label: "Overview",
+                        name: "overview",
+                        widget: "text",
+                        required: false,
+                        hint: "2–4 lines introducing the role.",
+                      },
                       {
                         label: "Responsibilities",
                         name: "responsibilities",
                         widget: "list",
                         required: false,
                         field: { label: "Item", name: "item", widget: "string" },
+                        hint: "Bulleted list. Leave empty to hide.",
                       },
                       {
                         label: "Requirements",
@@ -128,8 +172,15 @@
                         widget: "list",
                         required: false,
                         field: { label: "Item", name: "item", widget: "string" },
+                        hint: "Bulleted list. Leave empty to hide.",
                       },
-                      { label: "Apply URL (optional)", name: "applyUrl", widget: "string", required: false },
+                      {
+                        label: "Apply URL (optional)",
+                        name: "applyUrl",
+                        widget: "string",
+                        required: false,
+                        hint: "Leave blank to use the default HMJ apply form.",
+                      },
                     ],
                   },
                 ],
@@ -142,10 +193,13 @@
       window.CMS_MANUAL_INIT = true;
       window.CMS_CONFIG = cmsConfig;
 
+      // State for diagnostics & flow
       window.__HMJ_STATE__ = {
         cmsLoaded: false,
         user: null,
         errors: [],
+        intentOpen: false,
+        autoOpened: false
       };
     })();
   </script>
@@ -163,37 +217,21 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0;color:#eaf0ff;
-      font-family: Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
-      background: var(--ink);
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
+    body{margin:0;color:#eaf0ff;font-family: Calibri,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;background: var(--ink);
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     a{color:#cfe0ff}
     code,.kbd{font-family:ui-monospace,Menlo,Consolas,"SF Mono","Cascadia Code",monospace}
 
     /* ======================= TOP BAR ======================== */
-    .hmj-topbar{
-      position:sticky; top:0; z-index:5000;
+    .hmj-topbar{position:sticky; top:0; z-index:5000;
       background:linear-gradient(90deg,rgba(58,102,179,.12),rgba(58,102,179,.05));
-      border-bottom:1px solid var(--borderSoft);
-      backdrop-filter:blur(6px);
-    }
-    .hmj-topbar .inner{
-      max-width:1200px; margin:0 auto; padding:12px 16px;
-      display:flex; align-items:center; gap:12px; justify-content:space-between;
-    }
+      border-bottom:1px solid var(--borderSoft); backdrop-filter:blur(6px)}
+    .hmj-topbar .inner{max-width:1200px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px; justify-content:space-between}
     .hmj-brand{display:flex; align-items:center; gap:10px; font-weight:800; color:#eaf0ff; letter-spacing:.2px}
     .hmj-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
     .hmj-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:10px 14px;border-radius:12px;
-      text-decoration:none; font-weight:700;
-      border:1px solid var(--border); background:transparent; color:#eaf0ff;
-      white-space:nowrap; cursor:pointer; transition:transform .15s, box-shadow .15s, background .15s, border-color .15s;
-    }
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;text-decoration:none;font-weight:700;
+      border:1px solid var(--border); background:transparent; color:#eaf0ff;white-space:nowrap; cursor:pointer; transition:.15s}
     .btn:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
     .btn-blue{background:var(--accent); color:#fff; border-color:rgba(58,102,179,.85)}
     .btn-dark{background:#0f162c; color:#fff}
@@ -216,23 +254,12 @@
     .drawer td{padding:6px 10px;border-bottom:1px dashed var(--borderSoft)}
     .drawer .tools{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
 
-    /* ==================== LOGIN GATE ======================== */
-    .gate{max-width:920px;margin:52px auto 28px;padding:28px;background:var(--panel);border:1px solid var(--border);border-radius:16px;text-align:center}
-    .gate h1{margin:0 0 10px 0}
-    .gate p{color:#c9d6ff}
-
-    /* ==================== HERO / GUIDE ====================== */
-    .hmj-hero{
-      border-bottom:1px solid var(--borderSoft);
-      background:
-        radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
-        radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.02), transparent);
-    }
-    .hmj-hero .inner{
-      max-width:1200px;margin:0 auto;padding:26px 16px 8px;
-      display:grid;grid-template-columns:1.1fr .9fr;gap:18px;
-    }
+    /* ==================== HERO / GUIDE (visible) ====================== */
+    .hmj-hero{border-bottom:1px solid var(--borderSoft);
+      background: radial-gradient(1200px 420px at 20% -8%, rgba(58,102,179,.22), transparent 60%),
+                 radial-gradient(900px 420px at 80% 0%, rgba(58,102,179,.18), transparent 60%),
+                 linear-gradient(180deg, rgba(255,255,255,.02), transparent)}
+    .hmj-hero .inner{max-width:1200px;margin:0 auto;padding:26px 16px 8px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
     .card{background:rgba(255,255,255,.04);border:1px solid var(--borderSoft);border-radius:18px;padding:18px}
     .hero-title{margin:0 0 8px 0;font-size:1.38rem;line-height:1.3}
     .hero-sub{margin:0 0 12px 0;color:#bfc9ff;font-weight:600}
@@ -241,16 +268,10 @@
     .note{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--border);font-size:.8rem;color:#dce6ff;margin-top:2px}
 
     /* ==================== ACTION DOCK ======================= */
-    .dock{
-      position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
-      z-index:4500; background:var(--panel); border:1px solid var(--border);
-      border-radius:16px; padding:10px; box-shadow:var(--shadow);
-      display:none; align-items:center; gap:10px; flex-wrap:wrap;
-    }
+    .dock{position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:4500; background:var(--panel); border:1px solid var(--border);
+      border-radius:16px; padding:10px; box-shadow:var(--shadow); display:flex; align-items:center; gap:10px; flex-wrap:wrap}
     .dock .select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px}
-    .dock input[type="search"], .dock input[type="text"]{
-      background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px
-    }
+    .dock input[type="search"], .dock input[type="text"]{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;padding:10px 12px;border-radius:10px;min-width:220px}
     .dock .tiny{font-size:.85rem;color:#bcd0ff}
     .dock .divider{height:30px;width:1px;background:var(--borderSoft);margin:0 2px}
 
@@ -264,11 +285,6 @@
     .nc-button{border-radius:12px !important;font-weight:700 !important}
     .nc-entryCard, .nc-widgetControl, .nc-widgetPreview{border-radius:14px !important;border-color:rgba(26,26,46,.2) !important}
     .nc-entryCard:hover{box-shadow:0 10px 26px rgba(0,0,0,.25)}
-
-    /* little badge */
-    .kbd-badge{
-      display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:.84rem;color:#bcd0ff
-    }
 
     /* CMS mount (only shown when editor is opened) */
     #nc-root{display:none}
@@ -291,10 +307,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ======================= NOTICES ======================= -->
-  <div id="err" class="notice err" role="alert"></div>
-  <div id="domainWarn" class="notice warn" role="alert"></div>
 
   <!-- ===================== DIAGNOSTICS ===================== -->
   <div class="drawer" id="diagWrap">
@@ -327,7 +339,7 @@
     </details>
   </div>
 
-  <!-- ==================== GUIDE (ALWAYS VISIBLE) ===================== -->
+  <!-- ==================== GUIDE (always visible) ===================== -->
   <section id="guide" class="hmj-hero" aria-label="CMS issues resolution">
     <div class="inner">
       <div class="card">
@@ -353,7 +365,7 @@
   <div id="nc-root" class="cms-frame" role="region" aria-label="Netlify CMS"></div>
 
   <!-- ======================== DOCK ======================== -->
-  <div id="dock" class="dock" role="region" aria-label="Quick actions" style="display:block">
+  <div id="dock" class="dock" role="region" aria-label="Quick actions">
     <input id="q" type="search" placeholder="Search jobs (title, location, status)…" aria-label="Search jobs in CMS" />
     <div class="divider" aria-hidden="true"></div>
     <select id="tpl" class="select" aria-label="Templates">
@@ -385,7 +397,6 @@
         errDetails: $("#errDetails"),
         errStack: $("#errStack"),
         statusText: $("#statusText"),
-        btnLogin: $("#btnLogin"),
         btnLogout: $("#btnLogout"),
         btnOpenEditor: $("#btnOpenEditor"),
         btnOpenEditor2: $("#btnOpenEditor2"),
@@ -418,21 +429,17 @@
         }
       };
 
-      // ---------- Utils
-      function setText(elm, txt) { if (elm) elm.textContent = txt; }
-      function show(elm) { elm && (elm.style.display = ""); }
-      function hide(elm) { elm && (elm.style.display = "none"); }
+      // ---------- helpers
+      function setText(elm, t) { if (elm) elm.textContent = t; }
+      function show(n) { n && (n.style.display = ""); }
       function captureError(err) {
         state.errors.push(err);
         show(el.errDetails);
         if (el.errStack) el.errStack.textContent = String(err && err.stack || err);
       }
-      function notice(type, msg) {
-        const node = type === "err" ? el.err : null;
-        if (!node) return; node.innerHTML = msg; node.style.display = "";
-      }
+      function noticeErr(msg) { if (el.err) { el.err.innerHTML = msg; el.err.style.display = ""; } }
 
-      // ---------- Script loader
+      // ---------- loaders
       const ScriptCache = new Map();
       function loadScript(src) {
         if (ScriptCache.has(src)) return ScriptCache.get(src);
@@ -443,181 +450,111 @@
           s.onerror = () => reject(new Error("Failed loading script: " + src));
           document.head.appendChild(s);
         });
-        ScriptCache.set(src, p);
-        return p;
+        ScriptCache.set(src, p); return p;
       }
 
-      // ---------- Identity detection that does NOT rely on events
+      // ---------- identity access without trusting events
       function identity() { return window.netlifyIdentity || null; }
-
       function recoverStoredUser() {
         try {
-          const a = localStorage.getItem('gotrue.user');
-          if (a) { try { return JSON.parse(a); } catch {} }
-          const b = localStorage.getItem('netlify-cms-user');
-          if (b) { try { return JSON.parse(b); } catch {} }
+          const a = localStorage.getItem('gotrue.user'); if (a) return JSON.parse(a);
+        } catch {}
+        try {
+          const b = localStorage.getItem('netlify-cms-user'); if (b) return JSON.parse(b);
         } catch {}
         return null;
       }
-
       function currentUser() {
         const ni = identity();
         return (ni && ni.currentUser && ni.currentUser()) || recoverStoredUser();
       }
-
       function stripIdentityUI() {
-        const selectors = [
-          '.netlify-identity-modal',
-          '.netlify-identity-overlay',
-          '.netlify-identity-widget',
-          '[data-reach-dialog-overlay]',
-          '[data-reach-dialog-content]'
-        ];
-        selectors.forEach(sel => $$(sel).forEach(n => { try { n.style.display = 'none'; n.remove(); } catch {} }));
+        ['.netlify-identity-modal','.netlify-identity-overlay','.netlify-identity-widget','[data-reach-dialog-overlay]','[data-reach-dialog-content]']
+          .forEach(sel => $$(sel).forEach(n => { try { n.style.display='none'; n.remove(); } catch {} }));
       }
+      function forceCloseIdentityPopup() { try { identity() && identity().close && identity().close(); } catch{} stripIdentityUI(); }
 
-      function forceCloseIdentityPopup() {
-        try { const ni = identity(); if (ni && ni.close) ni.close(); } catch {}
-        stripIdentityUI();
-      }
-
-      async function waitForLogin(ms = 15000) {
-        const start = Date.now();
-        while (Date.now() - start < ms) {
-          const user = currentUser();
-          if (user) return user;
-          await new Promise(r => setTimeout(r, 150));
-        }
-        return null;
-      }
-
-      // ---------- CMS mount
+      // ---------- cms
       async function ensureCMSLoaded() {
         if (state.cmsLoaded && window.CMS) { setText(el.dg.cms, "✓ loaded"); return; }
         await loadScript("https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js");
-        state.cmsLoaded = true;
-        setText(el.dg.cms, "✓ loaded");
+        state.cmsLoaded = true; setText(el.dg.cms, "✓ loaded");
       }
-
       async function initCMS() {
-        await ensureCMSLoaded();
-        if (!window.CMS) throw new Error("CMS global not available after load.");
-        el.ncRoot.classList.add("show");
-        window.CMS.init({ config: window.CMS_CONFIG });
-      }
-
-      // ---------- Button actions
-      async function openEditorFlow() {
-        setText(el.statusText, "opening editor…");
         try {
-          const ni = identity();
-          let user = currentUser();
-
-          if (!user) {
-            if (ni && ni.open) ni.open("login");        // open the popup
-            user = await waitForLogin(15000);           // wait up to 15s
-          }
-
-          if (!user) {
-            notice("err", "<strong>Login didn’t complete.</strong> Please try again and make sure popups are allowed.");
-            return;
-          }
-
-          // Close any stuck modal and continue
-          forceCloseIdentityPopup();
-          setText(el.dg.user, "✓ signed in");
-          setText(el.statusText, "loading CMS…");
-
-          await initCMS();
-          window.scrollTo({ top: 0, behavior: "smooth" });
-          setText(el.statusText, "editor ready");
+          await ensureCMSLoaded();
+          if (!window.CMS) throw new Error("CMS global not available after load.");
+          el.ncRoot.classList.add("show");
+          window.CMS.init({ config: window.CMS_CONFIG });
         } catch (e) {
           captureError(e);
-          notice("err", "<strong>Error</strong><br>There’s been an error initialising the CMS. See Diagnostics → Error for details.");
+          noticeErr("<strong>Error</strong><br>There’s been an error initialising the CMS. See Diagnostics → Error.");
+          throw e;
         }
       }
 
-      // ---------- Diagnostics
-      async function checkJobsJSON() {
+      // ---------- open editor flow
+      async function waitForLogin(ms = 15000) {
+        const t0 = Date.now();
+        while (Date.now()-t0 < ms) {
+          const u = currentUser(); if (u) return u;
+          await new Promise(r=>setTimeout(r,150));
+        }
+        return null;
+      }
+      async function openEditorFlow() {
+        setText(el.statusText, "opening editor…");
         try {
-          const res = await fetch("/data/jobs.json", { cache: "no-store" });
-          setText(el.dg.json, res.ok ? "✓ reachable" : "✗ " + res.status);
-        } catch { setText(el.dg.json, "✗ fetch failed"); }
+          let u = currentUser();
+          if (!u) { identity() && identity().open && identity().open("login"); u = await waitForLogin(15000); }
+          if (!u) { noticeErr("<strong>Login didn’t complete.</strong> Please try again and allow popups."); return; }
+          forceCloseIdentityPopup();
+          setText(el.dg.user, "✓ signed in"); setText(el.statusText, "loading CMS…");
+          await initCMS(); window.scrollTo({ top: 0, behavior: "smooth" }); setText(el.statusText, "editor ready");
+        } catch (e) { captureError(e); }
       }
 
+      // ---------- diagnostics & bindings
+      async function checkJobsJSON() {
+        try { const res = await fetch("/data/jobs.json", { cache: "no-store" });
+          setText(el.dg.json, res.ok ? "✓ reachable" : "✗ " + res.status); } catch { setText(el.dg.json, "✗ fetch failed"); }
+      }
       function bootIdentityMarkers() {
-        const ni = identity();
-        setText(el.dg.id, ni ? "✓ loaded" : "—");
+        const ni = identity(); setText(el.dg.id, ni ? "✓ loaded" : "—");
         setText(el.dg.user, currentUser() ? "✓ signed in" : "— signed out");
       }
-
       function bindUI() {
         $("#btnShowDiag").addEventListener("click", () => el.diagWrap.scrollIntoView({ behavior: "smooth" }));
-        $("#btnReloadCMS").addEventListener("click", async () => { state.cmsLoaded = false; try { if (window.CMS && window.CMS.__reset) window.CMS.__reset(); } catch {} await initCMS(); });
+        $("#btnReloadCMS").addEventListener("click", async () => { state.cmsLoaded = false; try { window.CMS && window.CMS.__reset && window.CMS.__reset(); } catch {} await initCMS(); });
         $("#btnReloadIdentity").addEventListener("click", () => { try { identity() && identity().init && identity().init(); } catch {} });
         $("#btnClearLocal").addEventListener("click", () => { try { localStorage.clear(); sessionStorage.clear(); location.reload(); } catch {} });
-
-        // Both buttons open editor
         $("#btnOpenEditor").addEventListener("click", openEditorFlow);
         $("#btnOpenEditor2").addEventListener("click", openEditorFlow);
-
-        // Optional logout (won’t hide guide; just clears token)
-        $("#btnLogout").addEventListener("click", () => {
-          try { identity() && identity().logout && identity().logout(); } catch {}
-          try { localStorage.removeItem('gotrue.user'); localStorage.removeItem('netlify-cms-user'); } catch {}
-          setText(el.dg.user, "— signed out");
-          forceCloseIdentityPopup();
-        });
-
-        // Dock helpers
+        $("#btnLogout").addEventListener("click", () => { try { identity() && identity().logout && identity().logout(); } catch {} try { localStorage.removeItem('gotrue.user'); localStorage.removeItem('netlify-cms-user'); } catch {} setText(el.dg.user,"— signed out"); forceCloseIdentityPopup(); });
         el.dockCtrls.top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
-        el.dockCtrls.copy.addEventListener("click", async () => {
-          const val = el.dockCtrls.anchor.value.trim(); if (!val) return;
-          try { await navigator.clipboard.writeText(val); el.dockCtrls.copy.textContent = "Copied!"; setTimeout(()=>el.dockCtrls.copy.textContent="Copy", 900);} catch {}
-        });
-        el.dockCtrls.openAnchor.addEventListener("click", () => {
-          const id = el.dockCtrls.anchor.value.trim(); if (id) window.open("/jobs.html#" + encodeURIComponent(id), "_blank", "noopener");
-        });
+        el.dockCtrls.copy.addEventListener("click", async () => { const v=el.dockCtrls.anchor.value.trim(); if(!v) return; try{ await navigator.clipboard.writeText(v); el.dockCtrls.copy.textContent="Copied!"; setTimeout(()=>el.dockCtrls.copy.textContent="Copy",900);}catch{} });
+        el.dockCtrls.openAnchor.addEventListener("click", () => { const id = el.dockCtrls.anchor.value.trim(); if (id) window.open("/jobs.html#"+encodeURIComponent(id), "_blank", "noopener"); });
         el.dockCtrls.preview.addEventListener("click", () => window.open("/jobs.html", "_blank", "noopener"));
       }
 
       async function main() {
-        // Make guide & dock visible by default — no more gating
-        show(el.dock);
-        show(el.btnDashboard);
-        show(el.btnJobsPublic);
+        show(el.dock); show(el.btnDashboard); show(el.btnJobsPublic);
 
         // Diagnostics initial
         setText(el.dg.host, location.hostname);
-        setText(el.dg.cms, "—");
-        setText(el.dg.json, "—");
+        setText(el.dg.cms, "—"); setText(el.dg.json, "—");
+        bootIdentityMarkers(); checkJobsJSON().catch(()=>{});
 
-        // Identity markers (don’t depend on events)
-        bootIdentityMarkers();
-
-        // Proactive: if Safari Private / blockers hide modal, we’ll still mount after sign-in
-        // Heartbeat to catch late sign-in & close any stuck popups
+        // Heartbeat to keep UI synced & close stuck popups
         setInterval(() => {
-          if (currentUser()) {
-            setText(el.dg.user, "✓ signed in");
-            $("#btnLogout").style.display = "";
-            forceCloseIdentityPopup();
-          }
+          if (currentUser()) { setText(el.dg.user, "✓ signed in"); $("#btnLogout").style.display=""; stripIdentityUI(); }
         }, 400);
-
-        // Basic checks
-        checkJobsJSON().catch(()=>{});
 
         bindUI();
       }
 
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", main);
-      } else {
-        main();
-      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", main); else main();
 
-      // Global error capture
       window.addEventListener("error", (e) => { captureError(e.error || e.message || e); });
       window.addEventListener("unhandledrejection", (e) => { captureError(e.reason || e); });
     })();
