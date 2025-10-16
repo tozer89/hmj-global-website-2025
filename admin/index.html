@@ -5,16 +5,16 @@
   <title>HMJ Global — CMS Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Performance preconnects -->
+  <!-- Perf preconnects -->
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://identity.netlify.com" crossorigin>
 
   <!-- ===================== INLINE CMS CONFIG ===================== -->
   <script>
-    /* Prevent auto-fetch of /admin/config.yml */
+    /* Stop auto-fetch of /admin/config.yml */
     window.CMS_MANUAL_INIT = true;
 
-    /* CRITICAL: inline config */
+    /* Inline config (single JSON file) */
     window.CMS_CONFIG = {
       backend: { name: "git-gateway", branch: "main" },
       publish_mode: "editorial_workflow",
@@ -26,9 +26,8 @@
           name: "jobsData",
           files: [
             {
-              /* Single JSON file editor */
               label: "Jobs Data",
-              name: "jobs",                 /* entry slug used in the route */
+              name: "jobs",                      /* entry slug */
               file: "data/jobs.json",
               format: "json",
               editor: { preview: false },
@@ -51,8 +50,7 @@
                         { label: "Interviewing — Shortlist in Review", value: "interviewing" },
                         { label: "Closed — Not Accepting New Applicants", value: "closed" }
                       ],
-                      default: "live"
-                    },
+                      default: "live" },
                     { label: "Section", name: "section", widget: "select",
                       options: [
                         { label: "Data Centre — Commercial", value: "commercial" },
@@ -61,16 +59,13 @@
                         { label: "Life Sciences & Pharma", value: "pharma" },
                         { label: "ICT & Commissioning", value: "ict" }
                       ],
-                      default: "dc"
-                    },
+                      default: "dc" },
                     { label: "Discipline", name: "discipline", widget: "select",
                       options: ["Data Centre", "Life Sciences", "Pharma", "Substation"],
-                      default: "Data Centre"
-                    },
+                      default: "Data Centre" },
                     { label: "Employment Type", name: "type", widget: "select",
                       options: [{label:"Permanent",value:"permanent"},{label:"Contract",value:"contract"}],
-                      default: "permanent"
-                    },
+                      default: "permanent" },
                     { label: "Location Code", name: "locationCode", widget: "select",
                       options: [
                         { label: "Amsterdam, Netherlands", value: "amsterdam" },
@@ -85,8 +80,7 @@
                         { label: "UK (Various)", value: "uk" },
                         { label: "Europe (Travel)", value: "europe" }
                       ],
-                      default: "uk"
-                    },
+                      default: "uk" },
                     { label: "Location Text", name: "locationText", widget: "string", required: false },
                     { label: "Keywords", name: "keywords", widget: "text", required: false },
                     { label: "Overview", name: "overview", widget: "text", required: false },
@@ -103,24 +97,14 @@
         }
       ]
     };
-
-    /* Force the correct route BEFORE CMS renders to avoid undefined collection */
-    (function ensureHashEarly(){
-      var TARGET = "#/collections/jobsData/entries/jobs";
-      if (location.hash !== TARGET) {
-        // use replace so back button isn't polluted with intermediate hashes
-        location.replace(TARGET);
-      }
-    })();
   </script>
 
-  <!-- Identity (optional; we don't block on it) -->
+  <!-- Identity (non-blocking) -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js" defer></script>
-
-  <!-- Netlify CMS (the version you've been on) -->
+  <!-- Netlify CMS (same version you’ve been on) -->
   <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
 
-  <!-- =========================== STYLES =========================== -->
+  <!-- ============================ STYLES ============================ -->
   <style>
     :root{
       --ink:#0f1322; --bg:#0b0f1c; --panel:#0f162c; --accent:#3A66B3;
@@ -137,7 +121,7 @@
     .btn.blue{background:var(--accent);border-color:rgba(58,102,179,.85)}
     #nc-root{max-width:1200px;margin:14px auto 110px;padding:0 12px}
 
-    /* Dock pinned bottom-right */
+    /* Dock pinned bottom-right (out of the way) */
     .dock{
       position:fixed; right:14px; bottom:14px; z-index:60;
       background:var(--panel); border:1px solid var(--border);
@@ -147,20 +131,21 @@
     .dock input,.dock select{background:#0f1831;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:10px;padding:10px 12px}
     .dock .btn{background:#0f1831}
 
-    /* Light CMS chrome tweaks */
+    /* CMS chrome tweaks */
     .nc-appHeader{background:#0f1322 !important;border-bottom:1px solid var(--borderSoft) !important}
     .nc-toolbar{background:#0f1322 !important;border-top:1px solid var(--borderSoft) !important}
     .nc-primary{background:var(--accent) !important;color:#fff !important;border:1px solid rgba(58,102,179,.9) !important}
   </style>
 </head>
 <body>
-  <!-- =========================== TOP BAR =========================== -->
+  <!-- ============================ TOP BAR ============================ -->
   <div class="top">
     <div class="in">
       <div class="brand"><span class="dot"></span> HMJ Global — CMS Portal</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn blue" href="/">⟵ Return to Homepage</a>
         <a class="btn" href="/jobs.html" target="_blank" rel="noopener">View Jobs Page</a>
+        <button id="btnOpenEditor" class="btn" type="button">Open Jobs in Editor</button>
         <button id="btnSignOut" class="btn" type="button">Sign out</button>
         <a class="btn" href="https://app.netlify.com" target="_blank" rel="noopener">Netlify</a>
         <a class="btn" href="https://github.com" target="_blank" rel="noopener">GitHub</a>
@@ -168,10 +153,10 @@
     </div>
   </div>
 
-  <!-- ========================= CMS MOUNT ========================== -->
+  <!-- CMS mount -->
   <div id="nc-root" role="region" aria-label="Netlify CMS"></div>
 
-  <!-- ======================== QUICK DOCK ========================== -->
+  <!-- ============================= DOCK ============================= -->
   <div class="dock" aria-label="Quick actions">
     <input id="q" type="search" placeholder="Search jobs (title, location, status)…" />
     <select id="tpl">
@@ -188,32 +173,59 @@
     <button class="btn" id="copyBtn" type="button">Copy</button>
   </div>
 
-  <!-- ========================= BOOT SCRIPT ========================= -->
+  <!-- ========================== BOOT SCRIPT ========================= -->
   <script>
     (function(){
-      const TARGET = "#/collections/jobsData/entries/jobs";
+      const ENTRY_HASH = "#/collections/jobsData/entries/jobs";
 
+      /* Init CMS as soon as script is ready */
       function initCMS(){
         try { window.CMS.init({ config: window.CMS_CONFIG }); }
         catch(e){ console.error("CMS init failed:", e); }
       }
-
-      // Mount as soon as the script is available
       if (window.CMS) initCMS();
       else window.addEventListener("load", initCMS);
 
-      // Nudge to our entry a couple times after init too
-      const nudge = () => { if (location.hash !== TARGET) location.replace(TARGET); };
-      setTimeout(nudge, 80); setTimeout(nudge, 400); setTimeout(nudge, 1200);
+      /* Helper: is the Redux store populated with collections? */
+      function cmsStoreReady(){
+        try{
+          const st = window.CMS && window.CMS.getState && window.CMS.getState();
+          return !!(st && st.get && st.get("collections") && st.get("collections").size);
+        }catch(_){ return false; }
+      }
+      function waitForStore(maxMs=6000){
+        return new Promise((resolve,reject)=>{
+          const t0 = Date.now();
+          const tick = () => {
+            if (cmsStoreReady()) return resolve();
+            if (Date.now()-t0 > maxMs) return reject(new Error("CMS store not ready"));
+            setTimeout(tick, 120);
+          };
+          tick();
+        });
+      }
 
-      // Optional sign-out
+      /* Button -> open Jobs editor AFTER store is ready */
+      document.getElementById("btnOpenEditor")?.addEventListener("click", async () => {
+        try{
+          await waitForStore();
+          if (location.hash !== ENTRY_HASH) location.hash = ENTRY_HASH;
+          // one more nudge after a tick
+          setTimeout(() => { if (location.hash !== ENTRY_HASH) location.hash = ENTRY_HASH; }, 250);
+        }catch(e){
+          alert("CMS is still starting—try again in a second.");
+          console.error(e);
+        }
+      });
+
+      /* Optional sign-out */
       document.getElementById("btnSignOut")?.addEventListener("click", () => {
         try { window.netlifyIdentity && window.netlifyIdentity.logout(); } catch {}
         try { localStorage.clear(); sessionStorage.clear(); } catch {}
         location.reload();
       });
 
-      // Dock helpers
+      /* Dock helpers (unchanged UX) */
       document.getElementById("topBtn").onclick = () =>
         window.scrollTo({ top: 0, behavior: "smooth" });
       document.getElementById("openAnchor").onclick = () => {
