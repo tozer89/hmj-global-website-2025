@@ -6,189 +6,422 @@
   <title>Timesheets — Admin | HMJ-Global</title>
   <link rel="stylesheet" href="/css/style.css" />
   <style>
-    :root{ --bg:#0b1420; --panel:#0f1c2b; --border:#203042; --text:#e6edf6; --muted:#9fb3c8; }
-    body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    .wrap{max-width:1200px;margin:24px auto;padding:0 18px}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+    :root{
+      --bg:#0b1420; --panel:#0f1c2b; --panel2:#0c1a2a; --border:#203042;
+      --text:#e6edf6; --muted:#9fb3c8; --blue:#6ea8ff; --green:#25c08a; --red:#ff7a7a; --amber:#ffd166;
+      --chip:#12243a; --chip-b:#294466; --glow: rgba(108,163,255,.25);
+    }
+    html,body{margin:0;background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+
+    /* Fancy bar */
+    .shine{
+      position:sticky; top:0; z-index:60; height:3px; background:
+      linear-gradient(90deg,#58a6ff, #7ee787, #ffd166, #ff9a9a);
+      filter:blur(.4px); opacity:.9;
+    }
+
+    .wrap{max-width:1200px;margin:18px auto;padding:0 16px 40px; display:grid; gap:12px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .btn{background:#1a2740;border:1px solid #2b3c55;color:#fff;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
-    .btn:hover{border-color:#3b5172}
-    select,input{background:#0f172a;color:#e6edf6;border:1px solid #2b3c55;border-radius:8px;padding:8px}
-    table.grid{width:100%;border-collapse:collapse}
-    table.grid th,table.grid td{border-bottom:1px solid var(--border);padding:10px;text-align:left}
     .muted{color:var(--muted)}
+
+    .btn{background:#182842;border:1px solid #2b3c55;color:#fff;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+    .btn:hover{border-color:#3b5172}
+    .btn.ghost{background:transparent;border-color:#2b3c55}
+    .btn.primary{background:#4c7fff;border-color:transparent}
+    .btn.success{background:var(--green);border-color:transparent}
+    .btn.warn{background:#3a2c10;border-color:#5b460f}
+    .btn.danger{background:#3b1c1c;border-color:#5b2b2b}
+
+    select,input[type="text"],input[type="week"],input[type="date"]{
+      background:#0f172a;color:#e6edf6;border:1px solid #2b3c55;border-radius:8px;padding:8px; min-width: 140px;
+    }
+    input[type="search"]{min-width:200px}
+
+    /* Tabs */
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:6px 10px;border-radius:999px;border:1px solid #2b3c55;background:var(--chip);cursor:pointer}
+    .tab.active{background:var(--chip-b); box-shadow:0 0 0 2px var(--glow) inset}
+
+    /* Table */
+    table.grid{width:100%;border-collapse:collapse}
+    table.grid th,table.grid td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:top}
+    table.grid th{font-weight:700}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #2b3c55;background:#11233b; font-size:.85rem}
+    .badge.submitted{color:#99b8ff;border-color:#294466}
+    .badge.approved{color:#4fe3a2;border-color:#1b4638;background:#0f2a24}
+    .badge.rejected{color:#ff9a9a;border-color:#5b2b2b;background:#2a1010}
+    .grp{background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:10px}
+
+    /* Responsive cards */
+    @media (max-width:820px){
+      .table-wrap table{display:none}
+      .cards{display:grid;gap:10px}
+      .ts-card{background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:10px}
+      .ts-card .top{display:flex; justify-content:space-between; gap:8px; margin-bottom:8px}
+      .ts-actions{display:flex; gap:6px; flex-wrap:wrap}
+      .filters{position:sticky; top:10px; z-index:50; background:rgba(11,20,32,.9); backdrop-filter: blur(6px); border:1px solid var(--border); border-radius:12px; padding:10px}
+    }
+
+    /* Modals & drawers */
+    .modal, .drawer{display:none; position:fixed; inset:0; z-index:90; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.55)}
+    .modal .box{background:#0f1c2b; border:1px solid #203042; color:#e6edf6; width:min(860px,94vw); border-radius:14px; padding:16px}
+    .drawer .panel{position:absolute; right:0; top:0; bottom:0; width:min(420px,92vw); background:#0f1c2b; border-left:1px solid #203042; padding:12px; overflow:auto}
+
+    /* Subtle glow on focusable */
+    :where(input,button,select,[role="tab"]):focus{outline:2px solid #7aa2ff; outline-offset:2px}
   </style>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-
+  <div class="shine"></div>
 
   <div class="wrap">
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <div>
-          <h1 style="margin:0 0 6px">Timesheets — Admin</h1>
-          <div class="muted">Approve, reject, export, and manage weekly timesheets.</div>
-        </div>
-        <div class="row">
-          <a class="btn" href="/admin/">⟵ Back to CMS</a>
-          <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-        </div>
+    <!-- Header -->
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <h1 style="margin:0 0 4px">Timesheets — Admin</h1>
+        <div class="muted">Approve, edit, raise on behalf, export, and audit weekly timesheets.</div>
+      </div>
+      <div class="row">
+        <button id="btnCreate" class="btn primary">+ Create timesheet</button>
+        <button id="btnAudit" class="btn ghost">Audit log</button>
+        <a class="btn ghost" href="/admin/">⟵ Back to CMS</a>
+        <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
       </div>
     </div>
-  <div id="tsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#0f1c2b; border:1px solid #203042; color:#e6edf6; width:min(720px,94vw); border-radius:14px; padding:16px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <h3 style="margin:0">Timesheet details</h3>
-      <button class="btn" onclick="document.getElementById('tsModal').style.display='none'">Close</button>
-    </div>
-    <div id="tsModalBody" class="muted">Loading…</div>
-  </div>
-</div>
-
 
     <!-- Gate -->
     <div id="gate" class="card" style="display:none">
       <p><strong>Admin only.</strong> Please log in with an admin account.</p>
       <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
-      <div class="muted" style="margin-top:8px">Ask an administrator to add the <code>admin</code> role to your user in Netlify Identity.</div>
     </div>
 
-    <!-- App -->
-    <div id="app" style="display:none">
-      <div class="card">
+    <!-- Filters -->
+    <div id="filters" class="card filters">
+      <div class="row" style="justify-content:space-between; align-items:flex-end">
+        <div class="tabs" role="tablist" aria-label="Status tabs">
+          <button class="tab active" data-status="">All</button>
+          <button class="tab" data-status="draft">Draft</button>
+          <button class="tab" data-status="submitted">Submitted</button>
+          <button class="tab" data-status="approved">Approved</button>
+          <button class="tab" data-status="rejected">Rejected</button>
+        </div>
         <div class="row">
           <select id="fltClient"></select>
-          <select id="fltStatus">
-            <option value="">Any status</option>
-            <option>submitted</option><option>approved</option><option>rejected</option><option>draft</option>
-          </select>
-          <button class="btn" id="btnRefresh">Refresh</button>
-          <button class="btn" id="btnApprove">Bulk approve</button>
-          <button class="btn" id="btnExport">Export CSV</button>
+          <input id="fltWeek" type="date" />
+          <input id="fltSearch" type="search" placeholder="Search name / project / client" />
+          <button id="btnRefresh" class="btn">Refresh</button>
+          <button id="btnExport" class="btn">Export CSV</button>
+          <button id="btnBulkApprove" class="btn success">Bulk approve</button>
         </div>
       </div>
+    </div>
 
-      <div class="card">
-        <div id="tableWrap" class="muted">Loading…</div>
+    <!-- Table / Cards -->
+    <div class="card table-wrap">
+      <div id="tableWrap" class="muted">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Timesheet modal -->
+  <div id="tsModal" class="modal">
+    <div class="box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Timesheet</h3>
+        <div class="row">
+          <button id="btnEditSave" class="btn success" style="display:none">Save edits</button>
+          <button id="btnCloseModal" class="btn">Close</button>
+        </div>
       </div>
+      <div id="tsModalBody" class="muted">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Create timesheet modal -->
+  <div id="createModal" class="modal">
+    <div class="box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Create Timesheet</h3>
+        <button class="btn" onclick="toggle('createModal',false)">Close</button>
+      </div>
+      <div class="row">
+        <select id="createAssignment"></select>
+        <input id="createWeek" type="date">
+        <button id="btnCreateGo" class="btn primary">Create</button>
+      </div>
+      <div id="createHelp" class="muted" style="margin-top:8px">Choose assignment and week ending (Saturday).</div>
+    </div>
+  </div>
+
+  <!-- Audit drawer -->
+  <div id="auditDrawer" class="drawer">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Audit log</h3>
+        <button class="btn" onclick="toggle('auditDrawer',false)">Close</button>
+      </div>
+      <div id="auditWrap" class="muted">Loading…</div>
     </div>
   </div>
 
   <script>
-    function isAdmin(user){
-      const roles = user?.app_metadata?.roles || user?.roles || [];
-      return roles.includes('admin');
-    }
+    // -------- small helpers --------
+    const qs = s => document.querySelector(s);
+    const el = (t, attrs={}) => Object.assign(document.createElement(t), attrs);
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    function toast(msg){ console.log('[toast]', msg); } // hook up your own toast if desired
+    function toggle(id, on){ qs('#'+id).style.display = on ? (qs('#'+id).classList.contains('drawer') ? 'block':'flex') : 'none'; }
+
     async function api(path, method='GET', body=null){
       const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
       const token = await u.jwt();
       const res = await fetch(`/.netlify/functions${path}`, {
-        method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        method,
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
         body: body ? JSON.stringify(body) : null
       });
-      if(!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const txt = await res.text().catch(()=>String(res.status));
+        // If auth failure show gate; otherwise show message in UI
+        if (res.status === 401){
+          qs('#gate').style.display = 'block';
+          qs('.table-wrap').style.display = 'none';
+        }
+        throw new Error(txt || ('HTTP '+res.status));
+      }
       return res.json();
     }
 
+    // -------- UI boot --------
     async function boot(){
-      const user = netlifyIdentity?.currentUser();
-      if(!user || !isAdmin(user)){ document.getElementById('gate').style.display='block'; return; }
-      document.getElementById('app').style.display='block';
-
-      const clients = await api('/admin-timesheets-clients');
-      const selClient = document.getElementById('fltClient');
-      selClient.innerHTML = `<option value="">All clients</option>` + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-
-      async function load(){
-        document.getElementById('tableWrap').textContent = 'Loading…';
-        const q = { status: document.getElementById('fltStatus').value, client_id: selClient.value || null };
-        const rows = await api('/admin-timesheets-list','POST',q);
-        const html = `
-          <table class="grid">
-            <thead><tr>
-              <th><input type="checkbox" id="chkAll"></th>
-              <th>Contractor</th><th>Client / Project</th><th>Week ending</th>
-              <th>Total hours</th><th>Status</th><th>Actions</th>
-            </tr></thead>
-            <tbody>
-              ${rows.map(r=>`
-                <tr>
-                  <td><input type="checkbox" class="rowchk" data-id="${r.id}"></td>
-                  <td>${r.contractor_name}</td>
-                  <td>${r.client_name} — ${r.project_name}</td>
-                  <td>${r.week_ending}</td>
-                  <td>${r.total_hours}</td>
-                  <td>${r.status}</td>
-                  <td>
-                    <button class="btn" data-act="open"    data-id="${r.id}">View</button>
-                    <button class="btn" data-act="approve" data-id="${r.id}">Approve</button>
-                    <button class="btn" data-act="reject"  data-id="${r.id}">Reject</button>
-                  </td>
-
-                </tr>`).join('')}
-            </tbody>
-          </table>`;
-        const wrap = document.getElementById('tableWrap');
-        wrap.innerHTML = html;
-
-        document.getElementById('chkAll').onclick = e=>{
-          document.querySelectorAll('.rowchk').forEach(c=>c.checked = e.target.checked);
-        };
-        wrap.onclick = async (e)=>{
-          const btn = e.target.closest('button'); if(!btn) return;
-          const id = btn.dataset.id, act = btn.dataset.act;
-          if (act==='approve') await api('/admin-timesheets-approve','POST',{id});
-          if (act==='reject')  await api('/admin-timesheets-reject','POST',{id});
-          if (act==='open') {
-            const m = document.getElementById('tsModal');
-            const body = document.getElementById('tsModalBody');
-            m.style.display = 'flex';
-            body.textContent = 'Loading…';
-            const d = await api('/admin-timesheets-detail','POST',{id});
-            const order = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-            body.innerHTML = `
-              <div style="margin-bottom:10px"><strong>${d.contractor_name}</strong> — ${d.client_name} — ${d.project_name}<br>
-              Week ending ${d.week_ending} • Status: ${d.status}</div>
-              <table class="grid">
-                <thead><tr><th>Day</th><th>Std</th><th>OT</th><th>Notes</th></tr></thead>
-                <tbody>
-                  ${order.map(k=>{
-                    const x = d.entries[k]||{std:0,ot:0,note:''};
-                    return `<tr><td>${k}</td><td>${x.std||0}</td><td>${x.ot||0}</td><td>${(x.note||'')}</td></tr>`;
-                  }).join('')}
-                </tbody>
-              </table>`;
-            return;
-          }
-
-          await load();
-        };
+      qs('#gate').style.display = 'none'; // let server decide
+      // clients
+      try {
+        const clients = await api('/admin-timesheets-clients');
+        qs('#fltClient').innerHTML = `<option value="">All clients</option>` +
+          clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      } catch(e){
+        qs('#fltClient').innerHTML = `<option value="">(clients unavailable)</option>`;
       }
 
-      document.getElementById('btnRefresh').onclick = load;
-      document.getElementById('btnApprove').onclick = async ()=>{
-        const ids = [...document.querySelectorAll('.rowchk:checked')].map(x=>x.dataset.id);
-        if (!ids.length) return alert('Select rows first');
-        await api('/admin-timesheets-bulk-approve','POST',{ids});
-        await load();
-      };
-      document.getElementById('btnExport').onclick = async ()=>{
-        const q = { status: document.getElementById('fltStatus').value, client_id: document.getElementById('fltClient').value || null };
+      // assignments for create modal
+      try{
+        const a = await api('/admin-assignments-list');
+        qs('#createAssignment').innerHTML =
+          `<option value="">Select assignment…</option>` +
+          a.map(x=>`<option value="${x.id}">${x.contractor_name} — ${x.project_name} @ ${x.client_name}</option>`).join('');
+      }catch{
+        qs('#createAssignment').innerHTML = `<option value="">Assignments unavailable</option>`;
+      }
+
+      // events
+      document.querySelectorAll('.tab').forEach(t=>{
+        t.onclick = ()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); load(); };
+      });
+      qs('#btnRefresh').onclick = load;
+      qs('#fltClient').onchange = load;
+      qs('#fltWeek').onchange = load;
+      qs('#fltSearch').oninput = e=>{ if(e.target.value.length===0 || e.target.value.length>2) load(); };
+      qs('#btnExport').onclick = async ()=>{
+        const q = collectFilters();
         const res = await api('/admin-timesheets-export','POST',q);
-        const a = document.createElement('a');
-        a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(res.csv);
-        a.download = `timesheets-${Date.now()}.csv`; a.click();
+        const a = el('a', { href:'data:text/csv;charset=utf-8,'+encodeURIComponent(res.csv), download:`timesheets-${Date.now()}.csv`}); a.click();
+      };
+      qs('#btnBulkApprove').onclick = async ()=>{
+        const ids = [...document.querySelectorAll('.rowchk:checked')].map(x=>x.dataset.id);
+        if(!ids.length) return alert('Select rows first');
+        await api('/admin-timesheets-bulk-approve','POST',{ids}); load();
+      };
+      qs('#btnAudit').onclick = async ()=>{
+        toggle('auditDrawer', true);
+        qs('#auditWrap').textContent = 'Loading…';
+        try{
+          const logs = await api('/admin-audit-list','POST',{limit:200});
+          qs('#auditWrap').innerHTML = logs.map(l=>`<div style="border-bottom:1px solid var(--border);padding:8px 0">
+            <div><b>${l.action}</b> <span class="muted">by ${l.actor_email}</span></div>
+            <div class="muted" style="font-size:.9rem">${new Date(l.created_at).toLocaleString()} • ${l.target_type} #${l.target_id}</div>
+          </div>`).join('');
+        }catch(e){ qs('#auditWrap').textContent = 'Audit unavailable: '+e.message; }
+      };
+      qs('#btnCreate').onclick = ()=>toggle('createModal', true);
+      qs('#btnCreateGo').onclick = async ()=>{
+        const assignment_id = qs('#createAssignment').value;
+        const week_ending = qs('#createWeek').value || null;
+        if (!assignment_id) return alert('Select assignment');
+        try{
+          const r = await api('/admin-timesheets-create','POST',{ assignment_id, week_ending });
+          toggle('createModal', false);
+          toast('Timesheet created #'+r.id);
+          load();
+        }catch(e){ alert('Create failed: '+e.message); }
       };
 
-      await load();
+      load();
     }
 
+    function collectFilters(){
+      const status = (document.querySelector('.tab.active')?.dataset.status)||'';
+      const client_id = qs('#fltClient').value || null;
+      const week = qs('#fltWeek').value || null;
+      const q = (qs('#fltSearch').value || '').trim();
+      return { status, client_id, week, q };
+    }
+
+    async function load(){
+      const wrap = qs('#tableWrap');
+      wrap.textContent = 'Loading…';
+      const q = collectFilters();
+      try{
+        const rows = await api('/admin-timesheets-list','POST',q);
+        render(rows);
+      }catch(e){
+        wrap.textContent = 'Failed to load: '+e.message;
+      }
+    }
+
+    function render(rows){
+      const wrap = qs('#tableWrap');
+      if (!rows.length){ wrap.textContent = 'No results.'; return; }
+
+      // Group by week
+      const byWeek = {};
+      for (const r of rows){
+        byWeek[r.week_ending] = byWeek[r.week_ending] || [];
+        byWeek[r.week_ending].push(r);
+      }
+
+      // Desktop table
+      let html = '';
+      for (const wk of Object.keys(byWeek).sort().reverse()){
+        const group = byWeek[wk];
+        html += `<div class="grp"><div style="margin:2px 0 8px"><b>Week ending ${wk}</b></div>
+          <table class="grid">
+            <thead><tr>
+              <th><input type="checkbox" class="chkAll" data-week="${wk}"></th>
+              <th>Contractor</th><th>Client / Project</th><th>Total</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody>
+              ${group.map(r=>`
+              <tr>
+                <td><input type="checkbox" class="rowchk" data-id="${r.id}" data-week="${wk}"></td>
+                <td>${r.contractor_name}<br><span class="muted" style="font-size:.85rem">${r.contractor_email||''}</span></td>
+                <td>${r.client_name} — ${r.project_name}</td>
+                <td>${r.total_hours}h</td>
+                <td><span class="badge ${r.status}">${r.status}</span></td>
+                <td class="row">
+                  <button class="btn" data-act="open" data-id="${r.id}">View</button>
+                  <button class="btn success" data-act="approve" data-id="${r.id}">Approve</button>
+                  <button class="btn danger" data-act="reject" data-id="${r.id}">Reject</button>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      }
+
+      // Mobile cards
+      html += `<div class="cards">` + rows.map(r=>`
+        <div class="ts-card">
+          <div class="top">
+            <div>
+              <b>${r.contractor_name}</b> <span class="badge ${r.status}">${r.status}</span><br>
+              <span class="muted" style="font-size:.9rem">${r.client_name} — ${r.project_name}</span>
+            </div>
+            <div class="muted" style="text-align:right">Week<br><b>${r.week_ending}</b></div>
+          </div>
+          <div class="muted" style="margin:4px 0 8px">Total ${r.total_hours}h</div>
+          <div class="ts-actions">
+            <label><input type="checkbox" class="rowchk" data-id="${r.id}"> Select</label>
+            <button class="btn" data-act="open" data-id="${r.id}">View</button>
+            <button class="btn success" data-act="approve" data-id="${r.id}">Approve</button>
+            <button class="btn danger" data-act="reject" data-id="${r.id}">Reject</button>
+          </div>
+        </div>`).join('') + `</div>`;
+
+      wrap.innerHTML = html;
+
+      // select all per week
+      wrap.querySelectorAll('.chkAll').forEach(chk=>{
+        chk.onclick = e=>{
+          const w = e.target.dataset.week;
+          wrap.querySelectorAll(`.rowchk[data-week="${w}"]`).forEach(c=>c.checked = e.target.checked);
+        };
+      });
+
+      // row actions
+      wrap.onclick = async (e)=>{
+        const btn = e.target.closest('button'); if(!btn) return;
+        const id = btn.dataset.id, act = btn.dataset.act;
+        if (act==='approve'){ await api('/admin-timesheets-approve','POST',{id}); load(); return; }
+        if (act==='reject'){ const reason = prompt('Reason (optional):',''); await api('/admin-timesheet-reject','POST',{id,reason}); load(); return; }
+        if (act==='open'){ openSheet(id); return; }
+      };
+    }
+
+    // ----- View/Edit modal -----
+    async function openSheet(id){
+      toggle('tsModal', true);
+      const body = qs('#tsModalBody'); body.textContent = 'Loading…';
+      qs('#btnEditSave').style.display = 'none';
+      try{
+        const d = await api('/admin-timesheets-detail','POST',{id});
+        // Editable table
+        const order = DAYS;
+        body.innerHTML = `
+          <div style="margin-bottom:10px"><strong>${d.contractor_name}</strong> — ${d.client_name} — ${d.project_name}<br>
+          Week ending ${d.week_ending} • Status: <span class="badge ${d.status}">${d.status}</span></div>
+          <table class="grid" id="editTable">
+            <thead><tr><th>Day</th><th>Std</th><th>OT</th><th>Notes</th></tr></thead>
+            <tbody>
+              ${order.map(k=>{
+                const x = d.entries[k]||{std:0,ot:0,note:''};
+                return `<tr>
+                  <td>${k}</td>
+                  <td><input type="number" step="0.25" min="0" value="${x.std||0}" data-k="${k}" data-f="std"></td>
+                  <td><input type="number" step="0.25" min="0" value="${x.ot||0}" data-k="${k}" data-f="ot"></td>
+                  <td><input type="text" value="${(x.note||'')}" data-k="${k}" data-f="note"></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="quickMonFri">Mon–Fri 8h</button>
+            <button class="btn" id="quickClear">Clear</button>
+          </div>
+        `;
+        qs('#btnEditSave').style.display = 'inline-block';
+        qs('#quickMonFri').onclick = ()=>{
+          ['Mon','Tue','Wed','Thu','Fri'].forEach(k=>{
+            body.querySelectorAll(`input[data-k="${k}"][data-f="std"]`).forEach(i=>i.value='8');
+            body.querySelectorAll(`input[data-k="${k}"][data-f="ot"]`).forEach(i=>i.value='0');
+          });
+        };
+        qs('#quickClear').onclick = ()=>{ body.querySelectorAll('#editTable input').forEach(i=>i.value = i.type==='number' ? '0' : ''); };
+        qs('#btnEditSave').onclick = async ()=>{
+          const entries = {};
+          body.querySelectorAll('#editTable input').forEach(i=>{
+            const k=i.dataset.k, f=i.dataset.f;
+            entries[k] = entries[k] || {std:0,ot:0,note:''};
+            entries[k][f] = (f==='note') ? i.value : Number(i.value||0);
+          });
+          try{ await api('/admin-timesheets-edit','POST',{id, entries, keep_status:true}); toggle('tsModal',false); load(); }
+          catch(e){ alert('Save failed: '+e.message); }
+        };
+      }catch(e){
+        body.textContent = 'Failed to load: '+e.message;
+      }
+    }
+    qs('#btnCloseModal').onclick = ()=>toggle('tsModal',false);
+
+    // Gate & init
     document.addEventListener('DOMContentLoaded', ()=>{
-      netlifyIdentity?.on('init', boot);
+      netlifyIdentity?.on('init', ()=>{ netlifyIdentity.currentUser() ? boot() : qs('#gate').style.display='block'; });
       netlifyIdentity?.on('login', ()=>location.reload());
       netlifyIdentity?.on('logout', ()=>location.href='/admin/');
-      setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else document.getElementById('gate').style.display='block'; }, 500);
+      setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else qs('#gate').style.display='block'; }, 600);
     });
   </script>
 </body>

@@ -1,17 +1,18 @@
 // netlify/functions/admin-timesheets-edit.js
-const { supabase, getContext } = require('./_timesheet-helpers');
+const { getContext } = require('./_timesheet-helpers');
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 exports.handler = async (event, context) => {
   try {
-    const { user } = await getContext(context);
-    const roles = user?.app_metadata?.roles || user?.roles || [];
-    if (!roles.includes('admin')) throw Object.assign(new Error('Forbidden'), { code: 401 });
+    const { user, supabase } = await getContext(context, { requireAdmin: true });
 
     const { id, entries = {}, keep_status = true } = JSON.parse(event.body || '{}');
     if (!id) throw new Error('Missing id');
 
-    const { data: before } = await supabase.from('timesheet_entries').select('day,hours_std,hours_ot,note').eq('timesheet_id', id);
+    const { data: before } = await supabase
+      .from('timesheet_entries')
+      .select('day,hours_std,hours_ot,note')
+      .eq('timesheet_id', id);
 
     for (const d of DAYS) {
       const row = entries[d] || {};
@@ -25,21 +26,17 @@ exports.handler = async (event, context) => {
       if (error) throw error;
     }
 
-    // If an approved sheet is edited, we mark it as 'approved' but flagged as amended
-    let patch = {};
-    if (keep_status) patch = { amended_at: new Date().toISOString() };
-
-    if (Object.keys(patch).length) {
-      const { error: uErr } = await supabase.from('timesheets').update(patch).eq('id', id);
-      if (uErr) throw uErr;
+    if (keep_status) {
+      const { error: patchErr } = await supabase
+        .from('timesheets')
+        .update({ amended_at: new Date().toISOString() })
+        .eq('id', id);
+      if (patchErr) throw patchErr;
     }
 
     await supabase.from('admin_audit_logs').insert({
-      actor_email: user.email,
-      actor_id: user.id,
-      action: 'edit_timesheet',
-      target_type: 'timesheet',
-      target_id: String(id),
+      actor_email: user.email, actor_id: user.id,
+      action: 'edit_timesheet', target_type: 'timesheet', target_id: String(id),
       meta: { before, after: entries }
     });
 

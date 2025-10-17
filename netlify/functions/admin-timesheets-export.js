@@ -1,16 +1,16 @@
 // netlify/functions/admin-timesheets-export.js
-const { supabase, getContext } = require('./_timesheet-helpers');
+const { getContext } = require('./_timesheet-helpers');
 
 exports.handler = async (event, context) => {
   try {
-    const { user } = await getContext(context);
-    const roles = user?.app_metadata?.roles || user?.roles || [];
-    if (!roles.includes('admin')) throw Object.assign(new Error('Forbidden'), { code: 401 });
-
+    const { supabase } = await getContext(context, { requireAdmin: true });
     const body = JSON.parse(event.body || '{}');
     const { status = '', client_id = null, week = null, q = '' } = body;
 
-    let query = supabase.from('v_timesheets_admin').select('*').order('week_ending', { ascending: false });
+    let query = supabase.from('v_timesheets_admin')
+      .select('*')
+      .order('week_ending', { ascending: false });
+
     if (status) query = query.eq('status', status);
     if (client_id) query = query.eq('client_id', client_id);
     if (week) query = query.eq('week_ending', week);

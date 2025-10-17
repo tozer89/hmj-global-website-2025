@@ -1,11 +1,17 @@
 // netlify/functions/_auth.js
-const coded = (code, msg) => Object.assign(new Error(msg), { code });
+const { createClient } = require('@supabase/supabase-js');
 
-function getRolesFromJWT(bearer) {
+function coded(status, message) {
+  const e = new Error(message);
+  e.code = status;
+  return e;
+}
+
+function decodeRolesFromJWT(bearer) {
   try {
-    if (!bearer) return [];
-    const token = bearer.replace(/^Bearer\s+/i, '');
-    const [, payload] = token.split('.');
+    const token = (bearer || '').replace(/^Bearer\s+/i, '');
+    const payload = token.split('.')[1];
+    if (!payload) return [];
     const claims = JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
     return claims?.app_metadata?.roles || claims?.roles || [];
   } catch {
@@ -13,21 +19,36 @@ function getRolesFromJWT(bearer) {
   }
 }
 
-exports.getContext = async (context, opts = {}) => {
-  const user = context.clientContext?.user;
+function getSupabaseAdmin() {
+  const url = (process.env.SUPABASE_URL || '').trim();
+  const key = (process.env.SUPABASE_SERVICE_KEY || '').trim();
+  if (!url) throw coded(500, 'SUPABASE_URL missing');
+  if (!key) throw coded(500, 'SUPABASE_SERVICE_KEY missing');
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+/**
+ * Unified context fetcher.
+ * - Returns: { user, roles, supabase }
+ * - Throws: 401 when no user / not admin (if opts.requireAdmin)
+ */
+exports.getContext = async (netlifyContext, opts = {}) => {
+  const supabase = getSupabaseAdmin();
+
+  const user = netlifyContext?.clientContext?.user;
   if (!user) throw coded(401, 'Unauthorized');
 
-  // Roles may come from Netlify user OR only be present in the JWT claims.
-  const headerAuth = context.headers?.authorization || context.headers?.Authorization;
-  const rolesFromUser = user.app_metadata?.roles || user.roles || [];
-  const rolesFromJWT  = getRolesFromJWT(headerAuth);
-
-  const roles = Array.from(new Set([...(rolesFromUser || []), ...(rolesFromJWT || [])]));
+  const headerAuth = netlifyContext?.headers?.authorization || '';
+  const rolesFromHeader = decodeRolesFromJWT(headerAuth);
+  const rolesFromContext = user.app_metadata?.roles || user.roles || [];
+  const roles = Array.from(new Set([...rolesFromContext, ...rolesFromHeader]));
 
   if (opts.requireAdmin && !roles.includes('admin')) {
-    throw coded(403, 'Forbidden (admin role required)');
+    throw coded(401, 'Forbidden'); // 401 only for auth/role issues
   }
 
-  // return whatever else you already return here (email, id, etc.)
-  return { user, roles };
+  return { user, roles, supabase };
 };
+
+exports.coded = coded;
+exports.getSupabaseAdmin = getSupabaseAdmin;
