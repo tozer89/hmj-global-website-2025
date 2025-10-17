@@ -1,22 +1,16 @@
-// ESM-friendly helper for Netlify Functions (CommonJS file using dynamic import)
-let _createClient;
+// netlify/functions/_supabase.js  (CommonJS)
+const { createClient } = require('@supabase/supabase-js');
 
-async function supabaseClient() {
-  if (!_createClient) {
-    ({ createClient: _createClient } = await import('@supabase/supabase-js'));
-  }
+const url  = process.env.SUPABASE_URL;
+const key  = process.env.SUPABASE_SERVICE_KEY;
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-
-  if (!url || !key) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY');
-  }
-
-  return _createClient(url, key, {
-    auth: { persistSession: false },
-    global: { headers: { 'X-Client-Info': 'hmjg-netlify-fns' } }
-  });
+// Fail fast if env vars are missing (shows as 500, not 401)
+if (!url || !key) {
+  throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars');
 }
 
-module.exports = { supabaseClient };
+const supabase = createClient(url, key, {
+  auth: { persistSession: false }
+});
+
+module.exports = { supabase };
