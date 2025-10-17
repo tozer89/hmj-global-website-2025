@@ -1,40 +1,44 @@
+// netlify/functions/contractor-profile.js
 const { supabase } = require('./_supabase');
 const { getUser } = require('./_auth');
 
-exports.handler = async (event, context) => {
+exports.handler = async (_event, context) => {
   try {
-    const user = getUser(context);                       // Netlify Identity user
-    const email = (user.email || '').toLowerCase();
+    // Require a logged-in Netlify Identity user
+    const user = getUser(context);
+    if (!user?.email) return { statusCode: 401, body: 'Unauthorized' };
 
-    // Find contractor by login email
+    const email = String(user.email).toLowerCase();
+
+    // Find contractor by email (case-insensitive, tolerate accidental duplicates)
     const { data: contractor, error: cErr } = await supabase
       .from('contractors')
       .select('id,name,email,phone,payroll_ref')
-      .eq('email', email)
-      .single();
+      .ilike('email', email)              // ← case-insensitive match
+      .order('id', { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
-    if (cErr || !contractor) {
-      return { statusCode: 404, body: 'Contractor not found' };
-    }
+    if (cErr) return { statusCode: 500, body: cErr.message };
+    if (!contractor) return { statusCode: 404, body: 'Contractor not found' };
 
-    // Active assignment summary (view we created in SQL)
+    // Try to fetch active assignment (may be null if not yet set up)
     const { data: assignment, error: aErr } = await supabase
       .from('assignment_summary')
       .select('*')
       .eq('contractor_id', contractor.id)
       .eq('active', true)
+      .order('id', { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    if (aErr) {
-      return { statusCode: 500, body: aErr.message };
-    }
+    if (aErr) return { statusCode: 500, body: aErr.message };
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ contractor, assignment })
+      body: JSON.stringify({ contractor, assignment: assignment || null })
     };
   } catch (e) {
-    return { statusCode: 401, body: e.message || 'Unauthorized' };
+    return { statusCode: 401, body: e?.message || 'Unauthorized' };
   }
 };
