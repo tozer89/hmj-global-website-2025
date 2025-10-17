@@ -31,6 +31,14 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ contractor, assignment }),
     };
   } catch (e) {
-    return { statusCode: 401, body: JSON.stringify({ error: e.message || 'Unauthorized' }) };
-  }
+    const status =
+        e.code === 401 ? 401 :
+        e.code === 404 ? 404 : 500;
+
+    return {
+        statusCode: status,
+        body: JSON.stringify({ error: e.message })
+    };
+    }
+
 };

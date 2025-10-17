@@ -50,10 +50,14 @@ exports.handler = async (event, context) => {
       status: ts.status,
       entries: map
     });
-  } catch (e) {
-    const msg = e && e.message ? e.message : 'Failed to load timesheet';
-    const code = msg === 'Unauthorized' ? 401 : (msg.includes('not found') ? 404 : 400);
-    console.error('get-this-week exception:', e);
-    return respond(code, { error: msg });
+    } catch (e) {
+    const status =
+      e.code === 401 ? 401 :
+      e.code === 404 ? 404 : 500;
+
+    return {
+      statusCode: status,
+      body: JSON.stringify({ error: e.message || 'Failed to load timesheet' })
+    };
   }
 };
