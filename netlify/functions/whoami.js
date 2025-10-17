@@ -1,14 +1,19 @@
-const { getUser } = require('./_auth');
-
+// netlify/functions/whoami.js
 exports.handler = async (event, context) => {
-  try {
-    const u = getUser(event, context);
+  const u = context?.clientContext?.user || null;
+  if (!u) {
     return {
-      statusCode: 200,
-      body: JSON.stringify({ email: u.email, roles: u.app_metadata?.roles || [] }),
-      headers: { 'Content-Type': 'application/json' },
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Unauthorized', hint: 'No Identity user on context' }),
     };
-  } catch (e) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      ok: true,
+      email: u.email,
+      sub: u.sub,
+      app_metadata: u.app_metadata || {},
+    }),
+  };
 };
