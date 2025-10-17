@@ -1,0 +1,16 @@
+[build]
+  publish = "/"
+  functions = "netlify/functions"
+
+# Gate the timesheets admin to users with the "admin" role
+[[redirects]]
+  from = "/admin/timesheets*"
+  to = "/admin/timesheets.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+# Fallback for non-admins
+[[redirects]]
+  from = "/admin/timesheets*"
+  to = "/unauthorized.html"
+  status = 401

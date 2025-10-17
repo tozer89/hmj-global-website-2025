@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>HMJ-Global | Data Centre & Pharma Recruitment Partner</title>
 
+
+  <!-- In your <head> (once per page) -->
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  // Global login→redirect helper
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.netlifyIdentity) {
+      netlifyIdentity.on('login', () => {
+        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
+        sessionStorage.removeItem('afterLogin');
+        window.location.href = dest;
+      });
+      netlifyIdentity.on('logout', () => {
+        window.location.href = '/';
+      });
+    }
+  });
+</script>
+
+
+
   <!-- Your site stylesheet -->
   <link rel="stylesheet" href="css/style.css" />
 
@@ -183,6 +204,26 @@
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
+        <!-- In your nav menu -->
+<li><a href="/timesheets.html" id="nav-timesheets">Timesheets</a></li>
+<li><a href="#" id="nav-login" onclick="if(window.netlifyIdentity){ netlifyIdentity.open('login'); } return false;">Log in</a></li>
+<li><a href="#" id="nav-logout" style="display:none" onclick="if(window.netlifyIdentity){ netlifyIdentity.logout(); } return false;">Log out</a></li>
+
+<script>
+  // Swap Login/Logout depending on session
+  document.addEventListener('DOMContentLoaded', () => {
+    const login = document.getElementById('nav-login');
+    const logout = document.getElementById('nav-logout');
+    const user = window.netlifyIdentity?.currentUser();
+    if (user) { login.style.display='none'; logout.style.display='inline-block'; }
+    window.netlifyIdentity?.on('init', u => {
+      if (u) { login.style.display='none'; logout.style.display='inline-block'; }
+    });
+    window.netlifyIdentity?.on('login', () => { login.style.display='none'; logout.style.display='inline-block'; });
+    window.netlifyIdentity?.on('logout', () => { login.style.display='inline-block'; logout.style.display='none'; });
+  });
+</script>
+
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>

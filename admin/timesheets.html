@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Timesheets — Admin | HMJ Global</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    :root{ --bg:#0b1420; --panel:#0f1c2b; --border:#203042; --text:#e6edf6; --muted:#9fb3c8; }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    .wrap{ max-width:1200px; margin:24px auto; padding:0 18px }
+    .card{ background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px }
+    .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+    .btn{ background:#1a2740; border:1px solid #2b3c55; color:#fff; padding:8px 12px; border-radius:10px; font-weight:600; cursor:pointer }
+    .btn:hover{ border-color:#3b5172 }
+    table.grid{ width:100%; border-collapse:collapse }
+    table.grid th, table.grid td{ border-bottom:1px solid var(--border); padding:10px; text-align:left }
+    select, input{ background:#0f172a; color:#e6edf6; border:1px solid #2b3c55; border-radius:8px; padding:8px }
+    .muted{ color:var(--muted) }
+  </style>
+
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h1 style="margin:0 0 6px">Timesheets — Admin</h1>
+          <div class="muted">Approve, reject, export, and manage weekly timesheets.</div>
+        </div>
+        <div class="row">
+          <a class="btn" href="/admin/">⟵ Back to CMS</a>
+          <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gate for unauthenticated or non-admin users -->
+    <div id="gate" class="card" style="display:none">
+      <p><strong>Admin only.</strong> Please log in with an admin account.</p>
+      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+    </div>
+
+    <!-- Main admin UI -->
+    <div id="app" style="display:none">
+      <div class="card">
+        <div class="row">
+          <select id="fltClient"></select>
+          <select id="fltStatus">
+            <option value="">Any status</option>
+            <option>submitted</option><option>approved</option><option>rejected</option><option>draft</option>
+          </select>
+          <button class="btn" id="btnRefresh">Refresh</button>
+          <button class="btn" id="btnApprove">Bulk approve</button>
+          <button class="btn" id="btnExport">Export CSV</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="tableWrap" class="muted">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---- utilities
+    function isAdmin(user){
+      const roles = user?.app_metadata?.roles || user?.roles || [];
+      return roles.includes('admin');
+    }
+    async function api(path, method='GET', body=null){
+      const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+      const token = await u.jwt();
+      const res = await fetch(`/.netlify/functions${path}`, {
+        method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body: body ? JSON.stringify(body) : null
+      });
+      if(!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    // ---- boot
+    async function boot(){
+      const user = netlifyIdentity?.currentUser();
+      if(!user || !isAdmin(user)){
+        document.getElementById('gate').style.display = 'block';
+        return;
+      }
+      document.getElementById('app').style.display = 'block';
+
+      // Populate client filter
+      const clients = await api('/admin-timesheets-clients');
+      const sel = document.getElementById('fltClient');
+      sel.innerHTML = `<option value="">All clients</option>` + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+
+      async function load(){
+        document.getElementById('tableWrap').textContent = 'Loading…';
+        const q = { status: document.getElementById('fltStatus').value, client_id: sel.value || null };
+        const rows = await api('/admin-timesheets-list','POST',q);
+        const html = `
+          <table class="grid">
+            <thead><tr>
+              <th><input type="checkbox" id="chkAll"></th>
+              <th>Contractor</th><th>Client / Project</th><th>Week ending</th>
+              <th>Total hours</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody>
+              ${rows.map(r=>`
+                <tr>
+                  <td><input type="checkbox" class="rowchk" data-id="${r.id}"></td>
+                  <td>${r.contractor_name}</td>
+                  <td>${r.client_name} — ${r.project_name}</td>
+                  <td>${r.week_ending}</td>
+                  <td>${r.total_hours}</td>
+                  <td>${r.status}</td>
+                  <td>
+                    <button class="btn" data-act="approve" data-id="${r.id}">Approve</button>
+                    <button class="btn" data-act="reject"  data-id="${r.id}">Reject</button>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+        const wrap = document.getElementById('tableWrap');
+        wrap.innerHTML = html;
+
+        document.getElementById('chkAll').onclick = e=>{
+          document.querySelectorAll('.rowchk').forEach(c=>c.checked = e.target.checked);
+        };
+        wrap.onclick = async (e)=>{
+          const btn = e.target.closest('button'); if(!btn) return;
+          const id = btn.dataset.id, act = btn.dataset.act;
+          if (act==='approve') await api('/admin-timesheets-approve','POST',{id});
+          if (act==='reject')  await api('/admin-timesheets-reject','POST',{id});
+          await load();
+        };
+      }
+
+      document.getElementById('btnRefresh').onclick = load;
+      document.getElementById('btnApprove').onclick = async ()=>{
+        const ids = [...document.querySelectorAll('.rowchk:checked')].map(x=>x.dataset.id);
+        if (!ids.length) return alert('Select rows first');
+        await api('/admin-timesheets-bulk-approve','POST',{ids});
+        await load();
+      };
+      document.getElementById('btnExport').onclick = async ()=>{
+        const q = { status: document.getElementById('fltStatus').value, client_id: document.getElementById('fltClient').value || null };
+        const res = await api('/admin-timesheets-export','POST',q);
+        const a = document.createElement('a');
+        a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(res.csv);
+        a.download = `timesheets-${Date.now()}.csv`; a.click();
+      };
+
+      await load();
+    }
+
+    // Identity events
+    document.addEventListener('DOMContentLoaded', ()=>{
+      netlifyIdentity?.on('init', boot);
+      netlifyIdentity?.on('login', ()=>location.reload());
+      netlifyIdentity?.on('logout', ()=>location.href='/admin/');
+      // Fallback if init doesn’t fire quickly
+      setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else document.getElementById('gate').style.display='block'; }, 500);
+    });
+  </script>
+</body>
+</html>
