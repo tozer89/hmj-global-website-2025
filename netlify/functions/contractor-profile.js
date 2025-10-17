@@ -1,44 +1,21 @@
-const { supabase } = require('./_supabase');
-const { getUser } = require('./_auth');
+// netlify/functions/contractor-profile.js
+const { getContext } = require('./_timesheet-helpers');
+
+const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
 
 exports.handler = async (event, context) => {
   try {
-    const user = getUser(context);
-    const email = (user.email || '').toLowerCase();
+    if (event.httpMethod !== 'GET') return respond(405, { error: 'Method Not Allowed' });
 
-    const { data: contractor, error: cErr } = await supabase
-      .from('contractors')
-      .select('id,name,email,phone,payroll_ref')
-      .eq('email', email)
-      .maybeSingle();
+    // Throws 401 if no/invalid token or no matching contractor
+    const { contractor, assignment } = await getContext(context);
 
-    if (cErr) return { statusCode: 500, body: JSON.stringify({ error: cErr.message }) };
-    if (!contractor) return { statusCode: 404, body: JSON.stringify({ error: 'Contractor not found for ' + email }) };
-
-    const { data: assignment, error: aErr } = await supabase
-      .from('assignment_summary')
-      .select('*')
-      .eq('contractor_id', contractor.id)
-      .eq('active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (aErr) return { statusCode: 500, body: JSON.stringify({ error: aErr.message }) };
-
-    return {
-      statusCode: 200,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ contractor, assignment }),
-    };
+    return respond(200, { contractor, assignment });
   } catch (e) {
-    const status =
-        e.code === 401 ? 401 :
-        e.code === 404 ? 404 : 500;
-
-    return {
-        statusCode: status,
-        body: JSON.stringify({ error: e.message })
-    };
-    }
-
+    const msg = e?.message || 'Unauthorized';
+    const status = (e?.code === 401 || msg === 'Unauthorized') ? 401 : 500;
+    console.error('contractor-profile error:', e);
+    return respond(status, { error: msg });
+  }
 };
