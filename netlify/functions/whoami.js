@@ -1,14 +1,14 @@
-// Simple echo of what Netlify thinks you are
+const { getUser } = require('./_auth');
+
 exports.handler = async (event, context) => {
-  const user = context.clientContext && context.clientContext.user;
-  return {
-    statusCode: 200,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      hasUser: !!user,
-      user: user || null,
-      // show what headers we received (helps debugging)
-      receivedAuthHeader: event.headers?.authorization || null,
-    }, null, 2),
-  };
+  try {
+    const u = getUser(event, context);
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ email: u.email, roles: u.app_metadata?.roles || [] }),
+      headers: { 'Content-Type': 'application/json' },
+    };
+  } catch (e) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
 };
