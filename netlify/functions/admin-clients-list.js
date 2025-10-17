@@ -1,4 +1,4 @@
-// netlify/functions/admin-assignments-list.js
+// netlify/functions/admin-clients-list.js
 const { supabase } = require('./_supabase.js');
 const { getContext, coded } = require('./_auth.js');
 
@@ -6,18 +6,11 @@ exports.handler = async (event, context) => {
   try {
     await getContext(context, { requireAdmin: true });
     const q = event.body ? JSON.parse(event.body) : {};
-    const onlyActive = q.onlyActive ?? false;
-
-    let query = supabase
-      .rpc('assignment_summary')   // if you made a view; else:
-    // Fallback if no RPC/view; comment the above and use:
-    // let query = supabase
-    //   .from('assignments')
-    //   .select('id, contractor_id, project_id, rate_std, rate_ot, start_date, end_date, closed_at, active, po_number,
-    //     contractors(name,email), projects(name, clients(name), sites(name))')
-      ;
-
-    if (onlyActive) query = query.eq('active', true);
+    const term = (q.search||'').trim();
+    let query = supabase.from('clients')
+      .select('id,name,contact_name,contact_email,contact_phone,billing,status')
+      .order('name', { ascending: true }).limit(200);
+    if (term) query = query.ilike('name', `%${term}%`);
     const { data, error } = await query;
     if (error) throw coded(500, error.message);
     return { statusCode: 200, body: JSON.stringify(data) };

@@ -1,303 +1,380 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>HMJ Global — CMS Portal</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin Portal | HMJ-Global</title>
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  :root{ --bg:#0b1420; --panel:#0f1c2b; --border:#203042; --ink:#e6edf6; --muted:#9fb3c8;
+         --blue:#4c7fff; --green:#25c08a; --red:#ff7a7a; --amber:#ffd166; --white:#fff; --black:#0c1118; }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .muted{color:var(--muted)}
+  .btn{background:#1a2740;border:1px solid #2b3c55;color:#fff;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+  .btn:hover{border-color:#3b5172}
+  .btn.primary{background:var(--blue);border-color:transparent}
+  .btn.success{background:var(--green);border-color:transparent}
+  select,input,textarea{background:#0f172a;color:#e6edf6;border:1px solid #2b3c55;border-radius:8px;padding:8px}
+  label{font-size:.9rem;color:var(--muted)}
+  table.grid{width:100%;border-collapse:collapse}
+  table.grid th,table.grid td{border-bottom:1px solid var(--border);padding:10px;text-align:left}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap}
+  .tab{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:#0f172a;cursor:pointer}
+  .tab.active{background:#182740;border-color:#395077}
+  .two{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+  @media (max-width:900px){ .two{grid-template-columns:1fr} }
 
-  <style>
-    :root{
-      --bg:#0b1420; --panel:#0f1c2b; --muted:#9fb3c8; --text:#e6edf6;
-      --blue:#4c7fff; --green:#1fb981; --red:#ff6b6b; --border:#203042;
-    }
-    html,body{ margin:0;height:100%;background:var(--bg);color:var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
-    a{ color:var(--blue); text-decoration:none }
-
-    .topbar{ position:sticky; top:0; z-index:50; background:rgba(11,20,32,.9);
-      backdrop-filter:saturate(120%) blur(6px); border-bottom:1px solid var(--border) }
-    .row{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:10px; align-items:center }
-    .brand-dot{ width:8px; height:8px; border-radius:999px; background:#3bb3ff; display:inline-block; margin-right:10px }
-    .title{ font-weight:700; letter-spacing:.2px }
-    .spacer{ flex:1 }
-    .btn{ background:#1a2740; border:1px solid #2b3c55; color:var(--text);
-      padding:10px 14px; border-radius:12px; display:inline-flex; align-items:center; gap:8px; transition:all .18s ease; font-weight:600 }
-    .btn:hover{ transform:translateY(-1px); border-color:#3b5172 }
-    .primary{ background:var(--blue); border-color:transparent }
-    .danger{ background:#2a1b1b; border-color:#472a2a }
-
-    .wrap{ max-width:1100px; margin:22px auto; padding:0 20px }
-    .card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px 20px; margin-bottom:18px }
-    .h1{ font-size:28px; font-weight:800; margin:0 0 4px }
-    .muted{ color:var(--muted) }
-    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px }
-    .kvs{ display:grid; grid-template-columns:240px 1fr; gap:8px; padding:10px 0; border-top:1px dashed var(--border) }
-    .badge{ display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:rgba(255,255,255,.03) }
-    .ok{ color:#4fe3a2 } .warn{ color:#ffd166 } .err{ color:#ff8fa3 }
-    .hr{ height:1px; background:var(--border); margin:14px 0 }
-
-    /* floating Quick Tools (bottom-right) */
-    #hmj-floating-tools{ position:fixed; right:16px; bottom:16px; z-index:9999; }
-    #hmj-floating-tools .card{ background:#0f172a; color:#cbd5e1; border:1px solid #233044; border-radius:14px; padding:10px 12px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
-    #hmj-floating-tools .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
-    #hmj-floating-tools button, #hmj-floating-tools .ghost{ background:#1f2937; color:#e5e7eb; border:1px solid #334155; padding:7px 10px; border-radius:9px; font-size:.84rem; cursor:pointer }
-    #hmj-floating-tools button:hover{ background:#243042 }
-    #hmj-floating-tools .ghost{ border-style:dashed; opacity:.9 }
-
-    /* bottom-left HUD */
-    #hmj-hud{ position:fixed; left:16px; bottom:16px; background:#0b1020; color:#cbd5e1;
-      border:1px solid #233044; border-radius:12px; padding:10px 12px; z-index:9998; font-size:.85rem }
-    #hmj-hud b{ color:#fff }
-  </style>
-
-  <!-- Netlify Identity -->
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-  <!-- Decap CMS (successor to Netlify CMS) -->
-  <script>window.CMS_MANUAL_INIT = true;</script>
-  <script src="https://unpkg.com/decap-cms@^3.8.4/dist/decap-cms.js"></script>
+  /* subtle flourish */
+  .headerGlow{position:relative;overflow:hidden;border-radius:14px}
+  .headerGlow:before{content:"";position:absolute;inset:-50%;background:
+     radial-gradient(700px 200px at 10% -20%, rgba(76,127,255,.12), transparent 60%),
+     radial-gradient(400px 150px at 90% -10%, rgba(37,192,138,.10), transparent 60%);
+     transform:rotate(-3deg)}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:#0b1420;border:1px solid #233044;padding:1px 6px;border-radius:6px}
+  .pill{font-size:.85rem;padding:6px 8px;border-radius:999px;background:#101b2a;border:1px solid #2b3c55;color:#e6edf6}
+</style>
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-  <div class="topbar">
-    <div class="row">
-      <span class="brand-dot"></span><span class="title">HMJ Global — CMS Portal</span>
-      <span class="spacer"></span>
-      <a href="/" class="btn">⟵ Return to Homepage</a>
-      <a id="btnView" class="btn" href="/jobs.html" target="_blank">View Jobs Page</a>
-      <button id="btnOpenEditor" class="btn primary">Open Jobs in Editor</button>
-      <a class="btn" href="/admin/timesheets.html">Timesheets Admin</a>
-      <button id="btnSignOut" class="btn danger">Sign out</button>
-      <a class="btn" href="https://app.netlify.com" target="_blank">Netlify</a>
-      <a class="btn" href="https://github.com" target="_blank">GitHub</a>
+<div class="wrap">
+  <div class="card headerGlow" style="position:sticky;top:0;z-index:5;backdrop-filter:blur(6px)">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <h1 style="margin:0 0 6px">HMJ Global — Admin Portal</h1>
+        <div class="muted">Create & manage candidates, assignments, clients, and review the audit trail.</div>
+      </div>
+      <div class="row">
+        <a class="btn" href="/">⟵ Homepage</a>
+        <a class="btn" href="/timesheets.html">Timesheets</a>
+        <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="tabs">
+        <button class="tab active" data-pane="paneCandidates">Candidates</button>
+        <button class="tab" data-pane="paneAssignments">Assignments</button>
+        <button class="tab" data-pane="paneClients">Clients</button>
+        <button class="tab" data-pane="paneAudit">Audit</button>
+      </div>
+      <span class="pill">Tip: <span class="kbd">/</span> to search</span>
     </div>
   </div>
 
-  <div class="wrap">
-    <div class="card">
-      <div class="h1">⚙ Diagnostics &amp; tools</div>
-      <div class="grid">
+  <!-- Gate -->
+  <div id="gate" class="card" style="display:none">
+    <p><strong>Admin only.</strong> Please log in with an admin account.</p>
+    <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+  </div>
+
+  <!-- PANES -->
+  <div id="app" style="display:none">
+    <!-- Candidates -->
+    <div id="paneCandidates" class="card">
+      <div class="two">
         <div>
-          <div class="kvs"><div>Host</div><div id="dg-host" class="muted"></div></div>
-          <div class="kvs"><div>Identity widget loaded</div><div id="dg-ident" class="ok">✓ loaded</div></div>
-          <div class="kvs"><div>Login state</div><div id="dg-login" class="muted">—</div></div>
-          <div class="kvs"><div>CMS script loaded</div><div id="dg-cms" class="muted">—</div></div>
-          <div class="kvs"><div>Jobs JSON reachable</div><div id="dg-json" class="muted">—</div></div>
-          <div class="kvs"><div>Backend / branch</div><div class="muted">git-gateway @ main</div></div>
-          <div class="kvs"><div>Jobs file</div><div class="muted">data/jobs.json</div></div>
+          <div class="row">
+            <input id="candSearch" placeholder="Search candidates by name or email" style="flex:1" />
+            <button class="btn" id="btnCandNew">New</button>
+            <button class="btn" id="btnCandRefresh">Refresh</button>
+          </div>
+          <div style="margin-top:10px" id="candTable" class="muted">Loading…</div>
         </div>
         <div>
-          <button id="btnRunChecks" class="btn">Run checks</button>
-          <button id="btnReloadCMS" class="btn">Reload CMS script</button>
-          <button id="btnReloadId" class="btn">Reload Identity</button>
-          <button id="btnClearCache" class="btn">Clear local cache</button>
-          <div class="hr"></div>
-          <div id="errBlock" class="muted"></div>
+          <h3 style="margin:0 0 6px">Edit Candidate</h3>
+          <form id="candForm" autocomplete="off">
+            <input type="hidden" name="id">
+            <label>Name</label><input name="name" required>
+            <label>Email</label><input name="email" required>
+            <label>Phone</label><input name="phone">
+            <label>Payroll ref</label><input name="payroll_ref">
+            <label>Pay type</label>
+            <select name="pay_type">
+              <option value="">—</option>
+              <option>umbrella</option><option>limited</option><option>cis</option>
+              <option>sole_trader</option><option>agency</option>
+            </select>
+            <label>Address (JSON)</label><textarea name="address_json" rows="3" placeholder='{"line1":"","city":"","postcode":""}'></textarea>
+            <label>Bank (JSON)</label><textarea name="bank" rows="3" placeholder='{"sort_code":"","account_number":"","iban":"","swift":""}'></textarea>
+            <label>Emergency contact (JSON)</label><textarea name="emergency_contact" rows="3" placeholder='{"name":"","phone":"","relation":""}'></textarea>
+            <label>Right to work (JSON)</label><textarea name="right_to_work" rows="3" placeholder='{"status":"","doc_type":"","doc_ref":"","expiry":""}'></textarea>
+            <div class="row" style="margin-top:10px">
+              <button type="button" class="btn success" id="btnCandSave">Save</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="h1">Welcome 👋</div>
-      <div class="muted">Use the dock below to open the Jobs editor, duplicate templates, and copy anchors.</div>
-      <ul>
-        <li>Click <span class="badge">Open Jobs in Editor</span> to edit <code>data/jobs.json</code>.</li>
-        <li>Preview your public page: <code>/jobs.html</code>.</li>
-        <li>If you see a “Logged in” popup, it will auto-close and the editor will mount.</li>
-      </ul>
-      <div class="badge ok" id="cmsStatus">CMS Status: ready</div>
+    <!-- Assignments -->
+    <div id="paneAssignments" class="card" style="display:none">
+      <div class="two">
+        <div>
+          <div class="row">
+            <label><input type="checkbox" id="asOnlyActive" checked> Active only</label>
+            <button class="btn" id="btnAsRefresh">Refresh</button>
+            <button class="btn" id="btnAsNew">New assignment</button>
+          </div>
+          <div style="margin-top:10px" id="asTable" class="muted">Loading…</div>
+        </div>
+        <div>
+          <h3 style="margin:0 0 6px">Edit Assignment</h3>
+          <form id="asForm" autocomplete="off">
+            <input type="hidden" name="id">
+            <label>Contractor</label><select name="contractor_id" id="asContractor"></select>
+            <label>Project</label><select name="project_id" id="asProject"></select>
+            <label>PO number</label><input name="po_number">
+            <div class="row"><div style="flex:1">
+              <label>Std rate</label><input name="rate_std" type="number" min="0" step="0.01">
+            </div><div style="flex:1">
+              <label>OT rate</label><input name="rate_ot" type="number" min="0" step="0.01">
+            </div></div>
+            <div class="row"><div style="flex:1">
+              <label>Start date</label><input name="start_date" type="date" required>
+            </div><div style="flex:1">
+              <label>End date</label><input name="end_date" type="date">
+            </div></div>
+            <label><input type="checkbox" name="active" checked> Active</label>
+            <div class="row" style="margin-top:10px">
+              <button type="button" class="btn success" id="btnAsSave">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clients -->
+    <div id="paneClients" class="card" style="display:none">
+      <div class="two">
+        <div>
+          <div class="row">
+            <input id="cliSearch" placeholder="Search clients" style="flex:1">
+            <button class="btn" id="btnCliNew">New</button>
+            <button class="btn" id="btnCliRefresh">Refresh</button>
+          </div>
+          <div style="margin-top:10px" id="cliTable" class="muted">Loading…</div>
+        </div>
+        <div>
+          <h3 style="margin:0 0 6px">Edit Client</h3>
+          <form id="cliForm" autocomplete="off">
+            <input type="hidden" name="id">
+            <label>Name</label><input name="name" required>
+            <label>Contact name</label><input name="contact_name">
+            <label>Contact email</label><input name="contact_email">
+            <label>Contact phone</label><input name="contact_phone">
+            <label>Billing (JSON)</label><textarea name="billing" rows="3" placeholder='{"address":"","vat_number":"","company_no":""}'></textarea>
+            <label>Status</label><select name="status"><option>active</option><option>inactive</option></select>
+            <div class="row" style="margin-top:10px">
+              <button type="button" class="btn success" id="btnCliSave">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit -->
+    <div id="paneAudit" class="card" style="display:none">
+      <div class="row">
+        <button class="btn" id="btnAuditRefresh">Refresh</button>
+      </div>
+      <div id="auditTable" style="margin-top:10px" class="muted">Loading…</div>
     </div>
   </div>
+</div>
 
-  <!-- Quick Tools (bottom-right) + HUD (bottom-left) are created by JS -->
+<script>
+  // ---- Helpers ----
+  const sel = s => document.querySelector(s);
+  const panes = ['paneCandidates','paneAssignments','paneClients','paneAudit'];
+  function tabTo(which){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.pane===which));
+    panes.forEach(id => sel('#'+id).style.display = id===which ? 'block' : 'none');
+  }
+  document.addEventListener('click', e=>{
+    const t=e.target.closest('.tab'); if(!t) return; tabTo(t.dataset.pane);
+  });
 
-  <script>
-    // --- helpers & diagnostics ---
-    const qs = s => document.querySelector(s);
-    qs('#dg-host').textContent = location.host;
-    function setStatus(sel, text, cls){ const el = qs(sel); if(!el) return; el.textContent = text; el.className = cls||''; }
-    function showError(err){ console.error(err); qs('#errBlock').innerHTML =
-      '<div class="badge err">Error</div><div style="margin-top:6px">'+String(err?.message||err).replace(/</g,'&lt;')+'</div>'; }
+  async function api(path, method='GET', body=null){
+    const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+    const token = await u.jwt();
+    const res = await fetch(`/.netlify/functions${path}`, {
+      method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body: body ? JSON.stringify(body) : null
+    });
+    if(!res.ok){ throw new Error(await res.text() || ('HTTP '+res.status)); }
+    return res.json();
+  }
 
-    // Identity
-    const idw = window.netlifyIdentity;
-    if (idw) setStatus('#dg-ident','✓ loaded','ok');
-
-    function ensureLoginThen(cb){
-      if (idw && idw.currentUser()){ setStatus('#dg-login','✓ signed in','ok'); cb(); return; }
-      idw?.open('login');
-      idw?.on('login', ()=>{ setStatus('#dg-login','✓ signed in','ok'); idw.close(); cb(); });
+  // ---- Candidates ----
+  async function loadCandidates(){
+    sel('#candTable').textContent='Loading…';
+    const data = await api('/admin-contractors-list','POST',{ search: sel('#candSearch').value });
+    sel('#candTable').innerHTML = `
+      <table class="grid">
+        <thead><tr><th>Name</th><th>Email</th><th>Pay type</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${data.map(c=>`
+            <tr>
+              <td>${c.name}</td><td>${c.email}</td><td>${c.pay_type||'—'}</td>
+              <td><button class="btn" data-cand="${c.id}">Edit</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+  sel('#btnCandRefresh').onclick = loadCandidates;
+  sel('#candSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') loadCandidates(); });
+  sel('#btnCandNew').onclick = ()=>{ sel('#candForm').reset(); sel('#candForm [name=id]').value=''; };
+  sel('#candTable').addEventListener('click', async (e)=>{
+    const id = e.target?.dataset?.cand; if(!id) return;
+    const row = await api('/admin-contractors-get','POST',{ id });
+    const f = sel('#candForm');
+    for (const k of ['id','name','email','phone','payroll_ref','pay_type']) if (k in row) f.elements[k].value = row[k]||'';
+    f.elements.address_json.value = JSON.stringify(row.address_json||{},null,2);
+    f.elements.bank.value = JSON.stringify(row.bank||{},null,2);
+    f.elements.emergency_contact.value = JSON.stringify(row.emergency_contact||{},null,2);
+    f.elements.right_to_work.value = JSON.stringify(row.right_to_work||{},null,2);
+  });
+  sel('#btnCandSave').onclick = async ()=>{
+    const f = sel('#candForm'); const body = Object.fromEntries(new FormData(f).entries());
+    for (const k of ['address_json','bank','emergency_contact','right_to_work']){
+      try{ body[k] = JSON.parse(body[k]||'{}'); }catch{ alert(`Invalid JSON in ${k}`); return; }
     }
-    document.getElementById('btnSignOut').onclick = ()=>{
-      idw?.logout(); setStatus('#dg-login','— signed out','muted'); location.reload();
-    };
+    body.rate_std = parseFloat(body.rate_std||0);
+    const saved = await api('/admin-contractors-save','POST',body);
+    alert('Saved contractor: '+saved.name);
+    loadCandidates();
+  };
 
-    // JSON reachability quick check
-    async function checkJobsJSON(){
-      try{
-        const r = await fetch('/data/jobs.json', {cache:'no-store'});
-        if(!r.ok) throw new Error('Jobs JSON fetch failed: '+r.status);
-        const j = await r.json();
-        if(!j || !Array.isArray(j.jobs)) throw new Error('Expected { "jobs": [...] }');
-        setStatus('#dg-json','✓ reachable','ok');
-      }catch(e){ setStatus('#dg-json','✗ unreachable','err'); showError(e); }
-    }
-    document.getElementById('btnRunChecks').onclick = checkJobsJSON;
-    document.getElementById('btnReloadCMS').onclick = ()=>location.reload();
-    document.getElementById('btnReloadId').onclick = ()=>location.href='/admin/';
-    document.getElementById('btnClearCache').onclick = ()=>{
-      try{ localStorage.clear(); sessionStorage.clear(); caches?.keys?.().then(k=>k.forEach(c=>caches.delete(c))); }catch(e){}
-      location.reload();
-    };
-    checkJobsJSON();
+  // ---- Assignments ----
+  async function primeAssignmentPickers(){
+    const cs = await api('/admin-contractors-list','POST',{});
+    sel('#asContractor').innerHTML = cs.map(c=>`<option value="${c.id}">${c.name} — ${c.email}</option>`).join('');
+    // For projects dropdown, reuse your existing tables (clients->projects). If you have a “projects list” function, call it here.
+    // Temporarily build from your clients list function:
+    const clients = await api('/admin-timesheets-clients'); // [id,name]
+    // Expect a separate projects endpoint in future; for now the admin picks by ID manually or extend later.
+    sel('#asProject').innerHTML = `<option value="">(enter ID manually later)</option>`;
+  }
+  async function loadAssignments(){
+    sel('#asTable').textContent='Loading…';
+    const data = await api('/admin-assignments-list','POST',{ onlyActive: sel('#asOnlyActive').checked });
+    sel('#asTable').innerHTML = `
+      <table class="grid">
+        <thead><tr><th>Contractor</th><th>Client / Project</th><th>Rates</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${data.map(r=>{
+            const name = r.contractor_name || r.contractors?.name || '—';
+            const proj = r.project_name || r.projects?.name || '—';
+            const cli  = r.client_name || r.clients?.name || r.projects?.clients?.name || '—';
+            return `<tr>
+              <td>${name}</td>
+              <td>${cli} — ${proj}</td>
+              <td>£${(r.rate_std??0).toFixed(2)} / £${(r.rate_ot??0).toFixed(2)}</td>
+              <td>${r.start_date||'—'}</td>
+              <td>${r.end_date||'—'}</td>
+              <td>${r.active ? 'active' : 'closed'}</td>
+              <td><button class="btn" data-asid="${r.id||''}" ${r.id?'':'disabled'}>Edit</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+  sel('#btnAsRefresh').onclick = loadAssignments;
+  sel('#btnAsNew').onclick = ()=>{ sel('#asForm').reset(); sel('#asForm [name=id]').value=''; sel('#asForm [name=active]').checked = true; };
+  sel('#asTable').addEventListener('click', async (e)=>{
+    const id = e.target?.dataset?.asid; if(!id) return;
+    // You could add an admin-assignments-get endpoint; for brevity, reuse list and pick entry:
+    const data = await api('/admin-assignments-list','POST',{ onlyActive:false });
+    const row = data.find(x=>String(x.id)===String(id)); if(!row) return alert('Not found');
+    const f = sel('#asForm');
+    for(const k of ['id','contractor_id','project_id','po_number','rate_std','rate_ot','start_date','end_date']) if(k in row) f.elements[k].value = row[k]||'';
+    f.elements.active.checked = !!row.active;
+  });
+  sel('#btnAsSave').onclick = async ()=>{
+    const f = sel('#asForm'); const body = Object.fromEntries(new FormData(f).entries());
+    body.id = body.id || undefined;
+    body.rate_std = parseFloat(body.rate_std||0); body.rate_ot = parseFloat(body.rate_ot||0);
+    body.active = f.elements.active.checked;
+    const saved = await api('/admin-assignments-save','POST',body);
+    alert('Saved assignment '+saved.id);
+    loadAssignments();
+  };
 
-    // --- CMS init (single boot guard) ---
-    let CMS_BOOTED = false;
-    function initCMS(){
-      if (CMS_BOOTED) return; // guard
-      if (!window.CMS){ setStatus('#dg-cms','✗ failed','err'); showError(new Error('CMS library not loaded')); return; }
-      setStatus('#dg-cms','✓ Decap loaded','ok');
-      CMS.init({ config: '/admin/config.yml' }); // B1 config
-      CMS_BOOTED = true;
-      // route to our collection after store warms up
-      setTimeout(()=>{
-        if (!location.hash.startsWith('#/collections/')) location.hash = '#/collections/jobsData';
-      }, 450);
-    }
-    document.getElementById('btnOpenEditor').onclick = ()=>ensureLoginThen(initCMS);
-    window.addEventListener('load', ()=>{ if (idw?.currentUser()) ensureLoginThen(initCMS); });
+  // ---- Clients ----
+  async function loadClients(){
+    sel('#cliTable').textContent='Loading…';
+    const data = await api('/admin-clients-list','POST',{ search: sel('#cliSearch').value });
+    sel('#cliTable').innerHTML = `
+      <table class="grid">
+        <thead><tr><th>Name</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${data.map(c=>`
+            <tr>
+              <td>${c.name}</td>
+              <td>${c.contact_name||'—'}${c.contact_email?` • ${c.contact_email}`:''}</td>
+              <td>${c.status||'active'}</td>
+              <td><button class="btn" data-cli="${c.id}">Edit</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+  sel('#btnCliRefresh').onclick = loadClients;
+  sel('#cliSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') loadClients(); });
+  sel('#btnCliNew').onclick = ()=>{ sel('#cliForm').reset(); sel('#cliForm [name=id]').value=''; };
+  sel('#cliTable').addEventListener('click', async (e)=>{
+    const id = e.target?.dataset?.cli; if(!id) return;
+    const list = await api('/admin-clients-list','POST',{});
+    const row = list.find(x=>String(x.id)===String(id)); if(!row) return alert('Not found');
+    const f = sel('#cliForm');
+    for (const k of ['id','name','contact_name','contact_email','contact_phone','status']) if (k in row) f.elements[k].value = row[k]||'';
+    f.elements.billing.value = JSON.stringify(row.billing||{},null,2);
+  });
+  sel('#btnCliSave').onclick = async ()=>{
+    const f = sel('#cliForm'); const body = Object.fromEntries(new FormData(f).entries());
+    try{ body.billing = JSON.parse(body.billing||'{}'); }catch{ alert('Invalid billing JSON'); return; }
+    const saved = await api('/admin-clients-save','POST',body);
+    alert('Saved client: '+saved.name);
+    loadClients();
+  };
 
-    // --- Quick Tools + HUD (guards so they never duplicate) ---
-    (function installToolsOnce(){
-      if (document.getElementById('hmj-floating-tools')) return;
+  // ---- Audit ----
+  async function loadAudit(){
+    sel('#auditTable').textContent='Loading…';
+    const rows = await api('/admin-audit-list');
+    sel('#auditTable').innerHTML = `
+      <table class="grid">
+        <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>ID</th><th>Payload</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`<tr>
+            <td>${new Date(r.at).toLocaleString()}</td>
+            <td>${r.actor_email}</td>
+            <td>${r.action}</td>
+            <td>${r.entity}</td>
+            <td>${r.entity_id||''}</td>
+            <td><code style="font-size:.8rem">${JSON.stringify(r.payload||{})}</code></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+  sel('#btnAuditRefresh').onclick = loadAudit;
 
-      const JOBS_FILE = 'data/jobs.json';
-      const JOBS_COLLECTION = 'jobsData';
-      const slug = s => (s||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
-        .replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80);
-
-      // Tools
-      const tools = document.createElement('div');
-      tools.id = 'hmj-floating-tools';
-      tools.innerHTML = `
-        <div class="card">
-          <div class="row" style="margin-bottom:6px">
-            <strong>Quick tools</strong>
-            <span class="ghost" id="hmj-anchor">Copy anchor</span>
-            <button id="hmj-duplicate">Duplicate</button>
-            <button id="hmj-validate">Validate</button>
-            <button id="hmj-export">Export JSON</button>
-            <button id="hmj-import">Import JSON</button>
-          </div>
-          <div class="row">
-            <button id="hmj-backup">Backup to browser</button>
-            <button id="hmj-restore">Restore backup</button>
-            <button id="hmj-clear">Clear CMS cache</button>
-            <span class="ghost" title="⌘/Ctrl+K validate · ⌘/Ctrl+D duplicate">Shortcuts</span>
-          </div>
-        </div>`;
-      document.body.appendChild(tools);
-
-      // HUD
-      if (!document.getElementById('hmj-hud')){
-        const hud = document.createElement('div');
-        hud.id = 'hmj-hud';
-        hud.innerHTML = `Jobs: <b id="hudTotal">—</b> ·
-          <span class="badge" id="hudLive">live —</span>
-          <span class="badge" id="hudHold">hold —</span>
-          <span class="badge" id="hudClosed">closed —</span>`;
-        document.body.appendChild(hud);
-      }
-
-      async function refreshHUD(){
-        try{
-          const r = await fetch(`/${JOBS_FILE}?_=${Date.now()}`); const d = await r.json();
-          const arr = Array.isArray(d.jobs)?d.jobs:[];
-          const live = arr.filter(j=>(j.status||'').toLowerCase()==='live').length;
-          const hold = arr.filter(j=>(j.status||'').toLowerCase().includes('hold')).length;
-          const closed = arr.filter(j=>(j.status||'').toLowerCase()==='closed').length;
-          document.getElementById('hudTotal').textContent = arr.length;
-          document.getElementById('hudLive').textContent = `live ${live}`;
-          document.getElementById('hudHold').textContent = `hold ${hold}`;
-          document.getElementById('hudClosed').textContent = `closed ${closed}`;
-        }catch{}
-      }
-      refreshHUD(); setInterval(refreshHUD, 8000);
-
-      // helpers
-      function downloadAs(name, content){
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(new Blob([content],{type:'application/json'})); a.download=name; a.click(); URL.revokeObjectURL(a.href);
-      }
-      function validateEntry(data){
-        const errs=[]; ['id','title','status','locationText'].forEach(k=>{ if(!data[k]) errs.push(`Missing required: ${k}`); });
-        if(data.id && !/^[a-z0-9-]{3,}$/.test(data.id)) errs.push('id must be URL-safe (a–z, 0–9, -)');
-        return errs;
-      }
-      function getCurrent(){
-        const st = window.reduxStore?.getState?.(); if(!st) return {};
-        const collName = st.entry?.get('collection');
-        const collection = st.collections?.get(collName || JOBS_COLLECTION) || st.collections?.first();
-        const entry = st.entry;
-        return { entry, collection };
-      }
-
-      // actions
-      document.getElementById('hmj-validate').onclick = ()=>{
-        const { entry } = getCurrent(); if(!entry){ alert('Open an entry first.'); return; }
-        const errs = validateEntry(entry.get('data').toJS());
-        alert(errs.length ? ('Issues:\n\n• '+errs.join('\n• ')) : 'Looks good ✅');
-      };
-      document.getElementById('hmj-duplicate').onclick = ()=>{
-        const { entry, collection } = getCurrent(); if(!entry||!collection){ alert('Open an entry first.'); return; }
-        const data = entry.get('data').toJS();
-        const nextId = slug(`${data.title||'job'}-${Date.now().toString(36).slice(-5)}`);
-        const clone = { ...data, id: nextId, status:'on-hold', published:false };
-        window.location.hash = `#/collections/${collection.get('name')}/new`;
-        setTimeout(()=>{
-          const store = window.reduxStore; if(!store) return;
-          store.dispatch({ type:'ENTRY_LOAD_SUCCESS', payload:{
-            collection, entry: window.immutable.Map({ collection: collection.get('name'), data: window.immutable.fromJS(clone) })
-          }});
-        }, 300);
-      };
-      document.getElementById('hmj-anchor').onclick = ()=>{
-        const { entry } = getCurrent(); if(!entry){ alert('Open an entry first.'); return; }
-        const id = entry.get('data').get('id'); if(!id){ alert('No id yet.'); return; }
-        const url = `/jobs.html#${id}`; navigator.clipboard.writeText(url).then(()=>alert(`Copied: ${url}`));
-      };
-      document.getElementById('hmj-export').onclick = async ()=>{
-        const t = await (await fetch(`/${JOBS_FILE}?_=${Date.now()}`)).text(); downloadAs('jobs-export.json', t);
-      };
-      document.getElementById('hmj-import').onclick = ()=>{
-        const i=document.createElement('input'); i.type='file'; i.accept='.json,application/json';
-        i.onchange=async()=>{ const f=i.files[0]; if(!f) return; const txt=await f.text();
-          try{ const j=JSON.parse(txt); if(!Array.isArray(j.jobs)) throw new Error('Expected { jobs: [] }');
-            downloadAs('jobs-normalized.json', JSON.stringify(j,null,2));
-            alert('Imported OK. Open the file and paste into data/jobs.json (or commit in Git).');
-          }catch(e){ alert('Invalid format: '+e.message); } };
-        i.click();
-      };
-      document.getElementById('hmj-backup').onclick = async ()=>{
-        const t = await (await fetch(`/${JOBS_FILE}?_=${Date.now()}`)).text();
-        localStorage.setItem('hmj-jobs-backup', t); alert('Backup saved in this browser.');
-      };
-      document.getElementById('hmj-restore').onclick = ()=>{
-        const raw = localStorage.getItem('hmj-jobs-backup'); if(!raw){ alert('No backup found.'); return; }
-        try{ const j=JSON.parse(raw); downloadAs('jobs-restore.json', JSON.stringify(j,null,2)); }
-        catch{ alert('Backup unreadable.'); }
-      };
-      document.getElementById('hmj-clear').onclick = ()=>{
-        try{ localStorage.clear(); sessionStorage.clear(); caches?.keys?.().then(k=>k.forEach(c=>caches.delete(c))); }catch{}
-        alert('Local cache cleared. Reloading…'); location.reload();
-      };
-
-      // shortcuts
-      document.addEventListener('keydown',(e)=>{
-        const mod=e.metaKey||e.ctrlKey;
-        if(mod && e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('hmj-validate').click(); }
-        if(mod && e.key.toLowerCase()==='d'){ e.preventDefault(); document.getElementById('hmj-duplicate').click(); }
-      });
-    })();
-  </script>
+  // ---- Boot / Gate ----
+  function isAdmin(u){ const roles = u?.app_metadata?.roles || u?.roles || []; return roles.includes('admin'); }
+  async function boot(){
+    const u = netlifyIdentity?.currentUser();
+    if (!u || !isAdmin(u)){ sel('#gate').style.display='block'; return; }
+    sel('#app').style.display='block';
+    await primeAssignmentPickers();
+    loadCandidates(); loadAssignments(); loadClients(); loadAudit();
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{
+    netlifyIdentity?.on('init', boot);
+    netlifyIdentity?.on('login', ()=>location.reload());
+    netlifyIdentity?.on('logout', ()=>location.href='/');
+    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else sel('#gate').style.display='block'; }, 600);
+  });
+</script>
 </body>
 </html>

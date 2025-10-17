@@ -1,342 +1,507 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Timesheets — Admin | HMJ-Global</title>
-<link rel="stylesheet" href="/css/style.css"/>
-<style>
-  :root{
-    --ink:#0c1118; --muted:#6b7b91; --bg:#081122;
-    --panel:#0c1830; --panel-light:#ffffff; --border:#1e2f4a;
-    --blue:#3878ff; --green:#15b871; --red:#ff6a6a; --amber:#ffd166;
-  }
-  body{margin:0;background:var(--bg);color:#e6edf6;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 18px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
-  .white{background:var(--panel-light); color:var(--ink); border:1px solid #e2e8f0}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .spacer{flex:1}
-  .btn{background:#132544;border:1px solid #2e4773;color:#fff;padding:9px 12px;border-radius:10px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3a5aa1}
-  .btn.primary{background:var(--blue);border-color:transparent}
-  .btn.success{background:var(--green);border-color:transparent}
-  .btn.warn{background:#3a2c10;border-color:#5b460f}
-  .btn.ghost{background:transparent;border-color:#2e4773}
-  select,input{background:#0d1730;color:#e6edf6;border:1px solid #2e4773;border-radius:10px;padding:9px}
-  input.white, select.white { background:#fff; color:#0c1118; border:1px solid #cbd5e1 }
-  table.grid{width:100%;border-collapse:collapse}
-  table.grid th,table.grid td{border-bottom:1px solid var(--border);padding:10px;text-align:left}
-  .muted{color:#9fb3c8}
-  .tabs{display:flex; gap:8px; align-items:center}
-  .tab{padding:8px 12px;border-radius:999px;border:1px solid #2e4773;cursor:pointer}
-  .tab.active{background:#1b2d56}
-  .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#0f1f3f;border:1px solid #2e4773;color:#c7d2fe;font-variant-numeric:tabular-nums}
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:10px;background:#0f1f3f;border:1px solid #2e4773}
-  .section{margin-top:8px;margin-bottom:4px;font-weight:700}
-  .tableWrap .week{margin-top:6px;margin-bottom:2px;color:#cbd5e1}
-  .hover-row:hover{background:rgba(255,255,255,0.03)}
-  .right{ text-align:right }
-  .sticky{position:sticky; top:0; z-index:20; backdrop-filter:saturate(120%) blur(6px)}
-  /* Modal */
-  .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; align-items:center; justify-content:center;}
-  .modal > .box{background:#0c1830; border:1px solid #1e2f4a; color:#e6edf6; width:min(800px,94vw); border-radius:14px; padding:16px;}
-  .audit{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; background:#0b1325; border:1px solid #1e2f4a; padding:8px; border-radius:10px; max-height:320px; overflow:auto}
-</style>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Timesheets | HMJ-Global</title>
+
+  <!-- Base styles if you have /css/style.css — keep it. This page adds its own scoped CSS too -->
+  <link rel="stylesheet" href="/css/style.css" />
+
+  <style>
+    :root{
+      /* 50/50 contrast palette: dark chrome + light working surface */
+      --ink:#0f172a;        /* primary text on light */
+      --ink-muted:#55627a;
+      --bg:#0b1420;         /* page chrome */
+      --panel:#0f1c2b;      /* cards on dark */
+      --border:#203042;
+
+      --white:#ffffff;      /* form surface */
+      --shadow:0 8px 24px rgba(2,6,23,.12);
+
+      --brand:#3b82f6;      /* blue */
+      --brand-600:#2563eb;
+      --green:#22c55e;
+      --red:#ef4444;
+      --amber:#f59e0b;
+
+      --radius-xl:16px;
+      --radius-lg:12px;
+      --radius-md:10px;
+
+      --font-s:14px;
+      --font-m:16px;
+      --font-l:18px;
+      --font-xl:22px;
+    }
+
+    html,body{margin:0;background:var(--bg);color:#e6edf6;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:#8ab4ff;text-decoration:none}
+
+    /* Top bar */
+    .topbar{position:sticky;top:0;z-index:40;background:rgba(11,20,32,.9);
+      border-bottom:1px solid var(--border);backdrop-filter:saturate(120%) blur(6px)}
+    .toprow{max-width:1100px;margin:0 auto;padding:14px 16px;display:flex;gap:12px;align-items:center}
+    .brand{font-weight:800;font-size:18px}
+    .spacer{flex:1}
+    .btn{font-size:16px;background:#19283f;border:1px solid #2b3c55;color:#e6edf6;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn:hover{border-color:#3b5172}
+    .btn.ghost{background:transparent}
+    .btn.primary{background:var(--brand);border-color:transparent}
+    .btn.success{background:var(--green);border-color:transparent;color:#062b11}
+    .btn.warn{background:#3a2c10;border-color:#5b460f}
+
+    .wrap{max-width:1100px;margin:28px auto;padding:0 16px;display:grid;grid-template-columns:1fr 340px;gap:18px}
+    @media (max-width:1000px){ .wrap{grid-template-columns:1fr} }
+
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-xl);padding:16px;margin-bottom:16px}
+
+    /* Right column profile */
+    #profilePane .kv{display:grid;grid-template-columns:120px 1fr;gap:8px;margin:6px 0}
+    #profilePane .kv div:first-child{color:#9fb3c8}
+
+    /* Light working surface */
+    .work-surface{background:var(--white); color:var(--ink); border-radius:var(--radius-xl); box-shadow:var(--shadow); border:1px solid #e5e9f2}
+    .work-inner{padding:16px}
+
+    /* Headline + totals row */
+    .headline{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap}
+    .headline h2{color:var(--ink);margin:0 0 6px}
+    .muted-dark{color:var(--ink-muted)}
+    #totals{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    #totals .box{background:#f3f6fb;border:1px solid #e1e7f2;border-radius:12px;padding:10px 12px;color:var(--ink)}
+    #totals b{color:#0b1220}
+
+    /* Entry rows (bigger tap targets) */
+    .day-card{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e1e7f2;border-radius:14px;padding:12px 12px;margin-bottom:12px}
+    .day-badge{min-width:64px;text-align:center;background:#eef2f8;border:1px solid #d7dbe3;border-radius:12px;padding:10px 8px;font-weight:900;line-height:1;color:#162033}
+    .day-badge .dn{display:block;font-size:.78rem;letter-spacing:.6px}
+    .day-fields{flex:1;display:grid;grid-template-columns:160px 160px 1fr 100px;gap:10px;align-items:center}
+    .day-fields input[type="number"], .day-fields input[type="text"]{
+      width:100%;background:#fff;color:var(--ink);border:1px solid #cbd5e1;border-radius:10px;padding:12px;font-size:18px}
+    .day-tools{display:flex;gap:8px;align-items:center}
+    .pill{font-size:16px;padding:10px 12px;border-radius:10px;background:#eef2f8;border:1px solid #d7dbe3;color:#162033;cursor:pointer}
+    .pill.icon{width:40px;height:40px;display:inline-grid;place-items:center;font-size:18px}
+    .pill:hover{filter:brightness(.98)}
+
+    /* Inputs outside white cards */
+    input[type="number"],input[type="text"]{width:100%}
+
+    /* Quick fill row */
+    .quickhelp{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:#eef2f8;border:1px solid #d7dbe3;color:#162033;padding:2px 8px;border-radius:8px}
+
+    /* History */
+    .history-list{display:grid;gap:10px}
+    details.history{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px}
+    details.history[open] summary{margin-bottom:8px}
+    summary{cursor:pointer;list-style:none}
+    summary::-webkit-details-marker{display:none}
+
+    /* Toasts */
+    #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:10px;z-index:9999}
+    .toast{background:#0f172a;border:1px solid #233044;color:#e6edf6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .toast.ok{border-color:#245d46}
+    .toast.err{border-color:#5b2b2b}
+
+    /* Focus */
+    :where(input,button,.pill,.btn):focus{outline:3px solid #7aa2ff; outline-offset:2px}
+
+    @media (max-width:760px){
+      .day-fields{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
+      .day-fields input[name$="_note"]{grid-column:1/-1}
+      .headline{align-items:flex-start}
+    }
+  </style>
+
+  <!-- Netlify Identity -->
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <!-- Header -->
-  <div class="card sticky">
-    <div class="row" style="justify-content:space-between">
-      <div>
-        <h1 style="margin:0 0 6px">Timesheets — Admin</h1>
-        <div class="muted">Review, create, edit, approve, reject. All changes are audited.</div>
-      </div>
-      <div class="row">
-        <a class="btn ghost" href="/admin/">⟵ Back to CMS</a>
-        <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <div class="tabs" id="statusTabs">
-        <span class="tab active" data-status="">All <span class="badge" id="countAll">0</span></span>
-        <span class="tab" data-status="submitted">Submitted <span class="badge" id="countSubmitted">0</span></span>
-        <span class="tab" data-status="approved">Approved <span class="badge" id="countApproved">0</span></span>
-        <span class="tab" data-status="rejected">Rejected <span class="badge" id="countRejected">0</span></span>
-        <span class="tab" data-status="draft">Draft <span class="badge" id="countDraft">0</span></span>
-      </div>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="toprow">
+      <div class="brand">HMJ Global — Timesheets</div>
       <span class="spacer"></span>
-      <select id="fltClient"></select>
-      <input id="fltWeek" type="date"/>
-      <input id="fltQ" class="white" placeholder="Search contractor / project / client" style="min-width:240px"/>
-      <button class="btn" id="btnRefresh">Refresh</button>
-      <button class="btn success" id="btnBulkApprove">Bulk approve</button>
-      <button class="btn" id="btnExport">Export CSV</button>
-      <button class="btn primary" id="btnCreate">+ Create on behalf</button>
+      <span id="deadlineTag" class="btn ghost" style="cursor:default">Calculating deadline…</span>
+      <a href="/" class="btn ghost" title="Back to homepage">⟵ Return to Homepage</a>
+      <button id="btnSignOut" class="btn">Sign out</button>
     </div>
   </div>
 
-  <!-- Gate -->
-  <div id="gate" class="card" style="display:none">
-    <p><strong>Admin only.</strong> Log in with an admin account.</p>
-    <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
-  </div>
-
-  <!-- App -->
-  <div id="app" style="display:none">
-    <!-- table -->
-    <div class="card white">
-      <div id="tableWrap" class="tableWrap">Loading…</div>
-    </div>
-
-    <!-- audit -->
-    <div class="card">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <div class="section">Recent admin activity</div>
-        <button class="btn" id="btnReloadAudit">Reload</button>
+  <div class="wrap">
+    <!-- MAIN COLUMN -->
+    <div>
+      <div class="card">
+        <h1 style="margin:0 0 6px">My Timesheet</h1>
+        <div class="muted">Submit your hours by <b>Tuesday 17:00</b> for Friday payment.
+          <span id="deadlineClock" class="muted" aria-live="polite"></span>
+        </div>
       </div>
-      <div id="auditBox" class="audit">Loading…</div>
+
+      <!-- Gate (not logged in) -->
+      <div id="gate" class="card" style="display:none">
+        <p>Please log in to access your timesheets.</p>
+        <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
+        <div class="muted" style="margin-top:8px">After login you will be redirected here automatically.</div>
+      </div>
+
+      <!-- App -->
+      <div id="app" style="display:none">
+        <div id="summary" class="card">Loading…</div>
+
+        <!-- Light surface work area -->
+        <div class="work-surface">
+          <div class="work-inner">
+            <div class="headline">
+              <div>
+                <h2>This Week</h2>
+                <div id="weekMeta" class="muted-dark"></div>
+              </div>
+              <div id="totals">
+                <div class="box"><span class="muted-dark">Std</span> <b id="tStd">0</b>h</div>
+                <div class="box"><span class="muted-dark">OT</span> <b id="tOt">0</b>h</div>
+                <div class="box"><span class="muted-dark">Total</span> <b id="tAll">0</b>h</div>
+                <div class="box"><span class="muted-dark">Est. gross</span> £<b id="tGross">0.00</b></div>
+              </div>
+            </div>
+
+            <!-- Quick fill tools -->
+            <div class="quickhelp">
+              <span class="muted-dark">Quick fill:</span>
+              <button class="pill" id="qMonFri8" type="button">Mon–Fri 8h</button>
+              <button class="pill" id="qClear"   type="button">Clear all</button>
+              <button class="pill" id="qSetAll"  type="button">Set all…</button>
+              <span class="muted-dark" title="Keyboard help">Jump with <span class="kbd">Tab</span> • Copy previous day with <span class="kbd">⌘/Ctrl + D</span></span>
+            </div>
+
+            <form id="tsForm" class="day-list" autocomplete="off">
+              <div id="days"></div>
+              <div class="quickhelp" style="margin-top:6px">
+                <button type="button" class="btn" id="btnDraft">Save draft</button>
+                <button type="submit" class="btn success" id="btnSubmit">Submit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin:0 0 10px">Previous Weeks</h3>
+          <div id="history" class="history-list muted">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Profile -->
+    <div id="profilePane" class="card">
+      <div class="muted">Loading profile…</div>
     </div>
   </div>
-</div>
 
-<!-- Detail Modal -->
-<div id="tsModal" class="modal"><div class="box">
-  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-    <h3 style="margin:0">Timesheet details</h3>
-    <button class="btn" onclick="closeModal('tsModal')">Close</button>
-  </div>
-  <div id="tsModalBody" class="muted">Loading…</div>
-  <div class="row" style="margin-top:10px">
-    <button class="btn" id="btnEditSave">Save Edits</button>
-    <button class="btn success" id="btnApproveOne">Approve</button>
-    <button class="btn warn" id="btnRejectOne">Reject…</button>
-  </div>
-</div></div>
+  <!-- Toasts -->
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
-<!-- Create Modal -->
-<div id="createModal" class="modal"><div class="box">
-  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-    <h3 style="margin:0">Create timesheet on behalf</h3>
-    <button class="btn" onclick="closeModal('createModal')">Close</button>
-  </div>
-  <div class="row" style="gap:12px">
-    <select id="assignSelect" class="white" style="min-width:320px"></select>
-    <input id="createWeek" type="date" class="white"/>
-    <button class="btn primary" id="btnCreateDo">Create</button>
-  </div>
-  <div class="muted" style="margin-top:8px">Only active assignments are listed.</div>
-</div></div>
+  <script>
+    // ---------- helpers ----------
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const sel = s => document.querySelector(s);
+    const byName = (f, n) => f.elements.namedItem(n);
 
-<script>
-  const $ = (s)=>document.querySelector(s);
-  const api = async (path, method='GET', body=null)=>{
-    const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
-    const t = await u.jwt();
-    const r = await fetch(`/.netlify/functions${path}`,{
-      method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${t}`},
-      body: body?JSON.stringify(body):null
-    });
-    if(!r.ok) throw new Error(await r.text());
-    return r.json();
-  };
+    function toast(msg, type='ok', t=2800){
+      const box = document.createElement('div'); box.className = `toast ${type}`;
+      box.textContent = msg; sel('#toast').appendChild(box);
+      setTimeout(()=>box.remove(), t);
+    }
 
-  function closeModal(id){ document.getElementById(id).style.display='none'; }
-  function openModal(id){ document.getElementById(id).style.display='flex'; }
+    function fmt(n, d=2){ return (Number(n||0)).toFixed(d); }
 
-  let currentStatus = '';
-  let currentDetailId = null;
+    function nextTuesday1700(){
+      const now = new Date();
+      const t = new Date(now);
+      const diff = (2 - t.getDay() + 7) % 7; // 2 = Tuesday
+      t.setDate(t.getDate() + diff);
+      t.setHours(17,0,0,0);
+      if (t < now) t.setDate(t.getDate() + 7);
+      return t;
+    }
+    function startDeadlineClock(){
+      function tick(){
+        const to = nextTuesday1700() - new Date();
+        if (to <= 0){ sel('#deadlineClock').textContent = ' • Deadline passed'; return; }
+        const hrs = Math.floor(to/36e5), mins = Math.floor((to%36e5)/6e4);
+        sel('#deadlineClock').textContent = ` • ${hrs}h ${mins}m remaining`;
+      }
+      tick(); setInterval(tick, 30e3);
+      sel('#deadlineTag').textContent = 'Deadline: Tue 17:00';
+    }
 
-  async function loadClients(){
-    const list = await api('/admin-timesheets-clients');
-    $('#fltClient').innerHTML = `<option value="">All clients</option>` + list.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  }
-
-  function groupByWeek(rows){
-    const m = new Map();
-    rows.forEach(r=>{
-      const w = r.week_ending;
-      if(!m.has(w)) m.set(w, []);
-      m.get(w).push(r);
-    });
-    return m;
-  }
-
-  function renderTable(blocks){
-    const wrap = $('#tableWrap');
-    if (!blocks || !blocks.size) { wrap.innerHTML = `<div class="muted">No timesheets found.</div>`; return; }
-    let html = '';
-    [...blocks.keys()].sort((a,b)=>a<b?1:-1).forEach(week=>{
-      html += `<div class="week"><b>Week ending ${week}</b></div>`;
-      html += `<table class="grid white" style="margin-bottom:12px">
-        <thead><tr>
-          <th><input type="checkbox" class="chkAll" data-week="${week}"></th>
-          <th>Contractor</th><th>Client</th><th>Project</th>
-          <th class="right">Hours</th><th>Status</th><th>Actions</th>
-        </tr></thead><tbody>`;
-      blocks.get(week).forEach(r=>{
-        html += `<tr class="hover-row">
-          <td><input type="checkbox" class="rowchk" data-id="${r.id}"></td>
-          <td>${r.contractor_name}</td>
-          <td>${r.client_name}</td>
-          <td>${r.project_name}</td>
-          <td class="right">${r.total_hours}</td>
-          <td>${r.status}</td>
-          <td>
-            <button class="btn" data-act="open" data-id="${r.id}">View</button>
-            <button class="btn success" data-act="approve" data-id="${r.id}">Approve</button>
-            <button class="btn warn" data-act="reject" data-id="${r.id}">Reject</button>
-          </td>
-        </tr>`;
+    // ---------- API ----------
+    async function api(path, method='GET', body=null){
+      const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+      const token = await u.jwt();
+      const res = await fetch(`/.netlify/functions${path}`, {
+        method,
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body: body ? JSON.stringify(body) : null
       });
-      html += `</tbody></table>`;
-    });
-    wrap.innerHTML = html;
+      if(!res.ok){
+        let msg = await res.text();
+        try{ const j = JSON.parse(msg); msg = j.error || msg; }catch{}
+        throw new Error(msg || ('HTTP '+res.status));
+      }
+      return res.json();
+    }
 
-    wrap.onclick = async (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.dataset.id, act = btn.dataset.act;
-      if (act==='open'){ currentDetailId=id; openDetail(id); return; }
-      if (act==='approve'){ await api('/admin-timesheets-approve','POST',{id}); await refresh(); return; }
-      if (act==='reject'){ const reason = prompt('Reason (optional):',''); await api('/admin-timesheet-reject','POST',{id, reason}); await refresh(); return; }
-    };
-  }
-
-  async function refresh(){
-    const body = {
-      status: currentStatus,
-      client_id: $('#fltClient').value || null,
-      week: $('#fltWeek').value || null,
-      q: $('#fltQ').value || ''
-    };
-    const res = await api('/admin-timesheets-list','POST',body);
-    const rows = res.rows || [];
-
-    // counts for tabs
-    $('#countAll').textContent = res.count ?? rows.length;
-    $('#countSubmitted').textContent = rows.filter(r=>r.status==='submitted').length;
-    $('#countApproved').textContent = rows.filter(r=>r.status==='approved').length;
-    $('#countRejected').textContent = rows.filter(r=>r.status==='rejected').length;
-    $('#countDraft').textContent = rows.filter(r=>r.status==='draft').length;
-
-    renderTable(groupByWeek(rows));
-  }
-
-  async function openDetail(id){
-    $('#tsModalBody').textContent = 'Loading…'; openModal('tsModal');
-    const d = await api('/admin-timesheets-detail','POST',{id});
-    const order = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const rows = order.map(k=>{
-      const x = d.entries[k]||{std:0,ot:0,note:''};
-      return `<tr>
-        <td>${k}</td>
-        <td><input type="number" step="0.25" class="white" data-day="${k}" data-kind="std" value="${x.std}"/></td>
-        <td><input type="number" step="0.25" class="white" data-day="${k}" data-kind="ot"  value="${x.ot}"/></td>
-        <td><input type="text" class="white" data-day="${k}" data-kind="note" value="${x.note||''}"/></td>
-      </tr>`;
-    }).join('');
-    $('#tsModalBody').innerHTML = `
-      <div style="margin-bottom:10px"><strong>${d.contractor_name}</strong> — ${d.client_name} — ${d.project_name}<br>
-      Week ending ${d.week_ending} • Status: ${d.status}</div>
-      <table class="grid white">
-        <thead><tr><th>Day</th><th>Std</th><th>OT</th><th>Notes</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }
-
-  async function loadAudit(){
-    const list = await api('/admin-audit-list','POST',{limit:100});
-    $('#auditBox').innerHTML = list.map(a=>`${new Date(a.at).toLocaleString()}  ::  ${a.actor_email}  ::  ${a.action}  ::  ${a.target_type}#${a.target_id}`).join('\n');
-  }
-
-  async function boot(){
-    const user = netlifyIdentity?.currentUser();
-    const roles = user?.app_metadata?.roles || user?.roles || [];
-    if (!user || !roles.includes('admin')){ $('#gate').style.display='block'; return; }
-    $('#app').style.display='block';
-
-    await loadClients();
-    await refresh();
-    await loadAudit();
-
-    // events
-    $('#btnRefresh').onclick = refresh;
-    $('#btnReloadAudit').onclick = loadAudit;
-    document.querySelectorAll('#statusTabs .tab').forEach(t=>{
-      t.onclick = ()=>{ document.querySelectorAll('#statusTabs .tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); currentStatus=t.dataset.status||''; refresh(); };
-    });
-    $('#fltClient').onchange = refresh; $('#fltWeek').onchange = refresh;
-    $('#fltQ').oninput = () => { clearTimeout(window._deb); window._deb = setTimeout(refresh, 300); };
-
-    $('#btnBulkApprove').onclick = async ()=>{
-      const ids = [...document.querySelectorAll('.rowchk:checked')].map(x=>x.dataset.id);
-      if (!ids.length) return alert('Select rows first');
-      await api('/admin-timesheets-bulk-approve','POST',{ids});
-      await refresh(); await loadAudit();
-    };
-
-    $('#btnExport').onclick = async ()=>{
-      const q = { status: currentStatus, client_id: $('#fltClient').value || null, week: $('#fltWeek').value || null, q: $('#fltQ').value || '' };
-      const res = await api('/admin-timesheets-export','POST',q);
-      const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(res.csv);
-      a.download = `timesheets-${Date.now()}.csv`; a.click();
-    };
-
-    // Create on behalf: load active assignments
-    $('#btnCreate').onclick = async ()=>{
-      openModal('createModal');
-      // light query: active assignments with names (build a small view later if you want)
-      const { rows } = await api('/admin-timesheets-list','POST',{ status:'', limit:1 }); // poke token
-      // minimal fetch of active assignments for dropdown
-      const { data, error } = await supaAssignments(); // helper below using function endpoint
-      if (error) { alert(error); return; }
-      $('#assignSelect').innerHTML = data.map(a=>`<option value="${a.id}">${a.contractor_name} — ${a.client_name} — ${a.project_name}</option>`).join('');
-    };
-    $('#btnCreateDo').onclick = async ()=>{
-      const assignment_id = $('#assignSelect').value;
-      const week_ending = $('#createWeek').value;
-      if (!assignment_id || !week_ending) return alert('Select assignment and week');
-      await api('/admin-timesheets-create','POST',{ assignment_id, week_ending });
-      closeModal('createModal'); await refresh(); await loadAudit();
-    };
-
-    // Detail modal buttons
-    $('#btnApproveOne').onclick = async ()=>{ if(!currentDetailId) return; await api('/admin-timesheets-approve','POST',{id: currentDetailId}); closeModal('tsModal'); await refresh(); await loadAudit(); };
-    $('#btnRejectOne').onclick  = async ()=>{ if(!currentDetailId) return; const reason = prompt('Reason (optional)',''); await api('/admin-timesheet-reject','POST',{id: currentDetailId, reason}); closeModal('tsModal'); await refresh(); await loadAudit(); };
-    $('#btnEditSave').onclick   = async ()=>{
-      if(!currentDetailId) return;
-      const map = {}; document.querySelectorAll('#tsModalBody [data-day]').forEach(i=>{
-        const d = i.dataset.day, k = i.dataset.kind, v = k==='note' ? i.value : Number(i.value||0);
-        map[d] = map[d] || { std:0, ot:0, note:'' }; map[d][k] = v;
+    // ---------- Rendering ----------
+    function renderDays(existing, rates, readOnly){
+      const wrap = document.getElementById('days'); wrap.innerHTML = '';
+      const label = {Sun:'SUN',Mon:'MON',Tue:'TUE',Wed:'WED',Thu:'THU',Fri:'FRI',Sat:'SAT'};
+      DAYS.forEach((d, i)=>{
+        const e = existing?.[d] || {};
+        const card = document.createElement('div'); card.className = 'day-card';
+        const dis = readOnly ? 'disabled' : '';
+        const ro  = readOnly ? 'readonly'  : '';
+        card.innerHTML = `
+          <div class="day-badge"><span class="dn">${label[d]}</span></div>
+          <div class="day-fields">
+            <input ${ro} ${dis} aria-label="${d} standard hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_std" placeholder="Std hrs" value="${e.std ?? ''}">
+            <input ${ro} ${dis} aria-label="${d} overtime hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_ot"  placeholder="OT hrs"  value="${e.ot ?? ''}">
+            <input ${ro} ${dis} aria-label="${d} notes" type="text" name="${d}_note" placeholder="Notes (optional)" value="${e.note ?? ''}">
+            <div class="day-tools">
+              <button class="pill icon" type="button" title="Copy previous day" data-copy="${i-1}" ${dis}>⟲</button>
+              <button class="pill icon" type="button" title="Clear row" data-clear ${dis}>✕</button>
+            </div>
+          </div>`;
+        wrap.appendChild(card);
       });
-      await api('/admin-timesheets-edit','POST',{ id: currentDetailId, entries: map, keep_status: true });
-      closeModal('tsModal'); await refresh(); await loadAudit();
-    };
-  }
 
-  // helper to fetch active assignments for create-modal
-  async function supaAssignments(){
-    // lightweight query using the service-backed endpoint we already have (no new function needed here)
-    // we'll piggyback supabase via a small public RPC if you add later; for now, do a tiny join via CSV export then parse
-    // Simpler: return a minimal static set from admin list’s projects present this week (works to get you going)
-    const res = await api('/admin-timesheets-list','POST',{ limit: 1000 });
-    const uniq = {};
-    res.rows.forEach(r=>{
-      const key = `${r.contractor_name}|${r.client_name}|${r.project_name}|${r.assignment_id}`;
-      if (!uniq[key]) uniq[key] = { id: r.assignment_id, contractor_name:r.contractor_name, client_name:r.client_name, project_name:r.project_name };
+      if (readOnly) return;
+
+      // Row tools behavior (only in editable mode)
+      wrap.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button'); if(!btn) return;
+        const card = btn.closest('.day-card'); if(!card) return;
+        const idx = [...wrap.children].indexOf(card);
+        const f = document.getElementById('tsForm');
+
+        if (btn.dataset.copy){
+          const srcIdx = Number(btn.dataset.copy);
+          if (srcIdx >= 0){
+            const srcDay = DAYS[srcIdx], dstDay = DAYS[idx];
+            byName(f, `${dstDay}_std`).value = byName(f, `${srcDay}_std`).value;
+            byName(f, `${dstDay}_ot`).value  = byName(f, `${srcDay}_ot`).value;
+            byName(f, `${dstDay}_note`).value= byName(f, `${srcDay}_note`).value;
+            calcTotals(rates);
+          }
+        }
+        if (btn.hasAttribute('data-clear')){
+          const day = DAYS[idx];
+          byName(f, `${day}_std`).value = '';
+          byName(f, `${day}_ot`).value  = '';
+          byName(f, `${day}_note`).value= '';
+          calcTotals(rates);
+        }
+      }, { once:true });
+    }
+
+    function collect(status){
+      const f = document.getElementById('tsForm'); const entries = {};
+      DAYS.forEach(d=>{
+        entries[d] = {
+          std: parseFloat(byName(f,`${d}_std`).value || 0),
+          ot:  parseFloat(byName(f,`${d}_ot`).value  || 0),
+          note: byName(f,`${d}_note`).value || ''
+        };
+      });
+      return { status, entries };
+    }
+
+    function calcTotals(rates){
+      const f = document.getElementById('tsForm'); let std=0, ot=0;
+      DAYS.forEach(d=>{ std += Number(byName(f,`${d}_std`).value||0); ot += Number(byName(f,`${d}_ot`).value||0); });
+      const all = std+ot; const gross = (std*(rates?.rate_std||0)) + (ot*(rates?.rate_ot||0));
+      sel('#tStd').textContent = fmt(std,2); sel('#tOt').textContent = fmt(ot,2);
+      sel('#tAll').textContent = fmt(all,2); sel('#tGross').textContent = fmt(gross,2);
+    }
+
+    // ---------- Autosave ----------
+    const CACHE_KEY = 'hmj_ts_draft';
+    function loadDraft(){
+      try{ const j = JSON.parse(localStorage.getItem(CACHE_KEY)||''); return j||null; }catch{return null;}
+    }
+    function saveDraftLocal(payload){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(payload)); }catch{} }
+    function clearDraftLocal(){ try{ localStorage.removeItem(CACHE_KEY); }catch{} }
+
+    // ---------- History ----------
+    function renderHistory(list){
+      if (!list?.length){ sel('#history').textContent = 'No previous weeks.'; return; }
+
+      const visible = list.slice(0,3);
+      const hidden  = list.slice(3);
+
+      const row = (h) => `
+        <details class="history">
+          <summary><strong>${h.week_ending}</strong> — ${h.project_name} — ${h.total_hours}h — <em>${h.status}</em></summary>
+          <div class="muted">Client: ${h.client_name}${h.site_name?` — ${h.site_name}`:''}</div>
+        </details>`;
+
+      let html = visible.map(row).join('');
+      if (hidden.length){
+        html += `<details class="history">
+          <summary>Show ${hidden.length} more…</summary>
+          <div class="history-list" style="margin-top:8px">${hidden.map(row).join('')}</div>
+        </details>`;
+      }
+      sel('#history').innerHTML = html;
+    }
+
+    // ---------- Boot ----------
+    async function boot(){
+      const user = netlifyIdentity?.currentUser();
+      if(!user){ sel('#gate').style.display='block'; return; }
+
+      sel('#btnSignOut').onclick = ()=>{ netlifyIdentity?.logout(); };
+
+      sel('#app').style.display='block';
+      startDeadlineClock();
+
+      // Profile pane (contractor + assignment)
+      try{
+        const prof = await api('/contractor-profile');
+        const c = prof.contractor, a = prof.assignment;
+        sel('#profilePane').innerHTML = a ? `
+          <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
+          <div style="height:1px;background:var(--border);margin:10px 0"></div>
+          <div class="kv"><div>Client</div><div>${a.client_name}</div></div>
+          <div class="kv"><div>Project</div><div>${a.project_name}</div></div>
+          <div class="kv"><div>Site</div><div>${a.site_name || '—'}</div></div>
+          <div class="kv"><div>Rate</div><div>£${a.rate_std}/h ${a.rate_ot?`(OT £${a.rate_ot}/h)`:''}</div></div>
+          <div style="height:1px;background:var(--border);margin:10px 0"></div>
+          <div class="muted">Need help? Email <a href="mailto:info@hmj-global.com">info@hmj-global.com</a></div>
+        ` : `<div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
+             <div style="height:1px;background:var(--border);margin:10px 0"></div><div class="muted">No active assignment.</div>`;
+      }catch(e){
+        sel('#profilePane').innerHTML = `<div class="muted">Profile unavailable</div>`;
+      }
+
+      // Load/ensure this week's timesheet
+      let data;
+      try{
+        data = await api('/timesheets-get-this-week');
+      }catch(e){
+        toast('Failed to load timesheet: '+e.message,'err',5000);
+        sel('#summary').textContent = 'Could not load timesheet.';
+        return;
+      }
+
+      sel('#summary').innerHTML =
+        `<strong>${data.contractor.name}</strong> — ${data.assignment.project_name} @ ${data.assignment.client_name}
+         <br><span class="muted">Rate: £${data.assignment.rate_std}/h ${data.assignment.rate_ot?`(OT £${data.assignment.rate_ot}/h)`:''}</span>`;
+
+      sel('#weekMeta').textContent = `Week ending ${data.week_ending} • Status: ${data.status}`;
+
+      // Merge server data with any local draft (same week only) — only if editable
+      const editable = !['submitted','approved','rejected'].includes(String(data.status||'').toLowerCase());
+      const draft = loadDraft();
+      const sameWeek = draft && draft.week_ending === data.week_ending;
+      const mergedEntries = editable && sameWeek ? Object.assign({}, data.entries, draft.entries || {}) : data.entries;
+
+      renderDays(mergedEntries, data.assignment, !editable);
+      calcTotals(data.assignment);
+
+      // Toggle button availability by status
+      sel('#btnDraft').disabled  = !editable;
+      sel('#btnSubmit').disabled = !editable;
+
+      // Live recalc + autosave only if editable
+      if (editable){
+        sel('#tsForm').addEventListener('input', ()=>{
+          calcTotals(data.assignment);
+          saveDraftLocal({ week_ending: data.week_ending, entries: collect('draft').entries });
+          window.onbeforeunload = ()=>'You have unsaved changes.';
+        });
+
+        // Quick fill tools
+        sel('#qMonFri8').onclick = ()=>{
+          const f = sel('#tsForm');
+          ['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{ byName(f,`${d}_std`).value = '8'; byName(f,`${d}_ot`).value='0'; });
+          calcTotals(data.assignment);
+        };
+        sel('#qClear').onclick = ()=>{
+          const f = sel('#tsForm');
+          DAYS.forEach(d=>{ byName(f,`${d}_std`).value=''; byName(f,`${d}_ot`).value=''; byName(f,`${d}_note`).value=''; });
+          calcTotals(data.assignment);
+        };
+        sel('#qSetAll').onclick = ()=>{
+          const h = prompt('Set standard hours for all days (e.g. 8, 7.5, 0):','8');
+          if (h==null) return;
+          const f = sel('#tsForm'); DAYS.forEach(d=>{ byName(f,`${d}_std`).value = h; });
+          calcTotals(data.assignment);
+        };
+
+        // Copy previous day shortcut
+        document.addEventListener('keydown',(e)=>{
+          if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='d'){
+            e.preventDefault();
+            const active = document.activeElement;
+            const name = active?.name||'';
+            const match = name.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)_(std|ot|note)$/);
+            if(!match) return;
+            const day = match[1], idx = DAYS.indexOf(day);
+            if(idx<=0) return;
+            const prev = DAYS[idx-1], f = sel('#tsForm');
+            byName(f,`${day}_std`).value = byName(f,`${prev}_std`).value;
+            byName(f,`${day}_ot`).value  = byName(f,`${prev}_ot`).value;
+            byName(f,`${day}_note`).value= byName(f,`${prev}_note`).value;
+            calcTotals(data.assignment);
+          }
+        });
+
+        // Save & Submit
+        sel('#btnDraft').onclick = async ()=>{
+          try{
+            const payload = collect('draft');
+            await api('/timesheets-save','POST',payload);
+            clearDraftLocal(); window.onbeforeunload=null;
+            toast('Draft saved');
+          }catch(e){ toast('Save failed: '+e.message,'err',5000); }
+        };
+
+        sel('#tsForm').onsubmit = async (e)=>{
+          e.preventDefault();
+          try{
+            const payload = collect('submitted');
+            await api('/timesheets-submit','POST',payload);
+            clearDraftLocal(); window.onbeforeunload=null;
+            toast('Submitted — thank you!', 'ok', 3000);
+            setTimeout(()=>location.reload(), 600);
+          }catch(e){ toast('Submit failed: '+e.message,'err',6000); }
+        };
+      } else {
+        // Read-only: hide quick-fill buttons tooltips, disable form submission
+        sel('#tsForm').onsubmit = (e)=>{ e.preventDefault(); return false; };
+        sel('#qMonFri8').disabled = sel('#qClear').disabled = sel('#qSetAll').disabled = true;
+        sel('#qMonFri8').classList.add('muted-dark'); sel('#qClear').classList.add('muted-dark'); sel('#qSetAll').classList.add('muted-dark');
+      }
+
+      // History
+      try{
+        const hist = await api('/timesheets-history');
+        renderHistory(hist);
+      }catch{
+        sel('#history').textContent = 'History unavailable.';
+      }
+    }
+
+    // ---------- Gate & init ----------
+    document.addEventListener('DOMContentLoaded', ()=>{
+      netlifyIdentity?.on('init', ()=>{ netlifyIdentity.currentUser() ? boot() : sel('#gate').style.display='block'; });
+      netlifyIdentity?.on('login', ()=>location.reload());
+      netlifyIdentity?.on('logout', ()=>location.href='/');
+      // Fallback if init is slow
+      setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else sel('#gate').style.display='block'; }, 600);
     });
-    return { data: Object.values(uniq) };
-  }
-
-  document.addEventListener('DOMContentLoaded', ()=>{
-    netlifyIdentity?.on('init', boot);
-    netlifyIdentity?.on('login', ()=>location.reload());
-    netlifyIdentity?.on('logout', ()=>location.href='/admin/');
-    setTimeout(()=>{ netlifyIdentity?.currentUser()? boot() : $('#gate').style.display='block'; }, 500);
-  });
-</script>
+  </script>
 </body>
 </html>
