@@ -1,44 +1,50 @@
-// netlify/functions/contractor-profile.js
-const { supabase } = require('./_supabase');
+const { supabaseClient } = require('./_supabase');
 const { getUser } = require('./_auth');
 
-exports.handler = async (_event, context) => {
+exports.handler = async (event, context) => {
   try {
-    // Require a logged-in Netlify Identity user
-    const user = getUser(context);
-    if (!user?.email) return { statusCode: 401, body: 'Unauthorized' };
+    const user = getUser(context);                   // Netlify Identity user
+    const email = (user.email || '').toLowerCase();
 
-    const email = String(user.email).toLowerCase();
+    const supabase = await supabaseClient();
 
-    // Find contractor by email (case-insensitive, tolerate accidental duplicates)
+    // Look up contractor by login email
     const { data: contractor, error: cErr } = await supabase
       .from('contractors')
       .select('id,name,email,phone,payroll_ref')
-      .ilike('email', email)              // ← case-insensitive match
-      .order('id', { ascending: true })
-      .limit(1)
+      .eq('email', email)
       .maybeSingle();
 
-    if (cErr) return { statusCode: 500, body: cErr.message };
-    if (!contractor) return { statusCode: 404, body: 'Contractor not found' };
+    if (cErr) {
+      console.error('contractor query error:', cErr);
+      return { statusCode: 500, body: 'DB error (contractors)' };
+    }
+    if (!contractor) {
+      return { statusCode: 404, body: 'Contractor not found' };
+    }
 
-    // Try to fetch active assignment (may be null if not yet set up)
+    // Active assignment from the view we created
     const { data: assignment, error: aErr } = await supabase
       .from('assignment_summary')
       .select('*')
       .eq('contractor_id', contractor.id)
       .eq('active', true)
-      .order('id', { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    if (aErr) return { statusCode: 500, body: aErr.message };
+    if (aErr) {
+      console.error('assignment_summary error:', aErr);
+      return { statusCode: 500, body: 'DB error (assignment_summary)' };
+    }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ contractor, assignment: assignment || null })
+      body: JSON.stringify({ contractor, assignment })
     };
   } catch (e) {
-    return { statusCode: 401, body: e?.message || 'Unauthorized' };
+    console.error('contractor-profile exception:', e);
+    const msg = e && e.message ? e.message : 'Unauthorized';
+    const code = msg === 'Unauthorized' ? 401 : 500;
+    return { statusCode: code, body: msg };
   }
 };

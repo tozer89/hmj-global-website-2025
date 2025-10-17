@@ -1,27 +1,73 @@
 // netlify/functions/timesheets-save.js
-const { supabase, weekEndingSaturdayISO, getContext, ensureTimesheet } = require('./_timesheet-helpers');
+const { weekEndingSaturdayISO, getContext, ensureTimesheet } = require('./_timesheet-helpers');
+
+const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
+
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const isDay = d => DAYS.includes(d);
+
+async function upsertEntry(supabase, tsId, day, row) {
+  // Try RPC first (if function exists), then fall back to table upsert
+  const payload = {
+    p_timesheet_id: tsId,
+    p_day: day,
+    p_std: Number(row.std || 0),
+    p_ot: Number(row.ot || 0),
+    p_note: row.note || ''
+  };
+
+  // 1) RPC
+  try {
+    const { error } = await supabase.rpc('upsert_timesheet_entry', payload);
+    if (!error) return;
+    // If function exists but fails for other reason, throw:
+    throw error;
+  } catch (rpcErr) {
+    // 2) Fallback: direct upsert
+    const { error: upErr } = await supabase
+      .from('timesheet_entries')
+      .upsert({
+        timesheet_id: tsId,
+        day,
+        hours_std: payload.p_std,
+        hours_ot: payload.p_ot,
+        note: payload.p_note
+      }, { onConflict: 'timesheet_id,day' }); // requires unique(timesheet_id, day)
+
+    if (upErr) throw upErr;
+  }
+}
 
 exports.handler = async (event, context) => {
   try {
-    const body = JSON.parse(event.body || '{}');
-    const entries = body.entries || {};
+    if (event.httpMethod !== 'POST') return respond(405, { error: 'Method Not Allowed' });
 
-    const { assignment } = await getContext(context);
-    const week_ending = weekEndingSaturdayISO();
-    const ts = await ensureTimesheet(assignment.id, week_ending);
-
-    for (const d of DAYS) {
-      const row = entries[d] || {};
-      const { error } = await supabase.rpc('upsert_timesheet_entry', {
-        p_timesheet_id: ts.id,
-        p_day: d,
-        p_std: Number(row.std || 0),
-        p_ot: Number(row.ot || 0),
-        p_note: row.note || ''
-      });
-      if (error) throw error;
+    let body;
+    try {
+      body = JSON.parse(event.body || '{}');
+    } catch {
+      return respond(400, { error: 'Invalid JSON' });
     }
+
+    const entries = body.entries && typeof body.entries === 'object' ? body.entries : {};
+    const { supabase, assignment } = await getContext(context);
+
+    const week_ending = weekEndingSaturdayISO();
+    const ts = await ensureTimesheet(supabase, assignment.id, week_ending);
+
+    // Validate keys and coerce numbers
+    const tasks = [];
+    for (const [day, row] of Object.entries(entries)) {
+      if (!isDay(day)) continue;
+      const safe = {
+        std: Math.max(0, Number(row?.std || 0)),
+        ot:  Math.max(0, Number(row?.ot  || 0)),
+        note: (row?.note || '').toString().slice(0, 500)
+      };
+      tasks.push(upsertEntry(supabase, ts.id, day, safe));
+    }
+    await Promise.all(tasks);
 
     const upd = await supabase
       .from('timesheets')
@@ -29,10 +75,17 @@ exports.handler = async (event, context) => {
       .eq('id', ts.id)
       .select('id,status')
       .single();
-    if (upd.error) throw upd.error;
 
-    return { statusCode: 200, body: JSON.stringify({ ok: true, status: upd.data.status }) };
+    if (upd.error) {
+      console.error('timesheet status update error:', upd.error);
+      return respond(500, { error: 'Database error (timesheets update)' });
+    }
+
+    return respond(200, { ok: true, status: upd.data.status });
   } catch (e) {
-    return { statusCode: 400, body: e.message || 'Failed to save draft' };
+    const msg = e && e.message ? e.message : 'Failed to save draft';
+    const code = msg === 'Unauthorized' ? 401 : 400;
+    console.error('timesheets-save exception:', e);
+    return respond(code, { error: msg });
   }
 };
