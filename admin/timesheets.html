@@ -21,6 +21,8 @@
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
+
+
   <div class="wrap">
     <div class="card">
       <div class="row" style="justify-content:space-between">
@@ -34,6 +36,16 @@
         </div>
       </div>
     </div>
+  <div id="tsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#0f1c2b; border:1px solid #203042; color:#e6edf6; width:min(720px,94vw); border-radius:14px; padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0">Timesheet details</h3>
+      <button class="btn" onclick="document.getElementById('tsModal').style.display='none'">Close</button>
+    </div>
+    <div id="tsModalBody" class="muted">Loading…</div>
+  </div>
+</div>
+
 
     <!-- Gate -->
     <div id="gate" class="card" style="display:none">
@@ -109,9 +121,11 @@
                   <td>${r.total_hours}</td>
                   <td>${r.status}</td>
                   <td>
+                    <button class="btn" data-act="open"    data-id="${r.id}">View</button>
                     <button class="btn" data-act="approve" data-id="${r.id}">Approve</button>
                     <button class="btn" data-act="reject"  data-id="${r.id}">Reject</button>
                   </td>
+
                 </tr>`).join('')}
             </tbody>
           </table>`;
@@ -126,6 +140,28 @@
           const id = btn.dataset.id, act = btn.dataset.act;
           if (act==='approve') await api('/admin-timesheets-approve','POST',{id});
           if (act==='reject')  await api('/admin-timesheets-reject','POST',{id});
+          if (act==='open') {
+            const m = document.getElementById('tsModal');
+            const body = document.getElementById('tsModalBody');
+            m.style.display = 'flex';
+            body.textContent = 'Loading…';
+            const d = await api('/admin-timesheets-detail','POST',{id});
+            const order = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            body.innerHTML = `
+              <div style="margin-bottom:10px"><strong>${d.contractor_name}</strong> — ${d.client_name} — ${d.project_name}<br>
+              Week ending ${d.week_ending} • Status: ${d.status}</div>
+              <table class="grid">
+                <thead><tr><th>Day</th><th>Std</th><th>OT</th><th>Notes</th></tr></thead>
+                <tbody>
+                  ${order.map(k=>{
+                    const x = d.entries[k]||{std:0,ot:0,note:''};
+                    return `<tr><td>${k}</td><td>${x.std||0}</td><td>${x.ot||0}</td><td>${(x.note||'')}</td></tr>`;
+                  }).join('')}
+                </tbody>
+              </table>`;
+            return;
+          }
+
           await load();
         };
       }

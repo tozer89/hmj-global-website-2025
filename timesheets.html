@@ -6,6 +6,13 @@
   <title>Timesheets | HMJ-Global</title>
   <link rel="stylesheet" href="/css/style.css" />
   <style>
+    .day-card{display:flex;align-items:center;gap:12px;background:#0f172a;border:1px solid #2b3c55;border-radius:12px;padding:10px 12px;margin-bottom:10px}
+    .day-badge{min-width:54px;text-align:center;background:#0b1420;border:1px solid #2b3c55;border-radius:10px;padding:8px 6px;font-weight:800;line-height:1}
+    .day-badge .dn{display:block;font-size:.72rem;opacity:.7;letter-spacing:.6px}
+    .day-fields{flex:1;display:grid;grid-template-columns:130px 130px 1fr;gap:8px}
+    .day-fields input[type="number"], .day-fields input[type="text"]{width:100%}
+    @media (max-width:700px){ .day-fields{grid-template-columns:1fr 1fr; grid-auto-rows:auto} .day-fields input[type="text"]{grid-column:1 / -1} }
+
     :root{ --ink:#e6edf6; --muted:#9fb3c8; --bg:#0b1420; --panel:#0f1c2b; --border:#203042; }
     body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
     .wrap{max-width:1000px;margin:34px auto;padding:0 16px}
@@ -42,16 +49,14 @@
         <h2 style="margin:0 0 8px">This Week</h2>
         <div id="weekMeta" class="muted" style="margin-bottom:8px"></div>
 
-        <form id="tsForm">
-          <table class="grid">
-            <thead><tr><th>Day</th><th>Std hrs</th><th>OT hrs</th><th>Notes</th></tr></thead>
-            <tbody id="days"></tbody>
-          </table>
-          <div class="row" style="margin-top:12px">
-            <button type="button" class="btn" id="btnDraft">Save draft</button>
-            <button type="submit" class="btn">Submit</button>
-          </div>
+        <form id="tsForm" class="day-list">
+            <div id="days"></div>
+            <div class="row" style="margin-top:12px">
+                <button type="button" class="btn" id="btnDraft">Save draft</button>
+                <button type="submit" class="btn">Submit</button>
+            </div>
         </form>
+
       </div>
 
       <div class="card">
@@ -62,7 +67,7 @@
   </div>
 
   <script>
-    const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
     function showGate(){ document.getElementById('gate').style.display='block'; }
     function showApp(){ document.getElementById('app').style.display='block'; }
@@ -80,16 +85,19 @@
     }
 
     function renderDays(existing){
-      const tb = document.getElementById('days'); tb.innerHTML='';
+      const wrap = document.getElementById('days'); wrap.innerHTML = '';
+      const label = {Sun:'SUN',Mon:'MON',Tue:'TUE',Wed:'WED',Thu:'THU',Fri:'FRI',Sat:'SAT'};
       DAYS.forEach(d=>{
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${d}</td>
-          <td><input type="number" min="0" step="0.25" name="${d}_std" value="${existing?.[d]?.std ?? ''}"></td>
-          <td><input type="number" min="0" step="0.25" name="${d}_ot"  value="${existing?.[d]?.ot ?? ''}"></td>
-          <td><input type="text" name="${d}_note" value="${existing?.[d]?.note ?? ''}"></td>`;
-        tb.appendChild(row);
-      });
+        const card = document.createElement('div'); card.className = 'day-card';
+        card.innerHTML = `
+        <div class="day-badge"><span class="dn">${label[d]}</span></div>
+        <div class="day-fields">
+            <input type="number" min="0" step="0.25" name="${d}_std" placeholder="Std hrs" value="${existing?.[d]?.std ?? ''}">
+            <input type="number" min="0" step="0.25" name="${d}_ot"  placeholder="OT hrs"  value="${existing?.[d]?.ot ?? ''}">
+            <input type="text" name="${d}_note" placeholder="Notes (optional)" value="${existing?.[d]?.note ?? ''}">
+        </div>`;
+        wrap.appendChild(card);
+    });
     }
 
     function collect(status){
