@@ -1,25 +1,35 @@
-exports.handler = async (event) => {
-  const { id } = JSON.parse(event.body || "{}");
-  if (!id) return { statusCode: 400, body: "Missing id" };
+// netlify/functions/admin-timesheets-detail.js
+const { supabase, getContext } = require('./_timesheet-helpers');
 
-  // Demo payload; replace with DB lookup later
-  const demo = {
-    id,
-    contractor_name: id === "ts_1001" ? "Lee Guerin" : "Noel Colman",
-    client_name: id === "ts_1001" ? "Smith & Nephew" : "Acme Data Centre",
-    project_name: id === "ts_1001" ? "Hull Pharma Fitout" : "Eemshaven DC",
-    week_ending: "2025-10-19",
-    status: id === "ts_1001" ? "submitted" : "draft",
-    entries: {
-      Sun:{std:0,ot:0,note:""},
-      Mon:{std:9.5,ot:0,note:""},
-      Tue:{std:9.5,ot:0,note:""},
-      Wed:{std:9.5,ot:0,note:""},
-      Thu:{std:9.5,ot:0,note:""},
-      Fri:{std:9.5,ot:0,note:""},
-      Sat:{std:6,ot:0,note:""}
-    }
-  };
+exports.handler = async (event, context) => {
+  try {
+    const { user } = await getContext(context);
+    const roles = user?.app_metadata?.roles || user?.roles || [];
+    if (!roles.includes('admin')) throw Object.assign(new Error('Forbidden'), { code: 401 });
 
-  return { statusCode: 200, body: JSON.stringify(demo) };
+    const { id } = JSON.parse(event.body || '{}');
+    if (!id) throw new Error('Missing id');
+
+    // header info
+    const { data: head, error: hErr } = await supabase
+      .from('v_timesheets_admin')
+      .select('*').eq('id', id).single();
+    if (hErr) throw hErr;
+
+    // entries
+    const { data: rows, error: eErr } = await supabase
+      .from('timesheet_entries')
+      .select('day,hours_std,hours_ot,note')
+      .eq('timesheet_id', id);
+    if (eErr) throw eErr;
+
+    const order = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const map = {}; order.forEach(k => map[k] = { std:0, ot:0, note:'' });
+    (rows || []).forEach(r => { map[r.day] = { std: Number(r.hours_std||0), ot: Number(r.hours_ot||0), note: r.note||'' }; });
+
+    return { statusCode: 200, body: JSON.stringify({ ...head, entries: map }) };
+  } catch (e) {
+    const status = e.code === 401 ? 401 : 500;
+    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
+  }
 };
