@@ -1,15 +1,14 @@
-// netlify/functions/whoami.js
+// Simple echo of what Netlify thinks you are
 exports.handler = async (event, context) => {
-  const id = context.clientContext && context.clientContext.identity;
-  if (!id) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
-
+  const user = context.clientContext && context.clientContext.user;
   return {
     statusCode: 200,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      ok: true,
-      user: id.user,    // contains your email etc.
-      claims: id.token, // raw JWT claims
-    }),
+      hasUser: !!user,
+      user: user || null,
+      // show what headers we received (helps debugging)
+      receivedAuthHeader: event.headers?.authorization || null,
+    }, null, 2),
   };
 };
