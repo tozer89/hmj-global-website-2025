@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Timesheets | HMJ-Global</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    :root{ --ink:#e6edf6; --muted:#9fb3c8; --bg:#0b1420; --panel:#0f1c2b; --border:#203042; }
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{max-width:1000px;margin:34px auto;padding:0 16px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+    .muted{color:var(--muted)}
+    table.grid{width:100%;border-collapse:collapse}
+    table.grid th,table.grid td{border-bottom:1px solid var(--border);padding:10px;text-align:left}
+    input[type="number"],input[type="text"]{width:100%;background:#0f172a;color:#e6edf6;border:1px solid #2b3c55;border-radius:8px;padding:8px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{background:#1a2740;border:1px solid #2b3c55;color:#fff;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+    .btn:hover{border-color:#3b5172}
+  </style>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 style="margin:0 0 6px">My Timesheet</h1>
+      <div class="muted">Submit your hours by Tuesday 17:00 for Friday payment.</div>
+    </div>
+
+    <!-- Gate (not logged in) -->
+    <div id="gate" class="card" style="display:none">
+      <p>Please log in to access your timesheets.</p>
+      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+      <div class="muted" style="margin-top:8px">After login you will be redirected here automatically.</div>
+    </div>
+
+    <!-- App -->
+    <div id="app" style="display:none">
+      <div id="summary" class="card">Loading…</div>
+
+      <div class="card">
+        <h2 style="margin:0 0 8px">This Week</h2>
+        <div id="weekMeta" class="muted" style="margin-bottom:8px"></div>
+
+        <form id="tsForm">
+          <table class="grid">
+            <thead><tr><th>Day</th><th>Std hrs</th><th>OT hrs</th><th>Notes</th></tr></thead>
+            <tbody id="days"></tbody>
+          </table>
+          <div class="row" style="margin-top:12px">
+            <button type="button" class="btn" id="btnDraft">Save draft</button>
+            <button type="submit" class="btn">Submit</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">Previous Weeks</h3>
+        <div id="history" class="muted">—</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    function showGate(){ document.getElementById('gate').style.display='block'; }
+    function showApp(){ document.getElementById('app').style.display='block'; }
+
+    async function api(path, method='GET', body=null){
+      const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+      const token = await u.jwt();
+      const res = await fetch(`/.netlify/functions${path}`, {
+        method,
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body: body ? JSON.stringify(body) : null
+      });
+      if(!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    function renderDays(existing){
+      const tb = document.getElementById('days'); tb.innerHTML='';
+      DAYS.forEach(d=>{
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${d}</td>
+          <td><input type="number" min="0" step="0.25" name="${d}_std" value="${existing?.[d]?.std ?? ''}"></td>
+          <td><input type="number" min="0" step="0.25" name="${d}_ot"  value="${existing?.[d]?.ot ?? ''}"></td>
+          <td><input type="text" name="${d}_note" value="${existing?.[d]?.note ?? ''}"></td>`;
+        tb.appendChild(row);
+      });
+    }
+
+    function collect(status){
+      const f = document.getElementById('tsForm'); const entries = {};
+      DAYS.forEach(d=>{
+        entries[d] = {
+          std: parseFloat(f[`${d}_std`].value || 0),
+          ot:  parseFloat(f[`${d}_ot`].value  || 0),
+          note: f[`${d}_note`].value || ''
+        };
+      });
+      return { status, entries };
+    }
+
+    async function boot(){
+      const user = netlifyIdentity?.currentUser();
+      if(!user){ showGate(); return; }
+
+      showApp();
+
+      // load/ensure this week's timesheet
+      const data = await api('/timesheets-get-this-week');
+      document.getElementById('summary').innerHTML =
+        `<strong>${data.contractor.name}</strong> — ${data.assignment.project_name} @ ${data.assignment.client_name}
+         <br><span class="muted">Rate: £${data.assignment.rate_std}/h (OT £${data.assignment.rate_ot}/h)</span>`;
+      document.getElementById('weekMeta').textContent = `Week ending ${data.week_ending} • Status: ${data.status}`;
+      renderDays(data.entries);
+
+      document.getElementById('btnDraft').onclick = async ()=>{
+        await api('/timesheets-save','POST',collect('draft'));
+        alert('Draft saved');
+      };
+      document.getElementById('tsForm').onsubmit = async (e)=>{
+        e.preventDefault();
+        await api('/timesheets-submit','POST',collect('submitted'));
+        alert('Submitted — thank you!');
+        location.reload();
+      };
+
+      // history
+      const hist = await api('/timesheets-history');
+      document.getElementById('history').innerHTML = hist.length
+        ? hist.map(h=>`${h.week_ending} — ${h.project_name} — ${h.total_hours}h — ${h.status}`).join('<br>')
+        : 'No previous weeks.';
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      netlifyIdentity?.on('init', ()=>{ netlifyIdentity.currentUser() ? boot() : showGate(); });
+      netlifyIdentity?.on('login', ()=>location.reload());
+      netlifyIdentity?.on('logout', ()=>location.href='/');
+      // Fallback if init is slow
+      setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else showGate(); }, 500);
+    });
+  </script>
+</body>
+</html>

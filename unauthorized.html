@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Unauthorized | HMJ Global</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    :root{ --bg:#0b1420; --panel:#0f1c2b; --border:#203042; --text:#e6edf6; --muted:#9fb3c8; --blue:#4c7fff; }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{min-height:100%;display:grid;place-items:center;padding:24px}
+    .card{max-width:520px;width:100%;background:var(--panel);border:1px solid var(--border);
+      border-radius:14px;padding:22px}
+    h1{margin:0 0 6px}
+    p{color:var(--muted);margin:0 0 14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{background:#1a2740;border:1px solid #2b3c55;color:#fff;padding:10px 14px;border-radius:10px;
+      font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+    .btn:hover{border-color:#3b5172}
+    .link{color:var(--blue);text-decoration:none}
+  </style>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Unauthorized</h1>
+      <p>You don’t have permission to view this page. If you’re an HMJ admin, please log in with an admin account.</p>
+      <div class="row">
+        <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+        <a class="btn" href="/">Go to homepage</a>
+        <a class="link" href="/admin/">Open CMS</a>
+      </div>
+      <p style="margin-top:14px">Need access? Ask an administrator to add the <code>admin</code> role to your user in Netlify Identity.</p>
+    </div>
+  </div>
+  <script>
+    // If a user logs in and has access, send them to the admin console
+    document.addEventListener('DOMContentLoaded',()=>{
+      netlifyIdentity?.on('login', ()=> { window.location.href = '/admin/timesheets.html'; });
+    });
+  </script>
+</body>
+</html>
