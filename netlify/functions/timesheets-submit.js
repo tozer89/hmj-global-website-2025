@@ -78,9 +78,14 @@ exports.handler = async (event, context) => {
 
     return respond(200, { ok: true, status: upd.data.status, submitted_at: upd.data.submitted_at });
   } catch (e) {
-    const msg = e && e.message ? e.message : 'Failed to submit';
-    const code = msg === 'Unauthorized' ? 401 : 400;
-    console.error('timesheets-submit exception:', e);
-    return respond(code, { error: msg });
-  }
+  const status =
+    e.code === 401 ? 401 :
+    e.code === 404 ? 404 : 500;
+
+  return {
+    statusCode: status,
+    body: JSON.stringify({ error: e.message || 'Failed to submit' })
+  };
+}
+
 };
