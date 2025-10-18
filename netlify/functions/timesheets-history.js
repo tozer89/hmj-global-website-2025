@@ -1,9 +1,13 @@
 // netlify/functions/timesheets-history.js
 const { supabase, getContext } = require('./_timesheet-helpers');
 
+const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
+
 exports.handler = async (event, context) => {
   try {
     const { assignment } = await getContext(context);
+    if (!assignment?.id) return respond(404, { error: 'no_active_assignment' });
 
     const { data: list, error } = await supabase
       .from('timesheets')
@@ -11,26 +15,31 @@ exports.handler = async (event, context) => {
       .eq('assignment_id', assignment.id)
       .order('week_ending', { ascending: false })
       .limit(10);
+
     if (error) throw error;
 
-    const out = [];
+    const items = [];
     for (const ts of (list || [])) {
       const { data: rows, error: e2 } = await supabase
         .from('timesheet_entries')
         .select('hours_std,hours_ot')
         .eq('timesheet_id', ts.id);
       if (e2) throw e2;
-      const total = (rows || []).reduce((a, r) => a + Number(r.hours_std || 0) + Number(r.hours_ot || 0), 0);
-      out.push({
+
+      const std = (rows || []).reduce((a, r) => a + Number(r.hours_std || 0), 0);
+      const ot  = (rows || []).reduce((a, r) => a + Number(r.hours_ot  || 0), 0);
+
+      items.push({
         week_ending: ts.week_ending,
-        project_name: assignment.project_name,
-        total_hours: total,
-        status: ts.status
+        status: ts.status,
+        std, ot,
+        project_name: assignment.project_name
       });
     }
 
-    return { statusCode: 200, body: JSON.stringify(out) };
+    return respond(200, { items });
   } catch (e) {
-    return { statusCode: 400, body: e.message || 'Failed to load history' };
+    console.error('[history] exception:', e);
+    return respond(400, { error: e.message || 'history_failed' });
   }
 };

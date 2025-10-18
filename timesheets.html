@@ -32,18 +32,6 @@
     .toprow{ max-width:1080px; margin:0 auto; display:flex; gap:12px; align-items:center; }
     .brand{ color:#d9e2ff; font-weight:700; letter-spacing:.2px }
     .spacer{ flex:1 }
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:9px 12px; border-radius:10px; border:1px solid var(--cardBorder);
-      background:#fff; color:var(--ink); cursor:pointer; text-decoration:none; font-weight:600
-    }
-    .btn:hover{ filter:brightness(.98) }
-    .btn.primary{ background:var(--accent); color:#fff; border-color:rgba(0,0,0,.0) }
-    .btn.ghost{ background:var(--surface) }
-    .btn.good{ background:var(--good); color:#fff; border:0 }
-    .btn.warn{ background:var(--warn); color:#1a1600; border:0 }
-    .btn.bad{ background:var(--bad); color:#fff; border:0 }
-    .btn.sm{ padding:7px 10px; font-weight:600 }
 
     .wrap{ max-width:1080px; margin:0 auto 64px; padding:0 16px; }
     .grid{ display:grid; grid-template-columns: 1fr 320px; gap:18px; }
@@ -65,9 +53,23 @@
     }
     .panel-dark .inner{ background:var(--card); color:var(--ink); border-radius:12px; padding:12px; }
 
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:9px 12px; border-radius:10px; border:1px solid var(--cardBorder);
+      background:#fff; color:var(--ink); cursor:pointer; text-decoration:none; font-weight:600
+    }
+    .btn:hover{ filter:brightness(.98) }
+    .btn.primary{ background:var(--accent); color:#fff; border-color:transparent }
+    .btn.ghost{ background:var(--surface) }
+    .btn.good{ background:var(--good); color:#fff; border:0 }
+    .btn.warn{ background:var(--warn); color:#1a1600; border:0 }
+    .btn.bad{ background:var(--bad); color:#fff; border:0 }
+    .btn.sm{ padding:7px 10px; font-weight:600 }
+
     .muted{ color:var(--muted) }
     .kpis{ display:flex; gap:8px; flex-wrap:wrap }
     .chip{ background:var(--chip); border:1px solid var(--chipBorder); color:#223259; padding:6px 10px; border-radius:999px; font-weight:700 }
+    .section-gap{ margin-top:12px }
 
     .bubble{
       background:var(--card);
@@ -81,15 +83,18 @@
     td{ background:#fff; border:1px solid var(--cardBorder); padding:8px 10px; vertical-align:middle; }
     td:first-child{ border-top-left-radius:10px; border-bottom-left-radius:10px; }
     td:last-child{ border-top-right-radius:10px; border-bottom-right-radius:10px; }
+
     input[type="number"], textarea{
       width:100%; border:1px solid var(--cardBorder); border-radius:8px; padding:8px 10px; font:inherit; color:var(--ink);
       background:#fff;
     }
     textarea{ resize:vertical; min-height:40px }
     input:focus, textarea:focus{ outline:2px solid rgba(58,102,179,.25); border-color:var(--accent) }
-    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+
+    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center }
     .help{ font-size:12px; color:var(--muted) }
     .hidden{ display:none !important }
+
     .toast{
       position:fixed; left:50%; transform:translateX(-50%); bottom:14px; max-width:90vw;
       background:#0c1224; color:#fff; border:1px solid rgba(255,255,255,.12);
@@ -118,11 +123,16 @@
 
     <div id="app" class="grid hidden">
       <div>
+        <!-- Summary -->
         <div class="card" id="summary">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
             <div>
               <h2 style="margin:0">My Timesheet</h2>
-              <div class="muted">Submit your hours by <b>Tuesday 17:00</b> for Friday payment. <span id="deadlineTag" class="chip" style="margin-left:6px">Deadline: Tue 17:00</span></div>
+              <div class="muted">
+                Submit your hours by <b>Tuesday 17:00</b> for Friday payment.
+                <span id="deadlineTag" class="chip" style="margin-left:6px">Deadline: Tue 17:00</span>
+              </div>
+              <div id="assnLine" class="muted section-gap hidden"></div>
             </div>
             <div class="kpis">
               <span class="chip" id="kStd">Std 0h</span>
@@ -133,24 +143,27 @@
           </div>
         </div>
 
-        <div class="bubble" id="sheet">
+        <!-- Timesheet bubble -->
+        <div class="bubble section-gap" id="sheet">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h3 style="margin:4px 0" id="weekTitle">This Week</h3>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn ghost sm" onclick="quickFill('8x5')">Mon–Fri 8h</button>
               <button class="btn ghost sm" onclick="clearAll()">Clear all</button>
               <button class="btn ghost sm" onclick="setAll('std')">Set all…</button>
+              <button class="btn ghost sm" onclick="resetWeek()">Reset week</button>
             </div>
           </div>
 
-          <table>
+          <table aria-label="Timesheet">
             <thead><tr><th>Day</th><th style="width:120px">Std (h)</th><th style="width:120px">OT (h)</th><th>Note</th></tr></thead>
             <tbody id="tbody"></tbody>
           </table>
 
-          <div class="row-actions" style="margin-top:8px">
+          <div class="row-actions section-gap">
             <span class="help" id="statusHelp"></span>
             <span style="flex:1"></span>
+            <button class="btn warn" onclick="raiseIssue()">Raise issue</button>
             <button class="btn" onclick="saveDraft()">Save draft</button>
             <button class="btn good" onclick="submitTimesheet()">Submit</button>
             <button class="btn warn hidden" id="btnReqEdit" onclick="requestEdit()">Request edit</button>
@@ -158,18 +171,20 @@
           </div>
         </div>
 
-        <div class="card" id="history" style="margin-top:12px">
+        <!-- History -->
+        <div class="card section-gap" id="history">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <h3 style="margin:0">Previous Weeks</h3>
             <button class="btn ghost sm" onclick="toggleHistory()" id="btnHistToggle">Collapse</button>
           </div>
-          <div id="histBody" class="muted" style="margin-top:8px">—</div>
+          <div id="histBody" class="muted section-gap">—</div>
         </div>
       </div>
 
+      <!-- Profile -->
       <div class="panel-dark">
         <div class="muted">Profile</div>
-        <div class="inner" id="profileBox">
+        <div class="inner section-gap" id="profileBox">
           Loading profile…
         </div>
       </div>
@@ -231,9 +246,9 @@
         const r = STATE.entries[d] || {std:0,ot:0,note:''};
         const tr = el('tr',{},
           el('td',{}, d),
-          el('td',{}, el('input',{type:'number', step:'0.25', min:'0', value:r.std, 'data-day':d, 'data-kind':'std'})),
-          el('td',{}, el('input',{type:'number', step:'0.25', min:'0', value:r.ot,  'data-day':d, 'data-kind':'ot'})),
-          el('td',{}, el('textarea',{'data-day':d, 'data-kind':'note'}, r.note))
+          el('td',{}, el('input',{type:'number', step:'0.25', min:'0', max:'24', value:r.std, 'data-day':d, 'data-kind':'std', 'aria-label':`${d} standard hours`})),
+          el('td',{}, el('input',{type:'number', step:'0.25', min:'0', max:'24', value:r.ot,  'data-day':d, 'data-kind':'ot',  'aria-label':`${d} overtime hours`})),
+          el('td',{}, el('textarea',{'data-day':d, 'data-kind':'note', 'placeholder':'Optional note…', 'aria-label':`${d} note`}, r.note))
         );
         tb.append(tr);
       });
@@ -262,6 +277,11 @@
         <div style="margin-top:6px"><b>Site</b><br>${a.site_name||'—'}</div>
         <div class="muted" style="margin-top:8px">Rate: £${Number(a.rate_std||0)} /h (OT £${Number(a.rate_ot||0)})</div>
       `;
+      const al = $('#assnLine');
+      if (a.client_name || a.project_name || a.site_name){
+        al.classList.remove('hidden');
+        al.textContent = `Assignment: ${[a.client_name,a.project_name,a.site_name].filter(Boolean).join(' • ')}`;
+      }
     }
 
     // ---------- Loaders ----------
@@ -316,9 +336,19 @@
         const t = ev.target; if(!t.dataset.day) return;
         const day = t.dataset.day, kind = t.dataset.kind;
         const cur = STATE.entries[day] || {std:0,ot:0,note:''};
-        if(kind==='note'){ cur.note = t.value; }
-        else { cur[kind] = t.value===''?0:Math.max(0, Number(t.value)); }
-        STATE.entries[day] = cur; totals();
+
+        if(kind==='note'){
+          cur.note = t.value;
+        } else {
+          // normalise numeric input (0–24, step 0.25)
+          let v = t.value===''?0:Number(t.value);
+          if (!Number.isFinite(v)) v = 0;
+          v = Math.max(0, Math.min(24, Math.round(v*4)/4)); // clamp and snap to .25
+          t.value = v; // reflect back to UI
+          cur[kind] = v;
+        }
+        STATE.entries[day] = cur;
+        totals();
       });
     }
 
@@ -330,9 +360,11 @@
       }
     }
     function clearAll(){ DAYS.forEach(d=> STATE.entries[d]={std:0,ot:0,note:''}); renderRows(); totals(); }
+    function resetWeek(){ clearAll(); toast('Week reset'); }
     function setAll(which){
       const v = prompt(`Set ALL ${which==='std'?'standard':'overtime'} hours to:`, '8'); if(v===null) return;
-      const n = Math.max(0, Number(v)||0); DAYS.forEach(d=> STATE.entries[d][which]=n); renderRows(); totals();
+      let n = Number(v); if(!Number.isFinite(n)) n=0; n=Math.max(0, Math.min(24, Math.round(n*4)/4));
+      DAYS.forEach(d=> STATE.entries[d][which]=n); renderRows(); totals();
     }
 
     async function saveDraft(){
@@ -342,15 +374,26 @@
       }catch(e){ toast(`Save failed: ${e.message}`); }
     }
     async function submitTimesheet(){
+      // warn if empty
+      const sum = Object.values(STATE.entries).reduce((s,r)=>s+Number(r.std||0)+Number(r.ot||0),0);
+      if (sum===0 && !confirm('You are about to submit 0 total hours. Continue?')) return;
+
       try{
         await api('/timesheets-submit','POST',{ week_ending: STATE.week_ending });
         toast('Submitted for approval'); await loadWeek(); await loadHistory();
       }catch(e){ toast(`Submit failed: ${e.message}`); }
     }
 
+    // Quick request helpers
     function openMail(subject, body){
       const mail = `mailto:billing@hmj-global.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.location.href = mail;
+    }
+    function raiseIssue(){
+      const note = prompt('Describe the issue (data looks wrong, missing assignment, etc.)','');
+      if (note===null) return;
+      const id = STATE.week_ending || '';
+      openMail(`Timesheet ISSUE — ${id}`, `Contractor: ${STATE?.contractor?.email}\nWeek ending: ${id}\nStatus: ${STATE.status}\nNote: ${note||'-'}`);
     }
     function requestEdit(){
       const reason = prompt('Brief reason for edit request:','');
@@ -365,16 +408,45 @@
     }
     function toggleHistory(){ const b=$('#histBody'), btn=$('#btnHistToggle'); const hide=!b.classList.contains('hidden'); b.classList.toggle('hidden',hide); btn.textContent = hide?'Expand':'Collapse'; }
 
-    // Wire Identity once it’s actually available
-    whenIdentityReady((ni)=>{
-      $('#btnSignOut').onclick = () => ni.logout();
-      ni.on('init', user => {
-        if (user){ $('#gate').classList.add('hidden'); $('#app').classList.remove('hidden'); boot(); }
-        else     { $('#gate').classList.remove('hidden'); $('#app').classList.add('hidden'); }
+    // ---- Safe Identity wiring (no reload loops) ----
+    let BOOTED = false;
+    function showGate(){ $('#gate').classList.remove('hidden'); $('#app').classList.add('hidden'); }
+    function showApp(){  $('#gate').classList.add('hidden');  $('#app').classList.remove('hidden'); }
+    function bootOnce(){
+      if (BOOTED) return;
+      BOOTED = true;
+      boot().catch(e => {
+        BOOTED = false;                // allow retry if boot failed
+        console.error(e);
+        toast(`Could not load timesheet: ${e.message || e}`);
       });
-      ni.on('login',  () => location.reload());
-      ni.on('logout', () => location.reload());
-      ni.init(); // start widget
+    }
+
+    whenIdentityReady((ni)=>{
+      // sign-out button
+      $('#btnSignOut').onclick = () => ni.logout();
+
+      // Fired exactly once on load
+      ni.on('init', (user) => {
+        if (user){ showApp();  bootOnce(); }
+        else     { showGate(); }
+      });
+
+      // Fired when a user has just logged in from the widget
+      ni.on('login', (user) => {
+        showApp();
+        bootOnce();
+      });
+
+      // Fired when a user signs out
+      ni.on('logout', () => {
+        BOOTED = false;
+        showGate();
+        // Optionally redirect home:
+        // window.location.href = '/';
+      });
+
+      ni.init(); // start widget once
     });
   </script>
 </body>

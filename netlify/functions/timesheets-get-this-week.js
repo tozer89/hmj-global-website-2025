@@ -8,48 +8,49 @@ exports.handler = async (event, context) => {
   try {
     if (event.httpMethod !== 'GET') return respond(405, { error: 'method_not_allowed' });
 
-    // Identity must be present (Netlify)
+    // Require Netlify Identity
     const idUser = context?.clientContext?.user;
     if (!idUser) return respond(401, { error: 'identity_required' });
 
-    // Contractor + active assignment
+    // Resolve contractor + active assignment
     let contractor, assignment;
     try {
       const ctx = await getContext(context);
       contractor = ctx?.contractor || null;
       assignment = ctx?.assignment || null;
     } catch (err) {
-      console.error('getContext error:', err);
+      console.error('[get-this-week] getContext error:', err);
       return respond(500, { error: 'context_failed' });
     }
 
     if (!contractor) return respond(404, { error: 'contractor_not_found_for_email', email: idUser.email });
     if (!assignment?.id) return respond(404, { error: 'no_active_assignment' });
 
+    // Compute target week (Sun..Sat; week ends Saturday)
     const week_ending = weekEndingSaturdayISO();
 
-    // Ensure timesheet row for (assignment, week)
+    // Ensure a timesheet exists for (assignment, week)
     let ts;
     try {
       ts = await ensureTimesheet(assignment.id, week_ending);
     } catch (err) {
-      console.error('ensureTimesheet error:', err);
+      console.error('[get-this-week] ensureTimesheet error:', err);
       return respond(500, { error: 'timesheet_create_failed' });
     }
     if (!ts?.id) return respond(500, { error: 'timesheet_create_failed' });
 
-    // Entries for that sheet
+    // Load day entries
     const { data: rows, error } = await supabase
       .from('timesheet_entries')
       .select('day,hours_std,hours_ot,note')
       .eq('timesheet_id', ts.id);
 
     if (error) {
-      console.error('timesheet_entries select error:', error);
+      console.error('[get-this-week] select timesheet_entries error:', error);
       return respond(500, { error: 'db_select_failed_timesheet_entries' });
     }
 
-    // Build Sun→Sat map
+    // Sun→Sat map
     const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const map = Object.fromEntries(days.map(d => [d, { std: 0, ot: 0, note: '' }]));
     (rows || []).forEach(r => {
@@ -65,10 +66,10 @@ exports.handler = async (event, context) => {
     const assignmentOut = {
       id: assignment.id,
       project_name: assignment.project_name,
-      client_name: assignment.client_name,
-      site_name: assignment.site_name,
+      client_name:  assignment.client_name,
+      site_name:    assignment.site_name,
       rate_std: Number.isFinite(+assignment.rate_std) ? +assignment.rate_std : 0,
-      rate_ot: Number.isFinite(+assignment.rate_ot) ? +assignment.rate_ot : 0
+      rate_ot:  Number.isFinite(+assignment.rate_ot)  ? +assignment.rate_ot  : 0
     };
 
     return respond(200, {
@@ -81,13 +82,11 @@ exports.handler = async (event, context) => {
 
   } catch (e) {
     const msg = e?.message || 'unknown_error';
-    const status = (msg === 'Unauthorized' || msg === 'identity_required') ? 401
-                  : (msg.endsWith('_failed') ? 500 : 400);
-    console.error('timesheets-get-this-week error:', e);
+    const status =
+      msg === 'Unauthorized' || msg === 'identity_required' ? 401 :
+      msg.endsWith('_failed') ? 500 : 400;
+
+    console.error('[get-this-week] exception:', e);
     return respond(status, { error: msg });
   }
 };
-
-const idUser = context?.clientContext?.user;
-console.log('[get-this-week] identity email:', idUser?.email, 'SUPABASE_URL:', process.env.SUPABASE_URL);
-
