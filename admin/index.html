@@ -1,154 +1,115 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-
-<title>Admin Portal | HMJ-Global</title>
-<link rel="stylesheet" href="/css/style.css" />
-<style>
-  :root{
-    --bg:#0b0f18; --panel:#111827; --panel2:#0e1524; --border:#252f3f;
-    --text:#e8eef7; --muted:#9fb0c9; --ink:#0b0f18;
-    --purple:#7c5cff; --purple-2:#5d40ff; --green:#25c08a; --red:#ff7a7a; --amber:#ffd166;
-  }
-  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  a{color:#9fbaff;text-decoration:none}
-  .top{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,#0b0f18, #0f1430 60%, #0b0f18);
-       border-bottom:1px solid var(--border);backdrop-filter:saturate(120%) blur(6px)}
-  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800;font-size:18px}
-  .spacer{flex:1}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79}
-  .btn.primary{background:var(--purple);border-color:transparent}
-  .btn.ghost{background:transparent}
-  .wrap{max-width:1200px;margin:28px auto;padding:0 18px;display:grid;gap:18px}
-  .hero{background:radial-gradient(1200px 220px at 20% -50%, rgba(124,92,255,.25), transparent 60%),
-         linear-gradient(180deg,#0f1430 0,#0b0f18 80%);border:1px solid var(--border);border-radius:16px;padding:20px}
-  .hero h1{margin:0 0 8px}
-  .muted{color:var(--muted)}
-  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px}
-  .tile{display:flex;gap:14px;align-items:center;background:var(--panel2);border:1px solid var(--border);
-        padding:14px;border-radius:14px}
-  .tile .icon{width:42px;height:42px;border-radius:12px;background:var(--purple);display:grid;place-items:center;font-weight:800}
-  .tile h3{margin:0 0 6px}
-  .list{display:grid;gap:12px}
-</style>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Admin Portal | HMJ-Global</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    :root{ --bg:#0b1420; --panel:#0f1c2b; --border:#203042; --ink:#e6edf6; --muted:#9fb3c8; --violet:#7c5cff; }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 18px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:14px}
+    @media (max-width:720px){ .grid{grid-template-columns:1fr} }
+    .tile{background:linear-gradient(145deg,#0f1c2b 0%, #16263a 100%);border:1px solid #22344b;border-radius:14px;padding:16px}
+    .tile h3{margin:0 0 6px}
+    .btn{background:#1a2740;border:1px solid #2b3c55;color:#fff;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+    .btn:hover{border-color:#3b5172}
+    .btn.primary{background:var(--violet);border-color:transparent}
+    .muted{color:var(--muted)}
+    a.btn{display:inline-block}
+  </style>
 </head>
 <body>
-  <div class="top">
-    <div class="row">
-      <div class="brand">HMJ Global — Admin Portal</div>
-      <div class="spacer"></div>
-      <a class="btn ghost" href="/">⟵ Homepage</a>
-      <a class="btn" href="/timesheets.html">Timesheets (contractor)</a>
-      <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-    </div>
-  </div>
 
-  <!-- Optional toast area -->
-<div id="toast" aria-live="polite" aria-atomic="true"></div>
+  <!-- include shared admin helpers -->
+  <script src="/admin/common.js"></script>
 
-<!-- Shown if not logged-in or missing 'admin' role -->
-<div id="gate" class="card" style="display:none">
-  <p><strong>Admin only.</strong> Please log in with an admin account.</p>
-  <p class="why" style="opacity:.75"></p>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
-</div>
-
-<!-- Your page UI (hidden until Admin.bootAdmin runs) -->
-<div id="app" style="display:none">
-  <!-- your filters / table / form etc -->
-  <div id="tableWrap">Loading…</div>
-</div>
-
-
-
-
-  <div class="wrap" id="gate" style="display:none">
-    <div class="hero"><h1>Admin only</h1><p class="muted">Please log in with an admin account.</p>
-      <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
-    </div>
-  </div>
-
-  <div class="wrap" id="app" style="display:none">
-    <div class="hero">
-      <h1>Welcome back 👋</h1>
-      <div class="muted">Create & manage candidates, assignments, clients, approve timesheets, and review the audit trail.</div>
-    </div>
-
-    <div class="grid">
-      <a class="tile" href="/admin/timesheets.html">
-        <div class="icon">TS</div>
-        <div><h3>Timesheets</h3><div class="muted">Approve, reject, export and manage weekly timesheets.</div></div>
-      </a>
-      <a class="tile" href="/admin/candidates.html">
-        <div class="icon">CA</div>
-        <div><h3>Candidates</h3><div class="muted">Create profiles, bank details, right-to-work, pay type.</div></div>
-      </a>
-      <a class="tile" href="/admin/assignments.html">
-        <div class="icon">AS</div>
-        <div><h3>Assignments</h3><div class="muted">Link contractors ↔ projects; dates, rates & charges.</div></div>
-      </a>
-      <a class="tile" href="/admin/clients.html">
-        <div class="icon">CL</div>
-        <div><h3>Clients</h3><div class="muted">Manage clients, contacts and billing details.</div></div>
-      </a>
-      <a class="tile" href="/admin/reports.html">
-        <div class="icon">RP</div>
-        <div><h3>Reports</h3><div class="muted">Audit log, CSV exports and simple KPIs.</div></div>
-      </a>
-    </div>
-
+  <div class="wrap">
     <div class="card">
-      <h3 style="margin:0 0 10px">Quick tips</h3>
-      <ul class="muted" style="margin:0 0 0 18px">
-        <li>On list pages, press <b>/</b> to search, <b>n</b> to create, <b>Esc</b> to close modals.</li>
-        <li>All admin changes are written to the audit log automatically.</li>
-      </ul>
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h1 style="margin:0 0 6px">HMJ Global — Admin Portal</h1>
+          <div class="muted">Create & manage candidates, assignments, clients, review audit, and run timesheets admin.</div>
+        </div>
+        <div class="row">
+          <a class="btn" href="/">⟵ Homepage</a>
+          <a class="btn" href="/timesheets.html">Timesheets (contractor)</a>
+          <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gate (not admin / not signed in) -->
+    <div id="gate" class="card" style="display:none">
+      <h3 style="margin-top:0">Loading…</h3>
+      <div id="why" class="muted"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
+        <span class="muted">Ask an administrator to add the <b>admin</b> role to your user.</span>
+      </div>
+    </div>
+
+    <!-- App -->
+    <div id="app" style="display:none">
+      <div class="grid">
+        <div class="tile">
+          <h3>Timesheets</h3>
+          <div class="muted">Approve/reject, export, bulk actions.</div>
+          <div class="row" style="margin-top:10px">
+            <a class="btn primary" href="/admin/timesheets.html">Open timesheets admin</a>
+          </div>
+        </div>
+        <div class="tile">
+          <h3>Candidates</h3>
+          <div class="muted">Create profiles, bank info, right-to-work, link assignments.</div>
+          <div class="row" style="margin-top:10px">
+            <a class="btn primary" href="/admin/candidates.html">Open candidates</a>
+          </div>
+        </div>
+        <div class="tile">
+          <h3>Assignments</h3>
+          <div class="muted">Manage project/site, rates & charge, active dates.</div>
+          <div class="row" style="margin-top:10px">
+            <a class="btn primary" href="/admin/assignments.html">Open assignments</a>
+          </div>
+        </div>
+        <div class="tile">
+          <h3>Clients</h3>
+          <div class="muted">Add clients, contacts and billing fields.</div>
+          <div class="row" style="margin-top:10px">
+            <a class="btn primary" href="/admin/clients.html">Open clients</a>
+          </div>
+        </div>
+        <div class="tile" style="grid-column:1/-1">
+          <h3>Reports</h3>
+          <div class="muted">Export CSV and browse audit trail.</div>
+          <div class="row" style="margin-top:10px">
+            <a class="btn" href="/admin/reports.html">Open reports</a>
+          </div>
+        </div>
+      </div>
+      <div id="errorBox" class="muted" style="margin-top:12px"></div>
     </div>
   </div>
 
-<script>
-  const isAdmin = (u)=> (u?.app_metadata?.roles || u?.roles || []).includes('admin');
-  function boot(){ const u = netlifyIdentity?.currentUser(); if(!u || !isAdmin(u)){gate.style.display='block';return;} app.style.display='block'; }
-  document.addEventListener('DOMContentLoaded', ()=>{
-    netlifyIdentity?.on('init', boot);
-    netlifyIdentity?.on('login', ()=>location.reload());
-    netlifyIdentity?.on('logout', ()=>location.href='/');
-    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else gate.style.display='block'; }, 600);
-  });
-</script>
-</body>
-<script>
-  // Your page’s main logic. Runs only after Identity is ready AND the user is an admin.
+  <!-- Boot block (same pattern for all admin pages) -->
+  <script>
   async function main({ api, sel, toast, user }) {
-    // Example: load clients list (adjust the endpoint per page)
-    const rows = await api('/admin-clients-list', 'POST', { q: null });
-    sel('#tableWrap').textContent = rows.length ? `${rows.length} client(s)` : 'No results';
-    // ...render your table, wire up buttons, etc...
+    // Index page doesn’t need to fetch anything to render the tiles.
+    // You *could* ping whoami or counts here in the future.
+    return;
   }
 
-  // Boot the page. You can drop this block as-is into every admin page.
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', ()=>{
     const start = () => Admin.bootAdmin(main);
-
     netlifyIdentity?.on('init', start);
-    netlifyIdentity?.on('login', () => location.reload());
-    netlifyIdentity?.on('logout', () => location.href = '/admin/');
-
-    // Fallback if Identity init is slow
-    setTimeout(() => {
-      if (netlifyIdentity?.currentUser()) start();
-      else (document.querySelector('#gate') || {}).style.display = 'block';
-    }, 600);
+    netlifyIdentity?.on('login', ()=>location.reload());
+    netlifyIdentity?.on('logout', ()=>location.href='/admin/');
+    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) start(); else (document.querySelector('#gate')||{}).style.display='block'; }, 600);
   });
-</script>
-
+  </script>
+</body>
 </html>
