@@ -5,57 +5,95 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Candidates — Admin | HMJ-Global</title>
 
-<!-- Netlify Identity + shared admin helpers -->
+<!-- Netlify Identity + shared admin helpers (keep these) -->
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script defer src="/admin/common.js"></script>
 
 <link rel="stylesheet" href="/css/style.css"/>
 
 <style>
-  --chip:#12213d; --chip-br:#29426c; --danger:#a33; --ok:#2fb36f;
+  /* ===== HMJ Admin — Candidates ===== */
   :root{
     --bg:#0b0f18; --panel:#111827; --border:#252f3f; --ink:#e6eef7; --muted:#9fb0c9;
-    --card:#0f172a; --chip:#0e1629; --accent:#3A66B3;
+    --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --accent-2:#4b7ae0; --danger:#ff6b6b; --ok:#22c55e; --warn:#fbbf24;
   }
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
   .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border);z-index:5}
   .row{max-width:1240px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
   .brand{font-weight:800}.sp{flex:1}
+
   .wrap{max-width:1240px;margin:22px auto;padding:0 18px;display:grid;gap:16px}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.20)}
   .muted{color:var(--muted)}
   input,select{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
+  input:focus,select:focus,button:focus{outline:2px solid #2f3f69;outline-offset:2px}
   .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;
-       font-weight:600;cursor:pointer}
+       font-weight:600;cursor:pointer;transition:border-color .15s,transform .06s}
   .btn:hover{border-color:#3b4f79}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:transparent}
+  .btn.accent{background:var(--accent);border-color:#4262a6}
+  .btn.danger{background:#3b1b22;border-color:#5a2a33}
+
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .pills{display:flex;gap:10px;flex-wrap:wrap}
+  .pills{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .pill{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:10px 14px;min-width:90px;text-align:center}
   .pill b{font-size:20px;display:block}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:12px;border-bottom:1px solid var(--border);text-align:left}
-  thead th{position:sticky;top:0;background:#0e1426;z-index:1}
-  tbody tr:hover{background:#0e1629}
+
   .filters{display:grid;grid-template-columns:1.5fr .9fr .9fr 1fr 1fr auto 120px;gap:10px;margin:6px 0}
   .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+
   .tableWrap{overflow:auto;border-radius:12px}
-  .badge{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid #2c3853;background:#0f172a}
-  .status-ok{background:#0e2a1e;border-color:#1e6646}
-  .status-warn{background:#33220f;border-color:#8a5b25}
-  .status-bad{background:#2a1214;border-color:#6a2b2f}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+  thead th{position:sticky;top:0;background:#0e1426;z-index:1;user-select:none}
+  thead th.sortable{cursor:pointer}
+  thead th.sortable .arrow{opacity:.35;margin-left:6px}
+  thead th.sortable.active .arrow{opacity:1}
+  tbody tr:hover{background:#0e1629}
+  tbody td:last-child{ text-align:right }
+
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
+  .status-ok{background:#0e2a1e;border-color:#1e6646;color:#b9f6d0}
+  .status-warn{background:#33220f;border-color:#8a5b25;color:#ffe8b3}
+  .status-bad{background:#2a1214;border-color:#6a2b2f;color:#ffc7c7}
+
   .inline{display:flex;gap:8px;flex-wrap:wrap}
   .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
   .editor-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
   .editor-grid .field{display:flex;flex-direction:column}
-  @media (max-width:980px){ .filters{grid-template-columns:1fr 1fr 1fr} .editor-grid{grid-template-columns:1fr} }
+  .editor-grid .field input,.editor-grid .field select{width:100%}
+  .editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+  .hint{font-size:12px;color:var(--muted)}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#121a2c;border:1px solid #27324d;padding:2px 6px;border-radius:6px}
+
+  /* toast + banner */
+  #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
+  #toast .toast{background:#0f172a;color:#e6edf6;border:1px solid #233044;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #toast .toast.error{border-color:#5b2b2b;background:#221216}
+  #toast .toast.ok{border-color:#1f5433;background:#0f1c17}
+
+  #error-banner{display:none;background:#221216;border:1px solid #5b2b2b;color:#ffd8d8;padding:10px 12px;border-radius:10px}
+
+  .loading{display:inline-flex;gap:8px;align-items:center}
+  .dot{width:6px;height:6px;border-radius:50%;background:#7d8bb3;opacity:.6;animation:ld 1.2s infinite}
+  .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+  @keyframes ld{0%{transform:translateY(0)}50%{transform:translateY(-4px);opacity:1}100%{transform:translateY(0)}}
+
+  @media (max-width:980px){
+    .filters{grid-template-columns:1fr 1fr 1fr}
+    .editor-grid{grid-template-columns:1fr}
+    thead th, tbody td{white-space:normal}
+  }
 </style>
 </head>
 <body>
   <!-- header -->
   <div class="top"><div class="row">
     <div class="brand">Candidates — Admin</div><div class="sp"></div>
-    <a class="btn" href="/admin/">⟵ Admin home</a>
+    <a class="btn ghost" href="/admin/">⟵ Admin home</a>
     <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
   </div></div>
 
@@ -64,31 +102,34 @@
     <div class="card">
       <strong>Admin only.</strong>
       <p class="why muted" style="margin:6px 0 12px"></p>
-      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+      <button class="btn accent" onclick="netlifyIdentity?.open('login')">Log in</button>
     </div>
   </div>
 
   <!-- app -->
   <div class="wrap" id="app" style="display:none">
 
-    <!-- stats -->
-    <div class="card pills">
-      <div class="pill"><b id="kTotal">0</b>Total</div>
-      <div class="pill"><b id="kFiltered">0</b>Filtered</div>
-      <div class="pill"><b id="kPage">1/1</b>Page</div>
-      <div class="sp"></div>
-      <div class="inline">
-        <button class="btn" id="btnRefresh">Refresh</button>
-        <button class="btn" id="btnNew">New candidate</button>
-        <button class="btn" id="btnExport">Export CSV</button>
-        <button class="btn" id="btnEmails" title="Copy filtered emails">📧 Email list</button>
+    <!-- stats / actions -->
+    <div class="card">
+      <div class="pills">
+        <div class="pill"><b id="kTotal">0</b>Total</div>
+        <div class="pill"><b id="kFiltered">0</b>Filtered</div>
+        <div class="pill"><b id="kPage">1/1</b>Page</div>
+        <div class="sp"></div>
+        <div class="inline">
+          <button class="btn" id="btnRefresh" title="R"><span>Refresh</span></button>
+          <button class="btn accent" id="btnNew" title="N"><span>New candidate</span></button>
+          <button class="btn" id="btnExport"><span>Export CSV</span></button>
+          <button class="btn" id="btnEmails" title="Copy filtered emails"><span>📧 Email list</span></button>
+        </div>
       </div>
+      <div id="error-banner" class="m-top"></div>
     </div>
 
     <!-- filters -->
     <div class="card">
       <div class="filters">
-        <input id="q" placeholder="Search name / email / phone"/>
+        <input id="q" placeholder="Search name / email / phone" autocomplete="off"/>
         <select id="fType">
           <option value="">Any pay type</option>
           <option>Umbrella</option><option>Umbrella CIS</option>
@@ -99,33 +140,38 @@
           <option value="">Any status</option>
           <option>Complete</option><option>In progress</option><option>Paused</option>
         </select>
-        <input id="fJob" placeholder="Job title"/>
-        <input id="fEmailHas" placeholder="Email contains"/>
+        <input id="fJob" placeholder="Job title" autocomplete="off"/>
+        <input id="fEmailHas" placeholder="Email contains" autocomplete="off"/>
+
         <div class="pager">
-          <button class="btn" id="pgPrev">◀</button>
+          <button class="btn" id="pgPrev" title="PgUp">◀</button>
           <div style="min-width:84px;text-align:center"><span id="pgNow">1</span>/<span id="pgMax">1</span></div>
-          <button class="btn" id="pgNext">▶</button>
+          <button class="btn" id="pgNext" title="PgDown">▶</button>
         </div>
+
         <select id="pageSize" title="Rows / page">
           <option>25</option><option>50</option><option>100</option>
         </select>
       </div>
+      <div class="hint">Tips: Press <span class="kbd">/</span> to focus search • <span class="kbd">R</span> refresh • <span class="kbd">N</span> new candidate • <span class="kbd">←/→</span> page</div>
     </div>
 
     <!-- list -->
-    <div class="card tableWrap" id="listWrap">Loading…</div>
+    <div class="card tableWrap" id="listWrap">
+      <div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>
+    </div>
 
     <!-- editor -->
     <div class="card" id="editor" style="display:none">
       <h3 style="margin:0 0 10px" id="edTitle">Candidate</h3>
       <div class="editor-grid">
-        <div class="field"><label>First name</label><input id="edFirst"></div>
-        <div class="field"><label>Last name</label><input id="edLast"></div>
+        <div class="field"><label>First name</label><input id="edFirst" autocomplete="off"></div>
+        <div class="field"><label>Last name</label><input id="edLast" autocomplete="off"></div>
 
-        <div class="field"><label>Email</label><input id="edEmail" type="email"></div>
-        <div class="field"><label>Phone</label><input id="edPhone"></div>
+        <div class="field"><label>Email</label><input id="edEmail" type="email" autocomplete="off" spellcheck="false"></div>
+        <div class="field"><label>Phone</label><input id="edPhone" autocomplete="off"></div>
 
-        <div class="field"><label>Job title</label><input id="edJob"></div>
+        <div class="field"><label>Job title</label><input id="edJob" autocomplete="off"></div>
         <div class="field"><label>Pay type</label>
           <select id="edType">
             <option>Umbrella</option><option>Umbrella CIS</option>
@@ -137,14 +183,14 @@
         <div class="field"><label>Status</label>
           <select id="edStatus"><option>In progress</option><option>Complete</option><option>Paused</option></select>
         </div>
-        <div class="field"><label>Payroll ref</label><input id="edPayroll"></div>
+        <div class="field"><label>Payroll ref</label><input id="edPayroll" autocomplete="off"></div>
 
-        <div class="field" style="grid-column:1 / -1"><label>Address</label><input id="edAddress" placeholder="Free-form address"></div>
+        <div class="field" style="grid-column:1 / -1"><label>Address</label><input id="edAddress" placeholder="Free-form address" autocomplete="off"></div>
       </div>
 
-      <div class="inline" style="justify-content:flex-end;margin-top:12px">
-        <button class="btn" id="btnSave">Save</button>
-        <button class="btn" id="btnDelete">Delete</button>
+      <div class="editor-actions">
+        <button class="btn accent" id="btnSave">Save</button>
+        <button class="btn danger" id="btnDelete">Delete</button>
         <button class="btn" id="btnClose">Close</button>
       </div>
     </div>
@@ -152,189 +198,382 @@
 
   <div id="toast"></div>
 
+<!-- ===== Page script ===== -->
 <script>
-async function main({ api, sel, toast }){
-  // state
-  let page=1, pages=1, size=Number(localStorage.cand_size||25)||25, cur=null, lastRows=[];
+/* ----------------------------------------------------------------------------
+   Safe mini-helpers (work even if /admin/common.js is not loaded)
+---------------------------------------------------------------------------- */
+(function(){
+  // $ and $$ helpers
+  window.$  = (s, root=document) => root.querySelector(s);
+  window.$$ = (s, root=document) => [...root.querySelectorAll(s)];
 
-  // els
-  const listWrap = sel('#listWrap');
-  const ed = sel('#editor');
+  // Null-safe counters
+  window.setNum = (idOrSel, val)=>{
+    const el = (idOrSel.startsWith('#') || idOrSel.startsWith('.')) ? $(idOrSel) : $(`#${idOrSel}`);
+    if(!el){ console.warn('Counter element not found:', idOrSel); return; }
+    el.textContent = String(val);
+  };
 
-  sel('#pageSize').value = String(size);
+  // Toasts
+  const toastHost = $('#toast');
+  let toastSeq = 0;
+  window.toast = (msg, kind=''){ // kind: '', 'error', 'ok'
+    const t = document.createElement('div');
+    t.className = `toast ${kind}`;
+    t.textContent = msg;
+    const id = ++toastSeq;
+    t.dataset.id = id;
+    toastHost.appendChild(t);
+    setTimeout(()=>{ t.style.opacity = '0'; t.style.transform='translateY(3px)'; }, 2600);
+    setTimeout(()=>{ t.remove(); }, 3000);
+  };
 
-  // helpers
-  const qv = id => sel(id).value.trim();
-  const setNum = (id,val)=> sel(id).textContent = String(val);
+  // Error banner helpers
+  window.showErrorBanner = (msg)=>{
+    const el = $('#error-banner'); if(!el) return;
+    el.textContent = `Error: ${msg}`;
+    el.style.display = 'block';
+  };
+  window.hideErrorBanner = ()=>{
+    const el = $('#error-banner'); if(!el) return;
+    el.style.display = 'none';
+  };
 
-  function statusBadge(s){
-    const t=(s||'').toLowerCase();
-    const cls = t==='complete' ? 'status-ok' : t==='in progress' ? 'status-warn' : 'status-bad';
-    return `<span class="badge ${cls}">${s||'—'}</span>`;
+  // Debounce
+  window.debounce = (fn, ms=300)=>{
+    let t=null; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+  };
+
+  // API wrapper; prefers /admin/common.js if present
+  window.apiCall = async (path, method='POST', body=null)=>{
+    // if /admin/common.js injected a helper, prefer it
+    if (window.__adminApiFetch) return __adminApiFetch(path, method, body);
+    // fallback local helper: call Netlify Function (with Identity JWT if available)
+    const url = `/.netlify/functions${path.startsWith('/')?path:`/${path}`}`;
+    const headers = {'Content-Type':'application/json'};
+    try{
+      const user = netlifyIdentity?.currentUser?.();
+      if (user) {
+        const token = await user.jwt();
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }catch(_){}
+    const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body):undefined });
+    if(!res.ok){
+      let msg = `HTTP ${res.status}`;
+      try{ const t = await res.text(); msg = t || msg; }catch(_){}
+      throw new Error(msg);
+    }
+    const type = res.headers.get('content-type')||'';
+    return type.includes('application/json') ? res.json() : res.text();
+  };
+
+  // Gate (admin only) — prefer common.js if it provided a gate
+  window.__adminGate = async ()=>{
+    if (window.__ensureAdmin) return __ensureAdmin(); // from common.js
+    // else simple default: require logged in user
+    return new Promise(resolve=>{
+      const showGate = (why)=>{
+        $('#app').style.display='none';
+        $('#gate').style.display='';
+        $('.why').textContent = why;
+      };
+      const showApp = ()=>{
+        $('#gate').style.display='none';
+        $('#app').style.display='';
+        resolve();
+      };
+      try{
+        const u = netlifyIdentity?.currentUser?.();
+        if (!u) { showGate('Please log in with an admin account.'); return; }
+        showApp();
+      }catch(e){
+        showGate('Login required.');
+      }
+    });
+  };
+})();
+
+/* ----------------------------------------------------------------------------
+   Main App
+---------------------------------------------------------------------------- */
+(async function(){
+  // Wait for Identity to be ready (helps when reloading)
+  document.addEventListener('DOMContentLoaded', start);
+  async function start(){
+    await __adminGate();       // admin or login
+    appMain();                 // boot
   }
 
-  function typeBadge(t){ return `<span class="badge">${t||'—'}</span>`; }
+  async function appMain(){
+    // ===== state =====
+    let page=Number(localStorage.cand_page||1)||1;
+    let size=Number(localStorage.cand_size||25)||25;
+    let pages=1;
+    let cur=null;             // current record in editor
+    let lastRows=[];          // rows on screen
+    let sort = JSON.parse(localStorage.cand_sort || '{"key":"name","dir":"asc"}');
 
-  function renderRows(rows){
-    lastRows = rows;
-    if(!rows.length){ listWrap.innerHTML = '<div class="muted">No candidates.</div>'; return; }
-    listWrap.innerHTML = `
-      <table>
+    // ===== element refs =====
+    const listWrap = $('#listWrap');
+    const ed = $('#editor');
+
+    // hydrate saved filters
+    const filters = JSON.parse(localStorage.cand_filters || '{}');
+    $('#q').value         = filters.q || '';
+    $('#fType').value     = filters.type || '';
+    $('#fStatus').value   = filters.status || '';
+    $('#fJob').value      = filters.job || '';
+    $('#fEmailHas').value = filters.emailHas || '';
+    $('#pageSize').value  = String(size);
+
+    // ===== small helpers =====
+    const qv = (sel)=> $(sel).value.trim();
+    const saveFilters = ()=>{
+      const f = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas') };
+      localStorage.cand_filters = JSON.stringify(f);
+    };
+    const saveSort = ()=> localStorage.cand_sort = JSON.stringify(sort);
+    const setPageMeta = ()=>{
+      setNum('#pgNow', page);
+      setNum('#pgMax', pages);
+      $('#kPage').textContent = `${page}/${pages}`;
+    };
+
+    const headCols = [
+      { key:'id',        label:'ID',        w:88  },
+      { key:'name',      label:'Name',      w:240 },
+      { key:'email',     label:'Email',     w:260 },
+      { key:'phone',     label:'Phone',     w:160 },
+      { key:'pay_type',  label:'Type',      w:170 },
+      { key:'status',    label:'Status',    w:140 },
+      { key:'actions',   label:'',          w:120, noSort:true },
+    ];
+
+    function statusBadge(s){
+      const t=(s||'').toLowerCase();
+      const cls = t==='complete' ? 'status-ok' : t==='in progress' ? 'status-warn' : 'status-bad';
+      const label = s || '—';
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
+    function typeBadge(t){ return `<span class="badge">${t||'—'}</span>`; }
+
+    // ===== rendering =====
+    function renderRows(rows){
+      lastRows = rows;
+
+      if(!rows?.length){
+        listWrap.innerHTML = `<div class="muted">No candidates.</div>`;
+        return;
+      }
+
+      // header
+      const thead = `
         <thead>
           <tr>
-            <th style="width:80px">ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th style="width:140px">Phone</th>
-            <th style="width:160px">Type</th>
-            <th style="width:140px">Status</th>
-            <th style="width:96px"></th>
+            ${headCols.map(c=>{
+              const arrow = c.noSort ? '' : `<span class="arrow">${(sort.key===c.key? (sort.dir==='asc'?'▲':'▼') : '↕')}</span>`;
+              const cls = c.noSort ? '' : `sortable ${sort.key===c.key ? 'active':''}`;
+              const style = c.w?`style="width:${c.w}px"`:'';
+              return `<th ${style} data-key="${c.key}" class="${cls}">${c.label}${arrow}</th>`;
+            }).join('')}
           </tr>
-        </thead>
+        </thead>`;
+
+      // body
+      const tbody = `
         <tbody>
-          ${rows.map(r=>`
-            <tr>
-              <td>${r.id}</td>
-              <td>${[r.first_name,r.last_name].filter(Boolean).join(' ')||'—'}</td>
-              <td>${r.email || '—'}</td>
-              <td>${r.phone || '—'}</td>
-              <td>${typeBadge(r.pay_type)}</td>
-              <td>${statusBadge(r.status)}</td>
-              <td><button class="btn" data-open="${r.id}">Open</button></td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-    listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEd(Number(b.dataset.open)));
-  }
+          ${rows.map(r=>{
+            const name = [r.first_name,r.last_name].filter(Boolean).join(' ') || '—';
+            const email = r.email || '—';
+            const phone = r.phone || '—';
+            return `
+              <tr>
+                <td>${r.id}</td>
+                <td>${name}</td>
+                <td>${email}</td>
+                <td>${phone}</td>
+                <td>${typeBadge(r.pay_type)}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>
+                  <div class="inline" style="justify-content:flex-end">
+                    <button class="btn" data-open="${r.id}">Open</button>
+                  </div>
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>`;
 
-  async function loadList(){
-    listWrap.textContent = 'Loading…';
-    try{
-      const body = {
-        q: qv('#q'),
-        type: qv('#fType'),
-        status: qv('#fStatus'),
-        job: qv('#fJob'),
-        emailHas: qv('#fEmailHas'),
-        page, size
-      };
-      // IMPORTANT: endpoint name is plural (matches file admin-candidates-lists.js)
-      const res = await api('/admin-candidates-lists','POST', body);
-      // tolerate either {rows,total,filtered,pages} or a flat array
-      const rows = Array.isArray(res) ? res : (res.rows || []);
-      const total = res.total ?? rows.length;
-      const filtered = res.filtered ?? rows.length;
-      pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size)||1));
-      if(page>pages) page=pages;
+      listWrap.innerHTML = `<table>${thead}${tbody}</table>`;
 
-      setNum('kTotal', total);
-      setNum('kFiltered', filtered);
-      setNum('pgNow', page);
-      setNum('pgMax', pages);
-      sel('#kPage').textContent = `${page}/${pages}`;
+      // row actions
+      listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEd(Number(b.dataset.open)));
 
-      renderRows(rows);
-    }catch(e){
-      listWrap.innerHTML = `<div style="color:#ffb4b4">Error: ${e.message||e}</div>`;
-      console.error(e);
+      // sorting
+      $$('#listWrap thead th.sortable').forEach(th=>{
+        th.onclick = ()=>{
+          const key = th.dataset.key;
+          if (sort.key===key) sort.dir = (sort.dir==='asc'?'desc':'asc'); else { sort.key=key; sort.dir='asc'; }
+          saveSort();
+          loadList(); // reload with sort applied server-side (or resort client-side if server ignores)
+        };
+      });
     }
-  }
 
-  function setEd(c){
-    sel('#edTitle').textContent = c?.id ? `Candidate #${c.id}` : 'New candidate';
-    sel('#edFirst').value   = c.first_name||'';
-    sel('#edLast').value    = c.last_name||'';
-    sel('#edEmail').value   = c.email||'';
-    sel('#edPhone').value   = c.phone||'';
-    sel('#edJob').value     = c.job_title||'';
-    sel('#edType').value    = c.pay_type||'Umbrella';
-    sel('#edStatus').value  = c.status||'In progress';
-    sel('#edPayroll').value = c.payroll_ref||'';
-    sel('#edAddress').value = c.address||'';
-  }
-  function getEd(){
-    return {
-      id: cur?.id || undefined,
-      first_name: qv('#edFirst')||null,
-      last_name:  qv('#edLast')||null,
-      email:      qv('#edEmail')||null,
-      phone:      qv('#edPhone')||null,
-      job_title:  qv('#edJob')||null,
-      pay_type:   qv('#edType')||null,
-      status:     qv('#edStatus')||null,
-      payroll_ref:qv('#edPayroll')||null,
-      address:    qv('#edAddress')||null
+    // ===== API =====
+    async function loadList(){
+      hideErrorBanner();
+      listWrap.innerHTML = `<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>`;
+      try{
+        const body = {
+          q: qv('#q'),
+          type: qv('#fType'),
+          status: qv('#fStatus'),
+          job: qv('#fJob'),
+          emailHas: qv('#fEmailHas'),
+          page, size,
+          sort // { key, dir } – your Netlify function can use this
+        };
+
+        // IMPORTANT: endpoint name is plural (matches file admin-candidates-lists.js)
+        const res = await apiCall('/admin-candidates-lists','POST', body);
+
+        // tolerate either array or paged object
+        const rows = Array.isArray(res) ? res : (res.rows || []);
+        const total = res.total ?? rows.length;
+        const filtered = res.filtered ?? rows.length;
+        pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size)||1));
+        if(page>pages) page=pages;
+
+        setNum('#kTotal', total);
+        setNum('#kFiltered', filtered);
+        setPageMeta();
+
+        renderRows(rows);
+      }catch(e){
+        console.error(e);
+        showErrorBanner(e.message || 'Error');
+        listWrap.innerHTML = `<div style="color:#ffb4b4">Error: ${e.message||e}</div>`;
+      }
+    }
+
+    function setEd(c){
+      $('#edTitle').textContent = c?.id ? `Candidate #${c.id}` : 'New candidate';
+      $('#edFirst').value   = c.first_name||'';
+      $('#edLast').value    = c.last_name||'';
+      $('#edEmail').value   = c.email||'';
+      $('#edPhone').value   = c.phone||'';
+      $('#edJob').value     = c.job_title||'';
+      $('#edType').value    = c.pay_type||'Umbrella';
+      $('#edStatus').value  = c.status||'In progress';
+      $('#edPayroll').value = c.payroll_ref||'';
+      $('#edAddress').value = c.address||'';
+    }
+    function getEd(){
+      return {
+        id: cur?.id || undefined,
+        first_name: qv('#edFirst')||null,
+        last_name:  qv('#edLast')||null,
+        email:      qv('#edEmail')||null,
+        phone:      qv('#edPhone')||null,
+        job_title:  qv('#edJob')||null,
+        pay_type:   qv('#edType')||null,
+        status:     qv('#edStatus')||null,
+        payroll_ref:qv('#edPayroll')||null,
+        address:    qv('#edAddress')||null
+      };
+    }
+
+    async function openEd(id){
+      hideErrorBanner();
+      try{
+        cur = id ? await apiCall('/admin-candidates-get','POST',{ id }) : { status:'In progress', pay_type:'Umbrella' };
+        setEd(cur);
+        ed.style.display = '';
+        ed.scrollIntoView({behavior:'smooth',block:'start'});
+        $('#edFirst').focus();
+      }catch(e){
+        toast('Open failed: '+(e.message||e), 'error');
+      }
+    }
+
+    // ===== events =====
+    const doSearch = debounce(()=>{ page=1; saveFilters(); loadList(); }, 350);
+
+    $('#btnRefresh').onclick = ()=> { loadList(); };
+    $('#q').addEventListener('input', doSearch);
+    ['#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
+      $(sid).addEventListener('change', ()=>{ page=1; saveFilters(); loadList(); });
+      $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; saveFilters(); loadList(); }});
+    });
+
+    $('#pgPrev').onclick = ()=>{ if(page>1){ page--; localStorage.cand_page=page; loadList(); } };
+    $('#pgNext').onclick = ()=>{ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } };
+    $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
+
+    $('#btnNew').onclick  = ()=> openEd(null);
+    $('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
+
+    $('#btnSave').onclick = async ()=>{
+      try{
+        const data = getEd();
+        const saved = await apiCall('/admin-candidates-save','POST', data);
+        toast('Saved','ok');
+        ed.style.display='none';
+        page=1;
+        await loadList();
+        if(saved?.id) openEd(saved.id);
+      }catch(e){ toast('Save failed: '+(e.message||e),'error'); }
     };
+
+    $('#btnDelete').onclick = async ()=>{
+      if(!cur?.id) return toast('Nothing to delete','error');
+      if(!confirm('Delete this candidate?')) return;
+      try{
+        await apiCall('/admin-candidates-delete','POST',{ id: cur.id });
+        toast('Deleted','ok');
+        ed.style.display='none';
+        await loadList();
+      }catch(e){ toast('Delete failed: '+(e.message||e),'error'); }
+    };
+
+    $('#btnEmails').onclick = ()=>{
+      const emails = lastRows.map(r=>r.email).filter(Boolean);
+      if(!emails.length) return toast('No emails in current list','error');
+      navigator.clipboard?.writeText(emails.join(', '));
+      toast(`Copied ${emails.length} email(s)`,'ok');
+    };
+
+    $('#btnExport').onclick = ()=>{
+      const rows = lastRows;
+      if(!rows.length){ toast('Nothing to export','error'); return; }
+      const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref'];
+      const head = cols.join(',');
+      const csv = [head].concat(rows.map(r=> cols.map(k=>{
+        const v = r[k] ?? '';
+        const s = String(v).replace(/"/g,'""');
+        return `"${s}"`;
+      }).join(','))).join('\n');
+      const blob = new Blob([csv],{type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    };
+
+    // keyboard shortcuts
+    document.addEventListener('keydown',(e)=>{
+      if(e.key==='/'){ e.preventDefault(); $('#q').focus(); return; }
+      if(e.key==='r' || e.key==='R'){ e.preventDefault(); loadList(); return; }
+      if(e.key==='n' || e.key==='N'){ e.preventDefault(); openEd(null); return; }
+      if(e.key==='ArrowLeft'){ if(page>1){ page--; localStorage.cand_page=page; loadList(); } }
+      if(e.key==='ArrowRight'){ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } }
+    });
+
+    // initial load
+    await loadList();
   }
-
-  async function openEd(id){
-    try{
-      cur = id ? await api('/admin-candidates-get','POST',{ id }) : { status:'In progress', pay_type:'Umbrella' };
-      setEd(cur);
-      ed.style.display = '';
-      ed.scrollIntoView({behavior:'smooth',block:'start'});
-    }catch(e){ toast('Open failed: '+(e.message||e)); }
-  }
-
-  // events
-  sel('#btnRefresh').onclick = ()=> { page=1; loadList(); };
-  ['#q','#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
-    sel(sid).addEventListener('change', ()=>{ page=1; loadList(); });
-    sel(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(); }});
-  });
-
-  sel('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(); } };
-  sel('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(); } };
-  sel('#pageSize').onchange = ()=>{ size = Number(sel('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
-
-  sel('#btnNew').onclick  = ()=> openEd(null);
-  sel('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
-
-  sel('#btnSave').onclick = async ()=>{
-    try{
-      const data = getEd();
-      const saved = await api('/admin-candidates-save','POST', data);
-      toast('Saved');
-      ed.style.display='none';
-      page=1;
-      await loadList();
-      if(saved?.id) openEd(saved.id);
-    }catch(e){ toast('Save failed: '+(e.message||e)); }
-  };
-
-  sel('#btnDelete').onclick = async ()=>{
-    if(!cur?.id) return toast('Nothing to delete');
-    if(!confirm('Delete this candidate?')) return;
-    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted'); ed.style.display='none'; await loadList(); }
-    catch(e){ toast('Delete failed: '+(e.message||e)); }
-  };
-
-  sel('#btnEmails').onclick = ()=>{
-    const emails = lastRows.map(r=>r.email).filter(Boolean);
-    if(!emails.length) return toast('No emails in current list');
-    navigator.clipboard?.writeText(emails.join(', '));
-    toast(`Copied ${emails.length} email(s)`);
-  };
-
-  sel('#btnExport').onclick = ()=>{
-    const rows = lastRows;
-    if(!rows.length){ toast('Nothing to export'); return; }
-    const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref'];
-    const head = cols.join(',');
-    const csv = [head].concat(rows.map(r=> cols.map(k=>{
-      const v = r[k] ?? '';
-      const s = String(v).replace(/"/g,'""');
-      return `"${s}"`;
-    }).join(','))).join('\n');
-    const blob = new Blob([csv],{type:'text/csv'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
-    setTimeout(()=>URL.revokeObjectURL(url), 5000);
-  };
-
-  // first load
-  await loadList();
-}
+})();
 </script>
 </body>
 </html>
