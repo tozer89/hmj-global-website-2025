@@ -145,17 +145,40 @@ const fmt=(n,d=2)=> (Number(n||0)).toFixed(d);
 function nextTuesday1700(){const now=new Date();const t=new Date(now);const diff=(2-t.getDay()+7)%7; t.setDate(t.getDate()+diff); t.setHours(17,0,0,0); if(t<now)t.setDate(t.getDate()+7); return t;}
 function startDeadlineClock(){function tick(){const to=nextTuesday1700()-new Date(); if(to<=0){ sel('#deadlineClock').textContent=' • Deadline passed'; return;} const h=Math.floor(to/36e5), m=Math.floor((to%36e5)/6e4); sel('#deadlineClock').textContent=` • ${h}h ${m}m remaining`; } tick(); setInterval(tick,30e3);}
 
+// Replace your existing api() with this:
 async function api(path, method='GET', body=null){
-  const u=netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
-  const token=await u.jwt();
-  const res=await fetch(`/.netlify/functions${path}`,{
-    method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-    body: body?JSON.stringify(body):null
+  const u = netlifyIdentity.currentUser();
+  if(!u) throw new Error('identity_required');
+
+  const token = await u.jwt();
+
+  const res = await fetch(`/.netlify/functions${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: body ? JSON.stringify(body) : null
   });
-  const text=await res.text();
-  if(!res.ok) throw new Error(text||(`HTTP ${res.status}`));
-  try{return JSON.parse(text);}catch{return text;}
+
+  const raw = await res.text();
+
+  if(!res.ok){
+    // If the function returned JSON like {"error":"..."} prefer that text.
+    let msg = raw;
+    try {
+      const j = JSON.parse(raw);
+      msg = j.error || j.message || raw;
+    } catch(_) {}
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+
+  // Ensure we only ever return JSON here
+  try { return JSON.parse(raw); }
+  catch { throw new Error('bad_json_response'); }
 }
+
+
 
 // Rendering
 function renderDays(existing, rates, editable){

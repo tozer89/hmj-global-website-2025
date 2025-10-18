@@ -1,17 +1,17 @@
-// netlify/functions/_supabase.js  (CommonJS)
+// netlify/functions/_supabase.js
 const { createClient } = require('@supabase/supabase-js');
 
-const url  = process.env.SUPABASE_URL;
-const key  = process.env.SUPABASE_SERVICE_KEY;
+// Use the Service key on the server so RLS never blocks server functions.
+// (Client-side still uses anon+JWT; this is only for Netlify Functions.)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 
-// Fail fast if env vars are missing (shows as 500, not 401)
-if (!url || !key) {
-  throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars');
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error('Supabase env missing: SUPABASE_URL or SUPABASE_SERVICE_KEY');
 }
 
-const supabase = createClient(url, key, {
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false }
 });
 
 module.exports = { supabase };
-
