@@ -1,48 +1,95 @@
 // netlify/functions/admin-candidates-save.js
-const { supabase } = require('./_supabase.js');
-const { getContext } = require('./_auth.js');
+const { getContext, coded } = require('./_auth.js');
 
-async function audit(actor, action, entity, entity_id, details) {
-  await supabase.from('admin_audit_logs').insert({
-    actor_email: actor?.email || null,
-    action, entity, entity_id,
-    details
-  });
+function resp(status, json) {
+  return {
+    statusCode: status,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(json),
+  };
 }
 
 exports.handler = async (event, context) => {
   try {
-    const { user } = await getContext(context, { requireAdmin: true });
-    const { contractor } = JSON.parse(event.body || '{}');
-    if (!contractor) return { statusCode: 400, body: JSON.stringify({ error: 'Missing contractor' }) };
+    // IMPORTANT: pass BOTH (event, context)
+    const debugFlag = (() => {
+      try { return JSON.parse(event.body || '{}').debug === true; } catch { return false; }
+    })();
 
-    // Only pass columns that exist in your table:
-    const payload = {
-      id: contractor.id ?? undefined,
-      name: contractor.name,
-      email: contractor.email,
-      phone: contractor.phone || null,
-      payroll_ref: contractor.payroll_ref || null,
-      // Optional JSONB columns if you created them:
-      address: contractor.address || null,                   // { line1, city, postcode, ... }
-      bank: contractor.bank || null,                         // { sort_code, account_number, iban, swift }
-      emergency_contact: contractor.emergency_contact || null, // { name, phone, relation }
-      right_to_work: contractor.right_to_work || null,       // { status, doc_type, doc_ref, expiry }
-      pay_type: contractor.pay_type || null                  // 'PAYE'|'Ltd Co'|'CIS'|...
+    const { user, roles, supabase } = await getContext(event, context, {
+      requireAdmin: true,
+    });
+
+    if (debugFlag) {
+      console.log('[save] who:', { email: user?.email, roles });
+    }
+
+    if (event.httpMethod !== 'POST') {
+      throw coded(405, 'Method Not Allowed');
+    }
+
+    const payload = JSON.parse(event.body || '{}');
+
+    // Normalize/trim inputs (mirror fields you show in candidates.html)
+    const row = {
+      id: payload.id ?? undefined,
+      first_name: (payload.first_name || '').trim() || null,
+      last_name: (payload.last_name || '').trim() || null,
+      email: (payload.email || '').trim() || null,
+      phone: (payload.phone || '').trim() || null,
+      job_title: (payload.job_title || '').trim() || null,
+      pay_type: (payload.pay_type || '').trim() || null,
+      status: (payload.status || '').trim() || null,
+      payroll_ref: (payload.payroll_ref || '').trim() || null,
+      address: (payload.address || '').trim() || null,
+      bank_sort_code: (payload.bank_sort_code || '').trim() || null,
+      bank_account: (payload.bank_account || '').trim() || null,
+      bank_iban: (payload.bank_iban || '').trim() || null,
+      bank_swift: (payload.bank_swift || '').trim() || null,
+      notes: payload.notes || null,
+      updated_at: new Date().toISOString(),
     };
 
+    // Basic validation like before
+    if (!row.first_name || !row.last_name) {
+      throw coded(400, 'First/Last name required');
+    }
+
+    // Upsert (admin service client bypasses RLS via service_role)
     const { data, error } = await supabase
-      .from('contractors')
-      .upsert(payload)
-      .select()
-      .single();
+      .from('candidates')
+      .upsert(row, { onConflict: 'id', ignoreDuplicates: false })
+      .select('*')
+      .limit(1);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[save] supabase error:', error);
+      throw coded(500, error.message || 'Database error');
+    }
 
-    await audit(user, payload.id ? 'update' : 'create', 'contractor', data.id, payload);
-    return { statusCode: 200, body: JSON.stringify(data) };
+    const saved = Array.isArray(data) ? data[0] : data;
+
+    // Audit (best-effort)
+    try {
+      await supabase.from('candidate_audit').insert({
+        candidate_id: saved.id,
+        actor_email: user?.email || null,
+        action: row.id ? 'update' : 'create',
+        before_data: null,
+        after_data: row,
+      });
+    } catch (e) {
+      console.warn('[save] audit insert failed (non-fatal):', e?.message || e);
+    }
+
+    if (debugFlag) {
+      console.log('[save] ok ->', { id: saved.id });
+    }
+
+    return resp(200, { ok: true, id: saved.id });
   } catch (e) {
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
+    const status = e.code && Number.isInteger(e.code) ? e.code : 401;
+    if (status >= 500) console.error('[save] fatal:', e);
+    return resp(status, { error: e.message || 'Unauthorized' });
   }
 };
