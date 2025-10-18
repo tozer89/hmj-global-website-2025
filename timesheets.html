@@ -1,421 +1,446 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Timesheets | HMJ-Global</title>
-<link rel="stylesheet" href="/css/style.css"/>
-<style>
-:root{
-  --ink:#0c1118; --ink-muted:#4b5a70; --bg:#0b1420; --panel:#0f1c2b;
-  --panel-2:#101b30; --border:#203042; --purple:#8b7dff; --green:#25c08a; --red:#ff7a7a; --amber:#ffd166;
-  --white:#fff;
-}
-html,body{margin:0;background:linear-gradient(180deg,#0b1420,#0d1830);color:#e6edf6;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-a{color:#9fb7ff;text-decoration:none}
-.wrap{max-width:1100px;margin:30px auto;padding:0 16px;display:grid;grid-template-columns:1fr 340px;gap:16px}
-@media (max-width:1000px){ .wrap{grid-template-columns:1fr} }
-.topbar{position:sticky;top:0;z-index:50;background:rgba(11,20,32,.85);border-bottom:1px solid var(--border);backdrop-filter:saturate(120%) blur(6px)}
-.toprow{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
-.brand{font-weight:800}
-.spacer{flex:1}
-.btn{background:#1a2740;border:1px solid #2b3c55;color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer}
-.btn.ghost{background:transparent}
-.btn.primary{background:var(--purple);border-color:transparent}
-.btn.success{background:var(--green);border-color:transparent}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
-.muted{color:#9fb3c8}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.hr{height:1px;background:var(--border);margin:10px 0}
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Timesheets | HMJ-Global</title>
 
-/* white cards */
-.day-card{display:flex;align-items:center;gap:12px;background:#fff;color:var(--ink);
-  border:1px solid #d7dbe3;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
-.day-badge{min-width:64px;text-align:center;background:#eef2f8;border:1px solid #d7dbe3;border-radius:10px;padding:10px 6px;font-weight:800;line-height:1;color:#162033}
-.day-badge .dn{display:block;font-size:.76rem;letter-spacing:.6px}
-.day-fields{flex:1;display:grid;grid-template-columns:160px 160px 1fr 90px;gap:10px}
-.day-fields input[type="number"], .day-fields input[type="text"]{
-  width:100%;background:#fff;color:#0b1420;border:2px solid #c9cfda;border-radius:10px;padding:12px 10px;font-size:1rem}
-.day-tools{display:flex;gap:6px;align-items:center}
-.pill{font-size:.9rem;padding:8px 10px;border-radius:10px;background:#eef2f8;border:1px solid #d7dbe3;color:#162033;cursor:pointer}
-.pill.icon{width:36px;height:36px;display:inline-grid;place-items:center}
+  <!-- Netlify Identity widget -->
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
-/* totals */
-#totals{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-#totals .box{background:#0d1930;border:1px solid #22324a;border-radius:12px;padding:10px 12px}
-#totals b{color:#fff}
+  <!-- ===== 50/50 themed styles (white work area on dark chrome) ===== -->
+  <style>
+    :root{
+      --bg:#121725; --panel:#1b2236; --surface:#f3f6fb;
+      --card:#ffffff; --ink:#0e1526; --muted:#5b6b82;
+      --accent:#3A66B3; --accent-2:#7aa0e6;
+      --good:#22a06b; --warn:#e6a100; --bad:#d14b4b;
+      --cardBorder:rgba(26,26,46,.12);
+      --chip:#eef3ff; --chipBorder:rgba(58,102,179,.28);
+      --radius:14px;
+    }
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0;
+      background:linear-gradient(180deg,var(--bg),#0f1422 45%) fixed;
+      color:var(--ink);
+      font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    }
 
-/* prev weeks */
-#history .rowi{padding:10px;border-bottom:1px solid var(--border)}
-#history .rowi:last-child{border-bottom:none}
-#history.collapsed .rowi:nth-child(n+4){display:none}
+    /* Top bar (dark chrome) */
+    .topbar{ padding:18px 16px; background:transparent; }
+    .toprow{ max-width:1080px; margin:0 auto; display:flex; gap:12px; align-items:center; }
+    .brand{ color:#d9e2ff; font-weight:700; letter-spacing:.2px }
+    .pill{ background:#201d3a; color:#d9d2ff; border:1px solid rgba(255,255,255,.1); padding:8px 10px; border-radius:999px; font-size:12px }
+    .spacer{ flex:1 }
 
-/* toasts */
-#toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
-.toast{background:#0f172a;border:1px solid #233044;color:#e6edf6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-.toast.err{border-color:#5b2b2b}
+    /* Layout: white “floating” work area */
+    .wrap{ max-width:1080px; margin:0 auto 64px; padding:0 16px; }
+    .grid{
+      display:grid; grid-template-columns: 1fr 320px; gap:18px;
+    }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
 
-/* mobile */
-@media (max-width:720px){
-  .day-fields{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
-  .day-fields input[name$="_note"]{grid-column:1/-1}
-  .btn{padding:12px 14px}
-}
-</style>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    .card{
+      background:var(--card);
+      border:1px solid var(--cardBorder);
+      box-shadow:0 8px 26px rgba(4,10,20,.08);
+      border-radius:var(--radius);
+      padding:16px;
+    }
+    .panel-dark{
+      background:var(--panel);
+      color:#d3dbf4;
+      border:1px solid rgba(255,255,255,.06);
+    }
+    .panel-dark .inner{ background:var(--card); color:var(--ink); border-radius:12px; padding:12px; }
+
+    .muted{ color:var(--muted) }
+    .hstack{ display:flex; align-items:center; gap:8px }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:9px 12px; border-radius:10px; border:1px solid var(--cardBorder);
+      background:#fff; color:var(--ink); cursor:pointer; text-decoration:none; font-weight:600
+    }
+    .btn:hover{ filter:brightness(.98) }
+    .btn.primary{ background:var(--accent); color:#fff; border-color:rgba(0,0,0,.0) }
+    .btn.ghost{ background:var(--surface) }
+    .btn.good{ background:var(--good); color:#fff; border:0 }
+    .btn.warn{ background:var(--warn); color:#1a1600; border:0 }
+    .btn.bad{ background:var(--bad); color:#fff; border:0 }
+    .btn.sm{ padding:7px 10px; font-weight:600 }
+
+    .kpis{ display:flex; gap:8px; flex-wrap:wrap }
+    .chip{ background:var(--chip); border:1px solid var(--chipBorder); color:#223259; padding:6px 10px; border-radius:999px; font-weight:700 }
+
+    /* Timesheet table (floating white bubble) */
+    .bubble{
+      background:var(--card);
+      border:1px solid var(--cardBorder);
+      border-radius:18px;
+      box-shadow:0 10px 34px rgba(4,10,20,.10);
+      padding:14px;
+    }
+    table{ width:100%; border-collapse:separate; border-spacing:0 8px; }
+    th{ text-align:left; font-size:12px; color:var(--muted); font-weight:700; padding:0 10px 6px }
+    td{
+      background:#fff; border:1px solid var(--cardBorder); padding:8px 10px; vertical-align:middle;
+    }
+    td:first-child{ border-top-left-radius:10px; border-bottom-left-radius:10px; }
+    td:last-child{ border-top-right-radius:10px; border-bottom-right-radius:10px; }
+    input[type="number"], textarea{
+      width:100%; border:1px solid var(--cardBorder); border-radius:8px; padding:8px 10px; font:inherit; color:var(--ink);
+      background:#fff;
+    }
+    textarea{ resize:vertical; min-height:40px }
+    input:focus, textarea:focus{ outline:2px solid rgba(58,102,179,.25); border-color:var(--accent) }
+    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .help{ font-size:12px; color:var(--muted) }
+
+    .center{ text-align:center }
+    .hidden{ display:none !important }
+
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom:14px; max-width:90vw;
+      background:#0c1224; color:#fff; border:1px solid rgba(255,255,255,.12);
+      padding:10px 12px; border-radius:12px; z-index:9999; box-shadow:0 12px 28px rgba(0,0,0,.35);
+      font-weight:600
+    }
+  </style>
 </head>
 <body>
-<div class="topbar">
-  <div class="toprow">
-    <div class="brand">HMJ Global — Timesheets</div>
-    <span class="spacer"></span>
-    <span id="deadlineTag" class="pill" style="background:#2b2242;color:#dbcfff;border-color:#3c2f66">Deadline: Tue 17:00</span>
-    <a href="/" class="btn ghost">⟵ Return to Homepage</a>
-    <button id="btnSignOut" class="btn">Sign out</button>
-  </div>
-</div>
 
-<div class="wrap">
-  <div>
-    <div class="card">
-      <h1 style="margin:0 0 6px">My Timesheet</h1>
-      <div class="muted">Submit your hours by <b>Tuesday 17:00</b> for Friday payment. <span id="deadlineClock"></span></div>
+  <!-- ===== Top bar ===== -->
+  <div class="topbar">
+    <div class="toprow">
+      <div class="brand">HMJ Global — Timesheets</div>
+      <span class="spacer"></span>
+      <a class="btn ghost sm" href="/">← Return to Homepage</a>
+      <button id="btnSignOut" class="btn sm">Sign out</button>
     </div>
+  </div>
 
-    <div id="gate" class="card" style="display:none">
+  <div class="wrap">
+
+    <!-- ===== Auth gate ===== -->
+    <div id="gate" class="card hidden">
       <p>Please log in to access your timesheets.</p>
       <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
     </div>
 
-    <div id="app" style="display:none">
-      <div id="summary" class="card">Loading…</div>
+    <!-- ===== App ===== -->
+    <div id="app" class="grid hidden">
 
-      <div class="card" id="weekCard">
-        <div class="row" style="justify-content:space-between;align-items:flex-end">
-          <div>
-            <h2 style="margin:0 0 8px">This Week</h2>
-            <div id="weekMeta" class="muted" style="margin-bottom:8px"></div>
-          </div>
-          <div id="totals">
-            <div class="box"><span class="muted">Std</span> <b id="tStd">0</b>h</div>
-            <div class="box"><span class="muted">OT</span> <b id="tOt">0</b>h</div>
-            <div class="box"><span class="muted">Total</span> <b id="tAll">0</b>h</div>
-            <div class="box"><span class="muted">Est. gross</span> £<b id="tGross">0.00</b></div>
+      <!-- LEFT: main work area -->
+      <div class="stack">
+        <!-- Summary -->
+        <div class="card" id="summary">
+          <div class="hstack" style="justify-content:space-between">
+            <div>
+              <h2 style="margin:0">My Timesheet</h2>
+              <div class="muted">Submit your hours by <b>Tuesday 17:00</b> for Friday payment. <span id="deadlineTag" class="chip" style="margin-left:6px">Deadline: Tue 17:00</span></div>
+            </div>
+            <div class="kpis">
+              <span class="chip" id="kStd">Std 0h</span>
+              <span class="chip" id="kOT">OT 0h</span>
+              <span class="chip" id="kTotal">Total 0h</span>
+              <span class="chip" id="kGross">Est. gross £0.00</span>
+            </div>
           </div>
         </div>
 
-        <div class="row" style="margin:12px 0 8px">
-          <span class="muted">Quick fill:</span>
-          <button class="pill" id="qMonFri8" type="button">Mon–Fri 8h</button>
-          <button class="pill" id="qClear" type="button">Clear all</button>
-          <button class="pill" id="qSetAll" type="button">Set all…</button>
-          <span class="muted">Jump with <b>Tab</b> • Copy previous with <b>⌘/Ctrl + D</b></span>
+        <!-- Timesheet “floating bubble” -->
+        <div class="bubble" id="sheet">
+          <div class="hstack" style="justify-content:space-between; margin-bottom:8px">
+            <h3 style="margin:4px 0" id="weekTitle">This Week</h3>
+            <div class="hstack">
+              <button class="btn ghost sm" onclick="quickFill('8x5')">Mon–Fri 8h</button>
+              <button class="btn ghost sm" onclick="clearAll()">Clear all</button>
+              <button class="btn ghost sm" onclick="setAll('std')">Set all…</button>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr><th>Day</th><th style="width:120px">Std (h)</th><th style="width:120px">OT (h)</th><th>Note</th></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+
+          <div class="row-actions" style="margin-top:8px">
+            <span class="help" id="statusHelp"></span>
+            <span class="spacer"></span>
+            <button class="btn" onclick="saveDraft()">Save draft</button>
+            <button class="btn good" onclick="submitTimesheet()">Submit</button>
+            <button class="btn warn hidden" id="btnReqEdit" onclick="requestEdit()">Request edit</button>
+            <button class="btn bad hidden" id="btnReqDelete" onclick="requestDelete()">Request delete</button>
+          </div>
         </div>
 
-        <form id="tsForm" class="day-list" autocomplete="off">
-          <div id="days"></div>
-          <div class="row" style="margin-top:12px">
-            <button type="button" class="btn" id="btnDraft">Save draft</button>
-            <button type="submit" class="btn success" id="btnSubmit">Submit</button>
+        <!-- Previous weeks -->
+        <div class="card" id="history">
+          <div class="hstack" style="justify-content:space-between">
+            <h3 style="margin:0">Previous Weeks</h3>
+            <button class="btn ghost sm" onclick="toggleHistory()" id="btnHistToggle">Collapse</button>
           </div>
-        </form>
+          <div id="histBody" class="muted" style="margin-top:8px">—</div>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <h3 style="margin:0">Previous Weeks</h3>
-          <button class="pill" id="btnToggleHist" type="button">Collapse</button>
+      <!-- RIGHT: profile panel -->
+      <div class="panel-dark card">
+        <div class="muted">Profile</div>
+        <div class="inner" id="profileBox">
+          Loading profile…
         </div>
-        <div id="history" class="muted collapsed">—</div>
       </div>
     </div>
   </div>
 
-  <div id="profilePane" class="card"><div class="muted">Loading profile…</div></div>
-</div>
+  <div id="toast" class="toast hidden"></div>
 
-<div id="toast" aria-live="polite" aria-atomic="true"></div>
+  <!-- ===== Page logic ===== -->
+  <script>
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    let STATE = {
+      contractor:null,
+      assignment:null,
+      week_ending:null,
+      status:'draft',
+      rates:{ std:0, ot:0 },
+      entries: Object.fromEntries(DAYS.map(d=>[d,{std:0,ot:0,note:''}]))
+    };
 
-<script>
-const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const sel = s => document.querySelector(s);
-const byName = (f,n)=>f.elements.namedItem(n);
-const toast=(msg,type='ok',t=2600)=>{const b=document.createElement('div');b.className=`toast ${type}`;b.textContent=msg;sel('#toast').appendChild(b);setTimeout(()=>b.remove(),t);};
-const fmt=(n,d=2)=> (Number(n||0)).toFixed(d);
-function nextTuesday1700(){const now=new Date();const t=new Date(now);const diff=(2-t.getDay()+7)%7; t.setDate(t.getDate()+diff); t.setHours(17,0,0,0); if(t<now)t.setDate(t.getDate()+7); return t;}
-function startDeadlineClock(){function tick(){const to=nextTuesday1700()-new Date(); if(to<=0){ sel('#deadlineClock').textContent=' • Deadline passed'; return;} const h=Math.floor(to/36e5), m=Math.floor((to%36e5)/6e4); sel('#deadlineClock').textContent=` • ${h}h ${m}m remaining`; } tick(); setInterval(tick,30e3);}
+    // ---------- Utilities ----------
+    const $ = sel => document.querySelector(sel);
+    const el = (tag, attrs={}, ...children) => {
+      const n = document.createElement(tag);
+      Object.entries(attrs).forEach(([k,v]) => {
+        if (k==='class') n.className=v;
+        else if (k==='html') n.innerHTML=v;
+        else n.setAttribute(k,v);
+      });
+      children.forEach(c => n.append(c));
+      return n;
+    };
+    const money = n => (Number(n||0)).toLocaleString('en-GB',{style:'currency',currency:'GBP'});
 
-// Replace your existing api() with this:
-async function api(path, method='GET', body=null){
-  const u = netlifyIdentity.currentUser();
-  if(!u) throw new Error('identity_required');
+    function toast(msg, ms=3500){
+      const t = $('#toast');
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      clearTimeout(t._h);
+      t._h = setTimeout(()=> t.classList.add('hidden'), ms);
+    }
 
-  const token = await u.jwt();
+    // Hardened API helper (fixes HTML/JSON parse errors)
+    async function api(path, method='GET', body=null){
+      const u = netlifyIdentity.currentUser();
+      if(!u){ throw new Error('identity_required'); }
+      const token = await u.jwt();
 
-  const res = await fetch(`/.netlify/functions${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: body ? JSON.stringify(body) : null
-  });
+      const res = await fetch(`/.netlify/functions${path}`,{
+        method,
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: body?JSON.stringify(body):null
+      });
 
-  const raw = await res.text();
+      const raw = await res.text();
+      if(!res.ok){
+        let msg = raw;
+        try{ const j = JSON.parse(raw); msg = j.error || j.message || raw; }catch{}
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      try{ return JSON.parse(raw); }
+      catch{ throw new Error('bad_json_response'); }
+    }
 
-  if(!res.ok){
-    // If the function returned JSON like {"error":"..."} prefer that text.
-    let msg = raw;
-    try {
-      const j = JSON.parse(raw);
-      msg = j.error || j.message || raw;
-    } catch(_) {}
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
+    // ---------- Identity gate ----------
+    netlifyIdentity.on('init', user => {
+      if (user){ $('#gate').classList.add('hidden'); $('#app').classList.remove('hidden'); boot(); }
+      else     { $('#gate').classList.remove('hidden'); $('#app').classList.add('hidden'); }
+    });
+    netlifyIdentity.on('login', () => location.reload());
+    netlifyIdentity.on('logout', () => location.reload());
+    $('#btnSignOut').onclick = () => netlifyIdentity.logout();
 
-  // Ensure we only ever return JSON here
-  try { return JSON.parse(raw); }
-  catch { throw new Error('bad_json_response'); }
-}
+    // ---------- Render ----------
+    function renderRows(){
+      const tb = $('#tbody'); tb.innerHTML='';
+      DAYS.forEach(d=>{
+        const r = STATE.entries[d] || {std:0,ot:0,note:''};
+        const tr = el('tr',{},
+          el('td',{}, d),
+          el('td',{}, el('input',{type:'number', step:'0.25', min:'0', value:r.std, 'data-day':d, 'data-kind':'std'})),
+          el('td',{}, el('input',{type:'number', step:'0.25', min:'0', value:r.ot,  'data-day':d, 'data-kind':'ot'})),
+          el('td',{}, el('textarea',{'data-day':d, 'data-kind':'note'}, r.note))
+        );
+        tb.append(tr);
+      });
 
+      // Disable inputs if not editable
+      const locked = (STATE.status !== 'draft');
+      tb.querySelectorAll('input,textarea').forEach(i=> i.disabled = locked);
 
+      $('#btnReqEdit').classList.toggle('hidden', !locked);
+      $('#btnReqDelete').classList.toggle('hidden', !locked);
+    }
 
-// Rendering
-function renderDays(existing, rates, editable){
-  const wrap=sel('#days'); wrap.innerHTML='';
-  const label={Sun:'SUN',Mon:'MON',Tue:'TUE',Wed:'WED',Thu:'THU',Fri:'FRI',Sat:'SAT'};
-  DAYS.forEach((d,i)=>{
-    const e=existing?.[d]||{};
-    const dis = editable ? '' : 'disabled';
-    const card=document.createElement('div'); card.className='day-card';
-    card.innerHTML=`
-      <div class="day-badge"><span class="dn">${label[d]}</span></div>
-      <div class="day-fields">
-        <input ${dis} aria-label="${d} standard hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_std" placeholder="Std hrs" value="${e.std ?? ''}">
-        <input ${dis} aria-label="${d} overtime hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_ot"  placeholder="OT hrs"  value="${e.ot ?? ''}">
-        <input ${dis} aria-label="${d} notes" type="text" name="${d}_note" placeholder="Notes (optional)" value="${e.note ?? ''}">
-        <div class="day-tools">
-          <button ${dis?'disabled':''} class="pill icon" type="button" title="Copy previous day" data-copy="${i-1}">⟲</button>
-          <button ${dis?'disabled':''} class="pill icon" type="button" title="Clear row" data-clear>✕</button>
-        </div>
-      </div>`;
-    wrap.appendChild(card);
-  });
+    function totals(){
+      const s = Object.values(STATE.entries).reduce((acc,r)=>({
+        std:acc.std+Number(r.std||0),
+        ot: acc.ot +Number(r.ot ||0)
+      }),{std:0,ot:0});
+      const gross = (s.std*STATE.rates.std) + (s.ot*STATE.rates.ot);
+      $('#kStd').textContent   = `Std ${s.std}h`;
+      $('#kOT').textContent    = `OT ${s.ot}h`;
+      $('#kTotal').textContent = `Total ${s.std+s.ot}h`;
+      $('#kGross').textContent = `Est. gross ${money(gross)}`;
+    }
 
-  if(!editable) return;
+    function renderProfile(){
+      const b = $('#profileBox');
+      if(!STATE.contractor) { b.textContent = 'Profile unavailable'; return; }
+      const c = STATE.contractor, a = STATE.assignment || {};
+      b.innerHTML = `
+        <div><b>${c.name||''}</b><div class="muted">${c.email||''}</div></div>
+        <hr style="border:none;border-top:1px solid var(--cardBorder);margin:10px 0">
+        <div><b>Client</b><br>${a.client_name||'—'}</div>
+        <div style="margin-top:6px"><b>Project</b><br>${a.project_name||'—'}</div>
+        <div style="margin-top:6px"><b>Site</b><br>${a.site_name||'—'}</div>
+        <div class="muted" style="margin-top:8px">Rate: £${Number(a.rate_std||0)} /h (OT £${Number(a.rate_ot||0)})</div>
+      `;
+    }
 
-  wrap.addEventListener('click',(e)=>{
-    const btn=e.target.closest('button'); if(!btn) return;
-    const card=btn.closest('.day-card'); if(!card) return;
-    const idx=[...wrap.children].indexOf(card);
-    const f=sel('#tsForm');
-    if(btn.dataset.copy){
-      const srcIdx=Number(btn.dataset.copy);
-      if(srcIdx>=0){
-        const src=DAYS[srcIdx], dst=DAYS[idx];
-        byName(f,`${dst}_std`).value=byName(f,`${src}_std`).value;
-        byName(f,`${dst}_ot`).value =byName(f,`${src}_ot`).value;
-        byName(f,`${dst}_note`).value=byName(f,`${src}_note`).value;
-        calcTotals(rates);
+    // ---------- Loaders ----------
+    async function boot(){
+      try{
+        await netlifyIdentity.currentUser()?.jwt(); // ensure ready
+        await loadWeek();
+        await loadHistory();
+        bindInputs();
+      }catch(e){
+        toast(`Could not load timesheet. ${e.message}`);
+        console.error(e);
       }
     }
-    if(btn.hasAttribute('data-clear')){
-      const day=DAYS[idx];
-      byName(f,`${day}_std`).value='';
-      byName(f,`${day}_ot`).value='';
-      byName(f,`${day}_note`).value='';
-      calcTotals(rates);
+
+    async function loadWeek(){
+      const res = await api('/timesheets-get-this-week');
+      // When server returns explicit errors, api() would have thrown above.
+      STATE.contractor = res.contractor || null;
+      STATE.assignment = res.assignment || null;
+      STATE.week_ending = res.week_ending;
+      STATE.status = res.status || 'draft';
+      STATE.rates = { std:Number(res?.assignment?.rate_std||0), ot:Number(res?.assignment?.rate_ot||0) };
+      STATE.entries = res.entries || STATE.entries;
+
+      $('#weekTitle').textContent = `This Week — ending ${STATE.week_ending}`;
+      $('#statusHelp').textContent = `Status: ${STATE.status}`;
+      renderRows(); totals(); renderProfile();
     }
-  });
-}
 
-function collect(status){
-  const f=sel('#tsForm'); const entries={};
-  DAYS.forEach(d=>{entries[d]={std:parseFloat(byName(f,`${d}_std`).value||0), ot:parseFloat(byName(f,`${d}_ot`).value||0), note:byName(f,`${d}_note`).value||''};});
-  return { status, entries };
-}
-
-function calcTotals(rates){
-  const f=sel('#tsForm'); let std=0,ot=0; DAYS.forEach(d=>{ std+=Number(byName(f,`${d}_std`).value||0); ot+=Number(byName(f,`${d}_ot`).value||0); });
-  const all=std+ot; const gross=(std*(rates?.rate_std||0))+(ot*(rates?.rate_ot||0));
-  sel('#tStd').textContent=fmt(std,2); sel('#tOt').textContent=fmt(ot,2); sel('#tAll').textContent=fmt(all,2); sel('#tGross').textContent=fmt(gross,2);
-  sel('#weekCard').style.boxShadow = all>84 ? '0 0 0 2px rgba(255,0,0,.25) inset' : 'none';
-}
-
-// autosave
-const CACHE_KEY='hmj_ts_draft';
-const loadDraft=()=>{try{return JSON.parse(localStorage.getItem(CACHE_KEY)||'')||null;}catch{return null;}};
-const saveDraftLocal=(p)=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(p));}catch{}};
-const clearDraftLocal=()=>{try{localStorage.removeItem(CACHE_KEY);}catch{}};
-
-// Boot
-async function boot(){
-  const user=netlifyIdentity?.currentUser();
-  if(!user){ sel('#gate').style.display='block'; return; }
-  sel('#btnSignOut').onclick=()=>netlifyIdentity?.logout();
-  sel('#app').style.display='block'; startDeadlineClock();
-
-  // Profile
-  try{
-    const prof = await api('/contractor-profile');
-    const c=prof.contractor, a=prof.assignment;
-    sel('#profilePane').innerHTML = a ? `
-      <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
-      <div class="hr"></div>
-      <div>Client<br><b>${a.client_name}</b></div><div class="hr"></div>
-      <div>Project<br><b>${a.project_name}</b></div><div class="hr"></div>
-      <div>Site<br><b>${a.site_name||'—'}</b></div><div class="hr"></div>
-      <div>Rate<br><b>£${a.rate_std}/h ${a.rate_ot?`(OT £${a.rate_ot}/h)`:''}</b></div>
-    ` : `<div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
-         <div class="hr"></div><div class="muted">No active assignment — contact HMJ.</div>`;
-  }catch(e){ sel('#profilePane').innerHTML='<div class="muted">Profile unavailable</div>'; }
-
-  // Week data
-  let data;
-  try{
-    data=await api('/timesheets-get-this-week');
-  }catch(e){
-    toast('Failed to load timesheet: '+e.message,'err',6000);
-    sel('#summary').textContent='Could not load timesheet.';
-    return;
-  }
-
-  // Summary
-  if (!data.assignment || !data.contractor){
-    sel('#summary').innerHTML = `<b>${data.contractor?.name || 'Your profile'}</b><br><span class="muted">No active assignment found. You can view previous weeks below.</span>`;
-    sel('#weekMeta').textContent = '—';
-    renderDays({}, null, false);
-    sel('#btnDraft').disabled = true; sel('#btnSubmit').disabled = true;
-    return;
-  }
-
-  sel('#summary').innerHTML =
-   `<strong>${data.contractor.name}</strong> — ${data.assignment.project_name} @ ${data.assignment.client_name}
-    <br><span class="muted">Rate: £${data.assignment.rate_std}/h ${data.assignment.rate_ot?`(OT £${data.assignment.rate_ot}/h)`:''}</span>`;
-
-  sel('#weekMeta').textContent = `Week ending ${data.week_ending} • Status: ${data.status}`;
-
-  // Merge draft if same week
-  const draft=loadDraft(); const sameWeek=draft && draft.week_ending===data.week_ending;
-  const mergedEntries = sameWeek ? Object.assign({}, data.entries, draft.entries||{}) : data.entries;
-
-  const editable = data.status === 'draft';
-  renderDays(mergedEntries, data.assignment, editable);
-  calcTotals(data.assignment);
-
-  // live calc + autosave (only in draft)
-  if (editable){
-    sel('#tsForm').addEventListener('input', ()=>{
-      calcTotals(data.assignment);
-      saveDraftLocal({ week_ending:data.week_ending, entries:collect('draft').entries });
-      window.onbeforeunload = ()=>'You have unsaved changes.';
-    });
-
-    // quick fill
-    sel('#qMonFri8').onclick=()=>{
-      const f=sel('#tsForm');
-      ['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{ byName(f,`${d}_std`).value='8'; byName(f,`${d}_ot`).value='0'; });
-      calcTotals(data.assignment);
-    };
-    sel('#qClear').onclick=()=>{
-      const f=sel('#tsForm'); DAYS.forEach(d=>{ byName(f,`${d}_std`).value=''; byName(f,`${d}_ot`).value=''; byName(f,`${d}_note`).value=''; });
-      calcTotals(data.assignment);
-    };
-    sel('#qSetAll').onclick=()=>{
-      const h = prompt('Set standard hours for all days (e.g. 8, 7.5, 0):','8');
-      if (h==null) return; const f=sel('#tsForm'); DAYS.forEach(d=>{ byName(f,`${d}_std`).value=h; }); calcTotals(data.assignment);
-    };
-
-    // copy previous day shortcut
-    document.addEventListener('keydown',(e)=>{
-      if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='d'){
-        e.preventDefault();
-        const active=document.activeElement; const name=active?.name||''; const m=name.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)_(std|ot|note)$/);
-        if(!m) return; const day=m[1], idx=DAYS.indexOf(day); if(idx<=0) return; const prev=DAYS[idx-1], f=sel('#tsForm');
-        byName(f,`${day}_std`).value=byName(f,`${prev}_std`).value;
-        byName(f,`${day}_ot`).value =byName(f,`${prev}_ot`).value;
-        byName(f,`${day}_note`).value=byName(f,`${prev}_note`).value;
-        calcTotals(data.assignment);
+    async function loadHistory(){
+      try{
+        const res = await api('/timesheets-history');
+        const body = $('#histBody');
+        if(!res || !res.items || !res.items.length){ body.textContent='—'; return; }
+        body.innerHTML = res.items.map(i=>{
+          return `<div style="padding:8px 10px;border:1px solid var(--cardBorder);border-radius:10px;margin:6px 0;background:#fff">
+              <b>Week ending:</b> ${i.week_ending}
+              <span class="chip" style="margin-left:8px">${i.status}</span>
+              <span class="muted" style="margin-left:8px">Std ${i.std||0}h • OT ${i.ot||0}h</span>
+          </div>`;
+        }).join('');
+      }catch(e){
+        console.warn('history load',e);
       }
-    });
-
-    // buttons
-    sel('#btnDraft').onclick=async ()=>{
-      try{ const payload=collect('draft'); await api('/timesheets-save','POST',payload); clearDraftLocal(); window.onbeforeunload=null; toast('Draft saved'); }
-      catch(e){ toast('Save failed: '+e.message,'err',5000); }
-    };
-    sel('#tsForm').onsubmit=async (e)=>{
-      e.preventDefault();
-      try{ const payload=collect('submitted'); await api('/timesheets-submit','POST',payload); clearDraftLocal(); window.onbeforeunload=null; toast('Submitted — thank you!', 'ok', 3000); setTimeout(()=>location.reload(), 700);}
-      catch(e){ toast('Submit failed: '+e.message,'err',6000); }
-    };
-  }else{
-    // lock UI
-    sel('#btnDraft').disabled=true; sel('#btnSubmit').disabled=true;
-    sel('#qMonFri8').disabled=true; sel('#qClear').disabled=true; sel('#qSetAll').disabled=true;
-  }
-
-  // History
-  try{
-    const hist = await api('/timesheets-history');
-    if (!hist.length){ sel('#history').textContent='No previous weeks.'; }
-    else{
-      const box = sel('#history'); box.classList.add('collapsed');
-      box.innerHTML = hist.map(h=>`<div class="rowi">${h.week_ending} — ${h.project_name} — ${h.total_hours}h — ${h.status}</div>`).join('');
-      sel('#btnToggleHist').onclick=()=>{
-        box.classList.toggle('collapsed');
-        sel('#btnToggleHist').textContent = box.classList.contains('collapsed') ? 'Expand' : 'Collapse';
-      };
     }
-  }catch{ sel('#history').textContent='History unavailable.'; }
-}
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  netlifyIdentity?.on('init', ()=>{ netlifyIdentity.currentUser() ? boot() : sel('#gate').style.display='block'; });
-  netlifyIdentity?.on('login', ()=>location.reload());
-  netlifyIdentity?.on('logout', ()=>location.href='/');
-  setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else sel('#gate').style.display='block'; }, 600);
-});
+    // ---------- Input handlers ----------
+    function bindInputs(){
+      $('#tbody').addEventListener('input', ev=>{
+        const t = ev.target;
+        if(!t.dataset.day) return;
+        const day = t.dataset.day, kind = t.dataset.kind;
+        const cur = STATE.entries[day] || {std:0,ot:0,note:''};
+        if(kind==='note'){ cur.note = t.value; }
+        else { cur[kind] = t.value===''?0:Math.max(0, Number(t.value)); }
+        STATE.entries[day] = cur;
+        totals();
+      });
+    }
 
-<style>
-:root{
-  --bg:#121725;            /* dark shell */
-  --panel:#1b2236;         /* darker frame */
-  --surface:#f3f6fb;       /* light neutral */
-  --card:#ffffff;          /* white content cards */
-  --ink:#0e1526;           /* primary text */
-  --muted:#5b6b82;
-  --accent:#3A66B3;
-  --cardBorder:rgba(26,26,46,.12);
-  --chip:#eef3ff; --chipBorder:rgba(58,102,179,.28);
-}
-body{ background:linear-gradient(180deg,var(--bg),#0f1422 40%) fixed; }
+    function quickFill(kind){
+      if(kind==='8x5'){
+        ['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{
+          STATE.entries[d].std = 8; STATE.entries[d].ot = 0;
+        });
+        ['Sun','Sat'].forEach(d=>{ STATE.entries[d].std = 0; STATE.entries[d].ot = 0; STATE.entries[d].note=''; });
+        renderRows(); totals();
+      }
+    }
+    function clearAll(){
+      DAYS.forEach(d=> STATE.entries[d] = {std:0,ot:0,note:''});
+      renderRows(); totals();
+    }
+    function setAll(which){
+      const v = prompt(`Set ALL ${which==='std'?'standard':'overtime'} hours to:`, '8');
+      if(v===null) return;
+      const n = Math.max(0, Number(v)||0);
+      DAYS.forEach(d=> STATE.entries[d][which] = n);
+      renderRows(); totals();
+    }
 
-.hmj-card,.panel,.timesheet-card{
-  background:var(--card); color:var(--ink);
-  border:1px solid var(--cardBorder);
-  box-shadow:0 6px 24px rgba(4,10,20,.08);
-}
-.section-title,.panel h2,.panel h3{ color:var(--ink); }
-.text-muted{ color:var(--muted); }
+    // ---------- Actions ----------
+    async function saveDraft(){
+      try{
+        await api('/timesheets-save','POST',{
+          week_ending: STATE.week_ending,
+          status: 'draft',
+          entries: STATE.entries
+        });
+        toast('Draft saved');
+      }catch(e){ toast(`Save failed: ${e.message}`); }
+    }
 
-.profile-panel{ background:var(--panel); padding:10px; border-radius:16px; }
-.profile-panel .inner{ background:var(--card); border-radius:12px; padding:12px; }
+    async function submitTimesheet(){
+      try{
+        await api('/timesheets-submit','POST',{ week_ending: STATE.week_ending });
+        toast('Submitted for approval');
+        await loadWeek(); await loadHistory();
+      }catch(e){ toast(`Submit failed: ${e.message}`); }
+    }
 
-.notice{ background:var(--surface); color:var(--ink); border:1px solid var(--cardBorder); }
+    // “Raise issue”, “Request edit”, “Request delete”
+    function openMail(subject, body){
+      const mail = `mailto:billing@hmj-global.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mail;
+    }
+    function requestEdit(){
+      const reason = prompt('Brief reason for edit request:','');
+      const id = STATE.week_ending || '';
+      openMail(`Timesheet EDIT request — ${id}`, `Contractor: ${STATE?.contractor?.email}\nWeek ending: ${id}\nStatus: ${STATE.status}\nReason: ${reason||'-'}`);
+    }
+    function requestDelete(){
+      const reason = prompt('Confirm why this timesheet should be deleted:','');
+      if(reason===null) return;
+      const id = STATE.week_ending || '';
+      openMail(`Timesheet DELETE request — ${id}`, `Contractor: ${STATE?.contractor?.email}\nWeek ending: ${id}\nStatus: ${STATE.status}\nReason: ${reason||'-'}`);
+    }
 
-input,select,textarea{
-  background:#fff; color:var(--ink);
-  border:1px solid var(--cardBorder);
-}
-input:focus,select:focus,textarea:focus{
-  outline:2px solid rgba(58,102,179,.25); border-color:var(--accent);
-}
+    // History toggle
+    function toggleHistory(){
+      const b = $('#histBody'); const btn = $('#btnHistToggle');
+      const hide = !b.classList.contains('hidden');
+      b.classList.toggle('hidden', hide);
+      btn.textContent = hide ? 'Expand' : 'Collapse';
+    }
 
-.btn-primary{ background:var(--accent); color:#fff; }
-.btn-ghost{ background:var(--surface); color:var(--ink); border:1px solid var(--cardBorder); }
-</style>
-
-</script>
+    // Kick Identity after widget loads
+    window.addEventListener('load', ()=> netlifyIdentity.init());
+  </script>
 </body>
 </html>
