@@ -900,3 +900,59 @@ footer {
 #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
 #toast .toast{background:#0f172a;color:#e6edf6;border:1px solid #233044;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 #toast .toast.error{border-color:#5b2b2b}
+
+<style>
+/* ===== Lighten the palette: balanced ink/card/bg while keeping contrast ===== */
+:root{
+  /* old: --bg:#0f1322; --card:#0f1322? etc.  */
+  --bg: #121725;              /* deep navy (kept for frame) */
+  --panel: #1b2236;           /* darker panels */
+  --surface: #f3f6fb;         /* new light surface */
+  --card: #ffffff;            /* white cards */
+  --ink: #0e1526;             /* near-black text */
+  --muted: #5b6b82;           /* muted text */
+  --accent: #3A66B3;          /* HMJ blue stays */
+  --chip: #eef3ff;
+  --cardBorder: rgba(26,26,46,.12);
+  --chipBorder: rgba(58,102,179,.28);
+}
+
+body{ background: linear-gradient(180deg, var(--bg), #0f1422 40%) fixed; }
+
+.hmj-card, .panel, .timesheet-card{
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--cardBorder);
+  box-shadow: 0 6px 24px rgba(4,10,20,.08);
+}
+
+.hero-stats .badge,
+.kpi,
+.pill{ background: var(--surface); color: var(--ink); border-color: var(--cardBorder); }
+
+.btn-primary{ background: var(--accent); color:#fff; }
+.btn-ghost{ background: var(--surface); color: var(--ink); border:1px solid var(--cardBorder); }
+
+.section-title, .panel h2, .panel h3{ color: var(--ink); }
+.text-muted{ color: var(--muted); }
+
+input, select, textarea{
+  background: #fff; color: var(--ink);
+  border:1px solid var(--cardBorder);
+}
+input:focus, select:focus, textarea:focus{
+  outline: 2px solid rgba(58,102,179,.25);
+  border-color: var(--accent);
+}
+
+/* Profile sidebar panel darker shell but white content */
+.profile-panel{ background: var(--panel); padding:10px; border-radius:16px; }
+.profile-panel .inner{ background: var(--card); border-radius:12px; padding:12px; }
+
+/* “My Timesheet” notice block brightened */
+.notice{ background: var(--surface); color: var(--ink); border:1px solid var(--cardBorder); }
+
+/* Previous Weeks accordion */
+.accordion .item{ background: var(--card); }
+.accordion .item + .item{ border-top:1px solid var(--cardBorder); }
+</style>

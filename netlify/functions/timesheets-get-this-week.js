@@ -87,3 +87,7 @@ exports.handler = async (event, context) => {
     return respond(status, { error: msg });
   }
 };
+
+const idUser = context?.clientContext?.user;
+console.log('[get-this-week] identity email:', idUser?.email, 'SUPABASE_URL:', process.env.SUPABASE_URL);
+

@@ -64,3 +64,14 @@ exports.handler = async () => {
     return { statusCode: 500, body: JSON.stringify(diag) };
   }
 };
+
+// netlify/functions/supa-health.js
+exports.handler = async () => ({
+  statusCode: 200,
+  headers: { 'Content-Type':'application/json' },
+  body: JSON.stringify({
+    ok: true,
+    supabaseUrl: process.env.SUPABASE_URL,
+    hasServiceKey: Boolean(process.env.SUPABASE_SERVICE_KEY)
+  })
+});
