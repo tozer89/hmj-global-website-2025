@@ -461,19 +461,34 @@ function appMain(){
   async function loadList(){
     hideErrorBanner();
     listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
-    try{
-      const body = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas'), page, size, sort };
+
+    try {
+      // build request body (add debug here)
+      const body = {
+        q: qv('#q'),
+        type: qv('#fType'),
+        status: qv('#fStatus'),
+        job: qv('#fJob'),
+        emailHas: qv('#fEmailHas'),
+        page,
+        size,
+        sort,
+        debug: true              // ← temporary debug flag
+      };
       __dbg.log('List: request body', body);
 
       // function filename is plural
-      const res = await apiCall('/admin-candidates-lists','POST', body);
+      const res = await apiCall('/admin-candidates-lists', 'POST', body);
+
+      // optional: show server-side debug payload if the function returns one
+      if (res && res.debug) __dbg.log('API debug →', res.debug);
 
       // tolerate JSON-string payloads and different shapes
       const rows = normalizeRows(res);
-      const total = (typeof res.total === 'number') ? res.total : rows.length;
+      const total    = (typeof res.total    === 'number') ? res.total    : rows.length;
       const filtered = (typeof res.filtered === 'number') ? res.filtered : rows.length;
-      pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size) || 1));
-      if(page>pages) page=pages;
+      pages = Math.max(1, Number(res.pages || Math.ceil(filtered / size) || 1));
+      if (page > pages) page = pages;
 
       setNum('#kTotal', total);
       setNum('#kFiltered', filtered);
@@ -481,12 +496,14 @@ function appMain(){
       __dbg.log('List: meta', { total, filtered, pages, page });
 
       renderRows(rows);
-    }catch(e){
+
+    } catch (e) {
       __dbg.err('List: load failed', String(e));
       showErrorBanner(e.message || 'Error');
-      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message||e)+'</div>';
+      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message || e)+'</div>';
     }
   }
+
 
   function setEd(c){
     $('#edTitle').textContent = (c && c.id) ? ('Candidate #'+c.id) : 'New candidate';
