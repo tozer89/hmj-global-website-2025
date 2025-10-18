@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Clients — Admin | HMJ-Global</title>
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  :root{
+    --bg:#0b0f18; --panel:#111827; --border:#252f3f; --text:#e8eef7; --muted:#9fb0c9;
+    --purple:#7c5cff; --red:#ff7a7a;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
+  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
+  .brand{font-weight:800}
+  .spacer{flex:1}
+  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+  .btn:hover{border-color:#3b4f79}
+  .btn.primary{background:var(--purple);border-color:transparent}
+  .btn.danger{background:#3a1920;border-color:#602b36}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .muted{color:var(--muted)}
+  input,textarea{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9999}
+  .dialog{width:min(760px,95vw);background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+</style>
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="top">
+  <div class="row">
+    <div class="brand">Clients — Admin</div>
+    <div class="spacer"></div>
+    <a class="btn" href="/admin/">⟵ Admin home</a>
+    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+  </div>
+</div>
+
+<div class="wrap" id="gate" style="display:none">
+  <div class="card"><strong>Admin only.</strong> <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button></div>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input id="q" placeholder="Search client name/email ( / )" style="min-width:260px" />
+    <button class="btn" id="btnRefresh">Refresh</button>
+    <button class="btn primary" id="btnNew">New client ( n )</button>
+  </div>
+
+  <div class="card" id="listWrap">Loading…</div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="dialog">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 id="dlgTitle" style="margin:0">Client</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn danger" id="btnDelete">Delete</button>
+        <button class="btn" id="btnClose">Close</button>
+      </div>
+    </div>
+    <form id="frm" class="grid">
+      <label>Name <input name="name" required></label>
+      <label>Billing email <input name="billing_email" type="email"></label>
+      <label>Phone <input name="phone"></label>
+      <label>Address (JSON) <textarea name="address" placeholder='{"line1":"","city":"","postcode":""}'></textarea></label>
+      <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" type="button" id="btnSave">Save</button>
+        <button class="btn primary" type="submit">Save & close</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" style="position:fixed;right:16px;bottom:16px;display:grid;gap:8px"></div>
+
+<script>
+  const sel = (s)=>document.querySelector(s);
+  const toast = (m)=>{const n=document.createElement('div');n.className='card';n.textContent=m;sel('#toast').appendChild(n);setTimeout(()=>n.remove(),2400);};
+  const isAdmin = (u)=> (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+  async function api(path, method='GET', body=null){
+    const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+    const t = await u.jwt();
+    const r = await fetch(`/.netlify/functions${path}`, {
+      method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},
+      body: body ? JSON.stringify(body) : null
+    });
+    if(!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  let rows=[], page=1, per=20, currentId=null;
+  function renderList(){
+    const q = sel('#q').value.toLowerCase().trim();
+    const filtered = rows.filter(r => !q || (r.name?.toLowerCase().includes(q) || r.billing_email?.toLowerCase().includes(q)));
+    const pages = Math.max(1, Math.ceil(filtered.length/per)); page = Math.min(page,pages);
+    const slice = filtered.slice((page-1)*per, page*per);
+    sel('#listWrap').innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <div class="muted">${filtered.length} clients</div>
+        <div class="muted">Page ${page}/${pages}</div>
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th>Billing email</th><th>Phone</th><th></th></tr></thead>
+        <tbody>
+          ${slice.map(c=>`
+            <tr>
+              <td>${c.name}</td><td>${c.billing_email||'—'}</td><td>${c.phone||'—'}</td>
+              <td><button class="btn" data-open="${c.id}">Open</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn" ${page<=1?'disabled':''} id="pPrev">Prev</button>
+        <button class="btn" ${page>=pages?'disabled':''} id="pNext">Next</button>
+      </div>`;
+    sel('#pPrev')?.addEventListener('click',()=>{page=Math.max(1,page-1);renderList();});
+    sel('#pNext')?.addEventListener('click',()=>{page=page+1;renderList();});
+    sel('#listWrap').querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEdit(b.dataset.open));
+  }
+  async function load(){ sel('#listWrap').textContent='Loading…'; rows = await api('/admin-clients-list','POST',{ q: sel('#q').value }); renderList(); }
+
+  function openModal(){ sel('#modal').style.display='flex'; }
+  function closeModal(){ sel('#modal').style.display='none'; }
+  function getForm(){
+    const f=sel('#frm'); const v=n=>f.elements[n].value||'';
+    let address=null; try{ address = v('address')? JSON.parse(v('address')) : null; }catch{ alert('Address JSON invalid'); throw new Error('bad json'); }
+    return { id: currentId||undefined, name:v('name'), billing_email:v('billing_email'), phone:v('phone'), address };
+  }
+  function setForm(c={}){
+    const f=sel('#frm'); const set=(n,v)=>{ if(f.elements[n]) f.elements[n].value=v||''; };
+    set('name',c.name); set('billing_email',c.billing_email); set('phone',c.phone);
+    set('address', c.address ? JSON.stringify(c.address) : '');
+  }
+  async function openEdit(id){
+    currentId=id||null; sel('#dlgTitle').textContent = id?'Edit client':'New client';
+    sel('#btnDelete').style.display = id?'inline-flex':'none';
+    if(id){ const c = await api('/admin-clients-get','POST',{ id }); setForm(c); } else setForm({});
+    openModal();
+  }
+  async function save(closeAfter){
+    const client = getForm(); const d = await api('/admin-clients-save','POST',{ client });
+    toast('Saved ✔'); await load(); if(closeAfter) closeModal(); else currentId = d.id;
+  }
+  async function remove(){
+    if(!currentId) return; if(!confirm('Delete this client?')) return;
+    await api('/admin-clients-delete','POST',{ id: currentId }); toast('Deleted'); closeModal(); await load();
+  }
+
+  function boot(){
+    const u=netlifyIdentity?.currentUser(); if(!u || !isAdmin(u)){ gate.style.display='block'; return; }
+    app.style.display='block'; load();
+    document.addEventListener('keydown',(e)=>{
+      if(e.key==='/' && document.activeElement===document.body){ e.preventDefault(); sel('#q').focus(); }
+      if(e.key.toLowerCase()==='n' && document.activeElement===document.body){ e.preventDefault(); openEdit(null); }
+      if(e.key==='Escape') closeModal();
+    });
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{
+    sel('#btnRefresh').onclick = load; sel('#btnNew').onclick = ()=>openEdit(null);
+    sel('#btnClose').onclick = closeModal; sel('#btnSave').onclick = ()=>save(false);
+    sel('#frm').onsubmit = (e)=>{e.preventDefault(); save(true);};
+    sel('#btnDelete').onclick = remove;
+    sel('#q').addEventListener('input', ()=>{ page=1; renderList(); });
+
+    netlifyIdentity?.on('init', boot);
+    netlifyIdentity?.on('login', ()=>location.reload());
+    netlifyIdentity?.on('logout', ()=>location.href='/admin/');
+    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else gate.style.display='block'; }, 600);
+  });
+</script>
+</body>
+</html>

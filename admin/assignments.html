@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Assignments — Admin | HMJ-Global</title>
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  :root{
+    --bg:#0b0f18; --panel:#111827; --panel2:#0e1524; --border:#252f3f;
+    --text:#e8eef7; --muted:#9fb0c9; --purple:#7c5cff; --green:#25c08a; --red:#ff7a7a;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
+  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
+  .brand{font-weight:800}
+  .spacer{flex:1}
+  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+  .btn:hover{border-color:#3b4f79}
+  .btn.primary{background:var(--purple);border-color:transparent}
+  .btn.danger{background:#3a1920;border-color:#602b36}
+  .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .muted{color:var(--muted)}
+  input,select{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
+  .tag{display:inline-block;border:1px solid #2c3853;background:#121a2c;border-radius:999px;padding:4px 8px;font-size:.8rem}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9999}
+  .dialog{width:min(860px,95vw);background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+</style>
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="top">
+  <div class="row">
+    <div class="brand">Assignments — Admin</div>
+    <div class="spacer"></div>
+    <a class="btn" href="/admin/">⟵ Admin home</a>
+    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+  </div>
+</div>
+
+<div class="wrap" id="gate" style="display:none">
+  <div class="card"><strong>Admin only.</strong> <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button></div>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <select id="fltActive">
+      <option value="">All</option><option value="true">Active</option><option value="false">Ended</option>
+    </select>
+    <select id="fltClient"></select>
+    <input id="q" placeholder="Search contractor/project ( / )" style="min-width:260px" />
+    <button class="btn" id="btnRefresh">Refresh</button>
+    <button class="btn primary" id="btnNew">New assignment ( n )</button>
+  </div>
+
+  <div class="card" id="listWrap">Loading…</div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="dialog">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 id="dlgTitle" style="margin:0">Assignment</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="btnClone" title="Clone">Clone</button>
+        <button class="btn danger" id="btnDelete" title="Delete">Delete</button>
+        <button class="btn" id="btnClose">Close</button>
+      </div>
+    </div>
+    <form id="frm" class="grid">
+      <label>Contractor
+        <select name="contractor_id" required id="selContractor"></select>
+      </label>
+      <label>Client
+        <select name="client_id" id="selClient"></select>
+      </label>
+      <label>Project
+        <select name="project_id" required id="selProject"></select>
+      </label>
+      <label>Start date <input type="date" name="start_date" required></label>
+      <label>End date <input type="date" name="end_date"></label>
+      <label>Rate (std) <input type="number" step="0.01" name="rate_std"></label>
+      <label>Rate (OT) <input type="number" step="0.01" name="rate_ot"></label>
+      <label>Charge (std) <input type="number" step="0.01" name="charge_std"></label>
+      <label>Charge (OT) <input type="number" step="0.01" name="charge_ot"></label>
+
+      <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" type="button" id="btnEndToday">End today</button>
+        <button class="btn" type="button" id="btnSave">Save</button>
+        <button class="btn primary" type="submit">Save & close</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" style="position:fixed;right:16px;bottom:16px;display:grid;gap:8px"></div>
+
+<script>
+  const sel = s=>document.querySelector(s);
+  const toast = (m)=>{const n=document.createElement('div');n.className='card';n.textContent=m;sel('#toast').appendChild(n);setTimeout(()=>n.remove(),2400);};
+  const isAdmin = (u)=> (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+  async function api(path, method='GET', body=null){
+    const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+    const t = await u.jwt();
+    const r = await fetch(`/.netlify/functions${path}`, {
+      method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},
+      body: body ? JSON.stringify(body) : null
+    });
+    if(!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  // dropdowns
+  let DD = { contractors:[], clients:[], projects:[] };
+  async function loadDropdowns(){
+    DD = await api('/admin-assignments-dropdowns');
+    sel('#selContractor').innerHTML = DD.contractors.map(x=>`<option value="${x.id}">${x.name} — ${x.email}</option>`).join('');
+    sel('#selClient').innerHTML = `<option value="">(Any)</option>` + DD.clients.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+    renderProjects();
+    sel('#selClient').onchange = renderProjects;
+  }
+  function renderProjects(){
+    const c = sel('#selClient').value;
+    const list = DD.projects.filter(p => !c || p.client_id == c);
+    sel('#selProject').innerHTML = list.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  }
+
+  // list
+  let rows=[], page=1, per=20;
+  function renderList(){
+    const q = sel('#q').value.toLowerCase().trim();
+    const fltActive = sel('#fltActive').value;
+    const fltClient = sel('#fltClient').value;
+    let filtered = rows.filter(r =>
+      (!q || (r.contractor_name?.toLowerCase().includes(q) || r.project_name?.toLowerCase().includes(q))) &&
+      (!fltClient || r.client_id == fltClient) &&
+      (!fltActive || (fltActive==='true'? r.active : !r.active))
+    );
+    const pages = Math.max(1, Math.ceil(filtered.length/per)); page = Math.min(page,pages);
+    const slice = filtered.slice((page-1)*per, page*per);
+    const html = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <div class="muted">${filtered.length} assignments</div>
+        <div class="muted">Page ${page}/${pages}</div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Contractor</th><th>Client / Project</th><th>Dates</th><th>Rates</th><th>Charges</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${slice.map(a=>`
+            <tr>
+              <td>${a.contractor_name}</td>
+              <td>${a.client_name} — ${a.project_name}</td>
+              <td>${a.start_date||'—'} → ${a.end_date||'—'}</td>
+              <td>£${a.rate_std||0}/h${a.rate_ot?` (OT £${a.rate_ot}/h)`:''}</td>
+              <td>£${a.charge_std||0}/h${a.charge_ot?` (OT £${a.charge_ot}/h)`:''}</td>
+              <td>${a.active?'<span class="tag">active</span>':'<span class="tag">ended</span>'}</td>
+              <td><button class="btn" data-open="${a.id}">Open</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn" ${page<=1?'disabled':''} id="pPrev">Prev</button>
+        <button class="btn" ${page>=pages?'disabled':''} id="pNext">Next</button>
+      </div>`;
+    sel('#listWrap').innerHTML = html;
+    sel('#pPrev')?.addEventListener('click',()=>{page=Math.max(1,page-1);renderList();});
+    sel('#pNext')?.addEventListener('click',()=>{page=page+1;renderList();});
+    sel('#listWrap').querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEdit(b.dataset.open));
+  }
+
+  async function loadList(){
+    sel('#listWrap').textContent='Loading…';
+    rows = await api('/admin-assignments-list','POST',{
+      client_id: sel('#fltClient').value || null,
+      active: sel('#fltActive').value==='' ? null : sel('#fltActive').value==='true'
+    });
+    renderList();
+  }
+
+  // modal
+  let currentId=null, cloning=false;
+  function openModal(){ sel('#modal').style.display='flex'; }
+  function closeModal(){ sel('#modal').style.display='none'; }
+  function setForm(a={}){
+    const f=sel('#frm'); const set=(n,v)=>{ if(f.elements[n]) f.elements[n].value=v||''; };
+    set('contractor_id',a.contractor_id); set('project_id',a.project_id);
+    // set client by matching project if possible
+    const pr = DD.projects.find(p=>p.id===a.project_id);
+    sel('#selClient').value = (pr?.client_id)||'';
+    renderProjects();
+    set('project_id',a.project_id);
+    set('start_date',a.start_date); set('end_date',a.end_date);
+    set('rate_std',a.rate_std); set('rate_ot',a.rate_ot);
+    set('charge_std',a.charge_std); set('charge_ot',a.charge_ot);
+  }
+  function getForm(){
+    const f=sel('#frm'); const v=n=>f.elements[n].value||'';
+    return {
+      id: cloning ? undefined : currentId || undefined,
+      contractor_id: Number(v('contractor_id')),
+      project_id: Number(v('project_id')),
+      start_date: v('start_date'),
+      end_date: v('end_date') || null,
+      rate_std: v('rate_std')?Number(v('rate_std')):null,
+      rate_ot: v('rate_ot')?Number(v('rate_ot')):null,
+      charge_std: v('charge_std')?Number(v('charge_std')):null,
+      charge_ot: v('charge_ot')?Number(v('charge_ot')):null
+    };
+  }
+
+  async function openEdit(id){
+    currentId=id||null; cloning=false;
+    sel('#dlgTitle').textContent = id ? 'Edit assignment' : 'New assignment';
+    sel('#btnDelete').style.display = id ? 'inline-flex' : 'none';
+    sel('#btnClone').style.display = id ? 'inline-flex' : 'none';
+    if(id){ const a = await api('/admin-assignments-get','POST',{ id }); setForm(a); }
+    else { setForm({}); }
+    openModal();
+  }
+  async function save(closeAfter){
+    const assignment = getForm();
+    const d = await api('/admin-assignments-save','POST',{ assignment });
+    toast('Saved ✔'); await loadList(); if(closeAfter) closeModal(); else { currentId=d.id; cloning=false; }
+  }
+  async function remove(){
+    if(!currentId) return; if(!confirm('Delete this assignment?')) return;
+    await api('/admin-assignments-delete','POST',{ id: currentId }); toast('Deleted'); closeModal(); await loadList();
+  }
+
+  // boot
+  function boot(){
+    const u=netlifyIdentity?.currentUser(); if(!u || !(u?.app_metadata?.roles||u?.roles||[]).includes('admin')){ gate.style.display='block'; return; }
+    app.style.display='block';
+    (async()=>{ await loadDropdowns(); 
+      sel('#fltClient').innerHTML = `<option value="">All clients</option>` + DD.clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      await loadList(); })();
+
+    document.addEventListener('keydown',(e)=>{
+      if(e.key==='/' && document.activeElement===document.body){ e.preventDefault(); sel('#q').focus(); }
+      if(e.key.toLowerCase()==='n' && document.activeElement===document.body){ e.preventDefault(); openEdit(null); }
+      if(e.key==='Escape') closeModal();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    sel('#btnRefresh').onclick = loadList;
+    sel('#btnNew').onclick = ()=>openEdit(null);
+    sel('#btnClose').onclick = closeModal;
+    sel('#btnSave').onclick = ()=>save(false);
+    sel('#frm').onsubmit = (e)=>{e.preventDefault(); save(true);};
+    sel('#btnDelete').onclick = remove;
+    sel('#btnEndToday').onclick = ()=>{ sel('#frm').elements.end_date.value = new Date().toISOString().slice(0,10); };
+    sel('#btnClone').onclick = ()=>{ cloning=true; toast('Cloning — changes will create a new assignment'); };
+
+    ['#q','#fltActive','#fltClient'].forEach(s=> sel(s).addEventListener('input', ()=>{ page=1; renderList(); }));
+
+    netlifyIdentity?.on('init', boot);
+    netlifyIdentity?.on('login', ()=>location.reload());
+    netlifyIdentity?.on('logout', ()=>location.href='/admin/');
+    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else gate.style.display='block'; }, 600);
+  });
+</script>
+</body>
+</html>

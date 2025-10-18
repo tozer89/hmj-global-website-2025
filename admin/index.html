@@ -6,60 +6,101 @@
 <title>Admin Portal | HMJ-Global</title>
 <link rel="stylesheet" href="/css/style.css" />
 <style>
-  :root{ --bg:#0b0b18; --panel:#14122a; --border:#26234b; --text:#e9e7ff; --muted:#a6a1d4; --accent:#7b5cff; --accent-2:#b6a6ff; }
-  body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
-  .card{background:linear-gradient(180deg,#181642,#131130);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
-  .muted{color:var(--muted)} .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .btn{background:#211d56;border:1px solid #342f6b;color:#fff;padding:14px 16px;border-radius:14px;font-weight:800;cursor:pointer}
-  .btn:hover{border-color:#4b4592}
-  .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:16px}
-  @media (max-width:780px){ .grid{grid-template-columns:1fr} }
-  .tile{display:block;background:#17143a;border:1px solid #2b2761;border-radius:16px;padding:18px;text-decoration:none;color:#fff}
+  :root{
+    --bg:#0b0f18; --panel:#111827; --panel2:#0e1524; --border:#252f3f;
+    --text:#e8eef7; --muted:#9fb0c9; --ink:#0b0f18;
+    --purple:#7c5cff; --purple-2:#5d40ff; --green:#25c08a; --red:#ff7a7a; --amber:#ffd166;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  a{color:#9fbaff;text-decoration:none}
+  .top{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,#0b0f18, #0f1430 60%, #0b0f18);
+       border-bottom:1px solid var(--border);backdrop-filter:saturate(120%) blur(6px)}
+  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
+  .brand{font-weight:800;font-size:18px}
+  .spacer{flex:1}
+  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+  .btn:hover{border-color:#3b4f79}
+  .btn.primary{background:var(--purple);border-color:transparent}
+  .btn.ghost{background:transparent}
+  .wrap{max-width:1200px;margin:28px auto;padding:0 18px;display:grid;gap:18px}
+  .hero{background:radial-gradient(1200px 220px at 20% -50%, rgba(124,92,255,.25), transparent 60%),
+         linear-gradient(180deg,#0f1430 0,#0b0f18 80%);border:1px solid var(--border);border-radius:16px;padding:20px}
+  .hero h1{margin:0 0 8px}
+  .muted{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px}
+  .tile{display:flex;gap:14px;align-items:center;background:var(--panel2);border:1px solid var(--border);
+        padding:14px;border-radius:14px}
+  .tile .icon{width:42px;height:42px;border-radius:12px;background:var(--purple);display:grid;place-items:center;font-weight:800}
   .tile h3{margin:0 0 6px}
+  .list{display:grid;gap:12px}
 </style>
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card row" style="justify-content:space-between">
-      <div>
-        <h1 style="margin:0 0 6px">HMJ Global — Admin Portal</h1>
-        <div class="muted">Create & manage candidates, assignments, clients, and review the audit trail.</div>
-      </div>
-      <div class="row">
-        <a class="btn" href="/">⟵ Homepage</a>
-        <a class="btn" href="/timesheets.html">Timesheets</a>
-        <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-      </div>
+  <div class="top">
+    <div class="row">
+      <div class="brand">HMJ Global — Admin Portal</div>
+      <div class="spacer"></div>
+      <a class="btn ghost" href="/">⟵ Homepage</a>
+      <a class="btn" href="/timesheets.html">Timesheets (contractor)</a>
+      <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="hero"><h1>Admin only</h1><p class="muted">Please log in with an admin account.</p>
+      <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <div class="hero">
+      <h1>Welcome back 👋</h1>
+      <div class="muted">Create & manage candidates, assignments, clients, approve timesheets, and review the audit trail.</div>
     </div>
 
-    <div id="gate" class="card" style="display:none">
-      <p><strong>Admin only.</strong> Please log in with an admin account.</p>
-      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
-      <div class="muted">Ask an administrator to add the <code>admin</code> role to your user.</div>
+    <div class="grid">
+      <a class="tile" href="/admin/timesheets.html">
+        <div class="icon">TS</div>
+        <div><h3>Timesheets</h3><div class="muted">Approve, reject, export and manage weekly timesheets.</div></div>
+      </a>
+      <a class="tile" href="/admin/candidates.html">
+        <div class="icon">CA</div>
+        <div><h3>Candidates</h3><div class="muted">Create profiles, bank details, right-to-work, pay type.</div></div>
+      </a>
+      <a class="tile" href="/admin/assignments.html">
+        <div class="icon">AS</div>
+        <div><h3>Assignments</h3><div class="muted">Link contractors ↔ projects; dates, rates & charges.</div></div>
+      </a>
+      <a class="tile" href="/admin/clients.html">
+        <div class="icon">CL</div>
+        <div><h3>Clients</h3><div class="muted">Manage clients, contacts and billing details.</div></div>
+      </a>
+      <a class="tile" href="/admin/reports.html">
+        <div class="icon">RP</div>
+        <div><h3>Reports</h3><div class="muted">Audit log, CSV exports and simple KPIs.</div></div>
+      </a>
     </div>
 
-    <div id="app" style="display:none">
-      <div class="grid">
-        <a class="tile" href="/admin/timesheets.html"><h3>Timesheets</h3><div class="muted">Approve, edit, export, audit.</div></a>
-        <a class="tile" href="/admin/candidates.html"><h3>Candidates</h3><div class="muted">Create profiles, bank & RTW info.</div></a>
-        <a class="tile" href="/admin/assignments.html"><h3>Assignments</h3><div class="muted">Link candidates to clients/projects; rates & dates.</div></a>
-        <a class="tile" href="/admin/clients.html"><h3>Clients</h3><div class="muted">Clients, sites & contacts.</div></a>
-        <a class="tile" href="/admin/reports.html"><h3>Reports</h3><div class="muted">Audit log and CSVs.</div></a>
-      </div>
+    <div class="card">
+      <h3 style="margin:0 0 10px">Quick tips</h3>
+      <ul class="muted" style="margin:0 0 0 18px">
+        <li>On list pages, press <b>/</b> to search, <b>n</b> to create, <b>Esc</b> to close modals.</li>
+        <li>All admin changes are written to the audit log automatically.</li>
+      </ul>
     </div>
   </div>
 
 <script>
-  function isAdmin(u){ const r=u?.app_metadata?.roles||u?.roles||[]; return r.includes('admin'); }
+  const isAdmin = (u)=> (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+  function boot(){ const u = netlifyIdentity?.currentUser(); if(!u || !isAdmin(u)){gate.style.display='block';return;} app.style.display='block'; }
   document.addEventListener('DOMContentLoaded', ()=>{
-    netlifyIdentity?.on('init', ()=>{
-      const u=netlifyIdentity?.currentUser(); if(u && isAdmin(u)){ document.getElementById('app').style.display='block'; } else { document.getElementById('gate').style.display='block'; }
-    });
+    netlifyIdentity?.on('init', boot);
     netlifyIdentity?.on('login', ()=>location.reload());
     netlifyIdentity?.on('logout', ()=>location.href='/');
-    setTimeout(()=>{ const u=netlifyIdentity?.currentUser(); if(u && isAdmin(u)) document.getElementById('app').style.display='block'; else document.getElementById('gate').style.display='block'; },600);
+    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else gate.style.display='block'; }, 600);
   });
 </script>
 </body>
