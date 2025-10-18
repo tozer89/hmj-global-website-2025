@@ -14,3 +14,4 @@ const supabase = createClient(url, key, {
 });
 
 module.exports = { supabase };
+

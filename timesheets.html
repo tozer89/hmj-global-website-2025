@@ -353,6 +353,46 @@ document.addEventListener('DOMContentLoaded', ()=>{
   netlifyIdentity?.on('logout', ()=>location.href='/');
   setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else sel('#gate').style.display='block'; }, 600);
 });
+
+<style>
+:root{
+  --bg:#121725;            /* dark shell */
+  --panel:#1b2236;         /* darker frame */
+  --surface:#f3f6fb;       /* light neutral */
+  --card:#ffffff;          /* white content cards */
+  --ink:#0e1526;           /* primary text */
+  --muted:#5b6b82;
+  --accent:#3A66B3;
+  --cardBorder:rgba(26,26,46,.12);
+  --chip:#eef3ff; --chipBorder:rgba(58,102,179,.28);
+}
+body{ background:linear-gradient(180deg,var(--bg),#0f1422 40%) fixed; }
+
+.hmj-card,.panel,.timesheet-card{
+  background:var(--card); color:var(--ink);
+  border:1px solid var(--cardBorder);
+  box-shadow:0 6px 24px rgba(4,10,20,.08);
+}
+.section-title,.panel h2,.panel h3{ color:var(--ink); }
+.text-muted{ color:var(--muted); }
+
+.profile-panel{ background:var(--panel); padding:10px; border-radius:16px; }
+.profile-panel .inner{ background:var(--card); border-radius:12px; padding:12px; }
+
+.notice{ background:var(--surface); color:var(--ink); border:1px solid var(--cardBorder); }
+
+input,select,textarea{
+  background:#fff; color:var(--ink);
+  border:1px solid var(--cardBorder);
+}
+input:focus,select:focus,textarea:focus{
+  outline:2px solid rgba(58,102,179,.25); border-color:var(--accent);
+}
+
+.btn-primary{ background:var(--accent); color:#fff; }
+.btn-ghost{ background:var(--surface); color:var(--ink); border:1px solid var(--cardBorder); }
+</style>
+
 </script>
 </body>
 </html>
