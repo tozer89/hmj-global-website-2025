@@ -127,4 +127,27 @@ async function main({ api, sel, toast }){
       po_number:     sel('#edPO').value||null,
       active:        sel('#edActive').value==='true',
       start_date:    sel('#edStart').value||null,
-      end_date:      s_
+      end_date:      sel('#edEnd').value||null
+    };
+  }
+
+  async function openEd(id){
+    cur = await api('/admin-assignments-open','POST',{ id });
+    setEd(cur); ed.style.display='block';
+  }
+
+  sel('#btnNew').onclick = ()=>{ cur=null; setEd({active:true}); ed.style.display='block'; };
+  sel('#btnClose').onclick= ()=>{ ed.style.display='none'; };
+  sel('#btnSave').onclick = async ()=>{
+    try{
+      const saved = await api('/admin-assignments-save','POST', getEd());
+      toast('Saved'); if(saved?.id) { cur = saved; setEd(saved); } loadList();
+    }catch(e){ toast('Save failed: '+e.message); }
+  };
+  sel('#btnRefresh').onclick = loadList;
+
+  loadList();
+}
+</script>
+</body>
+</html>
