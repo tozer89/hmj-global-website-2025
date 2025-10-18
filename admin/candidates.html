@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Candidates — Admin | HMJ-Global</title>
 
-<!-- Netlify Identity (can load a little late sometimes) -->
+<!-- Netlify Identity + shared admin helpers (may load late on some CDNs) -->
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-<!-- Shared admin helpers (if this doesn’t load in time we fall back locally) -->
 <script defer src="/admin/common.js"></script>
 
 <link rel="stylesheet" href="/css/style.css"/>
@@ -18,7 +16,6 @@
     --bg:#0b0f18; --panel:#111827; --border:#252f3f; --ink:#e6eef7; --muted:#9fb0c9;
     --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --accent-2:#2b50d9;
     --good:#0e2a1e; --warn:#38240f; --bad:#2a1214;
-    --good-b:#1e6646; --warn-b:#8a5b25; --bad-b:#6a2b2f;
   }
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
@@ -35,10 +32,10 @@
   }
   textarea{min-height:96px;resize:vertical}
   .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;
-       font-weight:600;cursor:pointer;transition:.15s transform}
-  .btn:hover{border-color:#3b4f79;transform:translateY(-1px)}
-  .btn.bad{background:#2a1214;border-color:var(--bad-b)}
-  .btn.good{background:#153125;border-color:var(--good-b)}
+       font-weight:600;cursor:pointer}
+  .btn:hover{border-color:#3b4f79}
+  .btn.bad{background:#2a1214;border-color:#6a2b2f}
+  .btn.good{background:#153125;border-color:#1e6646}
   .btn.ghost{background:transparent}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .pills{display:flex;gap:10px;flex-wrap:wrap}
@@ -56,9 +53,9 @@
   .row-actions{display:flex;gap:6px}
 
   .badge{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
-  .status-ok{background:#0e2a1e;border-color:var(--good-b)}
-  .status-warn{background:#33220f;border-color:var(--warn-b)}
-  .status-bad{background:#2a1214;border-color:var(--bad-b)}
+  .status-ok{background:#0e2a1e;border-color:#1e6646}
+  .status-warn{background:#33220f;border-color:#8a5b25}
+  .status-bad{background:#2a1214;border-color:#6a2b2f}
 
   .grid2{display:grid;grid-template-columns:1fr 420px;gap:16px}
   .editor{display:grid;gap:12px}
@@ -72,25 +69,17 @@
   .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px}
   .kv div{white-space:pre-wrap;word-break:break-word}
 
-  .error-banner{background:var(--bad);border:1px solid var(--bad-b);color:#ffd6d6;padding:10px;border-radius:12px}
+  .error-banner{background:var(--bad);border:1px solid #6a2b2f;color:#ffd6d6;padding:10px;border-radius:12px}
   .loading{display:flex;gap:8px;align-items:center}
   .dot{width:6px;height:6px;border-radius:50%;background:#7f9dd9;opacity:.5;animation:bounce 1s infinite}
   .dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
   @keyframes bounce{0%,80%,100%{transform:scale(.8);opacity:.4}40%{transform:scale(1);opacity:1}}
 
+  .toolbar-right{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+
   .kpis{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .kpi{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:10px 14px;min-width:90px}
   .kpi b{font-size:20px;display:block}
-
-  .toast{
-    position:fixed;right:16px;bottom:16px;z-index:9999;display:grid;gap:8px;min-width:220px
-  }
-  .toast .t{
-    background:#0f1529;border:1px solid #2b3c6f;border-left-width:6px;border-left-color:#3A66B3;color:#dbe7ff;
-    padding:10px 12px;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.35);opacity:.98
-  }
-  .toast .t.good{border-left-color:#1e8f61}
-  .toast .t.bad{border-left-color:#b24a52}
 
   /* Mobile */
   @media (max-width: 980px){
@@ -108,17 +97,6 @@
     .row-actions{justify-content:flex-end}
   }
 </style>
-
-<!-- Early identity keep-alive + cookie helper (used by API fallback) -->
-<script>
-  window.netlifyIdentity?.on?.('init', ()=>{});
-  window.netlifyIdentity?.init?.({});
-  function getNFJwtFromCookie(){
-    const m = document.cookie.match(/(?:^|;\s*)nf_jwt=([^;]+)/);
-    return m ? decodeURIComponent(m[1]) : '';
-  }
-</script>
-
 </head>
 <body>
   <!-- header -->
@@ -149,7 +127,7 @@
           <div class="kpi"><b id="kFiltered">0</b>Filtered</div>
           <div class="kpi"><b id="kPage">1/1</b>Page</div>
         </div>
-        <div class="toolbar">
+        <div class="toolbar-right">
           <button class="btn" id="btnRefresh">Refresh</button>
           <button class="btn" id="btnNew">New candidate</button>
           <button class="btn" id="btnExport">Export CSV</button>
@@ -161,25 +139,25 @@
     <!-- filters -->
     <div class="card">
       <div class="filters">
-        <input id="q" placeholder="Search name / email / phone" aria-label="Search"/>
-        <select id="fType" aria-label="Pay type filter">
+        <input id="q" placeholder="Search name / email / phone"/>
+        <select id="fType">
           <option value="">Any pay type</option>
           <option>Umbrella</option><option>Umbrella CIS</option>
           <option>PAYE</option><option>Ltd</option><option>Ltd CIS</option>
           <option>International</option><option>International Umbrella</option>
         </select>
-        <select id="fStatus" aria-label="Status filter">
+        <select id="fStatus">
           <option value="">Any status</option>
           <option>Complete</option><option>In progress</option><option>Paused</option>
         </select>
-        <input id="fJob" placeholder="Job title" aria-label="Job contains"/>
-        <input id="fEmailHas" placeholder="Email contains" aria-label="Email contains"/>
-        <div class="toolbar" style="justify-content:center">
+        <input id="fJob" placeholder="Job title"/>
+        <input id="fEmailHas" placeholder="Email contains"/>
+        <div class="toolbar-right">
           <button class="btn" id="pgPrev" title="Prev">◀</button>
           <div style="min-width:84px;text-align:center"><span id="pgNow">1</span>/<span id="pgMax">1</span></div>
           <button class="btn" id="pgNext" title="Next">▶</button>
         </div>
-        <select id="pageSize" title="Rows / page" aria-label="Rows per page">
+        <select id="pageSize" title="Rows / page">
           <option>25</option><option>50</option><option>100</option>
         </select>
       </div>
@@ -189,7 +167,7 @@
     <!-- error banners -->
     <div id="errorTop" style="display:none" class="error-banner"></div>
 
-    <!-- content: table + side panel -->
+    <!-- content: table + editor + side panel -->
     <div class="grid2">
       <div>
         <!-- list -->
@@ -225,9 +203,7 @@
 
         <div class="card side-card">
           <h4 style="margin:0 0 10px">T&Cs sent</h4>
-          <div id="pTerms" class="muted">
-            Placeholder — later this will list documents/links sent for acceptance and their status.
-          </div>
+          <div id="pTcs" class="muted">—</div>
         </div>
       </div>
     </div>
@@ -283,13 +259,14 @@
     </div>
   </div>
 
-  <!-- toast host -->
-  <div class="toast" id="toast"></div>
+  <div id="toast"></div>
 
 <script>
-/* ================================================================================================
-   DEBUG CONSOLE
-================================================================================================ */
+/* ------------------------------------------------------------------------------------------------
+   RELIABLE BOOTSTRAP
+   - Waits for /admin/common.js (adminReady) up to 10s with retries.
+   - If unavailable, falls back to a tiny local helper (gate + api).
+--------------------------------------------------------------------------------------------------*/
 const __dbg = {
   on: false,
   log: (...a)=> __dbg.on && console.log('[line]', ...a),
@@ -298,43 +275,48 @@ const __dbg = {
 };
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-/* ================================================================================================
-   FALLBACK HELPERS when /admin/common.js hasn’t finished loading.
-   - gate(): minimal admin gate using Netlify Identity
-   - api():   robust fetch that tries Identity token OR nf_jwt cookie
-================================================================================================ */
+async function getIdentityUser(retries=50){
+  while(retries-- > 0){
+    if (window.netlifyIdentity && typeof window.netlifyIdentity === 'object'){
+      try{ return window.netlifyIdentity.currentUser(); }catch{}
+    }
+    await sleep(100);
+  }
+  return null;
+}
+async function getBearerToken(retries=50){
+  for(let i=0;i<retries;i++){
+    const user = await getIdentityUser(1);
+    if (user && typeof user.token === 'function'){
+      try{ const t = await user.token(); if(t) return t; }catch{}
+    }
+    await sleep(100);
+  }
+  return null;
+}
+
+function getNFJwtFromCookie() {
+  const m = document.cookie.match(/(?:^|;\s*)nf_jwt=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
 function localHelpers(){
   const sel = (s,root=document)=> root.querySelector(s);
-
-  const toastHost = document.getElementById('toast');
-  function toast(msg, kind=''){
-    if (!toastHost) return alert(msg);
-    const n = document.createElement('div');
-    n.className = 't'+(kind?(' '+kind):''); n.textContent = msg;
-    toastHost.appendChild(n);
-    setTimeout(()=>{ n.style.opacity='0'; n.style.transform='translateY(6px)'; }, 2600);
-    setTimeout(()=> toastHost.removeChild(n), 3000);
-  }
-
+  const toast = (msg)=> {
+    let t = document.getElementById('toast');
+    if(!t) return alert(msg);
+    t.textContent = msg; t.style.position='fixed'; t.style.bottom='16px'; t.style.right='16px';
+    t.style.background='#1a2238'; t.style.border='1px solid #2c3853'; t.style.padding='10px 12px';
+    t.style.borderRadius='10px'; t.style.zIndex=9999; t.style.boxShadow='0 8px 20px rgba(0,0,0,.4)';
+    setTimeout(()=>{ t.textContent=''; t.removeAttribute('style'); }, 2000);
+  };
   const show = id => sel(id).style.display='';
   const hide = id => sel(id).style.display='none';
-
-  async function getIdentityUser(retries=40){
-    for(let i=0;i<retries;i++){
-      const id = window.netlifyIdentity;
-      try{
-        if (id && typeof id.currentUser==='function') return id.currentUser();
-      }catch{}
-      await sleep(100);
-    }
-    return null;
-  }
 
   async function gate({ adminOnly }={}){
     const app = sel('#app'), gate = sel('#gate');
     const user = await getIdentityUser();
     if (user){
-      // we treat any logged-in user as allowed; server will enforce admin
       show('#app'); hide('#gate'); return { email: user.email };
     } else {
       hide('#app'); show('#gate');
@@ -343,39 +325,33 @@ function localHelpers(){
     }
   }
 
-  // *** THIS is the API function you asked for (with token + cookie fallback)
+  // *** FIXED helper: always sends Authorization (Identity or nf_jwt cookie)
   async function api(path, method='POST', body){
     const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
 
-    // 1) Try Identity token first
+    // 1) try Identity token
     let token = '';
     try {
       const user = window.netlifyIdentity?.currentUser?.();
       token = user ? (await (user.token?.() || user.jwt?.())) : '';
     } catch {}
-
-    // 2) If still blank, try nf_jwt cookie (Edge got it during Identity login)
+    // 2) fallback to nf_jwt cookie
     if (!token) token = getNFJwtFromCookie();
+    __dbg.warn('Auth:', token ? 'token attached' : 'no token available yet');
 
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    __dbg.warn('Auth: ' + (token ? 'token present' : 'no token available yet'));
-    __dbg.log('API ->', { url, method, body });
-
-    const r = await fetch(url, {
-      method,
-      headers,
-      credentials: 'include',
-      body: body ? JSON.stringify(body) : undefined
-    });
-
+    const r = await fetch(url, { method, headers, credentials:'include', body: body?JSON.stringify(body):undefined });
     const txt = await r.text();
     let json = null;
-    try { json = txt ? JSON.parse(txt) : null; } catch(e) {}
-
-    __dbg.log('API <--', { status: r.status, ok: r.ok, body: json });
-    if (!r.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+    try{ json = txt ? JSON.parse(txt) : null; }catch(e){ }
+    __dbg.log('API ->', { url, method, ok:r.ok, status:r.status, body });
+    __dbg.log('API <--', { status:r.status, ok:r.ok, body: json });
+    if(!r.ok){
+      const msg = (json && (json.error || json.message)) || `HTTP ${r.status}`;
+      throw new Error(msg);
+    }
     return json;
   }
 
@@ -389,11 +365,8 @@ function localHelpers(){
   return { gate, api, sel, toast, onKey };
 }
 
-/* ================================================================================================
-   BOOTSTRAP: prefer window.adminReady() from /admin/common.js; otherwise use fallbacks above
-================================================================================================ */
 async function waitAdminReadyOrFallback(){
-  for(let i=0;i<100;i++){ // ~10s
+  for(let i=0;i<100;i++){
     if (window.adminReady && typeof window.adminReady === 'function'){
       try{
         const helpers = await window.adminReady();
@@ -406,9 +379,9 @@ async function waitAdminReadyOrFallback(){
   return localHelpers();
 }
 
-/* ================================================================================================
-   APP
-================================================================================================ */
+/* ------------------------------------------------------------------------------------------------
+   APPLICATION
+--------------------------------------------------------------------------------------------------*/
 (async function bootstrap(){
   try{
     const helpers = await waitAdminReadyOrFallback();
@@ -462,7 +435,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
   function renderRows(rows){
     lastRows = rows;
     if(!rows.length){
-      listWrap.innerHTML = '<div class="muted" style="padding:12px">No candidates.</div>';
+      listWrap.innerHTML = '<div class="muted">No candidates.</div>';
       return;
     }
     const head = `
@@ -510,9 +483,9 @@ async function candidatesApp({ api, sel, toast, onKey }){
     return { rows, total, filtered, pages:pg };
   }
 
-  async function loadList(){
+  async function loadList(debugFlag=false){
     hideErrorBanner();
-    listWrap.innerHTML = '<div class="loading" style="padding:12px"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
+    listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
     try{
       const body = {
         q: qv('#q'),
@@ -539,12 +512,12 @@ async function candidatesApp({ api, sel, toast, onKey }){
       setNum('#pgMax', pages);
       $('#kPage').textContent = `${page}/${pages}`;
 
-      __dbg.log('List: meta', { total:meta.total, filtered:meta.filtered, pages, page });
+      __dbg.log('List meta', { total:meta.total, filtered:meta.filtered, pages, page });
       renderRows(meta.rows);
     }catch(e){
       __dbg.err('List: load failed', String(e));
       banner(errorTop, e.message || 'Error');
-      listWrap.innerHTML = '<div style="color:#ffb4b4;padding:12px">Error: '+(e.message||e)+'</div>';
+      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message||e)+'</div>';
     }
   }
 
@@ -565,6 +538,8 @@ async function candidatesApp({ api, sel, toast, onKey }){
     $('#edIban').value     = c.bank_iban||'';
     $('#edSwift').value    = c.bank_swift||'';
     $('#edNotes').value    = c.notes||'';
+    // side info
+    $('#pTcs').textContent = c.tcs_last_sent ? `Sent ${new Date(c.tcs_last_sent).toLocaleString()}` : '—';
   }
   function getEd(){
     return {
@@ -592,15 +567,15 @@ async function candidatesApp({ api, sel, toast, onKey }){
       setEd(cur);
       ed.style.display = '';
       ed.scrollIntoView({behavior:'smooth',block:'start'});
-      showProfile(cur?.id || null, cur); // reflect data into side panel
-    }catch(e){ toast('Open failed: '+(e.message||e),'bad'); }
+      showProfile(cur?.id || null, cur);
+    }catch(e){ toast('Open failed: '+(e.message||e)); }
   }
 
   function showProfile(id, candidateObj){
     if(!id && !candidateObj){
       $('#pTimesheets').textContent = 'Select a candidate…';
       $('#pAssignments').textContent = 'Select a candidate…';
-      ['#pName','#pEmail','#pPhone','#pJob','#pType','#pStatus','#pPayroll','#pAddress'].forEach(s=> $(s).textContent='—');
+      ['#pName','#pEmail','#pPhone','#pJob','#pType','#pStatus','#pPayroll','#pAddress','#pTcs'].forEach(s=> $(s).textContent='—');
       return;
     }
     const c = candidateObj || lastRows.find(r=> r.id===id);
@@ -613,11 +588,10 @@ async function candidatesApp({ api, sel, toast, onKey }){
     $('#pStatus').textContent = c?.status || '—';
     $('#pPayroll').textContent = c?.payroll_ref || '—';
     $('#pAddress').textContent = c?.address || '—';
+    $('#pTcs').textContent = c?.tcs_last_sent ? `Sent ${new Date(c.tcs_last_sent).toLocaleString()}` : '—';
 
-    // Load ancillary panels (best-effort; show message if not available)
     loadTimesheetsFor(c?.id).catch(e=> $('#pTimesheets').textContent = 'Timesheets unavailable: '+(e.message||e));
     loadAssignmentsFor(c?.id).catch(e=> $('#pAssignments').textContent = 'Assignments unavailable: '+(e.message||e));
-    $('#pTerms').textContent = 'T&Cs: (placeholder) — to be wired later against documents table.';
   }
 
   async function loadTimesheetsFor(id){
@@ -661,15 +635,15 @@ async function candidatesApp({ api, sel, toast, onKey }){
   }
 
   // events
-  $('#btnRefresh').onclick = ()=> { page=1; loadList(); };
+  $('#btnRefresh').onclick = ()=> { page=1; loadList(__dbg.on); };
   ['#q','#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
-    $(sid).addEventListener('change', ()=>{ page=1; loadList(); });
-    $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(); }});
+    $(sid).addEventListener('change', ()=>{ page=1; loadList(__dbg.on); });
+    $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(__dbg.on); }});
   });
 
-  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(); } };
-  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(); } };
-  $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
+  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(__dbg.on); } };
+  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(__dbg.on); } };
+  $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(__dbg.on); };
 
   $('#btnNew').onclick  = ()=> openEd(null);
   $('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
@@ -678,31 +652,31 @@ async function candidatesApp({ api, sel, toast, onKey }){
     try{
       const data = getEd();
       const saved = await api('/admin-candidates-save','POST', data);
-      toast('Saved','good');
+      toast('Saved ✅');
       ed.style.display='none';
       page=1;
-      await loadList();
+      await loadList(__dbg.on);
       if(saved?.id) { cur={id:saved.id}; openEd(saved.id); }
-    }catch(e){ toast('Save failed: '+(e.message||e),'bad'); }
+    }catch(e){ toast('Save failed: '+(e.message||e)); }
   };
 
   $('#btnDelete').onclick = async ()=>{
-    if(!cur?.id) return toast('Nothing to delete','bad');
+    if(!cur?.id) return toast('Nothing to delete');
     if(!confirm('Delete this candidate?')) return;
-    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted','good'); ed.style.display='none'; await loadList(); }
-    catch(e){ toast('Delete failed: '+(e.message||e),'bad'); }
+    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted 🗑️'); ed.style.display='none'; await loadList(__dbg.on); }
+    catch(e){ toast('Delete failed: '+(e.message||e)); }
   };
 
   $('#btnEmails').onclick = ()=>{
     const emails = lastRows.map(r=>r.email).filter(Boolean);
-    if(!emails.length) return toast('No emails in current list','bad');
+    if(!emails.length) return toast('No emails in current list');
     navigator.clipboard?.writeText(emails.join(', '));
-    toast(`Copied ${emails.length} email(s)`,'good');
+    toast(`Copied ${emails.length} email(s)`);
   };
 
   $('#btnExport').onclick = ()=>{
     const rows = lastRows;
-    if(!rows.length){ toast('Nothing to export','bad'); return; }
+    if(!rows.length){ toast('Nothing to export'); return; }
     const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref','bank_sort_code','bank_account','bank_iban','bank_swift'];
     const head = cols.join(',');
     const csv = [head].concat(rows.map(r=> cols.map(k=>{
@@ -714,7 +688,6 @@ async function candidatesApp({ api, sel, toast, onKey }){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
-    toast('Exported CSV','good');
   };
 
   // keyboard shortcuts
@@ -728,11 +701,11 @@ async function candidatesApp({ api, sel, toast, onKey }){
   $('#btnDebug').onclick = ()=>{
     __dbg.on = !__dbg.on;
     toast('Debug '+(__dbg.on?'ON':'OFF'));
-    if(__dbg.on) loadList();
+    if(__dbg.on) loadList(true);
   };
 
   // initial load
-  await loadList();
+  await loadList(false);
 }
 </script>
 </body>
