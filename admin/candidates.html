@@ -12,13 +12,42 @@
 <link rel="stylesheet" href="/css/style.css"/>
 
 <style>
+
+
   :root{
     --bg:#ffffff; --panel:#0f172a; --panel-2:#111b33; --border:#22304d; --ink:#0b1222;; --muted:#44516b;
     --card:#0d1426; --chip:#0e1629; --accent:#3A66B3; --accent-2:#2b50d9;
     --good:#0c2b1e; --warn:#35240d; --bad:#3a1418; --info:#0e2038;
+    /* text colors used on dark-blue panels */
+    --ink-on-panel: #eaf2ff;      /* near-white for headings & body on panels */
+    --muted-on-panel: #9fb7e3;    /* softer label color on panels */
     --shadow:0 12px 32px rgba(0,0,0,.28);
     --radius:18px;
   }
+
+  /* High-contrast text on dark-blue panels (cards, side panels, KPI chips, etc.) */
+  .card,
+  .side-card,
+  .kpi,
+  .pill,
+  .tableWrap,
+  thead th {
+    color: var(--ink-on-panel);
+  }
+
+  /* Muted/label text when it sits on a dark panel */
+  .card .muted,
+  .side-card .muted,
+  .section-title,
+  .filters label {
+    color: var(--muted-on-panel);
+  }
+
+  /* Badges and chips sit on dark too */
+  .badge { color: var(--ink-on-panel); }
+
+
+
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;font-size:18px;line-height:1.45}
   .top{position:sticky;top:0;background:#0b1222;border-bottom:1px solid var(--border);z-index:5}
