@@ -1,145 +1,146 @@
 // netlify/functions/admin-candidates-lists.js
-// Robust list endpoint – auto-detects columns on your 'candidates' table
-// and only selects / filters what exists. Supports search, filters, sort, pagination.
-
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 
-// Desired UI columns (will be intersected with actual table columns)
-const WANTED_COLS = [
-  'id',
-  'first_name',
-  'last_name',
-  'email',
-  'phone',
-  'job_title',
-  'pay_type',
-  'status',
-  'payroll_ref',
-  'address'
-];
-
-// Build PostgREST OR filter safely
-function applySearch(qb, have, term) {
-  if (!term || !term.trim()) return qb;
-  const like = `%${term.trim()}%`;
-  const orParts = [];
-
-  if (have.has('first_name')) orParts.push(`first_name.ilike.${like}`);
-  if (have.has('last_name'))  orParts.push(`last_name.ilike.${like}`);
-  if (have.has('email'))      orParts.push(`email.ilike.${like}`);
-  if (have.has('phone'))      orParts.push(`phone.ilike.${like}`);
-
-  if (orParts.length) qb = qb.or(orParts.join(','));
-  return qb;
-}
-
-function applyFilters(qb, have, { type, status, job, emailHas }) {
-  if (type && have.has('pay_type')) qb = qb.eq('pay_type', type);
-  if (status && have.has('status')) qb = qb.eq('status', status);
-  if (job && job.trim() && have.has('job_title')) qb = qb.ilike('job_title', `%${job.trim()}%`);
-  if (emailHas && emailHas.trim() && have.has('email')) qb = qb.ilike('email', `%${emailHas.trim()}%`);
-  return qb;
-}
-
-function applySort(qb, have, sort) {
-  const s = sort && sort.key ? sort : { key: 'name', dir: 'asc' };
-  const asc = (s.dir || 'asc').toLowerCase() !== 'desc';
-
-  if (s.key === 'name') {
-    // sort by last_name, first_name when present; otherwise fall back
-    if (have.has('last_name'))  qb = qb.order('last_name',  { ascending: asc, nullsFirst: true });
-    if (have.has('first_name')) qb = qb.order('first_name', { ascending: asc, nullsFirst: true });
-    if (!have.has('last_name') && !have.has('first_name')) qb = qb.order('id', { ascending: true });
-  } else if (have.has(s.key)) {
-    qb = qb.order(s.key, { ascending: asc, nullsFirst: true });
-  } else {
-    qb = qb.order('id', { ascending: true });
+/*
+  Request body:
+  {
+    q: string,           // search term (name/email/phone)
+    type: string,        // pay_type filter (optional)
+    status: string,      // status filter (optional)
+    job: string,         // job_title contains
+    emailHas: string,    // email contains
+    page: number,        // 1-based
+    size: number,        // rows per page
+    sort: { key, dir },  // optional { key: 'first_name'|'created_at'|..., dir: 'asc'|'desc' }
+    debug: boolean
   }
 
-  return qb;
-}
+  Response shape:
+  {
+    rows: Candidate[],
+    total: number,       // total rows in table (unfiltered)
+    filtered: number,    // rows after filters
+    pages: number        // Math.ceil(filtered/size)
+  }
+*/
 
 exports.handler = async (event, context) => {
   try {
     await getContext(context, { requireAdmin: true });
 
-    // Body
-    let args = {};
-    try { args = JSON.parse(event.body || '{}'); } catch { args = {}; }
+    const body = JSON.parse(event.body || '{}');
+    const {
+      q = '',
+      type = '',
+      status = '',
+      job = '',
+      emailHas = '',
+      page = 1,
+      size = 25,
+      sort = { key: 'id', dir: 'asc' },
+      debug = false,
+    } = body;
 
-    const page = Math.max(1, parseInt(args.page, 10) || 1);
-    const size = Math.min(500, Math.max(1, parseInt(args.size, 10) || 25));
-    const sort = args.sort || { key: 'name', dir: 'asc' };
+    // Validate paging
+    const p = Math.max(1, Number(page) || 1);
+    const s = Math.min(500, Math.max(1, Number(size) || 25));
+    const from = (p - 1) * s;
+    const to = from + s - 1;
 
-    // 1) Discover columns your table actually has
-    const { data: colRows, error: colErr } = await supabase
-      .from('information_schema.columns')
-      .select('column_name')
-      .eq('table_schema', 'public')
-      .eq('table_name', 'candidates');
-
-    if (colErr) throw colErr;
-
-    const have = new Set((colRows || []).map(r => r.column_name));
-    const selectCols = WANTED_COLS.filter(c => have.has(c));
-    if (!selectCols.length) selectCols.push('id'); // absolute fallback
-
-    // 2) Counts
-    const { count: total, error: totalErr } = await supabase
+    // Base selects
+    //  - We select "*" to avoid crashing if optional columns (e.g., address) don’t exist yet.
+    //  - We request an exact count for total/filtered numbers.
+    let base = supabase
       .from('candidates')
-      .select('id', { count: 'exact', head: true });
-    if (totalErr) throw totalErr;
+      .select('*', { count: 'exact', head: false });
 
-    let countQ = supabase.from('candidates').select('id', { count: 'exact', head: true });
-    countQ = applySearch(countQ, have, args.q);
-    countQ = applyFilters(countQ, have, args);
-    const { count: filtered, error: filteredErr } = await countQ;
-    if (filteredErr) throw filteredErr;
+    // Filters (only on commonly-present columns)
+    const orParts = [];
+    if (q && q.trim()) {
+      const like = `%${q.trim()}%`;
+      // Only use columns that exist in your schema:
+      // first_name, last_name, email, phone are typical.
+      orParts.push(`first_name.ilike.${like}`);
+      orParts.push(`last_name.ilike.${like}`);
+      orParts.push(`email.ilike.${like}`);
+      orParts.push(`phone.ilike.${like}`);
+    }
+    if (type) {
+      base = base.eq('pay_type', type);
+    }
+    if (status) {
+      base = base.eq('status', status);
+    }
+    if (job) {
+      base = base.ilike('job_title', `%${job}%`);
+    }
+    if (emailHas) {
+      base = base.ilike('email', `%${emailHas}%`);
+    }
+    if (orParts.length) {
+      base = base.or(orParts.join(','));
+    }
 
-    // 3) Data
-    let dataQ = supabase.from('candidates').select(selectCols.join(','));
-    dataQ = applySearch(dataQ, have, args.q);
-    dataQ = applyFilters(dataQ, have, args);
-    dataQ = applySort(dataQ, have, sort);
+    // Sorting (fall back safely)
+    const sortable = new Set(['id', 'first_name', 'last_name', 'email', 'created_at', 'updated_at', 'status', 'pay_type', 'job_title']);
+    const sortKey = sortable.has(String(sort?.key)) ? String(sort.key) : 'id';
+    const sortDir = String(sort?.dir).toLowerCase() === 'desc' ? false : true; // ascending if not 'desc'
 
-    const from = (page - 1) * size;
-    const to = from + size - 1;
-    dataQ = dataQ.range(from, to);
+    base = base.order(sortKey, { ascending: sortDir, nullsFirst: true });
 
-    const { data: rows, error: dataErr } = await dataQ;
-    if (dataErr) throw dataErr;
+    // Clone for filtered-count: PostgREST returns count together with data, so we’ll just use the returned count
+    // and get total separately with a light count-only query (no filters).
+    const totalRes = await supabase.from('candidates').select('*', { count: 'exact', head: true });
+    if (totalRes.error) throw totalRes.error;
 
-    const pages = Math.max(1, Math.ceil((filtered || 0) / size));
+    // Page slice
+    const pageRes = await base.range(from, to);
+    if (pageRes.error) throw pageRes.error;
 
-    // Optional debug echo to help future troubleshooting (toggle by sending { debug:true })
-    const debug = !!args.debug ? {
-      wanted: WANTED_COLS,
-      have: Array.from(have),
-      selected: selectCols,
-      sort
-    } : undefined;
+    const rows = pageRes.data || [];
+    const filtered = pageRes.count ?? rows.length;
+    const pages = Math.max(1, Math.ceil(filtered / s));
+
+    if (debug) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          debug: {
+            input: body,
+            paging: { page: p, size: s, from, to },
+            sort: { key: sortKey, asc: sortDir },
+            total: totalRes.count ?? null,
+            filtered,
+          },
+          rows,
+          total: totalRes.count ?? filtered,
+          filtered,
+          pages,
+        }),
+      };
+    }
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        rows: rows || [],
-        total: total || 0,
-        filtered: filtered || 0,
+        rows,
+        total: totalRes.count ?? filtered,
+        filtered,
         pages,
-        page,
-        size,
-        sort,
-        ...(debug ? { debug } : {})
-      })
+      }),
     };
   } catch (e) {
-    const status = e.code === 401 ? 401 : (e.code === 403 ? 403 : 500);
+    const status =
+      e?.status || e?.code === 401
+        ? 401
+        : e?.code === 403
+        ? 403
+        : 500;
+
     return {
       statusCode: status,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: e.message || String(e) })
+      body: JSON.stringify({ error: e?.message || 'Server error' }),
     };
   }
 };
