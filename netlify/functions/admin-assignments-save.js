@@ -1,42 +1,49 @@
 // netlify/functions/admin-assignments-save.js
 const { supabase } = require('./_supabase.js');
-const { getContext, coded } = require('./_auth.js');
+const { getContext } = require('./_auth.js');
+
+async function audit(actor, action, entity, entity_id, details) {
+  await supabase.from('admin_audit_logs').insert({
+    actor_email: actor?.email || null,
+    action, entity, entity_id,
+    details
+  });
+}
 
 exports.handler = async (event, context) => {
   try {
-    const { user, roles } = await getContext(context, { requireAdmin: true });
-    const p = JSON.parse(event.body || '{}');
+    const { user } = await getContext(context, { requireAdmin: true });
+    const { assignment } = JSON.parse(event.body || '{}');
+    if (!assignment) return { statusCode: 400, body: JSON.stringify({ error: 'Missing assignment' }) };
 
-    if (!p.contractor_id || !p.project_id || !p.start_date)
-      throw coded(400, 'contractor_id, project_id, start_date required');
-
-    const row = {
-      contractor_id: p.contractor_id,
-      project_id: p.project_id,
-      rate_std: p.rate_std ?? 0,
-      rate_ot: p.rate_ot ?? 0,
-      start_date: p.start_date,
-      end_date: p.end_date || null,
-      po_number: p.po_number || null,
-      active: p.active ?? true,
-      closed_at: p.active === false && !p.closed_at ? new Date().toISOString() : p.closed_at || null
+    const payload = {
+      id: assignment.id ?? undefined,
+      contractor_id: assignment.contractor_id,
+      project_id: assignment.project_id,
+      rate_std: assignment.rate_std ?? null,
+      rate_ot: assignment.rate_ot ?? null,
+      charge_std: assignment.charge_std ?? null,
+      charge_ot: assignment.charge_ot ?? null,
+      start_date: assignment.start_date,
+      end_date: assignment.end_date ?? null
     };
 
-    let res = p.id
-      ? await supabase.from('assignments').update(row).eq('id', p.id).select().single()
-      : await supabase.from('assignments').insert(row).select().single();
+    if (!payload.contractor_id || !payload.project_id || !payload.start_date) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'contractor_id, project_id, start_date are required' }) };
+    }
 
-    if (res.error) throw coded(500, res.error.message);
+    const { data, error } = await supabase
+      .from('assignments')
+      .upsert(payload)
+      .select()
+      .single();
 
-    await supabase.from('audit_log').insert({
-      actor_email: user.email, actor_roles: roles,
-      action: p.id ? (row.active ? 'update' : 'close') : 'create',
-      entity: 'assignment', entity_id: res.data.id, payload: row
-    });
+    if (error) throw error;
 
-    return { statusCode: 200, body: JSON.stringify(res.data) };
+    await audit(user, payload.id ? 'update' : 'create', 'assignment', data.id, payload);
+    return { statusCode: 200, body: JSON.stringify(data) };
   } catch (e) {
-    const status = e.code === 401 || e.code === 403 ? e.code : 500;
+    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };

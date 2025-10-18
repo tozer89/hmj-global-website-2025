@@ -1,24 +1,21 @@
-// netlify/functions/admin-clients-list.js
+// netlify/functions/admin-clients-get.js
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
     await getContext(context, { requireAdmin: true });
-    const { q } = JSON.parse(event.body || '{}');
+    const { id } = JSON.parse(event.body || '{}');
+    if (!id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing id' }) };
 
-    let query = supabase
+    const { data, error } = await supabase
       .from('clients')
-      .select('id,name,billing_email,phone')
-      .order('name', { ascending: true });
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (q && q.trim()) {
-      query = query.or(`name.ilike.%${q}%,billing_email.ilike.%${q}%`);
-    }
-
-    const { data, error } = await query;
     if (error) throw error;
-    return { statusCode: 200, body: JSON.stringify(data || []) };
+    return { statusCode: 200, body: JSON.stringify(data) };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };

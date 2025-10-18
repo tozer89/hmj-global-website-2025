@@ -1,37 +1,41 @@
 // netlify/functions/admin-clients-save.js
 const { supabase } = require('./_supabase.js');
-const { getContext, coded } = require('./_auth.js');
+const { getContext } = require('./_auth.js');
+
+async function audit(actor, action, entity, entity_id, details) {
+  await supabase.from('admin_audit_logs').insert({
+    actor_email: actor?.email || null,
+    action, entity, entity_id,
+    details
+  });
+}
 
 exports.handler = async (event, context) => {
   try {
-    const { user, roles } = await getContext(context, { requireAdmin: true });
-    const p = JSON.parse(event.body || '{}');
-    if (!p.name) throw coded(400, 'name required');
+    const { user } = await getContext(context, { requireAdmin: true });
+    const { client } = JSON.parse(event.body || '{}');
+    if (!client) return { statusCode: 400, body: JSON.stringify({ error: 'Missing client' }) };
 
-    const row = {
-      name: p.name,
-      contact_name: p.contact_name || null,
-      contact_email: p.contact_email || null,
-      contact_phone: p.contact_phone || null,
-      billing: p.billing || {},
-      status: p.status || 'active'
+    const payload = {
+      id: client.id ?? undefined,
+      name: client.name,
+      billing_email: client.billing_email || null,
+      phone: client.phone || null,
+      address: client.address || null // optional JSONB
     };
 
-    let res = p.id
-      ? await supabase.from('clients').update(row).eq('id', p.id).select().single()
-      : await supabase.from('clients').insert(row).select().single();
+    const { data, error } = await supabase
+      .from('clients')
+      .upsert(payload)
+      .select()
+      .single();
 
-    if (res.error) throw coded(500, res.error.message);
+    if (error) throw error;
 
-    await supabase.from('audit_log').insert({
-      actor_email: user.email, actor_roles: roles,
-      action: p.id ? 'update' : 'create',
-      entity: 'client', entity_id: res.data.id, payload: row
-    });
-
-    return { statusCode: 200, body: JSON.stringify(res.data) };
+    await audit(user, payload.id ? 'update' : 'create', 'client', data.id, payload);
+    return { statusCode: 200, body: JSON.stringify(data) };
   } catch (e) {
-    const status = e.code === 401 || e.code === 403 ? e.code : 500;
+    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };

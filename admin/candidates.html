@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Candidates — Admin | HMJ-Global</title>
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  :root{ --bg:#0b0b18; --panel:#14122a; --border:#26234b; --text:#e9e7ff; --muted:#a6a1d4; --accent:#7b5cff; }
+  body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+  .card{background:#17153a;border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{background:#211d56;border:1px solid #342f6b;color:#fff;padding:12px 14px;border-radius:12px;font-weight:800;cursor:pointer}
+  .btn:hover{border-color:#4b4592}
+  select,input,textarea{background:#0f1430;color:#e9e7ff;border:1px solid #2b2a56;border-radius:10px;padding:10px}
+  table{width:100%;border-collapse:collapse} th,td{border-bottom:1px solid var(--border);padding:10px;text-align:left}
+  .muted{color:var(--muted)}
+  .drawer{position:fixed;right:0;top:0;bottom:0;width:min(520px,92vw);background:#15133a;border-left:1px solid var(--border);padding:16px;transform:translateX(110%);transition:transform .25s ease;z-index:50;overflow:auto}
+  .drawer.show{transform:translateX(0)}
+</style>
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="card row" style="justify-content:space-between">
+    <div>
+      <h1 style="margin:0 0 6px">Candidates</h1>
+      <div class="muted">Create profiles, store bank & right-to-work, and link to assignments.</div>
+    </div>
+    <div class="row">
+      <a class="btn" href="/admin/">⟵ Admin</a>
+      <button class="btn" id="btnNew">New Candidate</button>
+      <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div id="gate" class="card" style="display:none">
+    <p><strong>Admin only.</strong> Log in with admin account.</p>
+    <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="card row">
+      <input id="q" placeholder="Search name or email" style="min-width:260px">
+      <button class="btn" id="btnRefresh">Refresh</button>
+    </div>
+
+    <div class="card">
+      <table id="tbl"><thead>
+        <tr><th>Name</th><th>Email</th><th>Phone</th><th>Payroll Ref</th><th></th></tr>
+      </thead><tbody id="rows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<form id="drawer" class="drawer" onsubmit="return false;">
+  <div class="row" style="justify-content:space-between">
+    <h3 style="margin:0">Candidate</h3>
+    <button type="button" class="btn" onclick="toggle(false)">Close</button>
+  </div>
+  <div class="muted" id="formHint" style="margin-bottom:8px">Create or edit a candidate.</div>
+  <div class="row" style="flex-direction:column;align-items:stretch;gap:8px">
+    <input name="id" type="hidden">
+    <label>Name <input name="name" required></label>
+    <label>Email <input name="email" required inputmode="email"></label>
+    <label>Phone <input name="phone"></label>
+    <label>Payroll ref <input name="payroll_ref"></label>
+    <label>Pay type
+      <select name="pay_type">
+        <option value="">—</option>
+        <option>PAYE</option><option>LTD</option><option>CIS</option><option>Umbrella</option><option>Self-Employed</option>
+      </select>
+    </label>
+    <label>Address (JSON) <textarea name="address_json" rows="3" placeholder='{"line1":"","city":"","postcode":""}'></textarea></label>
+    <label>Bank (JSON) <textarea name="bank_json" rows="3" placeholder='{"sort_code":"","account_number":"","iban":"","swift":""}'></textarea></label>
+    <label>Emergency contact (JSON) <textarea name="emergency_json" rows="3" placeholder='{"name":"","phone":"","relation":""}'></textarea></label>
+    <label>Right to work (JSON) <textarea name="rtw_json" rows="3" placeholder='{"status":"","doc_type":"","doc_ref":"","expiry":""}'></textarea></label>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="btnSave">Save</button>
+      <button class="btn" id="btnDelete" type="button" style="background:#6a1a1a;border-color:#7a2a2a">Delete</button>
+    </div>
+  </div>
+</form>
+
+<script>
+  function isAdmin(u){ const r=u?.app_metadata?.roles||u?.roles||[]; return r.includes('admin'); }
+  const drawer = document.getElementById('drawer');
+  function toggle(on){ drawer.classList.toggle('show', !!on); }
+
+  async function api(path, method='GET', body=null){
+    const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+    const t = await u.jwt();
+    const res = await fetch(`/.netlify/functions${path}`, { method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${t}`}, body: body?JSON.stringify(body):null });
+    if(!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function load(){
+    const q = document.getElementById('q').value.trim();
+    const rows = await api('/admin-candidates-list','POST',{ q });
+    const tbody = document.getElementById('rows');
+    if (!rows.length){ tbody.innerHTML = `<tr><td colspan="5" class="muted">No candidates.</td></tr>`; return; }
+    tbody.innerHTML = rows.map(r=>`
+      <tr>
+        <td>${r.name}</td><td>${r.email}</td><td>${r.phone||'—'}</td><td>${r.payroll_ref||'—'}</td>
+        <td><button class="btn" data-id="${r.id}" data-act="edit">Edit</button></td>
+      </tr>`).join('');
+  }
+
+  function fillForm(c){
+    const f = drawer;
+    f.elements.id.value = c?.id||'';
+    f.elements.name.value = c?.name||'';
+    f.elements.email.value = c?.email||'';
+    f.elements.phone.value = c?.phone||'';
+    f.elements.payroll_ref.value = c?.payroll_ref||'';
+    f.elements.pay_type.value = c?.pay_type||'';
+    f.elements.address_json.value = c?.address_json ? JSON.stringify(c.address_json,null,2) : '';
+    f.elements.bank_json.value = c?.bank_json ? JSON.stringify(c.bank_json,null,2) : '';
+    f.elements.emergency_json.value = c?.emergency_json ? JSON.stringify(c.emergency_json,null,2) : '';
+    f.elements.rtw_json.value = c?.rtw_json ? JSON.stringify(c.rtw_json,null,2) : '';
+  }
+
+  document.getElementById('btnNew').onclick = ()=>{ fillForm(null); toggle(true); };
+  document.getElementById('btnRefresh').onclick = load;
+  document.getElementById('q').oninput = ()=>{ clearTimeout(window.__t); window.__t=setTimeout(load,250); };
+  document.getElementById('tbl').onclick = async (e)=>{
+    const b=e.target.closest('button'); if(!b) return;
+    if (b.dataset.act==='edit'){
+      const d = await api('/admin-candidates-get','POST',{ id: b.dataset.id });
+      fillForm(d); toggle(true);
+    }
+  };
+  document.getElementById('btnSave').onclick = async ()=>{
+    const f = drawer;
+    function tryJson(t){ try{return t?JSON.parse(t):null;}catch{return null;} }
+    const payload = {
+      id: f.elements.id.value||null,
+      name: f.elements.name.value.trim(),
+      email: f.elements.email.value.trim().toLowerCase(),
+      phone: f.elements.phone.value.trim() || null,
+      payroll_ref: f.elements.payroll_ref.value.trim() || null,
+      pay_type: f.elements.pay_type.value || null,
+      address_json: tryJson(f.elements.address_json.value),
+      bank_json: tryJson(f.elements.bank_json.value),
+      emergency_json: tryJson(f.elements.emergency_json.value),
+      rtw_json: tryJson(f.elements.rtw_json.value),
+    };
+    await api('/admin-candidates-save','POST', payload);
+    toggle(false); load();
+  };
+  document.getElementById('btnDelete').onclick = async ()=>{
+    const id = drawer.elements.id.value; if(!id) return toggle(false);
+    if(!confirm('Delete this candidate?')) return;
+    await api('/admin-candidates-delete','POST',{ id });
+    toggle(false); load();
+  };
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    netlifyIdentity?.on('init', ()=>{ const u=netlifyIdentity.currentUser(); if(u && isAdmin(u)){ document.getElementById('app').style.display='block'; load(); } else document.getElementById('gate').style.display='block'; });
+    netlifyIdentity?.on('login', ()=>location.reload());
+    netlifyIdentity?.on('logout', ()=>location.href='/');
+    setTimeout(()=>{ const u=netlifyIdentity?.currentUser(); if(u && isAdmin(u)){ document.getElementById('app').style.display='block'; load(); } else document.getElementById('gate').style.display='block'; },600);
+  });
+</script>
+</body>
+</html>

@@ -4,534 +4,331 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Timesheets | HMJ-Global</title>
-
-  <!-- Base styles if you have /css/style.css — keep it. This page adds its own scoped CSS too -->
   <link rel="stylesheet" href="/css/style.css" />
-
   <style>
     :root{
-      /* 50/50 contrast palette: dark chrome + light working surface */
-      --ink:#0f172a;        /* primary text on light */
-      --ink-muted:#55627a;
-      --bg:#0b1420;         /* page chrome */
-      --panel:#0f1c2b;      /* cards on dark */
-      --border:#203042;
-
-      --white:#ffffff;      /* form surface */
-      --shadow:0 8px 24px rgba(2,6,23,.12);
-
-      --brand:#3b82f6;      /* blue */
-      --brand-600:#2563eb;
-      --green:#22c55e;
-      --red:#ef4444;
-      --amber:#f59e0b;
-
-      --radius-xl:16px;
-      --radius-lg:12px;
-      --radius-md:10px;
-
-      --font-s:14px;
-      --font-m:16px;
-      --font-l:18px;
-      --font-xl:22px;
+      --ink:#0e1626; --muted:#71819a; --bg:#0b1420; --panel:#0e1930; --border:#203042;
+      --accent:#6c5ce7; --accent-2:#8e79ff; --ok:#25c08a; --warn:#ffd166; --err:#ff7575;
+      --white:#ffffff; --black:#0c1118;
     }
-
     html,body{margin:0;background:var(--bg);color:#e6edf6;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    a{color:#8ab4ff;text-decoration:none}
-
+    a{color:var(--accent-2);text-decoration:none}
     /* Top bar */
     .topbar{position:sticky;top:0;z-index:40;background:rgba(11,20,32,.9);
       border-bottom:1px solid var(--border);backdrop-filter:saturate(120%) blur(6px)}
-    .toprow{max-width:1100px;margin:0 auto;padding:14px 16px;display:flex;gap:12px;align-items:center}
-    .brand{font-weight:800;font-size:18px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .toprow{max-width:1100px;margin:0 auto;padding:12px 16px}
+    .brand{font-weight:800}
     .spacer{flex:1}
-    .btn{font-size:16px;background:#19283f;border:1px solid #2b3c55;color:#e6edf6;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn{background:#1b2542;border:1px solid #2b3c55;color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer}
     .btn:hover{border-color:#3b5172}
+    .btn.primary{background:var(--accent);border-color:transparent}
+    .btn.success{background:var(--ok);border-color:transparent;color:#0b1420}
     .btn.ghost{background:transparent}
-    .btn.primary{background:var(--brand);border-color:transparent}
-    .btn.success{background:var(--green);border-color:transparent;color:#062b11}
-    .btn.warn{background:#3a2c10;border-color:#5b460f}
-
-    .wrap{max-width:1100px;margin:28px auto;padding:0 16px;display:grid;grid-template-columns:1fr 340px;gap:18px}
+    /* Layout */
+    .wrap{max-width:1100px;margin:28px auto;padding:0 16px;display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
     @media (max-width:1000px){ .wrap{grid-template-columns:1fr} }
-
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-xl);padding:16px;margin-bottom:16px}
-
-    /* Right column profile */
-    #profilePane .kv{display:grid;grid-template-columns:120px 1fr;gap:8px;margin:6px 0}
-    #profilePane .kv div:first-child{color:#9fb3c8}
-
-    /* Light working surface */
-    .work-surface{background:var(--white); color:var(--ink); border-radius:var(--radius-xl); box-shadow:var(--shadow); border:1px solid #e5e9f2}
-    .work-inner{padding:16px}
-
-    /* Headline + totals row */
-    .headline{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap}
-    .headline h2{color:var(--ink);margin:0 0 6px}
-    .muted-dark{color:var(--ink-muted)}
+    .card{background:linear-gradient(180deg,#0f1b33, #0c1528);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
+    .muted{color:#9fb3c8}
+    .tag{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:6px 12px;background:rgba(255,255,255,.05)}
+    .tag.warn{color:var(--warn)}
+    /* Totals */
     #totals{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    #totals .box{background:#f3f6fb;border:1px solid #e1e7f2;border-radius:12px;padding:10px 12px;color:var(--ink)}
-    #totals b{color:#0b1220}
-
-    /* Entry rows (bigger tap targets) */
-    .day-card{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e1e7f2;border-radius:14px;padding:12px 12px;margin-bottom:12px}
-    .day-badge{min-width:64px;text-align:center;background:#eef2f8;border:1px solid #d7dbe3;border-radius:12px;padding:10px 8px;font-weight:900;line-height:1;color:#162033}
-    .day-badge .dn{display:block;font-size:.78rem;letter-spacing:.6px}
-    .day-fields{flex:1;display:grid;grid-template-columns:160px 160px 1fr 100px;gap:10px;align-items:center}
+    #totals .box{background:#0e1730;border:1px solid #22324a;border-radius:12px;padding:8px 12px}
+    #totals b{color:#fff}
+    /* Entry cards (white/black contrast) */
+    .day-card{display:flex;align-items:center;gap:12px;background:#fff;color:#0b1420;
+      border:1px solid #d7dbe3;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 3px 10px rgba(0,0,0,.09)}
+    .day-badge{min-width:64px;text-align:center;background:#eef2f8;border:1px solid #d7dbe3;border-radius:10px;padding:8px 6px;font-weight:800;line-height:1;color:#162033}
+    .day-badge .dn{display:block;font-size:.72rem;letter-spacing:.6px}
+    .day-fields{flex:1;display:grid;grid-template-columns:150px 150px 1fr 90px;gap:10px}
     .day-fields input[type="number"], .day-fields input[type="text"]{
-      width:100%;background:#fff;color:var(--ink);border:1px solid #cbd5e1;border-radius:10px;padding:12px;font-size:18px}
-    .day-tools{display:flex;gap:8px;align-items:center}
-    .pill{font-size:16px;padding:10px 12px;border-radius:10px;background:#eef2f8;border:1px solid #d7dbe3;color:#162033;cursor:pointer}
-    .pill.icon{width:40px;height:40px;display:inline-grid;place-items:center;font-size:18px}
-    .pill:hover{filter:brightness(.98)}
-
-    /* Inputs outside white cards */
-    input[type="number"],input[type="text"]{width:100%}
-
-    /* Quick fill row */
-    .quickhelp{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
-    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:#eef2f8;border:1px solid #d7dbe3;color:#162033;padding:2px 8px;border-radius:8px}
-
-    /* History */
-    .history-list{display:grid;gap:10px}
-    details.history{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px}
-    details.history[open] summary{margin-bottom:8px}
-    summary{cursor:pointer;list-style:none}
-    summary::-webkit-details-marker{display:none}
-
-    /* Toasts */
-    #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:10px;z-index:9999}
-    .toast{background:#0f172a;border:1px solid #233044;color:#e6edf6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    .toast.ok{border-color:#245d46}
-    .toast.err{border-color:#5b2b2b}
-
-    /* Focus */
-    :where(input,button,.pill,.btn):focus{outline:3px solid #7aa2ff; outline-offset:2px}
-
-    @media (max-width:760px){
+      width:100%;background:#fff;color:#0b1420;border:1px solid #c9cfda;border-radius:10px;padding:12px;font-size:16px}
+    .pill{font-size:.9rem;padding:10px 12px;border-radius:10px;background:#eef2f8;border:1px solid #d7dbe3;color:#162033;cursor:pointer}
+    .pill.icon{width:38px;height:38px;display:inline-grid;place-items:center}
+    /* Mobile */
+    @media (max-width:720px){
       .day-fields{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
       .day-fields input[name$="_note"]{grid-column:1/-1}
-      .headline{align-items:flex-start}
+      .wrap{padding-bottom:80px}
     }
+    /* Toasts */
+    #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
+    .toast{background:#0f172a;border:1px solid #233044;color:#e6edf6;border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .toast.ok{border-color:#245d46}.toast.err{border-color:#5b2b2b}
   </style>
-
-  <!-- Netlify Identity -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
   <!-- Top Bar -->
   <div class="topbar">
-    <div class="toprow">
+    <div class="toprow row">
       <div class="brand">HMJ Global — Timesheets</div>
       <span class="spacer"></span>
-      <span id="deadlineTag" class="btn ghost" style="cursor:default">Calculating deadline…</span>
-      <a href="/" class="btn ghost" title="Back to homepage">⟵ Return to Homepage</a>
+      <span id="deadlineTag" class="tag warn">Calculating…</span>
+      <a href="/" class="btn ghost">⟵ Return to Homepage</a>
       <button id="btnSignOut" class="btn">Sign out</button>
     </div>
   </div>
 
   <div class="wrap">
-    <!-- MAIN COLUMN -->
+    <!-- MAIN -->
     <div>
       <div class="card">
-        <h1 style="margin:0 0 6px">My Timesheet</h1>
+        <h1 style="margin:0 0 8px">My Timesheet</h1>
         <div class="muted">Submit your hours by <b>Tuesday 17:00</b> for Friday payment.
-          <span id="deadlineClock" class="muted" aria-live="polite"></span>
+          <span id="deadlineClock" class="tag" style="margin-left:8px"></span>
         </div>
       </div>
 
-      <!-- Gate (not logged in) -->
       <div id="gate" class="card" style="display:none">
         <p>Please log in to access your timesheets.</p>
         <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
-        <div class="muted" style="margin-top:8px">After login you will be redirected here automatically.</div>
       </div>
 
-      <!-- App -->
       <div id="app" style="display:none">
         <div id="summary" class="card">Loading…</div>
 
-        <!-- Light surface work area -->
-        <div class="work-surface">
-          <div class="work-inner">
-            <div class="headline">
-              <div>
-                <h2>This Week</h2>
-                <div id="weekMeta" class="muted-dark"></div>
-              </div>
-              <div id="totals">
-                <div class="box"><span class="muted-dark">Std</span> <b id="tStd">0</b>h</div>
-                <div class="box"><span class="muted-dark">OT</span> <b id="tOt">0</b>h</div>
-                <div class="box"><span class="muted-dark">Total</span> <b id="tAll">0</b>h</div>
-                <div class="box"><span class="muted-dark">Est. gross</span> £<b id="tGross">0.00</b></div>
-              </div>
+        <div class="card" id="weekCard">
+          <div class="row" style="justify-content:space-between;align-items:flex-end">
+            <div>
+              <h2 style="margin:0 0 8px">This Week</h2>
+              <div id="weekMeta" class="muted"></div>
             </div>
-
-            <!-- Quick fill tools -->
-            <div class="quickhelp">
-              <span class="muted-dark">Quick fill:</span>
-              <button class="pill" id="qMonFri8" type="button">Mon–Fri 8h</button>
-              <button class="pill" id="qClear"   type="button">Clear all</button>
-              <button class="pill" id="qSetAll"  type="button">Set all…</button>
-              <span class="muted-dark" title="Keyboard help">Jump with <span class="kbd">Tab</span> • Copy previous day with <span class="kbd">⌘/Ctrl + D</span></span>
+            <div id="totals">
+              <div class="box"><span class="muted">Std</span> <b id="tStd">0</b>h</div>
+              <div class="box"><span class="muted">OT</span> <b id="tOt">0</b>h</div>
+              <div class="box"><span class="muted">Total</span> <b id="tAll">0</b>h</div>
+              <div class="box"><span class="muted">Est. gross</span> £<b id="tGross">0.00</b></div>
             </div>
-
-            <form id="tsForm" class="day-list" autocomplete="off">
-              <div id="days"></div>
-              <div class="quickhelp" style="margin-top:6px">
-                <button type="button" class="btn" id="btnDraft">Save draft</button>
-                <button type="submit" class="btn success" id="btnSubmit">Submit</button>
-              </div>
-            </form>
           </div>
+
+          <div class="row" style="margin:12px 0 10px">
+            <span class="muted">Quick fill:</span>
+            <button class="pill" id="qMonFri8" type="button">Mon–Fri 8h</button>
+            <button class="pill" id="qClear"   type="button">Clear all</button>
+            <button class="pill" id="qSetAll"  type="button">Set all…</button>
+            <span class="muted">Copy previous day with ⌘/Ctrl + D</span>
+          </div>
+
+          <form id="tsForm" class="day-list" autocomplete="off">
+            <div id="days"></div>
+            <div class="row" style="margin-top:12px">
+              <button type="button" class="btn" id="btnDraft">Save draft</button>
+              <button type="submit" class="btn success" id="btnSubmit">Submit</button>
+            </div>
+          </form>
         </div>
 
         <div class="card">
-          <h3 style="margin:0 0 10px">Previous Weeks</h3>
-          <div id="history" class="history-list muted">—</div>
+          <h3 style="margin:0 0 8px">Previous Weeks</h3>
+          <div id="history" class="muted">—</div>
         </div>
       </div>
     </div>
 
-    <!-- RIGHT COLUMN: Profile -->
-    <div id="profilePane" class="card">
-      <div class="muted">Loading profile…</div>
-    </div>
+    <!-- RIGHT: Profile -->
+    <div id="profilePane" class="card"><div class="muted">Loading profile…</div></div>
   </div>
 
-  <!-- Toasts -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
   <script>
-    // ---------- helpers ----------
     const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const sel = s => document.querySelector(s);
     const byName = (f, n) => f.elements.namedItem(n);
-
-    function toast(msg, type='ok', t=2800){
+    function toast(msg, type='ok', t=2400){
       const box = document.createElement('div'); box.className = `toast ${type}`;
       box.textContent = msg; sel('#toast').appendChild(box);
       setTimeout(()=>box.remove(), t);
     }
-
     function fmt(n, d=2){ return (Number(n||0)).toFixed(d); }
-
-    function nextTuesday1700(){
-      const now = new Date();
-      const t = new Date(now);
-      const diff = (2 - t.getDay() + 7) % 7; // 2 = Tuesday
-      t.setDate(t.getDate() + diff);
-      t.setHours(17,0,0,0);
-      if (t < now) t.setDate(t.getDate() + 7);
-      return t;
-    }
+    function nextTuesday1700(){ const now=new Date();const t=new Date(now);
+      const diff=(2 - t.getDay() + 7)%7; t.setDate(t.getDate()+diff); t.setHours(17,0,0,0);
+      if (t<now) t.setDate(t.getDate()+7); return t; }
     function startDeadlineClock(){
-      function tick(){
-        const to = nextTuesday1700() - new Date();
-        if (to <= 0){ sel('#deadlineClock').textContent = ' • Deadline passed'; return; }
-        const hrs = Math.floor(to/36e5), mins = Math.floor((to%36e5)/6e4);
-        sel('#deadlineClock').textContent = ` • ${hrs}h ${mins}m remaining`;
-      }
-      tick(); setInterval(tick, 30e3);
-      sel('#deadlineTag').textContent = 'Deadline: Tue 17:00';
+      function tick(){ const to=nextTuesday1700()-new Date();
+        if (to<=0){ sel('#deadlineClock').textContent='Deadline passed'; return; }
+        const h=Math.floor(to/36e5), m=Math.floor((to%36e5)/6e4);
+        sel('#deadlineClock').textContent=`${h}h ${m}m remaining`; }
+      tick(); setInterval(tick, 30e3); sel('#deadlineTag').textContent='Deadline: Tue 17:00';
     }
 
-    // ---------- API ----------
     async function api(path, method='GET', body=null){
       const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
       const token = await u.jwt();
       const res = await fetch(`/.netlify/functions${path}`, {
-        method,
-        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
         body: body ? JSON.stringify(body) : null
       });
-      if(!res.ok){
-        let msg = await res.text();
-        try{ const j = JSON.parse(msg); msg = j.error || msg; }catch{}
-        throw new Error(msg || ('HTTP '+res.status));
-      }
+      if(!res.ok){ const txt=await res.text(); throw new Error(txt || ('HTTP '+res.status)); }
       return res.json();
     }
 
-    // ---------- Rendering ----------
-    <script>
-// ...
-
-function renderProfilePane(prof) {
-  const el = document.getElementById('profilePane');
-  if (!prof || !prof.contractor) {
-    el.innerHTML = `<div class="muted">Profile unavailable</div>`;
-    return { ok:false };
-  }
-  const c = prof.contractor, a = prof.assignment;
-  if (!a) {
-    el.innerHTML = `
-      <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
-      <div style="height:1px;background:var(--border);margin:10px 0"></div>
-      <div class="muted">No active assignment linked to this account.</div>
-      <div class="muted" style="margin-top:6px">Please contact HMJ to get your assignment set up.</div>`;
-    return { ok:false, contractor:c, assignment:null };
-  }
-  el.innerHTML = `
-    <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
-    <div style="height:1px;background:var(--border);margin:10px 0"></div>
-    <div class="kv"><div>Client</div><div>${a.client_name}</div></div>
-    <div class="kv"><div>Project</div><div>${a.project_name}</div></div>
-    <div class="kv"><div>Site</div><div>${a.site_name || '—'}</div></div>
-    <div class="kv"><div>Rate</div><div>£${a.rate_std}/h ${a.rate_ot?`(OT £${a.rate_ot}/h)`:''}</div></div>
-    <div style="height:1px;background:var(--border);margin:10px 0"></div>
-    <div class="muted">Need help? Email <a href="mailto:info@hmj-global.com">info@hmj-global.com</a></div>
-  `;
-  return { ok:true, contractor:c, assignment:a };
-}
-
-    function renderDays(existing, rates, readOnly){
+    function renderDays(existing, rates, readOnly=false){
       const wrap = document.getElementById('days'); wrap.innerHTML = '';
       const label = {Sun:'SUN',Mon:'MON',Tue:'TUE',Wed:'WED',Thu:'THU',Fri:'FRI',Sat:'SAT'};
       DAYS.forEach((d, i)=>{
         const e = existing?.[d] || {};
         const card = document.createElement('div'); card.className = 'day-card';
-        const dis = readOnly ? 'disabled' : '';
-        const ro  = readOnly ? 'readonly'  : '';
         card.innerHTML = `
           <div class="day-badge"><span class="dn">${label[d]}</span></div>
           <div class="day-fields">
-            <input ${ro} ${dis} aria-label="${d} standard hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_std" placeholder="Std hrs" value="${e.std ?? ''}">
-            <input ${ro} ${dis} aria-label="${d} overtime hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_ot"  placeholder="OT hrs"  value="${e.ot ?? ''}">
-            <input ${ro} ${dis} aria-label="${d} notes" type="text" name="${d}_note" placeholder="Notes (optional)" value="${e.note ?? ''}">
-            <div class="day-tools">
-              <button class="pill icon" type="button" title="Copy previous day" data-copy="${i-1}" ${dis}>⟲</button>
-              <button class="pill icon" type="button" title="Clear row" data-clear ${dis}>✕</button>
+            <input ${readOnly?'disabled':''} aria-label="${d} standard hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_std" placeholder="Std hrs" value="${e.std ?? ''}">
+            <input ${readOnly?'disabled':''} aria-label="${d} overtime hours" inputmode="decimal" type="number" min="0" step="0.25" name="${d}_ot"  placeholder="OT hrs"  value="${e.ot ?? ''}">
+            <input ${readOnly?'disabled':''} aria-label="${d} notes" type="text" name="${d}_note" placeholder="Notes (optional)" value="${e.note ?? ''}">
+            <div class="row">
+              <button ${readOnly?'disabled':''} class="pill icon" type="button" title="Copy previous day" data-copy="${i-1}">⟲</button>
+              <button ${readOnly?'disabled':''} class="pill icon" type="button" title="Clear row" data-clear>✕</button>
             </div>
           </div>`;
         wrap.appendChild(card);
       });
-
-      if (readOnly) return;
-
-      // Row tools behavior (only in editable mode)
-      wrap.addEventListener('click', (e)=>{
+      wrap.onclick = (e)=>{
         const btn = e.target.closest('button'); if(!btn) return;
-        const card = btn.closest('.day-card'); if(!card) return;
-        const idx = [...wrap.children].indexOf(card);
+        const card = btn.closest('.day-card'); const idx = [...wrap.children].indexOf(card);
         const f = document.getElementById('tsForm');
-
         if (btn.dataset.copy){
-          const srcIdx = Number(btn.dataset.copy);
-          if (srcIdx >= 0){
+          const srcIdx = Number(btn.dataset.copy); if (srcIdx>=0){
             const srcDay = DAYS[srcIdx], dstDay = DAYS[idx];
-            byName(f, `${dstDay}_std`).value = byName(f, `${srcDay}_std`).value;
-            byName(f, `${dstDay}_ot`).value  = byName(f, `${srcDay}_ot`).value;
-            byName(f, `${dstDay}_note`).value= byName(f, `${srcDay}_note`).value;
+            byName(f,`${dstDay}_std`).value = byName(f,`${srcDay}_std`).value;
+            byName(f,`${dstDay}_ot`).value  = byName(f,`${srcDay}_ot`).value;
+            byName(f,`${dstDay}_note`).value= byName(f,`${srcDay}_note`).value;
             calcTotals(rates);
           }
         }
         if (btn.hasAttribute('data-clear')){
           const day = DAYS[idx];
-          byName(f, `${day}_std`).value = '';
-          byName(f, `${day}_ot`).value  = '';
-          byName(f, `${day}_note`).value= '';
+          byName(f,`${day}_std`).value=''; byName(f,`${day}_ot`).value=''; byName(f,`${day}_note`).value='';
           calcTotals(rates);
         }
-      }, { once:true });
+      };
     }
 
     function collect(status){
       const f = document.getElementById('tsForm'); const entries = {};
-      DAYS.forEach(d=>{
-        entries[d] = {
-          std: parseFloat(byName(f,`${d}_std`).value || 0),
-          ot:  parseFloat(byName(f,`${d}_ot`).value  || 0),
-          note: byName(f,`${d}_note`).value || ''
-        };
-      });
+      DAYS.forEach(d=>{ entries[d] = {
+        std: parseFloat(byName(f,`${d}_std`).value || 0),
+        ot:  parseFloat(byName(f,`${d}_ot`).value  || 0),
+        note: byName(f,`${d}_note`).value || '' }; });
       return { status, entries };
     }
 
     function calcTotals(rates){
       const f = document.getElementById('tsForm'); let std=0, ot=0;
-      DAYS.forEach(d=>{ std += Number(byName(f,`${d}_std`).value||0); ot += Number(byName(f,`${d}_ot`).value||0); });
-      const all = std+ot; const gross = (std*(rates?.rate_std||0)) + (ot*(rates?.rate_ot||0));
-      sel('#tStd').textContent = fmt(std,2); sel('#tOt').textContent = fmt(ot,2);
-      sel('#tAll').textContent = fmt(all,2); sel('#tGross').textContent = fmt(gross,2);
+      DAYS.forEach(d=>{ std += Number(byName(f,`${d}_std`).value||0); ot += Number(byName(f,`${d}_ot`).value||0);});
+      const all=std+ot, gross=(std*(rates?.rate_std||0))+(ot*(rates?.rate_ot||0));
+      sel('#tStd').textContent = fmt(std); sel('#tOt').textContent = fmt(ot);
+      sel('#tAll').textContent = fmt(all); sel('#tGross').textContent = fmt(gross);
+      const card=sel('#weekCard'); card.style.boxShadow = (all>84)?'0 0 0 2px rgba(255,0,0,.25) inset':'none';
     }
 
-    // ---------- Autosave ----------
-    const CACHE_KEY = 'hmj_ts_draft';
-    function loadDraft(){
-      try{ const j = JSON.parse(localStorage.getItem(CACHE_KEY)||''); return j||null; }catch{return null;}
-    }
-    function saveDraftLocal(payload){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify(payload)); }catch{} }
-    function clearDraftLocal(){ try{ localStorage.removeItem(CACHE_KEY); }catch{} }
+    const CACHE_KEY='hmj_ts_draft';
+    const loadDraft=()=>{ try{return JSON.parse(localStorage.getItem(CACHE_KEY)||'');}catch{return null;} };
+    const saveDraftLocal=(p)=>{ try{localStorage.setItem(CACHE_KEY, JSON.stringify(p));}catch{} };
+    const clearDraftLocal=()=>{ try{localStorage.removeItem(CACHE_KEY);}catch{} };
 
-    // ---------- History ----------
-    function renderHistory(list){
-      if (!list?.length){ sel('#history').textContent = 'No previous weeks.'; return; }
-
-      const visible = list.slice(0,3);
-      const hidden  = list.slice(3);
-
-      const row = (h) => `
-        <details class="history">
-          <summary><strong>${h.week_ending}</strong> — ${h.project_name} — ${h.total_hours}h — <em>${h.status}</em></summary>
-          <div class="muted">Client: ${h.client_name}${h.site_name?` — ${h.site_name}`:''}</div>
-        </details>`;
-
-      let html = visible.map(row).join('');
-      if (hidden.length){
-        html += `<details class="history">
-          <summary>Show ${hidden.length} more…</summary>
-          <div class="history-list" style="margin-top:8px">${hidden.map(row).join('')}</div>
-        </details>`;
+    function renderProfilePane(prof){
+      const el=sel('#profilePane');
+      if (!prof || !prof.contractor){ el.innerHTML='<div class="muted">Profile unavailable</div>'; return {ok:false}; }
+      const c=prof.contractor, a=prof.assignment;
+      if (!a){
+        el.innerHTML = `<div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
+          <div style="height:1px;background:var(--border);margin:10px 0"></div>
+          <div class="muted">No active assignment linked to this account.</div>`;
+        return {ok:false, contractor:c};
       }
-      sel('#history').innerHTML = html;
+      el.innerHTML = `
+        <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
+        <div style="height:1px;background:var(--border);margin:10px 0"></div>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <div class="tag">Client&nbsp;•&nbsp;${a.client_name}</div>
+          <div class="tag">Project&nbsp;•&nbsp;${a.project_name}</div>
+          <div class="tag">Site&nbsp;•&nbsp;${a.site_name||'—'}</div>
+        </div>
+        <div style="margin-top:8px" class="muted">Rate: £${a.rate_std}/h ${a.rate_ot?`(OT £${a.rate_ot}/h)`:''}</div>`;
+      return {ok:true, contractor:c, assignment:a};
     }
 
-    // ---------- Boot ----------
     async function boot(){
       const user = netlifyIdentity?.currentUser();
       if(!user){ sel('#gate').style.display='block'; return; }
+      sel('#btnSignOut').onclick = ()=> netlifyIdentity?.logout();
+      sel('#app').style.display='block'; startDeadlineClock();
 
-      sel('#btnSignOut').onclick = ()=>{ netlifyIdentity?.logout(); };
-
-      sel('#app').style.display='block';
-      startDeadlineClock();
-
-      // Profile pane (contractor + assignment)
-      try{
-        const prof = await api('/contractor-profile');
-        const c = prof.contractor, a = prof.assignment;
-        sel('#profilePane').innerHTML = a ? `
-          <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
-          <div style="height:1px;background:var(--border);margin:10px 0"></div>
-          <div class="kv"><div>Client</div><div>${a.client_name}</div></div>
-          <div class="kv"><div>Project</div><div>${a.project_name}</div></div>
-          <div class="kv"><div>Site</div><div>${a.site_name || '—'}</div></div>
-          <div class="kv"><div>Rate</div><div>£${a.rate_std}/h ${a.rate_ot?`(OT £${a.rate_ot}/h)`:''}</div></div>
-          <div style="height:1px;background:var(--border);margin:10px 0"></div>
-          <div class="muted">Need help? Email <a href="mailto:info@hmj-global.com">info@hmj-global.com</a></div>
-        ` : `<div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
-             <div style="height:1px;background:var(--border);margin:10px 0"></div><div class="muted">No active assignment.</div>`;
+      let prof; try{
+        prof = await api('/contractor-profile');
       }catch(e){
-        sel('#profilePane').innerHTML = `<div class="muted">Profile unavailable</div>`;
+        sel('#summary').textContent='Could not load profile.'; toast('Profile load failed: '+e.message,'err',6000); return;
       }
-
-      // Load/ensure this week's timesheet
-      let data;
-      try{
-        data = await api('/timesheets-get-this-week');
-      }catch(e){
-        toast('Failed to load timesheet: '+e.message,'err',5000);
-        sel('#summary').textContent = 'Could not load timesheet.';
+      const pr = renderProfilePane(prof);
+      if (!pr.ok){
+        sel('#summary').innerHTML = `<strong>${prof?.contractor?.name || '—'}</strong><br><span class="muted">No active assignment.</span>`;
+        document.querySelectorAll('#tsForm input, #tsForm button, #qMonFri8, #qClear, #qSetAll').forEach(el=>el.disabled=true);
         return;
       }
 
-      sel('#summary').innerHTML =
-        `<strong>${data.contractor.name}</strong> — ${data.assignment.project_name} @ ${data.assignment.client_name}
-         <br><span class="muted">Rate: £${data.assignment.rate_std}/h ${data.assignment.rate_ot?`(OT £${data.assignment.rate_ot}/h)`:''}</span>`;
+      let data; try{ data = await api('/timesheets-get-this-week'); }
+      catch(e){ toast('Failed to load timesheet: '+e.message,'err',6000); sel('#summary').textContent='Could not load timesheet.'; return; }
 
+      sel('#summary').innerHTML = `<strong>${data.contractor.name}</strong> — ${data.assignment.project_name} @ ${data.assignment.client_name}
+        <br><span class="muted">Rate: £${data.assignment.rate_std}/h ${data.assignment.rate_ot?`(OT £${data.assignment.rate_ot}/h)`:''}</span>`;
       sel('#weekMeta').textContent = `Week ending ${data.week_ending} • Status: ${data.status}`;
 
-      // Merge server data with any local draft (same week only) — only if editable
-      const editable = !['submitted','approved','rejected'].includes(String(data.status||'').toLowerCase());
+      const isLocked = ['submitted','approved','rejected'].includes(String(data.status||'').toLowerCase());
       const draft = loadDraft();
-      const sameWeek = draft && draft.week_ending === data.week_ending;
-      const mergedEntries = editable && sameWeek ? Object.assign({}, data.entries, draft.entries || {}) : data.entries;
-
-      renderDays(mergedEntries, data.assignment, !editable);
+      const merged = (!isLocked && draft?.week_ending===data.week_ending) ? Object.assign({}, data.entries, draft.entries||{}) : data.entries;
+      renderDays(merged, data.assignment, isLocked);
       calcTotals(data.assignment);
+      sel('#btnDraft').disabled = isLocked; sel('#btnSubmit').disabled = isLocked;
 
-      // Toggle button availability by status
-      sel('#btnDraft').disabled  = !editable;
-      sel('#btnSubmit').disabled = !editable;
-
-      // Live recalc + autosave only if editable
-      if (editable){
+      if (!isLocked){
         sel('#tsForm').addEventListener('input', ()=>{
           calcTotals(data.assignment);
-          saveDraftLocal({ week_ending: data.week_ending, entries: collect('draft').entries });
+          saveDraftLocal({ week_ending:data.week_ending, entries: collect('draft').entries });
           window.onbeforeunload = ()=>'You have unsaved changes.';
         });
-
-        // Quick fill tools
-        sel('#qMonFri8').onclick = ()=>{
-          const f = sel('#tsForm');
-          ['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{ byName(f,`${d}_std`).value = '8'; byName(f,`${d}_ot`).value='0'; });
-          calcTotals(data.assignment);
-        };
-        sel('#qClear').onclick = ()=>{
-          const f = sel('#tsForm');
-          DAYS.forEach(d=>{ byName(f,`${d}_std`).value=''; byName(f,`${d}_ot`).value=''; byName(f,`${d}_note`).value=''; });
-          calcTotals(data.assignment);
-        };
-        sel('#qSetAll').onclick = ()=>{
-          const h = prompt('Set standard hours for all days (e.g. 8, 7.5, 0):','8');
-          if (h==null) return;
-          const f = sel('#tsForm'); DAYS.forEach(d=>{ byName(f,`${d}_std`).value = h; });
-          calcTotals(data.assignment);
-        };
-
-        // Copy previous day shortcut
         document.addEventListener('keydown',(e)=>{
           if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='d'){
             e.preventDefault();
-            const active = document.activeElement;
-            const name = active?.name||'';
-            const match = name.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)_(std|ot|note)$/);
-            if(!match) return;
-            const day = match[1], idx = DAYS.indexOf(day);
-            if(idx<=0) return;
-            const prev = DAYS[idx-1], f = sel('#tsForm');
-            byName(f,`${day}_std`).value = byName(f,`${prev}_std`).value;
-            byName(f,`${day}_ot`).value  = byName(f,`${prev}_ot`).value;
-            byName(f,`${day}_note`).value= byName(f,`${prev}_note`).value;
+            const a=document.activeElement, name=a?.name||''; const m=name.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)_(std|ot|note)$/);
+            if(!m) return; const day=m[1], idx=DAYS.indexOf(day); if(idx<=0) return;
+            const prev=DAYS[idx-1], f=sel('#tsForm');
+            byName(f,`${day}_std`).value=byName(f,`${prev}_std`).value;
+            byName(f,`${day}_ot`).value =byName(f,`${prev}_ot`).value;
+            byName(f,`${day}_note`).value=byName(f,`${prev}_note`).value;
             calcTotals(data.assignment);
           }
         });
-
-        // Save & Submit
+        sel('#qMonFri8').onclick=()=>{const f=sel('#tsForm'); ['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{byName(f,`${d}_std`).value='8';byName(f,`${d}_ot`).value='0';}); calcTotals(data.assignment);};
+        sel('#qClear').onclick  =()=>{const f=sel('#tsForm'); DAYS.forEach(d=>{byName(f,`${d}_std`).value='';byName(f,`${d}_ot`).value='';byName(f,`${d}_note`).value='';}); calcTotals(data.assignment);};
+        sel('#qSetAll').onclick =()=>{const h=prompt('Set standard hours for all days (e.g. 8, 7.5, 0):','8'); if(h==null)return; const f=sel('#tsForm'); DAYS.forEach(d=>{byName(f,`${d}_std`).value=h;}); calcTotals(data.assignment);};
         sel('#btnDraft').onclick = async ()=>{
-          try{
-            const payload = collect('draft');
-            await api('/timesheets-save','POST',payload);
-            clearDraftLocal(); window.onbeforeunload=null;
-            toast('Draft saved');
-          }catch(e){ toast('Save failed: '+e.message,'err',5000); }
+          try{ await api('/timesheets-save','POST', collect('draft')); clearDraftLocal(); window.onbeforeunload=null; toast('Draft saved'); }
+          catch(e){ toast('Save failed: '+e.message,'err',6000); }
         };
-
         sel('#tsForm').onsubmit = async (e)=>{
           e.preventDefault();
-          try{
-            const payload = collect('submitted');
-            await api('/timesheets-submit','POST',payload);
-            clearDraftLocal(); window.onbeforeunload=null;
-            toast('Submitted — thank you!', 'ok', 3000);
-            setTimeout(()=>location.reload(), 600);
-          }catch(e){ toast('Submit failed: '+e.message,'err',6000); }
+          try{ await api('/timesheets-submit','POST', collect('submitted')); clearDraftLocal(); window.onbeforeunload=null; toast('Submitted — thank you!', 'ok', 3000); setTimeout(()=>location.reload(), 600); }
+          catch(e){ toast('Submit failed: '+e.message,'err',6000); }
         };
-      } else {
-        // Read-only: hide quick-fill buttons tooltips, disable form submission
-        sel('#tsForm').onsubmit = (e)=>{ e.preventDefault(); return false; };
-        sel('#qMonFri8').disabled = sel('#qClear').disabled = sel('#qSetAll').disabled = true;
-        sel('#qMonFri8').classList.add('muted-dark'); sel('#qClear').classList.add('muted-dark'); sel('#qSetAll').classList.add('muted-dark');
       }
 
-      // History
+      // History (collapsible after 3)
       try{
         const hist = await api('/timesheets-history');
-        renderHistory(hist);
-      }catch{
-        sel('#history').textContent = 'History unavailable.';
-      }
+        if (!hist.length){ sel('#history').textContent='No previous weeks.'; return; }
+        const first = hist.slice(0,3).map(h=>`<div>${h.week_ending} — ${h.project_name} — ${h.total_hours}h — ${h.status}</div>`).join('');
+        const rest  = hist.slice(3).map(h=>`<div>${h.week_ending} — ${h.project_name} — ${h.total_hours}h — ${h.status}</div>`).join('');
+        sel('#history').innerHTML = first + (hist.length>3 ? `<details style="margin-top:6px"><summary>Show ${hist.length-3} more</summary>${rest}</details>` : '');
+      }catch{ sel('#history').textContent='History unavailable.'; }
     }
 
-    // ---------- Gate & init ----------
     document.addEventListener('DOMContentLoaded', ()=>{
       netlifyIdentity?.on('init', ()=>{ netlifyIdentity.currentUser() ? boot() : sel('#gate').style.display='block'; });
       netlifyIdentity?.on('login', ()=>location.reload());
       netlifyIdentity?.on('logout', ()=>location.href='/');
-      // Fallback if init is slow
-      setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else sel('#gate').style.display='block'; }, 600);
+      setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else sel('#gate').style.display='block'; }, 700);
     });
   </script>
 </body>

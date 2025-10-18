@@ -6,42 +6,23 @@
 <title>Admin Portal | HMJ-Global</title>
 <link rel="stylesheet" href="/css/style.css" />
 <style>
-  :root{ --bg:#0b1420; --panel:#0f1c2b; --border:#203042; --ink:#e6edf6; --muted:#9fb3c8;
-         --blue:#4c7fff; --green:#25c08a; --red:#ff7a7a; --amber:#ffd166; --white:#fff; --black:#0c1118; }
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .muted{color:var(--muted)}
-  .btn{background:#1a2740;border:1px solid #2b3c55;color:#fff;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b5172}
-  .btn.primary{background:var(--blue);border-color:transparent}
-  .btn.success{background:var(--green);border-color:transparent}
-  select,input,textarea{background:#0f172a;color:#e6edf6;border:1px solid #2b3c55;border-radius:8px;padding:8px}
-  label{font-size:.9rem;color:var(--muted)}
-  table.grid{width:100%;border-collapse:collapse}
-  table.grid th,table.grid td{border-bottom:1px solid var(--border);padding:10px;text-align:left}
-  .tabs{display:flex;gap:8px;flex-wrap:wrap}
-  .tab{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:#0f172a;cursor:pointer}
-  .tab.active{background:#182740;border-color:#395077}
-  .two{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
-  @media (max-width:900px){ .two{grid-template-columns:1fr} }
-
-  /* subtle flourish */
-  .headerGlow{position:relative;overflow:hidden;border-radius:14px}
-  .headerGlow:before{content:"";position:absolute;inset:-50%;background:
-     radial-gradient(700px 200px at 10% -20%, rgba(76,127,255,.12), transparent 60%),
-     radial-gradient(400px 150px at 90% -10%, rgba(37,192,138,.10), transparent 60%);
-     transform:rotate(-3deg)}
-  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:#0b1420;border:1px solid #233044;padding:1px 6px;border-radius:6px}
-  .pill{font-size:.85rem;padding:6px 8px;border-radius:999px;background:#101b2a;border:1px solid #2b3c55;color:#e6edf6}
+  :root{ --bg:#0b0b18; --panel:#14122a; --border:#26234b; --text:#e9e7ff; --muted:#a6a1d4; --accent:#7b5cff; --accent-2:#b6a6ff; }
+  body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+  .card{background:linear-gradient(180deg,#181642,#131130);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}
+  .muted{color:var(--muted)} .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{background:#211d56;border:1px solid #342f6b;color:#fff;padding:14px 16px;border-radius:14px;font-weight:800;cursor:pointer}
+  .btn:hover{border-color:#4b4592}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:16px}
+  @media (max-width:780px){ .grid{grid-template-columns:1fr} }
+  .tile{display:block;background:#17143a;border:1px solid #2b2761;border-radius:16px;padding:18px;text-decoration:none;color:#fff}
+  .tile h3{margin:0 0 6px}
 </style>
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <div class="card headerGlow" style="position:sticky;top:0;z-index:5;backdrop-filter:blur(6px)">
-    <div class="row" style="justify-content:space-between">
+  <div class="wrap">
+    <div class="card row" style="justify-content:space-between">
       <div>
         <h1 style="margin:0 0 6px">HMJ Global — Admin Portal</h1>
         <div class="muted">Create & manage candidates, assignments, clients, and review the audit trail.</div>
@@ -52,328 +33,33 @@
         <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
       </div>
     </div>
-    <div class="row" style="margin-top:10px">
-      <div class="tabs">
-        <button class="tab active" data-pane="paneCandidates">Candidates</button>
-        <button class="tab" data-pane="paneAssignments">Assignments</button>
-        <button class="tab" data-pane="paneClients">Clients</button>
-        <button class="tab" data-pane="paneAudit">Audit</button>
+
+    <div id="gate" class="card" style="display:none">
+      <p><strong>Admin only.</strong> Please log in with an admin account.</p>
+      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+      <div class="muted">Ask an administrator to add the <code>admin</code> role to your user.</div>
+    </div>
+
+    <div id="app" style="display:none">
+      <div class="grid">
+        <a class="tile" href="/admin/timesheets.html"><h3>Timesheets</h3><div class="muted">Approve, edit, export, audit.</div></a>
+        <a class="tile" href="/admin/candidates.html"><h3>Candidates</h3><div class="muted">Create profiles, bank & RTW info.</div></a>
+        <a class="tile" href="/admin/assignments.html"><h3>Assignments</h3><div class="muted">Link candidates to clients/projects; rates & dates.</div></a>
+        <a class="tile" href="/admin/clients.html"><h3>Clients</h3><div class="muted">Clients, sites & contacts.</div></a>
+        <a class="tile" href="/admin/reports.html"><h3>Reports</h3><div class="muted">Audit log and CSVs.</div></a>
       </div>
-      <span class="pill">Tip: <span class="kbd">/</span> to search</span>
     </div>
   </div>
-
-  <!-- Gate -->
-  <div id="gate" class="card" style="display:none">
-    <p><strong>Admin only.</strong> Please log in with an admin account.</p>
-    <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
-  </div>
-
-  <!-- PANES -->
-  <div id="app" style="display:none">
-    <!-- Candidates -->
-    <div id="paneCandidates" class="card">
-      <div class="two">
-        <div>
-          <div class="row">
-            <input id="candSearch" placeholder="Search candidates by name or email" style="flex:1" />
-            <button class="btn" id="btnCandNew">New</button>
-            <button class="btn" id="btnCandRefresh">Refresh</button>
-          </div>
-          <div style="margin-top:10px" id="candTable" class="muted">Loading…</div>
-        </div>
-        <div>
-          <h3 style="margin:0 0 6px">Edit Candidate</h3>
-          <form id="candForm" autocomplete="off">
-            <input type="hidden" name="id">
-            <label>Name</label><input name="name" required>
-            <label>Email</label><input name="email" required>
-            <label>Phone</label><input name="phone">
-            <label>Payroll ref</label><input name="payroll_ref">
-            <label>Pay type</label>
-            <select name="pay_type">
-              <option value="">—</option>
-              <option>umbrella</option><option>limited</option><option>cis</option>
-              <option>sole_trader</option><option>agency</option>
-            </select>
-            <label>Address (JSON)</label><textarea name="address_json" rows="3" placeholder='{"line1":"","city":"","postcode":""}'></textarea>
-            <label>Bank (JSON)</label><textarea name="bank" rows="3" placeholder='{"sort_code":"","account_number":"","iban":"","swift":""}'></textarea>
-            <label>Emergency contact (JSON)</label><textarea name="emergency_contact" rows="3" placeholder='{"name":"","phone":"","relation":""}'></textarea>
-            <label>Right to work (JSON)</label><textarea name="right_to_work" rows="3" placeholder='{"status":"","doc_type":"","doc_ref":"","expiry":""}'></textarea>
-            <div class="row" style="margin-top:10px">
-              <button type="button" class="btn success" id="btnCandSave">Save</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Assignments -->
-    <div id="paneAssignments" class="card" style="display:none">
-      <div class="two">
-        <div>
-          <div class="row">
-            <label><input type="checkbox" id="asOnlyActive" checked> Active only</label>
-            <button class="btn" id="btnAsRefresh">Refresh</button>
-            <button class="btn" id="btnAsNew">New assignment</button>
-          </div>
-          <div style="margin-top:10px" id="asTable" class="muted">Loading…</div>
-        </div>
-        <div>
-          <h3 style="margin:0 0 6px">Edit Assignment</h3>
-          <form id="asForm" autocomplete="off">
-            <input type="hidden" name="id">
-            <label>Contractor</label><select name="contractor_id" id="asContractor"></select>
-            <label>Project</label><select name="project_id" id="asProject"></select>
-            <label>PO number</label><input name="po_number">
-            <div class="row"><div style="flex:1">
-              <label>Std rate</label><input name="rate_std" type="number" min="0" step="0.01">
-            </div><div style="flex:1">
-              <label>OT rate</label><input name="rate_ot" type="number" min="0" step="0.01">
-            </div></div>
-            <div class="row"><div style="flex:1">
-              <label>Start date</label><input name="start_date" type="date" required>
-            </div><div style="flex:1">
-              <label>End date</label><input name="end_date" type="date">
-            </div></div>
-            <label><input type="checkbox" name="active" checked> Active</label>
-            <div class="row" style="margin-top:10px">
-              <button type="button" class="btn success" id="btnAsSave">Save</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Clients -->
-    <div id="paneClients" class="card" style="display:none">
-      <div class="two">
-        <div>
-          <div class="row">
-            <input id="cliSearch" placeholder="Search clients" style="flex:1">
-            <button class="btn" id="btnCliNew">New</button>
-            <button class="btn" id="btnCliRefresh">Refresh</button>
-          </div>
-          <div style="margin-top:10px" id="cliTable" class="muted">Loading…</div>
-        </div>
-        <div>
-          <h3 style="margin:0 0 6px">Edit Client</h3>
-          <form id="cliForm" autocomplete="off">
-            <input type="hidden" name="id">
-            <label>Name</label><input name="name" required>
-            <label>Contact name</label><input name="contact_name">
-            <label>Contact email</label><input name="contact_email">
-            <label>Contact phone</label><input name="contact_phone">
-            <label>Billing (JSON)</label><textarea name="billing" rows="3" placeholder='{"address":"","vat_number":"","company_no":""}'></textarea>
-            <label>Status</label><select name="status"><option>active</option><option>inactive</option></select>
-            <div class="row" style="margin-top:10px">
-              <button type="button" class="btn success" id="btnCliSave">Save</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Audit -->
-    <div id="paneAudit" class="card" style="display:none">
-      <div class="row">
-        <button class="btn" id="btnAuditRefresh">Refresh</button>
-      </div>
-      <div id="auditTable" style="margin-top:10px" class="muted">Loading…</div>
-    </div>
-  </div>
-</div>
 
 <script>
-  // ---- Helpers ----
-  const sel = s => document.querySelector(s);
-  const panes = ['paneCandidates','paneAssignments','paneClients','paneAudit'];
-  function tabTo(which){
-    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.pane===which));
-    panes.forEach(id => sel('#'+id).style.display = id===which ? 'block' : 'none');
-  }
-  document.addEventListener('click', e=>{
-    const t=e.target.closest('.tab'); if(!t) return; tabTo(t.dataset.pane);
-  });
-
-  async function api(path, method='GET', body=null){
-    const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
-    const token = await u.jwt();
-    const res = await fetch(`/.netlify/functions${path}`, {
-      method, headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-      body: body ? JSON.stringify(body) : null
-    });
-    if(!res.ok){ throw new Error(await res.text() || ('HTTP '+res.status)); }
-    return res.json();
-  }
-
-  // ---- Candidates ----
-  async function loadCandidates(){
-    sel('#candTable').textContent='Loading…';
-    const data = await api('/admin-contractors-list','POST',{ search: sel('#candSearch').value });
-    sel('#candTable').innerHTML = `
-      <table class="grid">
-        <thead><tr><th>Name</th><th>Email</th><th>Pay type</th><th>Actions</th></tr></thead>
-        <tbody>
-          ${data.map(c=>`
-            <tr>
-              <td>${c.name}</td><td>${c.email}</td><td>${c.pay_type||'—'}</td>
-              <td><button class="btn" data-cand="${c.id}">Edit</button></td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-  }
-  sel('#btnCandRefresh').onclick = loadCandidates;
-  sel('#candSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') loadCandidates(); });
-  sel('#btnCandNew').onclick = ()=>{ sel('#candForm').reset(); sel('#candForm [name=id]').value=''; };
-  sel('#candTable').addEventListener('click', async (e)=>{
-    const id = e.target?.dataset?.cand; if(!id) return;
-    const row = await api('/admin-contractors-get','POST',{ id });
-    const f = sel('#candForm');
-    for (const k of ['id','name','email','phone','payroll_ref','pay_type']) if (k in row) f.elements[k].value = row[k]||'';
-    f.elements.address_json.value = JSON.stringify(row.address_json||{},null,2);
-    f.elements.bank.value = JSON.stringify(row.bank||{},null,2);
-    f.elements.emergency_contact.value = JSON.stringify(row.emergency_contact||{},null,2);
-    f.elements.right_to_work.value = JSON.stringify(row.right_to_work||{},null,2);
-  });
-  sel('#btnCandSave').onclick = async ()=>{
-    const f = sel('#candForm'); const body = Object.fromEntries(new FormData(f).entries());
-    for (const k of ['address_json','bank','emergency_contact','right_to_work']){
-      try{ body[k] = JSON.parse(body[k]||'{}'); }catch{ alert(`Invalid JSON in ${k}`); return; }
-    }
-    body.rate_std = parseFloat(body.rate_std||0);
-    const saved = await api('/admin-contractors-save','POST',body);
-    alert('Saved contractor: '+saved.name);
-    loadCandidates();
-  };
-
-  // ---- Assignments ----
-  async function primeAssignmentPickers(){
-    const cs = await api('/admin-contractors-list','POST',{});
-    sel('#asContractor').innerHTML = cs.map(c=>`<option value="${c.id}">${c.name} — ${c.email}</option>`).join('');
-    // For projects dropdown, reuse your existing tables (clients->projects). If you have a “projects list” function, call it here.
-    // Temporarily build from your clients list function:
-    const clients = await api('/admin-timesheets-clients'); // [id,name]
-    // Expect a separate projects endpoint in future; for now the admin picks by ID manually or extend later.
-    sel('#asProject').innerHTML = `<option value="">(enter ID manually later)</option>`;
-  }
-  async function loadAssignments(){
-    sel('#asTable').textContent='Loading…';
-    const data = await api('/admin-assignments-list','POST',{ onlyActive: sel('#asOnlyActive').checked });
-    sel('#asTable').innerHTML = `
-      <table class="grid">
-        <thead><tr><th>Contractor</th><th>Client / Project</th><th>Rates</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          ${data.map(r=>{
-            const name = r.contractor_name || r.contractors?.name || '—';
-            const proj = r.project_name || r.projects?.name || '—';
-            const cli  = r.client_name || r.clients?.name || r.projects?.clients?.name || '—';
-            return `<tr>
-              <td>${name}</td>
-              <td>${cli} — ${proj}</td>
-              <td>£${(r.rate_std??0).toFixed(2)} / £${(r.rate_ot??0).toFixed(2)}</td>
-              <td>${r.start_date||'—'}</td>
-              <td>${r.end_date||'—'}</td>
-              <td>${r.active ? 'active' : 'closed'}</td>
-              <td><button class="btn" data-asid="${r.id||''}" ${r.id?'':'disabled'}>Edit</button></td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`;
-  }
-  sel('#btnAsRefresh').onclick = loadAssignments;
-  sel('#btnAsNew').onclick = ()=>{ sel('#asForm').reset(); sel('#asForm [name=id]').value=''; sel('#asForm [name=active]').checked = true; };
-  sel('#asTable').addEventListener('click', async (e)=>{
-    const id = e.target?.dataset?.asid; if(!id) return;
-    // You could add an admin-assignments-get endpoint; for brevity, reuse list and pick entry:
-    const data = await api('/admin-assignments-list','POST',{ onlyActive:false });
-    const row = data.find(x=>String(x.id)===String(id)); if(!row) return alert('Not found');
-    const f = sel('#asForm');
-    for(const k of ['id','contractor_id','project_id','po_number','rate_std','rate_ot','start_date','end_date']) if(k in row) f.elements[k].value = row[k]||'';
-    f.elements.active.checked = !!row.active;
-  });
-  sel('#btnAsSave').onclick = async ()=>{
-    const f = sel('#asForm'); const body = Object.fromEntries(new FormData(f).entries());
-    body.id = body.id || undefined;
-    body.rate_std = parseFloat(body.rate_std||0); body.rate_ot = parseFloat(body.rate_ot||0);
-    body.active = f.elements.active.checked;
-    const saved = await api('/admin-assignments-save','POST',body);
-    alert('Saved assignment '+saved.id);
-    loadAssignments();
-  };
-
-  // ---- Clients ----
-  async function loadClients(){
-    sel('#cliTable').textContent='Loading…';
-    const data = await api('/admin-clients-list','POST',{ search: sel('#cliSearch').value });
-    sel('#cliTable').innerHTML = `
-      <table class="grid">
-        <thead><tr><th>Name</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          ${data.map(c=>`
-            <tr>
-              <td>${c.name}</td>
-              <td>${c.contact_name||'—'}${c.contact_email?` • ${c.contact_email}`:''}</td>
-              <td>${c.status||'active'}</td>
-              <td><button class="btn" data-cli="${c.id}">Edit</button></td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-  }
-  sel('#btnCliRefresh').onclick = loadClients;
-  sel('#cliSearch').addEventListener('keydown', e=>{ if(e.key==='Enter') loadClients(); });
-  sel('#btnCliNew').onclick = ()=>{ sel('#cliForm').reset(); sel('#cliForm [name=id]').value=''; };
-  sel('#cliTable').addEventListener('click', async (e)=>{
-    const id = e.target?.dataset?.cli; if(!id) return;
-    const list = await api('/admin-clients-list','POST',{});
-    const row = list.find(x=>String(x.id)===String(id)); if(!row) return alert('Not found');
-    const f = sel('#cliForm');
-    for (const k of ['id','name','contact_name','contact_email','contact_phone','status']) if (k in row) f.elements[k].value = row[k]||'';
-    f.elements.billing.value = JSON.stringify(row.billing||{},null,2);
-  });
-  sel('#btnCliSave').onclick = async ()=>{
-    const f = sel('#cliForm'); const body = Object.fromEntries(new FormData(f).entries());
-    try{ body.billing = JSON.parse(body.billing||'{}'); }catch{ alert('Invalid billing JSON'); return; }
-    const saved = await api('/admin-clients-save','POST',body);
-    alert('Saved client: '+saved.name);
-    loadClients();
-  };
-
-  // ---- Audit ----
-  async function loadAudit(){
-    sel('#auditTable').textContent='Loading…';
-    const rows = await api('/admin-audit-list');
-    sel('#auditTable').innerHTML = `
-      <table class="grid">
-        <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>ID</th><th>Payload</th></tr></thead>
-        <tbody>
-          ${rows.map(r=>`<tr>
-            <td>${new Date(r.at).toLocaleString()}</td>
-            <td>${r.actor_email}</td>
-            <td>${r.action}</td>
-            <td>${r.entity}</td>
-            <td>${r.entity_id||''}</td>
-            <td><code style="font-size:.8rem">${JSON.stringify(r.payload||{})}</code></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
-  }
-  sel('#btnAuditRefresh').onclick = loadAudit;
-
-  // ---- Boot / Gate ----
-  function isAdmin(u){ const roles = u?.app_metadata?.roles || u?.roles || []; return roles.includes('admin'); }
-  async function boot(){
-    const u = netlifyIdentity?.currentUser();
-    if (!u || !isAdmin(u)){ sel('#gate').style.display='block'; return; }
-    sel('#app').style.display='block';
-    await primeAssignmentPickers();
-    loadCandidates(); loadAssignments(); loadClients(); loadAudit();
-  }
+  function isAdmin(u){ const r=u?.app_metadata?.roles||u?.roles||[]; return r.includes('admin'); }
   document.addEventListener('DOMContentLoaded', ()=>{
-    netlifyIdentity?.on('init', boot);
+    netlifyIdentity?.on('init', ()=>{
+      const u=netlifyIdentity?.currentUser(); if(u && isAdmin(u)){ document.getElementById('app').style.display='block'; } else { document.getElementById('gate').style.display='block'; }
+    });
     netlifyIdentity?.on('login', ()=>location.reload());
     netlifyIdentity?.on('logout', ()=>location.href='/');
-    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else sel('#gate').style.display='block'; }, 600);
+    setTimeout(()=>{ const u=netlifyIdentity?.currentUser(); if(u && isAdmin(u)) document.getElementById('app').style.display='block'; else document.getElementById('gate').style.display='block'; },600);
   });
 </script>
 </body>

@@ -1,28 +1,28 @@
 // netlify/functions/admin-assignments-list.js
 const { supabase } = require('./_supabase.js');
-const { getContext, coded } = require('./_auth.js');
+const { getContext } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
     await getContext(context, { requireAdmin: true });
-    const q = event.body ? JSON.parse(event.body) : {};
-    const onlyActive = q.onlyActive ?? false;
+    const { contractor_id, client_id, active } = JSON.parse(event.body || '{}');
 
     let query = supabase
-      .rpc('assignment_summary')   // if you made a view; else:
-    // Fallback if no RPC/view; comment the above and use:
-    // let query = supabase
-    //   .from('assignments')
-    //   .select('id, contractor_id, project_id, rate_std, rate_ot, start_date, end_date, closed_at, active, po_number,
-    //     contractors(name,email), projects(name, clients(name), sites(name))')
-      ;
+      .from('assignment_summary')
+      .select('id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, site_name, rate_std, rate_ot, charge_std, charge_ot, start_date, end_date, active')
+      .order('start_date', { ascending: false });
 
-    if (onlyActive) query = query.eq('active', true);
+    if (contractor_id) query = query.eq('contractor_id', contractor_id);
+    if (client_id)     query = query.eq('client_id', client_id);
+    if (active === true)  query = query.eq('active', true);
+    if (active === false) query = query.eq('active', false);
+
     const { data, error } = await query;
-    if (error) throw coded(500, error.message);
-    return { statusCode: 200, body: JSON.stringify(data) };
+    if (error) throw error;
+
+    return { statusCode: 200, body: JSON.stringify(data || []) };
   } catch (e) {
-    const status = e.code === 401 || e.code === 403 ? e.code : 500;
+    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };

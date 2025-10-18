@@ -1,4 +1,4 @@
-// netlify/functions/admin-clients-list.js
+// netlify/functions/admin-candidates-list.js
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 
@@ -8,12 +8,12 @@ exports.handler = async (event, context) => {
     const { q } = JSON.parse(event.body || '{}');
 
     let query = supabase
-      .from('clients')
-      .select('id,name,billing_email,phone')
+      .from('contractors')
+      .select('id,name,email,phone,payroll_ref')
       .order('name', { ascending: true });
 
     if (q && q.trim()) {
-      query = query.or(`name.ilike.%${q}%,billing_email.ilike.%${q}%`);
+      query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%`);
     }
 
     const { data, error } = await query;
