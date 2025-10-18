@@ -254,6 +254,37 @@
     }
 
     // ---------- Rendering ----------
+    <script>
+// ...
+
+function renderProfilePane(prof) {
+  const el = document.getElementById('profilePane');
+  if (!prof || !prof.contractor) {
+    el.innerHTML = `<div class="muted">Profile unavailable</div>`;
+    return { ok:false };
+  }
+  const c = prof.contractor, a = prof.assignment;
+  if (!a) {
+    el.innerHTML = `
+      <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
+      <div style="height:1px;background:var(--border);margin:10px 0"></div>
+      <div class="muted">No active assignment linked to this account.</div>
+      <div class="muted" style="margin-top:6px">Please contact HMJ to get your assignment set up.</div>`;
+    return { ok:false, contractor:c, assignment:null };
+  }
+  el.innerHTML = `
+    <div><strong>${c.name}</strong><br><span class="muted">${c.email}</span></div>
+    <div style="height:1px;background:var(--border);margin:10px 0"></div>
+    <div class="kv"><div>Client</div><div>${a.client_name}</div></div>
+    <div class="kv"><div>Project</div><div>${a.project_name}</div></div>
+    <div class="kv"><div>Site</div><div>${a.site_name || '—'}</div></div>
+    <div class="kv"><div>Rate</div><div>£${a.rate_std}/h ${a.rate_ot?`(OT £${a.rate_ot}/h)`:''}</div></div>
+    <div style="height:1px;background:var(--border);margin:10px 0"></div>
+    <div class="muted">Need help? Email <a href="mailto:info@hmj-global.com">info@hmj-global.com</a></div>
+  `;
+  return { ok:true, contractor:c, assignment:a };
+}
+
     function renderDays(existing, rates, readOnly){
       const wrap = document.getElementById('days'); wrap.innerHTML = '';
       const label = {Sun:'SUN',Mon:'MON',Tue:'TUE',Wed:'WED',Thu:'THU',Fri:'FRI',Sat:'SAT'};
