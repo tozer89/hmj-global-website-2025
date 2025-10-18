@@ -1,24 +1,23 @@
 // netlify/functions/whoami.js
 exports.handler = async (event, context) => {
-  // What Netlify thinks about your request
-  const user = context?.clientContext?.user || null;
-
+  const u = context.clientContext?.user || null;
+  const authHeader = !!event.headers?.authorization;
+  let roles = [];
+  try {
+    const payload = event.headers?.authorization?.split(' ')[1]?.split('.')[1];
+    roles = payload ? (JSON.parse(Buffer.from(payload, 'base64').toString('utf8'))?.app_metadata?.roles || []) : [];
+  } catch {}
   return {
     statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      // High level
-      hasUser: !!user,
-      // Useful bits to see
-      email: user?.email || null,
-      sub: user?.sub || null,
-      app_metadata: user?.app_metadata || null,
-      roles: user?.app_metadata?.roles || user?.roles || [],
-      // Helpful when debugging
+      hasUser: !!u,
+      email: u?.email ?? null,
+      sub: u?.sub ?? null,
+      app_metadata: u?.app_metadata ?? null,
+      roles,
       method: event.httpMethod,
       path: event.path,
-      // DO NOT log the token; just whether it was present
-      hasAuthHeader: !!event.headers.authorization,
-    }),
+      hasAuthHeader: authHeader
+    })
   };
 };

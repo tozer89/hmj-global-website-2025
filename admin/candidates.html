@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script defer src="/admin/common.js"></script>
+
 <title>Candidates — Admin | HMJ-Global</title>
 <link rel="stylesheet" href="/css/style.css" />
 <style>
@@ -51,6 +54,22 @@
     <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
   </div>
 </div>
+<!-- Optional toast area -->
+<div id="toast" aria-live="polite" aria-atomic="true"></div>
+
+<!-- Shown if not logged-in or missing 'admin' role -->
+<div id="gate" class="card" style="display:none">
+  <p><strong>Admin only.</strong> Please log in with an admin account.</p>
+  <p class="why" style="opacity:.75"></p>
+  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+</div>
+
+<!-- Your page UI (hidden until Admin.bootAdmin runs) -->
+<div id="app" style="display:none">
+  <!-- your filters / table / form etc -->
+  <div id="tableWrap">Loading…</div>
+</div>
+
 
 <div class="wrap" id="gate" style="display:none">
   <div class="card"><strong>Admin only.</strong> <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button></div>
@@ -270,5 +289,30 @@
     setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else gate.style.display='block'; }, 600);
   });
 </script>
+<script>
+  // Your page’s main logic. Runs only after Identity is ready AND the user is an admin.
+  async function main({ api, sel, toast, user }) {
+    // Example: load clients list (adjust the endpoint per page)
+    const rows = await api('/admin-clients-list', 'POST', { q: null });
+    sel('#tableWrap').textContent = rows.length ? `${rows.length} client(s)` : 'No results';
+    // ...render your table, wire up buttons, etc...
+  }
+
+  // Boot the page. You can drop this block as-is into every admin page.
+  document.addEventListener('DOMContentLoaded', () => {
+    const start = () => Admin.bootAdmin(main);
+
+    netlifyIdentity?.on('init', start);
+    netlifyIdentity?.on('login', () => location.reload());
+    netlifyIdentity?.on('logout', () => location.href = '/admin/');
+
+    // Fallback if Identity init is slow
+    setTimeout(() => {
+      if (netlifyIdentity?.currentUser()) start();
+      else (document.querySelector('#gate') || {}).style.display = 'block';
+    }, 600);
+  });
+</script>
+
 </body>
 </html>
