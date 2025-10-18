@@ -13,76 +13,88 @@
 
 <style>
   :root{
-    --bg:#0b0f18; --panel:#111827; --border:#252f3f; --ink:#e6eef7; --muted:#9fb0c9;
-    --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --accent-2:#2b50d9;
-    --good:#0e2a1e; --warn:#38240f; --bad:#2a1214;
+    --bg:#0a0f1a; --panel:#0f172a; --panel-2:#111b33; --border:#22304d; --ink:#eaf2ff; --muted:#9fb0c9;
+    --card:#0d1426; --chip:#0e1629; --accent:#3A66B3; --accent-2:#2b50d9;
+    --good:#0c2b1e; --warn:#35240d; --bad:#3a1418; --info:#0e2038;
+    --shadow:0 12px 32px rgba(0,0,0,.28);
+    --radius:18px;
   }
   html,body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border);z-index:5}
-  .row{max-width:1240px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800}.sp{flex:1}
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;font-size:18px;line-height:1.45}
+  .top{position:sticky;top:0;background:#0b1222;border-bottom:1px solid var(--border);z-index:5}
+  .row{max-width:1280px;margin:0 auto;padding:14px 18px;display:flex;gap:12px;align-items:center}
+  .brand{font-weight:800;font-size:18px}.sp{flex:1}
 
-  .wrap{max-width:1240px;margin:22px auto;padding:0 18px;display:grid;gap:16px}
+  .wrap{max-width:1280px;margin:22px auto;padding:0 18px;display:grid;gap:18px}
 
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.20)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
   .muted{color:var(--muted)}
+
+  /* INPUTS — white background with black text, bigger, comfortable spacing */
   input,select,textarea{
-    background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px;width:100%;
+    background:#ffffff;color:#111;border:1px solid #2c3853;border-radius:12px;padding:12px;width:100%;font-size:16px;
+    box-sizing:border-box;
   }
-  textarea{min-height:96px;resize:vertical}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;
-       font-weight:600;cursor:pointer}
+  input::placeholder,textarea::placeholder{color:#666}
+  textarea{min-height:120px;resize:vertical}
+  .btn{background:#1a2442;border:1px solid #2c3d60;color:#fff;padding:10px 14px;border-radius:12px;
+       font-weight:700;cursor:pointer;font-size:14px}
   .btn:hover{border-color:#3b4f79}
-  .btn.bad{background:#2a1214;border-color:#6a2b2f}
-  .btn.good{background:#153125;border-color:#1e6646}
+  .btn.bad{background:#3a1418;border-color:#7d3339}
+  .btn.good{background:#173b2a;border-color:#1e6646}
   .btn.ghost{background:transparent}
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .pills{display:flex;gap:10px;flex-wrap:wrap}
-  .pill{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:10px 14px;min-width:90px;text-align:center}
-  .pill b{font-size:20px;display:block}
+  .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
-  .filters{display:grid;grid-template-columns:1.5fr .9fr .9fr 1fr 1fr auto 120px;gap:10px;margin:6px 0}
-  .tips{font-size:12px;color:var(--muted);margin-top:8px}
+  .filters{display:grid;grid-template-columns:1.5fr .9fr .9fr 1fr 1fr auto 120px;gap:12px;margin:6px 0}
+  .tips{font-size:13px;color:var(--muted);margin-top:8px}
 
-  .tableWrap{overflow:auto;border-radius:12px}
+  .tableWrap{overflow:auto;border-radius:14px}
   table{width:100%;border-collapse:collapse}
-  th,td{padding:12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
-  thead th{position:sticky;top:0;background:#0e1426;z-index:1}
+  th,td{padding:14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;font-size:16px}
+  thead th{position:sticky;top:0;background:#0f1832;z-index:1}
   tbody tr:hover{background:#0e1629}
-  .row-actions{display:flex;gap:6px}
+  .row-actions{display:flex;gap:8px}
 
-  .badge{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
-  .status-ok{background:#0e2a1e;border-color:#1e6646}
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
+  .status-ok{background:#0d2c1f;border-color:#1e6646}
   .status-warn{background:#33220f;border-color:#8a5b25}
   .status-bad{background:#2a1214;border-color:#6a2b2f}
 
-  .grid2{display:grid;grid-template-columns:1fr 420px;gap:16px}
-  .editor{display:grid;gap:12px}
-  .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-  .editor-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .grid2{display:grid;grid-template-columns:1fr 430px;gap:18px}
+  .editor{display:grid;gap:16px}
+  /* Bigger GAPS between two-column fields so First/Last don’t kiss each other */
+  .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);column-gap:18px;row-gap:14px}
+  .editor-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase}
   .editor-grid .field{display:flex;flex-direction:column}
-  .section-title{margin:0 0 6px 0;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .section-title{margin:0 0 8px 0;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 
   .side{display:grid;gap:16px}
-  .side-card h4{margin:0 0 6px 0}
-  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px}
+  .side-card h4{margin:0 0 8px 0}
+  .kv{display:grid;grid-template-columns:130px 1fr;gap:8px 12px}
   .kv div{white-space:pre-wrap;word-break:break-word}
 
-  .error-banner{background:var(--bad);border:1px solid #6a2b2f;color:#ffd6d6;padding:10px;border-radius:12px}
+  .error-banner{background:var(--bad);border:1px solid #7d3339;color:#ffd6d6;padding:12px;border-radius:12px}
   .loading{display:flex;gap:8px;align-items:center}
-  .dot{width:6px;height:6px;border-radius:50%;background:#7f9dd9;opacity:.5;animation:bounce 1s infinite}
+  .dot{width:7px;height:7px;border-radius:50%;background:#7f9dd9;opacity:.5;animation:bounce 1s infinite}
   .dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
   @keyframes bounce{0%,80%,100%{transform:scale(.8);opacity:.4}40%{transform:scale(1);opacity:1}}
 
-  .toolbar-right{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+  .toolbar-right{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
 
-  .kpis{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .kpi{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:10px 14px;min-width:90px}
-  .kpi b{font-size:20px;display:block}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .kpi{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:12px 16px;min-width:98px}
+  .kpi b{font-size:22px;display:block}
+
+  /* Toasts */
+  #toastStack{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+  .toast{padding:12px 14px;border-radius:12px;border:1px solid #2c3853;box-shadow:var(--shadow);font-size:14px}
+  .t-ok{background:#102a1f;border-color:#1e6646;color:#d7ffe8}
+  .t-warn{background:#35240d;border-color:#a36b27;color:#ffe9c4}
+  .t-err{background:#3a1418;border-color:#7d3339;color:#ffd6d6}
+  .t-info{background:#0e2038;border-color:#355b9b;color:#e5f0ff}
 
   /* Mobile */
-  @media (max-width: 980px){
+  @media (max-width: 1040px){
     .filters{grid-template-columns:1fr 1fr 1fr}
     .grid2{grid-template-columns:1fr}
   }
@@ -93,7 +105,7 @@
     tbody tr{border:1px solid var(--border);border-radius:12px;margin-bottom:12px}
     td{border-bottom:1px dashed #1f2940}
     td:last-child{border-bottom:none}
-    td[data-h]:before{content:attr(data-h) ": ";color:var(--muted);font-weight:600}
+    td[data-h]:before{content:attr(data-h) ": ";color:var(--muted);font-weight:700}
     .row-actions{justify-content:flex-end}
   }
 </style>
@@ -154,7 +166,7 @@
         <input id="fEmailHas" placeholder="Email contains"/>
         <div class="toolbar-right">
           <button class="btn" id="pgPrev" title="Prev">◀</button>
-          <div style="min-width:84px;text-align:center"><span id="pgNow">1</span>/<span id="pgMax">1</span></div>
+          <div style="min-width:90px;text-align:center"><span id="pgNow">1</span>/<span id="pgMax">1</span></div>
           <button class="btn" id="pgNext" title="Next">▶</button>
         </div>
         <select id="pageSize" title="Rows / page">
@@ -188,6 +200,11 @@
             <div class="muted">Status</div> <div id="pStatus">—</div>
             <div class="muted">Payroll</div><div id="pPayroll">—</div>
             <div class="muted">Address</div><div id="pAddress">—</div>
+            <div class="muted">Updated</div><div id="pUpdated">—</div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="btnOpenPayslips">View payslips</button>
+            <button class="btn" id="btnOpenTnC">View T&Cs</button>
           </div>
         </div>
 
@@ -202,8 +219,13 @@
         </div>
 
         <div class="card side-card">
+          <h4 style="margin:0 0 10px">Payslips</h4>
+          <div id="pPayslips" class="muted">Select a candidate…</div>
+        </div>
+
+        <div class="card side-card">
           <h4 style="margin:0 0 10px">T&Cs sent</h4>
-          <div id="pTcs" class="muted">—</div>
+          <div id="pTerms" class="muted">Select a candidate…</div>
         </div>
       </div>
     </div>
@@ -233,7 +255,16 @@
         </div>
         <div class="field"><label>Payroll ref</label><input id="edPayroll"></div>
 
-        <div class="field" style="grid-column:1 / -1"><label>Address</label><input id="edAddress" placeholder="Free-form address"></div>
+        <div class="field"><label>Internal ref (UID)</label><input id="edInternalRef" placeholder="auto on create"></div>
+        <div class="field"><label>Country</label><input id="edCountry" placeholder="United Kingdom"></div>
+
+        <div class="field" style="grid-column:1 / -1"><label>Address (free-form)</label><input id="edAddress" placeholder="Full mailing address"></div>
+
+        <div class="field"><label>Address line 1</label><input id="edAddress1"></div>
+        <div class="field"><label>Address line 2</label><input id="edAddress2"></div>
+        <div class="field"><label>Town/City</label><input id="edTown"></div>
+        <div class="field"><label>County</label><input id="edCounty"></div>
+        <div class="field"><label>Postcode</label><input id="edPostcode"></div>
       </div>
 
       <div>
@@ -251,7 +282,12 @@
         <textarea id="edNotes" placeholder="Internal notes…"></textarea>
       </div>
 
-      <div class="inline" style="justify-content:flex-end;margin-top:12px;display:flex;gap:8px">
+      <div class="editor-grid">
+        <div class="field"><label>Created at</label><input id="edCreated" disabled></div>
+        <div class="field"><label>Updated at</label><input id="edUpdated" disabled></div>
+      </div>
+
+      <div class="inline" style="justify-content:flex-end;margin-top:12px;display:flex;gap:10px">
         <button class="btn good" id="btnSave">Save</button>
         <button class="btn bad" id="btnDelete">Delete</button>
         <button class="btn ghost" id="btnClose">Close</button>
@@ -259,14 +295,10 @@
     </div>
   </div>
 
-  <div id="toast"></div>
+  <div id="toastStack"></div>
 
 <script>
-/* ------------------------------------------------------------------------------------------------
-   RELIABLE BOOTSTRAP
-   - Waits for /admin/common.js (adminReady) up to 10s with retries.
-   - If unavailable, falls back to a tiny local helper (gate + api).
---------------------------------------------------------------------------------------------------*/
+/* ---------------------- Debug logger ---------------------- */
 const __dbg = {
   on: false,
   log: (...a)=> __dbg.on && console.log('[line]', ...a),
@@ -275,6 +307,24 @@ const __dbg = {
 };
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
+/* ---------------------- Toasts ---------------------------- */
+function toast(msg, kind='info', timeout=2600){
+  const stack = document.getElementById('toastStack');
+  const div = document.createElement('div');
+  div.className = 'toast ' + (kind==='ok'?'t-ok':kind==='warn'?'t-warn':kind==='err'?'t-err':'t-info');
+  div.textContent = msg;
+  stack.appendChild(div);
+  setTimeout(()=>{ div.style.opacity=.0; div.style.transform='translateY(6px)'; }, timeout);
+  setTimeout(()=> stack.removeChild(div), timeout+350);
+}
+
+/* ---------------------- Identity helpers ------------------ */
+function getNFJwtFromCookie(){
+  try{
+    const m = document.cookie.match(/(?:^|;\\s*)nf_jwt=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }catch{ return ''; }
+}
 async function getIdentityUser(retries=50){
   while(retries-- > 0){
     if (window.netlifyIdentity && typeof window.netlifyIdentity === 'object'){
@@ -284,94 +334,57 @@ async function getIdentityUser(retries=50){
   }
   return null;
 }
-async function getBearerToken(retries=50){
-  for(let i=0;i<retries;i++){
-    const user = await getIdentityUser(1);
-    if (user && typeof user.token === 'function'){
-      try{ const t = await user.token(); if(t) return t; }catch{}
-    }
-    await sleep(100);
-  }
-  return null;
+
+/* ---------------------- API helper (robust) --------------- */
+async function api(path, method='POST', body){
+  const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
+
+  let token = '';
+  try{
+    const user = window.netlifyIdentity?.currentUser?.();
+    token = user ? (await (user.token?.() || user.jwt?.())) : '';
+  }catch{}
+  if (!token) token = getNFJwtFromCookie();
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  __dbg.warn('Auth:', token ? 'have token' : 'no token available yet');
+  __dbg.log('API →', { url, method, body });
+
+  const res = await fetch(url, { method, headers, credentials:'include', body: body?JSON.stringify(body):undefined });
+  const txt = await res.text();
+  let json; try { json = txt ? JSON.parse(txt) : null; } catch { json = { raw: txt }; }
+
+  __dbg.log('API ←', { status: res.status, ok: res.ok, body: json });
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json;
 }
 
-function getNFJwtFromCookie() {
-  const m = document.cookie.match(/(?:^|;\s*)nf_jwt=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
-}
-
+/* ---------------------- Fallback admin helpers ------------ */
 function localHelpers(){
   const sel = (s,root=document)=> root.querySelector(s);
-  const toast = (msg)=> {
-    let t = document.getElementById('toast');
-    if(!t) return alert(msg);
-    t.textContent = msg; t.style.position='fixed'; t.style.bottom='16px'; t.style.right='16px';
-    t.style.background='#1a2238'; t.style.border='1px solid #2c3853'; t.style.padding='10px 12px';
-    t.style.borderRadius='10px'; t.style.zIndex=9999; t.style.boxShadow='0 8px 20px rgba(0,0,0,.4)';
-    setTimeout(()=>{ t.textContent=''; t.removeAttribute('style'); }, 2000);
-  };
   const show = id => sel(id).style.display='';
   const hide = id => sel(id).style.display='none';
-
   async function gate({ adminOnly }={}){
-    const app = sel('#app'), gate = sel('#gate');
+    const app = sel('#app'), g = sel('#gate');
     const user = await getIdentityUser();
-    if (user){
-      show('#app'); hide('#gate'); return { email: user.email };
-    } else {
-      hide('#app'); show('#gate');
-      sel('#gate .why').textContent = adminOnly ? 'Please sign in with an admin account.' : 'Please sign in.';
-      return null;
-    }
+    if (user){ show('#app'); hide('#gate'); return { email: user.email }; }
+    hide('#app'); show('#gate');
+    sel('#gate .why').textContent = adminOnly ? 'Please sign in with an admin account.' : 'Please sign in.'; return null;
   }
-
-  // *** FIXED helper: always sends Authorization (Identity or nf_jwt cookie)
-  async function api(path, method='POST', body){
-    const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
-
-    // 1) try Identity token
-    let token = '';
-    try {
-      const user = window.netlifyIdentity?.currentUser?.();
-      token = user ? (await (user.token?.() || user.jwt?.())) : '';
-    } catch {}
-    // 2) fallback to nf_jwt cookie
-    if (!token) token = getNFJwtFromCookie();
-    __dbg.warn('Auth:', token ? 'token attached' : 'no token available yet');
-
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const r = await fetch(url, { method, headers, credentials:'include', body: body?JSON.stringify(body):undefined });
-    const txt = await r.text();
-    let json = null;
-    try{ json = txt ? JSON.parse(txt) : null; }catch(e){ }
-    __dbg.log('API ->', { url, method, ok:r.ok, status:r.status, body });
-    __dbg.log('API <--', { status:r.status, ok:r.ok, body: json });
-    if(!r.ok){
-      const msg = (json && (json.error || json.message)) || `HTTP ${r.status}`;
-      throw new Error(msg);
-    }
-    return json;
-  }
-
   function onKey(code, fn){
     document.addEventListener('keydown', (e)=>{
       if(code.length===1 && e.key===code) return fn(e);
       if(code.length>1 && e.code===code) return fn(e);
     });
   }
-
   return { gate, api, sel, toast, onKey };
 }
-
 async function waitAdminReadyOrFallback(){
   for(let i=0;i<100;i++){
     if (window.adminReady && typeof window.adminReady === 'function'){
-      try{
-        const helpers = await window.adminReady();
-        if (helpers) return helpers; // { gate, api, sel, toast, onKey }
-      }catch(e){ console.error('adminReady threw:', e); }
+      try{ const helpers = await window.adminReady(); if (helpers) return helpers; }catch(e){ console.error('adminReady threw:', e); }
     }
     await sleep(100);
   }
@@ -379,21 +392,21 @@ async function waitAdminReadyOrFallback(){
   return localHelpers();
 }
 
-/* ------------------------------------------------------------------------------------------------
+/* ==========================================================================================
    APPLICATION
---------------------------------------------------------------------------------------------------*/
+=========================================================================================== */
+let cur=null, pages=1, page=1, size=Number(localStorage.cand_size||25)||25, lastRows=[], sort={key:'name',dir:'asc'};
+
 (async function bootstrap(){
   try{
     const helpers = await waitAdminReadyOrFallback();
-    const { gate, api, sel, toast, onKey } = helpers;
+    const { gate, sel, onKey } = helpers;
 
-    // Gate: admin only
-    __dbg.log('Gate: start', '');
     const who = await gate({ adminOnly:true });
     if(!who){ return; }
-    __dbg.log('Gate: user found', who);
+    __dbg.log('Gate OK →', who);
 
-    candidatesApp({ api, sel, toast, onKey });
+    candidatesApp({ api, sel, onKey });
   }catch(e){
     console.error(e);
     const top = document.querySelector('#errorTop');
@@ -401,13 +414,7 @@ async function waitAdminReadyOrFallback(){
   }
 })();
 
-async function candidatesApp({ api, sel, toast, onKey }){
-  __dbg.log('App: init', '');
-
-  // state
-  let page=1, pages=1, size=Number(localStorage.cand_size||25)||25, cur=null, lastRows=[], sort={key:'name',dir:'asc'};
-
-  // els
+async function candidatesApp({ sel, onKey }){
   const $ = (s,root=document)=> root.querySelector(s);
   const listWrap = $('#listWrap');
   const ed = $('#editor');
@@ -415,13 +422,8 @@ async function candidatesApp({ api, sel, toast, onKey }){
 
   $('#pageSize').value = String(size);
 
-  // helpers
   const qv = id => $(id).value.trim();
-  const setNum = (selId,val)=> {
-    const el = $(selId.startsWith('#')? selId : '#'+selId);
-    if(!el) return __dbg.warn('Counter element not found:', selId);
-    el.textContent = String(val);
-  };
+  const setNum = (selId,val)=> { const el = $(selId.startsWith('#')? selId : '#'+selId); if(el) el.textContent = String(val); };
   const banner = (el, msg)=>{ if(!msg){ el.style.display='none'; el.textContent=''; } else { el.style.display=''; el.textContent = 'Error: ' + msg; } };
   const hideErrorBanner = ()=> { banner(errorTop, null); banner(errorBottom, null); };
 
@@ -434,20 +436,17 @@ async function candidatesApp({ api, sel, toast, onKey }){
 
   function renderRows(rows){
     lastRows = rows;
-    if(!rows.length){
-      listWrap.innerHTML = '<div class="muted">No candidates.</div>';
-      return;
-    }
+    if(!rows.length){ listWrap.innerHTML = '<div class="muted">No candidates.</div>'; return; }
     const head = `
       <thead>
         <tr>
-          <th style="width:80px">ID</th>
+          <th style="width:84px">ID</th>
           <th>Name</th>
           <th>Email</th>
-          <th style="width:140px">Phone</th>
-          <th style="width:160px">Type</th>
-          <th style="width:140px">Status</th>
-          <th style="width:128px"></th>
+          <th style="width:150px">Phone</th>
+          <th style="width:170px">Type</th>
+          <th style="width:150px">Status</th>
+          <th style="width:150px"></th>
         </tr>
       </thead>`;
     const body = rows.map(r=>{
@@ -475,11 +474,10 @@ async function candidatesApp({ api, sel, toast, onKey }){
   }
 
   function normalizeResponse(res){
-    // Accept: array or {rows,total,filtered,pages}
     const rows = Array.isArray(res) ? res : (res && res.rows) ? res.rows : [];
     const total = (res && typeof res.total==='number') ? res.total : rows.length;
     const filtered = (res && typeof res.filtered==='number') ? res.filtered : rows.length;
-    const pg = Math.max(1, Number((res && res.pages) || Math.ceil(filtered/size) || 1));
+    const pg = Math.max(1, Number((res && res.pages) || Math.ceil((filtered||1)/size) || 1));
     return { rows, total, filtered, pages:pg };
   }
 
@@ -493,18 +491,15 @@ async function candidatesApp({ api, sel, toast, onKey }){
         status: qv('#fStatus'),
         job: qv('#fJob'),
         emailHas: qv('#fEmailHas'),
-        page,
-        size,
-        sort,
+        page, size, sort,
         debug: true,
       };
       __dbg.log('List: request body', body);
 
       const res = await api('/admin-candidates-lists','POST', body);
-      if (res?.debug) { __dbg.log('Function debug', res.debug); }
+      if (res?.debug) { __dbg.log('Function debug →', res.debug); }
       const meta = normalizeResponse(res);
-      pages = meta.pages;
-      if(page>pages) page=pages;
+      pages = meta.pages; if(page>pages) page=pages;
 
       setNum('#kTotal', meta.total);
       setNum('#kFiltered', meta.filtered);
@@ -512,7 +507,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
       setNum('#pgMax', pages);
       $('#kPage').textContent = `${page}/${pages}`;
 
-      __dbg.log('List meta', { total:meta.total, filtered:meta.filtered, pages, page });
+      __dbg.log('List: meta', { total:meta.total, filtered:meta.filtered, pages, page });
       renderRows(meta.rows);
     }catch(e){
       __dbg.err('List: load failed', String(e));
@@ -531,34 +526,63 @@ async function candidatesApp({ api, sel, toast, onKey }){
     $('#edType').value    = c.pay_type||'Umbrella';
     $('#edStatus').value  = c.status||'In progress';
     $('#edPayroll').value = c.payroll_ref||'';
-    $('#edAddress').value = c.address||'';
+    $('#edInternalRef').value = c.internal_ref||'';
+    $('#edCountry').value = c.country||'';
+    // addresses
+    $('#edAddress').value  = c.address||'';
+    $('#edAddress1').value = c.address1||'';
+    $('#edAddress2').value = c.address2||'';
+    $('#edTown').value     = c.town||'';
+    $('#edCounty').value   = c.county||'';
+    $('#edPostcode').value = c.postcode||'';
     // banking
     $('#edSortCode').value = c.bank_sort_code||'';
     $('#edAccount').value  = c.bank_account||'';
     $('#edIban').value     = c.bank_iban||'';
     $('#edSwift').value    = c.bank_swift||'';
     $('#edNotes').value    = c.notes||'';
-    // side info
-    $('#pTcs').textContent = c.tcs_last_sent ? `Sent ${new Date(c.tcs_last_sent).toLocaleString()}` : '—';
+    // meta
+    $('#edCreated').value  = c.created_at ? String(c.created_at).replace('T',' ').replace('Z','') : '';
+    $('#edUpdated').value  = c.updated_at ? String(c.updated_at).replace('T',' ').replace('Z','') : '';
   }
-  function getEd(){
+  function getEd() {
+    const v = (sel) => (document.querySelector(sel)?.value ?? '').trim();
     return {
-      id: cur?.id || undefined,
-      first_name: qv('#edFirst')||null,
-      last_name:  qv('#edLast')||null,
-      email:      qv('#edEmail')||null,
-      phone:      qv('#edPhone')||null,
-      job_title:  qv('#edJob')||null,
-      pay_type:   qv('#edType')||null,
-      status:     qv('#edStatus')||null,
-      payroll_ref:qv('#edPayroll')||null,
-      address:    qv('#edAddress')||null,
-      bank_sort_code: qv('#edSortCode')||null,
-      bank_account:   qv('#edAccount')||null,
-      bank_iban:      qv('#edIban')||null,
-      bank_swift:     qv('#edSwift')||null,
-      notes:          qv('#edNotes')||null,
+      id: cur?.id ?? undefined,
+      first_name: v('#edFirst') || null,
+      last_name:  v('#edLast')  || null,
+      email:      v('#edEmail') || null,
+      phone:      v('#edPhone') || null,
+      job_title:  v('#edJob')   || null,
+      pay_type:   v('#edType')  || null,
+      status:     v('#edStatus')|| null,
+      payroll_ref:v('#edPayroll')|| null,
+      internal_ref: v('#edInternalRef')|| null,
+      address:    v('#edAddress')|| null,
+      address1:   v('#edAddress1')|| null,
+      address2:   v('#edAddress2')|| null,
+      town:       v('#edTown')|| null,
+      county:     v('#edCounty')|| null,
+      postcode:   v('#edPostcode')|| null,
+      country:    v('#edCountry')|| null,
+      bank_sort_code: v('#edSortCode') || null,
+      bank_account:   v('#edAccount')  || null,
+      bank_iban:      v('#edIban')     || null,
+      bank_swift:     v('#edSwift')    || null,
+      notes:          v('#edNotes')    || null,
     };
+  }
+
+  function ensureUID(){
+    // Create a readable unique code and put it in #edInternalRef if blank
+    const curVal = ($('#edInternalRef')?.value||'').trim();
+    if (curVal) return curVal;
+    const d = new Date();
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    const rnd = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(2,6);
+    const uid = `CND-${y}${m}${day}-${rnd}`;
+    $('#edInternalRef').value = uid;
+    return uid;
   }
 
   async function openEd(id){
@@ -568,14 +592,16 @@ async function candidatesApp({ api, sel, toast, onKey }){
       ed.style.display = '';
       ed.scrollIntoView({behavior:'smooth',block:'start'});
       showProfile(cur?.id || null, cur);
-    }catch(e){ toast('Open failed: '+(e.message||e)); }
+    }catch(e){ toast('Open failed: '+(e.message||e),'err'); }
   }
 
   function showProfile(id, candidateObj){
     if(!id && !candidateObj){
       $('#pTimesheets').textContent = 'Select a candidate…';
       $('#pAssignments').textContent = 'Select a candidate…';
-      ['#pName','#pEmail','#pPhone','#pJob','#pType','#pStatus','#pPayroll','#pAddress','#pTcs'].forEach(s=> $(s).textContent='—');
+      $('#pPayslips').textContent = 'Select a candidate…';
+      $('#pTerms').textContent = 'Select a candidate…';
+      ['#pName','#pEmail','#pPhone','#pJob','#pType','#pStatus','#pPayroll','#pAddress','#pUpdated'].forEach(s=> $(s).textContent='—');
       return;
     }
     const c = candidateObj || lastRows.find(r=> r.id===id);
@@ -588,10 +614,12 @@ async function candidatesApp({ api, sel, toast, onKey }){
     $('#pStatus').textContent = c?.status || '—';
     $('#pPayroll').textContent = c?.payroll_ref || '—';
     $('#pAddress').textContent = c?.address || '—';
-    $('#pTcs').textContent = c?.tcs_last_sent ? `Sent ${new Date(c.tcs_last_sent).toLocaleString()}` : '—';
+    $('#pUpdated').textContent = c?.updated_at ? String(c.updated_at).replace('T',' ').replace('Z','') : '—';
 
     loadTimesheetsFor(c?.id).catch(e=> $('#pTimesheets').textContent = 'Timesheets unavailable: '+(e.message||e));
     loadAssignmentsFor(c?.id).catch(e=> $('#pAssignments').textContent = 'Assignments unavailable: '+(e.message||e));
+    $('#pPayslips').textContent = 'Payslip viewer coming soon…';
+    $('#pTerms').textContent = 'T&Cs tracking coming soon…';
   }
 
   async function loadTimesheetsFor(id){
@@ -634,7 +662,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
     }
   }
 
-  // events
+  /* events */
   $('#btnRefresh').onclick = ()=> { page=1; loadList(__dbg.on); };
   ['#q','#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
     $(sid).addEventListener('change', ()=>{ page=1; loadList(__dbg.on); });
@@ -646,38 +674,50 @@ async function candidatesApp({ api, sel, toast, onKey }){
   $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(__dbg.on); };
 
   $('#btnNew').onclick  = ()=> openEd(null);
-  $('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
+  $('#btnClose').onclick= ()=>{ ed.style.display='none'; /* do not clear fields */ };
 
   $('#btnSave').onclick = async ()=>{
+    // Pre-validate to prevent 400s: first & last are required by DB
+    const first = qv('#edFirst'), last = qv('#edLast');
+    if(!first || !last){ toast('First & last name are required', 'warn'); return; }
+
+    // Ensure UID exists on creation
+    ensureUID();
+
     try{
       const data = getEd();
       const saved = await api('/admin-candidates-save','POST', data);
-      toast('Saved ✅');
-      ed.style.display='none';
+      toast('Saved', 'ok');
       page=1;
       await loadList(__dbg.on);
+      ed.style.display='none'; // close only after successful save
       if(saved?.id) { cur={id:saved.id}; openEd(saved.id); }
-    }catch(e){ toast('Save failed: '+(e.message||e)); }
+    }catch(e){
+      toast('Save failed: '+(e.message||e), 'err');
+      // keep the editor open and preserve values
+    }
   };
 
   $('#btnDelete').onclick = async ()=>{
-    if(!cur?.id) return toast('Nothing to delete');
+    if(!cur?.id) return toast('Nothing to delete','warn');
     if(!confirm('Delete this candidate?')) return;
-    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted 🗑️'); ed.style.display='none'; await loadList(__dbg.on); }
-    catch(e){ toast('Delete failed: '+(e.message||e)); }
+    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted','ok'); ed.style.display='none'; await loadList(__dbg.on); }
+    catch(e){ toast('Delete failed: '+(e.message||e),'err'); }
   };
 
   $('#btnEmails').onclick = ()=>{
     const emails = lastRows.map(r=>r.email).filter(Boolean);
-    if(!emails.length) return toast('No emails in current list');
+    if(!emails.length) return toast('No emails in current list','warn');
     navigator.clipboard?.writeText(emails.join(', '));
-    toast(`Copied ${emails.length} email(s)`);
+    toast(`Copied ${emails.length} email(s)`,'ok');
   };
 
   $('#btnExport').onclick = ()=>{
     const rows = lastRows;
-    if(!rows.length){ toast('Nothing to export'); return; }
-    const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref','bank_sort_code','bank_account','bank_iban','bank_swift'];
+    if(!rows.length){ toast('Nothing to export','warn'); return; }
+    const cols = ['id','internal_ref','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref',
+                  'address','address1','address2','town','county','postcode','country',
+                  'bank_sort_code','bank_account','bank_iban','bank_swift','notes','created_at','updated_at'];
     const head = cols.join(',');
     const csv = [head].concat(rows.map(r=> cols.map(k=>{
       const v = r[k] ?? '';
@@ -700,9 +740,13 @@ async function candidatesApp({ api, sel, toast, onKey }){
   // debug toggle
   $('#btnDebug').onclick = ()=>{
     __dbg.on = !__dbg.on;
-    toast('Debug '+(__dbg.on?'ON':'OFF'));
+    toast('Debug '+(__dbg.on?'ON':'OFF'),'info');
     if(__dbg.on) loadList(true);
   };
+
+  // quick-actions
+  document.getElementById('btnOpenPayslips').onclick = ()=> toast('Payslip viewer coming soon (backend link TBD).','info');
+  document.getElementById('btnOpenTnC').onclick = ()=> toast('T&Cs viewer coming soon (backend link TBD).','info');
 
   // initial load
   await loadList(false);
