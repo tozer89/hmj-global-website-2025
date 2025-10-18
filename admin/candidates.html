@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Candidates — Admin | HMJ-Global</title>
 
-<!-- Netlify Identity + shared admin helpers -->
+<!-- Netlify Identity + shared admin helpers (may load late on some CDNs) -->
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script defer src="/admin/common.js"></script>
 
@@ -257,7 +257,12 @@
   <div id="toast"></div>
 
 <script>
-/* Small helper to print neat logs */
+/* ------------------------------------------------------------------------------------------------
+   RELIABLE BOOTSTRAP
+   - Waits for /admin/common.js (adminReady) up to 10s with retries.
+   - If unavailable, falls back to a tiny local helper (gate + api).
+--------------------------------------------------------------------------------------------------*/
+
 const __dbg = {
   on: false,
   log: (...a)=> __dbg.on && console.log('[line]', ...a),
@@ -265,12 +270,113 @@ const __dbg = {
   err: (...a)=> __dbg.on && console.error('[error]', ...a),
 };
 
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function getIdentityUser(retries=50){
+  // wait for netlifyIdentity to exist & init
+  while(retries-- > 0){
+    if (window.netlifyIdentity && typeof window.netlifyIdentity === 'object'){
+      try{
+        // if not initialized, calling currentUser() still works after .init(). Many sites auto-init.
+        return window.netlifyIdentity.currentUser();
+      }catch{}
+    }
+    await sleep(100);
+  }
+  return null;
+}
+
+async function getBearerToken(retries=50){
+  for(let i=0;i<retries;i++){
+    const user = await getIdentityUser(1);
+    if (user && typeof user.token === 'function'){
+      try{ const t = await user.token(); if(t) return t; }catch{}
+    }
+    await sleep(100);
+  }
+  return null;
+}
+
+function localHelpers(){
+  const sel = (s,root=document)=> root.querySelector(s);
+  const toast = (msg)=> {
+    let t = document.getElementById('toast');
+    if(!t) return alert(msg);
+    t.textContent = msg; t.style.position='fixed'; t.style.bottom='16px'; t.style.right='16px';
+    t.style.background='#1a2238'; t.style.border='1px solid #2c3853'; t.style.padding='10px 12px';
+    t.style.borderRadius='10px'; t.style.zIndex=9999; t.style.boxShadow='0 8px 20px rgba(0,0,0,.4)';
+    setTimeout(()=>{ t.textContent=''; t.removeAttribute('style'); }, 2000);
+  };
+  const show = id => sel(id).style.display='';
+  const hide = id => sel(id).style.display='none';
+
+  async function gate({ adminOnly }={}){
+    // If /admin/common.js provided adminReady, we won't use this.
+    // Minimal fallback: show app if any user exists; otherwise gate.
+    const app = sel('#app'), gate = sel('#gate');
+    const user = await getIdentityUser();
+    if (user){
+      show('#app'); hide('#gate'); return { email: user.email };
+    } else {
+      hide('#app'); show('#gate');
+      sel('#gate .why').textContent = adminOnly ? 'Please sign in with an admin account.' : 'Please sign in.';
+      return null;
+    }
+  }
+
+  async function api(path, method='POST', body){
+    const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
+    const token = await getBearerToken(40); // try hard
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    __dbg.log('API build request', { url, method, body });
+    const r = await fetch(url, { method, headers, body: body?JSON.stringify(body):undefined });
+    const txt = await r.text();
+    let json = null;
+    try{ json = txt ? JSON.parse(txt) : null; }catch(e){ /* non-json */ }
+    __dbg.log('Fetch complete', { status:r.status, ok:r.ok });
+    if(!r.ok){
+      const msg = json?.error || `HTTP ${r.status}`;
+      throw new Error(msg);
+    }
+    return json;
+  }
+
+  function onKey(code, fn){
+    document.addEventListener('keydown', (e)=>{
+      if(code.length===1 && e.key===code) return fn(e);
+      if(code.length>1 && e.code===code) return fn(e);
+    });
+  }
+
+  return { gate, api, sel, toast, onKey };
+}
+
+async function waitAdminReadyOrFallback(){
+  // Try to use /admin/common.js if it exposes adminReady
+  for(let i=0;i<100;i++){ // ~10s total
+    if (window.adminReady && typeof window.adminReady === 'function'){
+      try{
+        const helpers = await window.adminReady();
+        if (helpers) return helpers; // { gate, api, sel, toast, onKey }
+      }catch(e){
+        console.error('adminReady threw:', e);
+      }
+    }
+    await sleep(100);
+  }
+  console.error('common.js not loaded yet'); // this is the exact console you saw
+  // Fallback so the page still works
+  return localHelpers();
+}
+
+/* ------------------------------------------------------------------------------------------------
+   APPLICATION
+--------------------------------------------------------------------------------------------------*/
 (async function bootstrap(){
   try{
-    // Wait for common.js helper (netlify identity + gate)
-    const ready = await window.adminReady?.();
-    if(!ready){ console.error('common.js not loaded yet'); return; }
-    const { gate, api, sel, toast, onKey } = ready;
+    const helpers = await waitAdminReadyOrFallback();
+    const { gate, api, sel, toast, onKey } = helpers;
 
     // Gate: admin only
     __dbg.log('Gate: start', '');
@@ -281,6 +387,8 @@ const __dbg = {
     candidatesApp({ api, sel, toast, onKey });
   }catch(e){
     console.error(e);
+    const top = document.querySelector('#errorTop');
+    if (top){ top.style.display=''; top.textContent = 'Error: '+(e.message||e); }
   }
 })();
 
@@ -469,14 +577,14 @@ async function candidatesApp({ api, sel, toast, onKey }){
     $('#pAddress').textContent = c?.address || '—';
 
     // Load ancillary panels (best-effort; show message if not available)
-    loadTimesheetsFor(id).catch(e=> $('#pTimesheets').textContent = 'No timesheet adapter: '+(e.message||e));
-    loadAssignmentsFor(id).catch(e=> $('#pAssignments').textContent = 'No assignment adapter: '+(e.message||e));
+    loadTimesheetsFor(c?.id).catch(e=> $('#pTimesheets').textContent = 'Timesheets unavailable: '+(e.message||e));
+    loadAssignmentsFor(c?.id).catch(e=> $('#pAssignments').textContent = 'Assignments unavailable: '+(e.message||e));
   }
 
   async function loadTimesheetsFor(id){
+    if(!id){ $('#pTimesheets').textContent = 'Select a candidate…'; return; }
     $('#pTimesheets').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
     try{
-      // If you have an endpoint like this, great. If not, this will hit 404 and we’ll show a friendly note.
       const res = await api('/admin-timesheets-list','POST',{ candidate_id:id, size:5 });
       const rows = Array.isArray(res) ? res : (res?.rows||[]);
       if(!rows.length){ $('#pTimesheets').textContent = 'No recent timesheets'; return; }
@@ -494,9 +602,9 @@ async function candidatesApp({ api, sel, toast, onKey }){
   }
 
   async function loadAssignmentsFor(id){
+    if(!id){ $('#pAssignments').textContent = 'Select a candidate…'; return; }
     $('#pAssignments').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
     try{
-      // Expected endpoint (adapt to your real one if different)
       const res = await api('/admin-assignments-list','POST',{ candidate_id:id, size:5 });
       const rows = Array.isArray(res) ? res : (res?.rows||[]);
       if(!rows.length){ $('#pAssignments').textContent = 'No current assignments'; return; }
