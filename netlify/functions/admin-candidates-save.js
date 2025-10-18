@@ -1,95 +1,71 @@
 // netlify/functions/admin-candidates-save.js
 const { getContext, coded } = require('./_auth.js');
 
-function resp(status, json) {
-  return {
-    statusCode: status,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(json),
-  };
-}
-
 exports.handler = async (event, context) => {
   try {
-    // IMPORTANT: pass BOTH (event, context)
-    const debugFlag = (() => {
-      try { return JSON.parse(event.body || '{}').debug === true; } catch { return false; }
-    })();
+    // ✅ IMPORTANT: pass (event, context, { requireAdmin:true })
+    const { user, roles, supabase } = await getContext(event, context, { requireAdmin: true });
 
-    const { user, roles, supabase } = await getContext(event, context, {
-      requireAdmin: true,
-    });
+    if (event.httpMethod !== 'POST') throw coded(405, 'Method Not Allowed');
 
-    if (debugFlag) {
-      console.log('[save] who:', { email: user?.email, roles });
-    }
+    const body = JSON.parse(event.body || '{}');
 
-    if (event.httpMethod !== 'POST') {
-      throw coded(405, 'Method Not Allowed');
-    }
-
-    const payload = JSON.parse(event.body || '{}');
-
-    // Normalize/trim inputs (mirror fields you show in candidates.html)
-    const row = {
-      id: payload.id ?? undefined,
-      first_name: (payload.first_name || '').trim() || null,
-      last_name: (payload.last_name || '').trim() || null,
-      email: (payload.email || '').trim() || null,
-      phone: (payload.phone || '').trim() || null,
-      job_title: (payload.job_title || '').trim() || null,
-      pay_type: (payload.pay_type || '').trim() || null,
-      status: (payload.status || '').trim() || null,
-      payroll_ref: (payload.payroll_ref || '').trim() || null,
-      address: (payload.address || '').trim() || null,
-      bank_sort_code: (payload.bank_sort_code || '').trim() || null,
-      bank_account: (payload.bank_account || '').trim() || null,
-      bank_iban: (payload.bank_iban || '').trim() || null,
-      bank_swift: (payload.bank_swift || '').trim() || null,
-      notes: payload.notes || null,
-      updated_at: new Date().toISOString(),
+    // Minimal validation to satisfy your schema (first_name & last_name NOT NULL)
+    const rec = {
+      id:            body.id ?? undefined,
+      first_name:    (body.first_name || '').trim(),
+      last_name:     (body.last_name  || '').trim(),
+      email:         (body.email || null) || null,
+      phone:         (body.phone || null) || null,
+      job_title:     (body.job_title || null) || null,
+      pay_type:      (body.pay_type || null) || null,
+      status:        (body.status || null) || null,
+      payroll_ref:   (body.payroll_ref || null) || null,
+      address:       (body.address || null) || null,
+      bank_sort_code:(body.bank_sort_code || null) || null,
+      bank_account:  (body.bank_account || null) || null,
+      bank_iban:     (body.bank_iban || null) || null,
+      bank_swift:    (body.bank_swift || null) || null,
+      notes:         (body.notes || null) || null,
+      // updated_at: server default can handle this, but we can set explicit timestamp if you like
     };
 
-    // Basic validation like before
-    if (!row.first_name || !row.last_name) {
-      throw coded(400, 'First/Last name required');
+    if (!rec.first_name || !rec.last_name) throw coded(400, 'First & last name are required');
+
+    const t0 = Date.now();
+
+    let result, error;
+    if (rec.id) {
+      ({ data: result, error } = await supabase
+        .from('candidates')
+        .update(rec)
+        .eq('id', rec.id)
+        .select('id')
+        .maybeSingle());
+    } else {
+      ({ data: result, error } = await supabase
+        .from('candidates')
+        .insert(rec)
+        .select('id')
+        .single());
     }
 
-    // Upsert (admin service client bypasses RLS via service_role)
-    const { data, error } = await supabase
-      .from('candidates')
-      .upsert(row, { onConflict: 'id', ignoreDuplicates: false })
-      .select('*')
-      .limit(1);
+    if (error) throw coded(500, error.message);
 
-    if (error) {
-      console.error('[save] supabase error:', error);
-      throw coded(500, error.message || 'Database error');
-    }
+    // Optional: audit trail
+    await supabase.from('admin_audit_logs').insert({
+      actor_email: user.email,
+      actor_id: user.sub || user.id || null,
+      action: rec.id ? 'candidate.update' : 'candidate.insert',
+      target_type: 'candidate',
+      target_id: String(result.id),
+      meta: rec
+    });
 
-    const saved = Array.isArray(data) ? data[0] : data;
-
-    // Audit (best-effort)
-    try {
-      await supabase.from('candidate_audit').insert({
-        candidate_id: saved.id,
-        actor_email: user?.email || null,
-        action: row.id ? 'update' : 'create',
-        before_data: null,
-        after_data: row,
-      });
-    } catch (e) {
-      console.warn('[save] audit insert failed (non-fatal):', e?.message || e);
-    }
-
-    if (debugFlag) {
-      console.log('[save] ok ->', { id: saved.id });
-    }
-
-    return resp(200, { ok: true, id: saved.id });
+    const took_ms = Date.now() - t0;
+    return { statusCode: 200, body: JSON.stringify({ id: result.id, ok: true, took_ms }) };
   } catch (e) {
-    const status = e.code && Number.isInteger(e.code) ? e.code : 401;
-    if (status >= 500) console.error('[save] fatal:', e);
-    return resp(status, { error: e.message || 'Unauthorized' });
+    const status = e.code || 500;
+    return { statusCode: status, body: JSON.stringify({ error: e.message || 'Error' }) };
   }
 };
