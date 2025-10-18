@@ -12,7 +12,6 @@
 <link rel="stylesheet" href="/css/style.css"/>
 
 <style>
-  /* ===== HMJ Admin — Candidates ===== */
   :root{
     --bg:#0b0f18; --panel:#111827; --border:#252f3f; --ink:#e6eef7; --muted:#9fb0c9;
     --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --danger:#ff6b6b; --ok:#22c55e;
@@ -64,14 +63,12 @@
   .editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
   .hint{font-size:12px;color:var(--muted)}
 
-  /* toast + error banner */
   #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
   #toast .toast{background:#0f172a;color:#e6edf6;border:1px solid #233044;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   #toast .toast.error{border-color:#5b2b2b;background:#221216}
   #toast .toast.ok{border-color:#1f5433;background:#0f1c17}
   #error-banner{display:none;background:#221216;border:1px solid #5b2b2b;color:#ffd8d8;padding:10px 12px;border-radius:10px}
 
-  /* mini debug console */
   #dbg{position:fixed;left:16px;bottom:16px;max-width:40vw;min-width:320px;max-height:42vh;
        display:none;flex-direction:column;gap:8px;z-index:9999}
   #dbg .hdr{display:flex;gap:8px;align-items:center}
@@ -91,7 +88,6 @@
 </style>
 </head>
 <body>
-  <!-- header -->
   <div class="top"><div class="row">
     <div class="brand">Candidates — Admin</div><div class="sp"></div>
     <a class="btn ghost" href="/admin/">⟵ Admin home</a>
@@ -211,13 +207,10 @@
   </div>
 
 <script>
-/* ============================================================================
-   DEBUGGING UTILITIES (panel + console mirroring)
-============================================================================ */
+/* =============== Debug panel =============== */
 (function(){
   const dbg = document.getElementById('dbg');
   const pre = document.getElementById('dbg-log');
-  const verboseChk = document.getElementById('dbg-verbose');
   const btnClose = document.getElementById('dbg-close');
   const btnOpen = document.getElementById('btnDebug');
 
@@ -227,195 +220,158 @@
     const full = data ? (base + '\n' + JSON.stringify(data, null, 2)) : base;
     pre.textContent = pre.textContent ? (pre.textContent + '\n' + full) : full;
     pre.scrollTop = pre.scrollHeight;
-    // Mirror to browser console too
-    if (kind === 'ERR') console.error(msg, data || '');
-    else if (kind === 'WARN') console.warn(msg, data || '');
-    else console.log(msg, data || '');
+    if (kind === 'ERR') console.error(msg, data||''); else
+    if (kind === 'WARN') console.warn(msg, data||''); else
+    console.log(msg, data||'');
   }
 
   window.__dbg = {
-    show: function(){ dbg.style.display='flex'; },
-    hide: function(){ dbg.style.display='none'; },
-    log: function(msg, data){ line('LOG', msg, data || null); },
-    warn: function(msg, data){ line('WARN', msg, data || null); },
-    err: function(msg, data){ line('ERR', msg, data || null); },
-    verbose: function(){ return !!verboseChk.checked; }
+    show(){ dbg.style.display='flex'; },
+    hide(){ dbg.style.display='none'; },
+    log(msg, data){ line('LOG', msg, data||null); },
+    warn(msg, data){ line('WARN', msg, data||null); },
+    err(msg, data){ line('ERR', msg, data||null); }
   };
 
-  btnClose.addEventListener('click', function(){ __dbg.hide(); });
-  btnOpen.addEventListener('click', function(){ __dbg.show(); });
+  btnClose.addEventListener('click', ()=>__dbg.hide());
+  btnOpen.addEventListener('click', ()=>__dbg.show());
 
-  // expose small toast
   const toastHost = document.getElementById('toast');
   window.toast = function(msg, kind){
     const t = document.createElement('div');
     t.className = 'toast' + (kind ? ' ' + kind : '');
     t.textContent = msg;
     toastHost.appendChild(t);
-    setTimeout(function(){ t.style.opacity = '0'; t.style.transform='translateY(3px)'; }, 2600);
-    setTimeout(function(){ t.remove(); }, 3000);
+    setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(3px)'; }, 2600);
+    setTimeout(()=>{ t.remove(); }, 3000);
   };
 })();
 
-/* ============================================================================
-   SAFE DOM HELPERS
-============================================================================ */
+/* =============== Helpers =============== */
 (function(){
-  window.$  = function(s, root){ return (root||document).querySelector(s); };
-  window.$$ = function(s, root){ return Array.prototype.slice.call((root||document).querySelectorAll(s)); };
+  window.$  = (s, root)=> (root||document).querySelector(s);
+  window.$$ = (s, root)=> Array.from((root||document).querySelectorAll(s));
 
-  window.setNum = function(idOrSel, val){
-    var el = (idOrSel.charAt(0)==='#' || idOrSel.charAt(0)==='.') ? $(idOrSel) : $('#'+idOrSel);
-    if(!el){ __dbg.warn('Counter el missing', { idOrSel:idOrSel, value:val }); return; }
+  window.setNum = (idOrSel, val)=>{
+    const el = (idOrSel[0]==='#'||idOrSel[0]==='.') ? $(idOrSel) : $('#'+idOrSel);
+    if(!el){ __dbg.warn('Counter el missing', { idOrSel, value:val }); return; }
     el.textContent = String(val);
   };
 
-  window.showErrorBanner = function(msg){
-    var el = $('#error-banner'); if(!el) return;
-    el.textContent = 'Error: ' + String(msg||'');
-    el.style.display = 'block';
-  };
-  window.hideErrorBanner = function(){
-    var el = $('#error-banner'); if(!el) return;
-    el.style.display = 'none';
-  };
+  window.showErrorBanner = (msg)=>{ const el=$('#error-banner'); if(!el) return; el.textContent='Error: '+String(msg||''); el.style.display='block'; };
+  window.hideErrorBanner  = ()=>{ const el=$('#error-banner'); if(!el) return; el.style.display='none'; };
 
-  window.debounce = function(fn, ms){
-    var t=null; return function(){ var a=arguments; clearTimeout(t); t=setTimeout(function(){ fn.apply(null,a); }, ms||300); };
-  };
+  window.debounce = (fn, ms)=>{ let t=null; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms||300); }; };
 })();
 
-/* ============================================================================
-   API CALL (uses /admin/common.js if provided, else local fetch)
-============================================================================ */
+/* =============== API with “double-JSON” auto-fix =============== */
 (function(){
-  function normalizePath(path){
-    return path.charAt(0)==='/' ? path : '/'+path;
+  function normalizePath(path){ return path[0]==='/' ? path : '/'+path; }
+
+  // parse if server sent JSON string instead of JSON value
+  function coerceJson(payload){
+    if (typeof payload === 'string') {
+      const s = payload.trim();
+      if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+        try { const j = JSON.parse(s); __dbg.warn('API payload was JSON string; parsed automatically.'); return j; }
+        catch(e){ __dbg.err('Failed to parse JSON string payload', String(e)); }
+      }
+    }
+    return payload;
   }
 
   window.apiCall = async function(path, method, body){
     path = normalizePath(path);
     method = method || 'POST';
-    var url = '/.netlify/functions' + path;
+    const url = '/.netlify/functions' + path;
+    __dbg.log('API build request', { url, method, body });
 
-    __dbg.log('API build request', { url:url, method:method, body:body });
-
-    // prefer the project’s helper if available
+    // use project helper if present
     if (window.__adminApiFetch) {
-      try{
-        var data = await __adminApiFetch(path, method, body);
-        __dbg.log('API via common.js OK', data);
-        return data;
-      }catch(e1){
-        __dbg.err('API via common.js failed, fallback to local fetch', { error:String(e1) });
-      }
+      try { const data = await __adminApiFetch(path, method, body); return coerceJson(data); }
+      catch(e1){ __dbg.err('common.js fetch failed; using fallback', String(e1)); }
     }
 
-    var headers = { 'Content-Type':'application/json' };
+    const headers = { 'Content-Type':'application/json' };
     try{
       if (window.netlifyIdentity && netlifyIdentity.currentUser) {
-        var u = netlifyIdentity.currentUser();
-        if (u && u.jwt) {
-          var token = await u.jwt();
-          headers['Authorization'] = 'Bearer ' + token;
-        }
+        const u = netlifyIdentity.currentUser();
+        if (u && u.jwt) headers['Authorization'] = 'Bearer ' + (await u.jwt());
       }
     }catch(e){ __dbg.warn('JWT attach failed', String(e)); }
 
-    var res;
+    let res;
     try{
-      res = await fetch(url, { method:method, headers:headers, body: body ? JSON.stringify(body) : undefined });
+      res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
       __dbg.log('Fetch complete', { status:res.status, ok:res.ok });
-    }catch(e2){
-      __dbg.err('Network error', String(e2));
-      throw e2;
-    }
+    }catch(e2){ __dbg.err('Network error', String(e2)); throw e2; }
 
     if (!res.ok) {
-      var txt;
-      try{ txt = await res.text(); }catch(_){}
-      __dbg.err('HTTP not OK', { status:res.status, body:txt||'' });
+      let txt=''; try{ txt=await res.text(); }catch(_){}
+      __dbg.err('HTTP not OK', { status:res.status, body:txt });
       throw new Error(txt || ('HTTP '+res.status));
     }
 
-    var ctype = res.headers.get('content-type') || '';
-    var payload = ctype.indexOf('application/json')>=0 ? await res.json() : await res.text();
+    const ctype = res.headers.get('content-type') || '';
+    let payload = ctype.includes('application/json') ? await res.json() : await res.text();
+    payload = coerceJson(payload);
     __dbg.log('API payload', payload);
     return payload;
   };
 })();
 
-/* ============================================================================
-   ADMIN GATE (simple fallback if common.js absent)
-============================================================================ */
+/* =============== Admin Gate =============== */
 (function(){
   window.__adminGate = async function(){
     __dbg.log('Gate: start');
-    if (window.__ensureAdmin) {
-      __dbg.log('Gate: using common.js __ensureAdmin');
-      return __ensureAdmin();
-    }
+    if (window.__ensureAdmin) { __dbg.log('Gate: using common.js'); return __ensureAdmin(); }
 
-    return new Promise(function(resolve){
+    return new Promise((resolve)=>{
       try{
-        var u = window.netlifyIdentity && netlifyIdentity.currentUser ? netlifyIdentity.currentUser() : null;
+        const u = window.netlifyIdentity && netlifyIdentity.currentUser ? netlifyIdentity.currentUser() : null;
         if (!u) {
-          __dbg.warn('Gate: no user, showing gate');
-          $('#app').style.display='none';
-          $('#gate').style.display='';
-          $('.why').textContent = 'Please log in with an admin account.';
-          resolve(); // keep promise resolved; UI shows gate
-          return;
+          $('#app').style.display='none'; $('#gate').style.display=''; $('.why').textContent='Please log in with an admin account.';
+          __dbg.warn('Gate: no user'); resolve(); return;
         }
         __dbg.log('Gate: user found', { email:u.email });
-        $('#gate').style.display='none';
-        $('#app').style.display='';
+        $('#gate').style.display='none'; $('#app').style.display='';
         resolve();
       }catch(e){
         __dbg.err('Gate error', String(e));
-        $('#app').style.display='none';
-        $('#gate').style.display='';
-        resolve();
+        $('#app').style.display='none'; $('#gate').style.display=''; resolve();
       }
     });
   };
 })();
 
-/* ============================================================================
-   MAIN APP
-============================================================================ */
+/* =============== Boot =============== */
 document.addEventListener('DOMContentLoaded', function(){
-  start().catch(function(e){
-    __dbg.err('Fatal boot error', String(e));
-    showErrorBanner('Boot failed: ' + String(e));
-  });
+  start().catch(e=>{ __dbg.err('Fatal boot error', String(e)); showErrorBanner('Boot failed: '+String(e)); });
 });
 
 async function start(){
-  await __adminGate();          // render app or show login gate
-  if ($('#app').style.display === 'none') { return; } // not signed in
-
+  await __adminGate();
+  if ($('#app').style.display === 'none') return; // not signed in
   appMain();
 }
 
+/* =============== App =============== */
 function appMain(){
   __dbg.log('App: init');
 
-  // ===== state =====
-  var page = Number(localStorage.cand_page||1)||1;
-  var size = Number(localStorage.cand_size||25)||25;
-  var pages = 1;
-  var cur = null;
-  var lastRows = [];
-  var sort = JSON.parse(localStorage.cand_sort || '{"key":"name","dir":"asc"}');
+  // state
+  let page = Number(localStorage.cand_page||1)||1;
+  let size = Number(localStorage.cand_size||25)||25;
+  let pages = 1;
+  let cur = null;
+  let lastRows = [];
+  let sort = JSON.parse(localStorage.cand_sort || '{"key":"name","dir":"asc"}');
 
-  // ===== els =====
-  var listWrap = $('#listWrap');
-  var ed = $('#editor');
+  const listWrap = $('#listWrap');
+  const ed = $('#editor');
 
-  // hydrate saved filters
-  var filters = {};
-  try{ filters = JSON.parse(localStorage.cand_filters || '{}'); }catch(_){}
+  // load saved filters
+  let filters = {}; try{ filters = JSON.parse(localStorage.cand_filters || '{}'); }catch(_){}
   $('#q').value         = filters.q || '';
   $('#fType').value     = filters.type || '';
   $('#fStatus').value   = filters.status || '';
@@ -423,20 +379,12 @@ function appMain(){
   $('#fEmailHas').value = filters.emailHas || '';
   $('#pageSize').value  = String(size);
 
-  // ===== helpers =====
   function qv(sel){ return $(sel).value.trim(); }
-  function saveFilters(){
-    var f = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas') };
-    localStorage.cand_filters = JSON.stringify(f);
-  }
-  function saveSort(){ localStorage.cand_sort = JSON.stringify(sort); }
-  function setPageMeta(){
-    setNum('#pgNow', page);
-    setNum('#pgMax', pages);
-    $('#kPage').textContent = page + '/' + pages;
-  }
+  function saveFilters(){ const f = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas') }; localStorage.cand_filters=JSON.stringify(f); }
+  function saveSort(){ localStorage.cand_sort=JSON.stringify(sort); }
+  function setPageMeta(){ setNum('#pgNow', page); setNum('#pgMax', pages); $('#kPage').textContent = page + '/' + pages; }
 
-  var headCols = [
+  const headCols = [
     { key:'id',        label:'ID',      w:88  },
     { key:'name',      label:'Name',    w:240 },
     { key:'email',     label:'Email',   w:260 },
@@ -447,59 +395,66 @@ function appMain(){
   ];
 
   function statusBadge(s){
-    var t = (s||'').toLowerCase();
-    var cls = (t==='complete') ? 'status-ok' : (t==='in progress') ? 'status-warn' : 'status-bad';
-    return '<span class="badge ' + cls + '">' + (s||'—') + '</span>';
+    const t = (s||'').toLowerCase();
+    const cls = (t==='complete') ? 'status-ok' : (t==='in progress') ? 'status-warn' : 'status-bad';
+    return '<span class="badge '+cls+'">'+(s||'—')+'</span>';
   }
-  function typeBadge(t){ return '<span class="badge">' + (t||'—') + '</span>'; }
+  function typeBadge(t){ return '<span class="badge">'+(t||'—')+'</span>'; }
 
   function renderRows(rows){
-    lastRows = rows;
+    lastRows = rows || [];
+    if(!lastRows.length){ listWrap.innerHTML = '<div class="muted">No candidates.</div>'; return; }
 
-    if(!rows || !rows.length){
-      listWrap.innerHTML = '<div class="muted">No candidates.</div>';
-      return;
-    }
-
-    var thead = '<thead><tr>' + headCols.map(function(c){
-      var arrow = c.noSort ? '' : '<span class="arrow">' + (sort.key===c.key ? (sort.dir==='asc'?'▲':'▼') : '↕') + '</span>';
-      var cls = c.noSort ? '' : ('sortable ' + (sort.key===c.key ? 'active':''));
-      var style = c.w ? ('style="width:'+c.w+'px"') : '';
+    const thead = '<thead><tr>' + headCols.map(c=>{
+      const arrow = c.noSort ? '' : '<span class="arrow">'+(sort.key===c.key ? (sort.dir==='asc'?'▲':'▼') : '↕')+'</span>';
+      const cls = c.noSort ? '' : ('sortable ' + (sort.key===c.key ? 'active':''));
+      const style = c.w ? ('style="width:'+c.w+'px"') : '';
       return '<th '+style+' data-key="'+c.key+'" class="'+cls+'">'+c.label+arrow+'</th>';
     }).join('') + '</tr></thead>';
 
-    var tbody = '<tbody>' + rows.map(function(r){
-      var name = [r.first_name,r.last_name].filter(Boolean).join(' ') || '—';
-      var email = r.email || '—';
-      var phone = r.phone || '—';
+    const tbody = '<tbody>' + lastRows.map(r=>{
+      const name = (r.first_name || r.last_name) ? [r.first_name,r.last_name].filter(Boolean).join(' ') :
+                   (r.name || '—');
+      const email = r.email || '—';
+      const phone = r.phone || '—';
       return (
         '<tr>' +
-          '<td>'+r.id+'</td>' +
-          '<td>'+name+'</td>' +
-          '<td>'+email+'</td>' +
-          '<td>'+phone+'</td>' +
-          '<td>'+typeBadge(r.pay_type)+'</td>' +
-          '<td>'+statusBadge(r.status)+'</td>' +
-          '<td><div class="inline" style="justify-content:flex-end"><button class="btn" data-open="'+r.id+'">Open</button></div></td>' +
+          '<td>'+ (r.id!=null ? r.id : '—') +'</td>' +
+          '<td>'+ name +'</td>' +
+          '<td>'+ email +'</td>' +
+          '<td>'+ phone +'</td>' +
+          '<td>'+ typeBadge(r.pay_type) +'</td>' +
+          '<td>'+ statusBadge(r.status) +'</td>' +
+          '<td><div class="inline" style="justify-content:flex-end"><button class="btn" data-open="'+(r.id||'')+'">Open</button></div></td>' +
         '</tr>'
       );
     }).join('') + '</tbody>';
 
     listWrap.innerHTML = '<table>'+thead+tbody+'</table>';
 
-    // row actions
-    $$('#listWrap button[data-open]').forEach(function(b){
-      b.onclick = function(){ openEd(Number(b.getAttribute('data-open'))); };
+    $$('#listWrap button[data-open]').forEach(b=>{
+      const idAttr = b.getAttribute('data-open');
+      b.onclick = ()=> openEd(idAttr ? Number(idAttr) : null);
     });
 
-    // sorting
-    $$('#listWrap thead th.sortable').forEach(function(th){
+    $$('#listWrap thead th.sortable').forEach(th=>{
       th.onclick = function(){
-        var key = th.getAttribute('data-key');
+        const key = th.getAttribute('data-key');
         if (sort.key===key) sort.dir = (sort.dir==='asc'?'desc':'asc'); else { sort.key=key; sort.dir='asc'; }
-        saveSort();
-        loadList();
+        saveSort(); loadList();
       };
+    });
+  }
+
+  function normalizeRows(raw){
+    // Accept: array of candidates OR {rows,total,...}
+    const rows = Array.isArray(raw) ? raw : (raw && raw.rows) ? raw.rows : [];
+    // If items look like {id, name} (from clients), adapt minimally
+    return rows.map(x=>{
+      if (x && x.name && !x.first_name && !x.last_name) {
+        return { id:x.id, first_name:x.name, last_name:'', email:x.email||'', phone:x.phone||'', job_title:x.job_title||'', pay_type:x.pay_type||'', status:x.status||'', payroll_ref:x.payroll_ref||'', address:x.address||'' };
+      }
+      return x;
     });
   }
 
@@ -507,34 +462,24 @@ function appMain(){
     hideErrorBanner();
     listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
     try{
-      var body = {
-        q: qv('#q'),
-        type: qv('#fType'),
-        status: qv('#fStatus'),
-        job: qv('#fJob'),
-        emailHas: qv('#fEmailHas'),
-        page: page,
-        size: size,
-        sort: sort
-      };
-
+      const body = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas'), page, size, sort };
       __dbg.log('List: request body', body);
 
-      // IMPORTANT: function file is plural (admin-candidates-lists.js)
-      var res = await apiCall('/admin-candidates-lists','POST', body);
+      // function filename is plural
+      const res = await apiCall('/admin-candidates-lists','POST', body);
 
-      // allow array or paged object
-      var rows = Array.isArray(res) ? res : (res.rows || []);
-      var total = (typeof res.total === 'number') ? res.total : rows.length;
-      var filtered = (typeof res.filtered === 'number') ? res.filtered : rows.length;
+      // tolerate JSON-string payloads and different shapes
+      const rows = normalizeRows(res);
+      const total = (typeof res.total === 'number') ? res.total : rows.length;
+      const filtered = (typeof res.filtered === 'number') ? res.filtered : rows.length;
       pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size) || 1));
       if(page>pages) page=pages;
 
       setNum('#kTotal', total);
       setNum('#kFiltered', filtered);
       setPageMeta();
+      __dbg.log('List: meta', { total, filtered, pages, page });
 
-      __dbg.log('List: meta', { total:total, filtered:filtered, pages:pages, page:page });
       renderRows(rows);
     }catch(e){
       __dbg.err('List: load failed', String(e));
@@ -544,7 +489,7 @@ function appMain(){
   }
 
   function setEd(c){
-    $('#edTitle').textContent = c && c.id ? ('Candidate #'+c.id) : 'New candidate';
+    $('#edTitle').textContent = (c && c.id) ? ('Candidate #'+c.id) : 'New candidate';
     $('#edFirst').value   = (c && c.first_name) || '';
     $('#edLast').value    = (c && c.last_name) || '';
     $('#edEmail').value   = (c && c.email) || '';
@@ -558,15 +503,15 @@ function appMain(){
   function getEd(){
     return {
       id: cur && cur.id ? cur.id : undefined,
-      first_name: qv('#edFirst')||null,
-      last_name:  qv('#edLast')||null,
-      email:      qv('#edEmail')||null,
-      phone:      qv('#edPhone')||null,
-      job_title:  qv('#edJob')||null,
-      pay_type:   qv('#edType')||null,
-      status:     qv('#edStatus')||null,
-      payroll_ref:qv('#edPayroll')||null,
-      address:    qv('#edAddress')||null
+      first_name: $('#edFirst').value.trim() || null,
+      last_name:  $('#edLast').value.trim() || null,
+      email:      $('#edEmail').value.trim() || null,
+      phone:      $('#edPhone').value.trim() || null,
+      job_title:  $('#edJob').value.trim() || null,
+      pay_type:   $('#edType').value || null,
+      status:     $('#edStatus').value || null,
+      payroll_ref:$('#edPayroll').value.trim() || null,
+      address:    $('#edAddress').value.trim() || null
     };
   }
 
@@ -574,8 +519,8 @@ function appMain(){
     hideErrorBanner();
     try{
       if (id) {
-        __dbg.log('Editor: loading record', { id:id });
-        cur = await apiCall('/admin-candidates-get','POST',{ id:id });
+        __dbg.log('Editor: loading record', { id });
+        cur = await apiCall('/admin-candidates-get','POST',{ id });
       } else {
         cur = { status:'In progress', pay_type:'Umbrella' };
       }
@@ -589,28 +534,28 @@ function appMain(){
     }
   }
 
-  // ===== events =====
-  var doSearch = debounce(function(){ page=1; saveFilters(); loadList(); }, 350);
+  // events
+  const doSearch = debounce(()=>{ page=1; saveFilters(); loadList(); }, 350);
 
-  $('#btnRefresh').onclick = function(){ loadList(); };
+  $('#btnRefresh').onclick = ()=> loadList();
   $('#q').addEventListener('input', doSearch);
-  ['#fType','#fStatus','#fJob','#fEmailHas'].forEach(function(sid){
-    $(sid).addEventListener('change', function(){ page=1; saveFilters(); loadList(); });
-    $(sid).addEventListener('keyup',  function(e){ if(e.key==='Enter'){ page=1; saveFilters(); loadList(); } });
+  ['#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
+    $(sid).addEventListener('change', ()=>{ page=1; saveFilters(); loadList(); });
+    $(sid).addEventListener('keyup',  e=>{ if(e.key==='Enter'){ page=1; saveFilters(); loadList(); } });
   });
 
-  $('#pgPrev').onclick = function(){ if(page>1){ page--; localStorage.cand_page=page; loadList(); } };
-  $('#pgNext').onclick = function(){ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } };
-  $('#pageSize').onchange = function(){ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
+  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; localStorage.cand_page=page; loadList(); } };
+  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } };
+  $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
 
-  $('#btnNew').onclick  = function(){ openEd(null); };
-  $('#btnClose').onclick= function(){ ed.style.display='none'; cur=null; };
+  $('#btnNew').onclick  = ()=> openEd(null);
+  $('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
 
-  $('#btnSave').onclick = async function(){
+  $('#btnSave').onclick = async ()=>{
     try{
-      var data = getEd();
+      const data = getEd();
       __dbg.log('Editor: saving', data);
-      var saved = await apiCall('/admin-candidates-save','POST', data);
+      const saved = await apiCall('/admin-candidates-save','POST', data);
       toast('Saved','ok');
       ed.style.display='none';
       page=1;
@@ -619,7 +564,7 @@ function appMain(){
     }catch(e){ toast('Save failed: '+(e.message||e),'error'); __dbg.err('Editor: save failed', String(e)); }
   };
 
-  $('#btnDelete').onclick = async function(){
+  $('#btnDelete').onclick = async ()=>{
     if(!cur || !cur.id){ toast('Nothing to delete','error'); return; }
     if(!confirm('Delete this candidate?')) return;
     try{
@@ -631,37 +576,31 @@ function appMain(){
     }catch(e){ toast('Delete failed: '+(e.message||e),'error'); __dbg.err('Editor: delete failed', String(e)); }
   };
 
-  $('#btnEmails').onclick = function(){
-    var emails = lastRows.map(function(r){ return r.email; }).filter(Boolean);
+  $('#btnEmails').onclick = ()=>{
+    const emails = lastRows.map(r=>r.email).filter(Boolean);
     if(!emails.length){ toast('No emails in current list','error'); return; }
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(emails.join(', '));
-      toast('Copied '+emails.length+' email(s)','ok');
-    } else {
-      __dbg.warn('Clipboard API not available');
-    }
+    navigator.clipboard?.writeText(emails.join(', '));
+    toast('Copied '+emails.length+' email(s)','ok');
   };
 
-  $('#btnExport').onclick = function(){
-    var rows = lastRows;
+  $('#btnExport').onclick = ()=>{
+    const rows = lastRows;
     if(!rows.length){ toast('Nothing to export','error'); return; }
-    var cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref'];
-    var head = cols.join(',');
-    var csv = [head].concat(rows.map(function(r){
-      return cols.map(function(k){
-        var v = (r[k]!==undefined && r[k]!==null) ? r[k] : '';
-        var s = String(v).replace(/"/g,'""');
-        return '"' + s + '"';
-      }).join(',');
-    })).join('\n');
-    var blob = new Blob([csv],{type:'text/csv'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref'];
+    const head = cols.join(',');
+    const csv = [head].concat(rows.map(r=> cols.map(k=>{
+      const v = (r[k]!==undefined && r[k]!==null) ? r[k] : '';
+      const s = String(v).replace(/"/g,'""');
+      return '"' + s + '"';
+    }).join(','))).join('\n');
+    const blob = new Blob([csv],{type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
   };
 
   // keyboard shortcuts
-  document.addEventListener('keydown', function(e){
+  document.addEventListener('keydown', e=>{
     if(e.key==='/'){ e.preventDefault(); $('#q').focus(); return; }
     if(e.key==='r' || e.key==='R'){ e.preventDefault(); loadList(); return; }
     if(e.key==='n' || e.key==='N'){ e.preventDefault(); openEd(null); return; }
