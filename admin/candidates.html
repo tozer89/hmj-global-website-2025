@@ -5,170 +5,90 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Candidates — Admin | HMJ-Global</title>
 
-<!-- Netlify Identity + shared admin helpers -->
+<!-- Identity + shared admin helpers -->
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script defer src="/admin/common.js"></script>
+
 <link rel="stylesheet" href="/css/style.css"/>
 
 <style>
-/* =========================
-   THEME / TOKENS
-   ========================= */
-:root{
-  --bg:#0b0f18; 
-  --panel:#0f1424; 
-  --panel-2:#0a1020;
-  --border:#1e2a40; 
-  --border-soft:#192233;
-  --ink:#e6eef7; 
-  --muted:#9fb0c9;
-  --muted-2:#7f93b4;
-  --card:#0e162a; 
-  --chip:#0e1629; 
-  --accent:#3A66B3;
-  --accent-2:#5A8BFF;
-  --good:#1e8a5d;
-  --warn:#c28a2f;
-  --bad:#b55357;
-  --shadow: 0 10px 30px rgba(0,0,0,.25);
-  --radius: 14px;
-}
-
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);
-  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-
-/* =========================
-   HEADER
-   ========================= */
-.top{
-  position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border);
-  z-index:5;backdrop-filter:saturate(120%) blur(4px)
-}
-.row{max-width:1240px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-.brand{font-weight:800}
-.sp{flex:1}
-
-a.btn,button.btn{
-  background:#111a32;border:1px solid var(--border);color:#fff;
-  padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer;
-  box-shadow:0 1px 0 rgba(255,255,255,.05) inset;
-}
-a.btn:hover,button.btn:hover{border-color:#395079}
-a.btn:active,button.btn:active{transform:translateY(1px)}
-
-button.btn.bad{border-color:#2e1a1a;background:#1b1214}
-button.btn.bad:hover{border-color:#6a2b2f}
-button.btn.good{border-color:#1e6646;background:#0e2a1e}
-button.btn.good:hover{border-color:#2aa070}
-
-/* =========================
-   WRAPS / CARDS
-   ========================= */
-.wrap{max-width:1240px;margin:22px auto;padding:0 18px;display:grid;gap:16px}
-.card{
-  background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
-  padding:16px;box-shadow:var(--shadow)
-}
-.card.soft{background:var(--panel-2)}
-.card.min{padding:10px}
-
-/* =========================
-   STATS PILLS
-   ========================= */
-.pills{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
-.pill{
-  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;
-  min-width:100px;text-align:center;display:flex;flex-direction:column;justify-content:center;
-}
-.pill b{font-size:22px;display:block}
-
-/* =========================
-   INPUTS
-   ========================= */
-input,select,textarea{
-  background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px;
-  outline:none;min-height:40px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset
-}
-textarea{min-height:74px;resize:vertical}
-input::placeholder,textarea::placeholder{color:#6e83a7}
-
-.filters{display:grid;grid-template-columns:1.5fr .9fr .9fr 1fr 1fr auto 120px;gap:10px;margin:6px 0}
-.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end}
-
-/* =========================
-   TABLE / LIST
-   ========================= */
-.tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--border-soft);background:#0b1222}
-.tableWrap .loading{padding:16px;color:var(--muted)}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:12px;border-bottom:1px solid var(--border-soft);text-align:left}
-thead th{position:sticky;top:0;background:#0e1426;z-index:1;border-bottom:1px solid var(--border)}
-tbody tr:hover{background:#0e1629}
-td.actions{white-space:nowrap}
-
-/* Badges */
-.badge{display:inline-block;padding:4px 9px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
-.status-ok{background:#0e2a1e;border-color:#1e6646}
-.status-warn{background:#33220f;border-color:#8a5b25}
-.status-bad{background:#2a1214;border-color:#6a2b2f}
-
-/* =========================
-   EDITOR
-   ========================= */
-.editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.section-title{font-weight:700;color:#cbd8ee;margin:12px 0 6px}
-.field{display:flex;flex-direction:column;gap:6px}
-.field label{font-size:12px;color:var(--muted)}
-.inline{display:flex;gap:8px;flex-wrap:wrap}
-.editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-
-/* =========================
-   PROFILE PANEL
-   ========================= */
-.profile{
-  display:grid;grid-template-columns:340px 1fr;gap:16px
-}
-@media (max-width:1000px){
-  .profile{grid-template-columns:1fr}
-}
-.infoBlock{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:12px}
-.infoBlock h4{margin:0 0 8px}
-.kv{display:grid;grid-template-columns:1fr 2fr;gap:6px;font-size:13px;color:var(--muted)}
-.kv div:nth-child(odd){color:#9fb0c9}
-
-/* =========================
-   BANNERS / TOAST
-   ========================= */
-#banner-error{display:none;background:#2a1214;border:1px solid #6a2b2f;color:#ffbcbc;border-radius:12px;padding:10px}
-#banner-error pre{white-space:pre-wrap;word-break:break-word}
-#toast{position:fixed;right:14px;bottom:14px;max-width:40ch;background:#0e162a;border:1px solid var(--border);padding:10px 12px;border-radius:10px;display:none;z-index:50}
-#toast.show{display:block;animation:fade 3s ease}
-@keyframes fade{0%{opacity:0;transform:translateY(6px)}10%{opacity:1;transform:none}90%{opacity:1}100%{opacity:0}}
-
-/* =========================
-   MOBILE RESPONSIVE CARDS
-   ========================= */
-@media (max-width:860px){
-  .filters{grid-template-columns:1fr 1fr 1fr}
-  .tableWrap{border:none;background:transparent}
-  table{display:none}
-  .m-cards{display:grid;gap:10px}
-  .m-card{
-    background:#0b1222;border:1px solid var(--border-soft);border-radius:12px;padding:12px
+  :root{
+    --bg:#0b0f18; --panel:#111827; --border:#252f3f; --ink:#e6eef7; --muted:#9fb0c9;
+    --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --bad:#c05; --ok:#16a34a; --warn:#d97706;
   }
-  .m-top{display:flex;justify-content:space-between;gap:8px}
-  .m-title{font-weight:700}
-  .m-line{color:var(--muted);font-size:13px}
-  .m-actions{display:flex;gap:8px;margin-top:8px}
-}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border);z-index:30}
+  .row{max-width:1240px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
+  .brand{font-weight:800}.sp{flex:1}
+  .wrap{max-width:1240px;margin:22px auto;padding:0 18px;display:grid;gap:16px}
 
-/* tiny helpers */
-kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;border:1px solid var(--border);padding:2px 6px;border-radius:6px;background:#0b1222}
-.tip{color:var(--muted);font-size:12px}
-.hr{height:1px;background:var(--border);margin:10px 0}
-.small{font-size:12px;color:var(--muted)}
-.center{display:flex;align-items:center;justify-content:center}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.20)}
+  .muted{color:var(--muted)}
+  .chip{background:var(--chip);border:1px solid #2c3853;border-radius:10px;padding:4px 8px}
+  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;
+       font-weight:600;cursor:pointer;user-select:none}
+  .btn:hover{border-color:#3b4f79}
+  .btn.bad{background:#3a1624;border-color:#7a2a44}
+  .btn.ok{background:#11271a;border-color:#1f6a3f}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pillz{display:flex;gap:10px;flex-wrap:wrap}
+  .pill{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:10px 14px;min-width:90px;text-align:center}
+  .pill b{font-size:20px;display:block}
+  input,select,textarea{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
+  input::placeholder,textarea::placeholder{color:#7688aa}
+  .filters{display:grid;grid-template-columns:1.4fr .9fr .9fr 1fr 1fr auto 120px;gap:10px;margin:6px 0}
+  .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+  .kbtips{font-size:12px;color:var(--muted);margin-top:6px}
+
+  .tableWrap{overflow:auto;border-radius:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+  thead th{position:sticky;top:0;background:#0e1426;z-index:1}
+  tbody tr:hover{background:#0e1629}
+  .badge{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
+  .status-ok{background:#0e2a1e;border-color:#1e6646}
+  .status-warn{background:#33220f;border-color:#8a5b25}
+  .status-bad{background:#2a1214;border-color:#6a2b2f}
+  .inline{display:flex;gap:8px;flex-wrap:wrap}
+  .split{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+  .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .editor-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .editor-grid .field{display:flex;flex-direction:column}
+  .subtle{opacity:.7}
+  .errorBanner{background:#3a1820;border:1px solid #7c2d3a;color:#ffd0d6;padding:10px 12px;border-radius:10px}
+
+  /* quick profile panel */
+  .tabs{display:flex;gap:6px;margin:10px 0}
+  .tab{padding:8px 10px;border:1px solid #2c3853;border-radius:10px;background:#0f172a;cursor:pointer}
+  .tab.active{background:#1a2238}
+  .panel{border:1px dashed #2c3853;border-radius:12px;padding:12px}
+  .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .list{display:grid;gap:8px}
+  .item{display:flex;justify-content:space-between;gap:10px}
+  .item .l{color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+  /* mobile */
+  @media (max-width:980px){
+    .filters{grid-template-columns:1fr 1fr 1fr}
+    .split{grid-template-columns:1fr}
+    table{font-size:13px}
+    .pill{min-width:76px;padding:8px 10px}
+    th:nth-child(1), td:nth-child(1){display:none} /* hide ID on tiny screens */
+    th:nth-child(4), td:nth-child(4){display:none} /* hide phone on tiny screens */
+  }
+
+  /* loading dots */
+  .loading{display:flex;align-items:center;gap:8px}
+  .dot{width:6px;height:6px;border-radius:50%;background:#7aa0ff;opacity:.7;animation:b 1.3s infinite}
+  .dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
+  @keyframes b{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+  /* debug drawer */
+  .dbg{position:fixed;right:12px;bottom:12px;background:#0c1427;border:1px solid #2c3853;border-radius:12px;padding:10px 12px;max-width:420px;z-index:40}
+  .dbg h4{margin:0 0 6px 0}
+  .hidden{display:none}
 </style>
 </head>
 <body>
@@ -176,6 +96,7 @@ kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mo
   <div class="top"><div class="row">
     <div class="brand">Candidates — Admin</div><div class="sp"></div>
     <a class="btn" href="/admin/">⟵ Admin home</a>
+    <button class="btn" id="btnDebug">Debug</button>
     <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
   </div></div>
 
@@ -183,27 +104,37 @@ kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mo
   <div class="wrap" id="gate" style="display:none">
     <div class="card">
       <strong>Admin only.</strong>
-      <p class="why small" style="margin:6px 0 12px"></p>
-      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+      <p class="why muted" style="margin:6px 0 12px"></p>
+      <details class="mono" style="background:#0f172a;border:1px solid #2c3853;border-radius:10px;padding:8px">
+        <summary>Why am I blocked?</summary>
+        <ol>
+          <li>Log in with Netlify Identity (top-right) and try again.</li>
+          <li>Ask an owner to add your email to the server’s <code>ALLOWED_ADMINS</code> / roles list in <code>_auth.js</code>.</li>
+          <li>Ensure the front-end is sending your Identity token (see the Debug panel below).</li>
+        </ol>
+      </details>
+      <div class="inline" style="margin-top:10px">
+        <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+        <button class="btn" id="btnWhoAmI">Who am I?</button>
+      </div>
+      <pre id="who" class="mono" style="white-space:pre-wrap"></pre>
     </div>
   </div>
 
   <!-- app -->
   <div class="wrap" id="app" style="display:none">
-    <div id="banner-error" class="card"></div>
 
     <!-- stats -->
-    <div class="card pills">
+    <div class="card pillz">
       <div class="pill"><b id="kTotal">0</b>Total</div>
       <div class="pill"><b id="kFiltered">0</b>Filtered</div>
       <div class="pill"><b id="kPage">1/1</b>Page</div>
       <div class="sp"></div>
       <div class="inline">
         <button class="btn" id="btnRefresh">Refresh</button>
-        <button class="btn" id="btnNew">New candidate</button>
+        <button class="btn ok" id="btnNew">New candidate</button>
         <button class="btn" id="btnExport">Export CSV</button>
         <button class="btn" id="btnEmails" title="Copy filtered emails">📧 Email list</button>
-        <button class="btn" id="btnDebug" title="Toggle debug">Debug</button>
       </div>
     </div>
 
@@ -211,47 +142,50 @@ kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mo
     <div class="card">
       <div class="filters">
         <input id="q" placeholder="Search name / email / phone"/>
-        <select id="fType" title="Pay type">
+        <select id="fType">
           <option value="">Any pay type</option>
           <option>Umbrella</option><option>Umbrella CIS</option>
           <option>PAYE</option><option>Ltd</option><option>Ltd CIS</option>
           <option>International</option><option>International Umbrella</option>
         </select>
-        <select id="fStatus" title="Status">
+        <select id="fStatus">
           <option value="">Any status</option>
           <option>Complete</option><option>In progress</option><option>Paused</option>
         </select>
         <input id="fJob" placeholder="Job title"/>
         <input id="fEmailHas" placeholder="Email contains"/>
         <div class="pager">
-          <button class="btn" id="pgPrev" title="Prev">◀</button>
+          <button class="btn" id="pgPrev">◀</button>
           <div style="min-width:84px;text-align:center"><span id="pgNow">1</span>/<span id="pgMax">1</span></div>
-          <button class="btn" id="pgNext" title="Next">▶</button>
+          <button class="btn" id="pgNext">▶</button>
         </div>
         <select id="pageSize" title="Rows / page">
           <option>25</option><option>50</option><option>100</option>
         </select>
       </div>
-      <div class="tip">Tips: Press <kbd>/</kbd> to focus search · <kbd>R</kbd> refresh · <kbd>N</kbd> new candidate · <kbd>←/→</kbd> page</div>
+      <div class="kbtips">Tips: Press <span class="chip">/</span> to focus search · <span class="chip">R</span> refresh · <span class="chip">N</span> new candidate · <span class="chip">←/→</span> page</div>
     </div>
+
+    <!-- error banner (request-time) -->
+    <div id="err" class="errorBanner hidden"></div>
 
     <!-- list -->
-    <div class="card tableWrap" id="listWrap">
-      <div class="loading">Loading…</div>
-    </div>
+    <div class="card tableWrap" id="listWrap"><div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div></div>
 
-    <!-- editor + profile -->
-    <div class="profile" id="editorProfile" style="display:none">
-      <!-- Editor -->
-      <div class="card soft" id="editor">
+    <!-- split: editor + profile -->
+    <div class="split">
+
+      <!-- editor -->
+      <div class="card" id="editor" style="display:none">
         <h3 style="margin:0 0 10px" id="edTitle">Candidate</h3>
 
-        <div class="section-title">Identity</div>
         <div class="editor-grid">
           <div class="field"><label>First name</label><input id="edFirst"></div>
           <div class="field"><label>Last name</label><input id="edLast"></div>
+
           <div class="field"><label>Email</label><input id="edEmail" type="email"></div>
-          <div class="field"><label>Phone</label><input id="edPhone"></div>
+          <div class="field"><label>Phone</label><input id="edPhone" inputmode="tel" placeholder="+44…"></div>
+
           <div class="field"><label>Job title</label><input id="edJob"></div>
           <div class="field"><label>Pay type</label>
             <select id="edType">
@@ -260,186 +194,195 @@ kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mo
               <option>International</option><option>International Umbrella</option>
             </select>
           </div>
+
           <div class="field"><label>Status</label>
             <select id="edStatus"><option>In progress</option><option>Complete</option><option>Paused</option></select>
           </div>
-          <div class="field"><label>Payroll ref</label><input id="edPayroll"></div>
+          <div class="field"><label>Payroll ref</label><input id="edPayroll" placeholder="Internal reference"></div>
+
           <div class="field" style="grid-column:1 / -1"><label>Address</label><input id="edAddress" placeholder="Free-form address"></div>
+
+          <!-- Bank details (required for paying) -->
+          <div class="field"><label>Bank account name</label><input id="edBankName" placeholder="Exact account holder name"></div>
+          <div class="field"><label>Bank name</label><input id="edBank"></div>
+          <div class="field"><label>Sort code</label><input id="edSort" class="mono" placeholder="00-00-00" inputmode="numeric" maxlength="8"></div>
+          <div class="field"><label>Account number</label><input id="edAcct" class="mono" placeholder="8 digits" inputmode="numeric" maxlength="10"></div>
+          <div class="field"><label>IBAN (if Intl.)</label><input id="edIBAN" class="mono" placeholder="Optional"></div>
+          <div class="field"><label>SWIFT/BIC</label><input id="edBIC" class="mono" placeholder="Optional"></div>
         </div>
 
-        <div class="section-title">Bank details (for payments)</div>
-        <div class="editor-grid">
-          <div class="field"><label>Bank name</label><input id="edBankName"></div>
-          <div class="field"><label>Account holder</label><input id="edAccountName"></div>
-          <div class="field"><label>Sort code</label><input id="edSortCode" placeholder="12-34-56"></div>
-          <div class="field"><label>Account number</label><input id="edAccountNumber" placeholder="12345678"></div>
-          <div class="field"><label>IBAN</label><input id="edIban" placeholder=""></div>
-          <div class="field"><label>SWIFT / BIC</label><input id="edSwift" placeholder=""></div>
-          <div class="field" style="grid-column:1 / -1">
-            <label>Notes</label><textarea id="edNotes" placeholder="Internal notes (optional)"></textarea>
-          </div>
-        </div>
-
-        <div class="editor-actions">
-          <button class="btn good" id="btnSave">Save</button>
+        <div class="inline" style="justify-content:flex-end;margin-top:12px">
+          <button class="btn ok" id="btnSave">Save</button>
           <button class="btn bad" id="btnDelete">Delete</button>
           <button class="btn" id="btnClose">Close</button>
         </div>
       </div>
 
-      <!-- Profile panel -->
-      <div class="card soft" id="profile">
-        <h3 style="margin:0 0 10px">Profile</h3>
-        <div id="profileContent">
-          <div class="small">No candidate selected.</div>
+      <!-- quick profile / assignments / timesheets -->
+      <div class="card" id="profile" style="display:none">
+        <div class="inline" style="justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Profile & Activity</h3>
+          <span class="subtle">Candidate ID: <span id="pId" class="mono">—</span></span>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active" data-tab="p-overview">Overview</div>
+          <div class="tab" data-tab="p-assign">Assignments</div>
+          <div class="tab" data-tab="p-sheets">Timesheets</div>
+        </div>
+
+        <div class="panel" id="p-overview">
+          <div class="grid-2">
+            <div>
+              <div class="item"><span class="l">Name</span><span id="pName"></span></div>
+              <div class="item"><span class="l">Email</span><span id="pEmail"></span></div>
+              <div class="item"><span class="l">Phone</span><span id="pPhone"></span></div>
+              <div class="item"><span class="l">Job</span><span id="pJob"></span></div>
+            </div>
+            <div>
+              <div class="item"><span class="l">Pay type</span><span id="pType"></span></div>
+              <div class="item"><span class="l">Status</span><span id="pStatus"></span></div>
+              <div class="item"><span class="l">Payroll ref</span><span id="pPayroll" class="mono"></span></div>
+              <div class="item"><span class="l">Last activity</span><span id="pLast"></span></div>
+            </div>
+          </div>
+          <hr style="border:0;border-top:1px solid var(--border);margin:10px 0">
+          <div class="grid-2">
+            <div>
+              <div class="item"><span class="l">Bank</span><span id="pBank"></span></div>
+              <div class="item"><span class="l">Sort</span><span id="pSort" class="mono"></span></div>
+              <div class="item"><span class="l">Acct</span><span id="pAcct" class="mono"></span></div>
+            </div>
+            <div>
+              <div class="item"><span class="l">IBAN</span><span id="pIBAN" class="mono"></span></div>
+              <div class="item"><span class="l">SWIFT/BIC</span><span id="pBIC" class="mono"></span></div>
+              <div class="item"><span class="l">Address</span><span id="pAddress"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="p-assign">
+          <div class="inline" style="justify-content:flex-end;margin-bottom:8px">
+            <button class="btn" id="btnLinkAssign">Link to assignment…</button>
+          </div>
+          <div id="assignList" class="list"></div>
+        </div>
+
+        <div class="panel hidden" id="p-sheets">
+          <div class="inline" style="justify-content:flex-end;margin-bottom:8px">
+            <button class="btn" id="btnNewSheet">New timesheet…</button>
+          </div>
+          <div id="sheetList" class="list"></div>
         </div>
       </div>
+
+    </div><!--/split-->
+
+  </div><!--/wrap app-->
+
+  <!-- toast + debug -->
+  <div id="toast" class="hidden"></div>
+
+  <div id="dbg" class="dbg hidden">
+    <h4>Debug</h4>
+    <div class="mono" style="white-space:pre-wrap;font-size:12px" id="dbgBody">—</div>
+    <div class="inline" style="margin-top:8px;justify-content:flex-end">
+      <button class="btn" id="btnDbgClose">Close</button>
     </div>
   </div>
 
-  <div id="toast"></div>
-
 <script>
-/* ============================================================
-   Small DOM helpers (null-safe)
-   ============================================================ */
-const $  = (s,root=document)=> root.querySelector(s);
-const $$ = (s,root=document)=> Array.from(root.querySelectorAll(s));
-const setNum = (selector, val) => { const el = $(selector); if(!el){ console.warn('Counter not found:', selector); return; } el.textContent = String(val); };
-const show   = (el)=> el && (el.style.display='');
-const hide   = (el)=> el && (el.style.display='none');
-const text   = (el,v)=> el && (el.textContent=v);
+/* ===== Small DOM helpers (null-safe) ===== */
+const $ = (s, root=document) => root.querySelector(s);
+const $$ = (s, root=document) => [...root.querySelectorAll(s)];
+const setText = (sel, val) => { const el = $(sel); if (el) el.textContent = String(val ?? ''); };
+const setNum  = (sel, val) => setText(sel, Number.isFinite(val)? val : '0');
+const show = (sel, on=true) => { const el=$(sel); if(el) el.style.display = on? '' : 'none'; };
+const hide = sel => show(sel,false);
+const toggleCls = (el, cls, on) => (on ? el.classList.add(cls) : el.classList.remove(cls));
 
-/* ============================================================
-   Toast
-   ============================================================ */
-const toast = (msg) => {
-  const el = $('#toast'); if(!el) return;
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(el._t);
-  el._t = setTimeout(()=> el.classList.remove('show'), 2400);
-};
+/* ===== Debug console funnel ===== */
+const DBG = (()=> {
+  const log = (...a)=> console.log('[line]', ...a);
+  const err = (...a)=> console.error('[line]', ...a);
+  return { log, err };
+})();
 
-/* ============================================================
-   Debug channel (toggle-able)
-   ============================================================ */
-const __dbg = {
-  enabled: false,
-  log: (...a)=> __dbg.enabled && console.log(...a),
-  err: (...a)=> { console.error(...a); }
-};
-
-/* ============================================================
-   API helper - robust JSON handling, graceful errors
-   ============================================================ */
-async function apiCall(url, method='POST', body=null, opts={}){
-  try{
-    const full = url.startsWith('/.netlify') ? url : `/.netlify/functions${url.startsWith('/')?url:`/${url}`}`;
-    __dbg.log('API build request', { url: full, method, body });
-    const res = await fetch(full, {
-      method, headers:{'Content-Type':'application/json'}, body: body?JSON.stringify(body):null
-    });
-    __dbg.log('Fetch complete –', { status: res.status, ok: res.ok });
-    if(!res.ok){
-      let t = await res.text().catch(()=> '');
-      try{ t = JSON.parse(t) }catch{}
-      const msg = (t && (t.error||t.message)) || `HTTP ${res.status}`;
-      throw new Error(msg);
-    }
-    let txt = await res.text();
-    __dbg.log('API payload –', txt);
-    try{ return JSON.parse(txt) }catch{
-      // support raw arrays / csv accidentally returned
-      return txt;
-    }
-  }catch(e){
-    __dbg.err('API failed', e);
-    throw e;
-  }
+/* ===== Toast ===== */
+function toast(msg, ms=2500){
+  let t = $('#toast');
+  if(!t){ t = document.createElement('div'); t.id='toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.className = 'toast';
+  t.style.position='fixed'; t.style.left='50%'; t.style.bottom='18px'; t.style.transform='translateX(-50%)';
+  t.style.background='#0c1427'; t.style.border='1px solid #2c3853'; t.style.padding='10px 12px';
+  t.style.borderRadius='10px'; t.style.zIndex=50;
+  show('#toast', true);
+  setTimeout(()=> hide('#toast'), ms);
 }
 
-/* ============================================================
-   Gate: require admin (Identity)
-   ============================================================ */
-function showGateWhy(why){ const g=$('#gate'); show(g); $('.why',g).textContent = why || 'Sign in required.'; hide($('#app')); }
-function showApp(){ hide($('#gate')); show($('#app')); }
+/* ===== Error banner ===== */
+function showErrorBanner(msg){
+  const el = $('#err');
+  if(!el) return;
+  el.textContent = 'Error: ' + msg;
+  toggleCls(el,'hidden',false);
+}
+function hideErrorBanner(){ toggleCls($('#err'),'hidden',true); }
 
-/* ============================================================
-   Page main
-   ============================================================ */
-async function main(){
-  __dbg.log('Gate: start', '');
-  // Check identity: rely on /admin/common.js guard if present; else do a light check
-  const user = (window.netlifyIdentity && netlifyIdentity.currentUser && netlifyIdentity.currentUser()) || null;
-  __dbg.log('Gate: user found –', user ? {email:user.email} : null);
-  if(!user){ return showGateWhy('Please sign in.'); }
-  showApp();
+/* ===== Tab switcher ===== */
+function makeTabs(){
+  $$('.tab').forEach(t=>{
+    t.onclick = ()=>{
+      $$('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      $$('.panel').forEach(p=> p.classList.add('hidden'));
+      $('#' + t.dataset.tab).classList.remove('hidden');
+    };
+  });
+}
 
-  /* --------------- State --------------- */
-  let page=1, pages=1, size=Number(localStorage.cand_size||25)||25, cur=null, lastRows=[];
-  let sort = { key:'name', dir:'asc' }; // purely a hint to the API; backend may ignore
+/* ===== Page app ===== */
+async function main({ api, getUser, authHeader }){
+
+  // ---------- Gate (auth) ----------
+  DBG.log('Gate: start', '');
+  const user = await getUser();
+  if(user) DBG.log('Gate: user found', { email: user.email });
+
+  const authed = !!user;
+  show('#gate', !authed);
+  show('#app', authed);
+
+  $('#btnWhoAmI')?.addEventListener('click', async ()=>{
+    const u = await getUser();
+    $('#who').textContent = JSON.stringify(u, null, 2);
+  });
+
+  if(!authed) return; // stop here if not logged in
+
+  // ---------- State ----------
+  let page=1, pages=1, size=Number(localStorage.cand_size||25)||25, sort={key:'name',dir:'asc'};
+  let cur=null, lastRows=[], debugOpen=false;
+
   $('#pageSize').value = String(size);
+  makeTabs();
 
-  /* --------------- Elements --------------- */
-  const listWrap = $('#listWrap');
-  const editorProfile = $('#editorProfile');
-  const editor = $('#editor');
-  const profile = $('#profile');
-  const bannerErr = $('#banner-error');
+  // ---------- Helpers ----------
+  const qv = id => $(id)?.value?.trim() || '';
 
-  /* --------------- Helpers --------------- */
-  const qv = (sel)=> ($(sel)?.value ?? '').trim();
-
-  function showErrorBanner(message, raw){
-    bannerErr.innerHTML = `<strong>Error:</strong> <span>${String(message||'Unknown')}</span>${raw?`<pre class="small">${raw}</pre>`:''}`;
-    show(bannerErr);
-  }
-  function hideErrorBanner(){ bannerErr.innerHTML=''; hide(bannerErr); }
-
-  function statusBadge(s){
+  const badgeStatus = s => {
     const t=(s||'').toLowerCase();
     const cls = t==='complete' ? 'status-ok' : t==='in progress' ? 'status-warn' : 'status-bad';
     return `<span class="badge ${cls}">${s||'—'}</span>`;
-  }
-  const safe = (v)=> (v===null || v===undefined || v==='') ? '—' : v;
-
-  function typeBadge(t){ return `<span class="badge">${safe(t)}</span>`; }
-
-  function normalizeRows(raw){
-    // Accept: array of candidates OR {rows,total,...}
-    const rows = Array.isArray(raw) ? raw : (raw && raw.rows) ? raw.rows : [];
-    // If items look like {id, name} (from clients), adapt minimally
-    return rows.map(x=>{
-      if (x && x.name && !x.first_name && !x.last_name) {
-        return { 
-          id:x.id, 
-          first_name:x.first_name||x.name, 
-          last_name:x.last_name||'', 
-          email:x.email||'', 
-          phone:x.phone||'', 
-          job_title:x.job_title||'', 
-          pay_type:x.pay_type||'', 
-          status:x.status||'', 
-          payroll_ref:x.payroll_ref||'', 
-          address:x.address||''
-        };
-      }
-      return x;
-    });
-  }
-
-  function setPageMeta(){
-    setNum('#pgNow', page);
-    setNum('#pgMax', pages);
-    $('#kPage').textContent = `${page}/${pages}`;
-  }
+  };
+  const badgeType = t => `<span class="badge">${t||'—'}</span>`;
 
   function renderRows(rows){
     lastRows = rows;
-
-    // Desktop table
-    const tableHTML = `
+    const host = $('#listWrap');
+    if(!rows.length){ host.innerHTML = '<div class="muted">No candidates.</div>'; return; }
+    host.innerHTML = `
       <table>
         <thead>
           <tr>
@@ -449,91 +392,31 @@ async function main(){
             <th style="width:140px">Phone</th>
             <th style="width:160px">Type</th>
             <th style="width:140px">Status</th>
-            <th style="width:130px"></th>
+            <th style="width:120px">Actions</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(r=>`
             <tr>
-              <td>${safe(r.id)}</td>
-              <td>${safe([r.first_name,r.last_name].filter(Boolean).join(' '))}</td>
-              <td>${safe(r.email)}</td>
-              <td>${safe(r.phone)}</td>
-              <td>${typeBadge(r.pay_type)}</td>
-              <td>${statusBadge(r.status)}</td>
-              <td class="actions">
+              <td>${r.id}</td>
+              <td>${[r.first_name,r.last_name].filter(Boolean).join(' ')||'—'}</td>
+              <td>${r.email || '—'}</td>
+              <td>${r.phone || '—'}</td>
+              <td>${badgeType(r.pay_type)}</td>
+              <td>${badgeStatus(r.status)}</td>
+              <td class="inline">
                 <button class="btn" data-open="${r.id}">Open</button>
-                <button class="btn" data-prof="${r.id}">Profile</button>
+                <button class="btn" data-view="${r.id}">Profile</button>
               </td>
             </tr>`).join('')}
         </tbody>
       </table>`;
-
-    // Mobile cards
-    const mobileCards = `
-      <div class="m-cards">
-        ${rows.map(r=>`
-          <div class="m-card">
-            <div class="m-top">
-              <div><div class="m-title">${safe([r.first_name,r.last_name].filter(Boolean).join(' '))}</div>
-              <div class="small">ID ${safe(r.id)}</div></div>
-              <div>${typeBadge(r.pay_type)}</div>
-            </div>
-            <div class="m-line">${safe(r.email)} · ${safe(r.phone)}</div>
-            <div class="m-line">${statusBadge(r.status)} ${r.job_title?`· ${r.job_title}`:''}</div>
-            <div class="m-actions">
-              <button class="btn" data-open="${r.id}">Open</button>
-              <button class="btn" data-prof="${r.id}">Profile</button>
-            </div>
-          </div>
-        `).join('')}
-      </div>`;
-
-    if(!rows.length){
-      listWrap.innerHTML = `<div class="loading">No candidates.</div>`;
-    }else{
-      listWrap.innerHTML = tableHTML + mobileCards;
-    }
-
-    // attach actions
-    $$('button[data-open]', listWrap).forEach(b=> b.onclick = ()=> openEd(Number(b.dataset.open)));
-    $$( 'button[data-prof]', listWrap).forEach(b=> b.onclick = ()=> openProfile(Number(b.dataset.prof)));
-  }
-
-  async function loadList(){
-    hideErrorBanner();
-    listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
-    try{
-      const body = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas'), page, size, sort, debug: __dbg.enabled };
-      __dbg.log('List: request body', body);
-
-      // function filename is plural
-      const res = await apiCall('/admin-candidates-lists','POST', body);
-
-      // tolerate JSON-string payloads and different shapes
-      const rows = normalizeRows(res);
-      const total = (typeof res.total === 'number') ? res.total : rows.length;
-      const filtered = (typeof res.filtered === 'number') ? res.filtered : rows.length;
-      pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size) || 1));
-      if(page>pages) page=pages;
-
-      setNum('#kTotal', total);
-      setNum('#kFiltered', filtered);
-      setPageMeta();
-      __dbg.log('List: meta', { total, filtered, pages, page });
-
-      renderRows(rows);
-    }catch(e){
-      __dbg.err('List: load failed', String(e));
-      showErrorBanner(e.message || 'Error');
-      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message||e)+'</div>';
-    }
+    host.querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEd(Number(b.dataset.open)));
+    host.querySelectorAll('button[data-view]').forEach(b=> b.onclick = ()=> openProfile(Number(b.dataset.view)));
   }
 
   function setEd(c){
-    text($('#edTitle'), c?.id ? `Candidate #${c.id}` : 'New candidate');
-
-    // identity
+    $('#edTitle').textContent = c?.id ? `Candidate #${c.id}` : 'New candidate';
     $('#edFirst').value   = c.first_name||'';
     $('#edLast').value    = c.last_name||'';
     $('#edEmail').value   = c.email||'';
@@ -545,174 +428,203 @@ async function main(){
     $('#edAddress').value = c.address||'';
 
     // bank
-    $('#edBankName').value     = c.bank_name||'';
-    $('#edAccountName').value  = c.account_name||'';
-    $('#edSortCode').value     = c.sort_code||'';
-    $('#edAccountNumber').value= c.account_number||'';
-    $('#edIban').value         = c.iban||'';
-    $('#edSwift').value        = c.swift||'';
-    $('#edNotes').value        = c.notes||'';
+    $('#edBankName').value = c.bank_name_on_account||'';
+    $('#edBank').value     = c.bank||'';
+    $('#edSort').value     = c.sort_code||'';
+    $('#edAcct').value     = c.account_number||'';
+    $('#edIBAN').value     = c.iban||'';
+    $('#edBIC').value      = c.bic||'';
   }
-
   function getEd(){
     return {
       id: cur?.id || undefined,
-      // identity
-      first_name: $('#edFirst').value.trim() || null,
-      last_name:  $('#edLast').value.trim()  || null,
-      email:      $('#edEmail').value.trim() || null,
-      phone:      $('#edPhone').value.trim() || null,
-      job_title:  $('#edJob').value.trim()   || null,
-      pay_type:   $('#edType').value || null,
-      status:     $('#edStatus').value || null,
-      payroll_ref:$('#edPayroll').value.trim() || null,
-      address:    $('#edAddress').value.trim() || null,
-      // bank
-      bank_name:      $('#edBankName').value.trim() || null,
-      account_name:   $('#edAccountName').value.trim() || null,
-      sort_code:      $('#edSortCode').value.trim() || null,
-      account_number: $('#edAccountNumber').value.trim() || null,
-      iban:           $('#edIban').value.trim() || null,
-      swift:          $('#edSwift').value.trim() || null,
-      notes:          $('#edNotes').value.trim() || null
+      first_name: qv('#edFirst')||null,
+      last_name:  qv('#edLast')||null,
+      email:      qv('#edEmail')||null,
+      phone:      qv('#edPhone')||null,
+      job_title:  qv('#edJob')||null,
+      pay_type:   qv('#edType')||null,
+      status:     qv('#edStatus')||null,
+      payroll_ref:qv('#edPayroll')||null,
+      address:    qv('#edAddress')||null,
+      bank_name_on_account: qv('#edBankName')||null,
+      bank:       qv('#edBank')||null,
+      sort_code:  qv('#edSort')||null,
+      account_number: qv('#edAcct')||null,
+      iban:       qv('#edIBAN')||null,
+      bic:        qv('#edBIC')||null
     };
+  }
+
+  function normalizeRows(raw){
+    // Accept: array of candidates OR {rows,total,...}
+    const rows = Array.isArray(raw) ? raw : (raw && raw.rows) ? raw.rows : [];
+    // If items came from a clients list by mistake ({id,name}), adapt minimally so UI doesn't break
+    return rows.map(x=>{
+      if (x && x.name && !x.first_name && !x.last_name) {
+        return { id:x.id, first_name:x.name, last_name:'', email:x.email||'', phone:x.phone||'', job_title:x.job_title||'', pay_type:x.pay_type||'', status:x.status||'', payroll_ref:x.payroll_ref||'', address:x.address||'' };
+      }
+      return x;
+    });
+  }
+
+  async function loadList(){
+    hideErrorBanner();
+    $('#listWrap').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
+
+    // Build request body (include debug: true to enable optional debug in your function)
+    const body = {
+      q: qv('#q'),
+      type: qv('#fType'),
+      status: qv('#fStatus'),
+      job: qv('#fJob'),
+      emailHas: qv('#fEmailHas'),
+      page, size,
+      sort,
+      debug: true
+    };
+    DBG.log('List: request body', body);
+
+    try{
+      // NOTE: endpoint name is plural and matches your file admin-candidates-lists.js
+      const res = await api('/admin-candidates-lists','POST', body);
+
+      // If server purposely returns {error}, surface it
+      if (res && res.error) throw new Error(res.error);
+
+      // tolerate JSON-string payloads and different shapes
+      const data = (typeof res === 'string') ? JSON.parse(res) : res;
+      const rows = normalizeRows(data);
+      const total = (typeof data.total === 'number') ? data.total : rows.length;
+      const filtered = (typeof data.filtered === 'number') ? data.filtered : rows.length;
+      pages = Math.max(1, Number(data.pages || Math.ceil(filtered/size) || 1));
+      if(page>pages) page=pages;
+
+      setNum('#kTotal', total);
+      setNum('#kFiltered', filtered);
+      setNum('#pgNow', page);
+      setNum('#pgMax', pages);
+      $('#kPage').textContent = `${page}/${pages}`;
+      DBG.log('List: meta', { total, filtered, pages, page });
+
+      renderRows(rows);
+    }catch(e){
+      DBG.err('List: load failed', String(e));
+      showErrorBanner(e.message || 'Error');
+      $('#listWrap').innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message||e)+'</div>';
+    }
   }
 
   async function openEd(id){
     try{
-      cur = id ? await apiCall('/admin-candidates-get','POST',{ id }) : { status:'In progress', pay_type:'Umbrella' };
-      setEd(cur);
-      show(editorProfile); editor.scrollIntoView({behavior:'smooth',block:'start'});
+      cur = id ? await api('/admin-candidates-get','POST',{ id, debug:true }) : { status:'In progress', pay_type:'Umbrella' };
+      if (cur && cur.error) throw new Error(cur.error);
+      setEd(cur||{});
+      show('#editor', true);
+      show('#profile', true);
+      fillProfile(cur||{});
+      window.scrollTo({top: document.body.scrollHeight/3, behavior:'smooth'});
     }catch(e){ toast('Open failed: '+(e.message||e)); }
   }
 
-  function profileSkeleton(){
-    return `
-      <div class="infoBlock">
-        <h4>Summary</h4>
-        <div class="kv">
-          <div>Name</div><div>—</div>
-          <div>Email</div><div>—</div>
-          <div>Phone</div><div>—</div>
-          <div>Status</div><div>—</div>
-        </div>
-      </div>
-      <div class="hr"></div>
-      <div class="infoBlock">
-        <h4>Recent timesheets</h4>
-        <div class="small">Loading…</div>
-      </div>
-      <div class="infoBlock">
-        <h4>Current assignments</h4>
-        <div class="small">Loading…</div>
-      </div>`;
-  }
+  function fillProfile(c){
+    setText('#pId', c.id ?? '—');
+    setText('#pName', [c.first_name,c.last_name].filter(Boolean).join(' ') || '—');
+    setText('#pEmail', c.email || '—');
+    setText('#pPhone', c.phone || '—');
+    setText('#pJob', c.job_title || '—');
+    $('#pType').innerHTML = badgeType(c.pay_type);
+    $('#pStatus').innerHTML = badgeStatus(c.status);
+    setText('#pPayroll', c.payroll_ref || '—');
+    setText('#pLast', c.updated_at || c.created_at || '—');
+    setText('#pBank', c.bank || '—'); setText('#pSort', c.sort_code || '—'); setText('#pAcct', c.account_number || '—');
+    setText('#pIBAN', c.iban || '—'); setText('#pBIC', c.bic || '—'); setText('#pAddress', c.address || '—');
 
-  function renderProfile(candidate, timesheets, assignments){
-    const name = [candidate.first_name, candidate.last_name].filter(Boolean).join(' ') || '—';
-    const tRows = (timesheets||[]).slice(0,6).map(t=>`
-      <tr>
-        <td>${safe(t.ref||t.id)}</td>
-        <td>${safe(t.week_ending || t.week || t.date)}</td>
-        <td>${safe(t.hours || t.total_hours)}</td>
-        <td>${safe(t.status)}</td>
-      </tr>`).join('') || `<tr><td colspan="4" class="small">No recent timesheets.</td></tr>`;
-
-    const aRows = (assignments||[]).slice(0,6).map(a=>`
-      <tr>
-        <td>${safe(a.client_name || a.client || a.site)}</td>
-        <td>${safe(a.job_title || a.role)}</td>
-        <td>${safe(a.start_date || a.start)}</td>
-        <td>${safe(a.end_date || a.end) || '—'}</td>
-      </tr>`).join('') || `<tr><td colspan="4" class="small">No active assignments.</td></tr>`;
-
-    $('#profileContent').innerHTML = `
-      <div class="infoBlock">
-        <h4>Summary</h4>
-        <div class="kv">
-          <div>Name</div><div>${name}</div>
-          <div>Email</div><div>${safe(candidate.email)}</div>
-          <div>Phone</div><div>${safe(candidate.phone)}</div>
-          <div>Status</div><div>${statusBadge(candidate.status)}</div>
-          <div>Pay type</div><div>${typeBadge(candidate.pay_type)}</div>
-          <div>Job title</div><div>${safe(candidate.job_title)}</div>
-          <div>Payroll ref</div><div>${safe(candidate.payroll_ref)}</div>
-          <div>Address</div><div>${safe(candidate.address)}</div>
-        </div>
-      </div>
-      <div class="hr"></div>
-      <div class="infoBlock">
-        <h4>Recent timesheets</h4>
-        <div class="tableWrap min">
-          <table>
-            <thead><tr><th>Ref</th><th>Week ending</th><th>Hours</th><th>Status</th></tr></thead>
-            <tbody>${tRows}</tbody>
-          </table>
-        </div>
-      </div>
-      <div class="infoBlock">
-        <h4>Current assignments</h4>
-        <div class="tableWrap min">
-          <table>
-            <thead><tr><th>Client</th><th>Role</th><th>Start</th><th>End</th></tr></thead>
-            <tbody>${aRows}</tbody>
-          </table>
-        </div>
-      </div>
-    `;
+    // attempt to load assignments & timesheets (non-fatal if 404)
+    loadAssignments(c.id).catch(()=>{});
+    loadTimesheets(c.id).catch(()=>{});
   }
 
   async function openProfile(id){
-    try{
-      // always open editor too (for context)
-      await openEd(id);
-
-      $('#profileContent').innerHTML = profileSkeleton();
-
-      // pull optional data
-      let [ts, asg] = await Promise.allSettled([
-        apiCall('/admin-timesheets-by-candidate','POST',{ candidate_id: id }).catch(e=> { __dbg.err('timesheets err',e); return []; }),
-        apiCall('/admin-assignments-by-candidate','POST',{ candidate_id: id }).catch(e=> { __dbg.err('assignments err',e); return []; })
-      ]);
-
-      const t = ts.status==='fulfilled' ? (Array.isArray(ts.value) ? ts.value: (ts.value.rows||[])) : [];
-      const a = asg.status==='fulfilled'? (Array.isArray(asg.value)? asg.value: (asg.value.rows||[])): [];
-      renderProfile(cur, t, a);
-    }catch(e){
-      toast('Profile failed: '+(e.message||e));
-    }
+    await openEd(id);
+    // Switch to Overview tab by default
+    $$('.tab').forEach(x=>x.classList.remove('active'));
+    $('[data-tab="p-overview"]').classList.add('active');
+    $$('.panel').forEach(p=> p.classList.add('hidden'));
+    $('#p-overview').classList.remove('hidden');
   }
 
-  /* --------------- Events --------------- */
+  async function loadAssignments(candId){
+    const body = { candidate_id: candId, page:1, size:50, debug:true };
+    let res;
+    try{
+      // Try a likely function name first; fall back to a generic list if you have one
+      res = await api('/admin-assignments-list','POST', body);
+    }catch(e){
+      DBG.err('Assignments list failed', e);
+      $('#assignList').innerHTML = `<div class="muted">Assignments endpoint not found.</div>`;
+      return;
+    }
+    if (res && res.error){ $('#assignList').innerHTML = `<div class="muted">${res.error}</div>`; return; }
+    const rows = Array.isArray(res.rows) ? res.rows : (Array.isArray(res)? res : []);
+    if(!rows.length){ $('#assignList').innerHTML = `<div class="muted">No assignments.</div>`; return; }
+    $('#assignList').innerHTML = rows.map(r=>`
+      <div class="item"><span>${r.client_name||r.client||'Client'} — ${r.role||r.title||'Role'}</span>
+      <span class="mono">${r.start_date||'—'} → ${r.end_date||'—'}</span></div>`).join('');
+  }
+
+  async function loadTimesheets(candId){
+    const body = { candidate_id: candId, page:1, size:10, debug:true };
+    let res;
+    try{
+      res = await api('/admin-timesheets-list','POST', body);
+    }catch(e){
+      DBG.err('Timesheets list failed', e);
+      $('#sheetList').innerHTML = `<div class="muted">Timesheets endpoint not found.</div>`;
+      return;
+    }
+    if (res && res.error){ $('#sheetList').innerHTML = `<div class="muted">${res.error}</div>`; return; }
+    const rows = Array.isArray(res.rows) ? res.rows : (Array.isArray(res)? res : []);
+    if(!rows.length){ $('#sheetList').innerHTML = `<div class="muted">No recent timesheets.</div>`; return; }
+    $('#sheetList').innerHTML = rows.map(r=>`
+      <div class="item"><span>Week ${r.week_ending||r.week||'—'} · ${r.hours||0}h · ${r.status||'—'}</span>
+      <span class="mono">#${r.id}</span></div>`).join('');
+  }
+
+  // ---------- Events ----------
   $('#btnRefresh').onclick = ()=> { page=1; loadList(); };
   ['#q','#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
     $(sid).addEventListener('change', ()=>{ page=1; loadList(); });
     $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(); }});
   });
-
   $('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(); } };
   $('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(); } };
   $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
 
   $('#btnNew').onclick  = ()=> openEd(null);
-  $('#btnClose').onclick= ()=>{ hide(editorProfile); cur=null; };
+  $('#btnClose').onclick= ()=>{ hide('#editor'); hide('#profile'); cur=null; };
 
   $('#btnSave').onclick = async ()=>{
     try{
       const data = getEd();
-      const saved = await apiCall('/admin-candidates-save','POST', data);
+      const saved = await api('/admin-candidates-save','POST', data);
+      if (saved && saved.error) throw new Error(saved.error);
       toast('Saved');
-      // keep in view and refresh list; reopen with saved id if new
-      if(saved?.id){ cur = saved; setEd(cur); }
+      hide('#editor'); hide('#profile');
+      page=1;
       await loadList();
+      if(saved?.id) openEd(saved.id);
     }catch(e){ toast('Save failed: '+(e.message||e)); }
   };
 
   $('#btnDelete').onclick = async ()=>{
     if(!cur?.id) return toast('Nothing to delete');
     if(!confirm('Delete this candidate?')) return;
-    try{ await apiCall('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted'); hide(editorProfile); await loadList(); }
-    catch(e){ toast('Delete failed: '+(e.message||e)); }
+    try{
+      const res = await api('/admin-candidates-delete','POST',{ id: cur.id });
+      if (res && res.error) throw new Error(res.error);
+      toast('Deleted'); hide('#editor'); hide('#profile'); await loadList();
+    }catch(e){ toast('Delete failed: '+(e.message||e)); }
   };
 
   $('#btnEmails').onclick = ()=>{
@@ -725,7 +637,7 @@ async function main(){
   $('#btnExport').onclick = ()=>{
     const rows = lastRows;
     if(!rows.length){ toast('Nothing to export'); return; }
-    const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref','address','bank_name','account_name','sort_code','account_number','iban','swift'];
+    const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref','bank','sort_code','account_number'];
     const head = cols.join(',');
     const csv = [head].concat(rows.map(r=> cols.map(k=>{
       const v = r[k] ?? '';
@@ -738,37 +650,69 @@ async function main(){
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
   };
 
-  $('#btnDebug').onclick = ()=>{
-    __dbg.enabled = !__dbg.enabled;
-    toast('Debug '+(__dbg.enabled?'ON':'OFF'));
-  };
-
-  // keyboard shortcuts
-  window.addEventListener('keydown',(e)=>{
-    if(e.key==='/'){ e.preventDefault(); $('#q').focus(); $('#q').select(); }
-    if(e.key==='r' || e.key==='R'){ e.preventDefault(); $('#btnRefresh').click(); }
-    if(e.key==='n' || e.key==='N'){ e.preventDefault(); $('#btnNew').click(); }
-    if(e.key==='ArrowLeft'){ e.preventDefault(); $('#pgPrev').click(); }
-    if(e.key==='ArrowRight'){ e.preventDefault(); $('#pgNext').click(); }
-    if(e.key==='d' || e.key==='D'){ e.preventDefault(); $('#btnDebug').click(); }
+  // Keyboard shortcuts
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='/' && !e.metaKey && !e.ctrlKey){ e.preventDefault(); $('#q')?.focus(); }
+    if(e.key.toLowerCase()==='r'){ loadList(); }
+    if(e.key.toLowerCase()==='n'){ openEd(null); }
+    if(e.key==='ArrowLeft'){ $('#pgPrev').click(); }
+    if(e.key==='ArrowRight'){ $('#pgNext').click(); }
   });
 
-  __dbg.log('App: init', '');
+  // Debug drawer
+  $('#btnDebug').onclick = async ()=>{
+    debugOpen = !debugOpen;
+    toggleCls($('#dbg'),'hidden',!debugOpen);
+    const tokenInfo = await authHeader();
+    $('#dbgBody').textContent = JSON.stringify({
+      user: await getUser()?.then(u=>({ email:u?.email, id:u?.id })) ?? null,
+      authHeader: tokenInfo?.headerName ? { [tokenInfo.headerName]: 'Bearer ' + (tokenInfo.token?.slice(0,12)+'…') } : null,
+      now: new Date().toISOString()
+    }, null, 2);
+  };
+  $('#btnDbgClose').onclick = ()=> { debugOpen=false; toggleCls($('#dbg'),'hidden',true); };
 
-  // initial load
+  // First load
   await loadList();
 }
 
-/* ============================================================
-   Boot after Identity ready
-   ============================================================ */
+/* ===== Bootstrap once common.js is ready =====
+   common.js should expose: window.AdminAPI with { api, sel, toast, getUser, authHeader } */
 document.addEventListener('DOMContentLoaded', ()=>{
-  // If /admin/common.js exposes bootstrap, prefer it; otherwise run main.
-  if(window.__ADMIN_BOOTSTRAP__){
-    window.__ADMIN_BOOTSTRAP__(main);
-  }else{
-    main();
-  }
+  // Fallbacks in case common.js is older:
+  const api = window.AdminAPI?.api || (async (path, method='POST', body={})=>{
+    // Very defensive: attach token if possible
+    let headers = { 'Content-Type':'application/json' };
+    try{
+      const u = netlifyIdentity?.currentUser();
+      if(u){ const t = await u.jwt(); headers.Authorization = `Bearer ${t}`; }
+    }catch{}
+    const res = await fetch(`/.netlify/functions${path.startsWith('/')?path:('/'+path)}`,{
+      method, headers, body: method==='GET' ? undefined : JSON.stringify(body)
+    });
+    const text = await res.text();
+    let json; try{ json = JSON.parse(text); }catch{ json = text; }
+    if(!res.ok){
+      // Bubble up a clean message for 401/403
+      const msg = (json && json.error) ? json.error : `${res.status} ${res.statusText}`;
+      throw new Error(msg);
+    }
+    return json;
+  });
+  const getUser = window.AdminAPI?.getUser || (async ()=> {
+    try{ return await netlifyIdentity?.currentUser(); }catch{ return null; }
+  });
+  const authHeader = async ()=>{
+    const u = netlifyIdentity?.currentUser();
+    if(!u) return null;
+    try{ const token = await u.jwt(); return { headerName:'Authorization', token }; }catch{ return null; }
+  };
+
+  main({ api, getUser, authHeader }).catch(e=>{
+    console.error(e);
+    show('#gate', true);
+    $('.why').textContent = 'Failed to initialize: ' + (e.message||e);
+  });
 });
 </script>
 </body>
