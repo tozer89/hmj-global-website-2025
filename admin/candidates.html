@@ -257,35 +257,37 @@
   <div id="toast"></div>
 
 <script>
-/* ------------------------------------------------------------------------------------------------
-   RELIABLE BOOTSTRAP
-   - Waits for /admin/common.js (adminReady) up to 10s with retries.
-   - If unavailable, falls back to a tiny local helper (gate + api).
---------------------------------------------------------------------------------------------------*/
-
+/* =============================================================================
+   DEBUG + TOAST
+============================================================================= */
 const __dbg = {
   on: false,
   log: (...a)=> __dbg.on && console.log('[line]', ...a),
   warn:(...a)=> __dbg.on && console.warn('[warn]', ...a),
   err: (...a)=> __dbg.on && console.error('[error]', ...a),
 };
-
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function toast(msg){
+  let t = document.getElementById('toast');
+  if(!t){ alert(msg); return; }
+  t.textContent = msg; t.style.position='fixed'; t.style.bottom='16px'; t.style.right='16px';
+  t.style.background='#1a2238'; t.style.border='1px solid #2c3853'; t.style.padding='10px 12px';
+  t.style.borderRadius='10px'; t.style.zIndex=9999; t.style.boxShadow='0 8px 20px rgba(0,0,0,.4)';
+  setTimeout(()=>{ t.textContent=''; t.removeAttribute('style'); }, 2200);
+}
 
+/* =============================================================================
+   TOKEN + API (works even if /admin/common.js is late)
+============================================================================= */
 async function getIdentityUser(retries=50){
-  // wait for netlifyIdentity to exist & init
   while(retries-- > 0){
     if (window.netlifyIdentity && typeof window.netlifyIdentity === 'object'){
-      try{
-        // if not initialized, calling currentUser() still works after .init(). Many sites auto-init.
-        return window.netlifyIdentity.currentUser();
-      }catch{}
+      try{ return window.netlifyIdentity.currentUser(); }catch{}
     }
     await sleep(100);
   }
   return null;
 }
-
 async function getBearerToken(retries=50){
   for(let i=0;i<retries;i++){
     const user = await getIdentityUser(1);
@@ -294,97 +296,77 @@ async function getBearerToken(retries=50){
     }
     await sleep(100);
   }
-  return null;
+  return '';
+}
+async function apiCall(path, method='POST', body={}){
+  const token = await getBearerToken(40);
+  const res = await fetch(`/.netlify/functions${path.startsWith('/')?'':'/'}${path}`, {
+    method,
+    headers: {
+      'content-type':'application/json',
+      ...(token ? { 'authorization': `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify(body)
+  });
+  const txt = await res.text();
+  let json; try{ json = JSON.parse(txt); }catch{ json = { raw: txt }; }
+  if(!res.ok){
+    const msg = json?.error || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return json;
 }
 
-function localHelpers(){
+/* =============================================================================
+   Use helpers from /admin/common.js if available (adminReady), else fallback
+============================================================================= */
+function fallbackHelpers(){
   const sel = (s,root=document)=> root.querySelector(s);
-  const toast = (msg)=> {
-    let t = document.getElementById('toast');
-    if(!t) return alert(msg);
-    t.textContent = msg; t.style.position='fixed'; t.style.bottom='16px'; t.style.right='16px';
-    t.style.background='#1a2238'; t.style.border='1px solid #2c3853'; t.style.padding='10px 12px';
-    t.style.borderRadius='10px'; t.style.zIndex=9999; t.style.boxShadow='0 8px 20px rgba(0,0,0,.4)';
-    setTimeout(()=>{ t.textContent=''; t.removeAttribute('style'); }, 2000);
-  };
-  const show = id => sel(id).style.display='';
-  const hide = id => sel(id).style.display='none';
-
-  async function gate({ adminOnly }={}){
-    // If /admin/common.js provided adminReady, we won't use this.
-    // Minimal fallback: show app if any user exists; otherwise gate.
+  async function gate(){                     // minimal admin-only gate
     const app = sel('#app'), gate = sel('#gate');
     const user = await getIdentityUser();
-    if (user){
-      show('#app'); hide('#gate'); return { email: user.email };
-    } else {
-      hide('#app'); show('#gate');
-      sel('#gate .why').textContent = adminOnly ? 'Please sign in with an admin account.' : 'Please sign in.';
-      return null;
-    }
+    if (user){ app.style.display=''; gate.style.display='none'; return { email:user.email }; }
+    gate.style.display=''; app.style.display='none';
+    sel('#gate .why').textContent = 'Please sign in with an admin account.';
+    return null;
   }
-
-  async function api(path, method='POST', body){
-    const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
-    const token = await getBearerToken(40); // try hard
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    __dbg.log('API build request', { url, method, body });
-    const r = await fetch(url, { method, headers, body: body?JSON.stringify(body):undefined });
-    const txt = await r.text();
-    let json = null;
-    try{ json = txt ? JSON.parse(txt) : null; }catch(e){ /* non-json */ }
-    __dbg.log('Fetch complete', { status:r.status, ok:r.ok });
-    if(!r.ok){
-      const msg = json?.error || `HTTP ${r.status}`;
-      throw new Error(msg);
-    }
-    return json;
-  }
-
   function onKey(code, fn){
     document.addEventListener('keydown', (e)=>{
       if(code.length===1 && e.key===code) return fn(e);
       if(code.length>1 && e.code===code) return fn(e);
     });
   }
-
-  return { gate, api, sel, toast, onKey };
+  return { gate, api: apiCall, sel, toast, onKey };
 }
-
-async function waitAdminReadyOrFallback(){
-  // Try to use /admin/common.js if it exposes adminReady
-  for(let i=0;i<100;i++){ // ~10s total
+async function getHelpers(){
+  for(let i=0;i<200;i++){ // up to ~10s
     if (window.adminReady && typeof window.adminReady === 'function'){
       try{
-        const helpers = await window.adminReady();
-        if (helpers) return helpers; // { gate, api, sel, toast, onKey }
-      }catch(e){
-        console.error('adminReady threw:', e);
-      }
+        const h = await window.adminReady();
+        if (h) return h; // { gate, api, sel, toast, onKey }
+      }catch(e){ console.warn('adminReady error:', e); }
     }
-    await sleep(100);
+    await sleep(50);
   }
-  console.error('common.js not loaded yet'); // this is the exact console you saw
-  // Fallback so the page still works
-  return localHelpers();
+  console.warn('common.js not loaded in time; using fallback helpers');
+  return fallbackHelpers();
 }
 
-/* ------------------------------------------------------------------------------------------------
-   APPLICATION
---------------------------------------------------------------------------------------------------*/
+/* =============================================================================
+   APP
+============================================================================= */
 (async function bootstrap(){
   try{
-    const helpers = await waitAdminReadyOrFallback();
-    const { gate, api, sel, toast, onKey } = helpers;
+    const { gate, api, sel, toast: t2, onKey } = await getHelpers();
+    const toastFn = t2 || toast;
 
-    // Gate: admin only
     __dbg.log('Gate: start', '');
     const who = await gate({ adminOnly:true });
-    if(!who){ return; }
+    if(!who) return;
     __dbg.log('Gate: user found', who);
 
-    candidatesApp({ api, sel, toast, onKey });
+    candidatesApp({ api, sel, toast: toastFn, onKey });
   }catch(e){
     console.error(e);
     const top = document.querySelector('#errorTop');
@@ -396,7 +378,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
   __dbg.log('App: init', '');
 
   // state
-  let page=1, pages=1, size=Number(localStorage.cand_size||25)||25, cur=null, lastRows=[], sort={key:'name',dir:'asc'};
+  let page=1, pages=1, size=Number(localStorage.cand_size||25)||25, cur=null, lastRows=[], sort={key:'first_name',dir:'asc'};
 
   // els
   const $ = (s,root=document)=> root.querySelector(s);
@@ -466,7 +448,6 @@ async function candidatesApp({ api, sel, toast, onKey }){
   }
 
   function normalizeResponse(res){
-    // Accept: array or {rows,total,filtered,pages}
     const rows = Array.isArray(res) ? res : (res && res.rows) ? res.rows : [];
     const total = (res && typeof res.total==='number') ? res.total : rows.length;
     const filtered = (res && typeof res.filtered==='number') ? res.filtered : rows.length;
@@ -474,7 +455,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
     return { rows, total, filtered, pages:pg };
   }
 
-  async function loadList(debugFlag=false){
+  async function loadList(){
     hideErrorBanner();
     listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
     try{
@@ -484,13 +465,16 @@ async function candidatesApp({ api, sel, toast, onKey }){
         status: qv('#fStatus'),
         job: qv('#fJob'),
         emailHas: qv('#fEmailHas'),
-        page, size, sort,
-        debug: debugFlag
+        page,
+        size,
+        sort,
+        debug: true, // temporary, helpful while we finish wiring the functions
       };
       __dbg.log('List: request body', body);
 
       const res = await api('/admin-candidates-lists','POST', body);
-      if (res?.debug) { __dbg.log('Function debug', res.debug); }
+      if (res?.debug) __dbg.log('Function debug', res.debug);
+
       const meta = normalizeResponse(res);
       pages = meta.pages;
       if(page>pages) page=pages;
@@ -550,11 +534,11 @@ async function candidatesApp({ api, sel, toast, onKey }){
 
   async function openEd(id){
     try{
-      cur = id ? await api('/admin-candidates-get','POST',{ id }) : { status:'In progress', pay_type:'Umbrella' };
+      cur = id ? await api('/admin-candidates-get','POST',{ id, debug:true }) : { status:'In progress', pay_type:'Umbrella' };
       setEd(cur);
       ed.style.display = '';
       ed.scrollIntoView({behavior:'smooth',block:'start'});
-      showProfile(cur?.id || null, cur); // also reflect data into side panel
+      showProfile(cur?.id || null, cur); // reflect in side panel
     }catch(e){ toast('Open failed: '+(e.message||e)); }
   }
 
@@ -576,7 +560,6 @@ async function candidatesApp({ api, sel, toast, onKey }){
     $('#pPayroll').textContent = c?.payroll_ref || '—';
     $('#pAddress').textContent = c?.address || '—';
 
-    // Load ancillary panels (best-effort; show message if not available)
     loadTimesheetsFor(c?.id).catch(e=> $('#pTimesheets').textContent = 'Timesheets unavailable: '+(e.message||e));
     loadAssignmentsFor(c?.id).catch(e=> $('#pAssignments').textContent = 'Assignments unavailable: '+(e.message||e));
   }
@@ -585,7 +568,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
     if(!id){ $('#pTimesheets').textContent = 'Select a candidate…'; return; }
     $('#pTimesheets').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
     try{
-      const res = await api('/admin-timesheets-list','POST',{ candidate_id:id, size:5 });
+      const res = await api('/admin-timesheets-list','POST',{ candidate_id:id, size:5, debug:true });
       const rows = Array.isArray(res) ? res : (res?.rows||[]);
       if(!rows.length){ $('#pTimesheets').textContent = 'No recent timesheets'; return; }
       const ul = rows.map(t=>{
@@ -605,7 +588,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
     if(!id){ $('#pAssignments').textContent = 'Select a candidate…'; return; }
     $('#pAssignments').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
     try{
-      const res = await api('/admin-assignments-list','POST',{ candidate_id:id, size:5 });
+      const res = await api('/admin-assignments-list','POST',{ candidate_id:id, size:5, debug:true });
       const rows = Array.isArray(res) ? res : (res?.rows||[]);
       if(!rows.length){ $('#pAssignments').textContent = 'No current assignments'; return; }
       const ul = rows.map(a=>{
@@ -622,15 +605,15 @@ async function candidatesApp({ api, sel, toast, onKey }){
   }
 
   // events
-  $('#btnRefresh').onclick = ()=> { page=1; loadList(__dbg.on); };
+  $('#btnRefresh').onclick = ()=> { page=1; loadList(); };
   ['#q','#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
-    $(sid).addEventListener('change', ()=>{ page=1; loadList(__dbg.on); });
-    $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(__dbg.on); }});
+    $(sid).addEventListener('change', ()=>{ page=1; loadList(); });
+    $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(); }});
   });
 
-  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(__dbg.on); } };
-  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(__dbg.on); } };
-  $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(__dbg.on); };
+  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(); } };
+  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(); } };
+  $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
 
   $('#btnNew').onclick  = ()=> openEd(null);
   $('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
@@ -642,7 +625,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
       toast('Saved');
       ed.style.display='none';
       page=1;
-      await loadList(__dbg.on);
+      await loadList();
       if(saved?.id) { cur={id:saved.id}; openEd(saved.id); }
     }catch(e){ toast('Save failed: '+(e.message||e)); }
   };
@@ -650,7 +633,7 @@ async function candidatesApp({ api, sel, toast, onKey }){
   $('#btnDelete').onclick = async ()=>{
     if(!cur?.id) return toast('Nothing to delete');
     if(!confirm('Delete this candidate?')) return;
-    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted'); ed.style.display='none'; await loadList(__dbg.on); }
+    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted'); ed.style.display='none'; await loadList(); }
     catch(e){ toast('Delete failed: '+(e.message||e)); }
   };
 
@@ -688,11 +671,11 @@ async function candidatesApp({ api, sel, toast, onKey }){
   $('#btnDebug').onclick = ()=>{
     __dbg.on = !__dbg.on;
     toast('Debug '+(__dbg.on?'ON':'OFF'));
-    if(__dbg.on) loadList(true);
+    if(__dbg.on) loadList();
   };
 
   // initial load
-  await loadList(false);
+  await loadList();
 }
 </script>
 </body>

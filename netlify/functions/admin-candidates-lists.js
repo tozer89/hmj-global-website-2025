@@ -1,12 +1,18 @@
 // netlify/functions/admin-candidates-lists.js
-const { getContext } = require('./_auth.js');
-
-/** Safety: only allow sorting by these keys */
-const SORT_WHITELIST = new Set(['name', 'created_at', 'updated_at', 'status', 'pay_type']);
+const { getContext, coded } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    const payload = JSON.parse(event.body || '{}');
+    const body = JSON.parse(event.body || '{}');
+    const dbg = !!body.debug;
+
+    const { user, roles, supabase } = await getContext(event, context, {
+      requireAdmin: true,
+      debug: dbg,
+    });
+
+    if (dbg) console.log('[cands:list] user:', user.email, 'roles:', roles, 'body:', body);
+
     const {
       q = '',
       type = '',
@@ -16,120 +22,78 @@ exports.handler = async (event, context) => {
       page = 1,
       size = 25,
       sort = { key: 'name', dir: 'asc' },
-      debug = false
-    } = payload;
+    } = body;
 
-    const ctx = await getContext(event, context, { requireAdmin: true, debug });
-
-    // We’ll use the admin client from getContext()
-    const svc = ctx.supabase;
-
-    // Build base select with count
-    // Add/rename columns here to match your real schema
-    // IMPORTANT: Do not reference non-existent columns.
-    let query = svc
-      .from('candidates')
-      .select(
-        [
-          'id',
-          'first_name',
-          'last_name',
-          'email',
-          'phone',
-          'job_title',
-          'pay_type',
-          'status',
-          'payroll_ref',
-          'address',
-          // bank fields (read-only for list view; editor can use them)
-          'bank_name',
-          'bank_sort_code',
-          'bank_account',
-          'created_at',
-          'updated_at'
-        ].join(','),
-        { count: 'exact' }
-      );
-
-    const applied = { filters: {}, order: '', range: '', debug };
-
-    // Global quick search across name/email/phone
-    if (q && q.trim()) {
-      const s = `%${q.trim()}%`;
-      query = query.or(
-        [
-          `first_name.ilike.${s}`,
-          `last_name.ilike.${s}`,
-          `email.ilike.${s}`,
-          `phone.ilike.${s}`
-        ].join(',')
-      );
-      applied.filters.q = q;
-    }
-
-    if (type) { query = query.eq('pay_type', type); applied.filters.type = type; }
-    if (status) { query = query.eq('status', status); applied.filters.status = status; }
-    if (job) { query = query.ilike('job_title', `%${job}%`); applied.filters.job = job; }
-    if (emailHas) { query = query.ilike('email', `%${emailHas}%`); applied.filters.emailHas = emailHas; }
-
-    // Sorting
-    const sortKey = SORT_WHITELIST.has((sort?.key || '').toString()) ? sort.key : 'name';
-    const asc = (sort?.dir || 'asc').toLowerCase() !== 'desc';
-
-    if (sortKey === 'name') {
-      // Order by last_name, then first_name for stable sort
-      query = query.order('last_name', { ascending: asc }).order('first_name', { ascending: asc });
-      applied.order = `last_name ${asc ? 'ASC' : 'DESC'}, first_name ${asc ? 'ASC' : 'DESC'}`;
-    } else {
-      query = query.order(sortKey, { ascending: asc });
-      applied.order = `${sortKey} ${asc ? 'ASC' : 'DESC'}`;
-    }
-
-    // Pagination
-    const p = Math.max(1, parseInt(page, 10) || 1);
-    const s = Math.min(500, Math.max(1, parseInt(size, 10) || 25)); // cap for safety
+    const p = Math.max(1, Number(page) || 1);
+    const s = Math.min(200, Math.max(1, Number(size) || 25));
     const from = (p - 1) * s;
     const to = from + s - 1;
-    query = query.range(from, to);
-    applied.range = `${from}-${to}`;
 
-    // Execute
-    const { data, error, count } = await query;
+    // Columns in your "candidates" table (adjust if your names differ)
+    const cols = [
+      'id',
+      'first_name',
+      'last_name',
+      'email',
+      'phone',
+      'job_title',
+      'pay_type',
+      'status',
+      'payroll_ref',
+      'address',
+      'bank_name',
+      'bank_sort',
+      'bank_account',
+      'iban',
+      'swift',
+      'created_at',
+      'updated_at',
+    ].join(',');
+
+    let q1 = supabase.from('candidates').select(cols, { count: 'exact' });
+
+    // filters
+    if (q?.trim()) {
+      // global search (safe OR)
+      const like = `%${q.trim()}%`;
+      q1 = q1.or(
+        [
+          `first_name.ilike.${like}`,
+          `last_name.ilike.${like}`,
+          `email.ilike.${like}`,
+          `phone.ilike.${like}`,
+        ].join(',')
+      );
+    }
+    if (type)    q1 = q1.eq('pay_type', type);
+    if (status)  q1 = q1.eq('status', status);
+    if (job)     q1 = q1.ilike('job_title', `%${job}%`);
+    if (emailHas) q1 = q1.ilike('email', `%${emailHas}%`);
+
+    // sort
+    const key = (sort?.key || 'first_name');
+    const dir = (String(sort?.dir || 'asc').toLowerCase() === 'desc') ? false : true;
+    q1 = q1.order(key, { ascending: dir, nullsFirst: true });
+
+    // paging
+    q1 = q1.range(from, to);
+
+    const { data: rows, error, count } = await q1;
     if (error) throw error;
 
     const total = count || 0;
-    const filtered = count || 0;
+    const filtered = total;               // because we asked for count after filters
     const pages = Math.max(1, Math.ceil(filtered / s));
 
-    // Prepare rows; add a computed full_name for convenience (UI can ignore if not needed)
-    const rows = (data || []).map(r => ({
-      ...r,
-      full_name: [r.first_name, r.last_name].filter(Boolean).join(' ')
-    }));
-
-    const body = {
-      rows,
-      total,
-      filtered,
-      pages,
-      page: p,
-      size: s
-    };
-
-    if (debug) {
-      body._debug = {
-        email: ctx.user?.email || null,
-        isAdmin: ctx.isAdmin === true,
-        applied
-      };
-    }
+    if (dbg) console.log('[cands:list] rows:', rows?.length || 0, 'total:', total, 'filtered:', filtered, 'pages:', pages);
 
     return {
       statusCode: 200,
-      body: JSON.stringify(body)
+      body: JSON.stringify({ rows: rows || [], total, filtered, pages, page: p }),
     };
   } catch (e) {
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
+    const status = e.code === 401 || e.code === 403 ? e.code : 500;
+    console.error('[cands:list] error:', e.message || e);
+    return { statusCode: Number(status), body: JSON.stringify({ error: e.message || String(e) }) };
   }
 };
