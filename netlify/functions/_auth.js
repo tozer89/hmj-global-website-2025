@@ -21,33 +21,49 @@ function decodeRolesFromJWT(bearer) {
 
 function getSupabaseAdmin() {
   const url = (process.env.SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_KEY || '').trim();
+  const key =
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '').trim();
   if (!url) throw coded(500, 'SUPABASE_URL missing');
-  if (!key) throw coded(500, 'SUPABASE_SERVICE_KEY missing');
+  if (!key) throw coded(500, 'SUPABASE_SERVICE_ROLE_KEY missing');
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
 /**
- * Unified context fetcher.
- * - Returns: { user, roles, supabase }
- * - Throws: 401 when no user / not admin (if opts.requireAdmin)
+ * getContext(event, context, { requireAdmin?: boolean, debug?: boolean })
+ * Returns: { user, roles, supabase, isAdmin }
+ * Throws: 401 (no token), 403 (not admin when required)
  */
-exports.getContext = async (netlifyContext, opts = {}) => {
+exports.getContext = async (event, context, opts = {}) => {
   const supabase = getSupabaseAdmin();
 
-  const user = netlifyContext?.clientContext?.user;
-  if (!user) throw coded(401, 'Unauthorized');
+  const bearer =
+    event?.headers?.authorization ||
+    context?.headers?.authorization ||
+    '';
 
-  const headerAuth = netlifyContext?.headers?.authorization || '';
-  const rolesFromHeader = decodeRolesFromJWT(headerAuth);
-  const rolesFromContext = user.app_metadata?.roles || user.roles || [];
+  const user = context?.clientContext?.user || null;
+
+  const rolesFromHeader = decodeRolesFromJWT(bearer);
+  const rolesFromContext = user?.app_metadata?.roles || user?.roles || [];
   const roles = Array.from(new Set([...rolesFromContext, ...rolesFromHeader]));
 
-  if (opts.requireAdmin && !roles.includes('admin')) {
-    throw coded(401, 'Forbidden'); // 401 only for auth/role issues
+  const allowEmails = new Set(
+    (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const email = (user?.email || '').toLowerCase();
+  const isAdmin = allowEmails.has(email) || roles.includes('admin') || roles.includes('superadmin');
+
+  if (opts.debug) {
+    console.log('[auth] email:', email, 'roles:', roles, 'allowlist:', [...allowEmails], 'isAdmin:', isAdmin);
   }
 
-  return { user, roles, supabase };
+  if (!user) throw coded(401, 'Unauthorized');
+  if (opts.requireAdmin && !isAdmin) throw coded(403, 'Forbidden');
+
+  return { user, roles, supabase, isAdmin };
 };
 
 exports.coded = coded;
