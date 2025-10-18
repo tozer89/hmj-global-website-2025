@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Candidates — Admin | HMJ-Global</title>
 
-<!-- Netlify Identity + shared admin helpers (keep these) -->
+<!-- Netlify Identity + shared admin helpers -->
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script defer src="/admin/common.js"></script>
 
@@ -15,7 +15,7 @@
   /* ===== HMJ Admin — Candidates ===== */
   :root{
     --bg:#0b0f18; --panel:#111827; --border:#252f3f; --ink:#e6eef7; --muted:#9fb0c9;
-    --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --accent-2:#4b7ae0; --danger:#ff6b6b; --ok:#22c55e; --warn:#fbbf24;
+    --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --danger:#ff6b6b; --ok:#22c55e;
   }
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
@@ -36,7 +36,6 @@
   .btn.accent{background:var(--accent);border-color:#4262a6}
   .btn.danger{background:#3b1b22;border-color:#5a2a33}
 
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .pills{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .pill{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:10px 14px;min-width:90px;text-align:center}
   .pill b{font-size:20px;display:block}
@@ -52,30 +51,32 @@
   thead th.sortable .arrow{opacity:.35;margin-left:6px}
   thead th.sortable.active .arrow{opacity:1}
   tbody tr:hover{background:#0e1629}
-  tbody td:last-child{ text-align:right }
+  tbody td:last-child{text-align:right}
 
   .badge{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
   .status-ok{background:#0e2a1e;border-color:#1e6646;color:#b9f6d0}
   .status-warn{background:#33220f;border-color:#8a5b25;color:#ffe8b3}
   .status-bad{background:#2a1214;border-color:#6a2b2f;color:#ffc7c7}
 
-  .inline{display:flex;gap:8px;flex-wrap:wrap}
   .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
   .editor-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
   .editor-grid .field{display:flex;flex-direction:column}
-  .editor-grid .field input,.editor-grid .field select{width:100%}
   .editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-
   .hint{font-size:12px;color:var(--muted)}
-  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#121a2c;border:1px solid #27324d;padding:2px 6px;border-radius:6px}
 
-  /* toast + banner */
+  /* toast + error banner */
   #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
   #toast .toast{background:#0f172a;color:#e6edf6;border:1px solid #233044;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   #toast .toast.error{border-color:#5b2b2b;background:#221216}
   #toast .toast.ok{border-color:#1f5433;background:#0f1c17}
-
   #error-banner{display:none;background:#221216;border:1px solid #5b2b2b;color:#ffd8d8;padding:10px 12px;border-radius:10px}
+
+  /* mini debug console */
+  #dbg{position:fixed;left:16px;bottom:16px;max-width:40vw;min-width:320px;max-height:42vh;
+       display:none;flex-direction:column;gap:8px;z-index:9999}
+  #dbg .hdr{display:flex;gap:8px;align-items:center}
+  #dbg .pane{background:#0f172a;border:1px solid #233044;border-radius:10px;padding:8px;overflow:auto}
+  #dbg pre{white-space:pre-wrap;margin:0;font:12px ui-monospace, SFMono-Regular, Menlo, monospace;color:#cfe3ff}
 
   .loading{display:inline-flex;gap:8px;align-items:center}
   .dot{width:6px;height:6px;border-radius:50%;background:#7d8bb3;opacity:.6;animation:ld 1.2s infinite}
@@ -94,15 +95,15 @@
   <div class="top"><div class="row">
     <div class="brand">Candidates — Admin</div><div class="sp"></div>
     <a class="btn ghost" href="/admin/">⟵ Admin home</a>
-    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+    <button class="btn" onclick="netlifyIdentity && netlifyIdentity.logout()">Sign out</button>
   </div></div>
 
-  <!-- gate (non-admin / not signed-in) -->
+  <!-- gate -->
   <div class="wrap" id="gate" style="display:none">
     <div class="card">
       <strong>Admin only.</strong>
       <p class="why muted" style="margin:6px 0 12px"></p>
-      <button class="btn accent" onclick="netlifyIdentity?.open('login')">Log in</button>
+      <button class="btn accent" onclick="netlifyIdentity && netlifyIdentity.open('login')">Log in</button>
     </div>
   </div>
 
@@ -117,13 +118,14 @@
         <div class="pill"><b id="kPage">1/1</b>Page</div>
         <div class="sp"></div>
         <div class="inline">
-          <button class="btn" id="btnRefresh" title="R"><span>Refresh</span></button>
-          <button class="btn accent" id="btnNew" title="N"><span>New candidate</span></button>
-          <button class="btn" id="btnExport"><span>Export CSV</span></button>
-          <button class="btn" id="btnEmails" title="Copy filtered emails"><span>📧 Email list</span></button>
+          <button class="btn" id="btnRefresh" title="R">Refresh</button>
+          <button class="btn accent" id="btnNew" title="N">New candidate</button>
+          <button class="btn" id="btnExport">Export CSV</button>
+          <button class="btn" id="btnEmails" title="Copy filtered emails">📧 Email list</button>
+          <button class="btn" id="btnDebug">Debug</button>
         </div>
       </div>
-      <div id="error-banner" class="m-top"></div>
+      <div id="error-banner"></div>
     </div>
 
     <!-- filters -->
@@ -198,382 +200,478 @@
 
   <div id="toast"></div>
 
-<!-- ===== Page script ===== -->
-<script>
-/* ----------------------------------------------------------------------------
-   Safe mini-helpers (work even if /admin/common.js is not loaded)
----------------------------------------------------------------------------- */
-(function(){
-  // $ and $$ helpers
-  window.$  = (s, root=document) => root.querySelector(s);
-  window.$$ = (s, root=document) => [...root.querySelectorAll(s)];
+  <!-- mini debug console -->
+  <div id="dbg">
+    <div class="hdr">
+      <button id="dbg-close" class="btn">Close debug</button>
+      <div class="sp"></div>
+      <label class="hint"><input id="dbg-verbose" type="checkbox"> verbose</label>
+    </div>
+    <div class="pane"><pre id="dbg-log"></pre></div>
+  </div>
 
-  // Null-safe counters
-  window.setNum = (idOrSel, val)=>{
-    const el = (idOrSel.startsWith('#') || idOrSel.startsWith('.')) ? $(idOrSel) : $(`#${idOrSel}`);
-    if(!el){ console.warn('Counter element not found:', idOrSel); return; }
+<script>
+/* ============================================================================
+   DEBUGGING UTILITIES (panel + console mirroring)
+============================================================================ */
+(function(){
+  const dbg = document.getElementById('dbg');
+  const pre = document.getElementById('dbg-log');
+  const verboseChk = document.getElementById('dbg-verbose');
+  const btnClose = document.getElementById('dbg-close');
+  const btnOpen = document.getElementById('btnDebug');
+
+  function ts(){ const d=new Date(); return d.toISOString().split('T')[1].slice(0,12); }
+  function line(kind, msg, data){
+    const base = `[${ts()}] ${kind}: ${msg}`;
+    const full = data ? (base + '\n' + JSON.stringify(data, null, 2)) : base;
+    pre.textContent = pre.textContent ? (pre.textContent + '\n' + full) : full;
+    pre.scrollTop = pre.scrollHeight;
+    // Mirror to browser console too
+    if (kind === 'ERR') console.error(msg, data || '');
+    else if (kind === 'WARN') console.warn(msg, data || '');
+    else console.log(msg, data || '');
+  }
+
+  window.__dbg = {
+    show: function(){ dbg.style.display='flex'; },
+    hide: function(){ dbg.style.display='none'; },
+    log: function(msg, data){ line('LOG', msg, data || null); },
+    warn: function(msg, data){ line('WARN', msg, data || null); },
+    err: function(msg, data){ line('ERR', msg, data || null); },
+    verbose: function(){ return !!verboseChk.checked; }
+  };
+
+  btnClose.addEventListener('click', function(){ __dbg.hide(); });
+  btnOpen.addEventListener('click', function(){ __dbg.show(); });
+
+  // expose small toast
+  const toastHost = document.getElementById('toast');
+  window.toast = function(msg, kind){
+    const t = document.createElement('div');
+    t.className = 'toast' + (kind ? ' ' + kind : '');
+    t.textContent = msg;
+    toastHost.appendChild(t);
+    setTimeout(function(){ t.style.opacity = '0'; t.style.transform='translateY(3px)'; }, 2600);
+    setTimeout(function(){ t.remove(); }, 3000);
+  };
+})();
+
+/* ============================================================================
+   SAFE DOM HELPERS
+============================================================================ */
+(function(){
+  window.$  = function(s, root){ return (root||document).querySelector(s); };
+  window.$$ = function(s, root){ return Array.prototype.slice.call((root||document).querySelectorAll(s)); };
+
+  window.setNum = function(idOrSel, val){
+    var el = (idOrSel.charAt(0)==='#' || idOrSel.charAt(0)==='.') ? $(idOrSel) : $('#'+idOrSel);
+    if(!el){ __dbg.warn('Counter el missing', { idOrSel:idOrSel, value:val }); return; }
     el.textContent = String(val);
   };
 
-  // Toasts
-  const toastHost = $('#toast');
-  let toastSeq = 0;
-  window.toast = (msg, kind=''){ // kind: '', 'error', 'ok'
-    const t = document.createElement('div');
-    t.className = `toast ${kind}`;
-    t.textContent = msg;
-    const id = ++toastSeq;
-    t.dataset.id = id;
-    toastHost.appendChild(t);
-    setTimeout(()=>{ t.style.opacity = '0'; t.style.transform='translateY(3px)'; }, 2600);
-    setTimeout(()=>{ t.remove(); }, 3000);
-  };
-
-  // Error banner helpers
-  window.showErrorBanner = (msg)=>{
-    const el = $('#error-banner'); if(!el) return;
-    el.textContent = `Error: ${msg}`;
+  window.showErrorBanner = function(msg){
+    var el = $('#error-banner'); if(!el) return;
+    el.textContent = 'Error: ' + String(msg||'');
     el.style.display = 'block';
   };
-  window.hideErrorBanner = ()=>{
-    const el = $('#error-banner'); if(!el) return;
+  window.hideErrorBanner = function(){
+    var el = $('#error-banner'); if(!el) return;
     el.style.display = 'none';
   };
 
-  // Debounce
-  window.debounce = (fn, ms=300)=>{
-    let t=null; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+  window.debounce = function(fn, ms){
+    var t=null; return function(){ var a=arguments; clearTimeout(t); t=setTimeout(function(){ fn.apply(null,a); }, ms||300); };
   };
+})();
 
-  // API wrapper; prefers /admin/common.js if present
-  window.apiCall = async (path, method='POST', body=null)=>{
-    // if /admin/common.js injected a helper, prefer it
-    if (window.__adminApiFetch) return __adminApiFetch(path, method, body);
-    // fallback local helper: call Netlify Function (with Identity JWT if available)
-    const url = `/.netlify/functions${path.startsWith('/')?path:`/${path}`}`;
-    const headers = {'Content-Type':'application/json'};
-    try{
-      const user = netlifyIdentity?.currentUser?.();
-      if (user) {
-        const token = await user.jwt();
-        headers['Authorization'] = `Bearer ${token}`;
+/* ============================================================================
+   API CALL (uses /admin/common.js if provided, else local fetch)
+============================================================================ */
+(function(){
+  function normalizePath(path){
+    return path.charAt(0)==='/' ? path : '/'+path;
+  }
+
+  window.apiCall = async function(path, method, body){
+    path = normalizePath(path);
+    method = method || 'POST';
+    var url = '/.netlify/functions' + path;
+
+    __dbg.log('API build request', { url:url, method:method, body:body });
+
+    // prefer the project’s helper if available
+    if (window.__adminApiFetch) {
+      try{
+        var data = await __adminApiFetch(path, method, body);
+        __dbg.log('API via common.js OK', data);
+        return data;
+      }catch(e1){
+        __dbg.err('API via common.js failed, fallback to local fetch', { error:String(e1) });
       }
-    }catch(_){}
-    const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body):undefined });
-    if(!res.ok){
-      let msg = `HTTP ${res.status}`;
-      try{ const t = await res.text(); msg = t || msg; }catch(_){}
-      throw new Error(msg);
     }
-    const type = res.headers.get('content-type')||'';
-    return type.includes('application/json') ? res.json() : res.text();
-  };
 
-  // Gate (admin only) — prefer common.js if it provided a gate
-  window.__adminGate = async ()=>{
-    if (window.__ensureAdmin) return __ensureAdmin(); // from common.js
-    // else simple default: require logged in user
-    return new Promise(resolve=>{
-      const showGate = (why)=>{
-        $('#app').style.display='none';
-        $('#gate').style.display='';
-        $('.why').textContent = why;
-      };
-      const showApp = ()=>{
+    var headers = { 'Content-Type':'application/json' };
+    try{
+      if (window.netlifyIdentity && netlifyIdentity.currentUser) {
+        var u = netlifyIdentity.currentUser();
+        if (u && u.jwt) {
+          var token = await u.jwt();
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+      }
+    }catch(e){ __dbg.warn('JWT attach failed', String(e)); }
+
+    var res;
+    try{
+      res = await fetch(url, { method:method, headers:headers, body: body ? JSON.stringify(body) : undefined });
+      __dbg.log('Fetch complete', { status:res.status, ok:res.ok });
+    }catch(e2){
+      __dbg.err('Network error', String(e2));
+      throw e2;
+    }
+
+    if (!res.ok) {
+      var txt;
+      try{ txt = await res.text(); }catch(_){}
+      __dbg.err('HTTP not OK', { status:res.status, body:txt||'' });
+      throw new Error(txt || ('HTTP '+res.status));
+    }
+
+    var ctype = res.headers.get('content-type') || '';
+    var payload = ctype.indexOf('application/json')>=0 ? await res.json() : await res.text();
+    __dbg.log('API payload', payload);
+    return payload;
+  };
+})();
+
+/* ============================================================================
+   ADMIN GATE (simple fallback if common.js absent)
+============================================================================ */
+(function(){
+  window.__adminGate = async function(){
+    __dbg.log('Gate: start');
+    if (window.__ensureAdmin) {
+      __dbg.log('Gate: using common.js __ensureAdmin');
+      return __ensureAdmin();
+    }
+
+    return new Promise(function(resolve){
+      try{
+        var u = window.netlifyIdentity && netlifyIdentity.currentUser ? netlifyIdentity.currentUser() : null;
+        if (!u) {
+          __dbg.warn('Gate: no user, showing gate');
+          $('#app').style.display='none';
+          $('#gate').style.display='';
+          $('.why').textContent = 'Please log in with an admin account.';
+          resolve(); // keep promise resolved; UI shows gate
+          return;
+        }
+        __dbg.log('Gate: user found', { email:u.email });
         $('#gate').style.display='none';
         $('#app').style.display='';
         resolve();
-      };
-      try{
-        const u = netlifyIdentity?.currentUser?.();
-        if (!u) { showGate('Please log in with an admin account.'); return; }
-        showApp();
       }catch(e){
-        showGate('Login required.');
+        __dbg.err('Gate error', String(e));
+        $('#app').style.display='none';
+        $('#gate').style.display='';
+        resolve();
       }
     });
   };
 })();
 
-/* ----------------------------------------------------------------------------
-   Main App
----------------------------------------------------------------------------- */
-(async function(){
-  // Wait for Identity to be ready (helps when reloading)
-  document.addEventListener('DOMContentLoaded', start);
-  async function start(){
-    await __adminGate();       // admin or login
-    appMain();                 // boot
+/* ============================================================================
+   MAIN APP
+============================================================================ */
+document.addEventListener('DOMContentLoaded', function(){
+  start().catch(function(e){
+    __dbg.err('Fatal boot error', String(e));
+    showErrorBanner('Boot failed: ' + String(e));
+  });
+});
+
+async function start(){
+  await __adminGate();          // render app or show login gate
+  if ($('#app').style.display === 'none') { return; } // not signed in
+
+  appMain();
+}
+
+function appMain(){
+  __dbg.log('App: init');
+
+  // ===== state =====
+  var page = Number(localStorage.cand_page||1)||1;
+  var size = Number(localStorage.cand_size||25)||25;
+  var pages = 1;
+  var cur = null;
+  var lastRows = [];
+  var sort = JSON.parse(localStorage.cand_sort || '{"key":"name","dir":"asc"}');
+
+  // ===== els =====
+  var listWrap = $('#listWrap');
+  var ed = $('#editor');
+
+  // hydrate saved filters
+  var filters = {};
+  try{ filters = JSON.parse(localStorage.cand_filters || '{}'); }catch(_){}
+  $('#q').value         = filters.q || '';
+  $('#fType').value     = filters.type || '';
+  $('#fStatus').value   = filters.status || '';
+  $('#fJob').value      = filters.job || '';
+  $('#fEmailHas').value = filters.emailHas || '';
+  $('#pageSize').value  = String(size);
+
+  // ===== helpers =====
+  function qv(sel){ return $(sel).value.trim(); }
+  function saveFilters(){
+    var f = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas') };
+    localStorage.cand_filters = JSON.stringify(f);
+  }
+  function saveSort(){ localStorage.cand_sort = JSON.stringify(sort); }
+  function setPageMeta(){
+    setNum('#pgNow', page);
+    setNum('#pgMax', pages);
+    $('#kPage').textContent = page + '/' + pages;
   }
 
-  async function appMain(){
-    // ===== state =====
-    let page=Number(localStorage.cand_page||1)||1;
-    let size=Number(localStorage.cand_size||25)||25;
-    let pages=1;
-    let cur=null;             // current record in editor
-    let lastRows=[];          // rows on screen
-    let sort = JSON.parse(localStorage.cand_sort || '{"key":"name","dir":"asc"}');
+  var headCols = [
+    { key:'id',        label:'ID',      w:88  },
+    { key:'name',      label:'Name',    w:240 },
+    { key:'email',     label:'Email',   w:260 },
+    { key:'phone',     label:'Phone',   w:160 },
+    { key:'pay_type',  label:'Type',    w:170 },
+    { key:'status',    label:'Status',  w:140 },
+    { key:'actions',   label:'',        w:120, noSort:true }
+  ];
 
-    // ===== element refs =====
-    const listWrap = $('#listWrap');
-    const ed = $('#editor');
+  function statusBadge(s){
+    var t = (s||'').toLowerCase();
+    var cls = (t==='complete') ? 'status-ok' : (t==='in progress') ? 'status-warn' : 'status-bad';
+    return '<span class="badge ' + cls + '">' + (s||'—') + '</span>';
+  }
+  function typeBadge(t){ return '<span class="badge">' + (t||'—') + '</span>'; }
 
-    // hydrate saved filters
-    const filters = JSON.parse(localStorage.cand_filters || '{}');
-    $('#q').value         = filters.q || '';
-    $('#fType').value     = filters.type || '';
-    $('#fStatus').value   = filters.status || '';
-    $('#fJob').value      = filters.job || '';
-    $('#fEmailHas').value = filters.emailHas || '';
-    $('#pageSize').value  = String(size);
+  function renderRows(rows){
+    lastRows = rows;
 
-    // ===== small helpers =====
-    const qv = (sel)=> $(sel).value.trim();
-    const saveFilters = ()=>{
-      const f = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas') };
-      localStorage.cand_filters = JSON.stringify(f);
-    };
-    const saveSort = ()=> localStorage.cand_sort = JSON.stringify(sort);
-    const setPageMeta = ()=>{
-      setNum('#pgNow', page);
-      setNum('#pgMax', pages);
-      $('#kPage').textContent = `${page}/${pages}`;
-    };
-
-    const headCols = [
-      { key:'id',        label:'ID',        w:88  },
-      { key:'name',      label:'Name',      w:240 },
-      { key:'email',     label:'Email',     w:260 },
-      { key:'phone',     label:'Phone',     w:160 },
-      { key:'pay_type',  label:'Type',      w:170 },
-      { key:'status',    label:'Status',    w:140 },
-      { key:'actions',   label:'',          w:120, noSort:true },
-    ];
-
-    function statusBadge(s){
-      const t=(s||'').toLowerCase();
-      const cls = t==='complete' ? 'status-ok' : t==='in progress' ? 'status-warn' : 'status-bad';
-      const label = s || '—';
-      return `<span class="badge ${cls}">${label}</span>`;
-    }
-    function typeBadge(t){ return `<span class="badge">${t||'—'}</span>`; }
-
-    // ===== rendering =====
-    function renderRows(rows){
-      lastRows = rows;
-
-      if(!rows?.length){
-        listWrap.innerHTML = `<div class="muted">No candidates.</div>`;
-        return;
-      }
-
-      // header
-      const thead = `
-        <thead>
-          <tr>
-            ${headCols.map(c=>{
-              const arrow = c.noSort ? '' : `<span class="arrow">${(sort.key===c.key? (sort.dir==='asc'?'▲':'▼') : '↕')}</span>`;
-              const cls = c.noSort ? '' : `sortable ${sort.key===c.key ? 'active':''}`;
-              const style = c.w?`style="width:${c.w}px"`:'';
-              return `<th ${style} data-key="${c.key}" class="${cls}">${c.label}${arrow}</th>`;
-            }).join('')}
-          </tr>
-        </thead>`;
-
-      // body
-      const tbody = `
-        <tbody>
-          ${rows.map(r=>{
-            const name = [r.first_name,r.last_name].filter(Boolean).join(' ') || '—';
-            const email = r.email || '—';
-            const phone = r.phone || '—';
-            return `
-              <tr>
-                <td>${r.id}</td>
-                <td>${name}</td>
-                <td>${email}</td>
-                <td>${phone}</td>
-                <td>${typeBadge(r.pay_type)}</td>
-                <td>${statusBadge(r.status)}</td>
-                <td>
-                  <div class="inline" style="justify-content:flex-end">
-                    <button class="btn" data-open="${r.id}">Open</button>
-                  </div>
-                </td>
-              </tr>`;
-          }).join('')}
-        </tbody>`;
-
-      listWrap.innerHTML = `<table>${thead}${tbody}</table>`;
-
-      // row actions
-      listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEd(Number(b.dataset.open)));
-
-      // sorting
-      $$('#listWrap thead th.sortable').forEach(th=>{
-        th.onclick = ()=>{
-          const key = th.dataset.key;
-          if (sort.key===key) sort.dir = (sort.dir==='asc'?'desc':'asc'); else { sort.key=key; sort.dir='asc'; }
-          saveSort();
-          loadList(); // reload with sort applied server-side (or resort client-side if server ignores)
-        };
-      });
+    if(!rows || !rows.length){
+      listWrap.innerHTML = '<div class="muted">No candidates.</div>';
+      return;
     }
 
-    // ===== API =====
-    async function loadList(){
-      hideErrorBanner();
-      listWrap.innerHTML = `<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>`;
-      try{
-        const body = {
-          q: qv('#q'),
-          type: qv('#fType'),
-          status: qv('#fStatus'),
-          job: qv('#fJob'),
-          emailHas: qv('#fEmailHas'),
-          page, size,
-          sort // { key, dir } – your Netlify function can use this
-        };
+    var thead = '<thead><tr>' + headCols.map(function(c){
+      var arrow = c.noSort ? '' : '<span class="arrow">' + (sort.key===c.key ? (sort.dir==='asc'?'▲':'▼') : '↕') + '</span>';
+      var cls = c.noSort ? '' : ('sortable ' + (sort.key===c.key ? 'active':''));
+      var style = c.w ? ('style="width:'+c.w+'px"') : '';
+      return '<th '+style+' data-key="'+c.key+'" class="'+cls+'">'+c.label+arrow+'</th>';
+    }).join('') + '</tr></thead>';
 
-        // IMPORTANT: endpoint name is plural (matches file admin-candidates-lists.js)
-        const res = await apiCall('/admin-candidates-lists','POST', body);
+    var tbody = '<tbody>' + rows.map(function(r){
+      var name = [r.first_name,r.last_name].filter(Boolean).join(' ') || '—';
+      var email = r.email || '—';
+      var phone = r.phone || '—';
+      return (
+        '<tr>' +
+          '<td>'+r.id+'</td>' +
+          '<td>'+name+'</td>' +
+          '<td>'+email+'</td>' +
+          '<td>'+phone+'</td>' +
+          '<td>'+typeBadge(r.pay_type)+'</td>' +
+          '<td>'+statusBadge(r.status)+'</td>' +
+          '<td><div class="inline" style="justify-content:flex-end"><button class="btn" data-open="'+r.id+'">Open</button></div></td>' +
+        '</tr>'
+      );
+    }).join('') + '</tbody>';
 
-        // tolerate either array or paged object
-        const rows = Array.isArray(res) ? res : (res.rows || []);
-        const total = res.total ?? rows.length;
-        const filtered = res.filtered ?? rows.length;
-        pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size)||1));
-        if(page>pages) page=pages;
+    listWrap.innerHTML = '<table>'+thead+tbody+'</table>';
 
-        setNum('#kTotal', total);
-        setNum('#kFiltered', filtered);
-        setPageMeta();
+    // row actions
+    $$('#listWrap button[data-open]').forEach(function(b){
+      b.onclick = function(){ openEd(Number(b.getAttribute('data-open'))); };
+    });
 
-        renderRows(rows);
-      }catch(e){
-        console.error(e);
-        showErrorBanner(e.message || 'Error');
-        listWrap.innerHTML = `<div style="color:#ffb4b4">Error: ${e.message||e}</div>`;
-      }
-    }
-
-    function setEd(c){
-      $('#edTitle').textContent = c?.id ? `Candidate #${c.id}` : 'New candidate';
-      $('#edFirst').value   = c.first_name||'';
-      $('#edLast').value    = c.last_name||'';
-      $('#edEmail').value   = c.email||'';
-      $('#edPhone').value   = c.phone||'';
-      $('#edJob').value     = c.job_title||'';
-      $('#edType').value    = c.pay_type||'Umbrella';
-      $('#edStatus').value  = c.status||'In progress';
-      $('#edPayroll').value = c.payroll_ref||'';
-      $('#edAddress').value = c.address||'';
-    }
-    function getEd(){
-      return {
-        id: cur?.id || undefined,
-        first_name: qv('#edFirst')||null,
-        last_name:  qv('#edLast')||null,
-        email:      qv('#edEmail')||null,
-        phone:      qv('#edPhone')||null,
-        job_title:  qv('#edJob')||null,
-        pay_type:   qv('#edType')||null,
-        status:     qv('#edStatus')||null,
-        payroll_ref:qv('#edPayroll')||null,
-        address:    qv('#edAddress')||null
+    // sorting
+    $$('#listWrap thead th.sortable').forEach(function(th){
+      th.onclick = function(){
+        var key = th.getAttribute('data-key');
+        if (sort.key===key) sort.dir = (sort.dir==='asc'?'desc':'asc'); else { sort.key=key; sort.dir='asc'; }
+        saveSort();
+        loadList();
       };
-    }
-
-    async function openEd(id){
-      hideErrorBanner();
-      try{
-        cur = id ? await apiCall('/admin-candidates-get','POST',{ id }) : { status:'In progress', pay_type:'Umbrella' };
-        setEd(cur);
-        ed.style.display = '';
-        ed.scrollIntoView({behavior:'smooth',block:'start'});
-        $('#edFirst').focus();
-      }catch(e){
-        toast('Open failed: '+(e.message||e), 'error');
-      }
-    }
-
-    // ===== events =====
-    const doSearch = debounce(()=>{ page=1; saveFilters(); loadList(); }, 350);
-
-    $('#btnRefresh').onclick = ()=> { loadList(); };
-    $('#q').addEventListener('input', doSearch);
-    ['#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
-      $(sid).addEventListener('change', ()=>{ page=1; saveFilters(); loadList(); });
-      $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; saveFilters(); loadList(); }});
     });
-
-    $('#pgPrev').onclick = ()=>{ if(page>1){ page--; localStorage.cand_page=page; loadList(); } };
-    $('#pgNext').onclick = ()=>{ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } };
-    $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
-
-    $('#btnNew').onclick  = ()=> openEd(null);
-    $('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
-
-    $('#btnSave').onclick = async ()=>{
-      try{
-        const data = getEd();
-        const saved = await apiCall('/admin-candidates-save','POST', data);
-        toast('Saved','ok');
-        ed.style.display='none';
-        page=1;
-        await loadList();
-        if(saved?.id) openEd(saved.id);
-      }catch(e){ toast('Save failed: '+(e.message||e),'error'); }
-    };
-
-    $('#btnDelete').onclick = async ()=>{
-      if(!cur?.id) return toast('Nothing to delete','error');
-      if(!confirm('Delete this candidate?')) return;
-      try{
-        await apiCall('/admin-candidates-delete','POST',{ id: cur.id });
-        toast('Deleted','ok');
-        ed.style.display='none';
-        await loadList();
-      }catch(e){ toast('Delete failed: '+(e.message||e),'error'); }
-    };
-
-    $('#btnEmails').onclick = ()=>{
-      const emails = lastRows.map(r=>r.email).filter(Boolean);
-      if(!emails.length) return toast('No emails in current list','error');
-      navigator.clipboard?.writeText(emails.join(', '));
-      toast(`Copied ${emails.length} email(s)`,'ok');
-    };
-
-    $('#btnExport').onclick = ()=>{
-      const rows = lastRows;
-      if(!rows.length){ toast('Nothing to export','error'); return; }
-      const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref'];
-      const head = cols.join(',');
-      const csv = [head].concat(rows.map(r=> cols.map(k=>{
-        const v = r[k] ?? '';
-        const s = String(v).replace(/"/g,'""');
-        return `"${s}"`;
-      }).join(','))).join('\n');
-      const blob = new Blob([csv],{type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url), 5000);
-    };
-
-    // keyboard shortcuts
-    document.addEventListener('keydown',(e)=>{
-      if(e.key==='/'){ e.preventDefault(); $('#q').focus(); return; }
-      if(e.key==='r' || e.key==='R'){ e.preventDefault(); loadList(); return; }
-      if(e.key==='n' || e.key==='N'){ e.preventDefault(); openEd(null); return; }
-      if(e.key==='ArrowLeft'){ if(page>1){ page--; localStorage.cand_page=page; loadList(); } }
-      if(e.key==='ArrowRight'){ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } }
-    });
-
-    // initial load
-    await loadList();
   }
-})();
+
+  async function loadList(){
+    hideErrorBanner();
+    listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
+    try{
+      var body = {
+        q: qv('#q'),
+        type: qv('#fType'),
+        status: qv('#fStatus'),
+        job: qv('#fJob'),
+        emailHas: qv('#fEmailHas'),
+        page: page,
+        size: size,
+        sort: sort
+      };
+
+      __dbg.log('List: request body', body);
+
+      // IMPORTANT: function file is plural (admin-candidates-lists.js)
+      var res = await apiCall('/admin-candidates-lists','POST', body);
+
+      // allow array or paged object
+      var rows = Array.isArray(res) ? res : (res.rows || []);
+      var total = (typeof res.total === 'number') ? res.total : rows.length;
+      var filtered = (typeof res.filtered === 'number') ? res.filtered : rows.length;
+      pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size) || 1));
+      if(page>pages) page=pages;
+
+      setNum('#kTotal', total);
+      setNum('#kFiltered', filtered);
+      setPageMeta();
+
+      __dbg.log('List: meta', { total:total, filtered:filtered, pages:pages, page:page });
+      renderRows(rows);
+    }catch(e){
+      __dbg.err('List: load failed', String(e));
+      showErrorBanner(e.message || 'Error');
+      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message||e)+'</div>';
+    }
+  }
+
+  function setEd(c){
+    $('#edTitle').textContent = c && c.id ? ('Candidate #'+c.id) : 'New candidate';
+    $('#edFirst').value   = (c && c.first_name) || '';
+    $('#edLast').value    = (c && c.last_name) || '';
+    $('#edEmail').value   = (c && c.email) || '';
+    $('#edPhone').value   = (c && c.phone) || '';
+    $('#edJob').value     = (c && c.job_title) || '';
+    $('#edType').value    = (c && c.pay_type) || 'Umbrella';
+    $('#edStatus').value  = (c && c.status) || 'In progress';
+    $('#edPayroll').value = (c && c.payroll_ref) || '';
+    $('#edAddress').value = (c && c.address) || '';
+  }
+  function getEd(){
+    return {
+      id: cur && cur.id ? cur.id : undefined,
+      first_name: qv('#edFirst')||null,
+      last_name:  qv('#edLast')||null,
+      email:      qv('#edEmail')||null,
+      phone:      qv('#edPhone')||null,
+      job_title:  qv('#edJob')||null,
+      pay_type:   qv('#edType')||null,
+      status:     qv('#edStatus')||null,
+      payroll_ref:qv('#edPayroll')||null,
+      address:    qv('#edAddress')||null
+    };
+  }
+
+  async function openEd(id){
+    hideErrorBanner();
+    try{
+      if (id) {
+        __dbg.log('Editor: loading record', { id:id });
+        cur = await apiCall('/admin-candidates-get','POST',{ id:id });
+      } else {
+        cur = { status:'In progress', pay_type:'Umbrella' };
+      }
+      setEd(cur);
+      ed.style.display = '';
+      ed.scrollIntoView({behavior:'smooth',block:'start'});
+      $('#edFirst').focus();
+    }catch(e){
+      __dbg.err('Editor: open failed', String(e));
+      toast('Open failed: '+(e.message||e), 'error');
+    }
+  }
+
+  // ===== events =====
+  var doSearch = debounce(function(){ page=1; saveFilters(); loadList(); }, 350);
+
+  $('#btnRefresh').onclick = function(){ loadList(); };
+  $('#q').addEventListener('input', doSearch);
+  ['#fType','#fStatus','#fJob','#fEmailHas'].forEach(function(sid){
+    $(sid).addEventListener('change', function(){ page=1; saveFilters(); loadList(); });
+    $(sid).addEventListener('keyup',  function(e){ if(e.key==='Enter'){ page=1; saveFilters(); loadList(); } });
+  });
+
+  $('#pgPrev').onclick = function(){ if(page>1){ page--; localStorage.cand_page=page; loadList(); } };
+  $('#pgNext').onclick = function(){ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } };
+  $('#pageSize').onchange = function(){ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
+
+  $('#btnNew').onclick  = function(){ openEd(null); };
+  $('#btnClose').onclick= function(){ ed.style.display='none'; cur=null; };
+
+  $('#btnSave').onclick = async function(){
+    try{
+      var data = getEd();
+      __dbg.log('Editor: saving', data);
+      var saved = await apiCall('/admin-candidates-save','POST', data);
+      toast('Saved','ok');
+      ed.style.display='none';
+      page=1;
+      await loadList();
+      if(saved && saved.id){ openEd(saved.id); }
+    }catch(e){ toast('Save failed: '+(e.message||e),'error'); __dbg.err('Editor: save failed', String(e)); }
+  };
+
+  $('#btnDelete').onclick = async function(){
+    if(!cur || !cur.id){ toast('Nothing to delete','error'); return; }
+    if(!confirm('Delete this candidate?')) return;
+    try{
+      __dbg.log('Editor: deleting', { id:cur.id });
+      await apiCall('/admin-candidates-delete','POST',{ id: cur.id });
+      toast('Deleted','ok');
+      ed.style.display='none';
+      await loadList();
+    }catch(e){ toast('Delete failed: '+(e.message||e),'error'); __dbg.err('Editor: delete failed', String(e)); }
+  };
+
+  $('#btnEmails').onclick = function(){
+    var emails = lastRows.map(function(r){ return r.email; }).filter(Boolean);
+    if(!emails.length){ toast('No emails in current list','error'); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(emails.join(', '));
+      toast('Copied '+emails.length+' email(s)','ok');
+    } else {
+      __dbg.warn('Clipboard API not available');
+    }
+  };
+
+  $('#btnExport').onclick = function(){
+    var rows = lastRows;
+    if(!rows.length){ toast('Nothing to export','error'); return; }
+    var cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref'];
+    var head = cols.join(',');
+    var csv = [head].concat(rows.map(function(r){
+      return cols.map(function(k){
+        var v = (r[k]!==undefined && r[k]!==null) ? r[k] : '';
+        var s = String(v).replace(/"/g,'""');
+        return '"' + s + '"';
+      }).join(',');
+    })).join('\n');
+    var blob = new Blob([csv],{type:'text/csv'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  };
+
+  // keyboard shortcuts
+  document.addEventListener('keydown', function(e){
+    if(e.key==='/'){ e.preventDefault(); $('#q').focus(); return; }
+    if(e.key==='r' || e.key==='R'){ e.preventDefault(); loadList(); return; }
+    if(e.key==='n' || e.key==='N'){ e.preventDefault(); openEd(null); return; }
+    if(e.key==='ArrowLeft'){ if(page>1){ page--; localStorage.cand_page=page; loadList(); } }
+    if(e.key==='ArrowRight'){ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } }
+  });
+
+  // initial
+  loadList();
+}
 </script>
 </body>
 </html>
