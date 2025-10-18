@@ -8,443 +8,403 @@
 <!-- Netlify Identity + shared admin helpers -->
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script defer src="/admin/common.js"></script>
-
 <link rel="stylesheet" href="/css/style.css"/>
 
 <style>
-  :root{
-    --bg:#0b0f18; --panel:#111827; --border:#252f3f; --ink:#e6eef7; --muted:#9fb0c9;
-    --card:#0f172a; --chip:#0e1629; --accent:#3A66B3; --danger:#ff6b6b; --ok:#22c55e;
+/* =========================
+   THEME / TOKENS
+   ========================= */
+:root{
+  --bg:#0b0f18; 
+  --panel:#0f1424; 
+  --panel-2:#0a1020;
+  --border:#1e2a40; 
+  --border-soft:#192233;
+  --ink:#e6eef7; 
+  --muted:#9fb0c9;
+  --muted-2:#7f93b4;
+  --card:#0e162a; 
+  --chip:#0e1629; 
+  --accent:#3A66B3;
+  --accent-2:#5A8BFF;
+  --good:#1e8a5d;
+  --warn:#c28a2f;
+  --bad:#b55357;
+  --shadow: 0 10px 30px rgba(0,0,0,.25);
+  --radius: 14px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+
+/* =========================
+   HEADER
+   ========================= */
+.top{
+  position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border);
+  z-index:5;backdrop-filter:saturate(120%) blur(4px)
+}
+.row{max-width:1240px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
+.brand{font-weight:800}
+.sp{flex:1}
+
+a.btn,button.btn{
+  background:#111a32;border:1px solid var(--border);color:#fff;
+  padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer;
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset;
+}
+a.btn:hover,button.btn:hover{border-color:#395079}
+a.btn:active,button.btn:active{transform:translateY(1px)}
+
+button.btn.bad{border-color:#2e1a1a;background:#1b1214}
+button.btn.bad:hover{border-color:#6a2b2f}
+button.btn.good{border-color:#1e6646;background:#0e2a1e}
+button.btn.good:hover{border-color:#2aa070}
+
+/* =========================
+   WRAPS / CARDS
+   ========================= */
+.wrap{max-width:1240px;margin:22px auto;padding:0 18px;display:grid;gap:16px}
+.card{
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;box-shadow:var(--shadow)
+}
+.card.soft{background:var(--panel-2)}
+.card.min{padding:10px}
+
+/* =========================
+   STATS PILLS
+   ========================= */
+.pills{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
+.pill{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;
+  min-width:100px;text-align:center;display:flex;flex-direction:column;justify-content:center;
+}
+.pill b{font-size:22px;display:block}
+
+/* =========================
+   INPUTS
+   ========================= */
+input,select,textarea{
+  background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px;
+  outline:none;min-height:40px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset
+}
+textarea{min-height:74px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#6e83a7}
+
+.filters{display:grid;grid-template-columns:1.5fr .9fr .9fr 1fr 1fr auto 120px;gap:10px;margin:6px 0}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+
+/* =========================
+   TABLE / LIST
+   ========================= */
+.tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--border-soft);background:#0b1222}
+.tableWrap .loading{padding:16px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:12px;border-bottom:1px solid var(--border-soft);text-align:left}
+thead th{position:sticky;top:0;background:#0e1426;z-index:1;border-bottom:1px solid var(--border)}
+tbody tr:hover{background:#0e1629}
+td.actions{white-space:nowrap}
+
+/* Badges */
+.badge{display:inline-block;padding:4px 9px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
+.status-ok{background:#0e2a1e;border-color:#1e6646}
+.status-warn{background:#33220f;border-color:#8a5b25}
+.status-bad{background:#2a1214;border-color:#6a2b2f}
+
+/* =========================
+   EDITOR
+   ========================= */
+.editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.section-title{font-weight:700;color:#cbd8ee;margin:12px 0 6px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;color:var(--muted)}
+.inline{display:flex;gap:8px;flex-wrap:wrap}
+.editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+/* =========================
+   PROFILE PANEL
+   ========================= */
+.profile{
+  display:grid;grid-template-columns:340px 1fr;gap:16px
+}
+@media (max-width:1000px){
+  .profile{grid-template-columns:1fr}
+}
+.infoBlock{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:12px}
+.infoBlock h4{margin:0 0 8px}
+.kv{display:grid;grid-template-columns:1fr 2fr;gap:6px;font-size:13px;color:var(--muted)}
+.kv div:nth-child(odd){color:#9fb0c9}
+
+/* =========================
+   BANNERS / TOAST
+   ========================= */
+#banner-error{display:none;background:#2a1214;border:1px solid #6a2b2f;color:#ffbcbc;border-radius:12px;padding:10px}
+#banner-error pre{white-space:pre-wrap;word-break:break-word}
+#toast{position:fixed;right:14px;bottom:14px;max-width:40ch;background:#0e162a;border:1px solid var(--border);padding:10px 12px;border-radius:10px;display:none;z-index:50}
+#toast.show{display:block;animation:fade 3s ease}
+@keyframes fade{0%{opacity:0;transform:translateY(6px)}10%{opacity:1;transform:none}90%{opacity:1}100%{opacity:0}}
+
+/* =========================
+   MOBILE RESPONSIVE CARDS
+   ========================= */
+@media (max-width:860px){
+  .filters{grid-template-columns:1fr 1fr 1fr}
+  .tableWrap{border:none;background:transparent}
+  table{display:none}
+  .m-cards{display:grid;gap:10px}
+  .m-card{
+    background:#0b1222;border:1px solid var(--border-soft);border-radius:12px;padding:12px
   }
-  html,body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border);z-index:5}
-  .row{max-width:1240px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800}.sp{flex:1}
+  .m-top{display:flex;justify-content:space-between;gap:8px}
+  .m-title{font-weight:700}
+  .m-line{color:var(--muted);font-size:13px}
+  .m-actions{display:flex;gap:8px;margin-top:8px}
+}
 
-  .wrap{max-width:1240px;margin:22px auto;padding:0 18px;display:grid;gap:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.20)}
-  .muted{color:var(--muted)}
-  input,select{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
-  input:focus,select:focus,button:focus{outline:2px solid #2f3f69;outline-offset:2px}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;
-       font-weight:600;cursor:pointer;transition:border-color .15s,transform .06s}
-  .btn:hover{border-color:#3b4f79}
-  .btn:active{transform:translateY(1px)}
-  .btn.ghost{background:transparent}
-  .btn.accent{background:var(--accent);border-color:#4262a6}
-  .btn.danger{background:#3b1b22;border-color:#5a2a33}
-
-  .pills{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .pill{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:10px 14px;min-width:90px;text-align:center}
-  .pill b{font-size:20px;display:block}
-
-  .filters{display:grid;grid-template-columns:1.5fr .9fr .9fr 1fr 1fr auto 120px;gap:10px;margin:6px 0}
-  .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end}
-
-  .tableWrap{overflow:auto;border-radius:12px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
-  thead th{position:sticky;top:0;background:#0e1426;z-index:1;user-select:none}
-  thead th.sortable{cursor:pointer}
-  thead th.sortable .arrow{opacity:.35;margin-left:6px}
-  thead th.sortable.active .arrow{opacity:1}
-  tbody tr:hover{background:#0e1629}
-  tbody td:last-child{text-align:right}
-
-  .badge{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
-  .status-ok{background:#0e2a1e;border-color:#1e6646;color:#b9f6d0}
-  .status-warn{background:#33220f;border-color:#8a5b25;color:#ffe8b3}
-  .status-bad{background:#2a1214;border-color:#6a2b2f;color:#ffc7c7}
-
-  .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-  .editor-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
-  .editor-grid .field{display:flex;flex-direction:column}
-  .editor-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-  .hint{font-size:12px;color:var(--muted)}
-
-  #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
-  #toast .toast{background:#0f172a;color:#e6edf6;border:1px solid #233044;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-  #toast .toast.error{border-color:#5b2b2b;background:#221216}
-  #toast .toast.ok{border-color:#1f5433;background:#0f1c17}
-  #error-banner{display:none;background:#221216;border:1px solid #5b2b2b;color:#ffd8d8;padding:10px 12px;border-radius:10px}
-
-  #dbg{position:fixed;left:16px;bottom:16px;max-width:40vw;min-width:320px;max-height:42vh;
-       display:none;flex-direction:column;gap:8px;z-index:9999}
-  #dbg .hdr{display:flex;gap:8px;align-items:center}
-  #dbg .pane{background:#0f172a;border:1px solid #233044;border-radius:10px;padding:8px;overflow:auto}
-  #dbg pre{white-space:pre-wrap;margin:0;font:12px ui-monospace, SFMono-Regular, Menlo, monospace;color:#cfe3ff}
-
-  .loading{display:inline-flex;gap:8px;align-items:center}
-  .dot{width:6px;height:6px;border-radius:50%;background:#7d8bb3;opacity:.6;animation:ld 1.2s infinite}
-  .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
-  @keyframes ld{0%{transform:translateY(0)}50%{transform:translateY(-4px);opacity:1}100%{transform:translateY(0)}}
-
-  @media (max-width:980px){
-    .filters{grid-template-columns:1fr 1fr 1fr}
-    .editor-grid{grid-template-columns:1fr}
-    thead th, tbody td{white-space:normal}
-  }
+/* tiny helpers */
+kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;border:1px solid var(--border);padding:2px 6px;border-radius:6px;background:#0b1222}
+.tip{color:var(--muted);font-size:12px}
+.hr{height:1px;background:var(--border);margin:10px 0}
+.small{font-size:12px;color:var(--muted)}
+.center{display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
+  <!-- header -->
   <div class="top"><div class="row">
     <div class="brand">Candidates — Admin</div><div class="sp"></div>
-    <a class="btn ghost" href="/admin/">⟵ Admin home</a>
-    <button class="btn" onclick="netlifyIdentity && netlifyIdentity.logout()">Sign out</button>
+    <a class="btn" href="/admin/">⟵ Admin home</a>
+    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
   </div></div>
 
-  <!-- gate -->
+  <!-- gate (non-admin / not signed-in) -->
   <div class="wrap" id="gate" style="display:none">
     <div class="card">
       <strong>Admin only.</strong>
-      <p class="why muted" style="margin:6px 0 12px"></p>
-      <button class="btn accent" onclick="netlifyIdentity && netlifyIdentity.open('login')">Log in</button>
+      <p class="why small" style="margin:6px 0 12px"></p>
+      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
     </div>
   </div>
 
   <!-- app -->
   <div class="wrap" id="app" style="display:none">
+    <div id="banner-error" class="card"></div>
 
-    <!-- stats / actions -->
-    <div class="card">
-      <div class="pills">
-        <div class="pill"><b id="kTotal">0</b>Total</div>
-        <div class="pill"><b id="kFiltered">0</b>Filtered</div>
-        <div class="pill"><b id="kPage">1/1</b>Page</div>
-        <div class="sp"></div>
-        <div class="inline">
-          <button class="btn" id="btnRefresh" title="R">Refresh</button>
-          <button class="btn accent" id="btnNew" title="N">New candidate</button>
-          <button class="btn" id="btnExport">Export CSV</button>
-          <button class="btn" id="btnEmails" title="Copy filtered emails">📧 Email list</button>
-          <button class="btn" id="btnDebug">Debug</button>
-        </div>
+    <!-- stats -->
+    <div class="card pills">
+      <div class="pill"><b id="kTotal">0</b>Total</div>
+      <div class="pill"><b id="kFiltered">0</b>Filtered</div>
+      <div class="pill"><b id="kPage">1/1</b>Page</div>
+      <div class="sp"></div>
+      <div class="inline">
+        <button class="btn" id="btnRefresh">Refresh</button>
+        <button class="btn" id="btnNew">New candidate</button>
+        <button class="btn" id="btnExport">Export CSV</button>
+        <button class="btn" id="btnEmails" title="Copy filtered emails">📧 Email list</button>
+        <button class="btn" id="btnDebug" title="Toggle debug">Debug</button>
       </div>
-      <div id="error-banner"></div>
     </div>
 
     <!-- filters -->
     <div class="card">
       <div class="filters">
-        <input id="q" placeholder="Search name / email / phone" autocomplete="off"/>
-        <select id="fType">
+        <input id="q" placeholder="Search name / email / phone"/>
+        <select id="fType" title="Pay type">
           <option value="">Any pay type</option>
           <option>Umbrella</option><option>Umbrella CIS</option>
           <option>PAYE</option><option>Ltd</option><option>Ltd CIS</option>
           <option>International</option><option>International Umbrella</option>
         </select>
-        <select id="fStatus">
+        <select id="fStatus" title="Status">
           <option value="">Any status</option>
           <option>Complete</option><option>In progress</option><option>Paused</option>
         </select>
-        <input id="fJob" placeholder="Job title" autocomplete="off"/>
-        <input id="fEmailHas" placeholder="Email contains" autocomplete="off"/>
-
+        <input id="fJob" placeholder="Job title"/>
+        <input id="fEmailHas" placeholder="Email contains"/>
         <div class="pager">
-          <button class="btn" id="pgPrev" title="PgUp">◀</button>
+          <button class="btn" id="pgPrev" title="Prev">◀</button>
           <div style="min-width:84px;text-align:center"><span id="pgNow">1</span>/<span id="pgMax">1</span></div>
-          <button class="btn" id="pgNext" title="PgDown">▶</button>
+          <button class="btn" id="pgNext" title="Next">▶</button>
         </div>
-
         <select id="pageSize" title="Rows / page">
           <option>25</option><option>50</option><option>100</option>
         </select>
       </div>
-      <div class="hint">Tips: Press <span class="kbd">/</span> to focus search • <span class="kbd">R</span> refresh • <span class="kbd">N</span> new candidate • <span class="kbd">←/→</span> page</div>
+      <div class="tip">Tips: Press <kbd>/</kbd> to focus search · <kbd>R</kbd> refresh · <kbd>N</kbd> new candidate · <kbd>←/→</kbd> page</div>
     </div>
 
     <!-- list -->
     <div class="card tableWrap" id="listWrap">
-      <div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>
+      <div class="loading">Loading…</div>
     </div>
 
-    <!-- editor -->
-    <div class="card" id="editor" style="display:none">
-      <h3 style="margin:0 0 10px" id="edTitle">Candidate</h3>
-      <div class="editor-grid">
-        <div class="field"><label>First name</label><input id="edFirst" autocomplete="off"></div>
-        <div class="field"><label>Last name</label><input id="edLast" autocomplete="off"></div>
+    <!-- editor + profile -->
+    <div class="profile" id="editorProfile" style="display:none">
+      <!-- Editor -->
+      <div class="card soft" id="editor">
+        <h3 style="margin:0 0 10px" id="edTitle">Candidate</h3>
 
-        <div class="field"><label>Email</label><input id="edEmail" type="email" autocomplete="off" spellcheck="false"></div>
-        <div class="field"><label>Phone</label><input id="edPhone" autocomplete="off"></div>
-
-        <div class="field"><label>Job title</label><input id="edJob" autocomplete="off"></div>
-        <div class="field"><label>Pay type</label>
-          <select id="edType">
-            <option>Umbrella</option><option>Umbrella CIS</option>
-            <option>PAYE</option><option>Ltd</option><option>Ltd CIS</option>
-            <option>International</option><option>International Umbrella</option>
-          </select>
+        <div class="section-title">Identity</div>
+        <div class="editor-grid">
+          <div class="field"><label>First name</label><input id="edFirst"></div>
+          <div class="field"><label>Last name</label><input id="edLast"></div>
+          <div class="field"><label>Email</label><input id="edEmail" type="email"></div>
+          <div class="field"><label>Phone</label><input id="edPhone"></div>
+          <div class="field"><label>Job title</label><input id="edJob"></div>
+          <div class="field"><label>Pay type</label>
+            <select id="edType">
+              <option>Umbrella</option><option>Umbrella CIS</option>
+              <option>PAYE</option><option>Ltd</option><option>Ltd CIS</option>
+              <option>International</option><option>International Umbrella</option>
+            </select>
+          </div>
+          <div class="field"><label>Status</label>
+            <select id="edStatus"><option>In progress</option><option>Complete</option><option>Paused</option></select>
+          </div>
+          <div class="field"><label>Payroll ref</label><input id="edPayroll"></div>
+          <div class="field" style="grid-column:1 / -1"><label>Address</label><input id="edAddress" placeholder="Free-form address"></div>
         </div>
 
-        <div class="field"><label>Status</label>
-          <select id="edStatus"><option>In progress</option><option>Complete</option><option>Paused</option></select>
+        <div class="section-title">Bank details (for payments)</div>
+        <div class="editor-grid">
+          <div class="field"><label>Bank name</label><input id="edBankName"></div>
+          <div class="field"><label>Account holder</label><input id="edAccountName"></div>
+          <div class="field"><label>Sort code</label><input id="edSortCode" placeholder="12-34-56"></div>
+          <div class="field"><label>Account number</label><input id="edAccountNumber" placeholder="12345678"></div>
+          <div class="field"><label>IBAN</label><input id="edIban" placeholder=""></div>
+          <div class="field"><label>SWIFT / BIC</label><input id="edSwift" placeholder=""></div>
+          <div class="field" style="grid-column:1 / -1">
+            <label>Notes</label><textarea id="edNotes" placeholder="Internal notes (optional)"></textarea>
+          </div>
         </div>
-        <div class="field"><label>Payroll ref</label><input id="edPayroll" autocomplete="off"></div>
 
-        <div class="field" style="grid-column:1 / -1"><label>Address</label><input id="edAddress" placeholder="Free-form address" autocomplete="off"></div>
+        <div class="editor-actions">
+          <button class="btn good" id="btnSave">Save</button>
+          <button class="btn bad" id="btnDelete">Delete</button>
+          <button class="btn" id="btnClose">Close</button>
+        </div>
       </div>
 
-      <div class="editor-actions">
-        <button class="btn accent" id="btnSave">Save</button>
-        <button class="btn danger" id="btnDelete">Delete</button>
-        <button class="btn" id="btnClose">Close</button>
+      <!-- Profile panel -->
+      <div class="card soft" id="profile">
+        <h3 style="margin:0 0 10px">Profile</h3>
+        <div id="profileContent">
+          <div class="small">No candidate selected.</div>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="toast"></div>
 
-  <!-- mini debug console -->
-  <div id="dbg">
-    <div class="hdr">
-      <button id="dbg-close" class="btn">Close debug</button>
-      <div class="sp"></div>
-      <label class="hint"><input id="dbg-verbose" type="checkbox"> verbose</label>
-    </div>
-    <div class="pane"><pre id="dbg-log"></pre></div>
-  </div>
-
 <script>
-/* =============== Debug panel =============== */
-(function(){
-  const dbg = document.getElementById('dbg');
-  const pre = document.getElementById('dbg-log');
-  const btnClose = document.getElementById('dbg-close');
-  const btnOpen = document.getElementById('btnDebug');
+/* ============================================================
+   Small DOM helpers (null-safe)
+   ============================================================ */
+const $  = (s,root=document)=> root.querySelector(s);
+const $$ = (s,root=document)=> Array.from(root.querySelectorAll(s));
+const setNum = (selector, val) => { const el = $(selector); if(!el){ console.warn('Counter not found:', selector); return; } el.textContent = String(val); };
+const show   = (el)=> el && (el.style.display='');
+const hide   = (el)=> el && (el.style.display='none');
+const text   = (el,v)=> el && (el.textContent=v);
 
-  function ts(){ const d=new Date(); return d.toISOString().split('T')[1].slice(0,12); }
-  function line(kind, msg, data){
-    const base = `[${ts()}] ${kind}: ${msg}`;
-    const full = data ? (base + '\n' + JSON.stringify(data, null, 2)) : base;
-    pre.textContent = pre.textContent ? (pre.textContent + '\n' + full) : full;
-    pre.scrollTop = pre.scrollHeight;
-    if (kind === 'ERR') console.error(msg, data||''); else
-    if (kind === 'WARN') console.warn(msg, data||''); else
-    console.log(msg, data||'');
-  }
+/* ============================================================
+   Toast
+   ============================================================ */
+const toast = (msg) => {
+  const el = $('#toast'); if(!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=> el.classList.remove('show'), 2400);
+};
 
-  window.__dbg = {
-    show(){ dbg.style.display='flex'; },
-    hide(){ dbg.style.display='none'; },
-    log(msg, data){ line('LOG', msg, data||null); },
-    warn(msg, data){ line('WARN', msg, data||null); },
-    err(msg, data){ line('ERR', msg, data||null); }
-  };
+/* ============================================================
+   Debug channel (toggle-able)
+   ============================================================ */
+const __dbg = {
+  enabled: false,
+  log: (...a)=> __dbg.enabled && console.log(...a),
+  err: (...a)=> { console.error(...a); }
+};
 
-  btnClose.addEventListener('click', ()=>__dbg.hide());
-  btnOpen.addEventListener('click', ()=>__dbg.show());
-
-  const toastHost = document.getElementById('toast');
-  window.toast = function(msg, kind){
-    const t = document.createElement('div');
-    t.className = 'toast' + (kind ? ' ' + kind : '');
-    t.textContent = msg;
-    toastHost.appendChild(t);
-    setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(3px)'; }, 2600);
-    setTimeout(()=>{ t.remove(); }, 3000);
-  };
-})();
-
-/* =============== Helpers =============== */
-(function(){
-  window.$  = (s, root)=> (root||document).querySelector(s);
-  window.$$ = (s, root)=> Array.from((root||document).querySelectorAll(s));
-
-  window.setNum = (idOrSel, val)=>{
-    const el = (idOrSel[0]==='#'||idOrSel[0]==='.') ? $(idOrSel) : $('#'+idOrSel);
-    if(!el){ __dbg.warn('Counter el missing', { idOrSel, value:val }); return; }
-    el.textContent = String(val);
-  };
-
-  window.showErrorBanner = (msg)=>{ const el=$('#error-banner'); if(!el) return; el.textContent='Error: '+String(msg||''); el.style.display='block'; };
-  window.hideErrorBanner  = ()=>{ const el=$('#error-banner'); if(!el) return; el.style.display='none'; };
-
-  window.debounce = (fn, ms)=>{ let t=null; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms||300); }; };
-})();
-
-/* =============== API with “double-JSON” auto-fix =============== */
-(function(){
-  function normalizePath(path){ return path[0]==='/' ? path : '/'+path; }
-
-  // parse if server sent JSON string instead of JSON value
-  function coerceJson(payload){
-    if (typeof payload === 'string') {
-      const s = payload.trim();
-      if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
-        try { const j = JSON.parse(s); __dbg.warn('API payload was JSON string; parsed automatically.'); return j; }
-        catch(e){ __dbg.err('Failed to parse JSON string payload', String(e)); }
-      }
-    }
-    return payload;
-  }
-
-  window.apiCall = async function(path, method, body){
-    path = normalizePath(path);
-    method = method || 'POST';
-    const url = '/.netlify/functions' + path;
-    __dbg.log('API build request', { url, method, body });
-
-    // use project helper if present
-    if (window.__adminApiFetch) {
-      try { const data = await __adminApiFetch(path, method, body); return coerceJson(data); }
-      catch(e1){ __dbg.err('common.js fetch failed; using fallback', String(e1)); }
-    }
-
-    const headers = { 'Content-Type':'application/json' };
-    try{
-      if (window.netlifyIdentity && netlifyIdentity.currentUser) {
-        const u = netlifyIdentity.currentUser();
-        if (u && u.jwt) headers['Authorization'] = 'Bearer ' + (await u.jwt());
-      }
-    }catch(e){ __dbg.warn('JWT attach failed', String(e)); }
-
-    let res;
-    try{
-      res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
-      __dbg.log('Fetch complete', { status:res.status, ok:res.ok });
-    }catch(e2){ __dbg.err('Network error', String(e2)); throw e2; }
-
-    if (!res.ok) {
-      let txt=''; try{ txt=await res.text(); }catch(_){}
-      __dbg.err('HTTP not OK', { status:res.status, body:txt });
-      throw new Error(txt || ('HTTP '+res.status));
-    }
-
-    const ctype = res.headers.get('content-type') || '';
-    let payload = ctype.includes('application/json') ? await res.json() : await res.text();
-    payload = coerceJson(payload);
-    __dbg.log('API payload', payload);
-    return payload;
-  };
-})();
-
-/* =============== Admin Gate =============== */
-(function(){
-  window.__adminGate = async function(){
-    __dbg.log('Gate: start');
-    if (window.__ensureAdmin) { __dbg.log('Gate: using common.js'); return __ensureAdmin(); }
-
-    return new Promise((resolve)=>{
-      try{
-        const u = window.netlifyIdentity && netlifyIdentity.currentUser ? netlifyIdentity.currentUser() : null;
-        if (!u) {
-          $('#app').style.display='none'; $('#gate').style.display=''; $('.why').textContent='Please log in with an admin account.';
-          __dbg.warn('Gate: no user'); resolve(); return;
-        }
-        __dbg.log('Gate: user found', { email:u.email });
-        $('#gate').style.display='none'; $('#app').style.display='';
-        resolve();
-      }catch(e){
-        __dbg.err('Gate error', String(e));
-        $('#app').style.display='none'; $('#gate').style.display=''; resolve();
-      }
+/* ============================================================
+   API helper - robust JSON handling, graceful errors
+   ============================================================ */
+async function apiCall(url, method='POST', body=null, opts={}){
+  try{
+    const full = url.startsWith('/.netlify') ? url : `/.netlify/functions${url.startsWith('/')?url:`/${url}`}`;
+    __dbg.log('API build request', { url: full, method, body });
+    const res = await fetch(full, {
+      method, headers:{'Content-Type':'application/json'}, body: body?JSON.stringify(body):null
     });
-  };
-})();
-
-/* =============== Boot =============== */
-document.addEventListener('DOMContentLoaded', function(){
-  start().catch(e=>{ __dbg.err('Fatal boot error', String(e)); showErrorBanner('Boot failed: '+String(e)); });
-});
-
-async function start(){
-  await __adminGate();
-  if ($('#app').style.display === 'none') return; // not signed in
-  appMain();
+    __dbg.log('Fetch complete –', { status: res.status, ok: res.ok });
+    if(!res.ok){
+      let t = await res.text().catch(()=> '');
+      try{ t = JSON.parse(t) }catch{}
+      const msg = (t && (t.error||t.message)) || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    let txt = await res.text();
+    __dbg.log('API payload –', txt);
+    try{ return JSON.parse(txt) }catch{
+      // support raw arrays / csv accidentally returned
+      return txt;
+    }
+  }catch(e){
+    __dbg.err('API failed', e);
+    throw e;
+  }
 }
 
-/* =============== App =============== */
-function appMain(){
-  __dbg.log('App: init');
+/* ============================================================
+   Gate: require admin (Identity)
+   ============================================================ */
+function showGateWhy(why){ const g=$('#gate'); show(g); $('.why',g).textContent = why || 'Sign in required.'; hide($('#app')); }
+function showApp(){ hide($('#gate')); show($('#app')); }
 
-  // state
-  let page = Number(localStorage.cand_page||1)||1;
-  let size = Number(localStorage.cand_size||25)||25;
-  let pages = 1;
-  let cur = null;
-  let lastRows = [];
-  let sort = JSON.parse(localStorage.cand_sort || '{"key":"name","dir":"asc"}');
+/* ============================================================
+   Page main
+   ============================================================ */
+async function main(){
+  __dbg.log('Gate: start', '');
+  // Check identity: rely on /admin/common.js guard if present; else do a light check
+  const user = (window.netlifyIdentity && netlifyIdentity.currentUser && netlifyIdentity.currentUser()) || null;
+  __dbg.log('Gate: user found –', user ? {email:user.email} : null);
+  if(!user){ return showGateWhy('Please sign in.'); }
+  showApp();
 
+  /* --------------- State --------------- */
+  let page=1, pages=1, size=Number(localStorage.cand_size||25)||25, cur=null, lastRows=[];
+  let sort = { key:'name', dir:'asc' }; // purely a hint to the API; backend may ignore
+  $('#pageSize').value = String(size);
+
+  /* --------------- Elements --------------- */
   const listWrap = $('#listWrap');
-  const ed = $('#editor');
+  const editorProfile = $('#editorProfile');
+  const editor = $('#editor');
+  const profile = $('#profile');
+  const bannerErr = $('#banner-error');
 
-  // load saved filters
-  let filters = {}; try{ filters = JSON.parse(localStorage.cand_filters || '{}'); }catch(_){}
-  $('#q').value         = filters.q || '';
-  $('#fType').value     = filters.type || '';
-  $('#fStatus').value   = filters.status || '';
-  $('#fJob').value      = filters.job || '';
-  $('#fEmailHas').value = filters.emailHas || '';
-  $('#pageSize').value  = String(size);
+  /* --------------- Helpers --------------- */
+  const qv = (sel)=> ($(sel)?.value ?? '').trim();
 
-  function qv(sel){ return $(sel).value.trim(); }
-  function saveFilters(){ const f = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas') }; localStorage.cand_filters=JSON.stringify(f); }
-  function saveSort(){ localStorage.cand_sort=JSON.stringify(sort); }
-  function setPageMeta(){ setNum('#pgNow', page); setNum('#pgMax', pages); $('#kPage').textContent = page + '/' + pages; }
-
-  const headCols = [
-    { key:'id',        label:'ID',      w:88  },
-    { key:'name',      label:'Name',    w:240 },
-    { key:'email',     label:'Email',   w:260 },
-    { key:'phone',     label:'Phone',   w:160 },
-    { key:'pay_type',  label:'Type',    w:170 },
-    { key:'status',    label:'Status',  w:140 },
-    { key:'actions',   label:'',        w:120, noSort:true }
-  ];
+  function showErrorBanner(message, raw){
+    bannerErr.innerHTML = `<strong>Error:</strong> <span>${String(message||'Unknown')}</span>${raw?`<pre class="small">${raw}</pre>`:''}`;
+    show(bannerErr);
+  }
+  function hideErrorBanner(){ bannerErr.innerHTML=''; hide(bannerErr); }
 
   function statusBadge(s){
-    const t = (s||'').toLowerCase();
-    const cls = (t==='complete') ? 'status-ok' : (t==='in progress') ? 'status-warn' : 'status-bad';
-    return '<span class="badge '+cls+'">'+(s||'—')+'</span>';
+    const t=(s||'').toLowerCase();
+    const cls = t==='complete' ? 'status-ok' : t==='in progress' ? 'status-warn' : 'status-bad';
+    return `<span class="badge ${cls}">${s||'—'}</span>`;
   }
-  function typeBadge(t){ return '<span class="badge">'+(t||'—')+'</span>'; }
+  const safe = (v)=> (v===null || v===undefined || v==='') ? '—' : v;
 
-  function renderRows(rows){
-    lastRows = rows || [];
-    if(!lastRows.length){ listWrap.innerHTML = '<div class="muted">No candidates.</div>'; return; }
-
-    const thead = '<thead><tr>' + headCols.map(c=>{
-      const arrow = c.noSort ? '' : '<span class="arrow">'+(sort.key===c.key ? (sort.dir==='asc'?'▲':'▼') : '↕')+'</span>';
-      const cls = c.noSort ? '' : ('sortable ' + (sort.key===c.key ? 'active':''));
-      const style = c.w ? ('style="width:'+c.w+'px"') : '';
-      return '<th '+style+' data-key="'+c.key+'" class="'+cls+'">'+c.label+arrow+'</th>';
-    }).join('') + '</tr></thead>';
-
-    const tbody = '<tbody>' + lastRows.map(r=>{
-      const name = (r.first_name || r.last_name) ? [r.first_name,r.last_name].filter(Boolean).join(' ') :
-                   (r.name || '—');
-      const email = r.email || '—';
-      const phone = r.phone || '—';
-      return (
-        '<tr>' +
-          '<td>'+ (r.id!=null ? r.id : '—') +'</td>' +
-          '<td>'+ name +'</td>' +
-          '<td>'+ email +'</td>' +
-          '<td>'+ phone +'</td>' +
-          '<td>'+ typeBadge(r.pay_type) +'</td>' +
-          '<td>'+ statusBadge(r.status) +'</td>' +
-          '<td><div class="inline" style="justify-content:flex-end"><button class="btn" data-open="'+(r.id||'')+'">Open</button></div></td>' +
-        '</tr>'
-      );
-    }).join('') + '</tbody>';
-
-    listWrap.innerHTML = '<table>'+thead+tbody+'</table>';
-
-    $$('#listWrap button[data-open]').forEach(b=>{
-      const idAttr = b.getAttribute('data-open');
-      b.onclick = ()=> openEd(idAttr ? Number(idAttr) : null);
-    });
-
-    $$('#listWrap thead th.sortable').forEach(th=>{
-      th.onclick = function(){
-        const key = th.getAttribute('data-key');
-        if (sort.key===key) sort.dir = (sort.dir==='asc'?'desc':'asc'); else { sort.key=key; sort.dir='asc'; }
-        saveSort(); loadList();
-      };
-    });
-  }
+  function typeBadge(t){ return `<span class="badge">${safe(t)}</span>`; }
 
   function normalizeRows(raw){
     // Accept: array of candidates OR {rows,total,...}
@@ -452,43 +412,110 @@ function appMain(){
     // If items look like {id, name} (from clients), adapt minimally
     return rows.map(x=>{
       if (x && x.name && !x.first_name && !x.last_name) {
-        return { id:x.id, first_name:x.name, last_name:'', email:x.email||'', phone:x.phone||'', job_title:x.job_title||'', pay_type:x.pay_type||'', status:x.status||'', payroll_ref:x.payroll_ref||'', address:x.address||'' };
+        return { 
+          id:x.id, 
+          first_name:x.first_name||x.name, 
+          last_name:x.last_name||'', 
+          email:x.email||'', 
+          phone:x.phone||'', 
+          job_title:x.job_title||'', 
+          pay_type:x.pay_type||'', 
+          status:x.status||'', 
+          payroll_ref:x.payroll_ref||'', 
+          address:x.address||''
+        };
       }
       return x;
     });
   }
 
+  function setPageMeta(){
+    setNum('#pgNow', page);
+    setNum('#pgMax', pages);
+    $('#kPage').textContent = `${page}/${pages}`;
+  }
+
+  function renderRows(rows){
+    lastRows = rows;
+
+    // Desktop table
+    const tableHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px">ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th style="width:140px">Phone</th>
+            <th style="width:160px">Type</th>
+            <th style="width:140px">Status</th>
+            <th style="width:130px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${safe(r.id)}</td>
+              <td>${safe([r.first_name,r.last_name].filter(Boolean).join(' '))}</td>
+              <td>${safe(r.email)}</td>
+              <td>${safe(r.phone)}</td>
+              <td>${typeBadge(r.pay_type)}</td>
+              <td>${statusBadge(r.status)}</td>
+              <td class="actions">
+                <button class="btn" data-open="${r.id}">Open</button>
+                <button class="btn" data-prof="${r.id}">Profile</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    // Mobile cards
+    const mobileCards = `
+      <div class="m-cards">
+        ${rows.map(r=>`
+          <div class="m-card">
+            <div class="m-top">
+              <div><div class="m-title">${safe([r.first_name,r.last_name].filter(Boolean).join(' '))}</div>
+              <div class="small">ID ${safe(r.id)}</div></div>
+              <div>${typeBadge(r.pay_type)}</div>
+            </div>
+            <div class="m-line">${safe(r.email)} · ${safe(r.phone)}</div>
+            <div class="m-line">${statusBadge(r.status)} ${r.job_title?`· ${r.job_title}`:''}</div>
+            <div class="m-actions">
+              <button class="btn" data-open="${r.id}">Open</button>
+              <button class="btn" data-prof="${r.id}">Profile</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+
+    if(!rows.length){
+      listWrap.innerHTML = `<div class="loading">No candidates.</div>`;
+    }else{
+      listWrap.innerHTML = tableHTML + mobileCards;
+    }
+
+    // attach actions
+    $$('button[data-open]', listWrap).forEach(b=> b.onclick = ()=> openEd(Number(b.dataset.open)));
+    $$( 'button[data-prof]', listWrap).forEach(b=> b.onclick = ()=> openProfile(Number(b.dataset.prof)));
+  }
+
   async function loadList(){
     hideErrorBanner();
     listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
-
-    try {
-      // build request body (add debug here)
-      const body = {
-        q: qv('#q'),
-        type: qv('#fType'),
-        status: qv('#fStatus'),
-        job: qv('#fJob'),
-        emailHas: qv('#fEmailHas'),
-        page,
-        size,
-        sort,
-        debug: true              // ← temporary debug flag
-      };
+    try{
+      const body = { q:qv('#q'), type:qv('#fType'), status:qv('#fStatus'), job:qv('#fJob'), emailHas:qv('#fEmailHas'), page, size, sort, debug: __dbg.enabled };
       __dbg.log('List: request body', body);
 
       // function filename is plural
-      const res = await apiCall('/admin-candidates-lists', 'POST', body);
-
-      // optional: show server-side debug payload if the function returns one
-      if (res && res.debug) __dbg.log('API debug →', res.debug);
+      const res = await apiCall('/admin-candidates-lists','POST', body);
 
       // tolerate JSON-string payloads and different shapes
       const rows = normalizeRows(res);
-      const total    = (typeof res.total    === 'number') ? res.total    : rows.length;
+      const total = (typeof res.total === 'number') ? res.total : rows.length;
       const filtered = (typeof res.filtered === 'number') ? res.filtered : rows.length;
-      pages = Math.max(1, Number(res.pages || Math.ceil(filtered / size) || 1));
-      if (page > pages) page = pages;
+      pages = Math.max(1, Number(res.pages || Math.ceil(filtered/size) || 1));
+      if(page>pages) page=pages;
 
       setNum('#kTotal', total);
       setNum('#kFiltered', filtered);
@@ -496,119 +523,214 @@ function appMain(){
       __dbg.log('List: meta', { total, filtered, pages, page });
 
       renderRows(rows);
-
-    } catch (e) {
+    }catch(e){
       __dbg.err('List: load failed', String(e));
       showErrorBanner(e.message || 'Error');
-      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message || e)+'</div>';
+      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message||e)+'</div>';
     }
   }
 
-
   function setEd(c){
-    $('#edTitle').textContent = (c && c.id) ? ('Candidate #'+c.id) : 'New candidate';
-    $('#edFirst').value   = (c && c.first_name) || '';
-    $('#edLast').value    = (c && c.last_name) || '';
-    $('#edEmail').value   = (c && c.email) || '';
-    $('#edPhone').value   = (c && c.phone) || '';
-    $('#edJob').value     = (c && c.job_title) || '';
-    $('#edType').value    = (c && c.pay_type) || 'Umbrella';
-    $('#edStatus').value  = (c && c.status) || 'In progress';
-    $('#edPayroll').value = (c && c.payroll_ref) || '';
-    $('#edAddress').value = (c && c.address) || '';
+    text($('#edTitle'), c?.id ? `Candidate #${c.id}` : 'New candidate');
+
+    // identity
+    $('#edFirst').value   = c.first_name||'';
+    $('#edLast').value    = c.last_name||'';
+    $('#edEmail').value   = c.email||'';
+    $('#edPhone').value   = c.phone||'';
+    $('#edJob').value     = c.job_title||'';
+    $('#edType').value    = c.pay_type||'Umbrella';
+    $('#edStatus').value  = c.status||'In progress';
+    $('#edPayroll').value = c.payroll_ref||'';
+    $('#edAddress').value = c.address||'';
+
+    // bank
+    $('#edBankName').value     = c.bank_name||'';
+    $('#edAccountName').value  = c.account_name||'';
+    $('#edSortCode').value     = c.sort_code||'';
+    $('#edAccountNumber').value= c.account_number||'';
+    $('#edIban').value         = c.iban||'';
+    $('#edSwift').value        = c.swift||'';
+    $('#edNotes').value        = c.notes||'';
   }
+
   function getEd(){
     return {
-      id: cur && cur.id ? cur.id : undefined,
+      id: cur?.id || undefined,
+      // identity
       first_name: $('#edFirst').value.trim() || null,
-      last_name:  $('#edLast').value.trim() || null,
+      last_name:  $('#edLast').value.trim()  || null,
       email:      $('#edEmail').value.trim() || null,
       phone:      $('#edPhone').value.trim() || null,
-      job_title:  $('#edJob').value.trim() || null,
+      job_title:  $('#edJob').value.trim()   || null,
       pay_type:   $('#edType').value || null,
       status:     $('#edStatus').value || null,
       payroll_ref:$('#edPayroll').value.trim() || null,
-      address:    $('#edAddress').value.trim() || null
+      address:    $('#edAddress').value.trim() || null,
+      // bank
+      bank_name:      $('#edBankName').value.trim() || null,
+      account_name:   $('#edAccountName').value.trim() || null,
+      sort_code:      $('#edSortCode').value.trim() || null,
+      account_number: $('#edAccountNumber').value.trim() || null,
+      iban:           $('#edIban').value.trim() || null,
+      swift:          $('#edSwift').value.trim() || null,
+      notes:          $('#edNotes').value.trim() || null
     };
   }
 
   async function openEd(id){
-    hideErrorBanner();
     try{
-      if (id) {
-        __dbg.log('Editor: loading record', { id });
-        cur = await apiCall('/admin-candidates-get','POST',{ id });
-      } else {
-        cur = { status:'In progress', pay_type:'Umbrella' };
-      }
+      cur = id ? await apiCall('/admin-candidates-get','POST',{ id }) : { status:'In progress', pay_type:'Umbrella' };
       setEd(cur);
-      ed.style.display = '';
-      ed.scrollIntoView({behavior:'smooth',block:'start'});
-      $('#edFirst').focus();
+      show(editorProfile); editor.scrollIntoView({behavior:'smooth',block:'start'});
+    }catch(e){ toast('Open failed: '+(e.message||e)); }
+  }
+
+  function profileSkeleton(){
+    return `
+      <div class="infoBlock">
+        <h4>Summary</h4>
+        <div class="kv">
+          <div>Name</div><div>—</div>
+          <div>Email</div><div>—</div>
+          <div>Phone</div><div>—</div>
+          <div>Status</div><div>—</div>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div class="infoBlock">
+        <h4>Recent timesheets</h4>
+        <div class="small">Loading…</div>
+      </div>
+      <div class="infoBlock">
+        <h4>Current assignments</h4>
+        <div class="small">Loading…</div>
+      </div>`;
+  }
+
+  function renderProfile(candidate, timesheets, assignments){
+    const name = [candidate.first_name, candidate.last_name].filter(Boolean).join(' ') || '—';
+    const tRows = (timesheets||[]).slice(0,6).map(t=>`
+      <tr>
+        <td>${safe(t.ref||t.id)}</td>
+        <td>${safe(t.week_ending || t.week || t.date)}</td>
+        <td>${safe(t.hours || t.total_hours)}</td>
+        <td>${safe(t.status)}</td>
+      </tr>`).join('') || `<tr><td colspan="4" class="small">No recent timesheets.</td></tr>`;
+
+    const aRows = (assignments||[]).slice(0,6).map(a=>`
+      <tr>
+        <td>${safe(a.client_name || a.client || a.site)}</td>
+        <td>${safe(a.job_title || a.role)}</td>
+        <td>${safe(a.start_date || a.start)}</td>
+        <td>${safe(a.end_date || a.end) || '—'}</td>
+      </tr>`).join('') || `<tr><td colspan="4" class="small">No active assignments.</td></tr>`;
+
+    $('#profileContent').innerHTML = `
+      <div class="infoBlock">
+        <h4>Summary</h4>
+        <div class="kv">
+          <div>Name</div><div>${name}</div>
+          <div>Email</div><div>${safe(candidate.email)}</div>
+          <div>Phone</div><div>${safe(candidate.phone)}</div>
+          <div>Status</div><div>${statusBadge(candidate.status)}</div>
+          <div>Pay type</div><div>${typeBadge(candidate.pay_type)}</div>
+          <div>Job title</div><div>${safe(candidate.job_title)}</div>
+          <div>Payroll ref</div><div>${safe(candidate.payroll_ref)}</div>
+          <div>Address</div><div>${safe(candidate.address)}</div>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div class="infoBlock">
+        <h4>Recent timesheets</h4>
+        <div class="tableWrap min">
+          <table>
+            <thead><tr><th>Ref</th><th>Week ending</th><th>Hours</th><th>Status</th></tr></thead>
+            <tbody>${tRows}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="infoBlock">
+        <h4>Current assignments</h4>
+        <div class="tableWrap min">
+          <table>
+            <thead><tr><th>Client</th><th>Role</th><th>Start</th><th>End</th></tr></thead>
+            <tbody>${aRows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  async function openProfile(id){
+    try{
+      // always open editor too (for context)
+      await openEd(id);
+
+      $('#profileContent').innerHTML = profileSkeleton();
+
+      // pull optional data
+      let [ts, asg] = await Promise.allSettled([
+        apiCall('/admin-timesheets-by-candidate','POST',{ candidate_id: id }).catch(e=> { __dbg.err('timesheets err',e); return []; }),
+        apiCall('/admin-assignments-by-candidate','POST',{ candidate_id: id }).catch(e=> { __dbg.err('assignments err',e); return []; })
+      ]);
+
+      const t = ts.status==='fulfilled' ? (Array.isArray(ts.value) ? ts.value: (ts.value.rows||[])) : [];
+      const a = asg.status==='fulfilled'? (Array.isArray(asg.value)? asg.value: (asg.value.rows||[])): [];
+      renderProfile(cur, t, a);
     }catch(e){
-      __dbg.err('Editor: open failed', String(e));
-      toast('Open failed: '+(e.message||e), 'error');
+      toast('Profile failed: '+(e.message||e));
     }
   }
 
-  // events
-  const doSearch = debounce(()=>{ page=1; saveFilters(); loadList(); }, 350);
-
-  $('#btnRefresh').onclick = ()=> loadList();
-  $('#q').addEventListener('input', doSearch);
-  ['#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
-    $(sid).addEventListener('change', ()=>{ page=1; saveFilters(); loadList(); });
-    $(sid).addEventListener('keyup',  e=>{ if(e.key==='Enter'){ page=1; saveFilters(); loadList(); } });
+  /* --------------- Events --------------- */
+  $('#btnRefresh').onclick = ()=> { page=1; loadList(); };
+  ['#q','#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
+    $(sid).addEventListener('change', ()=>{ page=1; loadList(); });
+    $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(); }});
   });
 
-  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; localStorage.cand_page=page; loadList(); } };
-  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } };
+  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(); } };
+  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(); } };
   $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(); };
 
   $('#btnNew').onclick  = ()=> openEd(null);
-  $('#btnClose').onclick= ()=>{ ed.style.display='none'; cur=null; };
+  $('#btnClose').onclick= ()=>{ hide(editorProfile); cur=null; };
 
   $('#btnSave').onclick = async ()=>{
     try{
       const data = getEd();
-      __dbg.log('Editor: saving', data);
       const saved = await apiCall('/admin-candidates-save','POST', data);
-      toast('Saved','ok');
-      ed.style.display='none';
-      page=1;
+      toast('Saved');
+      // keep in view and refresh list; reopen with saved id if new
+      if(saved?.id){ cur = saved; setEd(cur); }
       await loadList();
-      if(saved && saved.id){ openEd(saved.id); }
-    }catch(e){ toast('Save failed: '+(e.message||e),'error'); __dbg.err('Editor: save failed', String(e)); }
+    }catch(e){ toast('Save failed: '+(e.message||e)); }
   };
 
   $('#btnDelete').onclick = async ()=>{
-    if(!cur || !cur.id){ toast('Nothing to delete','error'); return; }
+    if(!cur?.id) return toast('Nothing to delete');
     if(!confirm('Delete this candidate?')) return;
-    try{
-      __dbg.log('Editor: deleting', { id:cur.id });
-      await apiCall('/admin-candidates-delete','POST',{ id: cur.id });
-      toast('Deleted','ok');
-      ed.style.display='none';
-      await loadList();
-    }catch(e){ toast('Delete failed: '+(e.message||e),'error'); __dbg.err('Editor: delete failed', String(e)); }
+    try{ await apiCall('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted'); hide(editorProfile); await loadList(); }
+    catch(e){ toast('Delete failed: '+(e.message||e)); }
   };
 
   $('#btnEmails').onclick = ()=>{
     const emails = lastRows.map(r=>r.email).filter(Boolean);
-    if(!emails.length){ toast('No emails in current list','error'); return; }
+    if(!emails.length) return toast('No emails in current list');
     navigator.clipboard?.writeText(emails.join(', '));
-    toast('Copied '+emails.length+' email(s)','ok');
+    toast(`Copied ${emails.length} email(s)`);
   };
 
   $('#btnExport').onclick = ()=>{
     const rows = lastRows;
-    if(!rows.length){ toast('Nothing to export','error'); return; }
-    const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref'];
+    if(!rows.length){ toast('Nothing to export'); return; }
+    const cols = ['id','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref','address','bank_name','account_name','sort_code','account_number','iban','swift'];
     const head = cols.join(',');
     const csv = [head].concat(rows.map(r=> cols.map(k=>{
-      const v = (r[k]!==undefined && r[k]!==null) ? r[k] : '';
+      const v = r[k] ?? '';
       const s = String(v).replace(/"/g,'""');
-      return '"' + s + '"';
+      return `"${s}"`;
     }).join(','))).join('\n');
     const blob = new Blob([csv],{type:'text/csv'});
     const url = URL.createObjectURL(blob);
@@ -616,18 +738,38 @@ function appMain(){
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
   };
 
+  $('#btnDebug').onclick = ()=>{
+    __dbg.enabled = !__dbg.enabled;
+    toast('Debug '+(__dbg.enabled?'ON':'OFF'));
+  };
+
   // keyboard shortcuts
-  document.addEventListener('keydown', e=>{
-    if(e.key==='/'){ e.preventDefault(); $('#q').focus(); return; }
-    if(e.key==='r' || e.key==='R'){ e.preventDefault(); loadList(); return; }
-    if(e.key==='n' || e.key==='N'){ e.preventDefault(); openEd(null); return; }
-    if(e.key==='ArrowLeft'){ if(page>1){ page--; localStorage.cand_page=page; loadList(); } }
-    if(e.key==='ArrowRight'){ if(page<pages){ page++; localStorage.cand_page=page; loadList(); } }
+  window.addEventListener('keydown',(e)=>{
+    if(e.key==='/'){ e.preventDefault(); $('#q').focus(); $('#q').select(); }
+    if(e.key==='r' || e.key==='R'){ e.preventDefault(); $('#btnRefresh').click(); }
+    if(e.key==='n' || e.key==='N'){ e.preventDefault(); $('#btnNew').click(); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); $('#pgPrev').click(); }
+    if(e.key==='ArrowRight'){ e.preventDefault(); $('#pgNext').click(); }
+    if(e.key==='d' || e.key==='D'){ e.preventDefault(); $('#btnDebug').click(); }
   });
 
-  // initial
-  loadList();
+  __dbg.log('App: init', '');
+
+  // initial load
+  await loadList();
 }
+
+/* ============================================================
+   Boot after Identity ready
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // If /admin/common.js exposes bootstrap, prefer it; otherwise run main.
+  if(window.__ADMIN_BOOTSTRAP__){
+    window.__ADMIN_BOOTSTRAP__(main);
+  }else{
+    main();
+  }
+});
 </script>
 </body>
 </html>
