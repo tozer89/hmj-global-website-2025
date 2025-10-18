@@ -1,318 +1,178 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Candidates — Admin | HMJ-Global</title>
+
+<!-- Identity first -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<!-- Shared admin bootstrap -->
 <script defer src="/admin/common.js"></script>
 
-<title>Candidates — Admin | HMJ-Global</title>
-<link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="/css/style.css"/>
 <style>
-  :root{
-    --bg:#0b0f18; --panel:#111827; --panel2:#0e1524; --border:#252f3f;
-    --text:#e8eef7; --muted:#9fb0c9; --purple:#7c5cff; --green:#25c08a; --red:#ff7a7a;
-  }
+  :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  a{color:#9fbaff;text-decoration:none}
-  .top{position:sticky;top:0;z-index:50;background:#0c1222;border-bottom:1px solid var(--border)}
+  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border);z-index:5}
   .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800}
-  .spacer{flex:1}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79}
-  .btn.primary{background:var(--purple);border-color:transparent}
-  .btn.danger{background:#3a1920;border-color:#602b36}
+  .brand{font-weight:800}.sp{flex:1}
   .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
   .muted{color:var(--muted)}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  input,select,textarea{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
-  input::placeholder,textarea::placeholder{color:#8aa1c7}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
-  .pill{font-size:.9rem;padding:6px 8px;border-radius:10px;border:1px solid #2c3853;background:#151f33}
-  .tag{display:inline-block;border:1px solid #2c3853;background:#121a2c;border-radius:999px;padding:4px 8px;font-size:.8rem}
-  /* Modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9999}
-  .dialog{width:min(960px,95vw);background:#0f172a;border:1px solid var(--border);border-radius:16px;padding:16px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
-  .section{background:#0e1524;border:1px solid #1f2a44;border-radius:12px;padding:12px}
-  /* Toasts */
-  #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px}
-  .toast{background:#0f172a;border:1px solid #233044;border-radius:10px;padding:10px 12px}
+  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
+  .btn:hover{border-color:#3b4f79}
+  input{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
+  table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
 </style>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-<div class="top">
-  <div class="row">
-    <div class="brand">Candidates — Admin</div>
-    <div class="spacer"></div>
-    <a class="btn" href="/admin/">⟵ Admin home</a>
-    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-  </div>
-</div>
-<!-- Optional toast area -->
-<div id="toast" aria-live="polite" aria-atomic="true"></div>
+<div class="top"><div class="row">
+  <div class="brand">Candidates — Admin</div><div class="sp"></div>
+  <a class="btn" href="/admin/">⟵ Admin home</a>
+  <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+</div></div>
 
-<!-- Shown if not logged-in or missing 'admin' role -->
-<div id="gate" class="card" style="display:none">
-  <p><strong>Admin only.</strong> Please log in with an admin account.</p>
-  <p class="why" style="opacity:.75"></p>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
-</div>
-
-<!-- Your page UI (hidden until Admin.bootAdmin runs) -->
-<div id="app" style="display:none">
-  <!-- your filters / table / form etc -->
-  <div id="tableWrap">Loading…</div>
-</div>
-
-
+<!-- GATE (shown when not admin / not logged in) -->
 <div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button></div>
+  <div class="card"><strong>Admin only.</strong> <p class="why muted"></p>
+  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
 </div>
 
+<!-- APP (shown when admin) -->
 <div class="wrap" id="app" style="display:none">
-  <div class="card toolbar">
-    <input id="q" placeholder="Search name or email ( / )" style="min-width:260px" />
+  <div class="card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="q" placeholder="Search name / email / phone" />
     <button class="btn" id="btnRefresh">Refresh</button>
-    <button class="btn primary" id="btnNew">New candidate ( n )</button>
+    <button class="btn" id="btnNew">New candidate</button>
   </div>
 
   <div class="card" id="listWrap">Loading…</div>
-</div>
 
-<!-- Modal -->
-<div class="modal" id="modal">
-  <div class="dialog">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <h3 id="dlgTitle" style="margin:0">Candidate</h3>
-      <div class="toolbar">
-        <button class="btn danger" id="btnDelete" title="Delete">Delete</button>
-        <button class="btn" id="btnClose">Close</button>
-      </div>
+  <div class="card" id="editor" style="display:none">
+    <h3 style="margin:0 0 8px" id="edTitle">Candidate</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <label>Name <input id="edName"></label>
+      <label>Email <input id="edEmail" type="email"></label>
+      <label>Phone <input id="edPhone"></label>
+      <label>Address <input id="edAddress"></label>
+      <label>Payroll ref <input id="edPayroll"></label>
+      <label>Pay type <input id="edPayType"></label>
     </div>
-    <form id="frm" class="grid">
-      <div class="section">
-        <h4 style="margin:0 0 8px">Profile</h4>
-        <div class="grid">
-          <label>Name <input name="name" required></label>
-          <label>Email <input name="email" type="email" required></label>
-          <label>Phone <input name="phone"></label>
-          <label>Payroll ref <input name="payroll_ref" placeholder="HMJ001"></label>
-          <label>Pay type
-            <select name="pay_type">
-              <option value="">—</option>
-              <option>PAYE</option><option>Ltd Company</option><option>CIS</option><option>Umbrella</option><option>Self-employed</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div class="section">
-        <h4 style="margin:0 0 8px">Address</h4>
-        <div class="grid">
-          <label>Line 1 <input name="addr_line1"></label>
-          <label>Line 2 <input name="addr_line2"></label>
-          <label>City <input name="addr_city"></label>
-          <label>Postcode <input name="addr_postcode"></label>
-          <label>Country <input name="addr_country"></label>
-        </div>
-      </div>
-
-      <div class="section">
-        <h4 style="margin:0 0 8px">Bank</h4>
-        <div class="grid">
-          <label>Sort code <input name="bank_sort"></label>
-          <label>Account # <input name="bank_acct"></label>
-          <label>IBAN <input name="bank_iban"></label>
-          <label>SWIFT <input name="bank_swift"></label>
-        </div>
-      </div>
-
-      <div class="section">
-        <h4 style="margin:0 0 8px">Emergency contact</h4>
-        <div class="grid">
-          <label>Name <input name="em_name"></label>
-          <label>Phone <input name="em_phone"></label>
-          <label>Relation <input name="em_relation"></label>
-        </div>
-      </div>
-
-      <div class="section">
-        <h4 style="margin:0 0 8px">Right to work</h4>
-        <div class="grid">
-          <label>Status <input name="rtw_status" placeholder="UK citizen / Visa / Share code"></label>
-          <label>Doc type <input name="rtw_doc_type" placeholder="Passport"></label>
-          <label>Doc ref <input name="rtw_doc_ref"></label>
-          <label>Expiry <input type="date" name="rtw_expiry"></label>
-        </div>
-      </div>
-
-      <div class="section" style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn" type="button" id="btnSave">Save</button>
-        <button class="btn primary" type="submit">Save & close</button>
-      </div>
-    </form>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" id="btnSave">Save</button>
+      <button class="btn" id="btnDelete">Delete</button>
+      <button class="btn" id="btnClose">Close</button>
+    </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-  // ---- helpers ----
-  const sel = (s)=>document.querySelector(s);
-  const toastBox = sel('#toast');
-  const toast = (msg)=>{ const n=document.createElement('div'); n.className='toast'; n.textContent=msg; toastBox.appendChild(n); setTimeout(()=>n.remove(),2600); };
-  const isAdmin = (u)=> (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+/* page logic – uses helpers from /admin/common.js */
+async function main({ api, sel, toast }) {
+  const listWrap = sel('#listWrap');
+  const ed = sel('#editor');
+  let cur = null; // current candidate
 
-  async function api(path, method='GET', body=null){
-    const u = netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
-    const t = await u.jwt();
-    const r = await fetch(`/.netlify/functions${path}`, {
-      method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},
-      body: body ? JSON.stringify(body) : null
-    });
-    if(!r.ok){ throw new Error(await r.text()); }
-    return r.json();
+  function setEd(c) {
+    sel('#edTitle').textContent = c?.id ? `Candidate #${c.id}` : 'New candidate';
+    sel('#edName').value    = c?.name || '';
+    sel('#edEmail').value   = c?.email || '';
+    sel('#edPhone').value   = c?.phone || '';
+    sel('#edAddress').value = (c?.address_json && (c.address_json.line1 || c.address_json.address)) || '';
+    sel('#edPayroll').value = c?.payroll_ref || '';
+    sel('#edPayType').value = c?.pay_type || '';
   }
-
-  // ---- list ----
-  let rows = [], page = 1, per = 20;
-  function renderList(){
-    const q = sel('#q').value.toLowerCase().trim();
-    const filtered = rows.filter(r => !q || (r.name?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q)));
-    const pages = Math.max(1, Math.ceil(filtered.length / per));
-    page = Math.min(page, pages);
-    const slice = filtered.slice((page-1)*per, page*per);
-    const html = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="muted">${filtered.length} candidates</div>
-        <div class="muted">Page ${page}/${pages}</div>
-      </div>
-      <table>
-        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Payroll</th><th></th></tr></thead>
-        <tbody>
-          ${slice.map(r=>`
-            <tr>
-              <td>${r.name||'—'}</td>
-              <td>${r.email||'—'}</td>
-              <td>${r.phone||'—'}</td>
-              <td><span class="tag">${r.payroll_ref||'—'}</span></td>
-              <td><button class="btn" data-open="${r.id}">Open</button></td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-        <button class="btn" ${page<=1?'disabled':''} id="pPrev">Prev</button>
-        <button class="btn" ${page>=pages?'disabled':''} id="pNext">Next</button>
-      </div>`;
-    sel('#listWrap').innerHTML = html;
-    sel('#pPrev')?.addEventListener('click',()=>{page=Math.max(1,page-1);renderList();});
-    sel('#pNext')?.addEventListener('click',()=>{page=page+1;renderList();});
-    sel('#listWrap').querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEdit(b.dataset.open));
-  }
-
-  async function load(){ sel('#listWrap').textContent='Loading…'; rows = await api('/admin-candidates-list','POST', { q: sel('#q').value }); renderList(); }
-
-  // ---- modal/edit ----
-  let currentId = null;
-  function openModal(){ sel('#modal').style.display='flex'; sel('#frm').scrollTop=0; }
-  function closeModal(){ sel('#modal').style.display='none'; }
-  function getFormData(){
-    const f = sel('#frm'); const v = (n)=> f.elements.namedItem(n).value || '';
+  function getEd() {
     return {
-      id: currentId || undefined,
-      name: v('name'), email: v('email'), phone:v('phone'), payroll_ref:v('payroll_ref'), pay_type:v('pay_type'),
-      address:{ line1:v('addr_line1'), line2:v('addr_line2'), city:v('addr_city'), postcode:v('addr_postcode'), country:v('addr_country') },
-      bank:{ sort_code:v('bank_sort'), account_number:v('bank_acct'), iban:v('bank_iban'), swift:v('bank_swift') },
-      emergency_contact:{ name:v('em_name'), phone:v('em_phone'), relation:v('em_relation') },
-      right_to_work:{ status:v('rtw_status'), doc_type:v('rtw_doc_type'), doc_ref:v('rtw_doc_ref'), expiry:v('rtw_expiry') }
+      id: cur?.id,
+      name: sel('#edName').value.trim() || null,
+      email: sel('#edEmail').value.trim() || null,
+      phone: sel('#edPhone').value.trim() || null,
+      address_json: sel('#edAddress').value ? { address: sel('#edAddress').value } : {},
+      payroll_ref: sel('#edPayroll').value || null,
+      pay_type: sel('#edPayType').value || null
     };
   }
-  function setFormData(d={}){
-    const f = sel('#frm'); const set=(n,val)=>{ if(f.elements[n]) f.elements[n].value = val||''; };
-    set('name',d.name); set('email',d.email); set('phone',d.phone); set('payroll_ref',d.payroll_ref); set('pay_type',d.pay_type);
-    set('addr_line1',d.address?.line1); set('addr_line2',d.address?.line2); set('addr_city',d.address?.city);
-    set('addr_postcode',d.address?.postcode); set('addr_country',d.address?.country);
-    set('bank_sort',d.bank?.sort_code); set('bank_acct',d.bank?.account_number); set('bank_iban',d.bank?.iban); set('bank_swift',d.bank?.swift);
-    set('em_name',d.emergency_contact?.name); set('em_phone',d.emergency_contact?.phone); set('em_relation',d.emergency_contact?.relation);
-    set('rtw_status',d.right_to_work?.status); set('rtw_doc_type',d.right_to_work?.doc_type);
-    set('rtw_doc_ref',d.right_to_work?.doc_ref); set('rtw_expiry',d.right_to_work?.expiry);
+
+  async function loadList() {
+    listWrap.textContent = 'Loading…';
+    try {
+      const rows = await api('/admin-candidates-lists','POST',{ q: sel('#q').value || '' });
+      listWrap.innerHTML = `
+        <div class="muted" style="margin-bottom:8px">${rows.length} candidate(s)</div>
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${r.id}</td>
+                <td>${r.name || '—'}</td>
+                <td>${r.email || '—'}</td>
+                <td>${r.phone || '—'}</td>
+                <td><button class="btn" data-open="${r.id}">Open</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+      listWrap.querySelectorAll('button[data-open]').forEach(b => b.onclick = () => openEd(Number(b.dataset.open)));
+    } catch (e) {
+      console.error(e);
+      listWrap.innerHTML = `<div class="muted">Failed to load: ${e.message}</div>`;
+    }
   }
 
-  async function openEdit(id){
-    currentId = id || null;
-    sel('#dlgTitle').textContent = id ? 'Edit candidate' : 'New candidate';
-    sel('#btnDelete').style.display = id ? 'inline-flex' : 'none';
-    if(id){ const d = await api('/admin-candidates-get','POST',{ id }); setFormData(d); }
-    else { setFormData({}); }
-    openModal();
+  async function openEd(id) {
+    try {
+      const c = id ? await api('/admin-candidates-get','POST',{ id }) : {};
+      cur = c || {};
+      setEd(cur);
+      ed.style.display = 'block';
+      ed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      toast('Open failed: ' + e.message, 'error');
+    }
   }
 
-  async function save(closeAfter){
-    const contractor = getFormData();
-    const d = await api('/admin-candidates-save','POST',{ contractor });
-    toast('Saved ✔'); await load(); if(closeAfter) closeModal(); else currentId = d.id;
-  }
-  async function remove(){
-    if(!currentId) return; if(!confirm('Delete this candidate?')) return;
-    await api('/admin-candidates-delete','POST',{ id: currentId }); toast('Deleted'); closeModal(); await load();
+  async function saveEd() {
+    try {
+      const payload = getEd();
+      const saved = await api('/admin-candidates-save','POST', payload);
+      toast('Saved');
+      cur = saved;
+      setEd(cur);
+      loadList();
+    } catch (e) {
+      toast('Save failed: ' + e.message, 'error');
+    }
   }
 
-  // ---- boot + events ----
-  function boot(){
-    const u = netlifyIdentity?.currentUser();
-    if(!u || !isAdmin(u)){ gate.style.display='block'; return; }
-    app.style.display='block'; load();
-    document.addEventListener('keydown', (e)=>{
-      if(e.key === '/' && document.activeElement === document.body){ e.preventDefault(); sel('#q').focus(); }
-      if(e.key.toLowerCase() === 'n' && document.activeElement === document.body){ e.preventDefault(); openEdit(null); }
-      if(e.key === 'Escape'){ closeModal(); }
-    });
+  async function deleteEd() {
+    if (!cur?.id) return;
+    if (!confirm('Delete this candidate?')) return;
+    try {
+      await api('/admin-candidates-delete','POST',{ id: cur.id });
+      toast('Deleted');
+      ed.style.display = 'none';
+      cur = null;
+      loadList();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'error');
+    }
   }
-  document.addEventListener('DOMContentLoaded', ()=>{
-    sel('#btnRefresh').onclick = load;
-    sel('#btnNew').onclick = ()=>openEdit(null);
-    sel('#btnClose').onclick = closeModal;
-    sel('#btnDelete').onclick = remove;
-    sel('#btnSave').onclick = ()=>save(false);
-    sel('#frm').onsubmit = (e)=>{ e.preventDefault(); save(true); };
-    sel('#q').addEventListener('input', ()=>{ page=1; renderList(); });
 
-    netlifyIdentity?.on('init', boot);
-    netlifyIdentity?.on('login', ()=>location.reload());
-    netlifyIdentity?.on('logout', ()=>location.href='/admin/');
-    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else gate.style.display='block'; }, 600);
-  });
+  // UI events
+  sel('#btnRefresh').onclick = loadList;
+  sel('#btnNew').onclick = () => openEd(null);
+  sel('#btnSave').onclick = saveEd;
+  sel('#btnDelete').onclick = deleteEd;
+  sel('#btnClose').onclick = () => { ed.style.display = 'none'; cur = null; };
+
+  // First load
+  loadList();
+}
 </script>
-<script>
-  // Your page’s main logic. Runs only after Identity is ready AND the user is an admin.
-  async function main({ api, sel, toast, user }) {
-    // Example: load clients list (adjust the endpoint per page)
-    const rows = await api('/admin-clients-list', 'POST', { q: null });
-    sel('#tableWrap').textContent = rows.length ? `${rows.length} client(s)` : 'No results';
-    // ...render your table, wire up buttons, etc...
-  }
-
-  // Boot the page. You can drop this block as-is into every admin page.
-  document.addEventListener('DOMContentLoaded', () => {
-    const start = () => Admin.bootAdmin(main);
-
-    netlifyIdentity?.on('init', start);
-    netlifyIdentity?.on('login', () => location.reload());
-    netlifyIdentity?.on('logout', () => location.href = '/admin/');
-
-    // Fallback if Identity init is slow
-    setTimeout(() => {
-      if (netlifyIdentity?.currentUser()) start();
-      else (document.querySelector('#gate') || {}).style.display = 'block';
-    }, 600);
-  });
-</script>
-
 </body>
 </html>
