@@ -120,5 +120,28 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 </script>
 
+<!-- 2) Put these two just before </body>, in this exact order -->
+<script src="./common.js?v=8"></script>
+
+<script>
+  // Defensive: show a helpful message if common.js didn’t load
+  if (!window.Admin || !window.Admin.bootAdmin) {
+    console.error('common.js not loaded or cached stale — bump ?v= and hard refresh');
+    const warn = document.createElement('pre');
+    warn.style.cssText = 'padding:12px;border:1px solid #f59e0b;background:#fff7ed;color:#7c2d12;border-radius:8px;max-width:680px;margin:16px';
+    warn.textContent = 'Admin bootstrap missing (common.js). Try a hard refresh (⌘⇧R) or bump ?v= on the script tag.';
+    document.body.appendChild(warn);
+  } else {
+    Admin.bootAdmin(async ({ api, sel, toast }) => {
+      // ... your page code goes here ...
+      // If you already have a big inline block, just keep it here unchanged.
+      console.log('[candidates] boot ok');
+      // Example: prove the gate opened
+      const app = document.getElementById('app'); if (app) app.style.display = '';
+    });
+  }
+</script>
+
+
 </body>
 </html>
