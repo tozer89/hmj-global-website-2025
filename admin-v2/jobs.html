@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jobs | HMJ-Global</title>
+  <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    :root{
+      --ink:#1A1A2E; --accent:#3A66B3; --muted:#6b7280; --bg:#1a243b; --chip:#eef3ff;
+      --chipBorder:rgba(58,102,179,.35); --cardBorder:rgba(26,26,46,.14);
+      --ok:#1f7e39; --warn:#7a5b00; --stop:#8b1f28; --steel:#e8ecff;
+    }
+    /* ===== Header / Nav (unified across site) ===== */
+    .hmj-header{position:sticky;top:0;z-index:1000;background:var(--bg);color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
+    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+    .hmj-logo img{height:40px;display:block}
+    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
+    .hmj-menu a{display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s}
+    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
+    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
+    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
+    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
+    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
+    @media (max-width:900px){
+      .hmj-burger{display:inline-block}
+      .hmj-menu{
+        position:fixed;right:12px;left:12px;top:64px;background:var(--bg);
+        border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.35);
+        display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;transition:max-height .28s ease, padding .2s ease
+      }
+      .hmj-menu.open{max-height:70vh;padding:10px}
+      .hmj-menu a{padding:14px 12px;width:100%}
+      .hmj-scrim[hidden]{display:none}
+    }
+    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
+    .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+
+    /* ===== Page header ===== */
+    .page-header{min-height:40vh;display:grid;place-items:center;padding:120px 20px 80px;text-align:center;color:#fff;position:relative;background:url('images/hero.jpg') center/cover no-repeat;}
+    .page-header::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55))}
+    .page-header::after{
+      content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
+      background:repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 8px),
+                 repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 10px);
+      transform:translateX(0); animation:scanMove 18s linear infinite;
+    }
+    @keyframes scanMove { to { transform:translateX(16px); } }
+    .page-header>*{position:relative;z-index:1}
+    .page-header h1{font-size:clamp(30px,4vw,46px);margin:0 0 .3rem;line-height:1.15}
+    .page-header p{opacity:.9;margin:0}
+    .power-underline{width:min(88vw,740px); height:14px; margin:12px auto 0; opacity:.9}
+    .power-underline path{stroke:#5f86ff; stroke-width:2; fill:none; stroke-linecap:round; stroke-dasharray:6 8; animation:flow 2.8s linear infinite;}
+    @keyframes flow { to { stroke-dashoffset:-280; } }
+
+    /* ===== FILTER BAR ===== */
+    .filters{position:sticky; top:0; z-index:8; background:#fff; border-bottom:1px solid rgba(26,26,46,.08); box-shadow:0 6px 20px rgba(0,0,0,.06)}
+    .filters-inner{max-width:1200px; margin:0 auto; padding:12px 20px}
+    .filter-compact{display:none; gap:8px; align-items:center}
+    .filter-advanced{margin-top:8px}
+    .filter-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px}
+    .filter-label{font-weight:700; color:var(--ink); margin-right:6px}
+    .chip{display:inline-flex; align-items:center; gap:10px; padding:12px 16px; border-radius:999px; border:1px solid var(--chipBorder); background:var(--chip); color:var(--ink); font-weight:700; cursor:pointer; transition:transform .12s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease; user-select:none;}
+    .chip:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(58,102,179,.18)}
+    .chip.active{background:#dfe9ff; border-color:#6f95e0}
+    .chip .dot{width:9px;height:9px;border-radius:999px;box-shadow:0 0 0 2px rgba(0,0,0,.04) inset}
+    .dot.live{background:rgba(40,167,69,.9)} .dot.interviewing{background:rgba(255,193,7,.95)} .dot.closed{background:rgba(220,53,69,.9)}
+    .select{padding:12px 14px;border-radius:12px;border:1px solid rgba(26,26,46,.18);background:#fff;font-weight:600}
+    .search{flex:1;display:flex;align-items:center;gap:8px;min-width:220px}
+    .search input{width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(26,26,46,.18); outline:none; font-weight:600}
+    .btn{padding:12px 18px; border-radius:12px; border:1px solid rgba(58,102,179,.28); background:#f3f6ff; font-weight:800; color:var(--ink); cursor:pointer; transition:transform .12s ease, box-shadow .2s ease, background .2s ease;}
+    .btn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(58,102,179,.18); background:#e8f0ff}
+    .btn-primary{background:linear-gradient(180deg,rgba(58,102,179,.14),rgba(58,102,179,.06)),#fff; color:#3A66B3;}
+    .badge{display:inline-block;min-width:20px;padding:2px 6px;margin-left:6px;border-radius:999px;background:#dfe9ff;border:1px solid #bcd0ff;font-size:.8rem}
+    .meta-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:0 20px 12px;max-width:1200px;margin:0 auto;color:var(--muted);font-weight:700}
+    @media (max-width:680px){
+      .filters-inner{padding:10px 12px} .filter-compact{display:flex}
+      .filter-advanced{max-height:0; overflow:hidden; opacity:0; transition:max-height .25s ease, opacity .2s ease;}
+      .filters.open .filter-advanced{max-height:580px; opacity:1}
+      .chip{padding:8px 10px} .select,.search input{padding:9px 10px;border-radius:10px}
+      .meta-bar{padding:6px 12px 10px}
+    }
+
+    /* ===== Section Headings ===== */
+    .section-title{max-width:1200px;margin:30px auto 10px;padding:0 20px;}
+    .section-title h2{
+      margin:0; font-size:14px; letter-spacing:.12em; text-transform:uppercase; font-weight:800;
+      color:var(--section-pill-text);
+      background:linear-gradient(180deg,var(--section-pill-top),var(--section-pill-bottom));
+      display:inline-block; padding:10px 14px; border-radius:12px;
+      border:1px solid var(--section-pill-border);
+      box-shadow:0 10px 28px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+      transition:box-shadow .2s ease, transform .12s ease;
+    }
+    .section-title h2:hover{transform:translateY(-1px); box-shadow:0 0 0 2px rgba(95,134,255,.16), 0 12px 32px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.06);}
+
+    /* ===== JOB CARDS ===== */
+    .jobs-board{max-width:1200px;margin:12px auto 50px;padding:0 20px; display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;}
+    .job{background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%),#fff; border:1px solid var(--cardBorder); border-radius:18px; padding:18px 18px 20px; box-shadow:0 8px 22px rgba(0,0,0,.08); transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease, outline .12s ease; outline:0 solid transparent;}
+    .job:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.14);border-color:rgba(58,102,179,.35)}
+    .job:focus-within{outline:3px solid rgba(58,102,179,.25)}
+    .job h3{margin:.1rem 0 .3rem;color:var(--ink)}
+    .status{display:inline-block;padding:7px 12px;font-size:.82rem;border-radius:999px;font-weight:800;margin-bottom:.6rem;border:1px solid rgba(0,0,0,.08)}
+    .status.live{background:rgba(40,167,69,.14);color:var(--ok);border-color:rgba(40,167,69,.35)}
+    .status.interviewing{background:rgba(255,193,7,.18);color:var(--warn);border-color:rgba(255,255,7,.42)}
+    .status.closed{background:rgba(220,53,69,.14);color:var(--stop);border-color:rgba(220,53,69,.38)}
+    .tag{display:inline-block;padding:6px 10px;font-size:.75rem;border-radius:999px;margin-left:6px;background:rgba(58,102,179,.12);color:#3A66B3;font-weight:800}
+    .job .actions{margin-top:.6rem;display:flex;gap:8px;flex-wrap:wrap}
+    .btn-tertiary{background:#f3f6ff;color:var(--ink);border:1px solid rgba(58,102,179,.25);padding:10px 16px;border-radius:12px;font-weight:800;cursor:pointer;transition:background .2s ease,transform .1s ease,box-shadow .2s ease}
+    .btn-tertiary:hover{background:#e9f0ff;transform:translateY(-1px);box-shadow:0 6px 14px rgba(58,102,179,.15)}
+    .btn-ghost{background:#fff;color:var(--accent);border:1px dashed rgba(58,102,179,.35)}
+    .pin-btn{background:#fff;border:1px solid rgba(58,102,179,.25);border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer}
+    .pin-btn[aria-pressed="true"]{background:#fff6d9;border-color:#ffd36b}
+    .share-btn{background:#fff;border:1px solid rgba(58,102,179,.25);border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer}
+    .job-details{margin-top:12px;overflow:hidden;max-height:0;opacity:0;transition:max-height .35s ease,opacity .25s ease,transform .25s ease;transform:translateY(-4px);background:#fff;border:1px solid rgba(26,26,46,.12);border-radius:14px;padding:0 16px;box-shadow:0 8px 18px rgba(0,0,0,.06) inset}
+    .job-details.open{padding:16px;max-height:1200px;opacity:1;transform:translateY(0)}
+    .job-details h4{margin:.2rem 0 .4rem}
+    .job-details ul{margin:.25rem 0 .6rem 1.1rem}
+    .job-details .apply-row{display:flex;justify-content:flex-end;margin-top:.6rem}
+    .no-results{grid-column:1/-1;text-align:center;padding:30px;border:1px dashed rgba(26,26,46,.18);border-radius:16px;color:var(--muted);font-weight:700}
+
+    /* Toast */
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0f1322;color:#eaf0ff;border:1px solid rgba(95,134,255,.5);padding:10px 14px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:9999}
+    .toast.show{opacity:1}
+
+    /* ===== CTA bottom ===== */
+    .jobs-cta{margin:26px auto 60px; max-width:1100px; padding:24px 20px;
+      background:radial-gradient(600px 200px at 10% -30%, rgba(58,102,179,.18), transparent 60%), radial-gradient(600px 200px at 90% 130%, rgba(58,102,179,.18), transparent 60%), #0f1322;
+      color:#eaf0ff; border:1px solid rgba(255,255,255,.12); border-radius:16px; box-shadow:0 18px 40px rgba(0,0,0,.35);}
+    .jobs-cta h3{margin:0 0 8px}
+    .jobs-cta p{margin:0 0 12px;color:#cfd7ff}
+    .jobs-cta .cta-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .jobs-cta a{display:inline-block;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.22);text-decoration:none;color:#fff;font-weight:800}
+    .jobs-cta a.btn-light{background:#1d2747}
+    .jobs-cta a.btn-outline:hover{background:rgba(255,255,255,.08)}
+
+    /* ===== Scroll to top ===== */
+    .scroll-top{position:fixed; right:18px; bottom:18px; width:44px; height:44px; border-radius:12px; background:#0f1322; color:#eaf0ff; border:1px solid rgba(95,134,255,.5); display:grid; place-items:center; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease, box-shadow .2s ease, border-color .2s ease; z-index:999; box-shadow:0 0 0 rgba(95,134,255,0)}
+    .scroll-top.show{opacity:1; pointer-events:auto}
+    .scroll-top:hover{transform:translateY(-2px); border-color:#5f86ff; box-shadow:0 0 12px rgba(95,134,255,.6), 0 0 28px rgba(95,134,255,.35)}
+
+    /* ===== Footer ===== */
+    footer{text-align:center; padding:28px 16px; background:#0f1322; color:#cfd7ff; border-top:1px solid rgba(255,255,255,.06) }
+
+    /* ===== Reveal on scroll ===== */
+    .reveal{opacity:0; transform:translateY(12px); transition:opacity .5s ease, transform .5s ease}
+    .reveal.revealed{opacity:1; transform:none}
+  </style>
+</head>
+<body>
+  <!-- ===== Header / Navbar ===== -->
+  <header class="hmj-header">
+    <nav class="hmj-nav" aria-label="Main">
+      <a class="hmj-logo" href="index.html">
+        <img src="images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
+      </a>
+      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+        <span></span><span></span><span></span>
+      </button>
+      <ul id="hmj-menu" class="hmj-menu">
+        <li><a href="index.html" data-page="index">Home</a></li>
+        <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
+        <li><a href="clients.html" data-page="clients">Clients</a></li>
+        <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
+        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
+        <!-- <li><a href="admin/" data-page="portal">.</a></li> -->
+
+      </ul>
+      <div class="hmj-scrim" hidden></div>
+    </nav>
+  </header>
+
+  <!-- ===== Page header ===== -->
+  <section class="page-header">
+    <h1>Current Vacancies</h1>
+    <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
+      <path d="M2 7 C 100 7, 140 7, 180 7
+               C 220 7, 240 2, 260 7
+               C 280 12, 300 7, 340 7
+               C 380 7, 420 7, 460 7
+               C 500 7, 520 2, 540 7
+               C 560 12, 580 7, 620 7
+               C 660 7, 720 7, 798 7" />
+    </svg>
+    <p>Explore our latest roles across data centre & infrastructure projects in the UK & Europe.</p>
+  </section>
+
+  <!-- ===== Smart Filter Bar ===== -->
+  <div class="filters" role="region" aria-label="Job filters" id="filters">
+    <div class="filters-inner">
+      <div class="filter-compact">
+        <div class="search"><input id="searchBoxMobile" type="search" placeholder="Search job title, keywords…" aria-label="Search jobs (mobile)" /></div>
+        <button id="toggleFilters" class="btn" type="button">Filters <span id="activeCount" class="badge">0</span></button>
+        <button id="clearFilters" class="btn" type="button" title="Clear filters">Clear</button>
+      </div>
+
+      <div class="filter-advanced">
+        <div class="filter-row" aria-label="Status filters">
+          <span class="filter-label">Status:</span>
+          <button class="chip active" data-chip="status" data-value="all" aria-pressed="true"><span class="dot" style="background:#8088a0" aria-hidden="true"></span> All</button>
+          <button class="chip" data-chip="status" data-value="live"><span class="dot live" aria-hidden="true"></span> Live</button>
+          <button class="chip" data-chip="status" data-value="interviewing"><span class="dot interviewing" aria-hidden="true"></span> Interviewing</button>
+          <button class="chip" data-chip="status" data-value="closed"><span class="dot closed" aria-hidden="true"></span> Closed</button>
+          <div class="search" style="margin-left:auto; min-width:260px">
+            <input id="searchBox" type="search" placeholder="Search job title, keywords…" aria-label="Search jobs" />
+          </div>
+        </div>
+
+        <div class="filter-row" aria-label="Location & Type">
+          <span class="filter-label">Location:</span>
+          <select class="select" id="locationFilter" aria-label="Location filter">
+            <option value="all">All Locations</option>
+            <option value="dublin">Dublin, Ireland</option>
+            <option value="london">London, UK</option>
+            <option value="amsterdam">Amsterdam, Netherlands</option>
+            <option value="frankfurt">Frankfurt, Germany</option>
+            <option value="macclesfield">Macclesfield, UK</option>
+            <option value="eemshaven">Eemshaven, Netherlands</option>
+            <option value="groningen">Groningen, Netherlands</option>
+            <option value="helsinki">Helsinki, Finland</option>
+            <option value="espoo">Espoo, Finland</option>
+            <option value="uk">UK (Various)</option>
+            <option value="europe">Europe (Travel)</option>
+          </select>
+
+          <span class="filter-label" style="margin-left:12px">Employment:</span>
+          <button class="chip active" data-chip="type" data-value="all">All</button>
+          <button class="chip" data-chip="type" data-value="permanent">Permanent</button>
+          <button class="chip" data-chip="type" data-value="contract">Contract</button>
+
+          <span class="filter-label" style="margin-left:12px">Discipline:</span>
+          <button class="chip active" data-chip="disc" data-value="all">All</button>
+          <button class="chip" data-chip="disc" data-value="data centre">Data Centre</button>
+          <button class="chip" data-chip="disc" data-value="life sciences">Life Sciences</button>
+          <button class="chip" data-chip="disc" data-value="pharma">Pharma</button>
+          <button class="chip" data-chip="disc" data-value="substation">Substation</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="meta-bar">
+      <div id="resultCount">Showing all jobs</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn" id="shortlistBtn" type="button" title="Show saved roles">Shortlist (0)</button>
+        <span>Tip: use search for keywords (e.g. “Planner”, “BMS”, “Ireland”).</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Sections & Cards (fallback content) ===== -->
+  <div class="section-title reveal"><h2>DATA CENTRE – COMMERCIAL</h2></div>
+  <section id="jobsBoard-commercial" class="jobs-board">
+    <!-- Fallback cards … (kept as-is) -->
+    <div id="qs-london-dc" class="job reveal" data-id="qs-london-dc" data-status="live" data-location="london" data-type="permanent" data-disc="data centre" data-keywords="quantity surveyor qs london dc commercial nec fidic">
+      <h3>Quantity Surveyor — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> London, UK <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Quantity Surveyor — Data Centre (London)">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Join a leading DC contractor in London, managing commercial delivery across fast-paced build/fit-out packages: change, cost control and subcontract management.</p>
+        <h4>Requirements</h4>
+        <ul><li>QS background on data centre or mission-critical projects.</li><li>NEC/FIDIC experience and robust reporting.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Quantity Surveyor — Data Centre (London)">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="mep-sqs-eem" class="job reveal" data-id="mep-sqs-eem" data-status="live" data-location="eemshaven" data-type="permanent" data-disc="data centre" data-keywords="mep senior quantity surveyor dc nec fidic commercial">
+      <h3>MEP Senior Quantity Surveyor — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Eemshaven, Netherlands <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=MEP Senior Quantity Surveyor — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Lead MEP commercial delivery on a hyperscale DC build: cost control, procurement, change, forecasting, and subcontract administration.</p>
+        <h4>Requirements</h4>
+        <ul>
+          <li>Senior QS with strong MEP package exposure on DC/mission-critical projects.</li>
+          <li>NEC/FIDIC familiarity; stakeholder & supply chain leadership.</li>
+          <li>Accurate monthly reporting and value engineering capability.</li>
+        </ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=MEP Senior Quantity Surveyor — Data Centre">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="csa-sqs-eem" class="job reveal" data-id="csa-sqs-eem" data-status="interviewing" data-location="eemshaven" data-type="permanent" data-disc="data centre" data-keywords="csa senior quantity surveyor envelope civils structure fit-out change claims">
+      <h3>CSA Senior Quantity Surveyor — Data Centre</h3>
+      <span class="status interviewing">Interviewing</span>
+      <p><strong>Location:</strong> Eemshaven, Netherlands <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=CSA Senior Quantity Surveyor — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Commercial lead across CSA packages (civils, structure, architecture) on a large data centre campus.</p>
+        <h4>Requirements</h4>
+        <ul><li>Senior QS with CSA fit-out/envelope experience on complex builds.</li><li>Change management, claims preparation, subcontract negotiation.</li><li>EV, cash-flow and robust commercial reporting.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=CSA Senior Quantity Surveyor — Data Centre">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="sqs-dublin" class="job reveal" data-id="sqs-dublin" data-status="interviewing" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="senior quantity surveyor data centre commercial">
+      <h3>Senior Quantity Surveyor — Data Centre</h3>
+      <span class="status interviewing">Interviewing</span>
+      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Senior Quantity Surveyor — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Commercial lead on a major DC build—cost control, procurement, change management & subcontract oversight.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Senior Quantity Surveyor — Data Centre">Apply</a></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-title reveal"><h2>DATA CENTRE – ENGINEERING & MANAGEMENT</h2></div>
+  <section id="jobsBoard-dc" class="jobs-board">
+    <div id="planner-dublin" class="job reveal" data-id="planner-dublin" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="project planner scheduler p6 primavera data centre dublin">
+      <h3>Project Planner — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Project Planner — Data Centre (Dublin)">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Develop & maintain integrated Primavera P6 schedules for a hyperscale data centre programme. Interface with package managers, commissioning & commercial teams.</p>
+        <h4>Requirements</h4>
+        <ul><li>P6 expertise with large-scale build environments (DC/mission-critical preferred).</li><li>Progress measurement, risk/change controls, stakeholder reporting.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Project Planner — Data Centre (Dublin)">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="electrician-amsterdam" class="job reveal" data-id="electrician-amsterdam" data-status="live" data-location="amsterdam" data-type="contract" data-disc="data centre" data-keywords="electrician installer lv mv testing commissioning amsterdam data centre">
+      <h3>Electrician — Data Centre Construction</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Amsterdam, Netherlands <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Contract</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrician — Data Centre (Amsterdam)">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Hands-on installation, test & commissioning of LV/MV systems on a DC build in Amsterdam. Work safely to programme with QA documentation.</p>
+        <h4>Requirements</h4>
+        <ul><li>NVQ3 (or EU equivalent); ECS/JIB or VCA; 18th Edition/equivalent.</li><li>Containment, wiring, terminations and testing experience.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrician — Data Centre (Amsterdam)">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="epm-frankfurt" class="job reveal" data-id="epm-frankfurt" data-status="live" data-location="frankfurt" data-type="permanent" data-disc="data centre" data-keywords="electrical project manager frankfurt installation power lighting contractor dc">
+      <h3>Electrical Project Manager — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Frankfurt, Germany <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrical Project Manager — Data Centre (Frankfurt)">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Lead an electrical installation contractor delivering <strong>power and lighting</strong> across a Frankfurt data centre project—programme, subcontractors, QA and client interface.</p>
+        <h4>Requirements</h4>
+        <ul><li>PM experience on electrical install (power/lighting) within DC or mission-critical projects.</li><li>Strong safety, quality and commercial awareness.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrical Project Manager — Data Centre (Frankfurt)">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="proj-dir-eu" class="job reveal" data-id="proj-dir-eu" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="project director europe hyperscale programme leadership p&l">
+      <h3>Project Director — Data Centre (Europe)</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Project Director — Data Centre (Europe)">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Executive ownership for multi-site DC delivery across Europe: strategy, client leadership, P&amp;L, program, and team performance.</p>
+        <h4>Requirements</h4>
+        <ul><li>Director-level track record delivering hyperscale/mission-critical builds.</li><li>Commercial acumen and supply chain leadership.</li><li>Safety, quality and commissioning governance.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Project Director — Data Centre (Europe)">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="bms-eng-dub" class="job reveal" data-id="bms-eng-dub" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="bms engineer epms niagara trend jci siemens commissioning">
+      <h3>BMS Engineer (Building Management Systems) — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=BMS Engineer — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Deliver BMS/EPMS integration & commissioning, interfacing with mechanical/electrical systems and controls contractors.</p>
+        <h4>Requirements</h4>
+        <ul><li>Niagara/Trend/JCI/Siemens or similar.</li><li>Cause-and-effect testing; documentation & handover.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=BMS Engineer — Data Centre">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="csa-fit-dub" class="job reveal" data-id="csa-fit-dub" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="csa package manager fit out subcontractor qa programme handover">
+      <h3>CSA Package Manager (Fit-Out) — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=CSA Package Manager (Fit-Out) — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Lead CSA fit-out delivery: subcontractor management, QA, programme and handover.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=CSA Package Manager (Fit-Out) — Data Centre">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="ofci-espoo" class="job reveal" data-id="ofci-espoo" data-status="interviewing" data-location="espoo" data-type="permanent" data-disc="data centre" data-keywords="ofci package manager procurement logistics commissioning interface">
+      <h3>OFCI Package Manager — Data Centre</h3>
+      <span class="status interviewing">Interviewing</span>
+      <p><strong>Location:</strong> Espoo, Finland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=OFCI Package Manager — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Own owner-furnished, contractor-installed scope: procurement, logistics, integration & commissioning interface.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=OFCI Package Manager — Data Centre">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="ecm-hel" class="job reveal" data-id="ecm-hel" data-status="closed" data-location="helsinki" data-type="permanent" data-disc="data centre" data-keywords="electrical construction manager finland">
+      <h3>Electrical Construction Manager — Data Centre</h3>
+      <span class="status closed">Closed</span>
+      <p><strong>Location:</strong> Helsinki, Finland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrical Construction Manager — Data Centre">Register</a>
+      </div>
+      <div class="job-details">
+        <p>Recently closed—register to be notified of the next Electrical CM opening in Finland.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrical Construction Manager — Data Centre">Register Interest</a></div>
+      </div>
+    </div>
+
+    <div id="mcm-hel" class="job reveal" data-id="mcm-hel" data-status="live" data-location="helsinki" data-type="permanent" data-disc="data centre" data-keywords="mechanical construction manager chilled water crah crac bms interfaces">
+      <h3>Mechanical Construction Manager — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Helsinki, Finland <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Mechanical Construction Manager — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Manage mechanical install/commissioning (chilled water, CRAH/CRAC, pumps, BMS interfaces) to handover.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Mechanical Construction Manager — Data Centre">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="elec-gron" class="job reveal" data-id="elec-gron" data-status="live" data-location="groningen" data-type="contract" data-disc="data centre" data-keywords="electrician lv mv install test commission">
+      <h3>Electrical Engineer / Electrician — Data Centre Construction</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Groningen, Netherlands <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Contract</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrical Engineer / Electrician — Data Centre Construction">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Hands-on install, test & commission LV/MV systems on a hyperscale DC build. Coordinate with supervisors to maintain programme & QA.</p>
+        <h4>Key Responsibilities</h4>
+        <ul><li>Install, test & commission LV/MV; interpret SLDs & drawings.</li><li>Support QA/QC, red-lines, snagging & technical reporting.</li><li>Maintain safety standards and permit-to-work compliance.</li></ul>
+        <h4>Requirements</h4>
+        <ul><li>NVQ3 (or EU equivalent) with DC/mission-critical experience.</li><li>18th Edition / EU equivalent; ECS/JIB or VCA; IPAF a plus.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrical Engineer / Electrician — Data Centre Construction">Apply</a></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-title reveal"><h2>SUBSTATIONS, POWER & ENERGY</h2></div>
+  <section id="jobsBoard-substations" class="jobs-board">
+    <div id="permit-eng-eu" class="job reveal" data-id="permit-eng-eu" data-status="live" data-location="europe" data-type="permanent" data-disc="substation" data-keywords="permit engineer permitting specialist grid dco planning">
+      <h3>Permit Engineer / Permitting Specialist — Substations</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> Europe (Travel) <span class="tag">Substation</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Permit Engineer / Permitting Specialist — Substations">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Support grid-connection projects with permitting, stakeholder engagement, and local authority liaison for substation builds.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Permit Engineer / Permitting Specialist — Substations">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="estimator-uk" class="job reveal" data-id="estimator-uk" data-status="live" data-location="uk" data-type="permanent" data-disc="substation" data-keywords="mep cost estimator qs substation bess tender">
+      <h3>MEP Cost Estimator / QS — Substation & BESS</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> UK (Hybrid) <span class="tag">Substation</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=MEP Cost Estimator / QS — Substation & BESS">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Own estimating/QS for substation & battery storage packages: take-offs, tendering, value engineering, and supplier engagement.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=MEP Cost Estimator / QS — Substation & BESS">Apply</a></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-title reveal"><h2>LIFE SCIENCES & PHARMA</h2></div>
+  <section id="jobsBoard-pharma" class="jobs-board">
+    <div id="planner-macc" class="job reveal" data-id="planner-macc" data-status="interviewing" data-location="macclesfield" data-type="permanent" data-disc="life sciences" data-keywords="senior planner p6 pharma clean rooms risk change">
+      <h3>Senior Planner — Life Sciences</h3>
+      <span class="status interviewing">Interviewing</span>
+      <p><strong>Location:</strong> Macclesfield, UK <span class="tag">Life Sciences</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Senior Planner — Life Sciences">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Lead planning for a major pharma clean-room programme: P6 schedules, progress measurement and interface management.</p>
+        <h4>Requirements</h4>
+        <ul><li>Primavera P6 expert; clean-room/pharma project background.</li><li>Risk & change controls; strong reporting and stakeholder comms.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Senior Planner — Life Sciences">Apply</a></div>
+      </div>
+    </div>
+
+    <div id="elec-pharma" class="job reveal" data-id="elec-pharma" data-status="interviewing" data-location="macclesfield" data-type="contract" data-disc="pharma" data-keywords="electrician pharmaceutical clean room ecs jib containment">
+      <h3>Electrician — Pharmaceutical Construction</h3>
+      <span class="status interviewing">Interviewing</span>
+      <p><strong>Location:</strong> Hull (commutable), UK <span class="tag">Pharma</span></p>
+      <p><strong>Employment:</strong> Contract</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrician — Pharmaceutical Construction">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Electricians to support a regulated pharma/clean-room build with high compliance standards and QA/QC documentation.</p>
+        <h4>Key Responsibilities</h4>
+        <ul><li>Install, terminate, test & commission to clean-room standards.</li><li>Containment (tray, trunking, conduit), cable pulling, drawings.</li></ul>
+        <h4>Requirements</h4>
+        <ul><li>NVQ3; 18th Edition; valid ECS/JIB (gold preferred).</li><li>Industrial/pharma/clean-room experience desirable; IPAF/PASMA beneficial.</li></ul>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrician — Pharmaceutical Construction">Apply</a></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-title reveal"><h2>ICT & COMMISSIONING</h2></div>
+  <section id="jobsBoard-ict" class="jobs-board">
+    <div id="bms-cm-uk" class="job reveal" data-id="bms-cm-uk" data-status="live" data-location="uk" data-type="permanent" data-disc="data centre" data-keywords="bms commissioning manager epms niagara trend jci">
+      <h3>BMS Commissioning Manager — Data Centre</h3>
+      <span class="status live">Taking Candidates</span>
+      <p><strong>Location:</strong> UK (Various / Travel) <span class="tag">Data Centre</span></p>
+      <p><strong>Employment:</strong> Permanent</p>
+      <div class="actions">
+        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+        <button class="share-btn" type="button" data-share>Share</button>
+        <a class="btn-tertiary btn-ghost" href="contact.html?role=BMS Commissioning Manager — Data Centre">Apply</a>
+      </div>
+      <div class="job-details">
+        <h4>Overview</h4>
+        <p>Lead integrated BMS/EPMS commissioning, cause-and-effect, FAT/SAT, and performance verification across hyperscale DCs.</p>
+        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=BMS Commissioning Manager — Data Centre">Apply</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== No results ===== -->
+  <section class="jobs-board">
+    <div id="noResults" class="no-results" style="display:none">No roles match your filters. Try clearing filters or adjusting your search.</div>
+  </section>
+
+  <!-- ===== CTA block ===== -->
+  <section class="jobs-cta reveal">
+    <div class="wrap">
+      <h3>Didn’t see a role that fits?</h3>
+      <p>We hire for new data centre, pharma and power projects weekly. Register your profile and we’ll notify you first.</p>
+      <div class="cta-actions">
+        <a class="btn-light" href="candidates.html#candForm">Send CV / Register</a>
+        <a class="btn-outline" href="contact.html">Contact Us</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Scroll to Top ===== -->
+  <button class="scroll-top" id="scrollTopBtn" aria-label="Scroll to top" title="Back to top">↑</button>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">Link copied!</div>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
+    <br><br><br>
+    <p>HMJ-Global is a trading name of HMJ-Global Ltd, registered in England & Wales, company number 16029938.</p>
+    <p>Registered office: 905 Lightbox Blue, Media City, UK.</p>
+  </footer>
+
+  <!-- ===== Scripts ===== -->
+  <script>
+  (async function(){
+    /* ------ NEW: Load /data/jobs.json and render cards ------ */
+    async function loadJobsJSON(){
+      try{
+        const res = await fetch('data/jobs.json', {cache:'no-store'});
+        if(!res.ok) return null;
+        const data = await res.json();
+        return Array.isArray(data.jobs) ? data.jobs : null;
+      }catch(e){ return null; }
+    }
+    function sectionId(sec){
+      return ({commercial:'jobsBoard-commercial', dc:'jobsBoard-dc', substations:'jobsBoard-substations', pharma:'jobsBoard-pharma', ict:'jobsBoard-ict'}[sec] || 'jobsBoard-dc');
+    }
+    function statusBadge(status){
+      const map = {live:'live', interviewing:'interviewing', closed:'closed'};
+      return `<span class="status ${map[status]||'live'}">${status==='closed'?'Closed':status==='interviewing'?'Interviewing':'Taking Candidates'}</span>`;
+    }
+    function applyHref(title, locText){
+      const q = encodeURIComponent(`${title}${locText ? ' ('+locText+')' : ''}`);
+      return `contact.html?role=${q}`;
+    }
+    function renderOne(job){
+      const s=(job.status||'live').toLowerCase(), d=(job.discipline||'data centre').toLowerCase(),
+            t=(job.type||'permanent').toLowerCase(), l=(job.locationCode||'uk').toLowerCase();
+      const locText=job.locationText||'UK';
+      const applyUrl = job.applyUrl && job.applyUrl.trim() ? job.applyUrl.trim() : applyHref(job.title, locText);
+      const reqList=(job.requirements||[]).map(i=>`<li>${i}</li>`).join('');
+      const resps  =(job.responsibilities||[]).map(i=>`<li>${i}</li>`).join('');
+      return `
+      <div id="${job.id}" class="job reveal"
+           data-id="${job.id}" data-status="${s}" data-location="${l}" data-type="${t}"
+           data-disc="${d}" data-keywords="${(job.keywords||'').toLowerCase()}">
+        <h3>${job.title}</h3>
+        ${statusBadge(s)}
+        <p><strong>Location:</strong> ${locText} <span class="tag">${job.discipline||'Data Centre'}</span></p>
+        <p><strong>Employment:</strong> ${t.charAt(0).toUpperCase()+t.slice(1)}</p>
+        <div class="actions">
+          <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
+          <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
+          <button class="share-btn" type="button" data-share>Share</button>
+          <a class="btn-tertiary btn-ghost" href="${applyUrl}">${s==='closed'?'Register':'Apply'}</a>
+        </div>
+        <div class="job-details">
+          ${job.overview ? `<h4>Overview</h4><p>${job.overview}</p>` : ''}
+          ${resps ? `<h4>Key Responsibilities</h4><ul>${resps}</ul>` : ''}
+          ${reqList ? `<h4>Requirements</h4><ul>${reqList}</ul>` : ''}
+          <div class="apply-row"><a class="btn btn-primary" href="${applyUrl}">${s==='closed'?'Register Interest':'Apply'}</a></div>
+        </div>
+      </div>`;
+    }
+    async function maybeRenderFromJSON(){
+      const jobs = await loadJobsJSON();
+      if(!jobs) return;
+      ['commercial','dc','substations','pharma','ict'].forEach(sec=>{
+        const board=document.getElementById(sectionId(sec));
+        if(board) board.innerHTML='';
+      });
+      jobs.filter(j=>j.published).forEach(job=>{
+        const board=document.getElementById(sectionId(job.section||'dc'));
+        if(board) board.insertAdjacentHTML('beforeend', renderOne(job));
+      });
+    }
+    /* Ensure JSON render completes before we query .job cards for filters etc. */
+    await maybeRenderFromJSON();
+
+    /* ---------- Nav ---------- */
+    const burger=document.querySelector('.hmj-burger');
+    const menu=document.getElementById('hmj-menu');
+    const scrim=document.querySelector('.hmj-scrim');
+    const path=(location.pathname.split('/').pop()||'jobs.html').toLowerCase();
+    menu.querySelectorAll('a').forEach(a=>{ if(a.getAttribute('href').toLowerCase()===path) a.setAttribute('aria-current','page'); });
+    function openMenu(open){ burger.setAttribute('aria-expanded',String(open)); menu.classList.toggle('open',open); scrim.hidden=!open; document.documentElement.style.overflow=open?'hidden':''; }
+    burger.addEventListener('click',()=>openMenu(burger.getAttribute('aria-expanded')!=='true'));
+    scrim.addEventListener('click',()=>openMenu(false));
+    menu.addEventListener('click',(e)=>{ const link=e.target.closest('a[href]'); if(!link) return; requestAnimationFrame(()=>openMenu(false)); });
+    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') openMenu(false); });
+
+    /* ---------- Reveal-on-scroll ---------- */
+    const toReveal=document.querySelectorAll('.reveal, .job');
+    if('IntersectionObserver' in window){
+      const io=new IntersectionObserver((entries)=>{ entries.forEach(ent=>{ if(ent.isIntersecting){ ent.target.classList.add('revealed'); io.unobserve(ent.target);} }); },{threshold:0.12});
+      toReveal.forEach(el=>io.observe(el));
+    } else { toReveal.forEach(el=>el.classList.add('revealed')); }
+
+    /* ---------- Scroll to top ---------- */
+    const topBtn=document.getElementById('scrollTopBtn');
+    const showTop=()=>{ if(window.scrollY>420){ topBtn.classList.add('show'); } else { topBtn.classList.remove('show'); } };
+    showTop(); window.addEventListener('scroll',showTop,{passive:true});
+    topBtn.addEventListener('click',()=>{ const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches; window.scrollTo({top:0,behavior:reduce?'auto':'smooth'}); });
+
+    /* ---------- Filters, Search & Shortlist ---------- */
+    const state={status:'all',location:'all',type:'all',disc:'all',search:'',shortlistOnly:false};
+    const jobsEls=Array.from(document.querySelectorAll('.job'));
+    const chips=Array.from(document.querySelectorAll('.chip'));
+    const resultCount=document.getElementById('resultCount');
+    const noResultsEl=document.getElementById('noResults');
+    const locationSel=document.getElementById('locationFilter');
+    const searchBox=document.getElementById('searchBox');
+    const searchBoxMobile=document.getElementById('searchBoxMobile');
+    const clearBtn=document.getElementById('clearFilters');
+    const filtersEl=document.getElementById('filters');
+    const toggleFiltersBtn=document.getElementById('toggleFilters');
+    const activeCountEl=document.getElementById('activeCount');
+    const shortlistBtn=document.getElementById('shortlistBtn');
+
+    if(window.matchMedia('(max-width:680px)').matches){ filtersEl.classList.remove('open'); } else { filtersEl.classList.add('open'); }
+    toggleFiltersBtn?.addEventListener('click',()=>filtersEl.classList.toggle('open'));
+
+    function syncSearch(value){
+      if(searchBox && document.activeElement!==searchBox){ searchBox.value=value; }
+      if(searchBoxMobile && document.activeElement!==searchBoxMobile){ searchBoxMobile.value=value; }
+      state.search=value.trim().toLowerCase(); applyFilters();
+    }
+    searchBox?.addEventListener('input',e=>syncSearch(e.target.value));
+    searchBoxMobile?.addEventListener('input',e=>syncSearch(e.target.value));
+
+    const PIN_KEY='hmj_pinned_jobs_v1';
+    const getPins=()=>new Set(JSON.parse(localStorage.getItem(PIN_KEY)||'[]'));
+    const setPins=(set)=>localStorage.setItem(PIN_KEY,JSON.stringify([...set]));
+    function refreshPinsUI(){
+      const pins=getPins();
+      jobsEls.forEach(job=>{
+        const id=job.id||job.dataset.id||job.querySelector('h3')?.textContent?.trim();
+        const btn=job.querySelector('.pin-btn'); if(!btn) return;
+        const isPinned=pins.has(id);
+        btn.setAttribute('aria-pressed',String(isPinned));
+        btn.textContent=isPinned?'★ Saved':'☆ Save';
+      });
+      shortlistBtn.textContent=`Shortlist (${pins.size})`;
+    }
+    jobsEls.forEach(job=>{
+      const btn=job.querySelector('.pin-btn'); if(!btn) return;
+      btn.addEventListener('click',()=>{
+        const pins=getPins();
+        const id=job.id||job.dataset.id||job.querySelector('h3')?.textContent?.trim();
+        if(pins.has(id)) pins.delete(id); else pins.add(id);
+        setPins(pins); refreshPinsUI(); applyFilters();
+      });
+    });
+    shortlistBtn.addEventListener('click',()=>{
+      state.shortlistOnly=!state.shortlistOnly;
+      shortlistBtn.classList.toggle('btn-primary',state.shortlistOnly);
+      shortlistBtn.title=state.shortlistOnly?'Showing only saved roles':'Show saved roles';
+      applyFilters();
+    });
+    refreshPinsUI();
+
+    chips.forEach(chip=>{
+      chip.addEventListener('click',()=>{
+        const group=chip.dataset.chip;
+        chips.filter(c=>c.dataset.chip===group).forEach(c=>{ c.classList.remove('active'); c.setAttribute('aria-pressed','false'); });
+        chip.classList.add('active'); chip.setAttribute('aria-pressed','true');
+        state[group]=chip.dataset.value; applyFilters();
+      });
+    });
+
+    locationSel.addEventListener('change',()=>{ state.location=locationSel.value; applyFilters(); });
+    clearBtn.addEventListener('click',()=>{
+      state.status='all'; state.location='all'; state.type='all'; state.disc='all'; state.search=''; state.shortlistOnly=false;
+      locationSel.value='all'; searchBox&&(searchBox.value=''); searchBoxMobile&&(searchBoxMobile.value=''); shortlistBtn.classList.remove('btn-primary');
+      ['status','type','disc'].forEach(group=>{
+        const list=chips.filter(c=>c.dataset.chip===group);
+        list.forEach(c=>{ c.classList.remove('active'); c.setAttribute('aria-pressed','false'); });
+        const allBtn=list.find(c=>c.dataset.value==='all'); if(allBtn){ allBtn.classList.add('active'); allBtn.setAttribute('aria-pressed','true'); }
+      });
+      applyFilters();
+    });
+
+    function getAttr(el,name){ return (el.getAttribute(name)||'').toLowerCase(); }
+    function matchSearch(job){ if(!state.search) return true; const hay=(job.dataset.keywords||job.textContent||'').toLowerCase(); return hay.includes(state.search); }
+    function matchPins(job){ if(!state.shortlistOnly) return true; const pins=getPins(); const id=job.id||job.dataset.id||job.querySelector('h3')?.textContent?.trim(); return pins.has(id); }
+    function activeFiltersCount(){ let n=0; if(state.status!=='all') n++; if(state.location!=='all') n++; if(state.type!=='all') n++; if(state.disc!=='all') n++; if(state.search) n++; if(state.shortlistOnly) n++; return n; }
+
+    function applyFilters(){
+      let shown=0; const total=jobsEls.length;
+      jobsEls.forEach(job=>{
+        const keep=(state.status==='all'||getAttr(job,'data-status')===state.status) &&
+                   (state.location==='all'||getAttr(job,'data-location')===state.location) &&
+                   (state.type==='all'||getAttr(job,'data-type')===state.type) &&
+                   (state.disc==='all'||getAttr(job,'data-disc')===state.disc) &&
+                   matchSearch(job) && matchPins(job);
+        job.style.display=keep?'block':'none'; if(keep) shown++;
+      });
+      noResultsEl.style.display=shown?'none':'block';
+      resultCount.textContent=shown===total?'Showing all jobs':`Showing ${shown} of ${total} jobs`;
+      if(activeCountEl) activeCountEl.textContent=activeFiltersCount();
+    }
+    applyFilters();
+
+    /* ---------- Share buttons ---------- */
+    const toast=document.getElementById('toast');
+    function showToast(msg='Link copied!'){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.classList.remove('show'),1800); }
+    function handleShare(job){
+      const title=job.querySelector('h3')?.textContent?.trim()||'HMJ-Global role';
+      const loc=job.querySelector('p strong')?.nextSibling?.textContent?.trim()||'';
+      const url=`${location.origin}${location.pathname}${location.search}#${job.id||job.dataset.id||''}`;
+      const text=`${title} at HMJ-Global\n${loc ? 'Location: '+loc+'\n' : ''}Apply or learn more: ${url}`;
+      if(navigator.share){ navigator.share({title,text,url}).catch(()=>{}); }
+      else{
+        const full=`${title}\n${text}\n— HMJ-Global • https://www.hmj-global.com`;
+        if(navigator.clipboard?.writeText){ navigator.clipboard.writeText(full).then(()=>showToast(),()=>showToast('Copy failed')); }
+        else{ const ta=document.createElement('textarea'); ta.value=full; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); showToast(); }catch(e){ showToast('Copy failed'); } document.body.removeChild(ta); }
+      }
+    }
+    document.querySelectorAll('[data-share]').forEach(btn=>btn.addEventListener('click',()=>handleShare(btn.closest('.job'))));
+
+    // Toast when Apply clicked
+    document.querySelectorAll('a[href^="contact.html"]').forEach(a=>{
+      a.addEventListener('click',function(){ toast.textContent='Application started!'; toast.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>toast.classList.remove('show'),1800); });
+    });
+
+    /* ---------- Expandable Details ---------- */
+    window.toggleDetails=function(btn){
+      const details=btn.parentElement.nextElementSibling;
+      details.classList.toggle('open');
+      btn.textContent=details.classList.contains('open')?'Hide Details':'Details';
+    };
+  })();
+  </script>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  const portalLink = document.querySelector('a[href="/admin/"]');
+  if (portalLink) {
+    portalLink.style.display = 'none';
+    function toggle() { portalLink.style.display = netlifyIdentity.currentUser() ? '' : 'none'; }
+    netlifyIdentity.on('init', toggle);
+    netlifyIdentity.on('login', toggle);
+    netlifyIdentity.on('logout', toggle);
+    netlifyIdentity.init();
+  }
+</script>
+
+
+<!-- add before </body> on jobs.html -->
+<script>
+(function(){
+  // Copy anchor on hash change (gives feedback)
+  function feedback(msg){
+    const b = document.createElement('div');
+    b.textContent = msg;
+    Object.assign(b.style, {position:'fixed',right:'16px',bottom:'16px',background:'#0b1020',color:'#cbd5e1',padding:'8px 10px',border:'1px solid #223',borderRadius:'10px',zIndex:9999});
+    document.body.appendChild(b); setTimeout(()=>b.remove(), 1600);
+  }
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a[href^="#"]'); if(!a) return;
+    const url = location.pathname + a.getAttribute('href');
+    navigator.clipboard?.writeText(url); feedback('Anchor copied');
+  });
+
+  // Persist last used search/filter in localStorage (if your page has them)
+  const q = document.querySelector('input[type="search"], input[name="q"]');
+  if(q){
+    q.value = localStorage.getItem('hmj-jobs-q')||'';
+    q.addEventListener('input', ()=> localStorage.setItem('hmj-jobs-q', q.value));
+  }
+})();
+</script>
+
+
+</body>
+</html>
