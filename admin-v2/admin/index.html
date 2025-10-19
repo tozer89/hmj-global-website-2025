@@ -49,20 +49,55 @@
 const sel = s => document.querySelector(s);
 const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
 
-function wireIdentity(){
-  netlifyIdentity.on('login',()=>location.reload());
-  netlifyIdentity.on('logout',()=>location.reload());
+function showGate(msg){
+  sel('#gate').style.display = 'block';
+  const why = sel('.why'); if (why) why.textContent = msg || '';
+}
+
+function initWithIdentity(id){
+  // re-run on login/logout to refresh role state
+  id.on('login', () => location.reload());
+  id.on('logout', () => location.reload());
+
+  const u = id.currentUser ? id.currentUser() : null;
+  if (!u) { showGate('Not signed in.'); return; }
+  if (!isAdmin(u)) { showGate('Missing admin role.'); return; }
+
+  // success
+  sel('#app').style.display = 'block';
 }
 
 function boot(){
-  wireIdentity();
-  const u=netlifyIdentity?.currentUser?.();
-  if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
-  if(!isAdmin(u)){ sel('#gate').style.display='block'; sel('.why').textContent='Missing admin role.'; return; }
-  sel('#app').style.display='block';
+  const id = window.netlifyIdentity;
+
+  // If widget is present and initialized, go now
+  if (id && typeof id.on === 'function') {
+    // Some builds need an explicit init callback
+    id.on('init', () => initWithIdentity(id));
+    // If it’s already initialized, init fires immediately; also call once as a fallback
+    initWithIdentity(id);
+    return;
+  }
+
+  // Otherwise, wait for it to appear (script loads async)
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+    const i = window.netlifyIdentity;
+    if (i && typeof i.on === 'function') {
+      clearInterval(timer);
+      // Ensure Identity is initialized before we read currentUser
+      i.on('init', () => initWithIdentity(i));
+      initWithIdentity(i);
+    } else if (tries > 40) { // ~2s fallback
+      clearInterval(timer);
+      showGate('Identity widget did not load.');
+    }
+  }, 50);
 }
 
 document.addEventListener('DOMContentLoaded', boot);
 </script>
+
 </body>
 </html>
