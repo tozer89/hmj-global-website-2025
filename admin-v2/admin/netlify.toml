@@ -16,3 +16,14 @@
   to   = "/admin-v2/admin/:splat"
   status = 200
 
+# Map extensionless admin URLs to the .html files
+[[redirects]]
+  from = "/admin-v2/admin/:page"
+  to   = "/admin-v2/admin/:page.html"
+  status = 200
+
+# If you also use /admin/* as an entry, map those too
+[[redirects]]
+  from = "/admin/:page"
+  to   = "/admin-v2/admin/:page.html"
+  status = 200

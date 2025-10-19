@@ -103,5 +103,33 @@ document.addEventListener('DOMContentLoaded',()=>{
   else { let n=0; const t=setInterval(()=>{ const w=window.netlifyIdentity; if(w&&typeof w.on==='function'){clearInterval(t); w.on('init',()=>boot(w)); boot(w);} else if(++n>40){clearInterval(t); sel('#gate').style.display='block'; sel('.why').textContent='Identity widget did not load.';} },50);}
 });
 </script>
+
+<!-- 1) Netlify Identity widget -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+<!-- 2) Force-init the widget as soon as DOM is ready -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch (e) {}
+  });
+</script>
+
+<!-- 3) Shared admin bootstrap (cache-busted) -->
+<script src="./common.js?v=7"></script>
+
+<!-- 4) Must call bootAdmin to pass the gate and render -->
+<script>
+  Admin.bootAdmin(async ({ sel, identity, toast }) => {
+    // simple smoke test so we know identity worked
+    const who = await identity('admin');
+    if (who && who.ok) {
+      console.log('[admin] candidates boot ok for', who.email);
+      // OPTIONAL: show a tiny toast the first time it works
+      toast('Candidates loaded ✓', 'info', 2000);
+    }
+    // your page-specific code would go here
+  });
+</script>
+
 </body>
 </html>
