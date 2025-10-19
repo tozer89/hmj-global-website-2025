@@ -1,0 +1,6 @@
+# netlify.toml
+[[redirects]]
+  from = "/admin/functions/*"
+  to   = "/.netlify/functions/:splat"
+  status = 200
+
