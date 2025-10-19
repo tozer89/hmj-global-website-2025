@@ -1,12 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Assignments — Admin | HMJ-Global</title>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-<link rel="stylesheet" href="/css/style.css"/>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <style>
   :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
@@ -15,23 +12,21 @@
   .brand{font-weight:800}.sp{flex:1}
   .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .muted{color:var(--muted)}
+  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
   input,select{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
   table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79}
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px} @media(max-width:980px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="top"><div class="row">
   <div class="brand">Assignments — Admin</div><div class="sp"></div>
-  <a class="btn" href="/admin/">⟵ Admin home</a>
+  <a class="btn" href="/admin/">⟵ Admin</a>
   <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
 </div></div>
 
 <div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <p class="why muted"></p>
+  <div class="card"><strong>Admin only.</strong> <span class="muted why"></span>
   <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
 </div>
 
@@ -43,28 +38,22 @@
     <button class="btn" id="btnNew">New assignment</button>
   </div>
 
-  <div class="card" id="listWrap">Loading…</div>
+  <div id="listWrap" class="card">Loading…</div>
 
-  <div class="card" id="editor" style="display:none">
-    <h3 style="margin:0 0 8px" id="edTitle">Assignment</h3>
+  <div id="editor" class="card" style="display:none">
+    <h3 id="edTitle" style="margin:0 0 8px">Assignment</h3>
     <div class="grid">
       <label>Contractor ID <input id="edContractorId" type="number" min="1"></label>
       <label>Project ID <input id="edProjectId" type="number" min="1"></label>
       <label>Site ID <input id="edSiteId" type="number" min="1"></label>
-
       <label>Rate (std) <input id="edRateStd" type="number" step="0.01" min="0"></label>
       <label>Rate (OT)  <input id="edRateOt"  type="number" step="0.01" min="0"></label>
       <label>Charge (std) <input id="edChargeStd" type="number" step="0.01" min="0"></label>
-
       <label>Charge (OT)  <input id="edChargeOt" type="number" step="0.01" min="0"></label>
       <label>PO number <input id="edPO"></label>
-      <label>Active
-        <select id="edActive"><option value="true">true</option><option value="false">false</option></select>
-      </label>
-
+      <label>Active <select id="edActive"><option value="true">true</option><option value="false">false</option></select></label>
       <label>Start date <input id="edStart" type="date"></label>
       <label>End date <input id="edEnd" type="date"></label>
-      <div></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
       <button class="btn" id="btnSave">Save</button>
@@ -73,81 +62,88 @@
   </div>
 </div>
 
-<div id="toast"></div>
-
 <script>
-async function main({ api, sel, toast }){
-  const listWrap=sel('#listWrap'); const ed=sel('#editor');
-  let cur=null;
+const sel=s=>document.querySelector(s);
+const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+async function api(path, method='POST', body={}){
+  const u=netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+  const t=await u.jwt();
+  const r=await fetch(`/.netlify/functions${path}`,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text()); return r.json();
+}
+function wireIdentity(){ netlifyIdentity.on('login',()=>location.reload()); netlifyIdentity.on('logout',()=>location.reload()); }
 
-  async function loadList(){
-    listWrap.textContent='Loading…';
-    const rows = await api('/admin-assignments-list','POST',{ q: sel('#q').value||'', active: sel('#active').value||'' });
-    listWrap.innerHTML=`
+let cur=null;
+
+async function loadList(){
+  const q=sel('#q').value||''; const active=sel('#active').value||'';
+  sel('#listWrap').textContent='Loading…';
+  try{
+    const rows = await api('/admin-assignments-list','POST',{ q, active });
+    sel('#listWrap').innerHTML = `
       <table><thead><tr><th>ID</th><th>Contractor</th><th>Client</th><th>Project</th><th>Site</th><th>Active</th><th></th></tr></thead>
-      <tbody>
-        ${rows.map(r=>`
-          <tr>
-           <td>${r.id}</td>
-           <td>${r.contractor_email||'—'}</td>
-           <td>${r.client_name||'—'}</td>
-           <td>${r.project_name||'—'}</td>
-           <td>${r.site_name||'—'}</td>
-           <td>${r.active?'✓':'—'}</td>
-           <td><button class="btn" data-open="${r.id}">Open</button></td>
-          </tr>`).join('')}
-      </tbody></table>`;
-    listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick=()=>openEd(Number(b.dataset.open)));
-  }
+      <tbody>${rows.map(r=>`
+        <tr>
+          <td>${r.id}</td><td>${r.contractor_email||'—'}</td><td>${r.client_name||'—'}</td>
+          <td>${r.project_name||'—'}</td><td>${r.site_name||'—'}</td>
+          <td>${r.active?'✓':'—'}</td>
+          <td><button data-open="${r.id}" class="btn">Open</button></td>
+        </tr>`).join('')}</tbody></table>`;
+    sel('#listWrap').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEd(b.dataset.open));
+  }catch(e){ sel('#listWrap').textContent='Error: '+e.message; }
+}
 
-  function setEd(a){
-    sel('#edTitle').textContent = a?.id ? `Assignment #${a.id}` : 'New assignment';
-    sel('#edContractorId').value = a.contractor_id||'';
-    sel('#edProjectId').value    = a.project_id||'';
-    sel('#edSiteId').value       = a.site_id||'';
-    sel('#edRateStd').value      = a.rate_std||'';
-    sel('#edRateOt').value       = a.rate_ot||'';
-    sel('#edChargeStd').value    = a.charge_std||'';
-    sel('#edChargeOt').value     = a.charge_ot||'';
-    sel('#edPO').value           = a.po_number||'';
-    sel('#edActive').value       = String(!!a.active);
-    sel('#edStart').value        = a.start_date||'';
-    sel('#edEnd').value          = a.end_date||'';
-  }
-  function getEd(){
-    return {
-      id: cur?.id,
-      contractor_id: Number(sel('#edContractorId').value||0) || null,
-      project_id:    Number(sel('#edProjectId').value||0)    || null,
-      site_id:       Number(sel('#edSiteId').value||0)       || null,
-      rate_std:      Number(sel('#edRateStd').value||0),
-      rate_ot:       Number(sel('#edRateOt').value||0),
-      charge_std:    Number(sel('#edChargeStd').value||0) || null,
-      charge_ot:     Number(sel('#edChargeOt').value||0)  || null,
-      po_number:     sel('#edPO').value||null,
-      active:        sel('#edActive').value==='true',
-      start_date:    sel('#edStart').value||null,
-      end_date:      sel('#edEnd').value||null
-    };
-  }
+async function openEd(id){
+  try{
+    cur = await api('/admin-assignment-open','POST',{ id:Number(id) });
+    sel('#edTitle').textContent='Assignment #'+cur.id;
+    sel('#edContractorId').value = cur.contractor_id||'';
+    sel('#edProjectId').value    = cur.project_id||'';
+    sel('#edSiteId').value       = cur.site_id||'';
+    sel('#edRateStd').value      = cur.rate_std||'';
+    sel('#edRateOt').value       = cur.rate_ot||'';
+    sel('#edChargeStd').value    = cur.charge_std||'';
+    sel('#edChargeOt').value     = cur.charge_ot||'';
+    sel('#edPO').value           = cur.po||'';
+    sel('#edActive').value       = String(!!cur.active);
+    sel('#edStart').value        = (cur.start_date||'').slice(0,10);
+    sel('#edEnd').value          = (cur.end_date||'').slice(0,10);
+    sel('#editor').style.display='block';
+  }catch(e){ alert('Open failed: '+e.message); }
+}
 
-  async function openEd(id){
-    cur = await api('/admin-assignments-open','POST',{ id });
-    setEd(cur); ed.style.display='block';
-  }
-
-  sel('#btnNew').onclick = ()=>{ cur=null; setEd({active:true}); ed.style.display='block'; };
-  sel('#btnClose').onclick= ()=>{ ed.style.display='none'; };
-  sel('#btnSave').onclick = async ()=>{
-    try{
-      const saved = await api('/admin-assignments-save','POST', getEd());
-      toast('Saved'); if(saved?.id) { cur = saved; setEd(saved); } loadList();
-    }catch(e){ toast('Save failed: '+e.message); }
+async function save(){
+  const payload={
+    id: cur?.id,
+    contractor_id: Number(sel('#edContractorId').value||0),
+    project_id: Number(sel('#edProjectId').value||0),
+    site_id: Number(sel('#edSiteId').value||0),
+    rate_std: Number(sel('#edRateStd').value||0),
+    rate_ot: Number(sel('#edRateOt').value||0),
+    charge_std: Number(sel('#edChargeStd').value||0),
+    charge_ot: Number(sel('#edChargeOt').value||0),
+    po: sel('#edPO').value||'',
+    active: sel('#edActive').value==='true',
+    start_date: sel('#edStart').value||null,
+    end_date: sel('#edEnd').value||null
   };
-  sel('#btnRefresh').onclick = loadList;
+  try{ await api('/admin-assignment-save','POST',payload); alert('Saved.'); loadList(); }
+  catch(e){ alert('Save failed: '+e.message); }
+}
 
+function boot(){
+  wireIdentity();
+  const u=netlifyIdentity?.currentUser?.();
+  if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
+  if(!isAdmin(u)){ sel('#gate').style.display='block'; sel('.why').textContent='Missing admin role.'; return; }
+  document.getElementById('app').style.display='block';
+  sel('#btnRefresh').onclick=loadList;
+  sel('#btnNew').onclick=()=>{cur=null; sel('#editor').style.display='block'; sel('#edTitle').textContent='New assignment';};
+  sel('#btnSave').onclick=save;
+  sel('#btnClose').onclick=()=>{sel('#editor').style.display='none';};
   loadList();
 }
+document.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>

@@ -1,40 +1,33 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Clients — Admin | HMJ-Global</title>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-<link rel="stylesheet" href="/css/style.css"/>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <style>
-  :root{--bg:#0b0f18;--panel:#111827;--panel2:#0e1524;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9;--purple:#7c5cff}
+  :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
   .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
   .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
   .brand{font-weight:800}.sp{flex:1}
   .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .muted{color:var(--muted)} .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79} .btn.primary{background:var(--purple);border-color:transparent}
-  input,select,textarea{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px;width:100%}
+  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
+  input,textarea{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px;width:100%}
   table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
-  .tabs{display:flex;gap:8px;flex-wrap:wrap}
-  .tab{padding:8px 10px;border:1px solid #2a395a;background:#121a2d;border-radius:9px;cursor:pointer}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{padding:8px 10px;border:1px solid #2a395a;background:#121a2d;border-radius:9px;cursor:pointer}
   .tab.active{border-color:#385394;background:#16243d}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  .danger{background:#3a1920;border-color:#602b36}
 </style>
 </head>
 <body>
 <div class="top"><div class="row">
   <div class="brand">Clients — Admin</div><div class="sp"></div>
-  <a class="btn" href="/admin/">⟵ Admin home</a>
+  <a class="btn" href="/admin/">⟵ Admin</a>
   <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
 </div></div>
 
 <div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <p class="why muted"></p>
+  <div class="card"><strong>Admin only.</strong> <span class="muted why"></span>
   <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
 </div>
 
@@ -42,17 +35,17 @@
   <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     <input id="q" placeholder="Search client name or email…" style="min-width:260px"/>
     <button class="btn" id="btnRefresh">Refresh</button>
-    <button class="btn primary" id="btnNew">New client</button>
+    <button class="btn" id="btnNew">New client</button>
   </div>
 
-  <div class="card" id="listWrap">Loading…</div>
+  <div id="listWrap" class="card">Loading…</div>
 
-  <div class="card" id="profile" style="display:none">
+  <div id="profile" class="card" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
       <h3 style="margin:0" id="pTitle">Client</h3>
       <div style="display:flex;gap:8px">
         <button class="btn" id="btnSave">Save</button>
-        <button class="btn danger" id="btnDelete">Delete</button>
+        <button class="btn" id="btnDelete" style="background:#3a1920;border-color:#602b36">Delete</button>
       </div>
     </div>
     <div class="tabs">
@@ -62,21 +55,20 @@
     </div>
 
     <div id="tab-details" class="tabpane" style="margin-top:10px">
-      <form id="frmDetails" class="grid">
-        <label>Name <input name="name" required></label>
-        <label>Main email <input name="email" type="email"></label>
-        <label>Billing email <input name="billing_email" type="email"></label>
-        <label>Phone <input name="phone"></label>
-        <label>Contact name <input name="contact_name"></label>
-        <label>Contact email <input name="contact_email" type="email"></label>
-        <label>Contact phone <input name="contact_phone"></label>
-        <label>Terms (days) <input name="terms_days" type="number" min="0" step="1"></label>
-        <label style="grid-column:1/-1">Address (JSON) <textarea name="address" rows="3" placeholder='{"line1":"…"}'></textarea></label>
-      </form>
+      <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <label>Name <input id="c_name"></label>
+        <label>Billing email <input id="c_billing_email" type="email"></label>
+        <label>Phone <input id="c_phone"></label>
+        <label>Contact name <input id="c_contact_name"></label>
+        <label>Contact email <input id="c_contact_email" type="email"></label>
+        <label>Contact phone <input id="c_contact_phone"></label>
+        <label>Terms (days) <input id="c_terms_days" type="number" min="0" step="1"></label>
+        <label style="grid-column:1/-1">Address (JSON) <textarea id="c_address" rows="3" placeholder='{"line1":"…"}'></textarea></label>
+      </div>
     </div>
 
     <div id="tab-terms" class="tabpane" style="display:none;margin-top:10px">
-      <textarea id="termsText" rows="10" placeholder="Paste or write client-specific terms & special instructions…"></textarea>
+      <textarea id="c_terms_text" rows="10" placeholder="Client-specific terms & special instructions…"></textarea>
     </div>
 
     <div id="tab-assignments" class="tabpane" style="display:none;margin-top:10px">
@@ -85,93 +77,76 @@
   </div>
 </div>
 
-<div id="toast"></div>
-
 <script>
-async function main({ api, sel, toast }){
-  const listWrap = sel('#listWrap'); const profile = sel('#profile');
-  let cur = null;
+const sel=s=>document.querySelector(s);
+const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+async function api(path, method='POST', body={}){
+  const u=netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+  const t=await u.jwt();
+  const r=await fetch(`/.netlify/functions${path}`,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text()); return r.json();
+}
+function tabs(){ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); document.querySelectorAll('.tabpane').forEach(x=>x.style.display='none'); sel('#tab-'+t.dataset.tab).style.display='';}); }
 
-  // tabs
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.onclick = ()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      document.querySelectorAll('.tabpane').forEach(x=>x.style.display='none');
-      sel('#tab-'+t.dataset.tab).style.display='';
-    };
-  });
+let cur=null;
 
-  async function loadList(){
-    listWrap.textContent='Loading…';
-    const rows = await api('/admin-clients-list','POST',{ q: sel('#q').value||'' });
-    listWrap.innerHTML = `
-      <table><thead><tr><th>Name</th><th>Billing email</th><th>Phone</th><th></th></tr></thead>
-      <tbody>
-        ${rows.map(r=>`
-          <tr>
-            <td>${r.name||'—'}</td>
-            <td>${r.billing_email||'—'}</td>
-            <td>${r.phone||'—'}</td>
-            <td><button class="btn" data-open="${r.id}">Open</button></td>
-          </tr>`).join('')}
-      </tbody></table>`;
-    listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick=()=>openProfile(Number(b.dataset.open)));
-  }
+async function loadList(){
+  sel('#listWrap').textContent='Loading…';
+  const rows = await api('/admin-clients-list','POST',{ q: sel('#q').value||'' });
+  sel('#listWrap').innerHTML = `
+    <table><thead><tr><th>Name</th><th>Billing email</th><th>Phone</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>`
+      <tr>
+        <td>${r.name||'—'}</td><td>${r.billing_email||'—'}</td><td>${r.phone||'—'}</td>
+        <td><button class="btn" data-open="${r.id}">Open</button></td>
+      </tr>`).join('')}</tbody></table>`;
+  sel('#listWrap').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openProfile(b.dataset.open));
+}
 
-  function setDetails(d){
-    const f = sel('#frmDetails'); const set=(n,v)=>{ if(f.elements[n]) f.elements[n].value = v ?? ''; };
-    set('name', d.name); set('email', d.email); set('billing_email', d.billing_email);
-    set('phone', d.phone); set('contact_name', d.contact_name); set('contact_email', d.contact_email);
-    set('contact_phone', d.contact_phone); set('terms_days', d.terms_days);
-    set('address', JSON.stringify(d.address||{}, null, 2));
-  }
-  function getDetails(){
-    const f = sel('#frmDetails'); const v=n=>f.elements[n]?.value||'';
-    let addr={}; try{ addr = JSON.parse(v('address')||'{}'); }catch{}
-    return { id: cur?.id, name:v('name'), email:v('email'), billing_email:v('billing_email'),
-      phone:v('phone'), contact_name:v('contact_name'), contact_email:v('contact_email'),
-      contact_phone:v('contact_phone'), terms_days: Number(v('terms_days')||0), address: addr };
-  }
+async function openProfile(id){
+  cur = await api('/admin-client-open','POST',{ id:Number(id) });
+  sel('#pTitle').textContent = cur.name || ('Client #'+id);
+  sel('#c_name').value = cur.name||''; sel('#c_billing_email').value = cur.billing_email||''; sel('#c_phone').value = cur.phone||'';
+  sel('#c_contact_name').value = cur.contact_name||''; sel('#c_contact_email').value = cur.contact_email||''; sel('#c_contact_phone').value = cur.contact_phone||'';
+  sel('#c_terms_days').value = cur.terms_days||''; sel('#c_address').value = cur.address ? JSON.stringify(cur.address,null,2) : '';
+  sel('#c_terms_text').value = cur.terms_text||'';
+  sel('#assnWrap').textContent = 'Loading…';
+  const assn = await api('/admin-client-assignments','POST',{ client_id: cur.id });
+  sel('#assnWrap').innerHTML = assn.length? `<ul>${assn.map(a=>`<li>#${a.id} — ${a.contractor_email||'—'} @ ${a.project_name||'—'} (${a.active?'active':'closed'})</li>`).join('')}</ul>` : 'No assignments.';
+  sel('#profile').style.display='block';
+}
 
-  async function openProfile(id){
-    profile.style.display='block'; sel('#assnWrap').textContent='Loading…';
-    const d = await api('/admin-clients-open','POST',{ id });
-    cur = d; sel('#pTitle').textContent = d.name || ('Client '+id);
-    setDetails(d);
-    // load assignments tied to this client (your function supports filtering)
-    try{
-      const assn = await api('/admin-assignments-list','POST',{ client_id:id });
-      sel('#assnWrap').innerHTML = `
-        <table><thead><tr><th>ID</th><th>Contractor</th><th>Project</th><th>Site</th><th>Active</th></tr></thead>
-        <tbody>
-          ${(assn||[]).map(a=>`<tr><td>${a.id}</td><td>${a.contractor_email||'—'}</td><td>${a.project_name||'—'}</td><td>${a.site_name||'—'}</td><td>${a.active ? '✓':'—'}</td></tr>`).join('')}
-        </tbody></table>`;
-    }catch{ sel('#assnWrap').textContent='No assignments'; }
-    // hydrate terms text (store in clients.address.terms_notes or separate column if you have one)
-    sel('#termsText').value = (d.billing?.notes || d.terms_notes || '') || '';
-  }
-
-  sel('#btnRefresh').onclick = loadList;
-  sel('#btnNew').onclick = ()=>{ cur = {name:''}; profile.style.display='block'; setDetails(cur); sel('#termsText').value=''; sel('#pTitle').textContent='New client'; };
-
-  sel('#btnSave').onclick = async ()=>{
-    try{
-      const payload = getDetails();
-      payload.terms_notes = sel('#termsText').value || '';
-      const saved = await api('/admin-clients-save','POST', payload);
-      toast('Saved'); if(saved?.id) openProfile(saved.id); loadList();
-    }catch(e){ toast('Save failed: '+e.message); }
+async function save(){
+  const payload = {
+    id: cur?.id,
+    name: sel('#c_name').value.trim(),
+    billing_email: sel('#c_billing_email').value.trim()||null,
+    phone: sel('#c_phone').value.trim()||null,
+    contact_name: sel('#c_contact_name').value.trim()||null,
+    contact_email: sel('#c_contact_email').value.trim()||null,
+    contact_phone: sel('#c_contact_phone').value.trim()||null,
+    terms_days: sel('#c_terms_days').value? Number(sel('#c_terms_days').value) : null,
+    address: sel('#c_address').value ? JSON.parse(sel('#c_address').value) : null,
+    terms_text: sel('#c_terms_text').value||null
   };
-  sel('#btnDelete').onclick = async ()=>{
-    if(!cur?.id) return;
-    if(!confirm('Delete this client?')) return;
-    try{ await api('/admin-clients-delete','POST',{ id: cur.id }); toast('Deleted'); profile.style.display='none'; loadList(); }
-    catch(e){ toast('Delete failed: '+e.message); }
-  };
+  await api('/admin-client-save','POST',payload);
+  alert('Saved.'); loadList();
+}
 
+async function del(){ if(!cur?.id) return; if(!confirm('Delete this client?')) return; await api('/admin-client-delete','POST',{ id: cur.id }); alert('Deleted.'); sel('#profile').style.display='none'; loadList(); }
+
+function boot(){
+  tabs();
+  netlifyIdentity.on('login',()=>location.reload()); netlifyIdentity.on('logout',()=>location.reload());
+  const u=netlifyIdentity?.currentUser?.();
+  if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
+  if(!isAdmin(u)){ sel('#gate').style.display='block'; sel('.why').textContent='Missing admin role.'; return; }
+  document.getElementById('app').style.display='block';
+  sel('#btnRefresh').onclick=loadList; sel('#btnNew').onclick=()=>{cur=null; sel('#profile').style.display='block'; sel('#pTitle').textContent='New client';};
+  sel('#btnSave').onclick=save; sel('#btnDelete').onclick=del;
   loadList();
 }
+document.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>

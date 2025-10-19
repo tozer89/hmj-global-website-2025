@@ -4,11 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Admin — HMJ Global</title>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-<link rel="stylesheet" href="/css/style.css"/>
+
+<!-- Identity must load first -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
 <style>
-  :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9;--purple:#7c5cff}
+  :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
   .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
   .row{max-width:1100px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
@@ -16,12 +17,9 @@
   .wrap{max-width:1100px;margin:28px auto;padding:0 18px}
   .grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:14px}
   @media (max-width:820px){ .grid{grid-template-columns:1fr} }
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px}
-  .big{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;color:var(--text);background:#121a2d;border:1px solid #2a395a;padding:16px;border-radius:14px}
-  .big:hover{border-color:#385394}
-  .muted{color:var(--muted)}
+  .card{background:#121a2d;border:1px solid #2a395a;border-radius:16px;padding:18px;text-decoration:none;color:var(--text)}
+  .card:hover{border-color:#385394}
   .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79}
 </style>
 </head>
 <body>
@@ -32,23 +30,39 @@
 </div></div>
 
 <div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <p class="why muted"></p>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
+  <div class="card"><strong>Admin only.</strong><p class="muted why"></p>
+    <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+  </div>
 </div>
 
 <div class="wrap" id="app" style="display:none">
   <div class="grid">
-    <a class="big" href="/admin/timesheets.html"><div><h3 style="margin:0">Timesheets</h3><div class="muted">Approve, edit, raise on behalf</div></div> →</a>
-    <a class="big" href="/admin/clients.html"><div><h3 style="margin:0">Clients</h3><div class="muted">Profiles, terms, live assignments</div></div> →</a>
-    <a class="big" href="/admin/assignments.html"><div><h3 style="margin:0">Assignments</h3><div class="muted">Create & manage placements</div></div> →</a>
-    <a class="big" href="/admin/candidates.html"><div><h3 style="margin:0">Candidates</h3><div class="muted">People & compliance</div></div> →</a>
-    <a class="big" href="/admin/reports.html"><div><h3 style="margin:0">Reports</h3><div class="muted">Audit & export</div></div> →</a>
+    <a class="card" href="/admin/timesheets.html"><div><h3 style="margin:0">Timesheets</h3><div class="muted">Approve, edit, raise on behalf</div></div> →</a>
+    <a class="card" href="/admin/clients.html"><div><h3 style="margin:0">Clients</h3><div class="muted">Profiles, terms, assignments</div></div> →</a>
+    <a class="card" href="/admin/assignments.html"><div><h3 style="margin:0">Assignments</h3><div class="muted">Create & manage placements</div></div> →</a>
+    <a class="card" href="/admin/candidates.html"><div><h3 style="margin:0">Candidates</h3><div class="muted">People & compliance</div></div> →</a>
+    <a class="card" href="/admin/reports.html"><div><h3 style="margin:0">Reports</h3><div class="muted">Audit & export</div></div> →</a>
   </div>
 </div>
 
 <script>
-  // Nothing else needed here – common.js handles the guard.
-  async function main(){ /* no-op */ }
+const sel = s => document.querySelector(s);
+const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+
+function wireIdentity(){
+  netlifyIdentity.on('login',()=>location.reload());
+  netlifyIdentity.on('logout',()=>location.reload());
+}
+
+function boot(){
+  wireIdentity();
+  const u=netlifyIdentity?.currentUser?.();
+  if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
+  if(!isAdmin(u)){ sel('#gate').style.display='block'; sel('.why').textContent='Missing admin role.'; return; }
+  sel('#app').style.display='block';
+}
+
+document.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>
