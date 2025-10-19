@@ -1,14 +1,18 @@
-// netlify/functions/admin-timesheets-clients.js
-const { getContext } = require('./_timesheet-helpers');
+// /.netlify/functions/admin-timesheets-clients
+const { withSupabase, jsonOk, jsonError } = require('./_supabase.js');
 
-exports.handler = async (event, context) => {
-  try {
-    const { supabase } = await getContext(context, { requireAdmin: true });
-    const { data, error } = await supabase.from('clients').select('id,name').order('name');
-    if (error) throw error;
-    return { statusCode: 200, body: JSON.stringify(data) };
-  } catch (e) {
-    const status = e.code === 401 ? 401 : 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
-  }
-};
+module.exports.handler = withSupabase(async ({ supabase, trace }) => {
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id,name')
+    .order('name', { ascending: true });
+
+  if (error) return jsonError(500, 'query_failed', error.message, { trace });
+
+  // Return raw array because the UI expects an array (not {items:[]})
+  return {
+    statusCode: 200,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data || [], null, 2)
+  };
+});
