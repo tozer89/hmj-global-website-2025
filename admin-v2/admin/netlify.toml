@@ -4,3 +4,7 @@
   to   = "/.netlify/functions/:splat"
   status = 200
 
+[[redirects]]
+  from = "/admin/*"
+  to   = "/admin-v2/admin/:splat"
+  status = 200
