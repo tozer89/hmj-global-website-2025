@@ -5,10 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Timesheets — Admin | HMJ-Global</title>
 
-<!-- 1) Identity must load FIRST so tokens exist before any function calls -->
+<!-- Identity MUST load before common.js (common.js uses it) -->
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-<!-- 2) Shared admin helpers (like on Candidates) -->
+<!-- Shared admin bootstrap that calls main({ api, sel, toast, log, gate }) once ready -->
 <script defer src="/admin/common.js"></script>
 
 <link rel="stylesheet" href="/css/style.css"/>
@@ -23,16 +22,23 @@
   .row{max-width:1280px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
   .brand{font-weight:800}.sp{flex:1}
 
-  /* Debug / status strip (like Candidates admin) */
-  .dbg{position:sticky;top:56px;z-index:9;background:#0e1629;border-bottom:1px dashed #2c3853}
-  .dbg .row{padding:8px 18px}
-  .pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px;border:1px solid #2c3853;background:#0f172a;margin-right:6px}
+  /* Debug toggle button (non-intrusive) */
+  .linkish{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+  /* Debug panel (collapsible) */
+  .debugwrap{max-width:1280px;margin:0 auto;padding:0 18px}
+  .debug{display:none;border-bottom:1px dashed #2c3853;background:#0e1629}
+  .debug.show{display:block}
+  .debug .inner{padding:10px 0;display:grid;gap:10px}
+  .dbgline{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px;border:1px solid #2c3853;background:#0f172a}
   .pill.ok{border-color:#2d6a46;background:#0d2418;color:#a1f0b8}
   .pill.warn{border-color:#8a5b25;background:#2a2210;color:#f0d48f}
   .pill.bad{border-color:#7d3339;background:#2a1010;color:#f6a7a7}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .tiny{font-size:11px}
 
-  .wrap{max-width:1280px;margin:18px auto 32px;padding:0 18px;display:grid;gap:16px;grid-template-columns:1fr 380px}
+  .wrap{max-width:1280px;margin:18px auto 72px;padding:0 18px;display:grid;gap:16px;grid-template-columns:1fr 380px}
   @media (max-width:1100px){ .wrap{grid-template-columns:1fr} }
   .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
   .muted{color:var(--muted)}
@@ -49,7 +55,8 @@
   thead th{position:sticky;top:0;background:#0d1426;z-index:1}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media (max-width:720px){ .grid2{grid-template-columns:1fr} }
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media (max-width:720px){ .grid2{grid-template-columns:1fr} .grid3{grid-template-columns:1fr} }
   .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.8rem;border:1px solid #2b3854;background:#101a33}
   .badge.draft{color:#9fb0c9}
   .badge.submitted{color:#f0d48f;border-color:#5b4a19;background:#2a2210}
@@ -60,51 +67,79 @@
   .kpi b{font-size:18px;display:block}
   .tableWrap{overflow:auto;border-radius:12px}
   .soft{background:var(--panel2);border:1px solid #233044;border-radius:12px;padding:12px}
+  .sp{flex:1}
   .sr{position:absolute;left:-9999px}
 
-  /* Modal */
+  /* Collapsible filter panel for mobile */
+  .filters{transition:max-height .2s ease;overflow:hidden}
+  .filters.closed{max-height:0;padding-top:0;padding-bottom:0;border:0}
+  .filters.open{max-height:320px}
+
+  /* Sticky mobile bulk bar */
+  .bulkbar{position:fixed;left:0;right:0;bottom:0;background:#0f172a;border-top:1px solid #233044;padding:10px;display:none;z-index:20}
+  .bulkbar.show{display:flex;gap:8px;align-items:center;justify-content:center}
+
+  /* Drawer modal (mobile-friendly) */
   .backdrop{position:fixed;inset:0;background:rgba(9,12,20,.6);display:none;align-items:center;justify-content:center;z-index:10000}
   .backdrop.show{display:flex}
   .modal{width:min(1040px,94vw);max-height:90vh;background:#0f172a;color:var(--ink);border:1px solid #25324a;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45)}
   .modal .hd{padding:12px 14px;border-bottom:1px solid #25324a;display:flex;gap:10px;align-items:center;justify-content:space-between}
   .modal .bd{padding:14px;overflow:auto;max-height:68vh}
   .modal .ft{padding:12px 14px;border-top:1px solid #25324a;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  @media (max-width:720px){
+    .modal{width:100vw;max-height:100vh;border-radius:0}
+    .modal .bd{max-height:calc(100vh - 140px)}
+  }
 </style>
 </head>
 <body>
   <div class="top"><div class="row">
     <div class="brand">Timesheets — Admin</div><div class="sp"></div>
     <a class="btn" href="/admin/">⟵ Admin home</a>
-    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+    <button class="btn" onclick="netlifyIdentity?.open('logout')">Sign out</button>
   </div></div>
 
-  <!-- DEBUG STRIP (progress + identity + trace) -->
-  <div class="dbg"><div class="row mono" id="dbgRow">
-    <span class="pill" id="dbgStep">init…</span>
-    <span class="pill" id="dbgIdentity">identity: pending</span>
-    <span class="pill" id="dbgToken">token: -</span>
-    <span class="pill" id="dbgRole">role: -</span>
-    <span class="pill" id="dbgTrace">trace: -</span>
-    <span class="pill" id="dbgLast">last: -</span>
-    <span class="sp"></span>
-    <button class="btn ghost" id="btnDiag">Run diagnostics</button>
-  </div></div>
-
-  <!-- Gate (like Candidates admin) -->
-  <div class="wrap" id="gate" style="display:none;grid-template-columns:1fr">
-    <div class="card">
-      <strong>Restricted.</strong>
-      <p class="why muted" id="gateWhy">You need to sign in with an admin account.</p>
-      <div class="toolbar" style="margin-top:8px">
-        <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
-        <button class="btn" id="btnReload">Reload</button>
+  <!-- Collapsible debug panel (no auto reloads) -->
+  <div class="debugwrap">
+    <div class="toolbar" style="padding:8px 0">
+      <div class="pill tiny">debug</div>
+      <div class="linkish tiny" id="btnToggleDebug">show / hide</div>
+      <div class="sp"></div>
+      <div class="mono tiny" id="dbgTrace">trace: -</div>
+      <div class="mono tiny" id="dbgLast">last: -</div>
+    </div>
+    <div class="debug" id="debugPanel">
+      <div class="inner mono tiny">
+        <div class="dbgline" id="dbgLine1">
+          <span class="pill" id="dbgStep">init</span>
+          <span class="pill" id="dbgIdent">identity</span>
+          <span class="pill" id="dbgToken">token</span>
+          <span class="pill" id="dbgRole">role</span>
+          <span class="pill" id="dbgHealth">health</span>
+        </div>
+        <div class="dbgline"><div class="sp"></div><button class="btn ghost" id="btnRunHealth">Run diagnostics</button></div>
+        <div class="soft" id="dbgOut" style="max-height:180px;overflow:auto"></div>
       </div>
     </div>
   </div>
 
-  <!-- App -->
+  <!-- GATE (shown by /admin/common.js when not admin) -->
+  <div class="wrap" id="gate" style="display:none;grid-template-columns:1fr">
+    <div class="card"><strong>Admin only.</strong><p class="why muted"></p>
+      <button class="btn primary" onclick="netlifyIdentity?.open('login')">Log in</button>
+    </div>
+  </div>
+
+  <div class="bulkbar" id="bulkbar">
+    <div class="mono tiny" id="bulkCount">0 selected</div>
+    <button class="btn good" id="bbApprove">Approve</button>
+    <button class="btn bad"  id="bbReject">Reject</button>
+    <button class="btn" id="bbClear">Clear</button>
+  </div>
+
+  <!-- APP -->
   <div class="wrap" id="app" style="display:none">
-    <!-- LEFT -->
+    <!-- left column -->
     <div class="card" style="display:grid;gap:16px">
       <div class="toolbar" style="justify-content:space-between;align-items:flex-start">
         <div class="kpis">
@@ -119,20 +154,37 @@
         </div>
       </div>
 
+      <!-- Saved Views -->
       <div class="soft">
-        <div class="toolbar" style="flex-wrap:wrap">
-          <input id="q" placeholder="Search contractor / client / project / site" style="min-width:260px"/>
-          <select id="status">
-            <option value="">Any status</option>
-            <option value="draft">Draft</option>
-            <option value="submitted">Submitted</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <select id="client"><option value="">All clients</option></select>
-          <input id="week" type="date" title="Week ending (Saturday)"/>
-          <button class="btn" id="btnApply">Apply</button>
-          <span class="muted" style="margin-left:6px">Shortcuts: <b>/</b> search · <b>R</b> refresh · <b>B</b> bulk approve · <b>E</b> export</span>
+        <div class="toolbar" style="gap:8px;flex-wrap:wrap">
+          <div style="font-weight:700">Saved views</div>
+          <select id="viewSelect"></select>
+          <button class="btn ghost" id="viewSave">Save current</button>
+          <button class="btn ghost" id="viewDelete">Delete</button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="soft">
+        <div class="toolbar">
+          <div class="linkish" id="toggleFilters">Hide/show filters</div>
+          <div class="sp"></div>
+          <span class="muted tiny">Shortcuts: <b>/</b> search · <b>R</b> refresh · <b>B</b> bulk approve · <b>E</b> export</span>
+        </div>
+        <div class="filters open" id="filters">
+          <div class="toolbar" style="flex-wrap:wrap;margin-top:10px">
+            <input id="q" placeholder="Search contractor / client / project / site" style="min-width:260px"/>
+            <select id="status">
+              <option value="">Any status</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <select id="client"><option value="">All clients</option></select>
+            <input id="week" type="date" title="Week ending (Saturday)"/>
+            <button class="btn" id="btnApply">Apply</button>
+          </div>
         </div>
       </div>
 
@@ -140,7 +192,7 @@
       <div id="listError" class="soft" style="display:none;color:#f6a7a7;border-color:#7d3339;background:#2a1010"></div>
     </div>
 
-    <!-- RIGHT -->
+    <!-- right column -->
     <div class="card" style="display:grid;gap:16px">
       <div>
         <div style="font-weight:800;margin-bottom:6px">Raise on behalf</div>
@@ -165,15 +217,6 @@
         <div id="auditError" class="soft" style="display:none;color:#f6a7a7;border-color:#7d3339;background:#2a1010"></div>
       </div>
 
-      <!-- New Feature 1: Health panel -->
-      <div>
-        <div style="font-weight:800;margin-bottom:6px">Health</div>
-        <div class="soft mono" id="healthBody">Running probes…</div>
-        <div class="toolbar" style="margin-top:8px">
-          <button class="btn ghost" id="btnHealth">Re-run probes</button>
-        </div>
-      </div>
-
       <div>
         <div style="font-weight:800;margin-bottom:6px">Reminders & alerts</div>
         <div class="soft">
@@ -181,14 +224,14 @@
             <label><input id="remindUnsubmitted" type="checkbox"/> Send reminder to contractors with unsubmitted sheets for last week</label>
             <button class="btn warn" id="btnRunReminder">Run now</button>
           </div>
-          <div class="muted" style="margin-top:6px">This triggers a server task to email users with missing/submitted-late timesheets. Your <span class="mono">admin-timesheets-remind</span> function returns a recipient list.</div>
+          <div class="muted" style="margin-top:6px">Your <span class="mono">admin-timesheets-remind</span> function returns a recipient list; hook your mailer there.</div>
           <pre class="soft mono" id="remindOut" style="margin-top:8px;max-height:180px;overflow:auto"></pre>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- Modal / Drawer -->
   <div class="backdrop" id="sheetBackdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
       <div class="hd">
@@ -210,7 +253,7 @@
           <div class="soft">
             <div><b>Compliance</b></div>
             <div id="cmpWeekly" class="pill">Weekly ≤ 72h</div>
-            <div id="cmpDaily"  class="muted" style="margin-top:2px">Daily ≤ 16h, quarter steps</div>
+            <div class="muted" style="margin-top:2px">Daily ≤ 16h, quarter steps</div>
           </div>
         </div>
 
@@ -246,177 +289,23 @@
   <div id="toast"></div>
 
 <script>
-/* ==========================================================
-   Admin Timesheets — with deep diagnostics & identity-first boot
-   ========================================================== */
-(async ()=>{
-  // ---------- Debug helpers (like Candidates admin, expanded) ----------
+/* =====================================================================
+   Timesheets Admin — identity handled by /admin/common.js (no reloads).
+   This file exports a global main() that common.js will call once.
+   ===================================================================== */
+function main({ api, sel, toast, log, gate }) {
+  // --------------- DIAGNOSTICS (no looping, no reloads) ----------------
   const DEBUG = true;
-  const TIMERS = {};
-  const dbg = (label, data) => { if(!DEBUG) return; console.log('%c[TS-ADMIN]', 'color:#9fb0c9', label, data??''); };
-  const start = (k)=>{ TIMERS[k]=performance.now(); };
-  const end = (k,msg)=>{ if(!DEBUG) return; const t=((performance.now()-(TIMERS[k]||performance.now()))|0); console.log('%c[TS-ADMIN] '+(msg||k)+' – '+t+'ms','color:#8fe'); return t; };
+  const dbgOut = sel('#dbgOut');
+  const pill = (id, txt, cls)=>{ const el=sel('#'+id); if(!el) return; el.textContent = txt; el.className = 'pill '+(cls||''); };
+  const setTrace = (id)=>{ sel('#dbgTrace').textContent = 'trace: '+(id||'-'); };
+  const setLast  = (msg)=>{ sel('#dbgLast').textContent  = 'last: '+(msg||'-'); };
 
-  const pill = (id, text, state) => {
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.textContent = text;
-    el.className = 'pill'+(state?(' '+state):'');
-  };
-  const setTrace = (id) => pill('dbgTrace', id ? ('trace: '+id) : 'trace: -', id?'ok':'');
+  // Wire debug toggle
+  sel('#btnToggleDebug').onclick = ()=> sel('#debugPanel').classList.toggle('show');
+  sel('#btnRunHealth').onclick   = runDiagnostics;
 
-  // ---------- Toast (+ console) ----------
-  const toasty = (msg, kind='info', extra={})=>{
-    try{
-      if(window.toast){ window.toast(msg, kind); }
-      else {
-        const div=document.createElement('div'); div.className='card'; div.textContent=msg;
-        div.style.position='fixed';div.style.right='18px';div.style.bottom='18px';div.style.zIndex=99999;document.body.appendChild(div);
-        setTimeout(()=>div.remove(),3000);
-      }
-    }catch{}
-    if(DEBUG){ console[kind==='error'?'error':'log']('[Toast]', msg, extra); }
-  };
-
-  // ---------- Identity boot (robust) ----------
-  const gate = async ()=>{
-    const app = document.getElementById('app'), gate = document.getElementById('gate');
-    const why = document.getElementById('gateWhy');
-
-    // Wait for widget
-    start('identity-init');
-    for(let i=0;i<80;i++){
-      if(window.netlifyIdentity && typeof netlifyIdentity.on==='function'){ break; }
-      await new Promise(r=>setTimeout(r,100));
-    }
-    if(!window.netlifyIdentity){
-      pill('dbgIdentity','identity: not loaded','bad');
-      why.textContent='Netlify Identity widget failed to load.';
-      gate.style.display=''; app.style.display='none';
-      return null;
-    }
-    pill('dbgIdentity','identity: loaded','ok'); end('identity-init','identity widget loaded');
-
-    // Try existing session
-    const user = netlifyIdentity.currentUser();
-    if(!user){
-      pill('dbgIdentity','identity: no session','warn');
-      why.textContent='Sign in required.';
-      gate.style.display=''; app.style.display='none';
-      return null;
-    }
-
-    // Get token with retries
-    start('token');
-    let token='', err=null;
-    for(let i=0;i<4;i++){
-      try{ token = await user.token?.({forceRefresh:i>0}); if(token) break; }catch(e){ err=e; }
-      await new Promise(r=>setTimeout(r,150));
-    }
-    if(!token){
-      pill('dbgToken','token: missing','bad');
-      why.textContent='Could not obtain access token. Try signing out/in.';
-      gate.style.display=''; app.style.display='none';
-      dbg('token error', err);
-      return null;
-    }
-    pill('dbgToken','token: ok','ok'); end('token','identity token retrieved');
-
-    // Roles (if provided by your Identity/JWT)
-    const roles = (user?.app_metadata?.roles)||[];
-    pill('dbgRole','role: '+(roles.join('|')||'none'), roles.includes('admin')?'ok':'');
-    app.style.display=''; gate.style.display='none';
-    return { user, token, roles };
-  };
-
-  // ---------- API wrapper with tracing, retries, timing, surfacing errors ----------
-  function makeTrace(){ return 'ts-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
-
-  async function api(path, method='POST', body, opts={}){
-    const trace = makeTrace(); setTrace(trace);
-    const url = '/.netlify/functions'+path;
-    const tKey = 'req:'+path+':'+trace; start(tKey);
-
-    // Acquire token each time (so it refreshes if needed)
-    const user = netlifyIdentity?.currentUser?.();
-    let token=''; try{ token = user ? (await user.token?.()) : ''; }catch(e){ dbg('token fetch failed for call', e); }
-
-    // Show a one-line request summary for quick triage (never log the token)
-    dbg('API request', { path, method, hasToken: !!token, trace, body });
-
-    const headers = Object.assign({ 'Content-Type':'application/json', 'X-HMJ-Trace': trace }, opts.headers||{});
-    if(token) headers.Authorization = 'Bearer '+token;
-
-    const exec = async ()=>{
-      const res = await fetch(url, { method, headers, body: body?JSON.stringify(body):undefined, credentials:'include' });
-      const txt = await res.text();
-      let json; try{ json = txt ? JSON.parse(txt) : null; } catch { json = {raw:txt}; }
-      if(!res.ok){
-        const err = new Error((json&&json.error)||('HTTP '+res.status));
-        err.status = res.status; err.json = json; err.trace = trace; throw err;
-      }
-      return { json, trace };
-    };
-
-    // light retry for 5xx / network
-    let lastErr=null;
-    for(let i=0;i<2;i++){
-      try{
-        const res = await exec();
-        end(tKey, method+' '+path+' ['+res.trace+']');
-        pill('dbgLast', 'last: '+path, 'ok');
-        return res.json;
-      }catch(e){
-        lastErr = e;
-        pill('dbgLast','last: '+path+' !','bad');
-        dbg('API error', { path, status:e.status, trace:e.trace, err:e.message, payload:e.json });
-        if(!e.status || e.status>=500){ await new Promise(r=>setTimeout(r,200)); continue; }
-        throw e;
-      }
-    }
-    throw lastErr;
-  }
-
-  document.getElementById('btnReload').onclick = ()=>location.reload();
-
-  // ---------- Boot: Identity gate ----------
-  const who = await gate();
-  if(!who){
-    // Attach listeners so logging improves as you sign in/out (like Candidates)
-    netlifyIdentity?.on?.('login', ()=>location.reload());
-    netlifyIdentity?.on?.('logout', ()=>location.reload());
-    return;
-  }
-
-  // Short aliases
-  const sel = (s,root=document)=>root.querySelector(s);
-  const onKey = (code, fn)=> document.addEventListener('keydown', e=>{ if(code.length===1? e.key===code : e.code===code) fn(e); });
-
-  // Elements
-  const list  = sel('#list');
-  const listError = sel('#listError');
-  const q     = sel('#q');
-  const status= sel('#status');
-  const client= sel('#client');
-  const week  = sel('#week');
-  const kTotal= sel('#kTotal'), kFiltered= sel('#kFiltered'), kSelected= sel('#kSelected');
-
-  const btnApply= sel('#btnApply'), btnRefresh= sel('#btnRefresh'), btnCsv= sel('#btnCsv'), btnBulkApprove= sel('#btnBulkApprove');
-
-  const createAssignmentId= sel('#createAssignmentId'), createWeekEnding= sel('#createWeekEnding'), btnCreate= sel('#btnCreate'), btnOpenContractor= sel('#btnOpenContractor');
-
-  const auditBody = sel('#auditBody'), auditError = sel('#auditError');
-  const healthBody = sel('#healthBody');
-
-  // Modal
-  const backdrop = sel('#sheetBackdrop'), sheetBody = sel('#sheetBody'), sheetTitle = sel('#sheetTitle'), sheetSub = sel('#sheetSub'), sheetMeta = sel('#sheetMeta');
-  const rateStd = sel('#rateStd'), rateOT = sel('#rateOT');
-  const sumStd = sel('#sumStd'), sumOT = sel('#sumOT'), sumGross = sel('#sumGross');
-  const cmpWeekly = sel('#cmpWeekly');
-  const statusBadge = sel('#statusBadge');
-  const btnCloseModal = sel('#btnCloseModal'), btnSave = sel('#btnSave'), btnSubmit = sel('#btnSubmit'), btnApprove = sel('#btnApprove'), btnReject = sel('#btnReject');
-
-  // Endpoints
+  // --------------- CONSTANTS / ENDPOINTS ----------------
   const FN_LIST     = '/admin-timesheets-list';
   const FN_DETAIL   = '/admin-timesheets-detail';
   const FN_EDIT     = '/admin-timesheets-edit';
@@ -427,52 +316,86 @@
   const FN_EXPORT   = '/admin-timesheets-export';
   const FN_CLIENTS  = '/admin-timesheets-clients';
   const FN_AUDIT    = '/admin-audit-list';
+  const FN_REMIND   = '/admin-timesheets-remind';
   const FN_HEALTH   = '/supa-health';
   const FN_WHOAMI   = '/whoami';
 
-  // State
+  // --------------- ELEMENTS ----------------
+  const $ = (s)=>sel(s);
+  const list  = $('#list');           const listError = $('#listError');
+  const q     = $('#q');              const status = $('#status');
+  const client= $('#client');         const week   = $('#week');
+  const btnApply=$('#btnApply');      const btnRefresh=$('#btnRefresh'); const btnCsv=$('#btnCsv'); const btnBulkApprove=$('#btnBulkApprove');
+
+  const viewSelect = $('#viewSelect'); const viewSave = $('#viewSave'); const viewDelete = $('#viewDelete');
+  const toggleFilters = $('#toggleFilters'); const filtersWrap = $('#filters');
+
+  const kTotal=$('#kTotal'), kFiltered=$('#kFiltered'), kSelected=$('#kSelected');
+
+  const createAssignmentId=$('#createAssignmentId'); const createWeekEnding=$('#createWeekEnding'); const btnCreate=$('#btnCreate'); const btnOpenContractor=$('#btnOpenContractor');
+
+  const auditBody=$('#auditBody'), auditError=$('#auditError');
+
+  const bulkbar = $('#bulkbar'); const bbApprove=$('#bbApprove'); const bbReject=$('#bbReject'); const bbClear=$('#bbClear'); const bulkCount=$('#bulkCount');
+
+  // Modal
+  const backdrop=$('#sheetBackdrop'), sheetBody=$('#sheetBody'), sheetTitle=$('#sheetTitle'), sheetSub=$('#sheetSub'), sheetMeta=$('#sheetMeta');
+  const rateStd=$('#rateStd'), rateOT=$('#rateOT'); const sumStd=$('#sumStd'), sumOT=$('#sumOT'), sumGross=$('#sumGross');
+  const cmpWeekly=$('#cmpWeekly'); const statusBadge=$('#statusBadge');
+  const btnCloseModal=$('#btnCloseModal'), btnSave=$('#btnSave'), btnSubmit=$('#btnSubmit'), btnApprove=$('#btnApprove'), btnReject=$('#btnReject');
+
+  // --------------- STATE ----------------
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let LIST = []; let SELECTED = new Set(); let CUR = null;
 
   const money = (n)=>Number(n||0).toLocaleString('en-GB',{style:'currency',currency:'GBP'});
-  const badgeForStatus=(s)=>{ statusBadge.textContent=s||'draft'; statusBadge.className='badge '+(s||'draft'); };
 
-  // NEW FEATURE 2: Request queue for edits (retries later)
-  const OfflineQueue = {
-    items: [],
-    push(task){ this.items.push(task); renderQueue(); },
-    async runAll(){
-      for(const t of this.items){
-        try{ await t(); t.done=true; toasty('Queued action succeeded','info'); }
-        catch(e){ toasty('Queued action failed again: '+e.message,'error'); }
+  // --------------- DEBUG HELPERS ----------------
+  function traceId(){ return 'ts-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
+  async function call(path, method='POST', body){
+    const id = traceId(); setTrace(id); setLast(method+' '+path);
+    const t0 = performance.now();
+    try{
+      const res = await api(path, method, body, { headers: { 'X-HMJ-Trace': id }});
+      const ms = Math.round(performance.now()-t0);
+      if(DEBUG){
+        const div=document.createElement('div');
+        div.textContent = `[OK] ${method} ${path} in ${ms}ms (trace ${id})`;
+        dbgOut.prepend(div);
       }
-      this.items = this.items.filter(x=>!x.done); renderQueue();
+      return res;
+    }catch(e){
+      const ms = Math.round(performance.now()-t0);
+      const div=document.createElement('div');
+      div.style.color='#f6a7a7';
+      div.textContent = `[ERR] ${method} ${path} in ${ms}ms (trace ${id}): ${e.message||e}`;
+      dbgOut.prepend(div);
+      toast('Error: '+(e.message||e), 'error');
+      throw e;
     }
-  };
-  function renderQueue(){
-    pill('dbgLast', `queue: ${OfflineQueue.items.length}`, OfflineQueue.items.length?'warn':'');
   }
 
-  // Compliance
-  function compliance(entries){
+  // --------------- UI HELPERS ----------------
+  function show(el){ el.style.display=''; } function hide(el){ el.style.display='none'; }
+  function openModal(){ backdrop.classList.add('show'); backdrop.setAttribute('aria-hidden','false'); }
+  function closeModal(){ backdrop.classList.remove('show'); backdrop.setAttribute('aria-hidden','true'); CUR=null; }
+  function badgeForStatus(s){ statusBadge.textContent = s||'draft'; statusBadge.className='badge '+(s||'draft'); }
+  const compliance=(entries)=>{
     let std=0, ot=0, ok=true, msg=[];
     DAYS.forEach(d=>{
-      const r = entries[d]||{std:0,ot:0}; const day=r.std+r.ot;
+      const r=entries[d]||{std:0,ot:0}; const day=r.std+r.ot;
       if(day>16){ ok=false; msg.push(`${d}>16h`); }
       if((r.std*4)%1 || (r.ot*4)%1){ ok=false; msg.push(`${d} not .25`); }
       std+=Number(r.std||0); ot+=Number(r.ot||0);
     });
     if(std+ot>72){ ok=false; msg.push('Week>72h'); }
     return { ok, std, ot, msg };
-  }
+  };
 
-  // Modal helpers
-  function openModal(){ backdrop.classList.add('show'); backdrop.setAttribute('aria-hidden','false'); }
-  function closeModal(){ backdrop.classList.remove('show'); backdrop.setAttribute('aria-hidden','true'); CUR=null; }
   function renderRows(){
     sheetBody.innerHTML='';
     DAYS.forEach(d=>{
-      const r = CUR.entries[d] || {std:0,ot:0,note:''};
+      const r = (CUR.entries[d] || {std:0,ot:0,note:''});
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${d}</td>
@@ -485,7 +408,7 @@
   }
   function sumUp(){
     const t = compliance(CUR.entries);
-    sumStd.textContent = `${t.std}h`; sumOT.textContent=`${t.ot}h`;
+    sumStd.textContent = `${t.std}h`; sumOT.textContent = `${t.ot}h`;
     cmpWeekly.textContent = t.ok ? 'Weekly ≤ 72h (OK)' : ('Issues: '+t.msg.join(', '));
     const gross = t.std*Number(CUR.rates.std||0) + t.ot*Number(CUR.rates.ot||0);
     sumGross.textContent = money(gross);
@@ -494,38 +417,69 @@
     const t = ev.target; if(!t.dataset.day) return;
     const d=t.dataset.day, k=t.dataset.kind;
     if(k==='note'){ CUR.entries[d].note=t.value; }
-    else{
-      let v=t.value===''?0:Number(t.value); if(!Number.isFinite(v)) v=0;
-      v=Math.max(0,Math.min(24,Math.round(v*4)/4)); t.value=v;
-      CUR.entries[d][k]=v;
-    }
+    else{ let v=t.value===''?0:Number(t.value); if(!Number.isFinite(v)) v=0; v=Math.max(0,Math.min(24,Math.round(v*4)/4)); t.value=v; CUR.entries[d][k]=v; }
     sumUp();
   });
-  // Quick fills
-  document.getElementById('qfMonFri').onclick = ()=>{ ['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{ CUR.entries[d]={std:8,ot:0,note:CUR.entries[d]?.note||''}; }); ['Sun','Sat'].forEach(d=>{ CUR.entries[d]={std:0,ot:0,note:CUR.entries[d]?.note||''}; }); renderRows(); };
-  document.getElementById('qfClear').onclick  = ()=>{ DAYS.forEach(d=> CUR.entries[d]={std:0,ot:0,note:''}); renderRows(); };
-  document.getElementById('qfStd').onclick    = ()=>{ const v=prompt('Set ALL standard hours to:','8'); if(v!==null){ const n=Math.max(0,Math.min(24,Math.round(Number(v||0)*4)/4)); DAYS.forEach(d=> CUR.entries[d].std=n); renderRows(); } };
-  document.getElementById('qfOT').onclick     = ()=>{ const v=prompt('Set ALL overtime hours to:','0'); if(v!==null){ const n=Math.max(0,Math.min(24,Math.round(Number(v||0)*4)/4)); DAYS.forEach(d=> CUR.entries[d].ot=n);  renderRows(); } };
 
-  // Clients filter
+  // Quick fills
+  $('#qfMonFri').onclick = ()=>{ ['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{ CUR.entries[d]={std:8,ot:0,note:CUR.entries[d]?.note||''}; }); ['Sun','Sat'].forEach(d=>{ CUR.entries[d]={std:0,ot:0,note:CUR.entries[d]?.note||''}; }); renderRows(); };
+  $('#qfClear').onclick  = ()=>{ DAYS.forEach(d=> CUR.entries[d]={std:0,ot:0,note:''}); renderRows(); };
+  $('#qfStd').onclick    = ()=>{ const v=prompt('Set ALL standard hours to:','8'); if(v!==null){ const n=Math.max(0,Math.min(24,Math.round(Number(v||0)*4)/4)); DAYS.forEach(d=> CUR.entries[d].std=n); renderRows(); } };
+  $('#qfOT').onclick     = ()=>{ const v=prompt('Set ALL overtime hours to:','0'); if(v!==null){ const n=Math.max(0,Math.min(24,Math.round(Number(v||0)*4)/4)); DAYS.forEach(d=> CUR.entries[d].ot=n);  renderRows(); } };
+
+  // --------------- SAVED VIEWS (New Feature) ----------------
+  const VIEWS_KEY='hmj_ts_views';
+  function loadViews(){ try{ return JSON.parse(localStorage.getItem(VIEWS_KEY)||'[]'); }catch{ return []; } }
+  function saveViews(v){ localStorage.setItem(VIEWS_KEY, JSON.stringify(v)); }
+  function syncViewSelect(){
+    const vs=loadViews();
+    viewSelect.innerHTML = `<option value="">(none)</option>` + vs.map((v,i)=>`<option value="${i}">${v.name}</option>`).join('');
+  }
+  function applyView(i){
+    const vs=loadViews(); const v=vs[Number(i)];
+    if(!v) return;
+    q.value=v.q||''; status.value=v.status||''; client.value=v.client_id||''; week.value=v.week||'';
+    toast('View applied: '+v.name);
+    loadList();
+  }
+  viewSelect.onchange = ()=> applyView(viewSelect.value);
+  viewSave.onclick = ()=>{
+    const name = prompt('Save view as:','My filter'); if(!name) return;
+    const vs = loadViews(); vs.push({ name, q:q.value||'', status:status.value||'', client_id:client.value||'', week:week.value||'' });
+    saveViews(vs); syncViewSelect(); toast('View saved');
+  };
+  viewDelete.onclick = ()=>{
+    const idx = Number(viewSelect.value); if(isNaN(idx)) return toast('Select a saved view to delete');
+    const vs = loadViews(); const name = vs[idx]?.name||'#';
+    if(!confirm('Delete view “‘+name+’”?')) return;
+    vs.splice(idx,1); saveViews(vs); syncViewSelect(); toast('View deleted');
+  };
+
+  // --------------- LIST / CLIENTS / AUDIT ----------------
   async function loadClients(){
     try{
-      const data = await api(FN_CLIENTS,'GET');
+      const data = await call(FN_CLIENTS,'GET');
       client.innerHTML = '<option value="">All clients</option>' + (data||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
     }catch(e){
-      toasty('Clients load failed: '+e.message,'error');
-      dbg('clients error', e);
+      listError.style.display=''; listError.textContent = 'Clients failed: '+e.message;
     }
   }
 
-  // List
+  function updateBulkBar(){
+    const n = SELECTED.size;
+    bulkCount.textContent = n+' selected';
+    (n>0)? bulkbar.classList.add('show') : bulkbar.classList.remove('show');
+    kSelected.textContent = String(n);
+  }
+
   async function loadList(){
-    listError.style.display='none'; list.textContent='Loading…'; SELECTED.clear(); kSelected.textContent='0';
+    listError.style.display='none'; list.textContent='Loading…'; SELECTED.clear(); updateBulkBar();
     try{
-      const res = await api(FN_LIST,'POST',{ q:q.value||'', status:status.value||'', client_id:client.value||null, week:week.value||null });
-      LIST = Array.isArray(res) ? res : (res?.rows||res?.items||[]);
-      kFiltered.textContent = String(LIST.length);
-      if(!LIST.length){ list.innerHTML='<div class="muted" style="padding:10px">No timesheets match your filter.</div>'; kTotal.textContent='0'; return; }
+      const res = await call(FN_LIST,'POST',{ q:q.value||'', status:status.value||'', client_id:client.value||null, week:week.value||null });
+      const rows = Array.isArray(res)?res:(res?.rows||res?.items||[]);
+      LIST = rows; kFiltered.textContent = String(LIST.length); kTotal.textContent = String(LIST.length);
+
+      if(!rows.length){ list.innerHTML='<div class="muted" style="padding:10px">No timesheets match your filter.</div>'; return; }
 
       const head = `
         <thead><tr>
@@ -533,7 +487,7 @@
           <th>ID</th><th>Week ending</th><th>Status</th><th>Contractor</th><th>Client • Project • Site</th>
           <th>Std</th><th>OT</th><th>Gross (est.)</th><th></th>
         </tr></thead>`;
-      const bodyHtml = LIST.map(r=>{
+      const bodyHtml = rows.map(r=>{
         const gross=(Number(r.std||0)*Number(r.rate_std||0)) + (Number(r.ot||0)*Number(r.rate_ot||0));
         const badge=`<span class="badge ${r.status||'draft'}">${r.status||'draft'}</span>`;
         return `
@@ -558,32 +512,26 @@
       }).join('');
       list.innerHTML = `<table>${head}<tbody>${bodyHtml}</tbody></table>`;
 
-      list.querySelector('#ckAll').onchange = (e)=>{
+      // events
+      $('#ckAll').onchange = (e)=>{
         SELECTED.clear();
         list.querySelectorAll('.ckRow').forEach((c,i)=>{ c.checked=e.target.checked; if(c.checked) SELECTED.add(LIST[i].id); });
-        kSelected.textContent=String(SELECTED.size);
+        updateBulkBar();
       };
       list.querySelectorAll('.ckRow').forEach((c,i)=>{
-        c.onchange=()=>{ const id=LIST[i].id; c.checked?SELECTED.add(id):SELECTED.delete(id); kSelected.textContent=String(SELECTED.size); };
+        c.onchange=()=>{ const id=LIST[i].id; c.checked?SELECTED.add(id):SELECTED.delete(id); updateBulkBar(); };
       });
       list.querySelectorAll('button[data-open]').forEach(b=> b.onclick=()=> openSheet(Number(b.dataset.open)));
       list.querySelectorAll('button[data-approve]').forEach(b=> b.onclick=()=> approveOne(Number(b.dataset.approve)));
       list.querySelectorAll('button[data-reject]').forEach(b=> b.onclick=()=> rejectOne(Number(b.dataset.reject)));
-
-      kTotal.textContent = String(LIST.length);
     }catch(e){
-      listError.style.display=''; listError.textContent = `List failed: ${e.message} (trace in console)`;
-      dbg('list failed', e);
-      // Identity-specific helper
-      if(String(e.message).includes('identity') || e.status===401){
-        toasty('Identity token missing/invalid. Please sign in again.','error');
-      }
+      listError.style.display=''; listError.textContent = `List failed: ${e.message}`;
     }
   }
 
   async function loadAudit(){
     try{
-      const res = await api(FN_AUDIT,'POST',{limit:8});
+      const res = await call(FN_AUDIT,'POST',{limit:8});
       const items = Array.isArray(res)?res:(res?.items||[]);
       auditBody.innerHTML = items.map(i=>`
         <div style="padding:8px;border-bottom:1px solid #25324a">
@@ -593,32 +541,15 @@
         </div>`).join('') || '<div class="muted">No recent audit events.</div>';
     }catch(e){
       auditError.style.display=''; auditError.textContent = 'Audit failed: '+e.message;
-      dbg('audit failed', e);
     }
   }
 
-  // Health probes (NEW FEATURE 1)
-  async function runHealth(){
-    const lines=[];
-    const push=(txt,ok,t)=> lines.push(`<div class="pill ${ok?'ok':'bad'}">${txt}${t?` · ${t}ms`:''}</div>`);
-    // Identity
-    const u=netlifyIdentity?.currentUser?.();
-    push('Identity: '+(u?'ok':'no session'), !!u);
-    // whoami
-    try{ start('whoami'); await api(FN_WHOAMI,'GET'); push('whoami: ok', true, end('whoami')); }catch(e){ push('whoami: '+e.message, false); }
-    // supa-health
-    try{ start('supa'); await api(FN_HEALTH,'GET'); push('supabase: ok', true, end('supa')); }catch(e){ push('supabase: '+e.message, false); }
-    // list probe
-    try{ start('listp'); await api(FN_LIST,'POST',{limit:1}); push('timesheets-list: ok', true, end('listp')); }catch(e){ push('timesheets-list: '+e.message, false); }
-    healthBody.innerHTML = lines.join(' ');
-  }
-
-  // Detail open
+  // --------------- DETAIL / ACTIONS ----------------
   async function openSheet(id){
     openModal();
     sheetBody.innerHTML='<tr><td colspan="4" class="muted">Loading…</td></tr>';
     try{
-      const res = await api(FN_DETAIL+'?'+new URLSearchParams({id}), 'GET');
+      const res = await call(FN_DETAIL+'?'+new URLSearchParams({id}),'GET');
       CUR = {
         id: res?.timesheet?.id || res?.id,
         status: res?.timesheet?.status || res?.status || 'draft',
@@ -638,7 +569,6 @@
           return e || Object.fromEntries(DAYS.map(d=>[d,{std:0,ot:0,note:''}]));
         })()
       };
-
       sheetTitle.textContent = `Timesheet #${CUR.id}`;
       sheetSub.textContent = `Week ending ${CUR.week_ending||'-'}`;
       sheetMeta.textContent = [CUR.assignment.client_name, CUR.assignment.project_name, CUR.assignment.site_name].filter(Boolean).join(' • ');
@@ -648,84 +578,89 @@
       renderRows();
     }catch(e){
       sheetBody.innerHTML='<tr><td colspan="4" class="muted">Failed to load this timesheet.</td></tr>';
-      toasty('Detail failed: '+e.message,'error'); dbg('detail failed', e);
     }
   }
 
   async function approveOne(id){
-    try{ await api(FN_APPROVE,'POST',{id}); toasty('Approved'); await loadList(); await loadAudit(); if(CUR?.id===id){ CUR.status='approved'; badgeForStatus('approved'); } }
-    catch(e){ toasty('Approve failed: '+e.message,'error'); dbg('approve failed', e); }
+    try{ await call(FN_APPROVE,'POST',{id}); toast('Approved'); await loadList(); await loadAudit(); if(CUR?.id===id){ CUR.status='approved'; badgeForStatus('approved'); } }
+    catch(e){ toast('Approve failed: '+e.message,'error'); }
   }
   async function rejectOne(id){
     const reason = prompt('Reason for rejection:',''); if(reason===null) return;
-    try{ await api(FN_REJECT,'POST',{id,reason}); toasty('Rejected'); await loadList(); await loadAudit(); if(CUR?.id===id){ CUR.status='rejected'; badgeForStatus('rejected'); } }
-    catch(e){ toasty('Reject failed: '+e.message,'error'); dbg('reject failed', e); }
+    try{ await call(FN_REJECT,'POST',{id,reason}); toast('Rejected'); await loadList(); await loadAudit(); if(CUR?.id===id){ CUR.status='rejected'; badgeForStatus('rejected'); } }
+    catch(e){ toast('Reject failed: '+e.message,'error'); }
   }
   async function bulkApprove(){
-    if(!SELECTED.size) return toasty('Select at least one row');
+    if(!SELECTED.size) return toast('Select at least one row');
     if(!confirm(`Approve ${SELECTED.size} timesheet(s)?`)) return;
-    try{ await api(FN_BULK_OK,'POST',{ ids:[...SELECTED] }); toasty('Bulk approved'); await loadList(); await loadAudit(); }
-    catch(e){ toasty('Bulk approve failed: '+e.message,'error'); dbg('bulk failed', e); }
+    try{ await call(FN_BULK_OK,'POST',{ ids:[...SELECTED] }); toast('Bulk approved'); SELECTED.clear(); updateBulkBar(); await loadList(); await loadAudit(); }
+    catch(e){ toast('Bulk approve failed: '+e.message,'error'); }
   }
 
   async function saveCurrent(){
     if(!CUR) return;
     const t = compliance(CUR.entries);
     if(!t.ok && !confirm('Compliance warnings: '+t.msg.join(', ')+' — Save anyway?')) return;
-    const task = async ()=> api(FN_EDIT,'POST',{ id:CUR.id, entries:CUR.entries });
-    try{ await task(); toasty('Saved'); await loadList(); }
-    catch(e){
-      toasty('Save failed: '+e.message,'error'); dbg('save failed', e);
-      if(!e.status || e.status>=500){ OfflineQueue.push(task); toasty('Queued for retry (see debug strip)'); }
-    }
+    try{ await call(FN_EDIT,'POST',{ id:CUR.id, entries:CUR.entries }); toast('Saved'); await loadList(); }
+    catch(e){ toast('Save failed: '+e.message,'error'); }
   }
   async function setSubmitted(){
     if(!CUR) return;
-    const task = async ()=> api(FN_EDIT,'POST',{ id:CUR.id, status:'submitted' });
-    try{ await task(); toasty('Marked submitted'); CUR.status='submitted'; badgeForStatus('submitted'); await loadList(); await loadAudit(); }
-    catch(e){
-      toasty('Submit failed: '+e.message,'error'); dbg('submit failed', e);
-      if(!e.status || e.status>=500){ OfflineQueue.push(task); toasty('Queued for retry'); }
-    }
+    try{ await call(FN_EDIT,'POST',{ id:CUR.id, status:'submitted' }); toast('Marked submitted'); CUR.status='submitted'; badgeForStatus('submitted'); await loadList(); await loadAudit(); }
+    catch(e){ toast('Submit failed: '+e.message,'error'); }
   }
 
   async function createBlank(){
     const aid = Number(createAssignmentId.value||0);
     const we  = createWeekEnding.value;
-    if(!aid || !we){ return toasty('Provide Assignment ID and week ending','error'); }
+    if(!aid || !we){ return toast('Provide Assignment ID and week ending','error'); }
     try{
-      const created = await api(FN_CREATE,'POST',{ assignment_id:aid, week_ending:we });
-      toasty('Draft created (#'+(created?.id||'?')+')'); await loadList();
-    }catch(e){ toasty('Create failed: '+e.message,'error'); dbg('create failed', e); }
+      const created = await call(FN_CREATE,'POST',{ assignment_id:aid, week_ending:we });
+      toast('Draft created (#'+(created?.id||'?')+')'); await loadList();
+    }catch(e){ toast('Create failed: '+e.message,'error'); }
   }
 
   function exportCsv(){
-    if(!LIST?.length) return toasty('Nothing to export');
-    api(FN_EXPORT,'POST',{ q:q.value||'', status:status.value||'', client_id:client.value||null, week:week.value||null })
+    if(!LIST?.length) return toast('Nothing to export');
+    call(FN_EXPORT,'POST',{ q:q.value||'', status:status.value||'', client_id:client.value||null, week:week.value||null })
     .then(res=>{
       const blob=new Blob([res.csv||''],{type:'text/csv'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
       a.download=`timesheets_${new Date().toISOString().slice(0,10)}.csv`; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),1500);
     })
-    .catch(e=>{ toasty('Export failed: '+e.message,'error'); dbg('export failed', e); });
+    .catch(e=> toast('Export failed: '+e.message,'error'));
   }
 
-  // Reminders (admin-timesheets-remind)
   async function runReminder(){
-    const week_ending = week.value || undefined;
     try{
-      const res = await api('/admin-timesheets-remind','POST',{ week_ending, dryRun:true });
-      document.getElementById('remindOut').textContent = JSON.stringify(res, null, 2);
-      toasty(`Reminder dry-run: ${res.count} recipients`);
+      const res = await call(FN_REMIND,'POST',{ week_ending: week.value || undefined, dryRun:true });
+      $('#remindOut').textContent = JSON.stringify(res,null,2);
+      toast(`Reminder dry-run: ${res.count||0} recipients`);
     }catch(e){
-      toasty('Reminder failed: '+e.message,'error'); dbg('remind failed', e);
+      toast('Reminder failed: '+e.message,'error');
     }
   }
 
-  // Wire UI
-  document.getElementById('btnDiag').onclick = async ()=>{ await runHealth(); await OfflineQueue.runAll(); };
-  document.getElementById('btnHealth').onclick = runHealth;
+  // --------------- DIAGNOSTICS ----------------
+  async function runDiagnostics(){
+    const lines=[];
+    const push=(txt,ok,t)=> lines.push(`<span class="pill ${ok?'ok':'bad'} tiny">${txt}${t?` · ${t}ms`:''}</span>`);
+    try{
+      const t0=performance.now(); await call(FN_WHOAMI,'GET'); push('whoami',true,Math.round(performance.now()-t0));
+    }catch(e){ push('whoami:'+e.message,false); }
+    try{
+      const t0=performance.now(); await call(FN_HEALTH,'GET'); push('supa-health',true,Math.round(performance.now()-t0));
+    }catch(e){ push('supa-health:'+e.message,false); }
+    try{
+      const t0=performance.now(); await call(FN_LIST,'POST',{limit:1}); push('list',true,Math.round(performance.now()-t0));
+    }catch(e){ push('list:'+e.message,false); }
+    $('#dbgOut').innerHTML = lines.join(' ');
+  }
+
+  // --------------- WIRE UI ----------------
+  $('#btnToggleDebug').click(); // leave debug collapsed by default
+  $('#btnRunHealth').onclick = runDiagnostics;
 
   btnApply.onclick = loadList;
   btnRefresh.onclick = loadList;
@@ -734,29 +669,40 @@
   btnCreate.onclick = createBlank;
   btnOpenContractor.onclick = ()=>{
     const row = LIST.find(r=> SELECTED.has(r.id)) || LIST[0];
-    if(!row || !row.contractor_email){ return toasty('Select a row with contractor'); }
+    if(!row || !row.contractor_email){ return toast('Select a row with contractor'); }
     location.href = '/admin/candidates.html?q='+encodeURIComponent(row.contractor_email);
   };
 
-  document.getElementById('btnCloseModal').onclick = closeModal;
+  bbApprove.onclick = ()=>{ if(!SELECTED.size) return; if(confirm(`Approve ${SELECTED.size} timesheet(s)?`)) call(FN_BULK_OK,'POST',{ids:[...SELECTED]}).then(()=>{toast('Approved'); SELECTED.clear(); updateBulkBar(); loadList();}); };
+  bbReject.onclick  = ()=>{ if(!SELECTED.size) return; const reason=prompt('Reason for rejection:',''); if(reason===null) return; Promise.all([...SELECTED].map(id=>call(FN_REJECT,'POST',{id,reason}))).then(()=>{toast('Rejected'); SELECTED.clear(); updateBulkBar(); loadList();}); };
+  bbClear.onclick   = ()=>{ SELECTED.clear(); updateBulkBar(); list.querySelectorAll('.ckRow').forEach(c=>c.checked=false); };
+
+  btnCloseModal.onclick = closeModal;
   btnSave.onclick = saveCurrent;
   btnSubmit.onclick = setSubmitted;
   btnApprove.onclick = ()=> CUR && approveOne(CUR.id);
   btnReject.onclick  = ()=> CUR && rejectOne(CUR.id);
-  document.getElementById('btnRunReminder').onclick = runReminder;
+  $('#btnRunReminder').onclick = runReminder;
 
-  // Shortcuts
-  onKey('/', ()=> q.focus());
-  onKey('KeyR', ()=> loadList());
-  onKey('KeyB', ()=> bulkApprove());
-  onKey('KeyE', ()=> exportCsv());
+  document.addEventListener('keydown',(e)=>{ if(e.key==='/'){ e.preventDefault(); q.focus(); }});
+  document.addEventListener('keydown',(e)=>{ if(e.code==='KeyR') loadList(); });
+  document.addEventListener('keydown',(e)=>{ if(e.code==='KeyB') bulkApprove(); });
+  document.addEventListener('keydown',(e)=>{ if(e.code==='KeyE') exportCsv(); });
 
-  // Initial loads (with visibility + debug)
-  await runHealth();
-  await (async()=>{ try{ await loadClients(); }catch(e){} })();
-  await (async()=>{ try{ await loadAudit(); }catch(e){} })();
-  await loadList();
-})();
+  toggleFilters.onclick = ()=> filtersWrap.classList.toggle('closed');
+
+  // --------------- INITIAL LOAD ----------------
+  (async ()=>{
+    try{
+      // Gate is already handled by common.js before calling main(); still reflect pills for clarity
+      pill('dbgIdent','identity: ok','ok'); pill('dbgToken','token: ok','ok'); pill('dbgRole','role: ok','ok');
+    }catch{}
+    syncViewSelect();
+    await loadClients();
+    await loadAudit();
+    await loadList();
+  })();
+}
 </script>
 </body>
 </html>
