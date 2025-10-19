@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Timesheets — Admin | HMJ-Global</title>
 
-<!-- Identity MUST load before common.js -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<!-- Shared admin bootstrap (pure JS file, no <script> tags inside) -->
-<script defer src="/admin/common.js"></script>
 
 <link rel="stylesheet" href="/css/style.css"/>
 <style>
@@ -761,15 +757,32 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // Restore filters from cache
   try{ const f=JSON.parse(localStorage.getItem('hmj_ts_filters')||'{}'); if(f){ q.value=f.q||''; status.value=f.status||''; clientId.value=f.client_id||''; week.value=f.week||''; } }catch{}
 
-  // ---- Identity gate & diagnostics (like Candidates page memory) ----
-  const diag = await identity(); // from common.js; returns { ok, role, email, token }
-  diagChips.innerHTML=''; addChip('init: ok', true);
-  if(!diag.ok){ addChip('identity: no session', false); $('#gate').style.display='grid'; return; }
-  addChip('identity: ok', true);
-  addChip('token: ok', true);
-  addChip('role: '+(diag.role||'admin'), true);
-  ROLE = diag.role || 'admin';
-  roleView.value = ROLE;
+  // New: consistently gate via the shared bootstrap
+  (async function initTimesheets(){
+    const helpers = await (window.adminReady ? window.adminReady({ role:'admin' }) : window.bootAdmin({ role:'admin' }));
+    if (!helpers || helpers.ok === false) {
+      // gate already rendered a message; just stop here.
+      return;
+    }
+    // pull helpers you already use
+    const { api, sel, toast } = helpers;
+
+    // If you previously had globals like API = api; keep them
+    window.API = api;
+
+    // Trigger your existing loaders the same way as before
+    try {
+      document.dispatchEvent(new CustomEvent('admin:refresh')); // keeps your R shortcut useful
+      // or directly call your page loaders here:
+      // await loadClients();
+      // await loadAudit();
+      // await loadList();
+    } catch (e) {
+      console.error(e);
+      toast('Init error: '+(e.message||e), 'error');
+    }
+  })();
+
 
   // Load clients, audit, list
   await loadClients(); await loadAudit(); await loadList(); renderViews();
@@ -780,5 +793,13 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 
 /* Bootstrap via /admin/common.js */
 </script>
+
+
+<!-- Identity MUST load before common.js -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<!-- Shared admin bootstrap (pure JS file, no <script> tags inside) -->
+<script defer src="/admin/common.js"></script>
+
+
 </body>
 </html>
