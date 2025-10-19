@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Candidates — Admin | HMJ-Global</title>
+
+<!-- Netlify Identity + shared admin helpers (may load late on some CDNs) -->
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script defer src="/admin/common.js"></script>
+
+<link rel="stylesheet" href="/css/style.css"/>
+
+<style>
+
+
+  :root{
+    --bg:#ffffff; --panel:#0f172a; --panel-2:#111b33; --border:#22304d; --ink:#0b1222;; --muted:#44516b;
+    --card:#0d1426; --chip:#0e1629; --accent:#3A66B3; --accent-2:#2b50d9;
+    --good:#0c2b1e; --warn:#35240d; --bad:#3a1418; --info:#0e2038;
+    /* text colors used on dark-blue panels */
+    --ink-on-panel: #eaf2ff;      /* near-white for headings & body on panels */
+    --muted-on-panel: #9fb7e3;    /* softer label color on panels */
+    --shadow:0 12px 32px rgba(0,0,0,.28);
+    --radius:18px;
+  }
+
+  /* High-contrast text on dark-blue panels (cards, side panels, KPI chips, etc.) */
+  .card,
+  .side-card,
+  .kpi,
+  .pill,
+  .tableWrap,
+  thead th {
+    color: var(--ink-on-panel);
+  }
+
+  /* Muted/label text when it sits on a dark panel */
+  .card .muted,
+  .side-card .muted,
+  .section-title,
+  .filters label {
+    color: var(--muted-on-panel);
+  }
+
+  /* Badges and chips sit on dark too */
+  .badge { color: var(--ink-on-panel); }
+
+
+
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;font-size:18px;line-height:1.45}
+  .top{position:sticky;top:0;background:#0b1222;border-bottom:1px solid var(--border);z-index:5}
+  .row{max-width:1280px;margin:0 auto;padding:14px 18px;display:flex;gap:12px;align-items:center}
+  .brand{font-weight:800;font-size:18px}.sp{flex:1}
+
+  .wrap{max-width:1280px;margin:22px auto;padding:0 18px;display:grid;gap:18px}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .muted{color:var(--muted)}
+
+  /* INPUTS — white background with black text, bigger, comfortable spacing */
+  input,select,textarea{
+    background:#ffffff;color:#111;border:1px solid #2c3853;border-radius:12px;padding:12px;width:100%;font-size:16px;
+    box-sizing:border-box;
+  }
+  input::placeholder,textarea::placeholder{color:#666}
+  textarea{min-height:120px;resize:vertical}
+  .btn{background:#1a2442;border:1px solid #2c3d60;color:#fff;padding:10px 14px;border-radius:12px;
+       font-weight:700;cursor:pointer;font-size:14px}
+  .btn:hover{border-color:#3b4f79}
+  .btn.bad{background:#3a1418;border-color:#7d3339}
+  .btn.good{background:#173b2a;border-color:#1e6646}
+  .btn.ghost{background:transparent}
+  .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+  .filters{display:grid;grid-template-columns:1.5fr .9fr .9fr 1fr 1fr auto 120px;gap:12px;margin:6px 0}
+  .tips{font-size:13px;color:var(--muted);margin-top:8px}
+
+  .tableWrap{overflow:auto;border-radius:14px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;font-size:16px}
+  thead th{position:sticky;top:0;background:#0f1832;z-index:1}
+  tbody tr:hover{background:#0e1629}
+  .row-actions{display:flex;gap:8px}
+
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #2c3853;background:#0f172a;font-size:12px}
+  .status-ok{background:#0d2c1f;border-color:#1e6646}
+  .status-warn{background:#33220f;border-color:#8a5b25}
+  .status-bad{background:#2a1214;border-color:#6a2b2f}
+
+  .grid2{display:grid;grid-template-columns:1fr 430px;gap:18px}
+  .editor{display:grid;gap:16px}
+  /* Bigger GAPS between two-column fields so First/Last don’t kiss each other */
+  .editor-grid{display:grid;grid-template-columns:repeat(2,1fr);column-gap:18px;row-gap:14px}
+  .editor-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase}
+  .editor-grid .field{display:flex;flex-direction:column}
+  .section-title{margin:0 0 8px 0;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+
+  .side{display:grid;gap:16px}
+  .side-card h4{margin:0 0 8px 0}
+  .kv{display:grid;grid-template-columns:130px 1fr;gap:8px 12px}
+  .kv div{white-space:pre-wrap;word-break:break-word}
+
+  .error-banner{background:var(--bad);border:1px solid #7d3339;color:#ffd6d6;padding:12px;border-radius:12px}
+  .loading{display:flex;gap:8px;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;background:#7f9dd9;opacity:.5;animation:bounce 1s infinite}
+  .dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,80%,100%{transform:scale(.8);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+  .toolbar-right{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .kpi{background:var(--card);border:1px solid #2c3853;border-radius:12px;padding:12px 16px;min-width:98px}
+  .kpi b{font-size:22px;display:block}
+
+  /* Toasts */
+  #toastStack{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+  .toast{padding:12px 14px;border-radius:12px;border:1px solid #2c3853;box-shadow:var(--shadow);font-size:14px}
+  .t-ok{background:#102a1f;border-color:#1e6646;color:#d7ffe8}
+  .t-warn{background:#35240d;border-color:#a36b27;color:#ffe9c4}
+  .t-err{background:#3a1418;border-color:#7d3339;color:#ffd6d6}
+  .t-info{background:#0e2038;border-color:#355b9b;color:#e5f0ff}
+
+  /* Mobile */
+  @media (max-width: 1040px){
+    .filters{grid-template-columns:1fr 1fr 1fr}
+    .grid2{grid-template-columns:1fr}
+  }
+  /* Turn table rows into cards on small screens */
+  @media (max-width: 720px){
+    table thead{display:none}
+    table, tbody, tr, td{display:block;width:100%}
+    tbody tr{border:1px solid var(--border);border-radius:12px;margin-bottom:12px}
+    td{border-bottom:1px dashed #1f2940}
+    td:last-child{border-bottom:none}
+    td[data-h]:before{content:attr(data-h) ": ";color:var(--muted);font-weight:700}
+    .row-actions{justify-content:flex-end}
+  }
+</style>
+</head>
+<body>
+  <!-- header -->
+  <div class="top"><div class="row">
+    <div class="brand">Candidates — Admin</div><div class="sp"></div>
+    <a class="btn" href="/admin/">⟵ Admin home</a>
+    <button class="btn" id="btnDebug">Debug</button>
+    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+  </div></div>
+
+  <!-- gate (non-admin / not signed-in) -->
+  <div class="wrap" id="gate" style="display:none">
+    <div class="card">
+      <strong>Admin only.</strong>
+      <p class="why muted" style="margin:6px 0 12px"></p>
+      <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+    </div>
+  </div>
+
+  <!-- app -->
+  <div class="wrap" id="app" style="display:none">
+
+    <!-- stats / actions -->
+    <div class="card">
+      <div class="toolbar" style="justify-content:space-between;align-items:flex-start;gap:14px">
+        <div class="kpis">
+          <div class="kpi"><b id="kTotal">0</b>Total</div>
+          <div class="kpi"><b id="kFiltered">0</b>Filtered</div>
+          <div class="kpi"><b id="kPage">1/1</b>Page</div>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn" id="btnRefresh">Refresh</button>
+          <button class="btn" id="btnNew">New candidate</button>
+          <button class="btn" id="btnExport">Export CSV</button>
+          <button class="btn" id="btnEmails" title="Copy filtered emails">📧 Email list</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- filters -->
+    <div class="card">
+      <div class="filters">
+        <input id="q" placeholder="Search name / email / phone"/>
+        <select id="fType">
+          <option value="">Any pay type</option>
+          <option>Umbrella</option><option>Umbrella CIS</option>
+          <option>PAYE</option><option>Ltd</option><option>Ltd CIS</option>
+          <option>International</option><option>International Umbrella</option>
+        </select>
+        <select id="fStatus">
+          <option value="">Any status</option>
+          <option>Complete</option><option>In progress</option><option>Paused</option>
+        </select>
+        <input id="fJob" placeholder="Job title"/>
+        <input id="fEmailHas" placeholder="Email contains"/>
+        <div class="toolbar-right">
+          <button class="btn" id="pgPrev" title="Prev">◀</button>
+          <div style="min-width:90px;text-align:center"><span id="pgNow">1</span>/<span id="pgMax">1</span></div>
+          <button class="btn" id="pgNext" title="Next">▶</button>
+        </div>
+        <select id="pageSize" title="Rows / page">
+          <option>25</option><option>50</option><option>100</option>
+        </select>
+      </div>
+      <div class="tips">Tips: Press <b>/</b> to focus search · <b>R</b> refresh · <b>N</b> new candidate · <b>←/→</b> page</div>
+    </div>
+
+    <!-- error banners -->
+    <div id="errorTop" style="display:none" class="error-banner"></div>
+
+    <!-- content: table + editor + side panel -->
+    <div class="grid2">
+      <div>
+        <!-- list -->
+        <div class="card tableWrap" id="listWrap"><div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div></div>
+        <div id="errorBottom" style="display:none;margin-top:12px" class="error-banner"></div>
+      </div>
+
+      <!-- side panel: profile/quick view -->
+      <div class="side">
+        <div class="card side-card">
+          <h4 style="margin:0 0 10px">Quick profile</h4>
+          <div class="kv">
+            <div class="muted">Name</div>   <div id="pName">—</div>
+            <div class="muted">Email</div>  <div id="pEmail">—</div>
+            <div class="muted">Phone</div>  <div id="pPhone">—</div>
+            <div class="muted">Job</div>    <div id="pJob">—</div>
+            <div class="muted">Type</div>   <div id="pType">—</div>
+            <div class="muted">Status</div> <div id="pStatus">—</div>
+            <div class="muted">Payroll</div><div id="pPayroll">—</div>
+            <div class="muted">Address</div><div id="pAddress">—</div>
+            <div class="muted">Updated</div><div id="pUpdated">—</div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="btnOpenPayslips">View payslips</button>
+            <button class="btn" id="btnOpenTnC">View T&Cs</button>
+          </div>
+        </div>
+
+        <div class="card side-card">
+          <h4 style="margin:0 0 10px">Recent timesheets</h4>
+          <div id="pTimesheets" class="muted">Select a candidate…</div>
+        </div>
+
+        <div class="card side-card">
+          <h4 style="margin:0 0 10px">Assignments</h4>
+          <div id="pAssignments" class="muted">Select a candidate…</div>
+        </div>
+
+        <div class="card side-card">
+          <h4 style="margin:0 0 10px">Payslips</h4>
+          <div id="pPayslips" class="muted">Select a candidate…</div>
+        </div>
+
+        <div class="card side-card">
+          <h4 style="margin:0 0 10px">T&Cs sent</h4>
+          <div id="pTerms" class="muted">Select a candidate…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- editor -->
+    <div class="card editor" id="editor" style="display:none">
+      <h3 style="margin:0 0 10px" id="edTitle">Candidate</h3>
+
+      <div class="editor-grid">
+        <div class="field"><label>First name</label><input id="edFirst"></div>
+        <div class="field"><label>Last name</label><input id="edLast"></div>
+
+        <div class="field"><label>Email</label><input id="edEmail" type="email"></div>
+        <div class="field"><label>Phone</label><input id="edPhone"></div>
+
+        <div class="field"><label>Job title</label><input id="edJob"></div>
+        <div class="field"><label>Pay type</label>
+          <select id="edType">
+            <option>Umbrella</option><option>Umbrella CIS</option>
+            <option>PAYE</option><option>Ltd</option><option>Ltd CIS</option>
+            <option>International</option><option>International Umbrella</option>
+          </select>
+        </div>
+
+        <div class="field"><label>Status</label>
+          <select id="edStatus"><option>In progress</option><option>Complete</option><option>Paused</option></select>
+        </div>
+        <div class="field"><label>Payroll ref</label><input id="edPayroll"></div>
+
+        <div class="field"><label>Internal ref (UID)</label><input id="edInternalRef" placeholder="auto on create"></div>
+        <div class="field"><label>Country</label><input id="edCountry" placeholder="United Kingdom"></div>
+
+        <div class="field" style="grid-column:1 / -1"><label>Address (free-form)</label><input id="edAddress" placeholder="Full mailing address"></div>
+
+        <div class="field"><label>Address line 1</label><input id="edAddress1"></div>
+        <div class="field"><label>Address line 2</label><input id="edAddress2"></div>
+        <div class="field"><label>Town/City</label><input id="edTown"></div>
+        <div class="field"><label>County</label><input id="edCounty"></div>
+        <div class="field"><label>Postcode</label><input id="edPostcode"></div>
+      </div>
+
+      <div>
+        <div class="section-title">Bank details (for payment)</div>
+        <div class="editor-grid">
+          <div class="field"><label>Sort code</label><input id="edSortCode" placeholder="12-34-56"></div>
+          <div class="field"><label>Account number</label><input id="edAccount" placeholder="01234567"></div>
+          <div class="field"><label>IBAN</label><input id="edIban" placeholder="(if international)"></div>
+          <div class="field"><label>SWIFT / BIC</label><input id="edSwift" placeholder=""></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Notes</div>
+        <textarea id="edNotes" placeholder="Internal notes…"></textarea>
+      </div>
+
+      <div class="editor-grid">
+        <div class="field"><label>Created at</label><input id="edCreated" disabled></div>
+        <div class="field"><label>Updated at</label><input id="edUpdated" disabled></div>
+      </div>
+
+      <div class="inline" style="justify-content:flex-end;margin-top:12px;display:flex;gap:10px">
+        <button class="btn good" id="btnSave">Save</button>
+        <button class="btn bad" id="btnDelete">Delete</button>
+        <button class="btn ghost" id="btnClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastStack"></div>
+
+<script>
+/* ---------------------- Debug logger ---------------------- */
+const __dbg = {
+  on: false,
+  log: (...a)=> __dbg.on && console.log('[line]', ...a),
+  warn:(...a)=> __dbg.on && console.warn('[warn]', ...a),
+  err: (...a)=> __dbg.on && console.error('[error]', ...a),
+};
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ---------------------- Toasts ---------------------------- */
+function toast(msg, kind='info', timeout=2600){
+  const stack = document.getElementById('toastStack');
+  const div = document.createElement('div');
+  div.className = 'toast ' + (kind==='ok'?'t-ok':kind==='warn'?'t-warn':kind==='err'?'t-err':'t-info');
+  div.textContent = msg;
+  stack.appendChild(div);
+  setTimeout(()=>{ div.style.opacity=.0; div.style.transform='translateY(6px)'; }, timeout);
+  setTimeout(()=> stack.removeChild(div), timeout+350);
+}
+
+/* ---------------------- Identity helpers ------------------ */
+function getNFJwtFromCookie(){
+  try{
+    const m = document.cookie.match(/(?:^|;\\s*)nf_jwt=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }catch{ return ''; }
+}
+async function getIdentityUser(retries=50){
+  while(retries-- > 0){
+    if (window.netlifyIdentity && typeof window.netlifyIdentity === 'object'){
+      try{ return window.netlifyIdentity.currentUser(); }catch{}
+    }
+    await sleep(100);
+  }
+  return null;
+}
+
+/* ---------------------- API helper (robust) --------------- */
+async function api(path, method='POST', body){
+  const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
+
+  let token = '';
+  try{
+    const user = window.netlifyIdentity?.currentUser?.();
+    token = user ? (await (user.token?.() || user.jwt?.())) : '';
+  }catch{}
+  if (!token) token = getNFJwtFromCookie();
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  __dbg.warn('Auth:', token ? 'have token' : 'no token available yet');
+  __dbg.log('API →', { url, method, body });
+
+  const res = await fetch(url, { method, headers, credentials:'include', body: body?JSON.stringify(body):undefined });
+  const txt = await res.text();
+  let json; try { json = txt ? JSON.parse(txt) : null; } catch { json = { raw: txt }; }
+
+  __dbg.log('API ←', { status: res.status, ok: res.ok, body: json });
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json;
+}
+
+/* ---------------------- Fallback admin helpers ------------ */
+function localHelpers(){
+  const sel = (s,root=document)=> root.querySelector(s);
+  const show = id => sel(id).style.display='';
+  const hide = id => sel(id).style.display='none';
+  async function gate({ adminOnly }={}){
+    const app = sel('#app'), g = sel('#gate');
+    const user = await getIdentityUser();
+    if (user){ show('#app'); hide('#gate'); return { email: user.email }; }
+    hide('#app'); show('#gate');
+    sel('#gate .why').textContent = adminOnly ? 'Please sign in with an admin account.' : 'Please sign in.'; return null;
+  }
+  function onKey(code, fn){
+    document.addEventListener('keydown', (e)=>{
+      if(code.length===1 && e.key===code) return fn(e);
+      if(code.length>1 && e.code===code) return fn(e);
+    });
+  }
+  return { gate, api, sel, toast, onKey };
+}
+async function waitAdminReadyOrFallback(){
+  for(let i=0;i<100;i++){
+    if (window.adminReady && typeof window.adminReady === 'function'){
+      try{ const helpers = await window.adminReady(); if (helpers) return helpers; }catch(e){ console.error('adminReady threw:', e); }
+    }
+    await sleep(100);
+  }
+  console.warn('common.js not loaded in time; using fallback helpers');
+  return localHelpers();
+}
+
+/* ==========================================================================================
+   APPLICATION
+=========================================================================================== */
+let cur=null, pages=1, page=1, size=Number(localStorage.cand_size||25)||25, lastRows=[], sort={key:'name',dir:'asc'};
+
+(async function bootstrap(){
+  try{
+    const helpers = await waitAdminReadyOrFallback();
+    const { gate, sel, onKey } = helpers;
+
+    const who = await gate({ adminOnly:true });
+    if(!who){ return; }
+    __dbg.log('Gate OK →', who);
+
+    candidatesApp({ api, sel, onKey });
+  }catch(e){
+    console.error(e);
+    const top = document.querySelector('#errorTop');
+    if (top){ top.style.display=''; top.textContent = 'Error: '+(e.message||e); }
+  }
+})();
+
+async function candidatesApp({ sel, onKey }){
+  const $ = (s,root=document)=> root.querySelector(s);
+  const listWrap = $('#listWrap');
+  const ed = $('#editor');
+  const errorTop = $('#errorTop'), errorBottom = $('#errorBottom');
+
+  $('#pageSize').value = String(size);
+
+  const qv = id => $(id).value.trim();
+  const setNum = (selId,val)=> { const el = $(selId.startsWith('#')? selId : '#'+selId); if(el) el.textContent = String(val); };
+  const banner = (el, msg)=>{ if(!msg){ el.style.display='none'; el.textContent=''; } else { el.style.display=''; el.textContent = 'Error: ' + msg; } };
+  const hideErrorBanner = ()=> { banner(errorTop, null); banner(errorBottom, null); };
+
+  function statusBadge(s){
+    const t=(s||'').toLowerCase();
+    const cls = t==='complete' ? 'status-ok' : t==='in progress' ? 'status-warn' : 'status-bad';
+    return `<span class="badge ${cls}">${s||'—'}</span>`;
+  }
+  const typeBadge = t => `<span class="badge">${t||'—'}</span>`;
+
+  function renderRows(rows){
+    lastRows = rows;
+    if(!rows.length){ listWrap.innerHTML = '<div class="muted">No candidates.</div>'; return; }
+    const head = `
+      <thead>
+        <tr>
+          <th style="width:84px">ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th style="width:150px">Phone</th>
+          <th style="width:170px">Type</th>
+          <th style="width:150px">Status</th>
+          <th style="width:150px"></th>
+        </tr>
+      </thead>`;
+    const body = rows.map(r=>{
+      const name = [r.first_name,r.last_name].filter(Boolean).join(' ') || (r.name||'—');
+      return `
+        <tr data-id="${r.id}">
+          <td data-h="ID">${r.id??'—'}</td>
+          <td data-h="Name">${name}</td>
+          <td data-h="Email">${r.email || '—'}</td>
+          <td data-h="Phone">${r.phone || '—'}</td>
+          <td data-h="Type">${typeBadge(r.pay_type)}</td>
+          <td data-h="Status">${statusBadge(r.status)}</td>
+          <td data-h="">
+            <div class="row-actions">
+              <button class="btn" data-open="${r.id}">Open</button>
+              <button class="btn" data-profile="${r.id}">Profile</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    listWrap.innerHTML = `<table>${head}<tbody>${body}</tbody></table>`;
+    listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick = ()=> openEd(Number(b.dataset.open)));
+    listWrap.querySelectorAll('button[data-profile]').forEach(b=> b.onclick = ()=> showProfile(Number(b.dataset.profile)));
+  }
+
+  function normalizeResponse(res){
+    const rows = Array.isArray(res) ? res : (res && res.rows) ? res.rows : [];
+    const total = (res && typeof res.total==='number') ? res.total : rows.length;
+    const filtered = (res && typeof res.filtered==='number') ? res.filtered : rows.length;
+    const pg = Math.max(1, Number((res && res.pages) || Math.ceil((filtered||1)/size) || 1));
+    return { rows, total, filtered, pages:pg };
+  }
+
+  async function loadList(debugFlag=false){
+    hideErrorBanner();
+    listWrap.innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
+    try{
+      const body = {
+        q: qv('#q'),
+        type: qv('#fType'),
+        status: qv('#fStatus'),
+        job: qv('#fJob'),
+        emailHas: qv('#fEmailHas'),
+        page, size, sort,
+        debug: true,
+      };
+      __dbg.log('List: request body', body);
+
+      const res = await api('/admin-candidates-lists','POST', body);
+      if (res?.debug) { __dbg.log('Function debug →', res.debug); }
+      const meta = normalizeResponse(res);
+      pages = meta.pages; if(page>pages) page=pages;
+
+      setNum('#kTotal', meta.total);
+      setNum('#kFiltered', meta.filtered);
+      setNum('#pgNow', page);
+      setNum('#pgMax', pages);
+      $('#kPage').textContent = `${page}/${pages}`;
+
+      __dbg.log('List: meta', { total:meta.total, filtered:meta.filtered, pages, page });
+      renderRows(meta.rows);
+    }catch(e){
+      __dbg.err('List: load failed', String(e));
+      banner(errorTop, e.message || 'Error');
+      listWrap.innerHTML = '<div style="color:#ffb4b4">Error: '+(e.message||e)+'</div>';
+    }
+  }
+
+  function setEd(c){
+    $('#edTitle').textContent = c?.id ? `Candidate #${c.id}` : 'New candidate';
+    $('#edFirst').value   = c.first_name||'';
+    $('#edLast').value    = c.last_name||'';
+    $('#edEmail').value   = c.email||'';
+    $('#edPhone').value   = c.phone||'';
+    $('#edJob').value     = c.job_title||'';
+    $('#edType').value    = c.pay_type||'Umbrella';
+    $('#edStatus').value  = c.status||'In progress';
+    $('#edPayroll').value = c.payroll_ref||'';
+    $('#edInternalRef').value = c.internal_ref||'';
+    $('#edCountry').value = c.country||'';
+    // addresses
+    $('#edAddress').value  = c.address||'';
+    $('#edAddress1').value = c.address1||'';
+    $('#edAddress2').value = c.address2||'';
+    $('#edTown').value     = c.town||'';
+    $('#edCounty').value   = c.county||'';
+    $('#edPostcode').value = c.postcode||'';
+    // banking
+    $('#edSortCode').value = c.bank_sort_code||'';
+    $('#edAccount').value  = c.bank_account||'';
+    $('#edIban').value     = c.bank_iban||'';
+    $('#edSwift').value    = c.bank_swift||'';
+    $('#edNotes').value    = c.notes||'';
+    // meta
+    $('#edCreated').value  = c.created_at ? String(c.created_at).replace('T',' ').replace('Z','') : '';
+    $('#edUpdated').value  = c.updated_at ? String(c.updated_at).replace('T',' ').replace('Z','') : '';
+  }
+  function getEd() {
+    const v = (sel) => (document.querySelector(sel)?.value ?? '').trim();
+    return {
+      id: cur?.id ?? undefined,
+      first_name: v('#edFirst') || null,
+      last_name:  v('#edLast')  || null,
+      email:      v('#edEmail') || null,
+      phone:      v('#edPhone') || null,
+      job_title:  v('#edJob')   || null,
+      pay_type:   v('#edType')  || null,
+      status:     v('#edStatus')|| null,
+      payroll_ref:v('#edPayroll')|| null,
+      internal_ref: v('#edInternalRef')|| null,
+      address:    v('#edAddress')|| null,
+      address1:   v('#edAddress1')|| null,
+      address2:   v('#edAddress2')|| null,
+      town:       v('#edTown')|| null,
+      county:     v('#edCounty')|| null,
+      postcode:   v('#edPostcode')|| null,
+      country:    v('#edCountry')|| null,
+      bank_sort_code: v('#edSortCode') || null,
+      bank_account:   v('#edAccount')  || null,
+      bank_iban:      v('#edIban')     || null,
+      bank_swift:     v('#edSwift')    || null,
+      notes:          v('#edNotes')    || null,
+    };
+  }
+
+  function ensureUID(){
+    // Create a readable unique code and put it in #edInternalRef if blank
+    const curVal = ($('#edInternalRef')?.value||'').trim();
+    if (curVal) return curVal;
+    const d = new Date();
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    const rnd = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(2,6);
+    const uid = `CND-${y}${m}${day}-${rnd}`;
+    $('#edInternalRef').value = uid;
+    return uid;
+  }
+
+  async function openEd(id){
+    try{
+      cur = id ? await api('/admin-candidates-get','POST',{ id }) : { status:'In progress', pay_type:'Umbrella' };
+      setEd(cur);
+      ed.style.display = '';
+      ed.scrollIntoView({behavior:'smooth',block:'start'});
+      showProfile(cur?.id || null, cur);
+    }catch(e){ toast('Open failed: '+(e.message||e),'err'); }
+  }
+
+  function showProfile(id, candidateObj){
+    if(!id && !candidateObj){
+      $('#pTimesheets').textContent = 'Select a candidate…';
+      $('#pAssignments').textContent = 'Select a candidate…';
+      $('#pPayslips').textContent = 'Select a candidate…';
+      $('#pTerms').textContent = 'Select a candidate…';
+      ['#pName','#pEmail','#pPhone','#pJob','#pType','#pStatus','#pPayroll','#pAddress','#pUpdated'].forEach(s=> $(s).textContent='—');
+      return;
+    }
+    const c = candidateObj || lastRows.find(r=> r.id===id);
+    const name = [c?.first_name, c?.last_name].filter(Boolean).join(' ') || (c?.name||'—');
+    $('#pName').textContent = name;
+    $('#pEmail').textContent = c?.email || '—';
+    $('#pPhone').textContent = c?.phone || '—';
+    $('#pJob').textContent = c?.job_title || '—';
+    $('#pType').textContent = c?.pay_type || '—';
+    $('#pStatus').textContent = c?.status || '—';
+    $('#pPayroll').textContent = c?.payroll_ref || '—';
+    $('#pAddress').textContent = c?.address || '—';
+    $('#pUpdated').textContent = c?.updated_at ? String(c.updated_at).replace('T',' ').replace('Z','') : '—';
+
+    loadTimesheetsFor(c?.id).catch(e=> $('#pTimesheets').textContent = 'Timesheets unavailable: '+(e.message||e));
+    loadAssignmentsFor(c?.id).catch(e=> $('#pAssignments').textContent = 'Assignments unavailable: '+(e.message||e));
+    $('#pPayslips').textContent = 'Payslip viewer coming soon…';
+    $('#pTerms').textContent = 'T&Cs tracking coming soon…';
+  }
+
+  async function loadTimesheetsFor(id){
+    if(!id){ $('#pTimesheets').textContent = 'Select a candidate…'; return; }
+    $('#pTimesheets').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
+    try{
+      const res = await api('/admin-timesheets-list','POST',{ candidate_id:id, size:5 });
+      const rows = Array.isArray(res) ? res : (res?.rows||[]);
+      if(!rows.length){ $('#pTimesheets').textContent = 'No recent timesheets'; return; }
+      const ul = rows.map(t=>{
+        const when = t.week_ending || t.period || t.created_at || '';
+        const hours = t.hours_total ?? t.total_hours ?? '';
+        const stat = t.status || '';
+        return `<li>${when} — ${hours}h — <span class="badge">${stat}</span></li>`;
+      }).join('');
+      $('#pTimesheets').innerHTML = `<ul style="margin:0 0 0 18px;padding:0;display:grid;gap:4px">${ul}</ul>`;
+    }catch(e){
+      $('#pTimesheets').textContent = 'Timesheets unavailable: '+(e.message||e);
+      throw e;
+    }
+  }
+
+  async function loadAssignmentsFor(id){
+    if(!id){ $('#pAssignments').textContent = 'Select a candidate…'; return; }
+    $('#pAssignments').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div> Loading…</div>';
+    try{
+      const res = await api('/admin-assignments-list','POST',{ candidate_id:id, size:5 });
+      const rows = Array.isArray(res) ? res : (res?.rows||[]);
+      if(!rows.length){ $('#pAssignments').textContent = 'No current assignments'; return; }
+      const ul = rows.map(a=>{
+        const client = a.client_name || a.client || '';
+        const title  = a.job_title || a.role || '';
+        const stat   = a.status || '';
+        return `<li>${client} — ${title} — <span class="badge">${stat}</span></li>`;
+      }).join('');
+      $('#pAssignments').innerHTML = `<ul style="margin:0 0 0 18px;padding:0;display:grid;gap:4px">${ul}</ul>`;
+    }catch(e){
+      $('#pAssignments').textContent = 'Assignments unavailable: '+(e.message||e);
+      throw e;
+    }
+  }
+
+  /* events */
+  $('#btnRefresh').onclick = ()=> { page=1; loadList(__dbg.on); };
+  ['#q','#fType','#fStatus','#fJob','#fEmailHas'].forEach(sid=>{
+    $(sid).addEventListener('change', ()=>{ page=1; loadList(__dbg.on); });
+    $(sid).addEventListener('keyup',  (e)=>{ if(e.key==='Enter'){ page=1; loadList(__dbg.on); }});
+  });
+
+  $('#pgPrev').onclick = ()=>{ if(page>1){ page--; loadList(__dbg.on); } };
+  $('#pgNext').onclick = ()=>{ if(page<pages){ page++; loadList(__dbg.on); } };
+  $('#pageSize').onchange = ()=>{ size = Number($('#pageSize').value)||25; localStorage.cand_size=size; page=1; loadList(__dbg.on); };
+
+  $('#btnNew').onclick  = ()=> openEd(null);
+  $('#btnClose').onclick= ()=>{ ed.style.display='none'; /* do not clear fields */ };
+
+  $('#btnSave').onclick = async ()=>{
+    // Pre-validate to prevent 400s: first & last are required by DB
+    const first = qv('#edFirst'), last = qv('#edLast');
+    if(!first || !last){ toast('First & last name are required', 'warn'); return; }
+
+    // Ensure UID exists on creation
+    ensureUID();
+
+    try{
+      const data = getEd();
+      const saved = await api('/admin-candidates-save','POST', data);
+      toast('Saved', 'ok');
+      page=1;
+      await loadList(__dbg.on);
+      ed.style.display='none'; // close only after successful save
+      if(saved?.id) { cur={id:saved.id}; openEd(saved.id); }
+    }catch(e){
+      toast('Save failed: '+(e.message||e), 'err');
+      // keep the editor open and preserve values
+    }
+  };
+
+  $('#btnDelete').onclick = async ()=>{
+    if(!cur?.id) return toast('Nothing to delete','warn');
+    if(!confirm('Delete this candidate?')) return;
+    try{ await api('/admin-candidates-delete','POST',{ id: cur.id }); toast('Deleted','ok'); ed.style.display='none'; await loadList(__dbg.on); }
+    catch(e){ toast('Delete failed: '+(e.message||e),'err'); }
+  };
+
+  $('#btnEmails').onclick = ()=>{
+    const emails = lastRows.map(r=>r.email).filter(Boolean);
+    if(!emails.length) return toast('No emails in current list','warn');
+    navigator.clipboard?.writeText(emails.join(', '));
+    toast(`Copied ${emails.length} email(s)`,'ok');
+  };
+
+  $('#btnExport').onclick = ()=>{
+    const rows = lastRows;
+    if(!rows.length){ toast('Nothing to export','warn'); return; }
+    const cols = ['id','internal_ref','first_name','last_name','email','phone','job_title','pay_type','status','payroll_ref',
+                  'address','address1','address2','town','county','postcode','country',
+                  'bank_sort_code','bank_account','bank_iban','bank_swift','notes','created_at','updated_at'];
+    const head = cols.join(',');
+    const csv = [head].concat(rows.map(r=> cols.map(k=>{
+      const v = r[k] ?? '';
+      const s = String(v).replace(/"/g,'""');
+      return `"${s}"`;
+    }).join(','))).join('\n');
+    const blob = new Blob([csv],{type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  };
+
+  // keyboard shortcuts
+  onKey?.('/', ()=> $('#q')?.focus());
+  onKey?.('KeyR', ()=> $('#btnRefresh').click());
+  onKey?.('KeyN', ()=> $('#btnNew').click());
+  onKey?.('ArrowLeft', ()=> $('#pgPrev').click());
+  onKey?.('ArrowRight',()=> $('#pgNext').click());
+
+  // debug toggle
+  $('#btnDebug').onclick = ()=>{
+    __dbg.on = !__dbg.on;
+    toast('Debug '+(__dbg.on?'ON':'OFF'),'info');
+    if(__dbg.on) loadList(true);
+  };
+
+  // quick-actions
+  document.getElementById('btnOpenPayslips').onclick = ()=> toast('Payslip viewer coming soon (backend link TBD).','info');
+  document.getElementById('btnOpenTnC').onclick = ()=> toast('T&Cs viewer coming soon (backend link TBD).','info');
+
+  // initial load
+  await loadList(false);
+}
+</script>
+</body>
+</html>
