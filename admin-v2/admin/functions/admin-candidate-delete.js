@@ -1,25 +1,19 @@
-import { requireAdmin } from './_guard.js';
+// admin-candidate-delete.js
+const { supa, ok, err, parseBody } = require('./_lib.js');
+const { requireAdmin } = require('./_guard.js');
 
-export async function handler(event, context){
-  try{
-    const user = requireAdmin(context);   // ← guard
-    // ...existing code...
-  }catch(e){
-    return { statusCode: e.status || 500, body: JSON.stringify({ error: e.message || String(e) }) };
-  }
-}
+exports.handler = async (event) => {
+  try {
+    requireAdmin(event);
+    const { ids } = parseBody(event);
+    const list = Array.isArray(ids) ? ids : (ids ? [ids] : []);
+    if (!list.length) { const e = new Error('ids[] required'); e.status = 400; throw e; }
 
-
-
-import { ok, err, parseBody, requireAdmin, supa, auditLog } from './_lib.js';
-export async function handler(event, context){
-  try{
-    const user = requireAdmin(context, event);
-    const { ids=[] } = parseBody(event);
-    if(!ids.length) return ok({ deleted: 0 });
-    const { error } = await supa().from('candidates').delete().in('id', ids);
+    const { error } = await supa().from('candidates').delete().in('id', list);
     if (error) throw error;
-    await auditLog({ entity:'candidate', entity_id: null, action:'delete', actor_email:user.email, meta:{ ids }});
-    return ok({ deleted: ids.length });
-  }catch(e){ return err(e.message||e, e.status||500); }
-}
+
+    return ok({ ok: true, deleted: list.length });
+  } catch (e) {
+    return err(e.message || e, e.status || 500);
+  }
+};

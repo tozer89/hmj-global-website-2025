@@ -1,457 +1,383 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Timesheets — Admin | HMJ Global</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Timesheets — Admin | HMJ Global</title>
 
+  <!-- Netlify Identity -->
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch (e) {}
+    });
+  </script>
 
+  <style>
+    :root{
+      --ink:#101828; --bg:#ffffff; --muted:#667085;
+      --blue:#1f3b7a; --blue-2:#29478f;
+      --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
+      --danger:#dc2626; --ok:#16a34a; --warn:#f59e0b;
+    }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
 
+    /* Header */
+    .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+    .row{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+    .brand{font-weight:800;display:flex;gap:10px;align-items:center}
+    .brand a{color:#fff;text-decoration:none;display:inline-grid;grid-auto-flow:column;gap:8px;align-items:center}
+    .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;color:var(--blue);display:grid;place-items:center;font-weight:900}
+    .sp{flex:1}
+    .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn:hover{background:var(--blue-2)}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
+    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
+    .btn.danger{background:#7a1f28;border-color:#a42e3b}
+    .btn.ok{background:#0f5132;border-color:#0c4128}
 
-<style>
-  :root{
-    --ink:#101828; --bg:#ffffff; --muted:#667085;
-    --blue:#1f3b7a; --blue-2:#29478f; --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
-    --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
-  }
-  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
-  .row{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800;display:flex;gap:10px;align-items:center}
-  .brand a{color:#fff;text-decoration:none;display:inline-grid;grid-auto-flow:column;gap:8px;align-items:center}
-  .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;color:var(--blue);display:grid;place-items:center;font-weight:900}
-  .sp{flex:1}
-  .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
-  .btn:hover{background:var(--blue-2)}
-  .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
-  .btn.light{background:#fff;color:var(--blue);border-color:#fff}
-  .btn.danger{background:#7a1f28;border-color:#a42e3b}
-  .wrap{max-width:1200px;margin:20px auto;padding:0 16px;display:grid;gap:12px}
-  .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
-  .muted{color:var(--muted)}
-  input,select,textarea{background:#fff;border:1px solid var(--stroke);border-radius:10px;padding:10px}
-  input:focus,select:focus,textarea:focus{outline:3px solid var(--ring);outline-offset:2px}
-  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .bar .sp{flex:1}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left}
-  th{font-size:14px;color:#334155}
-  .pill{display:inline-grid;align-items:center;padding:3px 8px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
-  .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-  .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
-  .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-  /* Drawer */
-  .drawer{position:fixed;inset:0;display:none;background:rgba(2,6,23,.44);z-index:40}
-  .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:840px;max-width:100%;background:#fff;border-left:1px solid var(--stroke);padding:16px;overflow:auto}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media (max-width:980px){ .grid{grid-template-columns:1fr} }
-  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-  .days label{display:grid;gap:6px}
-  @media (max-width:680px){ .days{grid-template-columns:repeat(3,1fr)} }
-</style>
+    /* Page */
+    .wrap{max-width:1200px;margin:20px auto;padding:0 16px;display:grid;gap:12px}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
+    .muted{color:var(--muted)}
+    .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .bar .sp{flex:1}
+    input,select,textarea{background:#fff;border:1px solid var(--stroke);border-radius:10px;padding:10px}
+    input:focus,select:focus,textarea:focus{outline:3px solid var(--ring);outline-offset:2px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left}
+    th{font-size:14px;color:#334155}
+    .pill{display:inline-grid;align-items:center;padding:3px 8px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
+    .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+
+    /* Drawer */
+    .drawer{position:fixed;inset:0;display:none;background:rgba(2,6,23,.44);z-index:40}
+    .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:820px;max-width:100%;background:#fff;border-left:1px solid var(--stroke);padding:16px;overflow:auto}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:720px){ .twocol{grid-template-columns:1fr} }
+    .section{margin:12px 0 6px;font-weight:800}
+  </style>
 </head>
 <body>
 
-<!-- Header -->
-<div class="top"><div class="row">
-  <div class="brand">
-    <a href="../"><span class="logo">H</span> HMJ Global</a>
-    <span class="pill">Admin</span>
-    <span class="pill">Timesheets</span>
-  </div>
-  <div class="sp"></div>
-  <div class="chips" id="chips"></div>
-  <a class="btn ghost" href="./">⟵ Admin</a>
-  <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
-</div></div>
-
-<!-- Gate -->
-<div class="wrap" id="gate" style="display:none">
-  <div class="card">
-    <strong>Admin only.</strong>
-    <p class="muted why">Checking your session…</p>
-    <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
-  </div>
-</div>
-
-<!-- Toolbar -->
-<div class="wrap" id="app" style="display:none">
-  <div class="card bar">
-    <input id="q" placeholder="Search ref, candidate, client…" style="min-width:240px">
-    <select id="status">
-      <option value="">Any status</option>
-      <option>draft</option><option>submitted</option><option>approved</option><option>rejected</option>
-    </select>
-    <input id="wkFrom" type="date" title="Week from">
-    <input id="wkTo"   type="date" title="Week to">
-    <select id="candidate"><option value="">Candidate: any</option></select>
-    <select id="client"><option value="">Client: any</option></select>
-    <button class="btn" id="btnRefresh">Refresh</button>
+  <!-- Header -->
+  <div class="top"><div class="row">
+    <div class="brand">
+      <a href="../"><span class="logo">H</span> HMJ Global</a>
+      <span class="pill">Admin</span>
+      <span class="pill">Timesheets</span>
+    </div>
     <div class="sp"></div>
-    <input type="file" id="csv" accept=".csv" style="display:none">
-    <button class="btn ghost" id="btnExport">Export CSV</button>
-    <button class="btn ghost" id="btnImport">Import CSV</button>
-    <button class="btn" id="btnNew">+ New</button>
-    <button class="btn danger" id="btnDelete" disabled>Delete</button>
+    <div class="chips" id="chips"></div>
+    <a class="btn ghost" href="./">⟵ Admin</a>
+    <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+  </div></div>
+
+  <!-- Gate -->
+  <div class="wrap" id="gate" style="display:none">
+    <div class="card">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+    </div>
   </div>
 
-  <!-- List -->
-  <div class="card" id="listWrap">Loading…</div>
-
-  <!-- Audit -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="font-weight:800">Recent activity</div>
-      <button class="btn ghost" id="btnAudit">Refresh</button>
+  <!-- App -->
+  <div class="wrap" id="app" style="display:none">
+    <div class="card bar">
+      <input id="q" placeholder="Search candidate, client, ref…" style="min-width:260px">
+      <select id="status">
+        <option value="">Status: any</option>
+        <option value="draft">Draft</option>
+        <option value="submitted">Submitted</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="paid">Paid</option>
+      </select>
+      <input id="week_from" type="date" title="Week from">
+      <input id="week_to" type="date" title="Week to">
+      <button class="btn" id="btnRefresh">Refresh</button>
+      <div class="sp"></div>
+      <input type="file" id="csv" accept=".csv" style="display:none">
+      <button class="btn ghost" id="btnExport">Export CSV</button>
+      <button class="btn ghost" id="btnImport">Import CSV</button>
+      <button class="btn" id="btnNew">+ Raise on behalf</button>
+      <button class="btn danger" id="btnDelete" disabled>Delete</button>
     </div>
-    <div id="audit" class="muted">—</div>
+
+    <div class="card" id="listWrap">Loading…</div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="section" style="margin:0">Recent activity</div>
+        <button class="btn ghost" id="btnAudit">Refresh</button>
+      </div>
+      <div id="audit" class="muted">—</div>
+    </div>
   </div>
-</div>
 
-<!-- Drawer -->
-<div class="drawer" id="drawer" aria-modal="true" role="dialog">
-  <div class="panel">
-    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
-      <h2 id="edTitle" style="margin:0">Timesheet</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn ghost" id="btnApprove">Approve</button>
-        <button class="btn ghost" id="btnReject">Reject</button>
-        <button class="btn ghost" id="btnSave">Save</button>
-        <button class="btn danger" id="btnDelOne">Delete</button>
-        <button class="btn ghost" id="btnClose">Close</button>
-      </div>
-    </div>
-
-    <div class="grid">
-      <label>Reference <input id="ts_ref" placeholder="Auto or manual"></label>
-      <label>Status
-        <select id="ts_status"><option>draft</option><option>submitted</option><option>approved</option><option>rejected</option></select>
-      </label>
-      <label>Candidate <input id="candidate_name" list="candidates"></label>
-      <label>Assignment <input id="assignment_ref" placeholder="Assignment ref or id"></label>
-      <label>Client <input id="client_name" list="clients"></label>
-      <label>Week starting <input id="week_start" type="date"></label>
-      <label>Submitted at <input id="submitted_at" type="datetime-local"></label>
-      <label>Approved at <input id="approved_at" type="datetime-local"></label>
-    </div>
-
-    <div style="margin:10px 0 6px;font-weight:800">Hours</div>
-    <div class="days">
-      <label>Mon <input id="h_mon" type="number" step="0.25" min="0" max="24"></label>
-      <label>Tue <input id="h_tue" type="number" step="0.25" min="0" max="24"></label>
-      <label>Wed <input id="h_wed" type="number" step="0.25" min="0" max="24"></label>
-      <label>Thu <input id="h_thu" type="number" step="0.25" min="0" max="24"></label>
-      <label>Fri <input id="h_fri" type="number" step="0.25" min="0" max="24"></label>
-      <label>Sat <input id="h_sat" type="number" step="0.25" min="0" max="24"></label>
-      <label>Sun <input id="h_sun" type="number" step="0.25" min="0" max="24"></label>
-    </div>
-
-    <div class="grid" style="margin-top:10px">
-      <label>Total hours <input id="total_hours" disabled></label>
-      <label>Overtime hours <input id="ot_hours" type="number" step="0.25" min="0"></label>
-      <label>Pay rate <input id="rate_pay" type="number" step="0.01"></label>
-      <label>Charge rate <input id="rate_charge" type="number" step="0.01"></label>
-      <label>Currency
-        <select id="currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
-      </label>
-      <label>Approver email <input id="approver_email" type="email" placeholder="manager@client.com"></label>
-    </div>
-
-    <div class="grid">
-      <div class="card" style="background:#fff">
-        <div style="font-weight:800;margin-bottom:6px">Amounts</div>
-        <div id="amtOut" class="muted">Enter rates to preview pay/charge/GP.</div>
-      </div>
-      <div class="card" style="background:#fff">
-        <div style="font-weight:800;margin-bottom:6px">Attachment</div>
-        <div id="attInfo" class="muted">No file.</div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <input type="file" id="attFile" accept="application/pdf,image/*">
-          <button class="btn ghost" id="btnUploadAtt">Upload</button>
+  <!-- Drawer -->
+  <div class="drawer" id="drawer" aria-modal="true" role="dialog">
+    <div class="panel">
+      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+        <h2 id="edTitle" style="margin:0">Timesheet</h2>
+        <div class="right" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ok" id="btnApprove">Approve</button>
+          <button class="btn danger" id="btnReject">Reject</button>
+          <button class="btn ghost" id="btnSave">Save</button>
+          <button class="btn ghost" id="btnClose">Close</button>
         </div>
       </div>
+
+      <div class="section">Header</div>
+      <div class="grid">
+        <label>TS Ref <input id="ts_ref" placeholder="Auto/Manual"></label>
+        <label>Status
+          <select id="ts_status">
+            <option>draft</option><option>submitted</option><option>approved</option><option>rejected</option><option>paid</option>
+          </select>
+        </label>
+        <label>Week Starting <input id="week_start" type="date"></label>
+        <label>Assignment Ref <input id="assignment_ref" placeholder="Assignment ID / Ref"></label>
+        <label>Candidate <input id="candidate_name"></label>
+        <label>Client <input id="client_name"></label>
+      </div>
+
+      <div class="section">Hours</div>
+      <div class="grid">
+        <label>Mon <input id="mon" type="number" min="0" step="0.25"></label>
+        <label>Tue <input id="tue" type="number" min="0" step="0.25"></label>
+        <label>Wed <input id="wed" type="number" min="0" step="0.25"></label>
+        <label>Thu <input id="thu" type="number" min="0" step="0.25"></label>
+        <label>Fri <input id="fri" type="number" min="0" step="0.25"></label>
+        <label>Sat <input id="sat" type="number" min="0" step="0.25"></label>
+        <label>Sun <input id="sun" type="number" min="0" step="0.25"></label>
+        <label>Total (auto) <input id="total" disabled></label>
+      </div>
+
+      <div class="section">Attachments</div>
+      <div class="twocol">
+        <div class="card" style="background:#fff">
+          <div style="font-weight:700;margin-bottom:6px">Supporting evidence</div>
+          <div id="proof_info" class="muted">No file.</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="file" id="proof_file" accept="application/pdf,image/*">
+            <button class="btn ghost" id="btnUploadProof">Upload</button>
+          </div>
+        </div>
+        <div class="card" style="background:#fff">
+          <div style="font-weight:700;margin-bottom:6px">Approver</div>
+          <label>Approver Name <input id="approver_name"></label>
+          <label>Approver Email <input id="approver_email" type="email"></label>
+        </div>
+      </div>
+
+      <div class="section">Notes</div>
+      <textarea id="notes" rows="4" placeholder="Internal notes…"></textarea>
     </div>
-
-    <div style="margin:10px 0 6px;font-weight:800">Notes</div>
-    <textarea id="notes" rows="3" placeholder="Internal notes…"></textarea>
   </div>
-</div>
 
-<!-- Toast host -->
-<div id="toast" aria-live="polite" aria-atomic="true"></div>
+  <!-- Toast host -->
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
-<script>
-Admin.bootAdmin(async ({ api, sel, toast }) => {
-  const chip = (t,tone='info') => { const s=document.createElement('span'); s.className='pill'; s.textContent=t;
-    if(tone==='ok') s.classList.add('b-ok'); if(tone==='warn') s.classList.add('b-warn'); if(tone==='bad') s.classList.add('b-bad');
-    sel('#chips').appendChild(s); return s; };
-  chip('ready','ok');
+  <!-- Shared admin (absolute path; bump v if cached) -->
+  <script defer src="/admin/common.js?v=10"></script>
 
-  let page=1, pageSize=20, total=0, rows=[], selected=new Set(), current=null;
+  <script>
+  Admin.bootAdmin(async ({ api, sel, toast }) => {
+    // tiny debug chips
+    const chip=(t,tone='info')=>{const s=document.createElement('span');s.className='pill';s.textContent=t;
+      if(tone==='ok')s.classList.add('b-ok');if(tone==='warn')s.classList.add('b-warn');if(tone==='bad')s.classList.add('b-bad');
+      sel('#chips').appendChild(s);return s;};
+    chip('ready','ok');
 
-  function openDrawer(){ sel('#drawer').style.display='block'; }
-  function closeDrawer(){ sel('#drawer').style.display='none'; current=null; }
-  function enableDelete(){ sel('#btnDelete').disabled = selected.size===0; }
+    let page=1,pageSize=20,total=0,rows=[],selected=new Set(),current=null;
+    const enableDelete=()=> sel('#btnDelete').disabled=selected.size===0;
+    const openDrawer=()=> sel('#drawer').style.display='block';
+    const closeDrawer=()=>{ sel('#drawer').style.display='none'; current=null; };
 
-  function sumHours(){
-    const ids=['h_mon','h_tue','h_wed','h_thu','h_fri','h_sat','h_sun'];
-    const s = ids.map(id=>parseFloat(sel('#'+id).value||0)).reduce((a,b)=>a+b,0);
-    sel('#total_hours').value = s ? s.toFixed(2) : '';
-    return s;
-  }
-  function amounts(){
-    const hrs = Number(sel('#total_hours').value||0) + Number(sel('#ot_hours').value||0);
-    const pay = (parseFloat(sel('#rate_pay').value||0) * hrs);
-    const chg = (parseFloat(sel('#rate_charge').value||0) * hrs);
-    const gp = Math.max(0, chg - pay);
-    const cur = sel('#currency').value || 'GBP';
-    sel('#amtOut').textContent = `Pay: ${cur==='GBP'?'£':''}${pay.toFixed(2)} | Charge: ${cur==='GBP'?'£':''}${chg.toFixed(2)} | GP: ${cur==='GBP'?'£':''}${gp.toFixed(2)}`;
-  }
+    function sumHours(){ const ids=['mon','tue','wed','thu','fri','sat','sun']; let t=0;
+      ids.forEach(id=> t+= parseFloat(sel('#'+id).value||0)); sel('#total').value=t? t.toFixed(2):''; return t; }
 
-  function renderList(){
-    if(!rows.length){ sel('#listWrap').textContent='No timesheets found.'; return; }
-    const head = `<thead><tr>
-      <th style="width:28px"><input id="ckAll" type="checkbox"></th>
-      <th>Ref</th><th>Week</th><th>Candidate</th><th>Client</th>
-      <th>Hours</th><th>Status</th><th>Amount</th><th></th>
-    </tr></thead>`;
-    const body = rows.map(r=>{
-      const hrs = Number(r.total_hours||0)+(Number(r.ot_hours||0));
-      const amt = (r.charge_amount!=null) ? `£${Number(r.charge_amount).toFixed(2)}` : (r.rate_charge? `£${(hrs*Number(r.rate_charge)).toFixed(2)}`:'—');
-      const pill = r.status==='approved'?'b-ok':(r.status==='rejected'?'b-bad':'b-warn');
-      return `<tr>
-        <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
-        <td>${r.ts_ref||r.id}</td>
-        <td>${(r.week_start||'').slice(0,10)}</td>
-        <td>${r.candidate_name||'—'}</td>
-        <td>${r.client_name||'—'}</td>
-        <td>${hrs ? hrs.toFixed(2) : '—'}</td>
-        <td><span class="pill ${pill}">${r.status||'draft'}</span></td>
-        <td>${amt}</td>
-        <td>
-          <button class="btn ghost" data-open="${r.id}">Open</button>
-          <button class="btn ghost" data-appr="${r.id}">✓</button>
-          <button class="btn ghost" data-rej="${r.id}">✕</button>
-        </td>
-      </tr>`;
-    }).join('');
-    const pager = `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
-      <div class="muted">Showing ${(page-1)*pageSize+1}-${Math.min(page*pageSize,total)} of ${total}</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn ghost" id="pPrev" ${page<=1?'disabled':''}>Prev</button>
-        <button class="btn ghost" id="pNext" ${(page*pageSize)>=total?'disabled':''}>Next</button>
-      </div></div>`;
-    sel('#listWrap').innerHTML = `<table>${head}<tbody>${body}</tbody></table>${pager}`;
+    function renderList(){
+      if(!rows.length){ sel('#listWrap').textContent='No timesheets found.'; return; }
+      const head=`<thead><tr>
+        <th style="width:28px"><input id="ckAll" type="checkbox"></th>
+        <th>Ref</th><th>Week</th><th>Candidate</th><th>Client</th>
+        <th>Assignment</th><th>Hours</th><th>Status</th><th></th>
+      </tr></thead>`;
+      const body=rows.map(r=>{
+        const pill=r.status==='approved'?'b-ok':(r.status==='rejected'?'b-bad':'b-warn');
+        const wk=(r.week_start||'').slice(0,10);
+        const hrs=typeof r.total_hours==='number'? r.total_hours.toFixed(2):'—';
+        return `<tr>
+          <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
+          <td>${r.ts_ref||r.id}</td>
+          <td>${wk}</td>
+          <td>${r.candidate_name||'—'}</td>
+          <td>${r.client_name||'—'}</td>
+          <td>${r.assignment_ref||'—'}</td>
+          <td>${hrs}</td>
+          <td><span class="pill ${pill}">${r.status||'submitted'}</span></td>
+          <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
+        </tr>`;
+      }).join('');
+      const pager=`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
+        <div class="muted">Showing ${(page-1)*pageSize+1}-${Math.min(page*pageSize,total)} of ${total}</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="pPrev" ${page<=1?'disabled':''}>Prev</button>
+          <button class="btn ghost" id="pNext" ${(page*pageSize)>=total?'disabled':''}>Next</button>
+        </div></div>`;
+      sel('#listWrap').innerHTML=`<table>${head}<tbody>${body}</tbody></table>${pager}`;
 
-    sel('#ckAll').onclick=(e)=>{ if(e.target.checked){ rows.forEach(r=>selected.add(r.id)); } else rows.forEach(r=>selected.delete(r.id)); enableDelete(); renderList(); };
-    sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=> c.onchange=()=>{ const id=Number(c.getAttribute('data-id')); if(c.checked) selected.add(id); else selected.delete(id); enableDelete(); });
-    sel('#listWrap').querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openTS(Number(b.getAttribute('data-open'))));
-    sel('#listWrap').querySelectorAll('[data-appr]').forEach(b=> b.onclick=()=> approveQuick(Number(b.getAttribute('data-appr'))));
-    sel('#listWrap').querySelectorAll('[data-rej]').forEach(b=> b.onclick=()=> rejectQuick(Number(b.getAttribute('data-rej'))));
-    sel('#pPrev').onclick=()=>{ page--; load(); };
-    sel('#pNext').onclick=()=>{ page++; load(); };
-  }
-
-  async function load(){
-    sel('#listWrap').textContent='Loading…';
-    try{
-      const res = await api('admin-timesheets-list','POST',{
-        q: sel('#q').value||'',
-        status: sel('#status').value||'',
-        wk_from: sel('#wkFrom').value||'',
-        wk_to: sel('#wkTo').value||'',
-        candidate: sel('#candidate').value||'',
-        client: sel('#client').value||'',
-        page, pageSize
-      });
-      rows = res.rows || res || [];
-      total = res.total ?? rows.length;
-      renderList();
-    }catch(e){ sel('#listWrap').textContent='Error: '+e.message; }
-  }
-
-  async function loadAudit(){
-    try{
-      const list = await api('admin-audit-list','POST',{ entity:'timesheet', limit: 10 });
-      sel('#audit').innerHTML = list.length ? `<ul style="margin:6px 0;padding-left:18px">
-        ${list.map(a=>`<li><span class="muted">${a.created_at?.replace('T',' ').slice(0,16)||''}</span> — ${a.action} #${a.entity_id||''} by ${a.actor_email||'—'}</li>`).join('')}
-      </ul>` : '—';
-    }catch(e){ sel('#audit').textContent='Audit unavailable: '+e.message; }
-  }
-
-  async function openTS(id){
-    try{
-      const r = await api('admin-timesheet-open','POST',{ id });
-      current = r;
-      sel('#edTitle').textContent = `Timesheet #${r.id}`;
-      const set=(k,v)=>{ const el=sel('#'+k); if(el) el.value = (v ?? ''); };
-      set('ts_ref', r.ts_ref); set('ts_status', r.status||'draft');
-      set('candidate_name', r.candidate_name); set('assignment_ref', r.assignment_ref||r.assignment_id||'');
-      set('client_name', r.client_name); set('week_start', (r.week_start||'').slice(0,10));
-      set('submitted_at', r.submitted_at ? r.submitted_at.slice(0,16) : ''); set('approved_at', r.approved_at ? r.approved_at.slice(0,16) : '');
-      set('h_mon', r.h_mon||''); set('h_tue', r.h_tue||''); set('h_wed', r.h_wed||''); set('h_thu', r.h_thu||''); set('h_fri', r.h_fri||''); set('h_sat', r.h_sat||''); set('h_sun', r.h_sun||'');
-      set('ot_hours', r.ot_hours||''); set('rate_pay', r.rate_pay||''); set('rate_charge', r.rate_charge||''); set('currency', r.currency||'GBP');
-      set('approver_email', r.approver_email||''); set('notes', r.notes||'');
-      sel('#attInfo').innerHTML = r.attachment_url ? `<a href="${r.attachment_url}" target="_blank">Download</a>` : 'No file.';
-      sumHours(); amounts();
-      openDrawer();
-    }catch(e){ toast('Open failed: '+e.message,'err',5000); }
-  }
-
-  function newTS(){
-    current = { id:null, status:'draft', currency:'GBP' };
-    ['ts_ref','candidate_name','assignment_ref','client_name','week_start','submitted_at','approved_at',
-     'h_mon','h_tue','h_wed','h_thu','h_fri','h_sat','h_sun','ot_hours','rate_pay','rate_charge','approver_email','notes'].forEach(k=>{ const el=sel('#'+k); if(el) el.value=''; });
-    sel('#ts_status').value='draft'; sel('#currency').value='GBP';
-    sel('#attInfo').textContent='No file.';
-    openDrawer();
-  }
-
-  async function save(){
-    const get=id=> sel('#'+id)?.value || null;
-    const payload = {
-      id: current?.id || null,
-      ts_ref: get('ts_ref'),
-      status: get('ts_status'),
-      candidate_name: get('candidate_name'),
-      assignment_ref: get('assignment_ref'),
-      client_name: get('client_name'),
-      week_start: get('week_start') || null,
-      submitted_at: get('submitted_at') || null,
-      approved_at: get('approved_at') || null,
-      h_mon: parseFloat(get('h_mon'))||0, h_tue: parseFloat(get('h_tue'))||0, h_wed: parseFloat(get('h_wed'))||0,
-      h_thu: parseFloat(get('h_thu'))||0, h_fri: parseFloat(get('h_fri'))||0, h_sat: parseFloat(get('h_sat'))||0, h_sun: parseFloat(get('h_sun'))||0,
-      ot_hours: parseFloat(get('ot_hours'))||0,
-      rate_pay: parseFloat(get('rate_pay'))||null,
-      rate_charge: parseFloat(get('rate_charge'))||null,
-      currency: get('currency'),
-      approver_email: get('approver_email'),
-      notes: get('notes')
-    };
-    try{ await api('admin-timesheet-save','POST',payload); toast('Saved','ok',1800); closeDrawer(); load(); }
-    catch(e){ toast('Save failed: '+e.message,'err',5000); }
-  }
-
-  async function approveQuick(id){
-    try{ await api('admin-timesheet-approve','POST',{ id }); toast('Approved','ok',1400); load(); }
-    catch(e){ toast('Approve failed: '+e.message,'err',5000); }
-  }
-  async function rejectQuick(id){
-    const reason = prompt('Reason for rejection? (optional)') || '';
-    try{ await api('admin-timesheet-reject','POST',{ id, reason }); toast('Rejected','warn',1600); load(); }
-    catch(e){ toast('Reject failed: '+e.message,'err',5000); }
-  }
-  async function approve(){ if(!current?.id) return; await approveQuick(current.id); closeDrawer(); }
-  async function reject(){ if(!current?.id) return; await rejectQuick(current.id); closeDrawer(); }
-
-  async function delSelected(){
-    if(!selected.size) return;
-    if(!confirm(`Delete ${selected.size} timesheet(s)?`)) return;
-    try{ await api('admin-timesheet-delete','POST',{ ids:Array.from(selected) }); selected.clear(); enableDelete(); toast('Deleted','ok',1800); load(); }
-    catch(e){ toast('Delete failed: '+e.message,'err',5000); }
-  }
-  async function delOne(){ if(!current?.id) return; selected=new Set([current.id]); await delSelected(); closeDrawer(); }
-
-  async function uploadAtt(){
-    const f = sel('#attFile').files[0]; if(!f){ toast('Choose a file first','warn',2500); return; }
-    try{
-      const sign = await api('admin-uploads-presign','POST',{ entity:'timesheet', entity_id: current?.id, kind:'attachment', filename:f.name, type:f.type });
-      await fetch(sign.url,{ method:'PUT', headers:sign.headers||{}, body:f });
-      await api('admin-timesheet-attach','POST',{ id: current?.id, url: sign.public_url });
-      sel('#attInfo').innerHTML = `<a href="${sign.public_url}" target="_blank">Download</a>`;
-      toast('Uploaded','ok',1600);
-    }catch(e){ toast('Upload failed: '+e.message,'err',5000); }
-  }
-
-  async function exportCSV(){
-    try{
-      const blob = await api('admin-timesheets-export','POST',{
-        q: sel('#q').value||'', status: sel('#status').value||'',
-        wk_from: sel('#wkFrom').value||'', wk_to: sel('#wkTo').value||'',
-        candidate: sel('#candidate').value||'', client: sel('#client').value||''
-      });
-      const url=URL.createObjectURL(new Blob([blob],{type:'text/csv'}));
-      const a=document.createElement('a'); a.href=url; a.download='timesheets.csv'; a.click(); URL.revokeObjectURL(url);
-    }catch(e){ toast('Export failed: '+e.message,'err',5000); }
-  }
-  function importCSV(){ sel('#csv').click(); }
-  sel('#csv').addEventListener('change', async ()=>{
-    const f = sel('#csv').files[0]; if(!f) return;
-    const text = await f.text();
-    try{
-      const res = await api('admin-timesheets-import','POST',{ csv:text });
-      toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2200); load();
-    }catch(e){ toast('Import failed: '+e.message,'err',5000); }
-  });
-
-  // wire filters
-  ['#q','#status','#wkFrom','#wkTo','#candidate','#client'].forEach(s=> sel(s).addEventListener('change', ()=>{ page=1; load(); }));
-  sel('#btnRefresh').onclick=load;
-  sel('#btnNew').onclick=newTS;
-  sel('#btnSave').onclick=save;
-  sel('#btnDelete').onclick=delSelected;
-  sel('#btnDelOne').onclick=delOne;
-  sel('#btnClose').onclick=closeDrawer;
-  sel('#btnApprove').onclick=approve;
-  sel('#btnReject').onclick=reject;
-  sel('#btnUploadAtt').onclick=uploadAtt;
-  sel('#btnExport').onclick=exportCSV;
-  sel('#btnImport').onclick=importCSV;
-  enableDelete();
-
-  ['#h_mon','#h_tue','#h_wed','#h_thu','#h_fri','#h_sat','#h_sun','#ot_hours','#rate_pay','#rate_charge','#currency'].forEach(s=>{
-    sel(s).addEventListener('input', ()=>{ sumHours(); amounts(); });
-  });
-
-  // preload dropdowns
-  try{
-    const meta = await api('admin-timesheets-meta','POST',{}); // { candidates:[], clients:[] }
-    const add=(id,arr)=>{ const el=sel(id); if(!el||!Array.isArray(arr)) return; arr.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; el.appendChild(o); }); };
-    add('#candidate', meta.candidates); add('#client', meta.clients);
-    if(meta.candidates){ const dl=document.createElement('datalist'); dl.id='candidates'; dl.innerHTML=meta.candidates.map(v=>`<option value="${v}">`).join(''); document.body.appendChild(dl); }
-    if(meta.clients){ const dl=document.createElement('datalist'); dl.id='clients'; dl.innerHTML=meta.clients.map(v=>`<option value="${v}">`).join(''); document.body.appendChild(dl); }
-  }catch(_){}
-
-  // initial load + audit
-  await load(); await loadAudit();
-
-  // shortcuts
-  document.addEventListener('keydown',(e)=>{
-    if(e.key==='s' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(sel('#drawer').style.display==='block') save(); }
-    if(e.key==='n' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); newTS(); }
-    if(e.key==='a' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(sel('#drawer').style.display==='block') approve(); }
-    if(e.key==='r' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(sel('#drawer').style.display==='block') reject(); }
-    if(e.key==='Escape' && sel('#drawer').style.display==='block'){ e.preventDefault(); closeDrawer(); }
-  });
-});
-</script>
-
-<!-- 1) Netlify Identity widget -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-<!-- 2) Force-init the widget as soon as DOM is ready -->
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch (e) {}
-  });
-</script>
-
-<!-- 3) Shared admin bootstrap (cache-busted) -->
-<script src="./common.js?v=7"></script>
-
-<!-- 4) Must call bootAdmin to pass the gate and render -->
-<script>
-  Admin.bootAdmin(async ({ sel, identity, toast }) => {
-    // simple smoke test so we know identity worked
-    const who = await identity('admin');
-    if (who && who.ok) {
-      console.log('[admin] candidates boot ok for', who.email);
-      // OPTIONAL: show a tiny toast the first time it works
-      toast('Candidates loaded ✓', 'info', 2000);
+      sel('#ckAll').onclick=e=>{ if(e.target.checked){rows.forEach(r=>selected.add(r.id));}else{rows.forEach(r=>selected.delete(r.id));} enableDelete(); renderList(); };
+      sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=> c.onchange=()=>{const id=Number(c.getAttribute('data-id')); if(c.checked)selected.add(id); else selected.delete(id); enableDelete();});
+      sel('#listWrap').querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openTs(Number(b.getAttribute('data-open'))));
+      sel('#pPrev').onclick=()=>{page--; load();};
+      sel('#pNext').onclick=()=>{page++; load();};
     }
-    // your page-specific code would go here
-  });
-</script>
 
+    async function load(){
+      sel('#listWrap').textContent='Loading…';
+      try{
+        const res=await api('admin-timesheets-list','POST',{
+          q:sel('#q').value||'', status:sel('#status').value||'',
+          week_from:sel('#week_from').value||'', week_to:sel('#week_to').value||'',
+          page, pageSize
+        });
+        rows=res.rows||res||[]; total=res.total??rows.length; renderList();
+      }catch(e){ sel('#listWrap').textContent='Error: '+e.message; }
+    }
+
+    async function loadAudit(){
+      try{
+        const list=await api('admin-audit-list','POST',{entity:'timesheet',limit:10});
+        sel('#audit').innerHTML = list.length ? `<ul style="margin:6px 0;padding-left:18px">
+          ${list.map(a=>`<li><span class="muted">${a.created_at?.replace('T',' ').slice(0,16)||''}</span> — ${a.action} #${a.entity_id||''} by ${a.actor_email||'—'}</li>`).join('')}
+        </ul>` : '—';
+      }catch(e){ sel('#audit').textContent='Audit unavailable: '+e.message; }
+    }
+
+    async function openTs(id){
+      try{
+        const r=await api('admin-timesheet-open','POST',{id});
+        current=r;
+        sel('#edTitle').textContent=`Timesheet #${r.id}`;
+        const set=(k,v)=>{const el=sel('#'+k); if(el) el.value=(v??'');};
+        set('ts_ref',r.ts_ref); set('ts_status',r.status||'submitted');
+        set('week_start',(r.week_start||'').slice(0,10));
+        set('assignment_ref',r.assignment_ref||''); set('candidate_name',r.candidate_name||''); set('client_name',r.client_name||'');
+        ['mon','tue','wed','thu','fri','sat','sun'].forEach(d=> set(d, r[d] ?? ''));
+        sumHours();
+        set('approver_name',r.approver_name||''); set('approver_email',r.approver_email||''); set('notes',r.notes||'');
+        sel('#proof_info').innerHTML=r.proof_url?`<a href="${r.proof_url}" target="_blank">View proof</a>`:'No file.';
+        openDrawer();
+      }catch(e){ toast('Open failed: '+e.message,'err',5000); }
+    }
+
+    function newTs(){
+      current={id:null,status:'draft'};
+      ['ts_ref','assignment_ref','candidate_name','client_name','mon','tue','wed','thu','fri','sat','sun','approver_name','approver_email','notes']
+        .forEach(k=>{const el=sel('#'+k); if(el) el.value='';});
+      sel('#ts_status').value='draft'; sel('#week_start').value=''; sel('#total').value=''; sel('#proof_info').textContent='No file.'; openDrawer();
+    }
+
+    async function save(){
+      const get=id=> sel('#'+id)?.value || null;
+      const payload={
+        id:current?.id||null,
+        ts_ref:get('ts_ref'), status:get('ts_status'),
+        week_start:get('week_start')||null,
+        assignment_ref:get('assignment_ref'),
+        candidate_name:get('candidate_name'),
+        client_name:get('client_name'),
+        mon:parseFloat(get('mon'))||0, tue:parseFloat(get('tue'))||0, wed:parseFloat(get('wed'))||0,
+        thu:parseFloat(get('thu'))||0, fri:parseFloat(get('fri'))||0, sat:parseFloat(get('sat'))||0, sun:parseFloat(get('sun'))||0,
+        total_hours:sumHours(),
+        approver_name:get('approver_name'), approver_email:get('approver_email'),
+        notes:get('notes')
+      };
+      try{ await api('admin-timesheet-save','POST',payload); toast('Saved','ok',2000); closeDrawer(); load(); }
+      catch(e){ toast('Save failed: '+e.message,'err',5000); }
+    }
+
+    async function approve(reject=false){
+      if(!current?.id){ toast('Open a timesheet first','warn',2500); return; }
+      try{ await api('admin-timesheet-approve','POST',{id:current.id, approve:!reject});
+        toast(reject?'Rejected':'Approved','ok',2000); closeDrawer(); load();
+      }catch(e){ toast('Action failed: '+e.message,'err',5000); }
+    }
+
+    async function delSelected(){
+      if(!selected.size) return;
+      if(!confirm(`Delete ${selected.size} timesheet(s)?`)) return;
+      try{ await api('admin-timesheet-delete','POST',{ids:Array.from(selected)});
+        selected.clear(); enableDelete(); toast('Deleted','ok',2000); load();
+      }catch(e){ toast('Delete failed: '+e.message,'err',5000); }
+    }
+
+    async function uploadProof(){
+      const f=sel('#proof_file').files[0]; if(!f){ toast('Choose a file first','warn',2500); return; }
+      try{
+        const sign=await api('admin-uploads-presign','POST',{entity:'timesheet',entity_id:current?.id,kind:'proof',filename:f.name,type:f.type});
+        await fetch(sign.url,{method:'PUT',headers:sign.headers||{},body:f});
+        await api('admin-timesheet-attach-proof','POST',{id:current?.id,url:sign.public_url});
+        sel('#proof_info').innerHTML=`<a href="${sign.public_url}" target="_blank">View proof</a>`;
+        toast('Uploaded','ok',1800);
+      }catch(e){ toast('Upload failed: '+e.message,'err',5000); }
+    }
+
+    async function exportCSV(){
+      try{
+        const blob=await api('admin-timesheets-export','POST',{
+          q:sel('#q').value||'', status:sel('#status').value||'',
+          week_from:sel('#week_from').value||'', week_to:sel('#week_to').value||''
+        });
+        const url=URL.createObjectURL(new Blob([blob],{type:'text/csv'}));
+        const a=document.createElement('a'); a.href=url; a.download='timesheets.csv'; a.click(); URL.revokeObjectURL(url);
+      }catch(e){ toast('Export failed: '+e.message,'err',5000); }
+    }
+    function importCSV(){ sel('#csv').click(); }
+    sel('#csv').addEventListener('change', async ()=>{
+      const f=sel('#csv').files[0]; if(!f) return;
+      const text=await f.text();
+      try{
+        const res=await api('admin-timesheets-import','POST',{csv:text});
+        toast(`Imported ${res?.inserted ?? 0}`,'ok',2500); load();
+      }catch(e){ toast('Import failed: '+e.message,'err',5000); }
+    });
+
+    // Wire up UI
+    sel('#btnRefresh').onclick=load;
+    sel('#btnNew').onclick=newTs;
+    sel('#btnSave').onclick=save;
+    sel('#btnApprove').onclick=()=>approve(false);
+    sel('#btnReject').onclick=()=>approve(true);
+    sel('#btnDelete').onclick=delSelected;
+    sel('#btnClose').onclick=()=>{ closeDrawer(); };
+    sel('#btnUploadProof').onclick=uploadProof;
+    sel('#btnAudit').onclick=loadAudit;
+    sel('#btnExport').onclick=exportCSV;
+    sel('#btnImport').onclick=importCSV;
+
+    ['#mon','#tue','#wed','#thu','#fri','#sat','#sun'].forEach(id=> sel(id).addEventListener('input', sumHours));
+    ['#q','#status','#week_from','#week_to'].forEach(s=> sel(s).addEventListener('change', ()=>{ page=1; load(); }));
+
+    // Handy shortcuts
+    document.addEventListener('keydown', (e) => {
+      if(e.key==='n' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); newTs(); }
+      if(e.key==='s' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(sel('#drawer').style.display==='block') save(); }
+      if(e.key==='e' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); exportCSV(); }
+      if(e.key==='Escape' && sel('#drawer').style.display==='block'){ e.preventDefault(); closeDrawer(); }
+    });
+
+    await load();
+    await loadAudit();
+  });
+  </script>
 </body>
 </html>

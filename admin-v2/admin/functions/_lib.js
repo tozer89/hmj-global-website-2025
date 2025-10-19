@@ -1,50 +1,41 @@
-// _lib.js
-import { createClient } from '@supabase/supabase-js';
-import jwt from 'jsonwebtoken';
+// _lib.js  — small helpers shared by Netlify Functions (CommonJS)
+const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE;
-export const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'docs';
-
-export function supa() {
-  return createClient(supabaseUrl, supabaseKey, { auth: { autoRefreshToken: false, persistSession: false } });
+// Create a Supabase client with the Service Role key (server-side only)
+function supa() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE;
+  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE');
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
-export function ok(body, statusCode = 200) {
-  return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? null) };
+// Standard HTTP helpers
+function ok(data, status = 200) {
+  return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data ?? null) };
 }
-export function err(message, statusCode = 400) {
-  return ok({ error: String(message) }, statusCode);
-}
-
-export function parseBody(event) {
-  try { return event.body ? JSON.parse(event.body) : {}; } catch { return {}; }
+function err(message, status = 500) {
+  return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: String(message) }) };
 }
 
-/** Get Netlify Identity user & roles from function context */
-export function getIdentity(context, event) {
-  // Preferred: Netlify injects Identity info here if a valid bearer token is present
-  const user = context?.clientContext?.user || null;
-  const roles = (user?.app_metadata?.roles || user?.roles || []);
-  return { user, roles };
+// Body / query parsing
+function parseBody(event) {
+  try {
+    if (!event || !event.body) return {};
+    return typeof event.body === 'string' ? JSON.parse(event.body || '{}') : (event.body || {});
+  } catch (e) { return {}; }
+}
+function q(event, name, def = '') {
+  const p = (event && event.queryStringParameters) || {};
+  return name in p ? p[name] : def;
 }
 
-export function requireAdmin(context, event) {
-  const { user, roles } = getIdentity(context, event);
-  if (!user) throw { status: 401, message: 'No identity token' };
-  if (!roles.includes('admin')) throw { status: 403, message: 'Admin only' };
-  return user;
+// Simple pagination normaliser
+function qPaginate(event, defaults = { page: 1, pageSize: 20 }) {
+  const page = Math.max(1, parseInt(q(event, 'page', defaults.page), 10) || defaults.page);
+  const pageSize = Math.min(200, Math.max(1, parseInt(q(event, 'pageSize', defaults.pageSize), 10) || defaults.pageSize));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  return { page, pageSize, from, to };
 }
 
-/** Simple pagination helper */
-export function qPaginate({ page=1, pageSize=20 }) {
-  const from = Math.max(0, (Number(page)-1) * Number(pageSize));
-  const to   = from + Number(pageSize) - 1;
-  return { from, to };
-}
-
-/** Lightweight audit trail (optional) */
-export async function auditLog({ entity, entity_id, action, actor_email, meta }) {
-  const db = supa();
-  await db.from('audit').insert([{ entity, entity_id, action, actor_email, meta }]).select();
-}
+module.exports = { supa, ok, err, parseBody, q, qPaginate };

@@ -1,25 +1,28 @@
-import { ok, err, parseBody, requireAdmin, supa, qPaginate } from './_lib.js';
+// admin-candidates-lists.js — quick lists for dropdowns
+const { supa, ok, err } = require('./_lib.js');
+const { requireAdmin } = require('./_guard.js');
 
-export async function handler(event, context) {
+exports.handler = async (event) => {
   try {
-    requireAdmin(context, event);
-    const { q='', status='', has='', page=1, pageSize=20 } = parseBody(event);
-    const db = supa();
-    let query = db.from('candidates').select('*', { count: 'exact' }).order('id', { ascending: false });
+    requireAdmin(event);
+    const s = supa();
 
-    if (q) {
-      query = query.or(`ref.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`);
-    }
-    if (status) query = query.eq('status', status);
-    if (has === 'rtw') query = query.not('rtw_url', 'is', null);
-    if (has === 'contract') query = query.not('contract_url', 'is', null);
-    if (has === 'bank') query = query.not('bank_account', 'is', null);
+    const [consultants, clients, candidates] = await Promise.all([
+      s.from('consultants').select('name').order('name', { ascending: true }),
+      s.from('clients').select('name').order('name', { ascending: true }),
+      s.from('candidates').select('full_name').order('full_name', { ascending: true })
+    ]);
 
-    const { from, to } = qPaginate({ page, pageSize });
-    query = query.range(from, to);
+    if (consultants.error) throw consultants.error;
+    if (clients.error) throw clients.error;
+    if (candidates.error) throw candidates.error;
 
-    const { data, error, count } = await query;
-    if (error) throw error;
-    return ok({ rows: data, total: count });
-  } catch (e) { return err(e.message || e, e.status || 500); }
-}
+    return ok({
+      consultants: consultants.data?.map(r => r.name) || [],
+      clients: clients.data?.map(r => r.name) || [],
+      candidates: candidates.data?.map(r => r.full_name) || []
+    });
+  } catch (e) {
+    return err(e.message || e, e.status || 500);
+  }
+};
