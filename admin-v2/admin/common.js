@@ -82,6 +82,15 @@
     return null; // allow fallback
   }
 
+  // NEW: make sure the widget is initialised on every page
+  function initIdentity(){
+    const id = window.netlifyIdentity;
+    if (!id || typeof id.on !== 'function') return;
+    try { id.init(); } catch(_) {}               // <-- this is the key fix
+    id.on('login',  () => location.reload());
+    id.on('logout', () => (location.href = '/admin/'));
+  }
+
   // Resolve active user (works with widget or cookie-only)
   async function getIdentityUser() {
     try {
@@ -201,8 +210,9 @@
     if (_readyOnce) return _readyOnce;
     _readyOnce = (async () => {
       try {
-        await waitIdentityReady(4000); // non-fatal if not ready yet
-        setTrace(); // ensure we always have one
+        await waitIdentityReady(4000);   // wait for widget to be present
+        initIdentity();                  // <-- ensure widget is initialised
+        setTrace();                      // ensure we always have one
         Debug.log('Bootstrap ready; trace=', getTrace());
         return { api, sel: $, toast, setTrace, getTrace, identity, isMobile, gate };
       } catch (e) {

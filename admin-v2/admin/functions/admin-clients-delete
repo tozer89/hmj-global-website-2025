@@ -1,3 +1,15 @@
+import { requireAdmin } from './_guard.js';
+
+export async function handler(event, context){
+  try{
+    const user = requireAdmin(context);   // ← guard
+    // ...existing code...
+  }catch(e){
+    return { statusCode: e.status || 500, body: JSON.stringify({ error: e.message || String(e) }) };
+  }
+}
+
+
 // netlify/functions/admin-clients-delete.js
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
