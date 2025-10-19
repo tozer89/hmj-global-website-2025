@@ -1,97 +1,73 @@
-/* /admin/common.js  —  unified admin bootstrap + diagnostics
-   Works with Netlify Identity widget and Netlify Functions.
+/* /admin/common.js — admin bootstrap + diagnostics (v7)
    Exposes:
      - window.adminReady(): Promise<helpers>
      - window.Admin.bootAdmin(mainFn)
-     - window.getIdentity(requiredRole?)    // console-friendly
-     - window.apiPing()                     // console-friendly
-   Helpers injected to pages (main):
-     { api, sel, toast, setTrace, getTrace, identity, isMobile }
+     - window.getIdentity(requiredRole?)
+     - window.apiPing()
+   Helpers passed to pages:
+     { api, sel, toast, setTrace, getTrace, identity, isMobile, gate }
 */
-
 (function () {
   'use strict';
 
-  // ----------------------------------------------------------------------------
-  // Utilities
-  // ----------------------------------------------------------------------------
+  // ----------------------------- Utilities -----------------------------------
   const $ = (s, root = document) => root.querySelector(s);
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const isMobile = matchMedia('(max-width: 820px)').matches;
 
   const Debug = {
-    ts: () => new Date().toISOString().split('T')[1].replace('Z', ''),
-    log: (...a) => console.log('%c[OK]', 'color:#18a058;font-weight:600', ...a),
-    warn: (...a) => console.warn('%c[WARN]', 'color:#e6a100;font-weight:600', ...a),
-    err: (...a) => console.error('%c[ERR]', 'color:#b73b3b;font-weight:600', ...a),
+    log: (...a) => console.log('%c[OK]',   'color:#18a058;font-weight:600', ...a),
+    warn:(...a) => console.warn('%c[WARN]','color:#e6a100;font-weight:600', ...a),
+    err: (...a) => console.error('%c[ERR]','color:#b73b3b;font-weight:600', ...a),
   };
 
-  // Small on-page toast (non-blocking)
   function toast(msg, type = 'info', ms = 3600) {
     let host = $('#toast');
     if (!host) {
       host = document.createElement('div');
       host.id = 'toast';
-      host.style.position = 'fixed';
-      host.style.bottom = '16px';
-      host.style.right = '16px';
-      host.style.zIndex = '9999';
-      host.style.display = 'grid';
-      host.style.gap = '10px';
+      Object.assign(host.style, {
+        position:'fixed',bottom:'16px',right:'16px',zIndex:'9999',display:'grid',gap:'10px'
+      });
       document.body.appendChild(host);
     }
     const n = document.createElement('div');
-    n.setAttribute('role', 'status');
-    n.style.padding = '10px 12px';
-    n.style.borderRadius = '10px';
-    n.style.boxShadow = '0 10px 24px rgba(0,0,0,.18)';
-    n.style.fontWeight = '600';
-    n.style.maxWidth = '520px';
-    n.style.background = type === 'error' ? '#3a1418' :
-                         type === 'warn'  ? '#35240d' : '#0e2038';
-    n.style.border = '1px solid rgba(255,255,255,.14)';
-    n.style.color = 'white';
+    n.setAttribute('role','status');
+    Object.assign(n.style, {
+      padding:'10px 12px',borderRadius:'10px',boxShadow:'0 10px 24px rgba(0,0,0,.18)',
+      fontWeight:'600',maxWidth:'520px',border:'1px solid rgba(255,255,255,.14)',color:'#fff',
+      background: type==='error' ? '#3a1418' : type==='warn' ? '#35240d' : '#0e2038'
+    });
     n.textContent = String(msg);
-    host.appendChild(n);
-    setTimeout(() => n.remove(), ms);
+    host.appendChild(n); setTimeout(() => n.remove(), ms);
   }
 
-  // ----------------------------------------------------------------------------
-  // Identity helpers
-  // ----------------------------------------------------------------------------
-
+  // -------------------------- Identity helpers -------------------------------
   function getCookie(name) {
     const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
     return m ? decodeURIComponent(m[2]) : '';
   }
-  function getNFJwtFromCookie() {
-    // nf_jwt is Netlify’s Session cookie; __nfsec is the CSRF/edge cookie
-    return getCookie('nf_jwt') || '';
-  }
+  const getNFJwtFromCookie = () => getCookie('nf_jwt') || '';
 
   async function waitIdentityReady(maxMs = 6000) {
     let waited = 0;
     while (waited < maxMs) {
       if (window.netlifyIdentity && typeof window.netlifyIdentity.on === 'function') {
-        // Widget is live
         return window.netlifyIdentity;
       }
-      await sleep(100);
-      waited += 100;
+      await sleep(100); waited += 100;
     }
-    return null; // allow fallback
+    return null;
   }
 
-  // NEW: make sure the widget is initialised on every page
-  function initIdentity(){
-    const id = window.netlifyIdentity;
-    if (!id || typeof id.on !== 'function') return;
-    try { id.init(); } catch(_) {}               // <-- this is the key fix
-    id.on('login',  () => location.reload());
-    id.on('logout', () => (location.href = '/admin/'));
+  // NEW: ensure widget is initialised on this page
+  async function initIdentity() {
+    const id = await waitIdentityReady(4000);
+    if (!id) return null;
+    try { id.init && id.init(); } catch {}
+    return id;
   }
 
-  // Resolve active user (works with widget or cookie-only)
   async function getIdentityUser() {
     try {
       const id = window.netlifyIdentity;
@@ -100,58 +76,47 @@
         if (u) return u;
       }
     } catch {}
-    // Cookie-only session: we can’t read profile, but a token may exist
     const token = getNFJwtFromCookie();
-    if (token) return { token: async () => token, jwt: async () => token, email: undefined, app_metadata: {} };
+    if (token) return { token: async () => token, jwt: async () => token, app_metadata:{}, email: undefined };
     return null;
   }
 
-  // Public, promise-based identity snapshot used by pages & console
-  async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' | undefined */) {
-    // try widget first, then cookie
-    await waitIdentityReady(1200); // don’t block long
+  async function identity(requiredRole) {
+    // Ensure the widget is up before we read currentUser()
+    await initIdentity();
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
     try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
     const roles = (user?.app_metadata?.roles || user?.roles || []);
-    const role = roles.includes('admin') ? 'admin' :
-                 roles.includes('recruiter') ? 'recruiter' :
-                 roles.includes('client') ? 'client' : (roles[0] || '');
+    const role = roles.includes('admin') ? 'admin'
+               : roles.includes('recruiter') ? 'recruiter'
+               : roles.includes('client') ? 'client'
+               : (roles[0] || '');
     const ok = !!token && (!requiredRole || roles.includes(requiredRole) || role === requiredRole);
     return { ok, user, token, role, email: user?.email || '' };
   }
 
-  // Console helpers (intentionally global)
+  // Console helper
   window.getIdentity = identity;
 
-  // ----------------------------------------------------------------------------
-  // API helper (robust)
-  // ----------------------------------------------------------------------------
-  let TRACE = ''; // correlation id shown in UI + sent to server
+  // ----------------------------- API helper ----------------------------------
+  let TRACE = '';
   const setTrace = (v) => { TRACE = v || `ts-${Math.random().toString(36).slice(2)}`; return TRACE; };
   const getTrace = () => TRACE || setTrace();
 
   async function api(path, method = 'POST', body) {
-    const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
+    const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.')
+                                     : `/.netlify/functions/${path}`.replace('//.','/.');
 
-    // Get a token — widget user or cookie
     let token = '';
-    try {
-      const who = await identity(); // no role restriction at this level
-      token = who.token || '';
-    } catch {}
+    try { const who = await identity(); token = who.token || ''; } catch {}
 
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-trace': getTrace()
-    };
+    const headers = { 'Content-Type': 'application/json', 'x-trace': getTrace() };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     Debug.log(`API → ${method} ${url}`, body || '');
     const res = await fetch(url, {
-      method,
-      headers,
-      credentials: 'include',
+      method, headers, credentials: 'include',
       body: body ? JSON.stringify(body) : undefined
     });
     const txt = await res.text();
@@ -166,69 +131,46 @@
     return json;
   }
 
-  window.apiPing = async function apiPing() {
-    try {
-      const j = await api('/admin-audit-list', 'POST', { limit: 1 });
-      Debug.log('Ping OK', j?.length || 0);
-      return { ok: true, data: j };
-    } catch (e) {
-      Debug.err('Ping failed', e);
-      return { ok: false, error: String(e.message || e) };
-    }
+  window.apiPing = async function () {
+    try { const j = await api('admin-audit-list', 'POST', { limit: 1 }); return { ok:true, data:j }; }
+    catch (e) { return { ok:false, error:String(e.message||e) }; }
   };
 
-  // ----------------------------------------------------------------------------
-  // Gate: shows #gate or #app with helpful reasons
-  // ----------------------------------------------------------------------------
+  // ------------------------------ Gate ---------------------------------------
   async function gate({ adminOnly = true } = {}) {
-    const g = $('#gate'); const app = $('#app');
-    const why = g ? $('.why', g) : null;
+    const g = $('#gate'); const app = $('#app'); const why = g ? $('.why', g) : null;
     const who = await identity(adminOnly ? 'admin' : undefined);
 
     if (who.ok && (!adminOnly || who.role === 'admin')) {
-      if (g) g.style.display = 'none';
-      if (app) app.style.display = '';
-      return who; // { ok, user, token, role, email }
+      if (g) g.style.display = 'none'; if (app) app.style.display = '';
+      return who;
     }
-
-    // No session / wrong role
     if (app) app.style.display = 'none';
     if (g) g.style.display = '';
     if (why) {
-      if (!who.token)       why.textContent = 'Sign in required.';
-      else if (adminOnly)   why.textContent = 'Admin role required.';
-      else                  why.textContent = 'Access limited for your role.';
+      if (!who?.token)     why.textContent = 'Sign in required.';
+      else if (adminOnly)  why.textContent = 'Admin role required.';
+      else                 why.textContent = 'Access limited for your role.';
     }
     return null;
   }
 
-  // ----------------------------------------------------------------------------
-  // adminReady(): returns helpers when identity widget is ready (or fallback)
-  // ----------------------------------------------------------------------------
+  // ---------------------------- adminReady -----------------------------------
   let _readyOnce;
-  window.adminReady = function adminReady() {
+  window.adminReady = function () {
     if (_readyOnce) return _readyOnce;
     _readyOnce = (async () => {
-      try {
-        await waitIdentityReady(4000);   // wait for widget to be present
-        initIdentity();                  // <-- ensure widget is initialised
-        setTrace();                      // ensure we always have one
-        Debug.log('Bootstrap ready; trace=', getTrace());
-        return { api, sel: $, toast, setTrace, getTrace, identity, isMobile, gate };
-      } catch (e) {
-        // Don’t throw — provide helpers anyway
-        Debug.err('adminReady failed (continuing with fallbacks):', e);
-        return { api, sel: $, toast, setTrace, getTrace, identity, isMobile, gate };
-      }
+      await initIdentity();        // <— ensure widget is prepped on this page
+      setTrace();
+      Debug.log('Bootstrap ready; trace=', getTrace());
+      return { api, sel:$, toast, setTrace, getTrace, identity, isMobile, gate };
     })();
     return _readyOnce;
   };
 
-  // ----------------------------------------------------------------------------
-  // Admin.bootAdmin(mainFn): page-safe entrypoint
-  // ----------------------------------------------------------------------------
+  // ---------------------------- Boot wrapper ---------------------------------
   window.Admin = window.Admin || {};
-  window.Admin.bootAdmin = async function bootAdmin(mainFn) {
+  window.Admin.bootAdmin = async function (mainFn) {
     try {
       const helpers = await window.adminReady();
       const who = await helpers.gate({ adminOnly: true });
@@ -237,15 +179,12 @@
         Debug.warn('Gate blocked: no session / no admin role');
         return;
       }
-
-      // Hook Identity events so navigation stays consistent
       const id = window.netlifyIdentity;
       if (id && typeof id.on === 'function') {
-        id.on('login', () => location.reload());
+        id.on('login',  () => location.reload());
         id.on('logout', () => (location.href = '/admin/'));
       }
 
-      // Debug chip line (optional)
       try {
         const diag = $('#diagChips');
         if (diag) {
@@ -257,12 +196,10 @@
         }
       } catch {}
 
-      // Run the page’s main code
       await Promise.resolve(mainFn(helpers));
     } catch (e) {
       Debug.err('bootAdmin error:', e);
       toast('Init failed: ' + (e.message || e), 'error', 6000);
-      // keep the gate visible
       try { const g = $('#gate'); const app = $('#app'); if (g) g.style.display = ''; if (app) app.style.display = 'none'; } catch {}
     }
   };
@@ -270,15 +207,11 @@
   function addChip(host, text, ok) {
     const span = document.createElement('span');
     span.textContent = text;
-    span.style.display = 'inline-grid';
-    span.style.alignItems = 'center';
-    span.style.padding = '4px 8px';
-    span.style.borderRadius = '9999px';
-    span.style.fontSize = '12px';
-    span.style.fontWeight = '700';
-    span.style.border = '1px solid rgba(0,0,0,.12)';
-    span.style.background = ok ? '#e8f6ef' : '#fdeeee';
-    span.style.color = ok ? '#0f5132' : '#842029';
+    Object.assign(span.style, {
+      display:'inline-grid',alignItems:'center',padding:'4px 8px',borderRadius:'9999px',
+      fontSize:'12px',fontWeight:'700',border:'1px solid rgba(0,0,0,.12)',
+      background: ok ? '#e8f6ef' : '#fdeeee', color: ok ? '#0f5132' : '#842029'
+    });
     host.appendChild(span);
   }
 
