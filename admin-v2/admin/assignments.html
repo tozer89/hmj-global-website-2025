@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Assignments — Admin | HMJ-Global</title>
+<title>Assignments — Admin | HMJ Global</title>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <style>
   :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
@@ -22,12 +22,12 @@
 <div class="top"><div class="row">
   <div class="brand">Assignments — Admin</div><div class="sp"></div>
   <a class="btn" href="/admin/">⟵ Admin</a>
-  <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+  <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
 </div></div>
 
 <div class="wrap" id="gate" style="display:none">
   <div class="card"><strong>Admin only.</strong> <span class="muted why"></span>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
+  <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button></div>
 </div>
 
 <div class="wrap" id="app" style="display:none">
@@ -63,58 +63,87 @@
 </div>
 
 <script>
-const sel = s => document.querySelector(s);
+const API_BASE='/admin/functions';
+const sel=s=>document.querySelector(s);
 const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+async function api(name, method='POST', body={}){
+  const u=window.netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+  const t=await u.jwt();
+  const r=await fetch(`${API_BASE}/${name}`,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text()); return r.json();
+}
+let cur=null;
 
-function showGate(msg){
-  sel('#gate').style.display = 'block';
-  const why = sel('.why'); if (why) why.textContent = msg || '';
+async function loadList(){
+  sel('#listWrap').textContent='Loading…';
+  try{
+    const rows = await api('admin-assignments-list','POST',{ q: sel('#q').value||'', active: sel('#active').value||'' });
+    sel('#listWrap').innerHTML = `
+      <table><thead><tr><th>ID</th><th>Contractor</th><th>Client</th><th>Project</th><th>Site</th><th>Active</th><th></th></tr></thead>
+      <tbody>${rows.map(r=>`
+        <tr>
+          <td>${r.id}</td><td>${r.contractor_email||'—'}</td><td>${r.client_name||'—'}</td>
+          <td>${r.project_name||'—'}</td><td>${r.site_name||'—'}</td>
+          <td>${r.active?'✓':'—'}</td>
+          <td><button data-open="${r.id}" class="btn">Open</button></td>
+        </tr>`).join('')}</tbody></table>`;
+    sel('#listWrap').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEd(b.dataset.open));
+  }catch(e){ sel('#listWrap').textContent='Error: '+e.message; }
 }
 
-function initWithIdentity(id){
-  // re-run on login/logout to refresh role state
-  id.on('login', () => location.reload());
-  id.on('logout', () => location.reload());
-
-  const u = id.currentUser ? id.currentUser() : null;
-  if (!u) { showGate('Not signed in.'); return; }
-  if (!isAdmin(u)) { showGate('Missing admin role.'); return; }
-
-  // success
-  sel('#app').style.display = 'block';
+async function openEd(id){
+  try{
+    cur = await api('admin-assignment-open','POST',{ id:Number(id) });
+    sel('#edTitle').textContent='Assignment #'+cur.id;
+    sel('#edContractorId').value = cur.contractor_id||'';
+    sel('#edProjectId').value    = cur.project_id||'';
+    sel('#edSiteId').value       = cur.site_id||'';
+    sel('#edRateStd').value      = cur.rate_std||'';
+    sel('#edRateOt').value       = cur.rate_ot||'';
+    sel('#edChargeStd').value    = cur.charge_std||'';
+    sel('#edChargeOt').value     = cur.charge_ot||'';
+    sel('#edPO').value           = cur.po||'';
+    sel('#edActive').value       = String(!!cur.active);
+    sel('#edStart').value        = (cur.start_date||'').slice(0,10);
+    sel('#edEnd').value          = (cur.end_date||'').slice(0,10);
+    sel('#editor').style.display='block';
+  }catch(e){ alert('Open failed: '+e.message); }
 }
 
-function boot(){
-  const id = window.netlifyIdentity;
-
-  // If widget is present and initialized, go now
-  if (id && typeof id.on === 'function') {
-    // Some builds need an explicit init callback
-    id.on('init', () => initWithIdentity(id));
-    // If it’s already initialized, init fires immediately; also call once as a fallback
-    initWithIdentity(id);
-    return;
-  }
-
-  // Otherwise, wait for it to appear (script loads async)
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries++;
-    const i = window.netlifyIdentity;
-    if (i && typeof i.on === 'function') {
-      clearInterval(timer);
-      // Ensure Identity is initialized before we read currentUser
-      i.on('init', () => initWithIdentity(i));
-      initWithIdentity(i);
-    } else if (tries > 40) { // ~2s fallback
-      clearInterval(timer);
-      showGate('Identity widget did not load.');
-    }
-  }, 50);
+async function save(){
+  const payload={
+    id: cur?.id,
+    contractor_id: Number(sel('#edContractorId').value||0),
+    project_id: Number(sel('#edProjectId').value||0),
+    site_id: Number(sel('#edSiteId').value||0),
+    rate_std: Number(sel('#edRateStd').value||0),
+    rate_ot: Number(sel('#edRateOt').value||0),
+    charge_std: Number(sel('#edChargeStd').value||0),
+    charge_ot: Number(sel('#edChargeOt').value||0),
+    po: sel('#edPO').value||'',
+    active: sel('#edActive').value==='true',
+    start_date: sel('#edStart').value||null,
+    end_date: sel('#edEnd').value||null
+  };
+  try{ await api('admin-assignment-save','POST',payload); alert('Saved.'); loadList(); }
+  catch(e){ alert('Save failed: '+e.message); }
 }
 
-document.addEventListener('DOMContentLoaded', boot);
+function boot(id){
+  id.on('login',()=>location.reload()); id.on('logout',()=>location.reload());
+  const u=id.currentUser?.(); if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
+  if(!isAdmin(u)){ sel('#gate').style.display='block'; sel('.why').textContent='Missing admin role.'; return; }
+  sel('#app').style.display='block';
+  sel('#btnRefresh').onclick=loadList;
+  sel('#btnNew').onclick=()=>{cur=null; sel('#editor').style.display='block'; sel('#edTitle').textContent='New assignment';};
+  sel('#btnSave').onclick=save; sel('#btnClose').onclick=()=>{sel('#editor').style.display='none';};
+  loadList();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const id=window.netlifyIdentity;
+  if(id && typeof id.on==='function'){ id.on('init',()=>boot(id)); boot(id); }
+  else { let n=0; const t=setInterval(()=>{ const w=window.netlifyIdentity; if(w&&typeof w.on==='function'){clearInterval(t); w.on('init',()=>boot(w)); boot(w);} else if(++n>40){clearInterval(t); sel('#gate').style.display='block'; sel('.why').textContent='Identity widget did not load.';} },50);}
+});
 </script>
-
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Timesheets — Admin | HMJ-Global</title>
+<title>Timesheets — Admin | HMJ Global</title>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <style>
   :root{--bg:#fff;--ink:#0b1a3a;--muted:#5a6b88;--border:#dbe3f4;--chip:#e8eefb}
@@ -17,20 +17,20 @@
   .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--border)}
   input,select{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px}
   table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
-  .muted{color:var(--muted)} .chip{display:inline-block;background:var(--chip);border:1px solid var(--border);padding:4px 8px;border-radius:999px}
+  .muted{color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="top"><div class="row">
   <div class="brand">Timesheets — Admin</div><div class="sp"></div>
   <a class="btn ghost" href="/admin/">⟵ Admin</a>
-  <button class="btn ghost" onclick="netlifyIdentity?.logout()">Sign out</button>
+  <button class="btn ghost" onclick="window.netlifyIdentity?.logout()">Sign out</button>
 </div></div>
 
 <div class="wrap">
   <div id="gate" class="card" style="display:none">
     <strong>Admin only.</strong> <span class="muted why"></span>
-    <div style="margin-top:8px"><button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
+    <div style="margin-top:8px"><button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button></div>
   </div>
 
   <div id="app" style="display:none">
@@ -54,26 +54,36 @@
 </div>
 
 <script>
+const API_BASE = '/admin/functions';
 const sel=s=>document.querySelector(s);
 const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
 
-async function api(path, method='POST', body={}){
-  const u=netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
+async function api(name, method='POST', body={}){
+  const id=window.netlifyIdentity, u=id?.currentUser?.(); if(!u) throw new Error('No session');
   const t=await u.jwt();
-  const r=await fetch(`/.netlify/functions${path}`,{
+  const r=await fetch(`${API_BASE}/${name}`,{
     method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},
     body: JSON.stringify(body)
   });
-  if(!r.ok) throw new Error(await r.text());
-  return r.json();
+  if(!r.ok){ throw new Error(await r.text()); }
+  // export endpoints may stream CSV
+  const ct = r.headers.get('content-type')||'';
+  return ct.includes('application/json') ? r.json() : r.blob();
 }
 
-function wireIdentity(){ netlifyIdentity.on('login',()=>location.reload()); netlifyIdentity.on('logout',()=>location.reload()); }
+function identityReady(cb){
+  const id=window.netlifyIdentity;
+  if(id && typeof id.on==='function'){ id.on('init',()=>cb(id)); cb(id); return; }
+  let i=0; const t=setInterval(()=>{ const w=window.netlifyIdentity;
+    if(w && typeof w.on==='function'){ clearInterval(t); w.on('init',()=>cb(w)); cb(w); }
+    else if(++i>40){ clearInterval(t); sel('#gate').style.display='block'; sel('.why').textContent='Identity widget did not load.'; }
+  },50);
+}
 
 async function loadList(){
   sel('#listWrap').textContent='Loading…';
   try{
-    const rows = await api('/admin-timesheets-list','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
+    const rows = await api('admin-timesheets-list','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
     sel('#listWrap').innerHTML = `
       <table><thead><tr><th>ID</th><th>Contractor</th><th>Client</th><th>Week end</th><th>Status</th><th>Std</th><th>OT</th><th>£ Est</th><th></th></tr></thead>
       <tbody>
@@ -90,7 +100,7 @@ async function loadList(){
 
 async function openSheet(id){
   try{
-    const x = await api('/admin-timesheet-open','POST',{ id: Number(id) });
+    const x = await api('admin-timesheet-open','POST',{ id: Number(id) });
     alert(`Timesheet #${x.id}\nStatus: ${x.status}\nStd: ${x.hours_std}h, OT: ${x.hours_ot}h`);
   }catch(e){ alert('Open failed: '+e.message); }
 }
@@ -98,7 +108,7 @@ async function openSheet(id){
 async function bulkApprove(){
   const q = prompt('Approve by query (e.g. status=submitted)? Leave blank to approve all visible.');
   try{
-    const n = await api('/admin-timesheets-bulk-approve','POST',{ q: q||'' });
+    const n = await api('admin-timesheets-bulk-approve','POST',{ q: q||'' });
     alert('Approved: '+(n?.count ?? 0)); loadList();
   }catch(e){ alert('Bulk approve failed: '+e.message); }
 }
@@ -108,24 +118,25 @@ async function createDraft(){
   const week_ending = sel('#createWeekEnding').value||null;
   if(!assignment_id || !week_ending){ sel('#sideStatus').textContent='Assignment ID and week ending required.'; return; }
   try{
-    const row = await api('/admin-timesheet-save','POST',{ create_from_assignment: assignment_id, week_ending });
-    sel('#sideStatus').textContent='Created draft timesheet #'+row.id;
-    loadList();
+    const row = await api('admin-timesheet-save','POST',{ create_from_assignment: assignment_id, week_ending });
+    sel('#sideStatus').textContent='Created draft timesheet #'+row.id; loadList();
   }catch(e){ sel('#sideStatus').textContent='Error: '+e.message; }
 }
 
-function boot(){
-  wireIdentity();
-  const u=netlifyIdentity?.currentUser?.();
-  if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
+function boot(id){
+  id.on('login',()=>location.reload()); id.on('logout',()=>location.reload());
+  const u=id.currentUser?.(); if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
   if(!isAdmin(u)){ sel('#gate').style.display='block'; sel('.why').textContent='Missing admin role.'; return; }
-  document.getElementById('app').style.display='block';
-  sel('#btnRefresh').onclick=loadList;
-  sel('#btnBulkApprove').onclick=bulkApprove;
-  sel('#btnCreate').onclick=createDraft;
+  sel('#app').style.display='block';
+  sel('#btnRefresh').onclick=loadList; sel('#btnBulkApprove').onclick=bulkApprove; sel('#btnCreate').onclick=createDraft; sel('#btnCsv').onclick=async()=>{
+    try{
+      const blob = await api('admin-timesheets-export','POST',{ status: sel('#status').value||'' });
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='timesheets.csv'; a.click(); URL.revokeObjectURL(url);
+    }catch(e){ alert('Export failed: '+e.message); }
+  };
   loadList();
 }
-document.addEventListener('DOMContentLoaded', boot);
+document.addEventListener('DOMContentLoaded',()=>identityReady(boot));
 </script>
 </body>
 </html>

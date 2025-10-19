@@ -1,13 +1,11 @@
+<!-- ADMIN-V2 MARK 2025-10-19 21:xx -->
+
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Admin — HMJ Global</title>
-
-<!-- Identity must load first -->
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
 <style>
   :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
   html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
@@ -17,79 +15,95 @@
   .wrap{max-width:1100px;margin:28px auto;padding:0 18px}
   .grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:14px}
   @media (max-width:820px){ .grid{grid-template-columns:1fr} }
-  .card{background:#121a2d;border:1px solid #2a395a;border-radius:16px;padding:18px;text-decoration:none;color:var(--text)}
+  .card{background:#121a2d;border:1px solid #2a395a;border-radius:16px;padding:18px;text-decoration:none;color:var(--text);display:block}
   .card:hover{border-color:#385394}
   .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+  .muted{color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="top"><div class="row">
-  <div class="brand">Admin — HMJ Global</div>
-  <div class="sp"></div>
-  <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+  <div class="brand">Admin — HMJ Global</div><div class="sp"></div>
+  <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
 </div></div>
 
 <div class="wrap" id="gate" style="display:none">
   <div class="card"><strong>Admin only.</strong><p class="muted why"></p>
-    <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+    <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
   </div>
 </div>
 
 <div class="wrap" id="app" style="display:none">
   <div class="grid">
-    <a class="card" href="/admin/timesheets.html"><div><h3 style="margin:0">Timesheets</h3><div class="muted">Approve, edit, raise on behalf</div></div> →</a>
-    <a class="card" href="/admin/clients.html"><div><h3 style="margin:0">Clients</h3><div class="muted">Profiles, terms, assignments</div></div> →</a>
-    <a class="card" href="/admin/assignments.html"><div><h3 style="margin:0">Assignments</h3><div class="muted">Create & manage placements</div></div> →</a>
-    <a class="card" href="/admin/candidates.html"><div><h3 style="margin:0">Candidates</h3><div class="muted">People & compliance</div></div> →</a>
-    <a class="card" href="/admin/reports.html"><div><h3 style="margin:0">Reports</h3><div class="muted">Audit & export</div></div> →</a>
+    <a class="card" href="/admin/timesheets.html"><h3 style="margin:0">Timesheets</h3><div class="muted">Approve, edit, raise on behalf</div></a>
+    <a class="card" href="/admin/assignments.html"><h3 style="margin:0">Assignments</h3><div class="muted">Create & manage placements</div></a>
+    <a class="card" href="/admin/clients.html"><h3 style="margin:0">Clients</h3><div class="muted">Profiles, terms, assignments</div></a>
+    <a class="card" href="/admin/candidates.html"><h3 style="margin:0">Candidates</h3><div class="muted">People & compliance</div></a>
+    <a class="card" href="/admin/reports.html"><h3 style="margin:0">Reports</h3><div class="muted">Audit & export</div></a>
   </div>
 </div>
 
 <script>
+/* ===== Identity-safe boot with debug ===== */
 const sel = s => document.querySelector(s);
 const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
 
+function show(el){ el && (el.style.display='block'); }
+function txt(el, s){ if(el) el.textContent = s; }
+
 function showGate(msg){
-  sel('#gate').style.display = 'block';
-  const why = sel('.why'); if (why) why.textContent = msg || '';
+  show(sel('#gate'));
+  txt(sel('.why'), msg || '');
+  showDebug('gate:' + (msg||''));
+}
+
+function showDebug(line){
+  if (!/\bdebug=1\b/.test(location.search)) return;
+  let dbg = document.getElementById('admDbg');
+  if (!dbg) {
+    dbg = document.createElement('pre');
+    dbg.id='admDbg';
+    dbg.style.cssText='position:fixed;bottom:10px;left:10px;z-index:9999;background:#111827;color:#e8eef7;border:1px solid #2a395a;border-radius:8px;padding:8px;max-width:60vw;max-height:40vh;overflow:auto;font:12px/1.4 ui-monospace,Menlo,Consolas';
+    dbg.textContent='[admin debug]\n';
+    document.body.appendChild(dbg);
+  }
+  dbg.textContent += line + '\n';
 }
 
 function initWithIdentity(id){
-  // re-run on login/logout to refresh role state
-  id.on('login', () => location.reload());
-  id.on('logout', () => location.reload());
+  try { id.init && id.init(); } catch(_) {}
+  id.on('login',()=>location.reload());
+  id.on('logout',()=>location.reload());
 
   const u = id.currentUser ? id.currentUser() : null;
-  if (!u) { showGate('Not signed in.'); return; }
-  if (!isAdmin(u)) { showGate('Missing admin role.'); return; }
+  showDebug('init: user=' + (!!u) + (u ? (', email='+ (u.email||'?')) : ''));
 
-  // success
-  sel('#app').style.display = 'block';
+  if (!u) return showGate('Not signed in.');
+  const roles = (u.app_metadata?.roles || u.roles || []);
+  showDebug('roles=' + JSON.stringify(roles));
+  if (!isAdmin(u)) return showGate('Missing admin role.');
+
+  show(sel('#app'));
+  showDebug('app shown');
 }
 
 function boot(){
+  showDebug('boot start');
   const id = window.netlifyIdentity;
-
-  // If widget is present and initialized, go now
   if (id && typeof id.on === 'function') {
-    // Some builds need an explicit init callback
-    id.on('init', () => initWithIdentity(id));
-    // If it’s already initialized, init fires immediately; also call once as a fallback
-    initWithIdentity(id);
+    id.on('init', () => { showDebug('identity init event'); initWithIdentity(id); });
+    initWithIdentity(id); // also try immediately
     return;
   }
-
-  // Otherwise, wait for it to appear (script loads async)
   let tries = 0;
   const timer = setInterval(() => {
     tries++;
     const i = window.netlifyIdentity;
     if (i && typeof i.on === 'function') {
       clearInterval(timer);
-      // Ensure Identity is initialized before we read currentUser
-      i.on('init', () => initWithIdentity(i));
+      i.on('init', () => { showDebug('identity init (late)'); initWithIdentity(i); });
       initWithIdentity(i);
-    } else if (tries > 40) { // ~2s fallback
+    } else if (tries > 60) { // ~3s
       clearInterval(timer);
       showGate('Identity widget did not load.');
     }
