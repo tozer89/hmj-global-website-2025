@@ -1,126 +1,442 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Candidates — Admin | HMJ Global</title>
+
+<!-- Identity first -->
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>window.ADMIN_API_BASE='/admin/functions';</script>
+<script src="./common.js?v=2"></script>
+
 <style>
-  :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
-  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
-  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800}.sp{flex:1}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-  input,select,textarea{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
-  table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
+  :root{
+    --ink:#101828; --bg:#ffffff; --muted:#667085;
+    --blue:#1f3b7a; --blue-2:#29478f;
+    --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
+    --chip:#eef2ff; --danger:#dc2626; --ok:#16a34a; --warn:#f59e0b;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+  .row{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+  .brand{font-weight:800;display:flex;gap:10px;align-items:center}
+  .brand a{color:#fff;text-decoration:none;display:inline-grid;grid-auto-flow:column;gap:8px;align-items:center}
+  .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;color:var(--blue);display:grid;place-items:center;font-weight:900}
+  .sp{flex:1}
+  .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--blue-2)}
+  .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
+  .btn.danger{background:#7a1f28;border-color:#a42e3b}
+  .wrap{max-width:1200px;margin:20px auto;padding:0 16px;display:grid;gap:12px}
+  .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
+  .muted{color:var(--muted)}
+  input,select,textarea{background:#fff;border:1px solid var(--stroke);border-radius:10px;padding:10px}
+  input:focus,select:focus,textarea:focus{outline:3px solid var(--ring);outline-offset:2px}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .bar .sp{flex:1}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left}
+  th{font-size:14px;color:#334155}
+  .pill{display:inline-grid;align-items:center;padding:3px 8px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .right{display:flex;gap:8px;align-items:center}
+  /* Editor drawer */
+  .drawer{position:fixed;inset:0;display:none;background:rgba(2,6,23,.44);z-index:40}
+  .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:680px;max-width:100%;background:#fff;border-left:1px solid var(--stroke);padding:16px;overflow:auto}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+  .section{margin:10px 0 6px;font-weight:800}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:720px){ .twocol{grid-template-columns:1fr} }
+  /* little badges */
+  .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+  .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+  .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
 </style>
 </head>
 <body>
+
+<!-- Header -->
 <div class="top"><div class="row">
-  <div class="brand">Candidates — Admin</div><div class="sp"></div>
-  <a class="btn" href="/admin/">⟵ Admin</a>
-  <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+  <div class="brand">
+    <a href="../"><span class="logo">H</span> HMJ Global</a>
+    <span class="pill">Admin</span>
+    <span class="pill">Candidates</span>
+  </div>
+  <div class="sp"></div>
+  <div class="chips" id="chips"></div>
+  <a class="btn ghost" href="./">⟵ Admin</a>
+  <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
 </div></div>
 
+<!-- Gate (shown until admin OK) -->
 <div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <span class="muted why"></span>
-  <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button></div>
+  <div class="card">
+    <strong>Admin only.</strong>
+    <p class="muted why">Checking your session…</p>
+    <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+  </div>
 </div>
 
+<!-- Toolbar -->
 <div class="wrap" id="app" style="display:none">
-  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <input id="q" placeholder="Search email / name / status" style="min-width:260px"/>
-    <select id="status"><option value="">Any</option><option>active</option><option>blocked</option></select>
+  <div class="card bar">
+    <input id="q" placeholder="Search name, email, ref…" style="min-width:220px">
+    <select id="status">
+      <option value="">Any status</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+      <option value="archived">Archived</option>
+    </select>
+    <select id="hasDocs">
+      <option value="">Docs: any</option>
+      <option value="rtw">Has Right-to-Work</option>
+      <option value="contract">Has Contract</option>
+      <option value="bank">Has Bank details</option>
+    </select>
     <button class="btn" id="btnRefresh">Refresh</button>
-    <button class="btn" id="btnNew">New candidate</button>
+    <div class="sp"></div>
+    <input type="file" id="csv" accept=".csv" style="display:none">
+    <button class="btn ghost" id="btnExport">Export CSV</button>
+    <button class="btn ghost" id="btnImport">Import CSV</button>
+    <button class="btn" id="btnNew">+ Add candidate</button>
+    <button class="btn danger" id="btnDelete" title="Delete selected" disabled>Delete</button>
   </div>
 
-  <div id="listWrap" class="card">Loading…</div>
+  <!-- List -->
+  <div class="card" id="listWrap">Loading…</div>
 
-  <div id="editor" class="card" style="display:none">
-    <h3 id="edTitle" style="margin:0 0 8px">Candidate</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <!-- Audit mini -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="section" style="margin:0">Recent activity</div>
+      <button class="btn ghost" id="btnAudit">Refresh</button>
+    </div>
+    <div id="audit" class="muted">—</div>
+  </div>
+</div>
+
+<!-- Editor drawer -->
+<div class="drawer" id="drawer" aria-modal="true" role="dialog">
+  <div class="panel">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+      <h2 id="edTitle" style="margin:0">Candidate</h2>
+      <div class="right">
+        <button class="btn ghost" id="btnSave">Save</button>
+        <button class="btn" id="btnOpenTimesheets" title="Open timesheets for this candidate">Timesheets</button>
+        <button class="btn danger" id="btnDelOne">Delete</button>
+        <button class="btn ghost" id="btnClose">Close</button>
+      </div>
+    </div>
+
+    <div class="section">Profile</div>
+    <div class="grid">
+      <label>Reference #<input id="ref" placeholder="Auto or manual"></label>
+      <label>Status
+        <select id="c_status">
+          <option>active</option><option>inactive</option><option>archived</option>
+        </select>
+      </label>
       <label>First name <input id="first_name"></label>
-      <label>Last name <input id="last_name"></label>
+      <label>Last name  <input id="last_name"></label>
       <label>Email <input id="email" type="email"></label>
       <label>Phone <input id="phone"></label>
-      <label>Pay type <select id="pay_type"><option>PAYE</option><option>Umbrella</option><option>Ltd</option></select></label>
-      <label>Status <select id="c_status"><option>active</option><option>blocked</option></select></label>
-      <label style="grid-column:1/-1">Notes <textarea id="notes" rows="4"></textarea></label>
+      <label>Address <input id="address" placeholder="Line 1, City, Postcode"></label>
+      <label>NI / Tax ID <input id="tax_id"></label>
+      <label>Emergency Contact <input id="emergency_name" placeholder="Name"></label>
+      <label>Emergency Phone <input id="emergency_phone" placeholder="Phone"></label>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-      <button class="btn" id="btnSave">Save</button>
-      <button class="btn" id="btnClose">Close</button>
+
+    <div class="section">Payroll</div>
+    <div class="grid">
+      <label>Bank Name <input id="bank_name"></label>
+      <label>Account # <input id="bank_account"></label>
+      <label>Sort / Routing <input id="bank_sort"></label>
+      <label>Pay Type
+        <select id="pay_type"><option>PAYE</option><option>Umbrella</option><option>Ltd</option></select>
+      </label>
     </div>
+
+    <div class="section">Assignment</div>
+    <div class="grid">
+      <label>Role / Position <input id="role"></label>
+      <label>Client / Company <input id="client_name" placeholder="Client name"></label>
+      <label>Start date <input id="start_date" type="date"></label>
+      <label>End date   <input id="end_date" type="date"></label>
+      <label>Terms accepted
+        <select id="terms_ok"><option value="false">No</option><option value="true">Yes</option></select>
+      </label>
+      <label>Timesheet status
+        <select id="ts_status"><option value="">—</option><option>draft</option><option>submitted</option><option>approved</option><option>rejected</option></select>
+      </label>
+    </div>
+
+    <div class="section">Documents</div>
+    <div class="twocol">
+      <div class="card" style="background:#fff">
+        <div style="font-weight:700;margin-bottom:6px">Right to Work</div>
+        <div id="rtwInfo" class="muted">No file.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="file" id="rtwFile" accept="image/*,.pdf">
+          <button class="btn ghost" id="btnUploadRTW">Upload</button>
+        </div>
+      </div>
+      <div class="card" style="background:#fff">
+        <div style="font-weight:700;margin-bottom:6px">Contract</div>
+        <div id="ctrInfo" class="muted">No file.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="file" id="ctrFile" accept="application/pdf,image/*">
+          <button class="btn ghost" id="btnUploadCTR">Upload</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">Notes</div>
+    <textarea id="notes" rows="4" placeholder="Private admin notes…"></textarea>
   </div>
 </div>
 
+<!-- Toast host (from common.js this exists, but keep a fallback) -->
+<div id="toast" aria-live="polite" aria-atomic="true"></div>
+
 <script>
-const API_BASE='/admin/functions';
-const sel=s=>document.querySelector(s);
-const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
-async function api(name, method='POST', body={}){
-  const u=window.netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
-  const t=await u.jwt();
-  const r=await fetch(`${API_BASE}/${name}`,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)});
-  if(!r.ok) throw new Error(await r.text()); return r.json();
-}
-let cur=null;
-
-async function loadList(){
-  sel('#listWrap').textContent='Loading…';
-  try{
-    const rows = await api('admin-candidates-list','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
-    sel('#listWrap').innerHTML = `
-      <table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead>
-      <tbody>${rows.map(r=>`<tr>
-        <td>${r.id}</td><td>${(r.first_name||'')+' '+(r.last_name||'')}</td><td>${r.email||'—'}</td>
-        <td>${r.phone||'—'}</td><td>${r.status||'active'}</td>
-        <td><button class="btn" data-open="${r.id}">Open</button></td>
-      </tr>`).join('')}</tbody></table>`;
-    sel('#listWrap').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEd(b.dataset.open));
-  }catch(e){ sel('#listWrap').textContent='Error: '+e.message; }
-}
-
-async function openEd(id){
-  cur = await api('admin-candidate-open','POST',{ id:Number(id) });
-  sel('#edTitle').textContent='Candidate #'+cur.id;
-  ['first_name','last_name','email','phone','notes'].forEach(k=>{ sel('#'+k).value = cur[k]||''; });
-  sel('#pay_type').value = cur.pay_type||'PAYE';
-  sel('#c_status').value = cur.status||'active';
-  sel('#editor').style.display='block';
-}
-
-async function save(){
-  const payload={
-    id: cur?.id || null,
-    first_name: sel('#first_name').value.trim(),
-    last_name: sel('#last_name').value.trim(),
-    email: sel('#email').value.trim(),
-    phone: sel('#phone').value.trim()||null,
-    pay_type: sel('#pay_type').value,
-    status: sel('#c_status').value,
-    notes: sel('#notes').value||null
+Admin.bootAdmin(async ({ api, sel, toast }) => {
+  // chips
+  const chip = (t,tone='info') => {
+    const span = document.createElement('span'); span.className='pill'; span.textContent=t;
+    if(tone==='ok'){span.classList.add('b-ok');} if(tone==='warn'){span.classList.add('b-warn');} if(tone==='bad'){span.classList.add('b-bad');}
+    sel('#chips').appendChild(span); return span;
   };
-  await api('admin-candidate-save','POST',payload);
-  alert('Saved.'); loadList();
-}
+  chip('ready','ok');
 
-function boot(id){
-  id.on('login',()=>location.reload()); id.on('logout',()=>location.reload());
-  const u=id.currentUser?.(); if(!u){ sel('#gate').style.display='block'; sel('.why').textContent='Not signed in.'; return; }
-  if(!isAdmin(u)){ sel('#gate').style.display='block'; sel('.why').textContent='Missing admin role.'; return; }
-  document.getElementById('app').style.display='block';
-  sel('#btnRefresh').onclick=loadList; sel('#btnNew').onclick=()=>{cur=null; sel('#editor').style.display='block'; sel('#edTitle').textContent='New candidate';};
-  sel('#btnSave').onclick=save; sel('#btnClose').onclick=()=>{sel('#editor').style.display='none';};
-  loadList();
-}
-document.addEventListener('DOMContentLoaded',()=>{
-  const id=window.netlifyIdentity;
-  if(id && typeof id.on==='function'){ id.on('init',()=>boot(id)); boot(id); }
-  else { let n=0; const t=setInterval(()=>{ const w=window.netlifyIdentity; if(w&&typeof w.on==='function'){clearInterval(t); w.on('init',()=>boot(w)); boot(w);} else if(++n>40){clearInterval(t); sel('#gate').style.display='block'; sel('.why').textContent='Identity widget did not load.';} },50);}
+  // State
+  let page = 1, pageSize = 20, total = 0;
+  let rows = [];
+  let selected = new Set();
+  let current = null;
+
+  // UI helpers
+  function openDrawer(){ sel('#drawer').style.display='block'; sel('#drawer').focus(); }
+  function closeDrawer(){ sel('#drawer').style.display='none'; current=null; }
+  function enableDelete(){ sel('#btnDelete').disabled = selected.size===0; }
+
+  // Build list table
+  function renderList(){
+    if(!rows.length){ sel('#listWrap').textContent='No candidates found.'; return; }
+    const head = `<thead><tr>
+      <th style="width:28px"><input id="ckAll" type="checkbox"></th>
+      <th>Ref</th><th>Name</th><th>Email</th><th>Client</th><th>Status</th><th>Timesheet</th><th>Docs</th><th></th>
+    </tr></thead>`;
+    const body = rows.map(r=>`<tr>
+      <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
+      <td>${r.ref||'—'}</td>
+      <td>${(r.first_name||'')+' '+(r.last_name||'')}</td>
+      <td>${r.email||'—'}</td>
+      <td>${r.client_name||'—'}</td>
+      <td><span class="pill ${r.status==='active'?'b-ok':r.status==='archived'?'b-bad':'b-warn'}">${r.status||'active'}</span></td>
+      <td>${r.timesheet_status||'—'}</td>
+      <td>${(r.has_rtw?'RTW ':'')+(r.has_contract?'CTR':'') || '—'}</td>
+      <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
+    </tr>`).join('');
+    const pager = `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
+      <div class="muted">Showing ${(page-1)*pageSize+1}-${Math.min(page*pageSize,total)} of ${total}</div>
+      <div class="right">
+        <button class="btn ghost" id="pPrev" ${page<=1?'disabled':''}>Prev</button>
+        <button class="btn ghost" id="pNext" ${(page*pageSize)>=total?'disabled':''}>Next</button>
+      </div>
+    </div>`;
+    sel('#listWrap').innerHTML = `<table>${head}<tbody>${body}</tbody></table>${pager}`;
+
+    sel('#ckAll').onclick = (e)=>{
+      if(e.target.checked){ rows.forEach(r=>selected.add(r.id)); } else { rows.forEach(r=>selected.delete(r.id)); }
+      enableDelete(); renderList();
+    };
+    sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=>{
+      c.onchange=()=>{ const id = Number(c.getAttribute('data-id')); if(c.checked) selected.add(id); else selected.delete(id); enableDelete(); };
+    });
+    sel('#listWrap').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openCandidate(Number(b.getAttribute('data-open'))));
+    sel('#pPrev').onclick=()=>{page--; load();};
+    sel('#pNext').onclick=()=>{page++; load();};
+  }
+
+  // Load list from function
+  async function load(){
+    sel('#listWrap').textContent='Loading…';
+    try{
+      const res = await api('admin-candidates-list','POST',{
+        q: sel('#q').value||'',
+        status: sel('#status').value||'',
+        has: sel('#hasDocs').value||'',
+        page, pageSize
+      });
+      rows = res.rows || res || [];
+      total = res.total ?? rows.length;
+      renderList();
+    }catch(e){
+      sel('#listWrap').textContent='Error: '+e.message;
+    }
+  }
+
+  // Audit mini
+  async function loadAudit(){
+    try{
+      const list = await api('admin-audit-list','POST',{ entity:'candidate', limit: 10 });
+      sel('#audit').innerHTML = list.length ? `<ul style="margin:6px 0;padding-left:18px">
+        ${list.map(a=>`<li><span class="muted">${a.created_at?.replace('T',' ').slice(0,16)||''}</span> — ${a.action} #${a.entity_id||''} by ${a.actor_email||'—'}</li>`).join('')}
+      </ul>` : '—';
+    }catch(e){ sel('#audit').textContent='Audit unavailable: '+e.message; }
+  }
+
+  // Open candidate
+  async function openCandidate(id){
+    try{
+      const r = await api('admin-candidate-open','POST',{ id });
+      current = r;
+      sel('#edTitle').textContent = `Candidate #${r.id}`;
+      // Fill fields
+      const set = (k,v='')=>{ const el = sel('#'+k); if(el) el.value = v ?? ''; };
+      set('ref', r.ref); set('c_status', r.status||'active');
+      set('first_name', r.first_name); set('last_name', r.last_name);
+      set('email', r.email); set('phone', r.phone); set('address', r.address);
+      set('tax_id', r.tax_id);
+      set('emergency_name', r.emergency_name); set('emergency_phone', r.emergency_phone);
+      set('bank_name', r.bank_name); set('bank_account', r.bank_account); set('bank_sort', r.bank_sort);
+      set('pay_type', r.pay_type||'PAYE');
+      set('role', r.role); set('client_name', r.client_name);
+      set('start_date', (r.start_date||'').slice(0,10)); set('end_date', (r.end_date||'').slice(0,10));
+      set('terms_ok', String(!!r.terms_ok)); set('ts_status', r.timesheet_status||'');
+      set('notes', r.notes||'');
+
+      sel('#rtwInfo').innerHTML = r.rtw_url ? `<a href="${r.rtw_url}" target="_blank">View RTW</a>` : 'No file.';
+      sel('#ctrInfo').innerHTML = r.contract_url ? `<a href="${r.contract_url}" target="_blank">View Contract</a>` : 'No file.';
+
+      openDrawer();
+    }catch(e){ toast('Open failed: '+e.message,'err',5000); }
+  }
+
+  // New candidate
+  function newCandidate(){
+    current = { id:null, status:'active', pay_type:'PAYE' };
+    sel('#edTitle').textContent = 'New candidate';
+    ['ref','first_name','last_name','email','phone','address','tax_id','emergency_name','emergency_phone',
+     'bank_name','bank_account','bank_sort','role','client_name','start_date','end_date','notes'].forEach(k=>{ const el=sel('#'+k); if(el) el.value=''; });
+    sel('#c_status').value='active'; sel('#pay_type').value='PAYE'; sel('#terms_ok').value='false'; sel('#ts_status').value='';
+    sel('#rtwInfo').textContent='No file.'; sel('#ctrInfo').textContent='No file.';
+    openDrawer();
+  }
+
+  // Save
+  async function save(){
+    const get = id => sel('#'+id)?.value || null;
+    const payload = {
+      id: current?.id || null,
+      ref: get('ref'),
+      status: get('c_status'),
+      first_name: get('first_name'),
+      last_name: get('last_name'),
+      email: get('email'),
+      phone: get('phone'),
+      address: get('address'),
+      tax_id: get('tax_id'),
+      emergency_name: get('emergency_name'),
+      emergency_phone: get('emergency_phone'),
+      bank_name: get('bank_name'),
+      bank_account: get('bank_account'),
+      bank_sort: get('bank_sort'),
+      pay_type: get('pay_type'),
+      role: get('role'),
+      client_name: get('client_name'),
+      start_date: get('start_date') || null,
+      end_date: get('end_date') || null,
+      terms_ok: sel('#terms_ok')?.value === 'true',
+      timesheet_status: get('ts_status'),
+      notes: get('notes')
+    };
+    try{
+      const saved = await api('admin-candidate-save','POST', payload);
+      toast('Saved','ok',2000); closeDrawer(); load();
+    }catch(e){ toast('Save failed: '+e.message,'err',5000); }
+  }
+
+  // Delete selected
+  async function delSelected(){
+    if(!selected.size){ return; }
+    if(!confirm(`Delete ${selected.size} candidate(s)?`)) return;
+    try{
+      await api('admin-candidate-delete','POST',{ ids: Array.from(selected) });
+      selected.clear(); enableDelete(); toast('Deleted','ok',2000); load();
+    }catch(e){ toast('Delete failed: '+e.message,'err',5000); }
+  }
+  async function delOne(){ if(!current?.id) return; selected = new Set([current.id]); await delSelected(); closeDrawer(); }
+
+  // Upload helper (presigned flow via function)
+  async function upload(kind){
+    const file = sel(kind==='rtw' ? '#rtwFile' : '#ctrFile').files[0];
+    if(!file){ toast('Choose a file first','warn',2500); return; }
+    try{
+      const presign = await api('admin-uploads-presign','POST',{ entity:'candidate', entity_id: current?.id, kind, filename:file.name, type:file.type });
+      await fetch(presign.url, { method:'PUT', headers: presign.headers||{}, body:file });
+      const saved = await api('admin-candidate-attach','POST',{ id: current?.id, kind, url: presign.public_url });
+      toast('Uploaded','ok',1800);
+      if(kind==='rtw'){ sel('#rtwInfo').innerHTML = `<a href="${presign.public_url}" target="_blank">View RTW</a>`; }
+      else { sel('#ctrInfo').innerHTML = `<a href="${presign.public_url}" target="_blank">View Contract</a>`; }
+      load(); // refresh list flags
+    }catch(e){ toast('Upload failed: '+e.message,'err',5000); }
+  }
+
+  // CSV export/import
+  async function exportCSV(){
+    try{
+      const blob = await api('admin-candidates-export','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
+      const url = URL.createObjectURL(new Blob([blob],{type:'text/csv'}));
+      const a = document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click(); URL.revokeObjectURL(url);
+    }catch(e){ toast('Export failed: '+e.message,'err',5000); }
+  }
+  function importCSV(){ sel('#csv').click(); }
+  sel('#csv').addEventListener('change', async ()=>{
+    const f = sel('#csv').files[0]; if(!f) return;
+    const text = await f.text();
+    try{
+      const res = await api('admin-candidates-import','POST',{ csv:text });
+      toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2500); load();
+    }catch(e){ toast('Import failed: '+e.message,'err',5000); }
+  });
+
+  // Timesheets for a candidate
+  function openTimesheets(){
+    if(!current?.email){ toast('No email on candidate','warn',2500); return; }
+    // You can implement a filterable timesheets page; for now pass a query param
+    location.href = `./timesheets.html?q=${encodeURIComponent(current.email)}`;
+  }
+
+  // Wire toolbar
+  sel('#btnRefresh').onclick=load;
+  sel('#btnNew').onclick=newCandidate;
+  sel('#btnSave').onclick=save;
+  sel('#btnDelete').onclick=delSelected;
+  sel('#btnDelOne').onclick=delOne;
+  sel('#btnOpenTimesheets').onclick=openTimesheets;
+  sel('#btnExport').onclick=exportCSV;
+  sel('#btnImport').onclick=importCSV;
+  sel('#btnAudit').onclick=loadAudit;
+  sel('#btnUploadRTW').onclick=()=>upload('rtw');
+  sel('#btnUploadCTR').onclick=()=>upload('contract');
+  sel('#btnClose').onclick=closeDrawer;
+
+  ['#q','#status','#hasDocs'].forEach(s=> sel(s).addEventListener('change', ()=>{ page=1; load(); }));
+  enableDelete();
+
+  // initial loads
+  await load();
+  await loadAudit();
+
+  // simple keyboard shortcuts
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='n' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); newCandidate(); }
+    if(e.key==='s' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(sel('#drawer').style.display==='block') save(); }
+    if(e.key==='Escape' && sel('#drawer').style.display==='block'){ e.preventDefault(); closeDrawer(); }
+  });
 });
 </script>
 </body>

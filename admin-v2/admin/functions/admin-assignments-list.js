@@ -1,28 +1,24 @@
-// netlify/functions/admin-assignments-list.js
-const { supabase } = require('./_supabase.js');
-const { getContext } = require('./_auth.js');
+import { ok, err, parseBody, requireAdmin, supa, qPaginate } from './_lib.js';
+export async function handler(event, context){
+  try{
+    requireAdmin(context, event);
+    const { q='', status='', consultant='', client='', page=1, pageSize=20 } = parseBody(event);
+    const db = supa();
+    let query = db.from('assignments').select('*', { count:'exact' }).order('id', { ascending:false });
 
-exports.handler = async (event, context) => {
-  try {
-    await getContext(context, { requireAdmin: true });
-    const { contractor_id, client_id, active } = JSON.parse(event.body || '{}');
+    if(q) query = query.or(`as_ref.ilike.%${q}%,job_title.ilike.%${q}%,candidate_name.ilike.%${q}%,client_name.ilike.%${q}%`);
+    if(status) query = query.eq('status', status);
+    if(consultant) query = query.ilike('consultant_name', consultant);
+    if(client) query = query.ilike('client_name', client);
 
-    let query = supabase
-      .from('assignment_summary')
-      .select('id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, site_name, rate_std, rate_ot, charge_std, charge_ot, start_date, end_date, active')
-      .order('start_date', { ascending: false });
+    const { from, to } = qPaginate({ page, pageSize });
+    const { data, error, count } = await query.range(from,to);
+    if(error) throw error;
 
-    if (contractor_id) query = query.eq('contractor_id', contractor_id);
-    if (client_id)     query = query.eq('client_id', client_id);
-    if (active === true)  query = query.eq('active', true);
-    if (active === false) query = query.eq('active', false);
+    // Simple analytics example
+    const { count:live } = await db.from('assignments').select('*', { count:'exact', head:true }).eq('status','live');
+    const { count:pending } = await db.from('assignments').select('*', { count:'exact', head:true }).eq('status','pending');
 
-    const { data, error } = await query;
-    if (error) throw error;
-
-    return { statusCode: 200, body: JSON.stringify(data || []) };
-  } catch (e) {
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
-  }
-};
+    return ok({ rows:data, total:count, analytics:{ live, pending }});
+  }catch(e){ return err(e.message||e, e.status||500); }
+}

@@ -1,55 +1,21 @@
-// /.netlify/functions/admin-timesheets-list
-const { withSupabase, jsonOk, jsonError } = require('./_supabase.js');
+import { ok, err, parseBody, requireAdmin, supa, qPaginate } from './_lib.js';
+export async function handler(event, context){
+  try{
+    requireAdmin(context, event);
+    const { q='', status='', wk_from='', wk_to='', candidate='', client='', page=1, pageSize=20 } = parseBody(event);
+    const db = supa();
+    let query = db.from('timesheets').select('*', { count:'exact' }).order('week_start', { ascending:false });
 
-module.exports.handler = withSupabase(async ({ event, supabase, trace, debug }) => {
-  // Parse filters from POST body or GET query
-  let body = {};
-  if (event.httpMethod === 'POST' && event.body) {
-    try { body = JSON.parse(event.body || '{}'); } catch {}
-  } else if (event.httpMethod === 'GET' && event.queryStringParameters) {
-    body = event.queryStringParameters;
-  }
+    if(q) query = query.or(`ts_ref.ilike.%${q}%,candidate_name.ilike.%${q}%,client_name.ilike.%${q}%`);
+    if(status) query = query.eq('status', status);
+    if(wk_from) query = query.gte('week_start', wk_from);
+    if(wk_to) query = query.lte('week_start', wk_to);
+    if(candidate) query = query.ilike('candidate_name', candidate);
+    if(client) query = query.ilike('client_name', client);
 
-  const q         = (body.q || '').trim();
-  const status    = (body.status || '').trim();
-  const client_id = body.client_id ? Number(body.client_id) : null;
-  const week      = body.week || null;
-
-  // v_timesheets_admin columns per your screenshots:
-  // id, week_ending, status, assignment_id, contractor_id, contractor_name, contractor_email,
-  // project_id, project_name, client_id, client_name, total_hours
-  let query = supabase
-    .from('v_timesheets_admin')
-    .select('*')
-    .order('week_ending', { ascending: false })
-    .order('id', { ascending: false });
-
-  if (status)   query = query.eq('status', status);
-  if (client_id)query = query.eq('client_id', client_id);
-  if (week)     query = query.eq('week_ending', week);
-
-  if (q) {
-    // basic ilike across common columns
-    query = query.or(
-      [
-        `contractor_email.ilike.%${q}%`,
-        `client_name.ilike.%${q}%`,
-        `project_name.ilike.%${q}%`
-      ].join(',')
-    );
-  }
-
-  const { data, error } = await query;
-  if (error) return jsonError(500, 'query_failed', error.message, { trace });
-
-  // Normalize fields expected by the UI (std/ot/rates may be absent in view)
-  const items = (data || []).map(r => ({
-    ...r,
-    std: Number(r.std ?? 0),
-    ot:  Number(r.ot ?? 0),
-    rate_std: Number(r.rate_std ?? 0),
-    rate_ot:  Number(r.rate_ot ?? 0),
-  }));
-
-  return jsonOk({ ok: true, items, trace });
-});
+    const { from, to } = qPaginate({ page, pageSize });
+    const { data, error, count } = await query.range(from, to);
+    if(error) throw error;
+    return ok({ rows:data, total:count });
+  }catch(e){ return err(e.message||e, e.status||500); }
+}
