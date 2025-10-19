@@ -1,0 +1,8 @@
+{
+  "name": "hmj-global",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
