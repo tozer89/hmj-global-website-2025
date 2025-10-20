@@ -1,11 +1,11 @@
 /* /admin-v2/admin/common.js — admin bootstrap + diagnostics (v13)
-   Exposes (globals):
+   Exposes:
      - window.adminReady(): Promise<helpers>
      - window.Admin.bootAdmin(mainFn)
      - window.getIdentity(requiredRole?)
      - window.apiPing()
-     - window.api (console-friendly)
-   Page helpers:
+     - window.api  (console-friendly)
+   Helpers provided to pages:
      { api, sel, toast, setTrace, getTrace, identity, isMobile, gate }
 */
 (function () {
@@ -44,21 +44,30 @@
     setTimeout(() => n.remove(), ms);
   }
 
-  // -------------------------- Optional allowlist ------------------------------
-  // Add emails here if you want them treated as admin for UI bootstrapping
+  // -------------------------- Allow emails (optional) -------------------------
   const ADMIN_EMAIL_ALLOWLIST = [
     'joe@hmj-global.com',
-    // 'someone@example.com',
+    // add more emails if needed
   ];
 
-  // -------------------------- Identity helpers -------------------------------
+  // -------------------------- Identity helpers --------------------------------
   function getCookie(name) {
     const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
     return m ? decodeURIComponent(m[2]) : '';
   }
   const getNFJwtFromCookie = () => getCookie('nf_jwt') || '';
 
-  async function waitIdentityReady(maxMs = 8000) {
+  // Read an optional meta/global to pin identity to a single instance
+  function getPinnedIdentityURL() {
+    try {
+      if (window.ADMIN_IDENTITY_URL) return String(window.ADMIN_IDENTITY_URL);
+      const m = document.querySelector('meta[name="netlify-identity-url"]');
+      if (m?.content) return m.content;
+    } catch {}
+    return `${location.origin}/.netlify/identity`;
+  }
+
+  async function waitIdentityReady(maxMs = 6000) {
     let waited = 0;
     while (waited < maxMs) {
       if (window.netlifyIdentity && typeof window.netlifyIdentity.on === 'function') {
@@ -69,20 +78,10 @@
     return null;
   }
 
-  // Ensure widget is initialised on this page
   async function initIdentity() {
-    const id = await waitIdentityReady(8000);
+    const id = await waitIdentityReady(4000);
     if (!id) return null;
-    try {
-      // Prefer explicit override, else current origin (works for previews + prod)
-      const explicit = window.ADMIN_IDENTITY_URL
-        || document.querySelector('meta[name="netlify-identity-url"]')?.getAttribute('content');
-      const APIUrl = explicit || `${location.origin}/.netlify/identity`;
-      id.init({ APIUrl });
-      Debug.log('Identity init @', APIUrl);
-    } catch (e) {
-      Debug.warn('Identity init skipped', e?.message || e);
-    }
+    try { id.init({ APIUrl: getPinnedIdentityURL() }); } catch {}
     return id;
   }
 
@@ -101,30 +100,22 @@
   }
 
   async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' */) {
-    await initIdentity(); // make sure widget is alive
+    await initIdentity();
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
     try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
 
-    // roles from Identity (normalised to lowercase)
-    let roles = (user?.app_metadata?.roles || user?.roles || [])
-      .map(r => String(r).toLowerCase());
-
-    // email (lowercased)
+    let roles = (user?.app_metadata?.roles || user?.roles || []).map(r => String(r).toLowerCase());
     const email = (user?.email || '').toLowerCase();
 
-    // Allow-list: treat allow-listed emails as admin
     const allowlistedAdmin = !!email && ADMIN_EMAIL_ALLOWLIST.includes(email);
     if (allowlistedAdmin && !roles.includes('admin')) roles.push('admin');
 
     const role = roles.includes('admin') ? 'admin'
-      : roles.includes('recruiter') ? 'recruiter'
-      : roles.includes('client') ? 'client'
-      : (roles[0] || '');
+              : roles.includes('recruiter') ? 'recruiter'
+              : roles.includes('client') ? 'client'
+              : (roles[0] || '');
 
-    // OK if:
-    //  - we have a JWT and (no role required OR user has it)
-    //  - OR (allow-listed) and the requiredRole is exactly 'admin'
     const ok = ( !!token && (!requiredRole || roles.includes(requiredRole)) )
             || ( allowlistedAdmin && requiredRole === 'admin' );
 
@@ -139,15 +130,22 @@
   const setTrace = (v) => { TRACE = v || `ts-${Math.random().toString(36).slice(2)}`; return TRACE; };
   const getTrace = () => TRACE || setTrace();
 
+  async function getBearer() {
+    // prefer Identity token; otherwise cookie
+    try {
+      const who = await identity();
+      if (who?.token) return String(who.token);
+    } catch {}
+    const cookie = getNFJwtFromCookie();
+    return cookie || '';
+  }
+
   async function api(path, method = 'POST', body) {
     const url = path.startsWith('/')
       ? `/.netlify/functions${path}`.replace('//.','/.')
       : `/.netlify/functions/${path}`.replace('//.','/.');
 
-    // Always try to attach a fresh token (header beats cookie)
-    let token = '';
-    try { const who = await identity(); token = who.token || ''; } catch {}
-
+    const token = await getBearer();
     const headers = { 'Content-Type': 'application/json', 'x-trace': getTrace() };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -155,7 +153,7 @@
     const res = await fetch(url, {
       method,
       headers,
-      credentials: 'include', // keeps cookie paths working if present
+      credentials: 'include',
       body: body ? JSON.stringify(body) : undefined
     });
 
@@ -171,7 +169,7 @@
     return json;
   }
 
-  // Expose for console diagnostics
+  // Also expose api for console diagnostics
   window.api = api;
 
   window.apiPing = async function () {
@@ -192,7 +190,7 @@
 
     const who = await identity(adminOnly ? 'admin' : undefined);
 
-    if (who.ok && (!adminOnly || who.role === 'admin')) {
+    if (who?.ok && (!adminOnly || who.role === 'admin')) {
       if (g) g.style.display = 'none';
       if (app) app.style.display = '';
       return who;
@@ -213,7 +211,7 @@
   window.adminReady = function () {
     if (_readyOnce) return _readyOnce;
     _readyOnce = (async () => {
-      await initIdentity();        // ensure widget is prepped on this page
+      await initIdentity();
       setTrace();
       Debug.log('Bootstrap ready; trace=', getTrace());
       return { api, sel:$, toast, setTrace, getTrace, identity, isMobile, gate };
@@ -237,19 +235,19 @@
       if (id && typeof id.on === 'function') {
         id.on('login',  () => location.reload());
         id.on('logout', () => (location.href = '/admin-v2/admin/'));
-        id.on('error',  (e) => Debug.err('identity error', e));
       }
 
-      // Optional diag chips
       try {
         const diag = $('#diagChips');
         if (diag) {
           diag.innerHTML = '';
           addChip(diag, 'init: ok', true);
           addChip(diag, 'identity: ok', true);
-          addChip(diag, 'token: ok', true);
-          addChip(diag, 'role: ' + (who.role || 'admin'), true);
+          addChip(diag, `role: ${who.role||'admin'}`, true);
           addChip(diag, 'trace: ' + getTrace().slice(0,10), true);
+          // live auth signal
+          const hasBearer = !!(await getBearer());
+          addChip(diag, hasBearer ? 'auth: bearer' : 'auth: missing', !!hasBearer);
         }
       } catch {}
 
