@@ -1,537 +1,776 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Assignments — Admin | HMJ Global</title>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Assignments — Admin</title>
 
-  <!-- Netlify Identity -->
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch(e){}
-    });
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="/favicon.ico" rel="icon" />
 
+  <!-- Fonts / Icons (kept from your stack) -->
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,600,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Base styles -->
   <style>
     :root{
-      --ink:#101828; --bg:#ffffff; --muted:#667085;
-      --blue:#1f3b7a; --blue-2:#29478f;
-      --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
-      --danger:#dc2626; --ok:#16a34a; --warn:#f59e0b;
+      --bg:#0f172a;           /* slate-900 */
+      --bg-soft:#111827;      /* gray-900 */
+      --panel:#0b1220;        /* deep panel */
+      --muted:#94a3b8;        /* slate-400 */
+      --text:#e5e7eb;         /* gray-200 */
+      --brand:#06b6d4;        /* cyan-500 */
+      --brand-600:#0891b2;    /* cyan-600 */
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --chip:#1f2937;         /* gray-800 */
+      --border:#1f2937;
     }
-    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue","Noto Sans",Arial,"Apple Color Emoji","Segoe UI Emoji";}
 
-    /* Header */
-    .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
-    .row{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
-    .brand{font-weight:800;display:flex;gap:10px;align-items:center}
-    .brand a{color:#fff;text-decoration:none;display:inline-grid;grid-auto-flow:column;gap:8px;align-items:center}
-    .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;color:var(--blue);display:grid;place-items:center;font-weight:900}
-    .sp{flex:1}
-    .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
-    .btn:hover{background:var(--blue-2)}
-    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
-    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
-    .btn.danger{background:#7a1f28;border-color:#a42e3b}
+    a{color:var(--brand);text-decoration:none}
+    a:hover{color:var(--brand-600)}
 
-    /* Page */
-    .wrap{max-width:1200px;margin:20px auto;padding:0 16px;display:grid;gap:12px}
-    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
-    .muted{color:var(--muted)}
-    .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .bar .sp{flex:1}
-    input,select,textarea{background:#fff;border:1px solid var(--stroke);border-radius:10px;padding:10px}
-    input:focus,select:focus,textarea:focus{outline:3px solid var(--ring);outline-offset:2px}
+    header{
+      position:sticky;top:0;z-index:40;
+      backdrop-filter:saturate(150%) blur(6px);
+      background:linear-gradient(180deg, rgba(11,18,32,.9), rgba(11,18,32,.65));
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1 1 auto}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      background:#0b2530;color:var(--text);border:1px solid #134055;
+      padding:10px 14px;border-radius:12px;cursor:pointer;
+      transition:all .15s ease; font-weight:600;
+    }
+    .btn:hover{transform:translateY(-1px);border-color:#17607e}
+    .btn.brand{background:var(--brand); border-color:var(--brand-600); color:#001016}
+    .btn.bad{background:rgba(239,68,68,.15); border-color:#7a1e1e; color:#fecaca}
+    .btn.ghost{background:transparent;border-color:var(--border)}
+    .btn.sm{padding:8px 10px;border-radius:10px;font-size:13px}
+
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .search{
+      position:relative; flex:1 1 320px; min-width:220px;
+    }
+    .search input{
+      width:100%; background:#0a1425; color:var(--text);
+      border:1px solid var(--border); padding:12px 40px 12px 38px; border-radius:12px;
+      outline:none;
+    }
+    .search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+    .chip{
+      display:inline-flex;gap:8px;align-items:center;
+      background:var(--chip);border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:12px;color:var(--muted)
+    }
+    .pill{display:inline-block;background:#0a2332;border:1px solid #14445b;color:#bfeafe;padding:2px 8px;border-radius:999px;font-size:12px}
+    .b-warn{background:rgba(245,158,11,.12);border-color:#6b4a0a;color:#fde68a}
+    .b-bad{background:rgba(239,68,68,.13);border-color:#7a1e1e;color:#fecaca}
+    .b-ok{background:rgba(34,197,94,.12);border-color:#14532d;color:#bbf7d0}
+
+    /* Layout: table + drawer */
+    .content{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start}
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:16px; overflow:hidden;
+    }
+    .panel header{
+      position:static;background:#0a1629;border-bottom:1px solid var(--border)
+    }
+    .panel h2{font-size:16px;margin:0}
+    .pad{padding:16px}
+
     table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid var(--stroke);text-align:left}
-    th{font-size:14px;color:#334155}
-    .pill{display:inline-grid;align-items:center;padding:3px 8px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
-    .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-    .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
-    .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    thead th{
+      text-align:left; font-weight:700; font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--muted); border-bottom:1px solid var(--border); padding:12px 10px;
+    }
+    tbody td{border-bottom:1px solid var(--border); padding:14px 10px; vertical-align:top}
+    tbody tr{transition:background .15s ease}
+    tbody tr:hover{background:#0f1e33}
+    .row-actions{display:flex; gap:10px}
 
-    /* Drawer */
-    .drawer{position:fixed;inset:0;display:none;background:rgba(2,6,23,.44);z-index:40}
-    .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:820px;max-width:100%;background:#fff;border-left:1px solid var(--stroke);padding:16px;overflow:auto}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:980px){ .grid{grid-template-columns:1fr} }
-    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:720px){ .twocol{grid-template-columns:1fr} }
-    .section{margin:12px 0 6px;font-weight:800}
+    /* Drawer (right side) */
+    .drawer{
+      position:sticky; top:88px; max-height:calc(100vh - 104px); overflow:auto;
+    }
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+    .field label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .field input,.field select,.field textarea{
+      background:#0b1426;color:var(--text);border:1px solid var(--border);
+      border-radius:12px;padding:10px 12px;outline:none
+    }
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+    /* Pagination */
+    .pages{display:flex;justify-content:space-between;align-items:center;padding:12px;border-top:1px solid var(--border)}
+    .pages .btn{min-width:88px;justify-content:center}
+
+    /* Responsive (mobile-first) */
+    @media (max-width: 980px){
+      .content{grid-template-columns:1fr}
+      .drawer{position:relative;top:auto;max-height:none}
+      .hide-md{display:none}
+      .search{flex:1 1 100%}
+      .btn.wide{width:100%;justify-content:center}
+    }
+
+    /* Toast */
+    #toast{position:fixed;z-index:50;left:50%;top:14px;transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap}
   </style>
+
+  <!-- Load shared Admin helper correctly (RELATIVE path!) -->
+  <!-- NOTE: we must not use "/admin/common.js". This page lives in /admin/, so "./common.js" is correct. -->
+  <script defer src="./common.js?v=10"></script>
 </head>
 <body>
 
-  <!-- Header -->
-  <div class="top"><div class="row">
-    <div class="brand">
-      <a href="../"><span class="logo">H</span> HMJ Global</a>
-      <span class="pill">Admin</span>
-      <span class="pill">Assignments</span>
+  <header>
+    <div class="wrap row">
+      <div class="row" style="gap:10px">
+        <a class="btn ghost" href="/admin/index.html"><i class="fa fa-chevron-left"></i> Back</a>
+        <h1 style="margin:0;font-size:18px">Assignments</h1>
+        <span class="chip hide-md"><i class="fa fa-database"></i> Connected</span>
+      </div>
+      <div id="chips" class="row"></div>
     </div>
-    <div class="sp"></div>
-    <div class="chips" id="chips"></div>
-    <a class="btn ghost" href="./">⟵ Admin</a>
-    <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
-  </div></div>
+  </header>
 
-  <!-- Gate -->
-  <div class="wrap" id="gate" style="display:none">
-    <div class="card">
-      <strong>Admin only.</strong>
-      <p class="muted why">Checking your session…</p>
-      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
-    </div>
-  </div>
+  <main class="wrap" style="padding-top:18px;padding-bottom:40px">
+    <div class="toolbar">
+      <div class="search">
+        <i class="fa fa-search"></i>
+        <input id="q" placeholder="Search (title, ref, client, candidate)…" autocomplete="off" />
+      </div>
 
-  <!-- App -->
-  <div class="wrap" id="app" style="display:none">
-    <div class="card bar">
-      <input id="q" placeholder="Search title, client, candidate…" style="min-width:260px">
-      <select id="status">
-        <option value="">Status: any</option>
-        <option>live</option><option>pending</option><option>completed</option><option>cancelled</option><option>archived</option>
+      <select id="flt-status" class="btn ghost">
+        <option value="">All statuses</option>
+        <option value="in_progress">In progress</option>
+        <option value="complete">Complete</option>
+        <option value="archived">Archived</option>
       </select>
-      <select id="consultant"><option value="">Consultant: any</option></select>
-      <select id="client"><option value="">Client: any</option></select>
 
-      <button class="btn" id="btnRefresh">Refresh</button>
-      <div class="sp"></div>
-
-      <input type="file" id="csv" accept=".csv" style="display:none">
-      <button class="btn ghost" id="btnExport">Export CSV</button>
-      <button class="btn ghost" id="btnImport">Import CSV</button>
-
-      <button class="btn" id="btnNew">+ New assignment</button>
-      <button class="btn danger" id="btnDelete" disabled>Delete</button>
+      <button id="btn-refresh" class="btn"><i class="fa fa-rotate"></i> Refresh</button>
+      <div class="grow"></div>
+      <button id="btn-new" class="btn brand wide"><i class="fa fa-plus"></i> New assignment</button>
+      <button id="btn-delete" class="btn bad hide-md" disabled><i class="fa fa-trash"></i> Delete</button>
     </div>
 
-    <div class="card" id="listWrap">Loading…</div>
+    <div class="content" style="margin-top:14px">
+      <!-- LIST -->
+      <section class="panel">
+        <header class="pad row" style="justify-content:space-between">
+          <h2>All assignments</h2>
+          <span class="pill b-ok" id="count-pill">0 total</span>
+        </header>
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="section" style="margin:0">Recent activity</div>
-        <button class="btn ghost" id="btnAudit">Refresh</button>
-      </div>
-      <div id="audit" class="muted">—</div>
+        <div class="pad" style="padding-top:4px">
+          <div class="hide-md" style="overflow:auto">
+            <table id="tbl">
+              <thead>
+                <tr>
+                  <th style="width:36px"><input type="checkbox" id="sel-all" /></th>
+                  <th>Title</th>
+                  <th class="hide-md">Client</th>
+                  <th>Candidate</th>
+                  <th class="hide-md">Dates</th>
+                  <th>Status</th>
+                  <th style="width:120px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rows">
+                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile cards -->
+          <div id="cards" class="hide-lg" style="display:none;gap:10px"></div>
+        </div>
+
+        <div class="pages">
+          <div class="row" style="gap:8px">
+            <button id="prev" class="btn sm"><i class="fa fa-chevron-left"></i> Prev</button>
+            <button id="next" class="btn sm">Next <i class="fa fa-chevron-right"></i></button>
+          </div>
+          <div class="row" style="gap:10px;color:var(--muted)">
+            <span id="pginfo">Page 1</span>
+            <select id="pagesize" class="btn ghost sm">
+              <option>10</option>
+              <option selected>20</option>
+              <option>50</option>
+              <option>100</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- DRAWER -->
+      <aside class="panel drawer" id="drawer" style="display:none">
+        <header class="pad row" style="justify-content:space-between">
+          <h2 id="drawer-title">New assignment</h2>
+          <div class="row" style="gap:8px">
+            <button id="btn-close" class="btn ghost sm"><i class="fa fa-xmark"></i> Close</button>
+          </div>
+        </header>
+
+        <div class="pad">
+          <form id="frm" autocomplete="off">
+            <input type="hidden" id="id" />
+
+            <div class="field">
+              <label for="title">Job Title *</label>
+              <input id="title" required placeholder="e.g. Electrician — Data Hall 3" />
+            </div>
+
+            <div class="three">
+              <div class="field">
+                <label for="start_date">Start Date</label>
+                <input id="start_date" type="date" />
+              </div>
+              <div class="field">
+                <label for="end_date">End Date</label>
+                <input id="end_date" type="date" />
+              </div>
+              <div class="field">
+                <label for="po">PO Number</label>
+                <input id="po" maxlength="50" placeholder="Optional" />
+              </div>
+            </div>
+
+            <div class="three">
+              <div class="field">
+                <label for="client_id">Client</label>
+                <select id="client_id"></select>
+              </div>
+              <div class="field">
+                <label for="client_site_id">Client Site</label>
+                <select id="client_site_id"><option value="">—</option></select>
+              </div>
+              <div class="field">
+                <label for="consultant_id">Consultant</label>
+                <select id="consultant_id"></select>
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="candidate_id">Candidate</label>
+                <select id="candidate_id"></select>
+              </div>
+              <div class="field">
+                <label for="status">Status</label>
+                <select id="status">
+                  <option value="in_progress">In progress</option>
+                  <option value="complete">Complete</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="estimated_hours">Expected days / hours</label>
+                <input id="estimated_hours" placeholder="e.g. Mon–Fri, 08:00–17:00" />
+              </div>
+              <div class="field">
+                <label for="currency">Currency</label>
+                <select id="currency"><option value="">Choose a client first</option></select>
+              </div>
+            </div>
+
+            <div class="three">
+              <div class="field">
+                <label>Timesheets Type</label>
+                <select id="timesheets_type">
+                  <option value="eTimesheet">e-Timesheet</option>
+                  <option value="PaperTimesheet">Paper Timesheet</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Agency Only Submit</label>
+                <select id="agency_only_submit">
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Shift</label>
+                <select id="shift">
+                  <option value="Day">Day</option>
+                  <option value="Night">Night</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="qualifications">Qualifications required</label>
+                <input id="qualifications" placeholder="None notified" />
+              </div>
+              <div class="field">
+                <label for="duties">Duties</label>
+                <input id="duties" placeholder="—" />
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="hs">H&S risks & steps</label>
+                <input id="hs" placeholder="None disclosed" />
+              </div>
+              <div class="field">
+                <label for="special">Special conditions</label>
+                <input id="special" placeholder="None specified" />
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="equip_temp">Equipment (temp)</label>
+                <input id="equip_temp" placeholder="None specified" />
+              </div>
+              <div class="field">
+                <label for="equip_client">Equipment (client)</label>
+                <input id="equip_client" placeholder="None specified" />
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="awr">AWR Weeks</label>
+                <input id="awr" placeholder="None" />
+              </div>
+              <div class="field">
+                <label for="comments">Comments</label>
+                <input id="comments" placeholder="—" />
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label>Notice (Agency/Temp)</label>
+                <div class="two">
+                  <select id="notice_type_agency">
+                    <option value="None">None</option><option>Days</option><option>Weeks</option><option>Months</option>
+                  </select>
+                  <input id="notice_value_agency" type="number" min="1" placeholder="Value" />
+                </div>
+              </div>
+              <div class="field">
+                <label>Notice (Client)</label>
+                <div class="two">
+                  <select id="notice_type_client">
+                    <option value="None">None</option><option>Days</option><option>Weeks</option><option>Months</option>
+                  </select>
+                  <input id="notice_value_client" type="number" min="1" placeholder="Value" />
+                </div>
+              </div>
+            </div>
+
+            <div class="two">
+              <div class="field">
+                <label for="ext_source">External Source</label>
+                <input id="ext_source" placeholder="Optional" />
+              </div>
+              <div class="field">
+                <label for="ext_id">External ID</label>
+                <input id="ext_id" placeholder="Optional" />
+              </div>
+            </div>
+
+            <div class="row" style="gap:8px;margin-top:14px">
+              <button id="btn-save" class="btn brand"><i class="fa fa-floppy-disk"></i> Save</button>
+              <button id="btn-delete2" class="btn bad"><i class="fa fa-trash"></i> Delete</button>
+            </div>
+          </form>
+        </div>
+      </aside>
     </div>
-  </div>
+  </main>
 
-  <!-- Drawer -->
-  <div class="drawer" id="drawer" aria-modal="true" role="dialog">
-    <div class="panel">
-      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
-        <h2 id="edTitle" style="margin:0">Assignment</h2>
-        <div class="right" style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn ghost" id="btnSave">Save</button>
-          <button class="btn ghost" id="btnExtend">Extend</button>
-          <button class="btn" id="btnRenew">Renew</button>
-          <button class="btn danger" id="btnDelOne">Delete</button>
-          <button class="btn ghost" id="btnClose">Close</button>
-        </div>
-      </div>
-
-      <div class="section">Core</div>
-      <div class="grid">
-        <label>Assignment ID <input id="as_ref" placeholder="Auto or manual"></label>
-        <label>Status
-          <select id="as_status"><option>live</option><option>pending</option><option>completed</option><option>cancelled</option><option>archived</option></select>
-        </label>
-        <label>Job Title <input id="job_title"></label>
-        <label>Consultant <input id="consultant_name" list="consultants"></label>
-        <label>Candidate <input id="candidate_name" list="candidates" placeholder="link to candidate"></label>
-        <label>Client <input id="client_name" list="clients" placeholder="link to client"></label>
-        <label>Client Site <input id="client_site"></label>
-        <label>PO / Reference <input id="po_ref"></label>
-        <label>Start Date <input id="start_date" type="date"></label>
-        <label>End Date   <input id="end_date" type="date"></label>
-        <label>Duration (auto) <input id="duration_days" disabled></label>
-        <label>AWR Weeks (auto) <input id="awr_weeks" disabled></label>
-      </div>
-
-      <div class="section">Pay & Timesheets</div>
-      <div class="grid">
-        <label>Pay Frequency <select id="pay_freq"><option>Weekly</option><option>Monthly</option></select></label>
-        <label>Currency <select id="currency"><option>GBP</option><option>EUR</option><option>USD</option></select></label>
-        <label>Expected Days/Week <input id="days_per_week" type="number" min="0" max="7" step="0.5"></label>
-        <label>Expected Hours/Day <input id="hours_per_day" type="number" min="0" max="24" step="0.25"></label>
-        <label>Timesheet Type <select id="ts_type"><option>e-Timesheet</option><option>Paper</option></select></label>
-        <label>Shift Type <select id="shift_type"><option>Day</option><option>Night</option><option>Custom</option></select></label>
-        <label>Rate (Pay) <input id="rate_pay" type="number" step="0.01" placeholder="per hour"></label>
-        <label>Rate (Charge) <input id="rate_charge" type="number" step="0.01" placeholder="per hour"></label>
-        <label>Auto Timesheets <select id="auto_ts"><option value="false">No</option><option value="true">Yes</option></select></label>
-        <label>Approval Workflow <input id="approver" placeholder="Manager email / role"></label>
-      </div>
-
-      <div class="section">Estimates</div>
-      <div class="twocol">
-        <div class="card" style="background:#fff">
-          <div style="font-weight:700;margin-bottom:6px">Gross Profit Estimator</div>
-          <div id="gpOut" class="muted">Enter rates + hours to see a preview.</div>
-        </div>
-        <div class="card" style="background:#fff">
-          <div style="font-weight:700;margin-bottom:6px">Timesheet History</div>
-          <div><button class="btn ghost" id="btnTsHistory">Open timesheets for this assignment</button></div>
-        </div>
-      </div>
-
-      <div class="section">Compliance & Docs</div>
-      <div class="grid">
-        <label>H&S Risk Disclosure <input id="hs_risk"></label>
-        <label>Right-to-Work Check <select id="rtw_ok"><option value="false">No</option><option value="true">Yes</option></select></label>
-        <label>Qualifications Required <input id="quals"></label>
-        <label>Special Conditions <input id="special"></label>
-        <label>Duties <input id="duties"></label>
-        <label>Equipment Provided <input id="equipment"></label>
-        <label>Terms Dispatch <select id="terms_sent"><option value="false">Not sent</option><option value="true">Sent</option></select></label>
-        <label>Digital Signature <select id="sig_ok"><option value="false">Pending</option><option value="true">Signed</option></select></label>
-      </div>
-
-      <div class="section">Contract Document</div>
-      <div class="twocol">
-        <div class="card" style="background:#fff">
-          <div id="ctrInfo" class="muted">No file.</div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input type="file" id="ctrFile" accept="application/pdf,image/*">
-            <button class="btn ghost" id="btnUploadCTR">Upload</button>
-          </div>
-        </div>
-
-        <div class="card" style="background:#fff">
-          <div style="font-weight:700;margin-bottom:6px">Lifecycle & Termination</div>
-          <div class="grid">
-            <label>Notice (Agency/Temp) <input id="notice_temp" placeholder="e.g., 1 week"></label>
-            <label>Notice (Client) <input id="notice_client" placeholder="e.g., 1 week"></label>
-            <label>Termination Reason <input id="term_reason" placeholder="—"></label>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button class="btn ghost" id="btnChecklist">Completion Checklist</button>
-            <button class="btn ghost" id="btnArchive">Archive</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">Notes</div>
-      <textarea id="notes" rows="4" placeholder="Internal notes…"></textarea>
-    </div>
-  </div>
-
+  <!-- Toast host -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Shared admin -->
-  <script defer src="/admin/common.js?v=10"></script>
-
   <script>
-  Admin.bootAdmin(async ({ api, sel, toast }) => {
-    const chip = (t,tone='info') => {
-      const s=document.createElement('span'); s.className='pill'; s.textContent=t;
-      if(tone==='ok') s.classList.add('b-ok'); if(tone==='warn') s.classList.add('b-warn'); if(tone==='bad') s.classList.add('b-bad');
-      sel('#chips').appendChild(s); return s;
-    };
-    chip('ready','ok');
+  // ------------------------------ Helpers to display little status chips
+  const chip = (t, tone='info') => {
+    const s = document.createElement('span');
+    s.className = 'pill';
+    s.textContent = t;
+    if (tone==='ok') s.classList.add('b-ok');
+    if (tone==='warn') s.classList.add('b-warn');
+    if (tone==='bad') s.classList.add('b-bad');
+    return s;
+  };
 
-    let page=1, pageSize=20, total=0, rows=[], selected=new Set(), current=null;
-    const enableDelete=()=> sel('#btnDelete').disabled = selected.size===0;
-    const openDrawer=()=> sel('#drawer').style.display='block';
-    const closeDrawer=()=> { sel('#drawer').style.display='none'; current=null; };
-
-    function daysBetween(a,b){ if(!a||!b) return ''; const d=(new Date(b)-new Date(a))/(1000*60*60*24)+1; return d>0? Math.floor(d):''; }
-    function weeksBetween(a,b){ const d=daysBetween(a,b); return d? Math.ceil(d/7):''; }
-    function recomputeDates(){
-      const s = sel('#start_date').value, e = sel('#end_date').value;
-      sel('#duration_days').value = daysBetween(s,e);
-      sel('#awr_weeks').value = weeksBetween(s,e);
-      gpEstimate();
+  // ------------------------------ Safe boot:
+  // Start only when common.js has attached window.Admin
+  (function startWhenReady(){
+    if (!window.Admin || typeof Admin.bootAdmin !== 'function') {
+      return setTimeout(startWhenReady, 25);
     }
-    function gpEstimate(){
-      const rp = parseFloat(sel('#rate_pay').value||0);
-      const rc = parseFloat(sel('#rate_charge').value||0);
-      const h = parseFloat(sel('#hours_per_day').value||0);
-      const d = parseFloat(sel('#days_per_week').value||0);
-      if(!rc||!h||!d){ sel('#gpOut').textContent='Enter rates + hours to see a preview.'; return; }
-      const margin = Math.max(0, rc-rp);
-      sel('#gpOut').textContent = `Est. GP ~ £${(margin*h*d).toFixed(2)} / week`;
-    }
-
-    function renderList(){
-      if(!rows.length){ sel('#listWrap').textContent='No assignments found.'; return; }
-      const head = `<thead><tr>
-        <th style="width:28px"><input id="ckAll" type="checkbox"></th>
-        <th>ID</th><th>Job Title</th><th>Candidate</th><th>Client</th>
-        <th>Status</th><th>Dates</th><th>Rate</th><th></th>
-      </tr></thead>`;
-      const body = rows.map(r=>{
-        const dates = (r.start_date||'').slice(0,10) + (r.end_date? ` → ${(r.end_date||'').slice(0,10)}` : '');
-        const rate = (r.rate_pay?`£${Number(r.rate_pay).toFixed(2)}`:'—') + ' / ' + (r.rate_charge?`£${Number(r.rate_charge).toFixed(2)}`:'—');
-        const pillClass = r.status==='live'?'b-ok':(r.status==='completed'?'':'b-warn');
-        return `<tr>
-          <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
-          <td>${r.as_ref || r.id}</td>
-          <td>${r.job_title||'—'}</td>
-          <td>${r.candidate_name||'—'}</td>
-          <td>${r.client_name||'—'}</td>
-          <td><span class="pill ${pillClass}">${r.status||'pending'}</span></td>
-          <td>${dates}</td>
-          <td>${rate}</td>
-          <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
-        </tr>`;
-      }).join('');
-      const pager = `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
-        <div class="muted">Showing ${(page-1)*pageSize+1}-${Math.min(page*pageSize,total)} of ${total}</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn ghost" id="pPrev" ${page<=1?'disabled':''}>Prev</button>
-          <button class="btn ghost" id="pNext" ${(page*pageSize)>=total?'disabled':''}>Next</button>
-        </div></div>`;
-      sel('#listWrap').innerHTML = `<table>${head}<tbody>${body}</tbody></table>${pager}`;
-
-      sel('#ckAll').onclick = (e)=>{ if(e.target.checked){ rows.forEach(r=>selected.add(r.id)); } else { rows.forEach(r=>selected.delete(r.id)); } enableDelete(); renderList(); };
-      sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=> c.onchange=()=>{ const id=Number(c.getAttribute('data-id')); if(c.checked) selected.add(id); else selected.delete(id); enableDelete(); });
-      sel('#listWrap').querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openAssignment(Number(b.getAttribute('data-open'))));
-      sel('#pPrev').onclick=()=>{ page--; load(); };
-      sel('#pNext').onclick=()=>{ page++; load(); };
-    }
-
-    async function load(){
-      sel('#listWrap').textContent='Loading…';
-      try{
-        const res = await api('admin-assignments-list','POST',{
-          q: sel('#q').value||'', status: sel('#status').value||'',
-          consultant: sel('#consultant').value||'', client: sel('#client').value||'',
-          page, pageSize
-        });
-        rows = res.rows || res || [];
-        total = res.total ?? rows.length;
-        renderList();
-      }catch(e){ sel('#listWrap').textContent='Error: '+e.message; }
-    }
-
-    async function loadAudit(){
-      try{
-        const list = await api('admin-audit-list','POST',{ entity:'assignment', limit: 10 });
-        sel('#audit').innerHTML = list.length ? `<ul style="margin:6px 0;padding-left:18px">
-          ${list.map(a=>`<li><span class="muted">${a.created_at?.replace('T',' ').slice(0,16)||''}</span> — ${a.action} #${a.entity_id||''} by ${a.actor_email||'—'}</li>`).join('')}
-        </ul>` : '—';
-      }catch(e){ sel('#audit').textContent='Audit unavailable: '+e.message; }
-    }
-
-    async function openAssignment(id){
-      try{
-        const r = await api('admin-assignment-open','POST',{ id });
-        current = r;
-        sel('#edTitle').textContent = `Assignment #${r.id}`;
-        const set = (k,v)=>{ const el=sel('#'+k); if(el) el.value = (v ?? ''); };
-        set('as_ref', r.as_ref);
-        set('as_status', r.status||'pending');
-        set('job_title', r.job_title);
-        set('consultant_name', r.consultant_name);
-        set('candidate_name', r.candidate_name);
-        set('client_name', r.client_name);
-        set('client_site', r.client_site);
-        set('po_ref', r.po_ref);
-        set('start_date', (r.start_date||'').slice(0,10));
-        set('end_date', (r.end_date||'').slice(0,10));
-        set('pay_freq', r.pay_freq||'Weekly');
-        set('currency', r.currency||'GBP');
-        set('days_per_week', r.days_per_week||'');
-        set('hours_per_day', r.hours_per_day||'');
-        set('ts_type', r.ts_type||'e-Timesheet');
-        set('shift_type', r.shift_type||'Day');
-        set('rate_pay', r.rate_pay||'');
-        set('rate_charge', r.rate_charge||'');
-        set('auto_ts', String(!!r.auto_ts));
-        set('approver', r.approver||'');
-        set('hs_risk', r.hs_risk||'');
-        set('rtw_ok', String(!!r.rtw_ok));
-        set('quals', r.quals||'');
-        set('special', r.special||'');
-        set('duties', r.duties||'');
-        set('equipment', r.equipment||'');
-        set('terms_sent', String(!!r.terms_sent));
-        set('sig_ok', String(!!r.sig_ok));
-        set('notice_temp', r.notice_temp||'');
-        set('notice_client', r.notice_client||'');
-        set('term_reason', r.term_reason||'');
-        set('notes', r.notes||'');
-        sel('#ctrInfo').innerHTML = r.contract_url ? `<a href="${r.contract_url}" target="_blank">View Contract</a>` : 'No file.';
-        recomputeDates();
-        openDrawer();
-      }catch(e){ toast('Open failed: '+e.message,'err',5000); }
-    }
-
-    function newAssignment(){
-      current = { id:null, status:'pending', pay_freq:'Weekly', currency:'GBP', ts_type:'e-Timesheet', shift_type:'Day' };
-      ['as_ref','job_title','consultant_name','candidate_name','client_name','client_site','po_ref',
-       'start_date','end_date','days_per_week','hours_per_day','rate_pay','rate_charge','approver',
-       'hs_risk','quals','special','duties','equipment','notice_temp','notice_client','term_reason','notes']
-       .forEach(k=>{ const el=sel('#'+k); if(el) el.value=''; });
-      sel('#as_status').value='pending'; sel('#pay_freq').value='Weekly'; sel('#currency').value='GBP';
-      sel('#ts_type').value='e-Timesheet'; sel('#shift_type').value='Day';
-      sel('#auto_ts').value='false'; sel('#rtw_ok').value='false'; sel('#terms_sent').value='false'; sel('#sig_ok').value='false';
-      sel('#ctrInfo').textContent='No file.';
-      openDrawer();
-    }
-
-    async function save(){
-      const get = id => sel('#'+id)?.value || null;
-      const payload = {
-        id: current?.id || null,
-        as_ref: get('as_ref'),
-        status: get('as_status'),
-        job_title: get('job_title'),
-        consultant_name: get('consultant_name'),
-        candidate_name: get('candidate_name'),
-        client_name: get('client_name'),
-        client_site: get('client_site'),
-        po_ref: get('po_ref'),
-        start_date: get('start_date') || null,
-        end_date: get('end_date') || null,
-        pay_freq: get('pay_freq'),
-        currency: get('currency'),
-        days_per_week: parseFloat(get('days_per_week')) || null,
-        hours_per_day: parseFloat(get('hours_per_day')) || null,
-        ts_type: get('ts_type'),
-        shift_type: get('shift_type'),
-        rate_pay: parseFloat(get('rate_pay')) || null,
-        rate_charge: parseFloat(get('rate_charge')) || null,
-        auto_ts: sel('#auto_ts')?.value === 'true',
-        approver: get('approver'),
-        hs_risk: get('hs_risk'),
-        rtw_ok: sel('#rtw_ok')?.value === 'true',
-        quals: get('quals'),
-        special: get('special'),
-        duties: get('duties'),
-        equipment: get('equipment'),
-        terms_sent: sel('#terms_sent')?.value === 'true',
-        sig_ok: sel('#sig_ok')?.value === 'true',
-        notice_temp: get('notice_temp'),
-        notice_client: get('notice_client'),
-        term_reason: get('term_reason'),
-        notes: get('notes')
-      };
-      try{
-        await api('admin-assignment-save','POST', payload);
-        toast('Saved','ok',2000); closeDrawer(); load();
-      }catch(e){ toast('Save failed: '+e.message,'err',5000); }
-    }
-
-    async function delSelected(){
-      if(!selected.size) return;
-      if(!confirm(`Delete ${selected.size} assignment(s)?`)) return;
-      try{ await api('admin-assignment-delete','POST',{ ids: Array.from(selected) });
-        selected.clear(); enableDelete(); toast('Deleted','ok',2000); load();
-      }catch(e){ toast('Delete failed: '+e.message,'err',5000); }
-    }
-    async function delOne(){ if(!current?.id) return; selected=new Set([current.id]); await delSelected(); closeDrawer(); }
-
-    async function uploadCTR(){
-      const f = sel('#ctrFile').files[0]; if(!f){ toast('Choose a file first','warn',2500); return; }
-      try{
-        const sign = await api('admin-uploads-presign','POST',{ entity:'assignment', entity_id: current?.id, kind:'contract', filename:f.name, type:f.type });
-        await fetch(sign.url,{ method:'PUT', headers:sign.headers||{}, body:f });
-        await api('admin-assignment-attach','POST',{ id: current?.id, kind:'contract', url: sign.public_url });
-        sel('#ctrInfo').innerHTML = `<a href="${sign.public_url}" target="_blank">View Contract</a>`;
-        toast('Uploaded','ok',1800);
-      }catch(e){ toast('Upload failed: '+e.message,'err',5000); }
-    }
-
-    function extendBy(days=30){
-      const cur = sel('#end_date').value;
-      if(!cur){ toast('Set a current end date first','warn',2500); return; }
-      const d = new Date(cur); d.setDate(d.getDate()+days);
-      sel('#end_date').value = d.toISOString().slice(0,10); recomputeDates(); toast(`Extended by ${days} days`,'ok',1800);
-    }
-    function renew(){
-      if(!current){ toast('Open an assignment first','warn',2500); return; }
-      const copy = ['job_title','consultant_name','candidate_name','client_name','client_site','po_ref','pay_freq','currency','days_per_week','hours_per_day','ts_type','shift_type','rate_pay','rate_charge','approver'];
-      newAssignment();
-      copy.forEach(k=>{ const el=sel('#'+k); if(el) el.value = current[k] ?? el.value; });
-      sel('#as_status').value='pending';
-      toast('Renewal draft started','ok',2000);
-    }
-
-    async function exportCSV(){
-      try{
-        const blob = await api('admin-assignments-export','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
-        const url = URL.createObjectURL(new Blob([blob],{type:'text/csv'}));
-        const a=document.createElement('a'); a.href=url; a.download='assignments.csv'; a.click(); URL.revokeObjectURL(url);
-      }catch(e){ toast('Export failed: '+e.message,'err',5000); }
-    }
-    function importCSV(){ sel('#csv').click(); }
-    sel('#csv').addEventListener('change', async ()=>{
-      const f = sel('#csv').files[0]; if(!f) return;
-      const text = await f.text();
-      try{
-        const res = await api('admin-assignments-import','POST',{ csv:text });
-        toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2500); load();
-      }catch(e){ toast('Import failed: '+e.message,'err',5000); }
-    });
-
-    // quick links & events
-    sel('#btnTsHistory').onclick = ()=>{ if(!current){ toast('Open an assignment first','warn',2500); return; } location.href = `./timesheets.html?assignment=${encodeURIComponent(current.as_ref || current.id)}`; };
-    sel('#btnRefresh').onclick=load;
-    sel('#btnNew').onclick=newAssignment;
-    sel('#btnSave').onclick=save;
-    sel('#btnDelete').onclick=delSelected;
-    sel('#btnDelOne').onclick=delOne;
-    sel('#btnClose').onclick=()=>{ closeDrawer(); };
-    sel('#btnUploadCTR').onclick=uploadCTR;
-    sel('#btnExtend').onclick=()=>extendBy(30);
-    sel('#btnRenew').onclick=renew;
-    sel('#btnAudit').onclick=loadAudit;
-    sel('#btnExport').onclick=exportCSV;
-    sel('#btnImport').onclick=importCSV;
-
-    ['#start_date','#end_date','#hours_per_day','#days_per_week','#rate_pay','#rate_charge'].forEach(s=> sel(s).addEventListener('input', ()=>{ recomputeDates(); gpEstimate(); }));
-    ['#q','#status','#consultant','#client'].forEach(s=> sel(s).addEventListener('change', ()=>{ page=1; load(); }));
-
-    document.addEventListener('keydown',(e)=>{
-      if(e.key==='n' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); newAssignment(); }
-      if(e.key==='s' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(sel('#drawer').style.display==='block') save(); }
-      if(e.key==='e' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); exportCSV(); }
-      if(e.key==='Escape' && sel('#drawer').style.display==='block'){ e.preventDefault(); closeDrawer(); }
-    });
-
-    await load();
-    await loadAudit();
-
-    // meta lists for dropdowns
-    try{
-      const meta = await api('admin-assignments-meta','POST',{});
-      const addOpts = (id, arr) => { const el=sel(id); if(!el || !Array.isArray(arr)) return;
-        arr.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; el.appendChild(o); });
-      };
-      addOpts('#consultant', meta.consultants);
-      addOpts('#client', meta.clients);
-      if(meta.consultants){ const dl=document.createElement('datalist'); dl.id='consultants'; dl.innerHTML=meta.consultants.map(v=>`<option value="${v}">`).join(''); document.body.appendChild(dl); }
-      if(meta.clients){ const dl=document.createElement('datalist'); dl.id='clients'; dl.innerHTML=meta.clients.map(v=>`<option value="${v}">`).join(''); document.body.appendChild(dl); }
-      if(meta.candidates){ const dl=document.createElement('datalist'); dl.id='candidates'; dl.innerHTML=meta.candidates.map(v=>`<option value="${v}">`).join(''); document.body.appendChild(dl); }
-    }catch(_) {}
-  });
-  </script>
-
-<!-- 2) Put these two just before </body>, in this exact order -->
-<script src="./common.js?v=8"></script>
-
-<script>
-  // Defensive: show a helpful message if common.js didn’t load
-  if (!window.Admin || !window.Admin.bootAdmin) {
-    console.error('common.js not loaded or cached stale — bump ?v= and hard refresh');
-    const warn = document.createElement('pre');
-    warn.style.cssText = 'padding:12px;border:1px solid #f59e0b;background:#fff7ed;color:#7c2d12;border-radius:8px;max-width:680px;margin:16px';
-    warn.textContent = 'Admin bootstrap missing (common.js). Try a hard refresh (⌘⇧R) or bump ?v= on the script tag.';
-    document.body.appendChild(warn);
-  } else {
     Admin.bootAdmin(async ({ api, sel, toast }) => {
-      // ... your page code goes here ...
-      // If you already have a big inline block, just keep it here unchanged.
-      console.log('[candidates] boot ok');
-      // Example: prove the gate opened
-      const app = document.getElementById('app'); if (app) app.style.display = '';
+      // ===== Page code starts here =====
+
+      // --------- DOM shortcuts
+      const $ = (q, el=document) => el.querySelector(q);
+      const $$ = (q, el=document) => [...el.querySelectorAll(q)];
+      const on = (el, ev, fn) => el.addEventListener(ev, fn);
+
+      // --------- Endpoints (change if your function names differ)
+      const ENDPOINTS = {
+        DROPDOWNS: '/.netlify/functions/admin-assignments-dropdowns',
+        LIST: '/.netlify/functions/admin-assignments-list',
+        GET: '/.netlify/functions/admin-assignments-get',
+        SAVE: '/.netlify/functions/admin-assignments-save',
+        DELETE: '/.netlify/functions/admin-assignments-delete',
+      };
+
+      // --------- State
+      let page = 1;
+      let pageSize = 20;
+      let total = 0;
+      let rows = [];
+      let selected = new Set();
+      let current = null;
+      let mobile = () => matchMedia('(max-width:980px)').matches;
+
+      // --------- Elements
+      const $chips = $('#chips');
+      const $q = $('#q');
+      const $status = $('#flt-status');
+      const $rows = $('#rows');
+      const $cards = $('#cards');
+      const $selAll = $('#sel-all');
+      const $count = $('#count-pill');
+      const $pginfo = $('#pginfo');
+      const $pagesize = $('#pagesize');
+
+      const drawer = $('#drawer');
+      const $id = $('#id');
+      const $title = $('#title');
+      const $start = $('#start_date');
+      const $end = $('#end_date');
+      const $po = $('#po');
+      const $client = $('#client_id');
+      const $site = $('#client_site_id');
+      const $consultant = $('#consultant_id');
+      const $candidate = $('#candidate_id');
+      const $status2 = $('#status');
+      const $estimated = $('#estimated_hours');
+      const $currency = $('#currency');
+      const $tType = $('#timesheets_type');
+      const $agencyOnly = $('#agency_only_submit');
+      const $shift = $('#shift');
+      const $qual = $('#qualifications');
+      const $duties = $('#duties');
+      const $hs = $('#hs');
+      const $special = $('#special');
+      const $equipT = $('#equip_temp');
+      const $equipC = $('#equip_client');
+      const $awr = $('#awr');
+      const $comments = $('#comments');
+      const $nTypeA = $('#notice_type_agency');
+      const $nValA = $('#notice_value_agency');
+      const $nTypeC = $('#notice_type_client');
+      const $nValC = $('#notice_value_client');
+      const $extSrc = $('#ext_source');
+      const $extId = $('#ext_id');
+
+      // --------- Utility
+      const fmtDateRange = (a,b)=>{
+        const f = s=> s? new Date(s).toLocaleDateString(): '—';
+        return `${f(a)} → ${f(b)}`
+      }
+      const enableDelete = () => {
+        $('#btn-delete').disabled = selected.size===0;
+        $('#btn-delete2').disabled = !current;
+      };
+      const openDrawer = () => { drawer.style.display='block'; if(mobile()) window.scrollTo({top:0,behavior:'smooth'}) }
+      const closeDrawer = () => { drawer.style.display='none'; current=null; };
+      on($('#btn-close'),'click', closeDrawer);
+
+      // --------- Fetch wrappers (prefer Admin.api if present)
+      const GET = async (url) => (await api.get?.(url)) ?? (await fetch(url).then(r=>r.json()));
+      const POST = async (url, body) => (await api.post?.(url, body)) ?? (await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()));
+      const DEL = async (url) => (await api.del?.(url)) ?? (await fetch(url,{method:'DELETE'}).then(r=>r.json()));
+
+      // --------- Load dropdowns (clients, sites, consultants, candidates, currency map)
+      let currencyByClient = {};
+      async function loadDropdowns(){
+        const d = await GET(ENDPOINTS.DROPDOWNS);
+        // Expecting: { clients:[], clientSites:[], consultants:[], candidates:[], currenciesByClient:{client_id:[{id,code}]}}
+        fill($client,d.clients,'id','name');
+        fill($consultant,d.consultants,'id','email');
+        fill($candidate,d.candidates,'id','name');
+        currencyByClient = d.currenciesByClient || {};
+        // sites will be filtered by selected client
+        $site.innerHTML = '<option value="">—</option>';
+      }
+      function fill(sel, items, val='id', label='name'){
+        sel.innerHTML = '<option value="">Please select…</option>';
+        (items||[]).forEach(x=>{
+          const o=document.createElement('option');
+          o.value=x[val]; o.textContent=x[label]; sel.appendChild(o);
+        });
+      }
+
+      // Client change → sites + currencies
+      on($client,'change', ()=>{
+        const id = $client.value;
+        // Sites
+        GET(`${ENDPOINTS.DROPDOWNS}?clientId=${encodeURIComponent(id)}`)
+          .then(d => fill($site,d.clientSites || [],'id','name'));
+
+        // Currency list by client (if provided)
+        const cur = currencyByClient[id] || [];
+        $currency.innerHTML = cur.length
+          ? cur.map(c=>`<option value="${c.id}">${c.code||c.name||c.id}</option>`).join('')
+          : `<option value="">Choose a client first</option>`;
+      });
+
+      // --------- Renderers
+      function renderList(){
+        const hasRows = rows.length>0;
+        $rows.innerHTML = '';
+        if(!hasRows){
+          $rows.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">No assignments found</td></tr>';
+        }else{
+          rows.forEach(r=>{
+            const tr=document.createElement('tr');
+            tr.innerHTML = `
+              <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}/></td>
+              <td>
+                <div style="font-weight:700">${r.title||'—'}</div>
+                <div style="color:var(--muted);font-size:12px">Ref: ${r.ref||'—'}</div>
+              </td>
+              <td class="hide-md">${r.client_name||'—'}</td>
+              <td>${r.candidate_name||'—'}</td>
+              <td class="hide-md">${fmtDateRange(r.start_date,r.end_date)}</td>
+              <td><span class="pill ${r.status==='complete'?'b-ok': r.status==='archived'?'b-bad':'b-warn'}">${(r.status||'').replace('_',' ')||'—'}</span></td>
+              <td class="row-actions">
+                <button class="btn sm ghost" data-act="open" data-id="${r.id}"><i class="fa fa-pen"></i> Edit</button>
+              </td>`;
+            $rows.appendChild(tr);
+          });
+        }
+
+        // Mobile cards
+        if(mobile()){
+          $('#cards').style.display = 'grid';
+          $cards.style.gridTemplateColumns='1fr';
+          $cards.innerHTML = rows.map(r=>`
+            <div class="panel" style="border-radius:14px;overflow:hidden">
+              <div class="pad" style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+                <div>
+                  <div style="font-weight:700">${r.title||'—'}</div>
+                  <div style="color:var(--muted);font-size:12px">${r.client_name||'—'} • ${r.candidate_name||'—'}</div>
+                  <div style="color:var(--muted);font-size:12px">${fmtDateRange(r.start_date,r.end_date)}</div>
+                </div>
+                <span class="pill ${r.status==='complete'?'b-ok': r.status==='archived'?'b-bad':'b-warn'}">${(r.status||'').replace('_',' ')||'—'}</span>
+              </div>
+              <div class="pad" style="border-top:1px solid var(--border);display:flex;gap:10px">
+                <button class="btn sm ghost" data-act="open" data-id="${r.id}" style="flex:1 1 auto"><i class="fa fa-pen"></i> Edit</button>
+                <label class="btn sm ghost" style="flex:0 0 auto">
+                  <input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}/> Select
+                </label>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          $('#cards').style.display='none';
+        }
+
+        // Update counters / UI
+        $count.textContent = `${total} total`;
+        $pginfo.textContent = `Page ${page}`;
+        enableDelete();
+      }
+
+      // --------- Load list
+      async function loadList(){
+        const url = new URL(ENDPOINTS.LIST, location.origin);
+        url.searchParams.set('page', page);
+        url.searchParams.set('pageSize', pageSize);
+        const q = $q.value.trim();
+        const s = $status.value;
+        if(q) url.searchParams.set('q', q);
+        if(s) url.searchParams.set('status', s);
+
+        const res = await GET(url.toString());
+        rows = res.rows || res.items || [];
+        total = res.total || rows.length;
+        renderList();
+      }
+
+      // --------- Open one
+      async function openOne(id){
+        const res = await GET(`${ENDPOINTS.GET}?id=${encodeURIComponent(id)}`);
+        current = res || {};
+        // Fill fields
+        $id.value = current.id || '';
+        $title.value = current.title || '';
+        $start.value = (current.start_date||'').slice(0,10);
+        $end.value = (current.end_date||'').slice(0,10);
+        $po.value = current.po || '';
+        $client.value = current.client_id || '';
+        // trigger sites + currency fill
+        $client.dispatchEvent(new Event('change'));
+        setTimeout(()=>{ $site.value = current.client_site_id || '' }, 50);
+        $consultant.value = current.consultant_id || '';
+        $candidate.value = current.candidate_id || '';
+        $status2.value = current.status || 'in_progress';
+        $estimated.value = current.estimated_hours || '';
+        $tType.value = current.timesheets_type || 'eTimesheet';
+        $agencyOnly.value = String(!!current.agency_only_submit);
+        $shift.value = current.shift || 'Day';
+        $qual.value = current.qualifications || '';
+        $duties.value = current.duties || '';
+        $hs.value = current.health_safety || '';
+        $special.value = current.special || '';
+        $equipT.value = current.equipment_temp || '';
+        $equipC.value = current.equipment_client || '';
+        $awr.value = current.awr || '';
+        $comments.value = current.comments || '';
+        $nTypeA.value = current.notice_type_agency || 'None';
+        $nValA.value = current.notice_value_agency || '';
+        $nTypeC.value = current.notice_type_client || 'None';
+        $nValC.value = current.notice_value_client || '';
+        $extSrc.value = current.external_source || '';
+        $extId.value = current.external_id || '';
+        $('#drawer-title').textContent = `Edit: ${current.title || current.ref || current.id || ''}`;
+        openDrawer();
+      }
+
+      // --------- New
+      function newOne(){
+        current = null; $('#frm').reset(); $id.value='';
+        $('#drawer-title').textContent='New assignment';
+        openDrawer();
+      }
+
+      // --------- Save
+      async function saveOne(ev){
+        ev.preventDefault();
+        const body = {
+          id: $id.value || null,
+          title: $title.value.trim(),
+          start_date: $start.value || null,
+          end_date: $end.value || null,
+          po: $po.value || null,
+          client_id: $client.value || null,
+          client_site_id: $site.value || null,
+          consultant_id: $consultant.value || null,
+          candidate_id: $candidate.value || null,
+          status: $status2.value || 'in_progress',
+          estimated_hours: $estimated.value || null,
+          currency_id: $currency.value || null,
+          timesheets_type: $tType.value,
+          agency_only_submit: $agencyOnly.value === 'true',
+          shift: $shift.value,
+          qualifications: $qual.value || null,
+          duties: $duties.value || null,
+          health_safety: $hs.value || null,
+          special: $special.value || null,
+          equipment_temp: $equipT.value || null,
+          equipment_client: $equipC.value || null,
+          awr: $awr.value || null,
+          comments: $comments.value || null,
+          notice_type_agency: $nTypeA.value || 'None',
+          notice_value_agency: $nValA.value ? Number($nValA.value) : null,
+          notice_type_client: $nTypeC.value || 'None',
+          notice_value_client: $nValC.value ? Number($nValC.value) : null,
+          external_source: $extSrc.value || null,
+          external_id: $extId.value || null,
+        };
+        if(!body.title){ toast.warn('Please provide a Job Title'); return; }
+        const res = await POST(ENDPOINTS.SAVE, body);
+        if(res?.error){ toast.bad('Save failed: '+res.error); return; }
+        toast.ok('Saved');
+        closeDrawer();
+        await loadList();
+      }
+
+      // --------- Delete
+      async function deleteSelected(){
+        if(selected.size===0){ return; }
+        if(!confirm(`Delete ${selected.size} assignment(s)?`)) return;
+        const ids = [...selected];
+        const res = await DEL(`${ENDPOINTS.DELETE}?ids=${encodeURIComponent(ids.join(','))}`);
+        if(res?.error){ toast.bad('Delete failed: '+res.error); return; }
+        toast.ok('Deleted');
+        selected.clear(); enableDelete();
+        await loadList();
+      }
+      async function deleteCurrent(){
+        if(!current?.id) return;
+        if(!confirm('Delete this assignment?')) return;
+        const res = await DEL(`${ENDPOINTS.DELETE}?ids=${encodeURIComponent(String(current.id))}`);
+        if(res?.error){ toast.bad('Delete failed: '+res.error); return; }
+        toast.ok('Deleted');
+        closeDrawer();
+        selected.delete(current.id);
+        await loadList();
+      }
+
+      // --------- Events
+      // row selection / open
+      on(document,'click', e=>{
+        const openBtn = e.target.closest('[data-act="open"]');
+        if(openBtn){ openOne(openBtn.dataset.id); return; }
+      });
+      on(document,'change', e=>{
+        const cb = e.target.closest('input[type="checkbox"][data-id]');
+        if(cb){
+          const id = Number(cb.dataset.id);
+          if(cb.checked) selected.add(id); else selected.delete(id);
+          enableDelete();
+        }
+      });
+
+      on($selAll,'change', ()=>{
+        if($selAll.checked){ rows.forEach(r=>selected.add(r.id)) } else { selected.clear(); }
+        renderList();
+      });
+
+      // search (debounced)
+      let t=null;
+      on($q,'input', ()=>{ clearTimeout(t); t=setTimeout(()=>{ page=1; loadList(); }, 220); });
+      on($status,'change', ()=>{ page=1; loadList(); });
+
+      // paging
+      on($('#prev'),'click', ()=>{ if(page>1){ page--; loadList(); }});
+      on($('#next'),'click', ()=>{ page++; loadList(); });
+      on($pagesize,'change', ()=>{ pageSize = Number($pagesize.value)||20; page=1; loadList(); });
+
+      // drawer buttons
+      on($('#btn-new'),'click', newOne);
+      on($('#btn-refresh'),'click', loadList);
+      on($('#btn-delete'),'click', deleteSelected);
+      on($('#btn-delete2'),'click', deleteCurrent);
+      on($('#btn-save'),'click', saveOne);
+
+      // --------- Boot status chips
+      $chips.appendChild(chip('role: admin','ok'));
+      $chips.appendChild(chip('assignments:init','ok'));
+      $chips.appendChild(chip('token: ok','ok'));
+
+      // --------- Initial load
+      await loadDropdowns();
+      await loadList();
+
+      // ===== Page code ends here =====
     });
-  }
-</script>
-
-
+  })();
+  </script>
 </body>
 </html>
