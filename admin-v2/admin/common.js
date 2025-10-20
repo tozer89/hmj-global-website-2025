@@ -1,10 +1,11 @@
-/* /admin/common.js — admin bootstrap + diagnostics (v10)
+/* /admin/common.js — admin bootstrap + diagnostics (v11)
    Exposes:
      - window.adminReady(): Promise<helpers>
      - window.Admin.bootAdmin(mainFn)
      - window.getIdentity(requiredRole?)
      - window.apiPing()
-   Helpers passed to pages:
+     - window.api  (console-friendly)
+   Helpers provided to pages:
      { api, sel, toast, setTrace, getTrace, identity, isMobile, gate }
 */
 (function () {
@@ -18,7 +19,7 @@
   const Debug = {
     log:  (...a) => console.log('%c[OK]',   'color:#18a058;font-weight:600', ...a),
     warn: (...a) => console.warn('%c[WARN]','color:#e6a100;font-weight:600', ...a),
-    err:  (...a) => console.error('%c[ERR]', 'color:#b73b3b;font-weight:600', ...a),
+    err:  (...a) => console.error('%c[ERR]','color:#b73b3b;font-weight:600', ...a),
   };
 
   function toast(msg, type = 'info', ms = 3600) {
@@ -27,16 +28,15 @@
       host = document.createElement('div');
       host.id = 'toast';
       Object.assign(host.style, {
-        position:'fixed', bottom:'16px', right:'16px', zIndex:'9999',
-        display:'grid', gap:'10px'
+        position:'fixed',bottom:'16px',right:'16px',zIndex:'9999',display:'grid',gap:'10px'
       });
       document.body.appendChild(host);
     }
     const n = document.createElement('div');
     n.setAttribute('role','status');
     Object.assign(n.style, {
-      padding:'10px 12px', borderRadius:'10px', boxShadow:'0 10px 24px rgba(0,0,0,.18)',
-      fontWeight:'600', maxWidth:'520px', border:'1px solid rgba(255,255,255,.14)', color:'#fff',
+      padding:'10px 12px',borderRadius:'10px',boxShadow:'0 10px 24px rgba(0,0,0,.18)',
+      fontWeight:'600',maxWidth:'520px',border:'1px solid rgba(255,255,255,.14)',color:'#fff',
       background: type==='error' ? '#3a1418' : type==='warn' ? '#35240d' : '#0e2038'
     });
     n.textContent = String(msg);
@@ -62,17 +62,12 @@
     return null;
   }
 
-  // Ensure widget is initialised on this page (safe to call multiple times)
-  let __idInitOnce = null;
+  // Ensure widget is initialised on this page
   async function initIdentity() {
-    if (__idInitOnce) return __idInitOnce;
-    __idInitOnce = (async () => {
-      const id = await waitIdentityReady(4000);
-      if (!id) { Debug.warn('Netlify Identity widget not found on page'); return null; }
-      try { id.init && id.init(); } catch {}
-      return id;
-    })();
-    return __idInitOnce;
+    const id = await waitIdentityReady(4000);
+    if (!id) return null;
+    try { id.init && id.init(); } catch {}
+    return id;
   }
 
   async function getIdentityUser() {
@@ -83,18 +78,17 @@
         if (u) return u;
       }
     } catch {}
+    // Cookie-only session fallback
     const token = getNFJwtFromCookie();
     if (token) return { token: async () => token, jwt: async () => token, app_metadata:{}, email: undefined };
     return null;
   }
 
-  async function identity(requiredRole) {
-    // Ensure the widget is up before we read currentUser()
-    await initIdentity();
+  async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' */) {
+    await initIdentity(); // make sure widget is alive
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
     try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
-
     const roles = (user?.app_metadata?.roles || user?.roles || []);
     const role = roles.includes('admin') ? 'admin'
                : roles.includes('recruiter') ? 'recruiter'
@@ -104,7 +98,7 @@
     return { ok, user, token, role, email: user?.email || '' };
   }
 
-  // Console helper
+  // Console helpers
   window.getIdentity = identity;
 
   // ----------------------------- API helper ----------------------------------
@@ -112,15 +106,10 @@
   const setTrace = (v) => { TRACE = v || `ts-${Math.random().toString(36).slice(2)}`; return TRACE; };
   const getTrace = () => TRACE || setTrace();
 
-  function buildFnUrl(path) {
-    // Accept "name" or "/name"
-    return path.startsWith('/')
+  async function api(path, method = 'POST', body) {
+    const url = path.startsWith('/')
       ? `/.netlify/functions${path}`.replace('//.','/.')
       : `/.netlify/functions/${path}`.replace('//.','/.');
-  }
-
-  async function api(path, method = 'POST', body) {
-    const url = buildFnUrl(path);
 
     let token = '';
     try { const who = await identity(); token = who.token || ''; } catch {}
@@ -130,10 +119,11 @@
 
     Debug.log(`API → ${method} ${url}`, body || '');
     const res = await fetch(url, {
-      method, headers, credentials: 'include',
+      method,
+      headers,
+      credentials: 'include',
       body: body ? JSON.stringify(body) : undefined
     });
-
     const txt = await res.text();
     let json; try { json = txt ? JSON.parse(txt) : null; } catch { json = { raw: txt }; }
     Debug.log('API ←', res.status, json);
@@ -146,14 +136,25 @@
     return json;
   }
 
+  // also expose api for console diagnostics
+  window.api = api;
+
   window.apiPing = async function () {
-    try { const j = await api('admin-audit-list', 'POST', { limit: 1 }); return { ok:true, data:j }; }
-    catch (e) { return { ok:false, error:String(e.message||e) }; }
+    try {
+      const j = await api('admin-audit-list', 'POST', { limit: 1 });
+      Debug.log('Ping OK', j?.length || 0);
+      return { ok:true, data:j };
+    } catch (e) {
+      Debug.err('Ping failed', e);
+      return { ok:false, error:String(e.message||e) };
+    }
   };
 
   // ------------------------------ Gate ---------------------------------------
   async function gate({ adminOnly = true } = {}) {
-    const g = $('#gate'); const app = $('#app'); const why = g ? $('.why', g) : null;
+    const g = $('#gate'); const app = $('#app');
+    const why = g ? $('.why', g) : null;
+
     const who = await identity(adminOnly ? 'admin' : undefined);
 
     if (who.ok && (!adminOnly || who.role === 'admin')) {
@@ -177,7 +178,7 @@
   window.adminReady = function () {
     if (_readyOnce) return _readyOnce;
     _readyOnce = (async () => {
-      await initIdentity();        // <— ensure widget is prepped on this page
+      await initIdentity();        // ensure widget is prepped on this page
       setTrace();
       Debug.log('Bootstrap ready; trace=', getTrace());
       return { api, sel:$, toast, setTrace, getTrace, identity, isMobile, gate };
@@ -196,12 +197,14 @@
         Debug.warn('Gate blocked: no session / no admin role');
         return;
       }
+
       const id = window.netlifyIdentity;
       if (id && typeof id.on === 'function') {
         id.on('login',  () => location.reload());
         id.on('logout', () => (location.href = '/admin-v2/admin/'));
       }
 
+      // Optional diag chips
       try {
         const diag = $('#diagChips');
         if (diag) {
@@ -219,7 +222,8 @@
       toast('Init failed: ' + (e.message || e), 'error', 6000);
       try {
         const g = $('#gate'); const app = $('#app');
-        if (g) g.style.display = ''; if (app) app.style.display = 'none';
+        if (g) g.style.display = '';
+        if (app) app.style.display = 'none';
       } catch {}
     }
   };
@@ -228,16 +232,15 @@
     const span = document.createElement('span');
     span.textContent = text;
     Object.assign(span.style, {
-      display:'inline-grid', alignItems:'center', padding:'4px 8px', borderRadius:'9999px',
-      fontSize:'12px', fontWeight:'700', border:'1px solid rgba(0,0,0,.12)',
+      display:'inline-grid',alignItems:'center',padding:'4px 8px',borderRadius:'9999px',
+      fontSize:'12px',fontWeight:'700',border:'1px solid rgba(0,0,0,.12)',
       background: ok ? '#e8f6ef' : '#fdeeee', color: ok ? '#0f5132' : '#842029'
     });
     host.appendChild(span);
   }
 
-  // Version flags for quick console sanity checks
-  window.__admin_common_version = 'v10';
-  window.__has_admin_boot = !!(window.Admin && window.Admin.bootAdmin);
-
-  Debug.log('common.js loaded (v10)');
+  Debug.log('common.js loaded');
 })();
+
+window.__admin_common_version = 'v11';
+window.__has_admin_boot       = !!(window.Admin && window.Admin.bootAdmin);

@@ -17,7 +17,7 @@
       try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch (e) {}
     });
   </script>
-  <script defer src="/admin-v2/admin/common.js?v=10"></script>
+  <script defer src="/admin-v2/admin/common.js?v=11"></script>
 
   <style>
     :root{
@@ -382,7 +382,7 @@
     console.error('[candidates] ' + msg);
     const g = document.getElementById('gate');
     if (g) { g.style.display=''; const why=g.querySelector('.why'); if (why) why.textContent = msg; }
-    alert('Admin bootstrap failed:\n' + msg + '\n\nCheck Network tab for /admin-v2/admin/common.js?v=10.');
+    alert('Admin bootstrap failed:\n' + msg + '\n\nCheck Network tab for /admin-v2/admin/common.js?v=11.');
   }
 
   function start() {
