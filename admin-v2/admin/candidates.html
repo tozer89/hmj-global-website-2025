@@ -14,16 +14,23 @@
       try {
         if (window.netlifyIdentity) {
           window.netlifyIdentity.init({
-            APIUrl: 'https://hmjg.netlify.app/.netlify/identity'
+            APIUrl: `${location.origin}/.netlify/identity`
           });
         }
       } catch {}
     });
   </script>
 
+  <!-- Tell common.js which Identity instance to use (shared across previews) -->
+  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+
+
+
 
   <!-- Shared admin bootstrap (ABSOLUTE path; bump version when changing file) -->
-  <script defer src="/admin-v2/admin/common.js?v=12"></script>
+  <script defer src="/admin-v2/admin/common.js?v=13"></script>
 
   <style>
     :root{

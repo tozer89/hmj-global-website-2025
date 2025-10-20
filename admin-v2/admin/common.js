@@ -1,11 +1,11 @@
-/* /admin/common.js — admin bootstrap + diagnostics (v11)
-   Exposes:
+/* /admin-v2/admin/common.js — admin bootstrap + diagnostics (v13)
+   Exposes (globals):
      - window.adminReady(): Promise<helpers>
      - window.Admin.bootAdmin(mainFn)
      - window.getIdentity(requiredRole?)
      - window.apiPing()
-     - window.api  (console-friendly)
-   Helpers provided to pages:
+     - window.api (console-friendly)
+   Page helpers:
      { api, sel, toast, setTrace, getTrace, identity, isMobile, gate }
 */
 (function () {
@@ -44,14 +44,12 @@
     setTimeout(() => n.remove(), ms);
   }
 
-// -------------------------- Allow emails -------------------------------
-// Add this near the top (below utilities is fine)
-const ADMIN_EMAIL_ALLOWLIST = [
-  'joe@hmj-global.com',
-  // add more emails if needed
-];
-
-
+  // -------------------------- Optional allowlist ------------------------------
+  // Add emails here if you want them treated as admin for UI bootstrapping
+  const ADMIN_EMAIL_ALLOWLIST = [
+    'joe@hmj-global.com',
+    // 'someone@example.com',
+  ];
 
   // -------------------------- Identity helpers -------------------------------
   function getCookie(name) {
@@ -60,7 +58,7 @@ const ADMIN_EMAIL_ALLOWLIST = [
   }
   const getNFJwtFromCookie = () => getCookie('nf_jwt') || '';
 
-  async function waitIdentityReady(maxMs = 6000) {
+  async function waitIdentityReady(maxMs = 8000) {
     let waited = 0;
     while (waited < maxMs) {
       if (window.netlifyIdentity && typeof window.netlifyIdentity.on === 'function') {
@@ -73,15 +71,20 @@ const ADMIN_EMAIL_ALLOWLIST = [
 
   // Ensure widget is initialised on this page
   async function initIdentity() {
-    const id = await waitIdentityReady(4000);
+    const id = await waitIdentityReady(8000);
     if (!id) return null;
     try {
-      // ✅ Force the canonical Identity endpoint so previews share the same session/roles
-      id.init({ APIUrl: 'https://hmjg.netlify.app/.netlify/identity' });
-    } catch {}
+      // Prefer explicit override, else current origin (works for previews + prod)
+      const explicit = window.ADMIN_IDENTITY_URL
+        || document.querySelector('meta[name="netlify-identity-url"]')?.getAttribute('content');
+      const APIUrl = explicit || `${location.origin}/.netlify/identity`;
+      id.init({ APIUrl });
+      Debug.log('Identity init @', APIUrl);
+    } catch (e) {
+      Debug.warn('Identity init skipped', e?.message || e);
+    }
     return id;
   }
-
 
   async function getIdentityUser() {
     try {
@@ -105,31 +108,30 @@ const ADMIN_EMAIL_ALLOWLIST = [
 
     // roles from Identity (normalised to lowercase)
     let roles = (user?.app_metadata?.roles || user?.roles || [])
-                  .map(r => String(r).toLowerCase());
+      .map(r => String(r).toLowerCase());
 
     // email (lowercased)
     const email = (user?.email || '').toLowerCase();
 
-    // --- Allow-list: treat allow-listed emails as admin (UI bootstrap safety) ---
+    // Allow-list: treat allow-listed emails as admin
     const allowlistedAdmin = !!email && ADMIN_EMAIL_ALLOWLIST.includes(email);
     if (allowlistedAdmin && !roles.includes('admin')) roles.push('admin');
 
     const role = roles.includes('admin') ? 'admin'
-              : roles.includes('recruiter') ? 'recruiter'
-              : roles.includes('client') ? 'client'
-              : (roles[0] || '');
+      : roles.includes('recruiter') ? 'recruiter'
+      : roles.includes('client') ? 'client'
+      : (roles[0] || '');
 
     // OK if:
     //  - we have a JWT and (no role required OR user has it)
-    //  - OR (allow-listed) and the requiredRole is exactly 'admin' (lets UI boot on previews)
+    //  - OR (allow-listed) and the requiredRole is exactly 'admin'
     const ok = ( !!token && (!requiredRole || roles.includes(requiredRole)) )
             || ( allowlistedAdmin && requiredRole === 'admin' );
 
     return { ok, user, token, role, email };
   }
 
-
-  // Console helpers
+  // Console helper
   window.getIdentity = identity;
 
   // ----------------------------- API helper ----------------------------------
@@ -142,6 +144,7 @@ const ADMIN_EMAIL_ALLOWLIST = [
       ? `/.netlify/functions${path}`.replace('//.','/.')
       : `/.netlify/functions/${path}`.replace('//.','/.');
 
+    // Always try to attach a fresh token (header beats cookie)
     let token = '';
     try { const who = await identity(); token = who.token || ''; } catch {}
 
@@ -152,9 +155,10 @@ const ADMIN_EMAIL_ALLOWLIST = [
     const res = await fetch(url, {
       method,
       headers,
-      credentials: 'include',
+      credentials: 'include', // keeps cookie paths working if present
       body: body ? JSON.stringify(body) : undefined
     });
+
     const txt = await res.text();
     let json; try { json = txt ? JSON.parse(txt) : null; } catch { json = { raw: txt }; }
     Debug.log('API ←', res.status, json);
@@ -167,7 +171,7 @@ const ADMIN_EMAIL_ALLOWLIST = [
     return json;
   }
 
-  // also expose api for console diagnostics
+  // Expose for console diagnostics
   window.api = api;
 
   window.apiPing = async function () {
@@ -233,6 +237,7 @@ const ADMIN_EMAIL_ALLOWLIST = [
       if (id && typeof id.on === 'function') {
         id.on('login',  () => location.reload());
         id.on('logout', () => (location.href = '/admin-v2/admin/'));
+        id.on('error',  (e) => Debug.err('identity error', e));
       }
 
       // Optional diag chips
@@ -244,6 +249,7 @@ const ADMIN_EMAIL_ALLOWLIST = [
           addChip(diag, 'identity: ok', true);
           addChip(diag, 'token: ok', true);
           addChip(diag, 'role: ' + (who.role || 'admin'), true);
+          addChip(diag, 'trace: ' + getTrace().slice(0,10), true);
         }
       } catch {}
 
@@ -273,5 +279,5 @@ const ADMIN_EMAIL_ALLOWLIST = [
   Debug.log('common.js loaded');
 })();
 
-window.__admin_common_version = 'v11';
+window.__admin_common_version = 'v13';
 window.__has_admin_boot       = !!(window.Admin && window.Admin.bootAdmin);
