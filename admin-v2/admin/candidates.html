@@ -1,15 +1,25 @@
 <!doctype html>
 <html lang="en">
+
+
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
   <title>Candidates — Admin | HMJ Global</title>
 
-  <!-- 1) Identity first (defer so it doesn't block parse) -->
+  <!-- 1) Netlify Identity widget FIRST (defer keeps parse fast; order is preserved) -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
-  <!-- 2) Shared admin bootstrap (ABSOLUTE path + cache-bust) -->
-  <script defer src="/admin-v2/admin/common.js?v=7"></script>
+  <!-- 1b) Proactive init as soon as the DOM is ready -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch (e) {}
+    });
+  </script>
+
+  <!-- 2) Shared admin bootstrap (ABSOLUTE path + bump ?v= when you change the file) -->
+  <script defer src="/admin-v2/admin/common.js?v=10"></script>
 
   <style>
     :root{
@@ -56,6 +66,11 @@
     .section{margin:12px 0 6px;font-weight:800}
   </style>
 </head>
+
+
+
+
+
 <body>
 
   <!-- Header -->
@@ -104,118 +119,239 @@
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
   <!-- 3) Page script LAST. Boot only when Admin exists. -->
+  
+  
+
   <script>
-  (function bootWhenReady(){
-    // Small helper so we can be very loud if common.js didn’t load:
-    function hardFail(msg){
-      console.error('[candidates] ' + msg);
-      var g = document.getElementById('gate');
-      if (g) { g.style.display=''; var why=g.querySelector('.why'); if (why) why.textContent = msg; }
-      alert('Admin bootstrap failed:\n' + msg + '\n\nCheck that /admin-v2/admin/common.js?v=7 loads (Network tab).');
+/* candidates page boot — robust + noisy
+   Requirements on the page:
+   - #gate (with .why inside) and #app containers
+   - #listWrap, #q, #status, #btnRefresh, #btnDelete, #btnNew, #btnExport, #btnImport, #csv
+   - optional #diagChips (for chips line)
+*/
+(function bootCandidates() {
+  // --- tiny helpers ---------------------------------------------------------
+  const $ = (s, r=document) => r.querySelector(s);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function showGate(msg) {
+    const g = $('#gate'), app = $('#app');
+    if (app) app.style.display = 'none';
+    if (g) g.style.display = '';
+    const why = g && g.querySelector('.why');
+    if (why) why.textContent = msg || 'Sign in required.';
+  }
+  function hardFail(msg) {
+    console.error('[candidates] ' + msg);
+    showGate(msg);
+    alert('Admin bootstrap failed:\n' + msg + '\n\nCheck that /admin-v2/admin/common.js loads and there are no 404s.');
+  }
+
+  // --- wait for deps: Identity + common.js (Admin.bootAdmin) ----------------
+  async function waitDeps(maxMs = 6000) {
+    const start = Date.now();
+    while (Date.now() - start < maxMs) {
+      const hasId = !!window.netlifyIdentity;
+      const hasAdmin = !!(window.Admin && window.Admin.bootAdmin);
+      if (hasId && hasAdmin) return true;
+      await sleep(40);
     }
+    return false;
+  }
 
-    // Wait until both deferred scripts have executed
-    if (!window.netlifyIdentity || !window.Admin) {
-      // Try again shortly (defer scripts run after parse)
-      return setTimeout(bootWhenReady, 30);
-    }
+  // --- start ----------------------------------------------------------------
+  (async () => {
+    // Proactively init Identity (safe if already initialised)
+    try { window.netlifyIdentity && window.netlifyIdentity.init && window.netlifyIdentity.init(); } catch {}
 
-    try {
-      Admin.bootAdmin(async ({ api, sel, toast }) => {
-        // Debug chips for quick health
-        const chipHost = document.getElementById('diagChips');
-        const chip = (t, tone='ok') => {
-          const s = document.createElement('span');
-          s.className = 'pill ' + (tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
-          s.textContent = t; chipHost && chipHost.appendChild(s); return s;
+    const ok = await waitDeps(6500);
+    if (!ok) return hardFail('Required scripts not ready (Identity or common.js).');
+
+    // Safety ping in console so we know the state
+    console.log('[candidates] deps ready →',
+      { hasIdentity: !!window.netlifyIdentity, hasAdmin: !!(window.Admin && window.Admin.bootAdmin) });
+
+    // Boot the page through the shared guard in common.js
+    Admin.bootAdmin(async ({ api, sel = $, toast, identity, getTrace }) => {
+      // --------- diag chips (optional pretty badges) ----------
+      const chips = $('#diagChips');
+      const chip = (t, tone='ok') => {
+        if (!chips) return;
+        const s = document.createElement('span');
+        s.className = 'pill ' + (tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
+        s.textContent = t; chips.appendChild(s);
+      };
+      chip('candidates:init', 'ok');
+
+      // Identity snapshot (makes debugging role issues obvious)
+      const who = await identity('admin');
+      console.log('[candidates] identity snapshot →', who);
+      if (!who || !who.ok) {
+        chip('role: blocked', 'bad');
+        return showGate('Restricted. Sign in with an admin account.');
+      }
+      chip('role: admin', 'ok');
+      chip('trace: ' + getTrace().slice(0,10), 'ok');
+
+      // --------- state ----------
+      let rows = [];
+      let selected = new Set();
+
+      // --------- ui helpers ----------
+      function enableDelete() {
+        const b = $('#btnDelete');
+        if (b) b.disabled = selected.size === 0;
+      }
+
+      function render() {
+        const wrap = $('#listWrap');
+        if (!wrap) return;
+
+        if (!rows.length) {
+          wrap.textContent = 'No candidates found.';
+          return;
+        }
+
+        const thead = `<thead><tr>
+          <th style="width:28px"><input id="ckAll" type="checkbox"></th>
+          <th>Ref</th><th>Name</th><th>Email</th><th>Phone</th>
+          <th>Status</th><th></th>
+        </tr></thead>`;
+
+        const tbody = rows.map(r => `
+          <tr>
+            <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
+            <td>${r.ref || r.id}</td>
+            <td>${r.full_name || '—'}</td>
+            <td>${r.email || '—'}</td>
+            <td>${r.phone || '—'}</td>
+            <td><span class="pill ${r.status==='active'?'b-ok':r.status==='inactive'?'b-warn':'b-bad'}">${r.status||'inactive'}</span></td>
+            <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
+          </tr>`).join('');
+
+        wrap.innerHTML = `<table>${thead}<tbody>${tbody}</tbody></table>`;
+
+        // selection wiring
+        const ckAll = $('#ckAll');
+        if (ckAll) ckAll.onclick = (e) => {
+          if (e.target.checked) rows.forEach(r => selected.add(r.id));
+          else rows.forEach(r => selected.delete(r.id));
+          enableDelete(); render();
         };
-        chip('candidates: ready', 'ok');
-
-        // Wiring
-        let rows = [], selected = new Set();
-        function enableDelete(){ sel('#btnDelete').disabled = selected.size===0; }
-
-        function render(){
-          if (!rows.length) { sel('#listWrap').textContent = 'No candidates found.'; return; }
-          const head = `<thead><tr>
-            <th style="width:28px"><input id="ckAll" type="checkbox"></th>
-            <th>Ref</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th></th>
-          </tr></thead>`;
-          const body = rows.map(r => `
-            <tr>
-              <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
-              <td>${r.ref || r.id}</td>
-              <td>${r.full_name || '—'}</td>
-              <td>${r.email || '—'}</td>
-              <td>${r.phone || '—'}</td>
-              <td><span class="pill ${r.status==='active'?'b-ok':r.status==='inactive'?'b-warn':'b-bad'}">${r.status||'inactive'}</span></td>
-              <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
-            </tr>
-          `).join('');
-          sel('#listWrap').innerHTML = `<table>${head}<tbody>${body}</tbody></table>`;
-
-          sel('#ckAll').onclick = (e)=>{ if(e.target.checked){ rows.forEach(r=>selected.add(r.id)); } else { rows.forEach(r=>selected.delete(r.id)); } enableDelete(); render(); };
-          sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=> c.onchange=()=>{ const id=Number(c.getAttribute('data-id')); if(c.checked) selected.add(id); else selected.delete(id); enableDelete(); });
-          sel('#listWrap').querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openOne(Number(b.getAttribute('data-open'))));
-        }
-
-        async function load(){
-          sel('#listWrap').textContent = 'Loading…';
-          try{
-            const res = await api('admin-candidates-list','POST', { q: sel('#q').value||'', status: sel('#status').value||'' });
-            rows = res.rows || res || [];
-            render();
-          }catch(e){
-            sel('#listWrap').textContent = 'Error: ' + e.message;
-          }
-        }
-
-        async function openOne(id){
-          try{
-            const r = await api('admin-candidate-open','POST',{ id });
-            toast('Opened ' + (r.full_name||('ID ' + id)), 'info', 2000);
-            // (Your drawer/editor could go here)
-          }catch(e){ toast('Open failed: ' + e.message, 'error', 4000); }
-        }
-
-        async function delSelected(){
-          if(!selected.size) return;
-          if(!confirm(`Delete ${selected.size} candidate(s)?`)) return;
-          try{
-            await api('admin-candidate-delete','POST',{ ids: Array.from(selected) });
-            selected.clear(); enableDelete(); toast('Deleted', 'ok', 1800); load();
-          }catch(e){ toast('Delete failed: ' + e.message, 'error', 4000); }
-        }
-
-        // Wire UI
-        sel('#btnRefresh').onclick = load;
-        sel('#btnDelete').onclick = delSelected;
-        sel('#btnNew').onclick = () => window.location.href = './candidate-profile.html'; // or open drawer
-        sel('#btnExport').onclick = async () => {
-          try{
-            const csv = await api('admin-candidates-export','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
-            const url = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-            const a=document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click(); URL.revokeObjectURL(url);
-          }catch(e){ toast('Export failed: ' + e.message, 'error', 4000); }
-        };
-        sel('#btnImport').onclick = ()=> sel('#csv').click();
-        sel('#csv').addEventListener('change', async ()=>{
-          const f = sel('#csv').files[0]; if(!f) return;
-          try{
-            const text = await f.text();
-            const res = await api('admin-candidates-import','POST',{ csv: text });
-            toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2200); load();
-          }catch(e){ toast('Import failed: ' + e.message, 'error', 4000); }
+        wrap.querySelectorAll('input[type=checkbox][data-id]').forEach(c => {
+          c.onchange = () => {
+            const id = Number(c.getAttribute('data-id'));
+            if (c.checked) selected.add(id); else selected.delete(id);
+            enableDelete();
+          };
         });
-        ['#q','#status'].forEach(s => sel(s).addEventListener('input', load));
+        wrap.querySelectorAll('[data-open]').forEach(b => {
+          b.onclick = () => openOne(Number(b.getAttribute('data-open')));
+        });
+      }
 
-        // Initial load
-        await load();
+      // --------- data ops ----------
+      async function load() {
+        const wrap = $('#listWrap'); if (wrap) wrap.textContent = 'Loading…';
+        try {
+          const res = await api('admin-candidates-list', 'POST', {
+            q: ($('#q')?.value || '').trim(),
+            status: $('#status')?.value || ''
+          });
+          rows = Array.isArray(res) ? res : (res.rows || []);
+          console.log('[candidates] list ←', rows.length, 'rows');
+          render();
+        } catch (e) {
+          console.error('[candidates] list error', e);
+          if (wrap) wrap.textContent = 'Error: ' + (e.message || e);
+        }
+      }
+
+      async function openOne(id) {
+        try {
+          const r = await api('admin-candidate-open', 'POST', { id });
+          console.log('[candidates] open ←', r);
+          toast('Opened ' + (r.full_name || ('ID ' + id)), 'info', 1800);
+          // TODO: drawer/editor
+        } catch (e) {
+          console.error('[candidates] open error', e);
+          toast('Open failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      async function delSelected() {
+        if (!selected.size) return;
+        if (!confirm(`Delete ${selected.size} candidate(s)?`)) return;
+        try {
+          await api('admin-candidate-delete', 'POST', { ids: Array.from(selected) });
+          toast('Deleted', 'ok', 1800);
+          selected.clear(); enableDelete(); load();
+        } catch (e) {
+          console.error('[candidates] delete error', e);
+          toast('Delete failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      // --------- export / import ----------
+      async function exportCSV() {
+        try {
+          const csv = await api('admin-candidates-export','POST', {
+            q: ($('#q')?.value || '').trim(),
+            status: $('#status')?.value || ''
+          });
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'candidates.csv'; a.click();
+          URL.revokeObjectURL(url);
+          toast('Exported', 'ok', 1400);
+        } catch (e) {
+          console.error('[candidates] export error', e);
+          toast('Export failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+      function importCSVClick() { $('#csv')?.click(); }
+      async function importCSVDo(file) {
+        try {
+          const text = await file.text();
+          const res = await api('admin-candidates-import','POST',{ csv: text });
+          toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2000);
+          load();
+        } catch (e) {
+          console.error('[candidates] import error', e);
+          toast('Import failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      // --------- wire UI ----------
+      $('#btnRefresh') && ($('#btnRefresh').onclick = load);
+      $('#btnDelete')  && ($('#btnDelete').onclick = delSelected);
+      $('#btnNew')     && ($('#btnNew').onclick = () => location.href = './candidate-profile.html');
+      $('#btnExport')  && ($('#btnExport').onclick = exportCSV);
+      $('#btnImport')  && ($('#btnImport').onclick = importCSVClick);
+      $('#csv') && $('#csv').addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (f) importCSVDo(f);
       });
-    } catch (err) {
-      hardFail(err && err.message ? err.message : String(err));
-    }
-  })();
-  </script>
+      $('#q') && $('#q').addEventListener('input', () => load());
+      $('#status') && $('#status').addEventListener('change', () => load());
+
+      // Shortcuts
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') { e.preventDefault(); load(); }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'e') { e.preventDefault(); exportCSV(); }
+      });
+
+      // --------- go! ----------
+      await load();
+      enableDelete();
+      console.log('[candidates] boot complete ✓');
+    });
+  })().catch(err => hardFail(err?.message || String(err)));
+})();
+</script>
+
+
+
 </body>
 </html>
