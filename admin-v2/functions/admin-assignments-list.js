@@ -1,28 +1,23 @@
-// netlify/functions/admin-assignments-list.js
-const { supabase } = require('./_supabase.js');
-const { getContext } = require('./_auth.js');
+// admin-assignments-list.js
+import { sb, ok, bad, pre, bodyOf } from './_lib.js';
 
-exports.handler = async (event, context) => {
+export async function handler(event){
+  const pf = pre(event); if (pf) return pf;
+  const { q='', status='', consultant='', client='', page=1, pageSize=20 } = bodyOf(event);
   try {
-    await getContext(context, { requireAdmin: true });
-    const { contractor_id, client_id, active } = JSON.parse(event.body || '{}');
+    const supa = sb();
+    let query = supa.from('assignments_view')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range((page-1)*pageSize, page*pageSize-1);
 
-    let query = supabase
-      .from('assignment_summary')
-      .select('id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, site_name, rate_std, rate_ot, charge_std, charge_ot, start_date, end_date, active')
-      .order('start_date', { ascending: false });
+    if (status)     query = query.eq('status', status);
+    if (consultant) query = query.ilike('consultant_name', `%${consultant}%`);
+    if (client)     query = query.ilike('client_name', `%${client}%`);
+    if (q)          query = query.or(`job_title.ilike.%${q}%,candidate_name.ilike.%${q}%,client_name.ilike.%${q}%,as_ref.ilike.%${q}%`);
 
-    if (contractor_id) query = query.eq('contractor_id', contractor_id);
-    if (client_id)     query = query.eq('client_id', client_id);
-    if (active === true)  query = query.eq('active', true);
-    if (active === false) query = query.eq('active', false);
-
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
-
-    return { statusCode: 200, body: JSON.stringify(data || []) };
-  } catch (e) {
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
-  }
-};
+    return ok({ rows: data, total: count ?? (data?.length||0) });
+  } catch (e) { return bad(e.message); }
+}
