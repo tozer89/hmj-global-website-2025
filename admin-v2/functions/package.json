@@ -1,8 +1,12 @@
 {
-  "name": "hmjg-functions",
+  "name": "hmjg-admin-functions",
   "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
-    "jsonwebtoken": "^9.0.2"
+    "busboy": "^1.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
   }
 }
