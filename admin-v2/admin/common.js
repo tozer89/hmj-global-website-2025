@@ -44,6 +44,15 @@
     setTimeout(() => n.remove(), ms);
   }
 
+// -------------------------- Allow emails -------------------------------
+// Add this near the top (below utilities is fine)
+const ADMIN_EMAIL_ALLOWLIST = [
+  'joe@hmj-global.com',
+  // add more emails if needed
+];
+
+
+
   // -------------------------- Identity helpers -------------------------------
   function getCookie(name) {
     const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -89,13 +98,23 @@
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
     try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
-    const roles = (user?.app_metadata?.roles || user?.roles || []);
+
+    // Start with roles from Identity
+    let roles = (user?.app_metadata?.roles || user?.roles || []).slice();
+
+    // --- QUICK UNBLOCK: allow-list emails get admin role automatically ---
+    const email = (user?.email || '').toLowerCase();
+    if (email && ADMIN_EMAIL_ALLOWLIST.includes(email) && !roles.includes('admin')) {
+      roles.push('admin');
+    }
+
     const role = roles.includes('admin') ? 'admin'
-               : roles.includes('recruiter') ? 'recruiter'
-               : roles.includes('client') ? 'client'
-               : (roles[0] || '');
+              : roles.includes('recruiter') ? 'recruiter'
+              : roles.includes('client') ? 'client'
+              : (roles[0] || '');
+
     const ok = !!token && (!requiredRole || roles.includes(requiredRole) || role === requiredRole);
-    return { ok, user, token, role, email: user?.email || '' };
+    return { ok, user, token, role, email };
   }
 
   // Console helpers
