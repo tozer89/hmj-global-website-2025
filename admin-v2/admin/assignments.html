@@ -6,161 +6,103 @@
   <title>Assignments — Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Pin the Identity instance (Survival Guide §7.2/7.3) -->
+  <!-- Pin Identity to the canonical instance (Survival Guide) -->
   <script>
     window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';
-    window.ADMIN_BUILD = 'preview';          /* helpful in the top-right chips */
+    window.ADMIN_BUILD = 'preview';
   </script>
 
   <!-- Fonts / Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"/>
 
-  <!-- Identity widget (needed for login modal & token refresh hooks) -->
+  <!-- Netlify Identity widget -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
-  <!-- Shared admin bootstrap (!!! correct path) -->
-  <script defer src="/admin-v2/admin/common.js?v=11"></script>
+  <!-- IMPORTANT: correct path to shared bootstrap -->
+  <script defer src="/admin-v2/admin/common.js?v=12"></script>
 
   <style>
     :root{
-      --hmj-blue:#1f4c8e;         /* lighter, cleaner HMJ blue */
-      --hmj-blue-600:#1a4079;
+      --hmj-blue:#1f4c8e;
       --hmj-blue-50:#f3f6fb;
       --ink:#1b1f24;
       --muted:#6b7280;
       --line:#e6e8ef;
-      --ok:#10b981;               /* green */
-      --warn:#f59e0b;             /* amber */
-      --bad:#ef4444;              /* red */
+      --ok:#10b981;
+      --warn:#f59e0b;
+      --bad:#ef4444;
       --chip:#eef2ff;
-      --bg:#ffffff;               /* more white per your request */
+      --bg:#ffffff;
       --card:#ffffff;
       --shadow:0 6px 20px rgba(31,76,142,.08);
       --radius:14px;
     }
-    * { box-sizing:border-box }
-    html,body{ height:100% }
-    body{
-      margin:0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
-      color:var(--ink);
-      background:var(--bg);
-    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--bg)}
 
-    /* Top bar */
-    .top{
-      position:sticky; top:0; z-index:50;
-      background:#fff;
-      border-bottom:1px solid var(--line);
-    }
-    .top-inner{
-      max-width:1200px; margin:0 auto;
-      padding:14px 16px; display:flex; align-items:center; gap:12px;
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px; font-weight:700; color:var(--hmj-blue);
-    }
-    .brand .logo{
-      width:28px; height:28px; border-radius:8px; background:var(--hmj-blue); display:grid; place-items:center; color:#fff; font-weight:700;
-      box-shadow: var(--shadow);
-    }
-    .top-actions{ margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-    .chip{
-      display:inline-flex; align-items:center; gap:6px;
-      padding:6px 10px; border-radius:999px; font-size:12px; background:var(--chip); color:var(--hmj-blue);
-      border:1px solid #e0e7ff;
-    }
-    .signout{
-      border:1px solid var(--line); background:#fff; color:var(--ink); padding:7px 12px; border-radius:10px; cursor:pointer;
-    }
-    .signout:hover{ border-color:#d4d7df }
+    .top{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--line)}
+    .top-inner{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--hmj-blue)}
+    .logo{width:28px;height:28px;border-radius:8px;background:var(--hmj-blue);display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:var(--shadow)}
+    .top-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:12px;background:var(--chip);color:var(--hmj-blue);border:1px solid #e0e7ff}
+    .signout{border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;border-radius:10px;cursor:pointer}
+    .signout:hover{border-color:#d4d7df}
 
-    /* Page container */
-    .wrap{ max-width:1200px; margin:24px auto; padding:0 16px }
-    .h1{ font-size:22px; font-weight:700; margin:0 0 12px }
-    .toolbar{
-      display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; margin:12px 0 18px;
-    }
-    .search{
-      display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff;
-    }
-    .search input{ border:0; outline:0; width:100%; font-size:14px }
-    .select, .btn{
-      border:1px solid var(--line); border-radius:12px; background:#fff; height:40px; padding:0 12px; font-size:14px;
-    }
-    .btn.primary{
-      background:var(--hmj-blue); color:#fff; border-color:transparent; box-shadow:var(--shadow);
-    }
-    .btn.danger{ background:#fff; color:var(--bad); border:1px solid #fecaca }
-    .btn:disabled{ opacity:.5; pointer-events:none }
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    .h1{font-size:22px;font-weight:700;margin:0 0 12px}
+    .toolbar{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin:12px 0 18px}
+    .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
+    .search input{border:0;outline:0;width:100%;font-size:14px}
+    .select,.btn{border:1px solid var(--line);border-radius:12px;background:#fff;height:40px;padding:0 12px;font-size:14px}
+    .btn.primary{background:var(--hmj-blue);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
+    .btn.danger{background:#fff;color:var(--bad);border:1px solid #fecaca}
+    .btn:disabled{opacity:.5;pointer-events:none}
 
-    /* Card / table */
-    .card{
-      background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
-    }
-    .card-head{
-      padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;
-    }
-    .pill{ display:inline-block; font-size:12px; padding:4px 8px; border-radius:999px; background:#f3f4f6; color:#374151; }
-    .pill.ok{ background:#ecfdf5; color:#065f46 }
-    .pill.warn{ background:#fffbeb; color:#92400e }
-    .pill.bad{ background:#fef2f2; color:#991b1b }
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+    .pill{display:inline-block;font-size:12px;padding:4px 8px;border-radius:999px;background:#f3f4f6;color:#374151}
+    .pill.ok{background:#ecfdf5;color:#065f46}
+    .pill.warn{background:#fffbeb;color:#92400e}
+    .pill.bad{background:#fef2f2;color:#991b1b}
 
-    table{ width:100%; border-collapse:collapse; }
-    thead th{
-      text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.03em;
-      padding:12px 14px; color:var(--muted); border-bottom:1px solid var(--line);
-    }
-    tbody td{ padding:14px; border-bottom:1px solid var(--line); vertical-align:top; font-size:14px }
-    tbody tr:hover{ background:var(--hmj-blue-50) }
-    .row-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    table{width:100%;border-collapse:collapse}
+    thead th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.03em;padding:12px 14px;color:var(--muted);border-bottom:1px solid var(--line)}
+    tbody td{padding:14px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+    tbody tr:hover{background:var(--hmj-blue-50)}
+    .row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
-    /* Pager */
-    .pager{ display:flex; justify-content:space-between; align-items:center; padding:12px 14px }
-    .muted{ color:var(--muted) }
+    .pager{display:flex;justify-content:space-between;align-items:center;padding:12px 14px}
+    .muted{color:var(--muted)}
 
-    /* Drawer */
-    .drawer-backdrop{
-      position:fixed; inset:0; background:rgba(17,24,39,.4); display:none; z-index:70;
-    }
-    .drawer{
-      position:fixed; right:0; top:0; bottom:0; width:min(560px, 100%); background:#fff; box-shadow:-10px 0 30px rgba(0,0,0,.15);
-      transform:translateX(100%); transition:transform .25s ease; z-index:80; display:flex; flex-direction:column;
-    }
-    .drawer.open + .drawer-backdrop{ display:block }
-    .drawer.open{ transform:none }
-    .drawer-head{ padding:16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between }
-    .drawer-body{ padding:16px; overflow:auto }
-    .grid{ display:grid; gap:12px }
-    .grid.cols-2{ grid-template-columns: 1fr 1fr }
-    .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px }
-    .field input, .field select, .field textarea{
-      width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; background:#fff;
-    }
-    .drawer-foot{ padding:12px 16px; border-top:1px solid var(--line); display:flex; gap:10px; justify-content:flex-end }
+    .drawer-backdrop{position:fixed;inset:0;background:rgba(17,24,39,.4);display:none;z-index:70}
+    .drawer{position:fixed;right:0;top:0;bottom:0;width:min(560px,100%);background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,.15);transform:translateX(100%);transition:transform .25s ease;z-index:80;display:flex;flex-direction:column}
+    .drawer.open + .drawer-backdrop{display:block}
+    .drawer.open{transform:none}
+    .drawer-head{padding:16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+    .drawer-body{padding:16px;overflow:auto}
+    .grid{display:grid;gap:12px}
+    .grid.cols-2{grid-template-columns:1fr 1fr}
+    .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;background:#fff}
+    .drawer-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
 
-    /* Toast */
-    #toast{ position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:90; }
-    .toast{
-      background:#111827; color:#fff; padding:10px 12px; border-radius:10px; box-shadow:var(--shadow); font-size:14px; margin-top:8px;
-    }
+    #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:90}
+    .toast{background:#111827;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);font-size:14px;margin-top:8px}
 
-    /* Mobile */
-    @media (max-width: 720px){
-      .toolbar{ grid-template-columns:1fr; }
-      .grid.cols-2{ grid-template-columns: 1fr }
-      thead{ display:none }
-      tbody tr{ display:grid; grid-template-columns: 1fr; gap:8px }
-      tbody td{ border:0; padding:10px 14px }
-      tbody td[data-th]::before{
-        content: attr(data-th); display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px;
-      }
+    @media (max-width:720px){
+      .toolbar{grid-template-columns:1fr}
+      .grid.cols-2{grid-template-columns:1fr}
+      thead{display:none}
+      tbody tr{display:grid;grid-template-columns:1fr;gap:8px}
+      tbody td{border:0;padding:10px 14px}
+      tbody td[data-th]::before{content:attr(data-th);display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
     }
   </style>
 </head>
 <body>
-
   <header class="top">
     <div class="top-inner">
       <div class="brand">
@@ -192,7 +134,7 @@
         <option>archived</option>
       </select>
 
-      <div style="display:flex; gap:8px; justify-self:end">
+      <div style="display:flex;gap:8px;justify-self:end">
         <button id="btnRefresh" class="btn" title="Refresh"><i class="fa-solid fa-rotate"></i>&nbsp;Refresh</button>
         <button id="btnNew" class="btn primary"><i class="fa-solid fa-plus"></i>&nbsp;New assignment</button>
         <button id="btnDelete" class="btn danger" disabled><i class="fa-regular fa-trash-can"></i>&nbsp;Delete</button>
@@ -220,13 +162,13 @@
             </tr>
           </thead>
           <tbody id="rows">
-            <tr><td colspan="7" class="muted" style="padding:24px; text-align:center">Loading…</td></tr>
+            <tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Loading…</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="pager">
-        <div style="display:flex; gap:8px">
+        <div style="display:flex;gap:8px">
           <button id="prev" class="btn">&larr; Prev</button>
           <button id="next" class="btn">Next &rarr;</button>
         </div>
@@ -316,44 +258,35 @@
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
   <script>
-  // ---------- tiny helpers ----------
+  // ---------- small helpers ----------
   const $ = (s, r=document) => r.querySelector(s);
   const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
   const sleep = (ms) => new Promise(r=>setTimeout(r, ms));
   const toast = (t, tone='info', ms=2200) => {
-    const host = $('#toast');
-    const el = document.createElement('div');
-    el.className = 'toast';
-    el.textContent = t;
-    host.appendChild(el);
+    const host = $('#toast'); const el = document.createElement('div');
+    el.className = 'toast'; el.textContent = t; host.appendChild(el);
     setTimeout(()=>el.remove(), ms);
   };
-  const pill = (t, tone='') => {
-    const span = document.createElement('span');
-    span.className = 'pill' + (tone ? ' '+tone : '');
-    span.textContent = t;
-    return span;
-  };
+  const pill = (t, tone='') => { const s=document.createElement('span'); s.className='pill'+(tone?' '+tone:''); s.textContent=t; return s; };
   const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : '—');
 
-  // ---------- page script ----------
-  // This entire page runs inside the common bootstrap so we have:
-  //  - Identity, role chips, token countdown
-  //  - api(path, method, body) helper with Authorization header
-  //  - gate() logic
   document.addEventListener('DOMContentLoaded', () => {
-    // Wait until common.js is definitely there
     const waitForAdmin = async () => {
       let tries=0;
-      while(!window.Admin && tries<80){ tries++; await sleep(50); }
-      if(!window.Admin){ console.error('common.js missing'); toast('Boot error: common.js not found', 'bad', 3500); return; }
+      while(!window.Admin && tries<120){ tries++; await sleep(50); }
+      if(!window.Admin){ console.error('common.js missing'); toast('Boot error: common.js not found','bad',3500); return; }
 
-      Admin.bootAdmin(async ({ api, sel, toast:adminToast }) => {
+      // ✔ Use only what bootAdmin passes us (no Admin.getIdentity())
+      Admin.bootAdmin(async ({ api, sel, toast: adminToast, who }) => {
         // chips
         $('#chipBuild').textContent = `build: ${window.ADMIN_BUILD || '—'}`;
-        const who = await Admin.getIdentity(); // safe helper from common.js
-        $('#chipRole').textContent = who?.role ? `role: ${who.role}` : 'role: —';
-        $('#chipToken').textContent = who?.token_left ? `token: ${who.token_left}s left` : 'token: ok';
+        if (who){
+          if (who.role) $('#chipRole').textContent = `role: ${who.role}`;
+          $('#chipToken').textContent = 'token: ok';
+        } else {
+          $('#chipRole').textContent = 'role: —';
+          $('#chipToken').textContent = 'token: —';
+        }
 
         // signout
         $('#btnSignOut').onclick = () => {
@@ -364,43 +297,28 @@
           }
         };
 
-        // state
+        // ---- state
         let page=1, pageSize=20, total=0, rows=[];
         let selected = new Set();
-
         const enableDelete = () => { $('#btnDelete').disabled = (selected.size===0); };
         $('#btnDelete').disabled = true;
 
-        // events
-        $('#q').addEventListener('input', () => debounceLoad());
-        $('#status').addEventListener('change', () => load());
-        $('#btnRefresh').addEventListener('click', () => load());
+        // ---- events (filters / paging)
+        $('#q').addEventListener('input', () => { clearTimeout(window.__deb); window.__deb=setTimeout(load,280); });
+        $('#status').addEventListener('change', load);
+        $('#btnRefresh').addEventListener('click', load);
         $('#btnNew').addEventListener('click', () => openDrawer());
-        $('#btnExport').addEventListener('click', async () => {
-          const res = await api('admin-assignments-export','POST',{ q: $('#q').value.trim(), status: $('#status').value });
-          if (res?.ok && res.body){
-            const blob = new Blob([res.body], { type:'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = Object.assign(document.createElement('a'),{ href:url, download:'assignments.csv' });
-            document.body.appendChild(a); a.click(); a.remove();
-            URL.revokeObjectURL(url);
-          } else {
-            toast('Export failed','bad',3000);
-          }
-        });
-
+        $('#btnExport').addEventListener('click', exportCsv);
         $('#prev').onclick = () => { if(page>1){ page--; load(); } };
         $('#next').onclick = () => { if(rows.length===pageSize){ page++; load(); } };
         $('#pageSize').onchange = () => { pageSize = Number($('#pageSize').value); page = 1; load(); };
-
         $('#checkAll').onchange = (e) => {
-          if (!rows || !rows.length) return;
+          if (!rows?.length) return;
           selected.clear();
           if (e.target.checked) rows.forEach(r => selected.add(r.id));
           $$('#rows input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
           enableDelete();
         };
-
         $('#btnDelete').onclick = async () => {
           if (!selected.size) return;
           if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
@@ -410,15 +328,12 @@
           else toast('Delete failed','bad',3000);
         };
 
-        // drawer controls
+        // ---- drawer
         const openDrawer = async (id=null) => {
           $('#drawer').classList.add('open'); $('#drawer').setAttribute('aria-hidden','false'); $('#drawerBackdrop').style.display='block';
           $('#drawerTitle').textContent = id ? 'Edit assignment' : 'New assignment';
           $('#form').reset(); $('#id').value = id || '';
-
-          // load select lists (clients, sites, candidates)
           await preloadLookups();
-
           if (id){
             const res = await api('admin-assignment-get','POST',{ id });
             if(res?.ok && res.body){
@@ -429,7 +344,7 @@
               $('#start').value = a.start_date ? a.start_date.substring(0,10) : '';
               $('#end').value = a.end_date ? a.end_date.substring(0,10) : '';
               $('#client_id').value = a.client_id || '';
-              await reloadClientSites(); // keep site list in sync
+              await reloadClientSites();
               $('#client_site_id').value = a.client_site_id || '';
               $('#candidate_id').value = a.candidate_id || '';
               $('#shift').value = a.shift || 'Day';
@@ -448,21 +363,17 @@
         $('#client_id').addEventListener('change', reloadClientSites);
 
         async function preloadLookups(){
-          // You likely already have these functions in your codebase.
-          // If not, wire to your existing list endpoints or include in assignment-list response.
           const [clients, candidates] = await Promise.all([
             api('admin-clients-list','POST',{ all:true }),
             api('admin-candidates-lists','POST',{ all:true })
           ]);
 
-          // populate clients
           const clientSel = $('#client_id');
           clientSel.innerHTML = '<option value="">Please select…</option>';
           (clients?.body||[]).forEach(c => {
             const o = document.createElement('option'); o.value=c.id; o.textContent=c.name; clientSel.appendChild(o);
           });
 
-          // populate candidates
           const candSel = $('#candidate_id');
           candSel.innerHTML = '<option value="">Please select…</option>';
           (candidates?.body||[]).forEach(c => {
@@ -502,12 +413,22 @@
           else toast('Save failed','bad',3000);
         };
 
-        let debounceTimer;
-        const debounceLoad = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(load, 280); };
+        async function exportCsv(){
+          const res = await api('admin-assignments-export','POST',{ q: $('#q').value.trim(), status: $('#status').value });
+          if (res?.ok && res.body){
+            const blob = new Blob([res.body], { type:'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = Object.assign(document.createElement('a'),{ href:url, download:'assignments.csv' });
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+          } else {
+            toast('Export failed','bad',3000);
+          }
+        }
 
         async function load(){
-          $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px; text-align:center">Loading…</td></tr>`;
-          $('#checkAll').checked = false; selected.clear(); enableDelete();
+          $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Loading…</td></tr>`;
+          $('#checkAll').checked=false; selected.clear(); enableDelete();
 
           const res = await api('admin-assignments-list','POST',{
             q: $('#q').value.trim(),
@@ -515,7 +436,10 @@
             page, pageSize
           });
 
-          if(!res?.ok){ $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px; text-align:center">Failed to load</td></tr>`; return; }
+          if(!res?.ok){
+            $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Failed to load</td></tr>`;
+            return;
+          }
 
           rows = res.body?.rows || [];
           total = Number(res.body?.total || 0);
@@ -523,7 +447,7 @@
           $('#totalPill').textContent = `${total} total`;
 
           if(!rows.length){
-            $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px; text-align:center">No results</td></tr>`;
+            $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">No results</td></tr>`;
             return;
           }
 
@@ -531,9 +455,7 @@
           rows.forEach(r=>{
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td data-th="">
-                <input type="checkbox" data-id="${r.id}">
-              </td>
+              <td data-th=""><input type="checkbox" data-id="${r.id}"></td>
               <td data-th="Title">
                 <div style="font-weight:600">${r.title ?? '—'}</div>
                 <div class="muted" style="font-size:12px">${r.po ? 'PO '+r.po : '—'}</div>
@@ -560,7 +482,6 @@
           $('#rows').innerHTML = '';
           $('#rows').appendChild(frag);
 
-          // wire row checkboxes and actions
           $$('#rows input[type=checkbox]').forEach(cb=>{
             cb.onchange = (e) => {
               const id = e.target.getAttribute('data-id');
@@ -588,7 +509,7 @@
 
         // initial load
         await load();
-      });
+      }); // bootAdmin
     };
 
     waitForAdmin();
