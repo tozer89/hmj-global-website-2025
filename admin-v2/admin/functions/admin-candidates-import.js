@@ -1,24 +1,30 @@
 // admin-candidates-import.js
-// Import candidates from a CSV string sent in the POST body.
 // Body: { csv: "<entire CSV text>" }
-
 const { supa, ok, err, parseBody } = require('./_lib.js');
 const { requireAdmin } = require('./_guard.js');
 
-// Accept these columns (case-insensitive). Extra columns are ignored.
 const ALLOWED = new Set([
-  'id', 'ref', 'full_name', 'name', 'email', 'phone', 'status',
-  'created_at', 'updated_at'
+  'id', 'ref', 'first_name', 'last_name', 'full_name', 'name',
+  'email', 'phone', 'status', 'created_at', 'updated_at'
 ]);
 
-// Normalise header names to our schema
+// normalize header names
 function normHeader(h) {
   const k = String(h || '').trim().toLowerCase();
   if (k === 'name') return 'full_name';
   return k;
 }
 
-// RFC-ish CSV parser (handles quotes, commas, newlines)
+// split "First Last" → { first_name, last_name }
+function splitName(full) {
+  const t = String(full || '').trim();
+  if (!t) return { first_name: null, last_name: null };
+  const parts = t.split(/\s+/);
+  if (parts.length === 1) return { first_name: parts[0], last_name: null };
+  return { first_name: parts.slice(0, -1).join(' '), last_name: parts.slice(-1).join(' ') };
+}
+
+// minimal CSV parser (quotes, commas, CRLF)
 function parseCSV(text) {
   const rows = [];
   let i = 0, s = text || '', len = s.length;
@@ -31,31 +37,21 @@ function parseCSV(text) {
     const ch = s[i++];
     if (inQ) {
       if (ch === '"') {
-        if (s[i] === '"') { cell += '"'; i++; }       // escaped quote
-        else { inQ = false; }
-      } else {
-        cell += ch;
-      }
+        if (s[i] === '"') { cell += '"'; i++; } else { inQ = false; }
+      } else cell += ch;
     } else {
       if (ch === ',') pushCell();
       else if (ch === '\n') { pushCell(); pushRow(); }
-      else if (ch === '\r') {
-        if (s[i] === '\n') i++;
-        pushCell(); pushRow();
-      } else if (ch === '"') {
-        inQ = true;
-      } else {
-        cell += ch;
-      }
+      else if (ch === '\r') { if (s[i] === '\n') i++; pushCell(); pushRow(); }
+      else if (ch === '"') inQ = true;
+      else cell += ch;
     }
   }
-  // last cell/row
   pushCell();
   if (row.length > 1 || (row.length === 1 && row[0] !== '')) pushRow();
   return rows;
 }
 
-// Convert CSV text → array of objects using first row as headers
 function csvToObjects(csv) {
   const raw = parseCSV(csv);
   if (!raw.length) return { headers: [], rows: [] };
@@ -69,7 +65,7 @@ function csvToObjects(csv) {
     const obj = {};
     allowedIdx.forEach((idx, c) => {
       if (idx === -1) return;
-      const key = normHeader(raw[0][c]);
+      const key = headers[c];
       obj[key] = (rowArr[c] ?? '').toString().trim();
     });
     rows.push(obj);
@@ -80,35 +76,40 @@ function csvToObjects(csv) {
 exports.handler = async (event) => {
   try {
     requireAdmin(event);
-
-    if (event.httpMethod !== 'POST') {
-      const e = new Error('Method Not Allowed'); e.status = 405; throw e;
-    }
-
-    const { csv } = parseBody(event);
+    const { csv } = parseBody(event) || {};
     if (!csv || typeof csv !== 'string') {
       const e = new Error('csv (string) required'); e.status = 400; throw e;
     }
 
     const { rows } = csvToObjects(csv);
-
     if (!rows.length) return ok({ inserted: 0, skipped: 0, errors: [] });
 
-    // Normalise rows to our schema & defaults
     const cleaned = [];
     const errors = [];
     let skipped = 0;
 
     rows.forEach((r, idx) => {
-      // Minimal viable row: either full_name or email present
-      if (!r.full_name && !r.email) {
+      // prefer explicit first/last; fall back to full_name/name
+      let first_name = (r.first_name || '').trim();
+      let last_name  = (r.last_name || '').trim();
+
+      if ((!first_name || !last_name) && (r.full_name || r.name)) {
+        const { first_name: f, last_name: l } = splitName(r.full_name || r.name);
+        if (!first_name) first_name = f || '';
+        if (!last_name)  last_name  = l || '';
+      }
+
+      const hasNameOrEmail = (first_name || last_name || r.email);
+      if (!hasNameOrEmail) {
         skipped++;
-        errors.push({ line: idx + 2, error: 'Missing full_name/email' }); // +2 = header + 1-based
+        errors.push({ line: idx + 2, error: 'Missing name/email' });
         return;
       }
+
       const row = {
         ref: r.ref || null,
-        full_name: r.full_name || null,
+        first_name: first_name || null,
+        last_name:  last_name  || null,
         email: r.email || null,
         phone: r.phone || null,
         status: (r.status || 'active').toLowerCase(),
@@ -116,7 +117,9 @@ exports.handler = async (event) => {
       cleaned.push(row);
     });
 
-    // Insert with ignoreDuplicates (relies on your unique constraints if any)
+    if (!cleaned.length) return ok({ inserted: 0, skipped, errors });
+
+    // Insert (ignoreDuplicates relies on your unique constraints; if none, all will insert)
     const { data, error } = await supa()
       .from('candidates')
       .insert(cleaned, { ignoreDuplicates: true })
@@ -125,9 +128,7 @@ exports.handler = async (event) => {
     if (error) throw error;
 
     const inserted = Array.isArray(data) ? data.length : 0;
-
     return ok({ inserted, skipped, errors });
-
   } catch (e) {
     return err(e.message || e, e.status || 500);
   }

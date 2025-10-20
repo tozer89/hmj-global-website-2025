@@ -5,7 +5,7 @@ const { requireAdmin } = require('./_guard.js');
 exports.handler = async (event) => {
   try {
     requireAdmin(event);
-    const { ids } = parseBody(event);
+    const { ids } = parseBody(event) || {};
     const list = Array.isArray(ids) ? ids : (ids ? [ids] : []);
     if (!list.length) { const e = new Error('ids[] required'); e.status = 400; throw e; }
 
