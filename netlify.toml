@@ -1,16 +1,15 @@
+# netlify.toml (ROOT)
+
+# Default settings (used by main, other branches, previews unless overridden)
 [build]
-  publish = "/"
-  functions = "netlify/functions"
+  publish   = "."
+  functions = "functions"                 # your prod/main functions folder (adjust if different)
 
-# Gate the timesheets admin to users with the "admin" role
-[[redirects]]
-  from = "/admin/timesheets*"
-  to = "/admin/timesheets.html"
-  status = 200
-  conditions = { Role = ["admin"] }
+# --- Branch override for the admin-v2 branch ---
+[context."branch:admin-v2"]
+  functions = "admin-v2/admin/functions"  # where your dev functions currently live
 
-# Fallback for non-admins
-[[redirects]]
-  from = "/admin/timesheets*"
-  to = "/unauthorized.html"
-  status = 401
+# Optional: ensure deploy previews also see the dev folder when building the admin-v2 branch
+[context.deploy-preview]
+  # Netlify sets this for *any* branch previews. If you only want it for admin-v2,
+  # omit this block; the branch override above already applies to previews of admin-v2.

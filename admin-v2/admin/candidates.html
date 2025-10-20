@@ -11,9 +11,16 @@
   <!-- Proactive init once DOM exists (safe if already inited) -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch {}
+      try {
+        if (window.netlifyIdentity) {
+          window.netlifyIdentity.init({
+            APIUrl: 'https://hmjg.netlify.app/.netlify/identity'
+          });
+        }
+      } catch {}
     });
   </script>
+
 
   <!-- Shared admin bootstrap (ABSOLUTE path; bump version when changing file) -->
   <script defer src="/admin-v2/admin/common.js?v=12"></script>
