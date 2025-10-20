@@ -1,572 +1,543 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>Assignments — Admin</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- App icon & fonts -->
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Fonts / Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous"/>
 
-  <!-- Theme: light base with HMJ blue accents -->
+  <!-- Page styles (lean, matches Admin home palette) -->
   <style>
     :root{
-      --bg: #ffffff;
-      --panel: #ffffff;
-      --muted: #6b7280;      /* gray-500 */
-      --text: #0f172a;       /* slate-900 */
-      --line: #e5e7eb;       /* gray-200 */
-      --chip: #f3f4f6;       /* gray-100 */
-      --accent: #295aa6;     /* HMJ blue (slightly lighter) */
-      --accent-600:#1f4a8a;  /* darker hover */
-      --accent-100:#e8f0ff;
-      --success:#16a34a;
-      --warn:#eab308;
-      --danger:#dc2626;
-      --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
-      --radius: 12px;
+      --navy:#1f3e78;        /* HMJ navy (slightly lighter than the very dark one) */
+      --navy-600:#244685;
+      --navy-100:#eaf0fb;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      --bg:#ffffff;
+      --chip:#eef2ff;
+      --pill-ok:#e6f7ef;
+      --pill-warn:#fff7e6;
+      --pill-bad:#ffecec;
+      --accent:#2563eb;
+      --accent-600:#1d4ed8;
+      --row:#f8fafc;
+      --row-alt:#f1f5f9;
+      --shadow:0 8px 24px rgba(2,6,23,.08);
+      --radius:14px;
     }
-    * { box-sizing: border-box; }
-    html,body{ height:100%; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
-      margin:0; background:var(--bg); color:var(--text);
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--ink);
+      background:var(--bg);
     }
-    .wrap{ max-width:1200px; margin:0 auto; padding:16px 16px 80px; }
-    header.top{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:12px; padding:12px 0 6px;
-    }
-    .brand{ display:flex; align-items:center; gap:10px; }
-    .brand .logo{
-      width:28px; height:28px; display:grid; place-items:center;
-      border-radius:7px; background:var(--accent); color:#fff; font-weight:700;
-      box-shadow:var(--shadow);
-    }
-    .brand .title{ font-weight:600; font-size:15px; color:var(--muted); }
-    .toolbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
-    /* Controls row */
-    .controls{
-      display:grid; grid-template-columns: 1fr max-content max-content max-content max-content;
-      gap:10px; align-items:center; margin-top:12px;
+    /* Top bar */
+    .topbar{
+      background:var(--navy);
+      color:#fff;
+      padding:14px 18px;
+      position:sticky; top:0; z-index:30;
+      box-shadow:0 2px 0 rgba(2,6,23,.06);
     }
-    @media (max-width: 860px){
-      .controls{ grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 520px){
-      .controls{ grid-template-columns: 1fr; }
+    .topbar .wrap{max-width:1200px; margin:0 auto; display:flex; gap:14px; align-items:center; justify-content:space-between}
+    .brand{display:flex; gap:12px; align-items:center}
+    .brand .logo{width:28px; height:28px; border-radius:8px; background:#fff; color:var(--navy); display:grid; place-items:center; font-weight:800}
+    .brand .title{font-weight:700; letter-spacing:.2px}
+    .brand .tag{font-size:12px; background:#fff1; border:1px solid #ffffff33; padding:4px 10px; border-radius:999px}
+    .nav-pill{color:#fff; text-decoration:none; border:1px solid #ffffff33; border-radius:14px; padding:8px 14px; transition:.15s}
+    .nav-pill:hover{background:#ffffff0f}
+
+    .actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .chip{background:#ffffff14; border:1px solid #ffffff2a; color:#fff; font-size:12px; padding:6px 10px; border-radius:999px}
+    .chip.ok{background:#0bbd6a1a; border-color:#0bbd6a3a}
+    .chip.warn{background:#f59e0b1a; border-color:#f59e0b3a}
+    .chip.bad{background:#ef44441a; border-color:#ef44443a}
+    .btn-outline{background:#fff0; color:#fff; border:1px solid #ffffff66; border-radius:14px; padding:8px 14px; cursor:pointer}
+    .btn-outline:hover{background:#ffffff14}
+
+    /* Page shell */
+    .page{max-width:1200px; margin:22px auto; padding:0 16px}
+    .page h1{margin:0 0 10px; font-size:22px}
+    .toolbar{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0 14px;
     }
     .search{
-      display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line);
-      border-radius:10px; padding:10px 12px;
+      flex:1 1 420px; position:relative;
     }
     .search input{
-      width:100%; border:0; outline:0; font-size:14px; background:transparent; color:var(--text);
+      width:100%; padding:12px 38px 12px 36px; border:1px solid var(--border); border-radius:12px; outline:none;
+      background:#fff;
     }
-    select, .btn{
-      height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; color:var(--text);
-      padding:0 12px; font-size:14px;
+    .search i{position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted)}
+    .select{
+      border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#fff; color:var(--ink);
     }
-    .btn{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; }
-    .btn.primary{
-      background:var(--accent); color:#fff; border-color:transparent;
+    .btn{
+      border:none; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:600;
+      background:var(--navy); color:#fff;
     }
-    .btn.primary:hover{ background:var(--accent-600); }
-    .btn.ghost{ background:#fff; }
-    .btn.danger{ background:#fff; color:var(--danger); border-color:#fecaca; }
-    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    .btn:hover{background:var(--navy-600)}
+    .btn.ghost{background:#fff; color:var(--ink); border:1px solid var(--border)}
+    .btn.danger{background:#ef4444}
+    .btn.danger:hover{background:#dc2626}
+    .btn.icon{display:flex; gap:8px; align-items:center}
 
-    /* Card & table */
-    .card{
-      margin-top:14px; background:var(--panel); border:1px solid var(--line);
-      border-radius: var(--radius); box-shadow:var(--shadow);
-    }
+    /* Card + table */
+    .card{background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow)}
     .card .head{
-      padding:12px 14px; border-bottom:1px solid var(--line);
-      display:flex; justify-content:space-between; align-items:center;
+      display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); background:var(--row);
+      border-top-left-radius:var(--radius); border-top-right-radius:var(--radius);
     }
-    .card .head .subtitle{ font-size:13px; color:var(--muted); }
-    .table-wrap{ width:100%; overflow:auto; }
-    table{ width:100%; border-collapse: collapse; font-size:14px; }
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+
+    table{
+      width:100%; border-collapse:separate; border-spacing:0;
+    }
     thead th{
-      text-align:left; font-weight:600; color:#111827; background:var(--accent-100);
-      border-bottom:1px solid var(--line); padding:10px 12px; white-space:nowrap;
+      text-align:left; font-size:12px; letter-spacing:.04em; color:var(--muted); padding:12px 14px; background:var(--row);
+      border-bottom:1px solid var(--border);
     }
     tbody td{
-      border-bottom:1px solid var(--line); padding:12px; vertical-align:top;
+      padding:13px 14px; border-bottom:1px solid var(--border); vertical-align:middle;
     }
-    tbody tr:hover{ background:#fafafa; }
-    .muted{ color:var(--muted); }
-    .status{
-      display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
-      padding:4px 8px; border-radius:999px; background:var(--chip); color:#111827; border:1px solid var(--line);
-    }
-    .status.complete{ background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
-    .status.progress{ background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
-    .status.archived{ background:#f3f4f6; color:#374151; }
+    tbody tr:nth-child(2n){background:var(--row-alt)}
+    .status{font-size:12px; padding:4px 8px; border-radius:999px; display:inline-block}
+    .status.live{background:var(--pill-ok); color:#166534}
+    .status.draft{background:var(--pill-warn); color:#92400e}
+    .status.complete{background:#eef2f7; color:#334155}
 
-    .actions{ display:flex; gap:6px; flex-wrap:wrap; }
-    .chip{ background:var(--chip); border:1px solid var(--line); padding:3px 8px; border-radius:999px; font-size:12px; color:#111827; }
+    .footerbar{
+      display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:#fff; border-top:1px solid var(--border); border-bottom-left-radius:var(--radius); border-bottom-right-radius:var(--radius);
+    }
+    .pager{display:flex; gap:8px; align-items:center}
+    .pager .btn{padding:8px 12px}
+    .select-pages{border:1px solid var(--border); padding:6px 10px; border-radius:10px}
 
-    .footer{
-      display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px;
-    }
-    .pager{ display:flex; gap:8px; align-items:center; }
-    .pill{ border-radius:999px; padding:2px 8px; font-size:12px; background:var(--chip); border:1px solid var(--line); }
+    /* Drawer (Quick view) */
+    .drawer-backdrop{display:none; position:fixed; inset:0; background:rgba(15,23,42,.35); z-index:60}
+    .drawer{position:fixed; top:0; right:-520px; width:520px; max-width:96vw; height:100%; background:#fff; border-left:1px solid var(--border); box-shadow:var(--shadow); z-index:70; transition:right .22s ease}
+    .drawer.open{right:0}
+    .drawer-backdrop.show{display:block}
+    .drawer .drawer-head{display:flex; justify-content:space-between; align-items:center; padding:14px; border-bottom:1px solid var(--border)}
+    .drawer .drawer-body{padding:14px; display:grid; gap:14px}
+    .kv{display:grid; grid-template-columns:130px 1fr; gap:6px 10px; font-size:14px}
+    .kv .k{color:var(--muted)}
+    .subcard{border:1px solid var(--border); border-radius:12px; padding:12px}
+    .subcard h4{margin:0 0 8px}
+    .empty{color:var(--muted); font-style:italic}
 
-    /* Drawer (create/edit) */
-    .drawer{
-      position:fixed; inset:0; display:none;
-      background: rgba(15,23,42,.42); z-index:40;
-    }
-    .drawer.open{ display:block; }
-    .drawer .panel{
-      position:absolute; right:0; top:0; height:100%; width:min(640px, 100%);
-      background:#fff; border-left:1px solid var(--line); box-shadow: var(--shadow);
-      display:flex; flex-direction:column;
-    }
-    .drawer .panel header{
-      display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 16px; border-bottom:1px solid var(--line);
-    }
-    .drawer .panel main{ padding:16px; overflow:auto; }
-    .drawer .panel footer{
-      margin-top:auto; padding:12px 16px; border-top:1px solid var(--line);
-      display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;
-    }
-    .grid{
-      display:grid; gap:12px;
-      grid-template-columns: repeat(12, minmax(0,1fr));
-    }
-    .col-12{ grid-column: span 12 / span 12; }
-    .col-6{ grid-column: span 6 / span 6; }
-    .col-4{ grid-column: span 4 / span 4; }
-    .field label{ display:block; font-size:12px; color:#374151; margin-bottom:6px; }
-    .field input, .field select, .field textarea{
-      width:100%; height:38px; border-radius:10px; border:1px solid var(--line); padding:8px 10px; font-size:14px;
-    }
-    .field textarea{ height:92px; resize:vertical; }
-
-    @media (max-width:900px){
-      .col-6, .col-4{ grid-column:span 12 / span 12; }
+    /* Mobile tweaks */
+    @media (max-width:720px){
+      .actions .chip{display:none}
+      .footerbar{flex-direction:column; gap:10px}
+      .kv{grid-template-columns:1fr}
     }
 
-    /* Toast */
-    #toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:50; display:flex; flex-direction:column; gap:8px; }
-    .toast{ background:#111827; color:#fff; padding:10px 12px; border-radius:10px; box-shadow:var(--shadow); font-size:13px; }
-    .toast.warn{ background:#92400e; } .toast.bad{ background:#7f1d1d; } .toast.ok{ background:#065f46; }
-
-    /* Small utilities */
-    .sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-    .hide{ display:none!important; }
+    /* Toast (provided by common.js uses #toast) */
+    #toast{position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#111827; color:#fff; padding:10px 14px; border-radius:10px; box-shadow:var(--shadow); z-index:90; display:none}
+    .pill{font-size:12px; padding:4px 8px; border-radius:999px; display:inline-block; margin-right:6px; background:var(--chip)}
+    .b-warn{background:var(--pill-warn)}
+    .b-bad{background:var(--pill-bad)}
   </style>
 
-  <!-- Shared admin helpers (Identity gate + api wrapper + debug UI) -->
-  <script defer src="/admin/common.js?v=20"></script>
+  <!-- Shared admin helpers -->
+  <!-- after (works from /admin-v2/admin/assignments.html) -->
+  <script defer src="./common.js?v=11"></script>
+
+
 </head>
+
 <body>
-  <div class="wrap">
-    <header class="top">
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="wrap">
       <div class="brand">
         <div class="logo">H</div>
-        <div class="title">HMJ Global — Admin</div>
+        <div class="title">HMJ Global — <span class="title">Admin</span></div>
+        <a class="nav-pill" href="./index.html">← Dashboard</a>
       </div>
-      <div class="toolbar">
-        <!-- debug chips are drawn by common.js if enabled -->
+      <div class="actions">
+        <!-- debug chips land here -->
+        <div id="diagChips" class="chips"></div>
+        <button id="btnSignOut" class="btn-outline"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</button>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <h2 style="margin:8px 0 0;font-size:22px;">Assignments</h2>
+  <main class="page">
+    <h1>Assignments</h1>
 
-    <!-- Controls -->
-    <div class="controls" id="controls">
-      <label class="search">
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 20.3 16.7 16A7.2 7.2 0 1 0 15.97 16l4.33 4.33a.85.85 0 0 0 1.2-1.2zM4.4 10.8a6.4 6.4 0 1 1 12.8 0a6.4 6.4 0 0 1-12.8 0"/></svg>
-        <input id="q" type="search" placeholder="Search (title, ref, client, candidate)..." />
-      </label>
-
-      <select id="status">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="q" type="search" placeholder="Search (title, ref, client, candidate)…" />
+      </div>
+      <select id="status" class="select" title="Filter by status">
         <option value="">All statuses</option>
-        <option value="In progress">In progress</option>
-        <option value="Complete">Complete</option>
-        <option value="Archived">Archived</option>
+        <option value="live">Live</option>
+        <option value="draft">Draft</option>
+        <option value="complete">Complete</option>
+        <option value="archived">Archived</option>
       </select>
-
-      <button class="btn ghost" id="refresh">↻ Refresh</button>
-      <button class="btn primary" id="new"><span>＋</span> New assignment</button>
-      <button class="btn danger" id="delete" disabled>🗑 Delete</button>
+      <button id="btnRefresh" class="btn icon"><i class="fa-solid fa-rotate"></i> Refresh</button>
+      <button id="btnNew" class="btn icon"><i class="fa-solid fa-plus"></i> New assignment</button>
+      <button id="btnDelete" class="btn danger icon" disabled><i class="fa-solid fa-trash"></i> Delete</button>
     </div>
 
-    <!-- Table -->
-    <div class="card">
+    <!-- Table card -->
+    <section class="card" id="tableCard">
       <div class="head">
-        <div class="subtitle">All assignments</div>
-        <div class="pill" id="total">0 total</div>
+        <div><strong>All assignments</strong> <span class="muted small" id="total">(0 total)</span></div>
       </div>
 
-      <div class="table-wrap">
-        <table id="table">
+      <div style="overflow:auto">
+        <table id="grid">
           <thead>
-          <tr>
-            <th style="width:36px;"><input type="checkbox" id="checkAll" aria-label="Select all"/></th>
-            <th>TITLE</th>
-            <th>CLIENT</th>
-            <th>CANDIDATE</th>
-            <th>DATES</th>
-            <th>STATUS</th>
-            <th style="width:160px;">ACTIONS</th>
-          </tr>
+            <tr>
+              <th style="width:44px;"><input id="checkAll" type="checkbox" /></th>
+              <th>TITLE</th>
+              <th>CLIENT</th>
+              <th>CANDIDATE</th>
+              <th style="min-width:190px;">DATES</th>
+              <th>STATUS</th>
+              <th style="min-width:120px;">ACTIONS</th>
+            </tr>
           </thead>
-          <tbody id="tbody">
-          <tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Loading…</td></tr>
+          <tbody id="rows">
+            <tr><td colspan="7" class="muted" style="text-align:center; padding:28px">Loading…</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="footer">
+      <div class="footerbar">
         <div class="pager">
-          <button class="btn" id="prev">← Prev</button>
-          <button class="btn" id="next">Next →</button>
+          <button id="prev" class="btn ghost">&larr; Prev</button>
+          <button id="next" class="btn ghost">Next &rarr;</button>
+          <span class="muted small" id="pageLabel">Page 1</span>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span class="muted" style="font-size:12px;">Page</span>
-          <div class="pill" id="pageText">1</div>
-          <select id="pageSize">
-            <option>10</option><option selected>20</option><option>50</option>
+        <div>
+          <select id="pageSize" class="select-pages">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
           </select>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 
-  <!-- Drawer: create/edit -->
-  <div class="drawer" id="drawer" aria-hidden="true">
-    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
-      <header>
-        <div>
-          <div id="drawerTitle" style="font-weight:600;">New assignment</div>
-          <div class="muted" id="drawerSub" style="font-size:12px;"></div>
+  <!-- Drawer (Quick View) -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <div id="drawerTitle" style="font-weight:700">Assignment</div>
+        <div id="drawerSub" class="muted small"></div>
+      </div>
+      <button id="drawerClose" class="btn ghost"><i class="fa-solid fa-xmark"></i> Close</button>
+    </div>
+    <div class="drawer-body">
+      <div class="subcard">
+        <h4>Quick view</h4>
+        <div class="kv" id="kvBasics">
+          <!-- Filled by JS -->
         </div>
-        <button class="btn" id="closeDrawer">✕</button>
-      </header>
-
-      <main>
-        <form id="form" class="grid" autocomplete="off">
-          <input type="hidden" id="id" />
-
-          <div class="col-12 field">
-            <label for="title">Job title *</label>
-            <input id="title" required />
-          </div>
-
-          <div class="col-6 field">
-            <label for="po">PO number</label>
-            <input id="po" />
-          </div>
-
-          <div class="col-6 field">
-            <label for="shift">Shift</label>
-            <select id="shift">
-              <option>Day</option>
-              <option>Night</option>
-            </select>
-          </div>
-
-          <div class="col-6 field">
-            <label for="start">Start date</label>
-            <input id="start" type="date" />
-          </div>
-
-          <div class="col-6 field">
-            <label for="end">End date</label>
-            <input id="end" type="date" />
-          </div>
-
-          <div class="col-6 field">
-            <label for="client">Client</label>
-            <select id="client"></select>
-          </div>
-
-          <div class="col-6 field">
-            <label for="site">Client site</label>
-            <select id="site"></select>
-          </div>
-
-          <div class="col-6 field">
-            <label for="candidate">Candidate</label>
-            <select id="candidate"></select>
-          </div>
-
-          <div class="col-6 field">
-            <label for="hours">Expected days / hours</label>
-            <input id="hours" placeholder="e.g. Mon–Fri, 8–5" />
-          </div>
-
-          <div class="col-12 field">
-            <label for="notes">Internal notes</label>
-            <textarea id="notes" placeholder="Internal notes…"></textarea>
-          </div>
-        </form>
-      </main>
-
-      <footer>
-        <button class="btn" id="cancel">Cancel</button>
-        <button class="btn primary" id="save">Save</button>
-      </footer>
+      </div>
+      <div class="subcard">
+        <h4>Latest timesheet</h4>
+        <div id="latestTs" class="empty">No data (assignment not live, or no timesheets yet).</div>
+      </div>
+      <div class="subcard">
+        <h4>Internal notes</h4>
+        <textarea id="notes" rows="3" placeholder="Internal notes… (not sent to client)" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px"></textarea>
+        <div style="display:flex; gap:8px; margin-top:10px">
+          <button id="saveNotes" class="btn">Save</button>
+          <button id="openFull" class="btn ghost">Open full assignment</button>
+        </div>
+      </div>
     </div>
-  </div>
+  </aside>
 
-  <!-- Toast outlet -->
+  <!-- toast container -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Page logic -->
+  <!-- Page script -->
   <script>
-    // Wait for common.js to register the Admin namespace
-    window.addEventListener('DOMContentLoaded', () => {
-      const start = () => Admin.bootAdmin(async ({ api, sel, toast }) => {
-        // ---------------- UI helpers
-        const $ = (q, el=document) => el.querySelector(q);
-        const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
-        const formatDates = (a, b) => {
-          const fmt = s => s ? new Date(s).toLocaleDateString() : '—';
-          return `${fmt(a)} → ${fmt(b)}`;
-        };
+  /* global Admin */
+  Admin.bootAdmin(async ({ api, sel, toast }) => {
+    // -------------------------- tiny helpers --------------------------
+    const chip = (t, tone='info') => {
+      const s = document.createElement('span');
+      s.className='pill';
+      s.textContent=t;
+      if (tone==='warn') s.classList.add('b-warn');
+      if (tone==='bad')  s.classList.add('b-bad');
+      sel('#diagChips')?.appendChild(s);
+      return s;
+    };
 
-        // ---------------- State
-        let page=1, pageSize=20, total=0, rows=[], selected=new Set(), current=null, cacheDropdowns=null;
-        const state = () => ({ page, pageSize, search: $('#q').value.trim(), status: $('#status').value });
+    let page=1, pageSize=Number(sel('#pageSize').value||20), total=0;
+    let current=null;
+    const selected = new Set();
 
-        // ---------------- Elements
-        const tbody = $('#tbody'), totalEl = $('#total'), pageText = $('#pageText');
-        const btnPrev = $('#prev'), btnNext = $('#next'), btnNew = $('#new'), btnDel = $('#delete');
-        const selAll = $('#checkAll'), drawer = $('#drawer');
+    const openDrawer =()=>{ sel('#drawer').classList.add('open'); sel('#drawerBackdrop').classList.add('show'); };
+    const closeDrawer=()=>{ sel('#drawer').classList.remove('open'); sel('#drawerBackdrop').classList.remove('show'); current=null; };
 
-        // ---------------- Chips + wiring
-        const enableDelete = () => btnDel.disabled = (selected.size===0);
-        const openDrawer = () => { drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); };
-        const closeDrawer= () => { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); current=null; };
+    // sign out + debug chips from common.js
+    sel('#btnSignOut')?.addEventListener('click', () => Admin.signOut());
 
-        // ---------------- Dropdown cache (client / site / candidate)
-        async function dropdowns() {
-          if (cacheDropdowns) return cacheDropdowns;
-          const res = await api('/admin-assignments-dropdowns');
-          cacheDropdowns = res || { clients:[], clientSites:[], candidates:[] };
-          return cacheDropdowns;
+    // -----------------------------------------------------------------
+    // load grid
+    // -----------------------------------------------------------------
+    async function load() {
+      const q = sel('#q').value.trim();
+      const status = sel('#status').value.trim() || null;
+      sel('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center; padding:28px">Loading…</td></tr>`;
+
+      console.groupCollapsed('%c[assignments] list', 'color:#2563eb; font-weight:700');
+      console.log({ page, pageSize, q, status });
+
+      try {
+        const res = await api('admin-assignments-list', { page, pageSize, q, status });
+        total = res?.total || 0;
+        const items = res?.items || [];
+
+        sel('#total').textContent = `(${total} total)`;
+        sel('#pageLabel').textContent = `Page ${page}`;
+
+        if (!items.length) {
+          sel('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center; padding:30px">No assignments found.</td></tr>`;
+          console.log('No items');
+          console.groupEnd();
+          return;
         }
-        function fillSelect(sel, items, {value='id', label='name', placeholder='Please select…'}={}) {
-          sel.innerHTML = '';
-          const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent = placeholder; sel.appendChild(opt0);
-          for (const it of items) {
-            const o = document.createElement('option');
-            o.value = it[value]; o.textContent = it[label]; sel.appendChild(o);
+
+        const html = items.map(r => {
+          const live = r.status==='live' || (r.candidate_id && r.start_date && !r.end_date);
+          const st = live ? 'live' : (r.status || 'draft');
+          const statusChip = `<span class="status ${st}">${st}</span>`;
+          const dates = [r.start_date||'—', r.end_date||'—'].join(' → ');
+          return `
+          <tr data-id="${r.id}">
+            <td><input type="checkbox" data-id="${r.id}" class="rowcheck"/></td>
+            <td><a href="#" class="row-open" data-id="${r.id}">${r.title || '—'}</a><div class="small muted">${r.po_number ? 'PO '+r.po_number : ''}</div></td>
+            <td>${r.client_name||'—'}</td>
+            <td>${r.candidate_name||'—'}</td>
+            <td>${dates}</td>
+            <td>${statusChip}</td>
+            <td>
+              <button class="btn ghost small row-open" data-id="${r.id}"><i class="fa-regular fa-eye"></i> Quick view</button>
+              <button class="btn ghost small row-edit" data-id="${r.id}"><i class="fa-regular fa-pen-to-square"></i> Edit</button>
+            </td>
+          </tr>`;
+        }).join('');
+        sel('#rows').innerHTML = html;
+
+        // Wire up row actions
+        document.querySelectorAll('.row-open').forEach(el => el.addEventListener('click', (e)=>{
+          e.preventDefault();
+          const id = el.getAttribute('data-id');
+          openQuickView(id);
+        }));
+        document.querySelectorAll('.row-edit').forEach(el => el.addEventListener('click', (e)=>{
+          e.preventDefault();
+          const id = el.getAttribute('data-id');
+          location.href = `/admin-v2/admin/assignment?id=${encodeURIComponent(id)}`;
+        }));
+        document.querySelectorAll('.rowcheck').forEach(el => el.addEventListener('change', (e)=>{
+          const id = el.getAttribute('data-id');
+          if (el.checked) selected.add(id); else selected.delete(id);
+          sel('#btnDelete').disabled = selected.size===0;
+        }));
+        sel('#checkAll').checked=false;
+
+        console.groupEnd();
+        chip('assignments:init','ok');
+      } catch (err){
+        console.groupEnd();
+        console.error('list error', err);
+        toast('Failed to load assignments', 'bad', 4500);
+        chip('list: fail','bad');
+        sel('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center; padding:30px">Error loading assignments.</td></tr>`;
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // open quick view + fetch details + latest timesheet
+    // -----------------------------------------------------------------
+    async function openQuickView(id){
+      current = id;
+      openDrawer();
+      sel('#kvBasics').innerHTML = `<div class="muted">Loading…</div>`;
+      sel('#latestTs').innerHTML = `<span class="muted">Loading…</span>`;
+
+      console.groupCollapsed('%c[assignments] open', 'color:#2563eb; font-weight:700');
+      console.log({ id });
+
+      try{
+        const res = await api('admin-assignments-get', { id });
+        console.log('detail', res);
+        const a = res?.assignment || res;
+
+        // Header
+        sel('#drawerTitle').textContent = a?.title || 'Assignment';
+        sel('#drawerSub').textContent = a?.client_name ? `${a.client_name} • ${a.po_number||'No PO'}` : '';
+
+        // Status + basics
+        const live = a?.status==='live' || (!!a?.candidate_id && !!a?.start_date && !a?.end_date);
+        const st = live ? 'live' : (a?.status || 'draft');
+        const kv = [
+          ['Status', `<span class="status ${st}">${st}</span>`],
+          ['Client', a?.client_name || '—'],
+          ['Candidate', a?.candidate_name || '—'],
+          ['PO number', a?.po_number || '—'],
+          ['Dates', [a?.start_date||'—', a?.end_date||'—'].join(' → ')],
+          ['Shift', a?.shift || 'Day'],
+          ['Expected hours', a?.estimated_hours || '—']
+        ].map(([k,v])=>`<div class="k">${k}</div><div>${v}</div>`).join('');
+        sel('#kvBasics').innerHTML = kv || '<div class="empty">No details.</div>';
+
+        // Latest timesheet (only if live)
+        if (live) {
+          try{
+            const ts = await api('admin-timesheets-list', { assignmentId:id, limit:1, order:'desc' });
+            const item = ts?.items?.[0];
+            if (item){
+              sel('#latestTs').innerHTML = `
+                <div class="kv">
+                  <div class="k">Week</div><div>${item.week_commencing||'—'}</div>
+                  <div class="k">Hours</div><div>${item.total_hours??'—'}</div>
+                  <div class="k">Status</div><div><span class="status ${item.status||'draft'}">${item.status||'draft'}</span></div>
+                </div>
+                <div style="margin-top:8px">
+                  <a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
+                </div>
+              `;
+            } else {
+              sel('#latestTs').innerHTML = `<div class="empty">No timesheets yet.</div>`;
+            }
+          }catch(tsErr){
+            console.warn('timesheets load failed', tsErr);
+            sel('#latestTs').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
           }
+        } else {
+          sel('#latestTs').innerHTML = `<div class="empty">Not live — no timesheets.</div>`;
         }
 
-        // ---------------- Render table
-        function drawRows() {
-          tbody.innerHTML = '';
-          if (!rows.length) {
-            const tr = document.createElement('tr');
-            const td = document.createElement('td'); td.colSpan=7; td.className='muted'; td.style.textAlign='center'; td.style.padding='24px'; td.textContent='No assignments found.';
-            tr.appendChild(td); tbody.appendChild(tr); return;
-          }
-          for (const r of rows) {
-            const tr = document.createElement('tr');
-            const isSel = selected.has(r.id);
+        chip('open:ok','ok');
+        console.groupEnd();
+      }catch(err){
+        console.groupEnd();
+        chip('open:fail','bad');
+        toast('Failed to open assignment', 'bad', 4500);
+      }
+    }
 
-            // checkbox
-            const td0 = document.createElement('td');
-            const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=isSel;
-            cb.addEventListener('change', () => { if (cb.checked) selected.add(r.id); else selected.delete(r.id); enableDelete(); });
-            td0.appendChild(cb); tr.appendChild(td0);
+    // -----------------------------------------------------------------
+    // New assignment (lightweight create)
+    // -----------------------------------------------------------------
+    sel('#btnNew').addEventListener('click', async ()=>{
+      // Bare-minimum create flow: server will set draft
+      const title = prompt('Job title *');
+      if (!title) return;
 
-            // title
-            const td1 = document.createElement('td');
-            td1.innerHTML = `<div style="font-weight:600">${r.title || '—'}</div><div class="muted" style="font-size:12px">Ref: ${r.ref || '—'}</div>`;
-            tr.appendChild(td1);
-
-            // client
-            const td2 = document.createElement('td');
-            td2.textContent = r.client_name || '—'; tr.appendChild(td2);
-
-            // candidate
-            const td3 = document.createElement('td');
-            td3.textContent = r.candidate_name || '—'; tr.appendChild(td3);
-
-            // dates
-            const td4 = document.createElement('td');
-            td4.textContent = formatDates(r.start_date, r.end_date); tr.appendChild(td4);
-
-            // status
-            const td5 = document.createElement('td');
-            const st = document.createElement('span'); st.className='status';
-            const s = (r.status||'').toLowerCase();
-            if (s.includes('complete')) st.classList.add('complete');
-            else if (s.includes('progress')) st.classList.add('progress');
-            else if (s.includes('arch')) st.classList.add('archived');
-            st.textContent = r.status || '—';
-            td5.appendChild(st); tr.appendChild(td5);
-
-            // actions
-            const td6 = document.createElement('td'); td6.className='actions';
-            const btnEdit = document.createElement('button'); btnEdit.className='btn'; btnEdit.textContent='Edit';
-            btnEdit.addEventListener('click', () => edit(r.id));
-            const btnView = document.createElement('button'); btnView.className='btn ghost'; btnView.textContent='View';
-            btnView.addEventListener('click', () => view(r.id));
-            td6.append(btnEdit, btnView); tr.appendChild(td6);
-
-            tbody.appendChild(tr);
-          }
-        }
-
-        // ---------------- API calls
-        async function list() {
-          const { search, status } = state();
-          const body = { page, pageSize, search, status };
-          try {
-            const res = await api('/admin-assignments-list', { method:'POST', body });
-            rows = res.items || [];
-            total = res.total || rows.length;
-            totalEl.textContent = `${total} total`;
-            pageText.textContent = `${page}`;
-            drawRows();
-          } catch (e) {
-            console.error(e);
-            tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Failed to load.</td></tr>`;
-            toast('Could not load assignments', 'bad');
-          }
-        }
-
-        async function view(id) {
-          try {
-            const r = await api(`/admin-assignments-get?id=${encodeURIComponent(id)}`);
-            // Simple quick view: toast – you can swap this to a side-panel
-            toast(`Assignment: ${r.title || '—'} • ${r.client_name || '—'}`, 'info');
-          } catch (e){ console.error(e); toast('Could not open assignment', 'bad'); }
-        }
-
-        async function edit(id) {
-          try {
-            const [r, dd] = await Promise.all([
-              api(`/admin-assignments-get?id=${encodeURIComponent(id)}`),
-              dropdowns()
-            ]);
-            current = r.id;
-            $('#drawerTitle').textContent = 'Edit assignment';
-            $('#drawerSub').textContent = `Ref ${r.ref || '—'}`;
-            // fill dropdowns & values
-            fillSelect($('#client'), dd.clients, { value:'id', label:'name' });
-            fillSelect($('#site'), dd.clientSites, { value:'id', label:'name' });
-            fillSelect($('#candidate'), dd.candidates, { value:'id', label:'name' });
-
-            $('#id').value = r.id || '';
-            $('#title').value = r.title || '';
-            $('#po').value = r.po_number || '';
-            $('#shift').value = r.shift || 'Day';
-            $('#start').value = r.start_date ? r.start_date.substring(0,10) : '';
-            $('#end').value = r.end_date ? r.end_date.substring(0,10) : '';
-            $('#client').value = r.client_id || '';
-            $('#site').value = r.client_site_id || '';
-            $('#candidate').value = r.candidate_id || '';
-            $('#hours').value = r.estimated_hours || '';
-            $('#notes').value = r.notes || '';
-
-            openDrawer();
-          } catch (e){ console.error(e); toast('Could not open editor', 'bad'); }
-        }
-
-        async function createNew() {
-          try {
-            const dd = await dropdowns();
-            current = null;
-            $('#form').reset();
-            $('#drawerTitle').textContent = 'New assignment';
-            $('#drawerSub').textContent = '';
-            fillSelect($('#client'), dd.clients, { value:'id', label:'name' });
-            fillSelect($('#site'), dd.clientSites, { value:'id', label:'name' });
-            fillSelect($('#candidate'), dd.candidates, { value:'id', label:'name' });
-            $('#shift').value = 'Day';
-            openDrawer();
-          } catch(e){ console.error(e); toast('Could not start new assignment', 'bad'); }
-        }
-
-        async function save() {
-          // Validate
-          if (!$('#title').value.trim()) { toast('Job title is required', 'warn'); $('#title').focus(); return; }
-          const payload = {
-            id: $('#id').value || null,
-            title: $('#title').value.trim(),
-            po_number: $('#po').value.trim() || null,
-            shift: $('#shift').value || 'Day',
-            start_date: $('#start').value || null,
-            end_date: $('#end').value || null,
-            client_id: $('#client').value || null,
-            client_site_id: $('#site').value || null,
-            candidate_id: $('#candidate').value || null,
-            estimated_hours: $('#hours').value || null,
-            notes: $('#notes').value || null
-          };
-          try {
-            await api('/admin-assignments-save', { method:'POST', body: payload });
-            closeDrawer(); toast('Saved', 'ok'); await list();
-          } catch (e){ console.error(e); toast('Save failed', 'bad'); }
-        }
-
-        async function removeSelected() {
-          if (!selected.size) return;
-          if (!confirm(`Delete ${selected.size} assignment(s)? This cannot be undone.`)) return;
-          try {
-            await api('/admin-assignments-delete', { method:'POST', body:{ ids: Array.from(selected) } });
-            selected.clear(); enableDelete(); toast('Deleted', 'ok'); await list();
-          } catch(e){ console.error(e); toast('Delete failed', 'bad'); }
-        }
-
-        // ---------------- Events
-        $('#q').addEventListener('input', debounce(() => { page=1; list(); }, 300));
-        $('#status').addEventListener('change', () => { page=1; list(); });
-        $('#pageSize').addEventListener('change', e => { pageSize = parseInt(e.target.value,10)||20; page=1; list(); });
-        btnPrev.addEventListener('click', () => { if (page>1){ page--; list(); } });
-        btnNext.addEventListener('click', () => { const max = Math.max(1, Math.ceil(total/pageSize)); if (page<max){ page++; list(); } });
-        $('#refresh').addEventListener('click', () => list());
-        btnNew.addEventListener('click', () => createNew());
-        btnDel.addEventListener('click', () => removeSelected());
-        $('#closeDrawer').addEventListener('click', closeDrawer);
-        $('#cancel').addEventListener('click', closeDrawer);
-        $('#save').addEventListener('click', () => save());
-        selAll.addEventListener('change', () => {
-          if (selAll.checked) rows.forEach(r => selected.add(r.id));
-          else selected.clear();
-          enableDelete(); drawRows();
-        });
-
-        // click outside panel closes drawer
-        drawer.addEventListener('click', (e) => { if (e.target === drawer) closeDrawer(); });
-
-        // simple debounce
-        function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
-
-        // Kickoff
-        await list();
-        toast('ready', 'ok');
-      });
-
-      if (window.Admin && typeof Admin.bootAdmin === 'function') {
-        start();
-      } else {
-        // Safety: if common.js loads a tick later
-        const t = setInterval(() => {
-          if (window.Admin && typeof Admin.bootAdmin === 'function') {
-            clearInterval(t); start();
-          }
-        }, 50);
-        setTimeout(()=>clearInterval(t), 5000);
+      try{
+        const created = await api('admin-assignments-save', { title, status:'draft' });
+        toast('Draft assignment created', 'ok');
+        page = 1;
+        await load();
+        if (created?.id) openQuickView(created.id);
+      }catch(err){
+        console.error('create failed', err);
+        toast('Could not create assignment', 'bad');
       }
     });
+
+    // -----------------------------------------------------------------
+    // Delete selected
+    // -----------------------------------------------------------------
+    sel('#btnDelete').addEventListener('click', async ()=>{
+      if (!selected.size) return;
+      if (!confirm(`Delete ${selected.size} assignment(s)? This cannot be undone.`)) return;
+      try{
+        const ids = Array.from(selected);
+        await api('admin-assignments-delete', { ids });
+        toast('Deleted', 'ok');
+        selected.clear();
+        sel('#btnDelete').disabled = true;
+        await load();
+      }catch(err){
+        console.error('delete failed', err);
+        toast('Delete failed', 'bad');
+      }
+    });
+
+    // -----------------------------------------------------------------
+    // Notes (demo save using assignment-update)
+    // -----------------------------------------------------------------
+    sel('#saveNotes').addEventListener('click', async ()=>{
+      if (!current) return;
+      try{
+        const notes = sel('#notes').value.trim();
+        await api('admin-assignments-update', { id: current, notes });
+        toast('Notes saved', 'ok');
+      }catch(err){
+        console.error('notes save failed', err);
+        toast('Could not save notes', 'bad');
+      }
+    });
+
+    // -----------------------------------------------------------------
+    // Drawer controls
+    // -----------------------------------------------------------------
+    sel('#drawerClose').addEventListener('click', closeDrawer);
+    sel('#drawerBackdrop').addEventListener('click', closeDrawer);
+    sel('#openFull').addEventListener('click', ()=>{
+      if (current) location.href = `/admin-v2/admin/assignment?id=${encodeURIComponent(current)}`;
+    });
+
+    // -----------------------------------------------------------------
+    // Filters + pagination
+    // -----------------------------------------------------------------
+    let qTimer=null;
+    sel('#q').addEventListener('input', ()=>{
+      clearTimeout(qTimer);
+      qTimer = setTimeout(()=>{ page=1; load(); }, 300);
+    });
+    sel('#status').addEventListener('change', ()=>{ page=1; load(); });
+    sel('#btnRefresh').addEventListener('click', ()=> load());
+    sel('#prev').addEventListener('click', ()=>{ if (page>1){ page--; load(); }});
+    sel('#next').addEventListener('click', ()=>{
+      const max = Math.ceil(total / pageSize) || 1;
+      if (page < max){ page++; load(); }
+    });
+    sel('#pageSize').addEventListener('change', ()=>{
+      pageSize = Number(sel('#pageSize').value)||20; page=1; load();
+    });
+    sel('#checkAll').addEventListener('change', ()=>{
+      const checks = document.querySelectorAll('.rowcheck');
+      selected.clear();
+      checks.forEach(c => { c.checked = sel('#checkAll').checked; if (c.checked) selected.add(c.getAttribute('data-id')); });
+      sel('#btnDelete').disabled = selected.size===0;
+    });
+
+    // Boot diagnostics
+    chip('init: ok','ok');
+
+    // Initial load
+    await load();
+  });
   </script>
 </body>
 </html>
