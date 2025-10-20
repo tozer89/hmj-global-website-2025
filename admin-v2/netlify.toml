@@ -1,16 +1,20 @@
+# Netlify will serve the static site from the repo root
 [build]
-  publish = "/"
+  publish = "."
+  functions = "netlify/functions"   # production/default site uses these
+
+# Use the *root* functions folder for PR deploy previews
+[context.deploy-preview]
+  functions = "functions"
+
+# (Optional) Also use root functions for branch deploys
+[context.branch-deploy]
+  functions = "functions"
+
+# Be explicit for production (mirrors [build])
+[context.production]
   functions = "netlify/functions"
 
-# Gate the timesheets admin to users with the "admin" role
-[[redirects]]
-  from = "/admin/timesheets*"
-  to = "/admin/timesheets.html"
-  status = 200
-  conditions = { Role = ["admin"] }
-
-# Fallback for non-admins
-[[redirects]]
-  from = "/admin/timesheets*"
-  to = "/unauthorized.html"
-  status = 401
+# (Optional) if you run `netlify dev` locally and want to test v2:
+[dev]
+  functions = "functions"
