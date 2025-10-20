@@ -16,7 +16,61 @@
   <!-- Shared admin bootstrap (single copy; bump when changed) -->
   <script defer src="/admin-v2/admin/common.js?v=15"></script>
 
-  <!-- styles ... -->
+  <style>
+    :root{
+      --ink:#101828; --bg:#ffffff; --muted:#667085;
+      --blue:#1f3b7a; --blue-2:#29478f;
+      --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
+      --success:#16a34a; --danger:#dc2626; --warn:#f59e0b;
+      --chip:#eef2ff;
+    }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+    .row{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+    .brand{font-weight:800;letter-spacing:.2px;display:flex;gap:10px;align-items:center}
+    .brand a{display:inline-flex;gap:8px;align-items:center;color:#fff;text-decoration:none}
+    .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;display:grid;place-items:center;color:var(--blue);font-weight:900}
+    .sp{flex:1}
+    .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+    .btn:hover{background:var(--blue-2)}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
+    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
+    .btn.small{padding:6px 10px;border-radius:10px;font-weight:700}
+    .btn.danger{background:#7a1f28;border-color:#7a1f28}
+    .wrap{max-width:1200px;margin:20px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
+    .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    input[type=text], input[type=date], input[type=email], select, textarea{
+      border:1px solid var(--stroke);background:#fff;border-radius:12px;padding:9px 12px;min-width:180px;font:inherit
+    }
+    input[type=search]{ min-width:260px; }
+    table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
+    thead th{background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:10px 12px;font-weight:800}
+    tbody td{border-top:1px solid var(--stroke);padding:10px 12px;vertical-align:middle}
+    .muted{color:var(--muted)}
+    .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
+    .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    /* Drawer */
+    .drawer{position:fixed;inset:0 0 0 auto;max-width:760px;width:95vw;background:#fff;box-shadow:-4px 0 24px rgba(2,6,23,.24);transform:translateX(100%);transition:transform .24s ease;z-index:40;display:grid;grid-template-rows:auto 1fr auto}
+    .drawer.open{transform:translateX(0)}
+    .d-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--stroke);background:var(--card)}
+    .d-body{padding:16px;overflow:auto}
+    .d-foot{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--stroke);background:#fff}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px}
+    @media (max-width:820px){ .grid{grid-template-columns:1fr} }
+    .field{display:grid;gap:6px}
+    .field label{font-weight:700;font-size:13px}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+    .tab{padding:8px 10px;border-radius:10px;border:1px solid var(--stroke);background:#fff;cursor:pointer;font-weight:700}
+    .tab.active{background:var(--chip)}
+    .hr{height:1px;background:var(--stroke);margin:8px 0 4px}
+    .right{display:flex;gap:8px;align-items:center}
+    .link{color:var(--blue);text-decoration:underline;cursor:pointer}
+    :focus{outline:3px solid var(--ring);outline-offset:2px;border-radius:8px}
+  </style>
 </head>
 
 <body>
@@ -46,22 +100,44 @@
   <!-- App -->
   <div class="wrap" id="app" style="display:none">
     <div class="card bar">
-      <input id="q" placeholder="Search name, email, ref…" style="min-width:260px">
+      <input id="q" type="search" placeholder="Search name, email, ref…" />
       <select id="status">
         <option value="">Status: any</option>
-        <option>active</option><option>inactive</option><option>archived</option>
+        <option>In progress</option>
+        <option>Complete</option>
+        <option>Archived</option>
       </select>
-      <button class="btn" id="btnRefresh">Refresh</button>
+      <button class="btn small" id="btnRefresh">Refresh</button>
       <div class="sp"></div>
       <input type="file" id="csv" accept=".csv" style="display:none">
-      <button class="btn ghost" id="btnExport">Export CSV</button>
-      <button class="btn ghost" id="btnImport">Import CSV</button>
-      <button class="btn" id="btnNew">+ New candidate</button>
-      <button class="btn danger" id="btnDelete" disabled>Delete</button>
+      <button class="btn ghost small" id="btnExport">Export CSV</button>
+      <button class="btn ghost small" id="btnImport">Import CSV</button>
+      <button class="btn small" id="btnNew">+ New candidate</button>
+      <button class="btn danger small" id="btnDelete" disabled>Delete</button>
     </div>
 
     <div class="card" id="listWrap">Loading…</div>
   </div>
+
+  <!-- Drawer editor -->
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="d-head">
+      <strong id="dTitle">New candidate</strong>
+      <span class="sp"></span>
+      <button class="btn ghost small" id="btnClose">✕ Close</button>
+    </div>
+    <div class="d-body">
+      <div class="tabs" id="tabs"></div>
+      <form id="frm" class="grid" autocomplete="off"></form>
+    </div>
+    <div class="d-foot">
+      <div class="muted">Ref: <span id="dRef">—</span></div>
+      <div class="right">
+        <button class="btn ghost" id="btnSaveDraft" type="button">Save</button>
+        <button class="btn" id="btnSaveClose" type="button">Save & Close</button>
+      </div>
+    </div>
+  </aside>
 
   <!-- Toast host -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
@@ -69,12 +145,10 @@
   <!-- Single page boot (no duplicates) -->
   <script>
     (function startCandidates(){
-      // Wait until common.js has attached Admin + the identity widget exists
       if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.netlifyIdentity) {
         return setTimeout(startCandidates, 30);
       }
 
-      // One and only boot path
       Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
         // --- diag chips ---
         const chips = document.getElementById('diagChips');
@@ -86,7 +160,6 @@
         };
         chip('candidates:init','ok');
 
-        // Identity snapshot (helps debug gating)
         const who = await identity('admin');
         if (!who || !who.ok) {
           chip('role: blocked','bad');
@@ -96,19 +169,31 @@
           return;
         }
         chip('role: admin','ok');
+        chip('token: ok','ok');
         chip('trace: '+getTrace().slice(0,10),'ok');
 
         // ----- state -----
         let rows = [];
         let selected = new Set();
+        let editingId = null; // number | null
+        let currentTab = 'Basics';
 
         // ----- helpers -----
-        const enableDelete = () => { const b=sel('#btnDelete'); if (b) b.disabled = selected.size===0; };
+        const $ = sel;
+        const enableDelete = () => { const b=$('#btnDelete'); if (b) b.disabled = selected.size===0; };
+        const drawer = $('#drawer');
+        const openDrawer = () => drawer && drawer.classList.add('open');
+        const closeDrawer = () => { if (!drawer) return; drawer.classList.remove('open'); setTimeout(()=>resetForm(),150); };
+        $('#btnClose') && ($('#btnClose').onclick = closeDrawer);
+
+        function pillForStatus(s){
+          const tone = s==='Complete' ? 'b-ok' : s==='In progress' ? 'b-warn' : 'b-bad';
+          return `<span class="pill ${tone}">${s||'In progress'}</span>`;
+        }
 
         function render(){
-          const wrap = sel('#listWrap');
+          const wrap = $('#listWrap');
           if (!wrap) return;
-
           if (!rows.length) { wrap.textContent = 'No candidates found.'; return; }
 
           const thead = `<thead><tr>
@@ -121,11 +206,11 @@
             <tr>
               <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
               <td>${r.ref || r.id}</td>
-              <td>${r.full_name || '—'}</td>
+              <td>${(r.first_name||'—') + ' ' + (r.last_name||'')}</td>
               <td>${r.email || '—'}</td>
               <td>${r.phone || '—'}</td>
-              <td><span class="pill ${r.status==='active'?'b-ok':r.status==='inactive'?'b-warn':'b-bad'}">${r.status||'inactive'}</span></td>
-              <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
+              <td>${pillForStatus(r.status||'In progress')}</td>
+              <td><button class="btn ghost small" data-open="${r.id}">Open</button></td>
             </tr>`).join('');
 
           wrap.innerHTML = `<table>${thead}<tbody>${tbody}</tbody></table>`;
@@ -152,11 +237,11 @@
 
         // ----- data ops -----
         async function load(){
-          const wrap = sel('#listWrap'); if (wrap) wrap.textContent = 'Loading…';
+          const wrap = $('#listWrap'); if (wrap) wrap.textContent = 'Loading…';
           try{
             const res = await api('admin-candidates-list','POST',{
-              q: (sel('#q')?.value || '').trim(),
-              status: sel('#status')?.value || ''
+              q: ($('#q')?.value || '').trim(),
+              status: $('#status')?.value || ''
             });
             rows = Array.isArray(res) ? res : (res.rows || []);
             render();
@@ -168,9 +253,10 @@
 
         async function openOne(id){
           try{
-            const r = await api('admin-candidate-open','POST',{ id });
-            toast('Opened ' + (r.full_name || ('ID ' + id)), 'info', 1800);
-            // drawer/editor could be added here
+            const r = await api('admin-candidate-get','POST',{ id });
+            editingId = id;
+            openEditor(r);
+            toast('Opened ' + (r.full_name || (`ID ${id}`)), 'info', 1800);
           }catch(e){
             console.error('[candidates] open error', e);
             toast('Open failed: ' + (e.message || e), 'error', 4200);
@@ -181,7 +267,7 @@
           if (!selected.size) return;
           if (!confirm(`Delete ${selected.size} candidate(s)?`)) return;
           try{
-            await api('admin-candidate-delete','POST',{ ids: Array.from(selected) });
+            await api('admin-candidates-delete','POST',{ ids: Array.from(selected) });
             toast('Deleted','ok',1800);
             selected.clear(); enableDelete(); load();
           }catch(e){
@@ -190,12 +276,11 @@
           }
         }
 
-        // ----- export/import -----
         async function exportCSV(){
           try{
             const csv = await api('admin-candidates-export','POST',{
-              q: (sel('#q')?.value || '').trim(),
-              status: sel('#status')?.value || ''
+              q: ($('#q')?.value || '').trim(),
+              status: $('#status')?.value || ''
             });
             const blob = new Blob([csv], { type:'text/csv' });
             const url = URL.createObjectURL(blob);
@@ -207,7 +292,7 @@
             toast('Export failed: ' + (e.message || e), 'error', 4200);
           }
         }
-        function importCSVClick(){ sel('#csv')?.click(); }
+        function importCSVClick(){ $('#csv')?.click(); }
         async function importCSVDo(file){
           try{
             const text = await file.text();
@@ -220,23 +305,160 @@
           }
         }
 
+        // ----- editor (drawer) -----
+        const schemaTabs = [
+          { name:'Basics', fields:[
+            ['first_name','First name'],['last_name','Last name'],
+            ['job_title','Job title'],['status','Status','select','In progress,Complete,Archived'],
+            ['pay_type','Pay type','select','PAYE,PSC,Umbrella'],
+            ['payroll_ref','Payroll ref'],['internal_ref','Internal ref']
+          ]},
+          { name:'Contact', fields:[
+            ['email','Email','email'],['phone','Phone'],
+            ['address1','Address 1'],['address2','Address 2'],['town','Town'],['county','County'],
+            ['postcode','Postcode'],['country','Country']
+          ]},
+          { name:'Bank', fields:[
+            ['bank_name','Bank name'],['bank_sort','Sort code'],['bank_sort_code','Sort code (alt)'],
+            ['bank_account','Account number'],['bank_iban','IBAN'],['bank_swift','SWIFT/BIC']
+          ]},
+          { name:'Emergency', fields:[
+            ['emergency_name','Emergency contact'],['emergency_phone','Emergency phone']
+          ]},
+          { name:'Compliance', fields:[
+            ['rtw_url','Right to work URL'],['contract_url','Contract URL'],
+            ['terms_ok','Terms accepted','checkbox']
+          ]},
+          { name:'Employment', fields:[
+            ['client_name','Client'],['role','Role'],
+            ['start_date','Start date','date'],['end_date','End date','date'],
+            ['timesheet_status','Timesheet status','select','In progress,Complete,Missing']
+          ]},
+          { name:'Other', fields:[
+            ['ref','Ref'],['tax_id','Tax ID'],['notes','Notes','textarea']
+          ]}
+        ];
+
+        function fieldHtml([key,label,type='text',extra]){
+          const id = 'f_'+key;
+          if(type==='checkbox'){
+            return `<div class="field"><label for="${id}">${label}</label>
+                    <input id="${id}" name="${key}" type="checkbox"></div>`;
+          }
+          if(type==='textarea'){
+            return `<div class="field" style="grid-column:1/-1"><label for="${id}">${label}</label>
+                    <textarea id="${id}" name="${key}" rows="3"></textarea></div>`;
+          }
+          if(type==='select'){
+            const opts = (extra||'').split(',').map(s=>s.trim()).filter(Boolean)
+              .map(s=>`<option>${s}</option>`).join('');
+            return `<div class="field"><label for="${id}">${label}</label>
+                    <select id="${id}" name="${key}"><option value=""></option>${opts}</select></div>`;
+          }
+          return `<div class="field"><label for="${id}">${label}</label>
+                  <input id="${id}" name="${key}" type="${type}"></div>`;
+        }
+
+        function buildEditorShell(){
+          // tabs
+          const tabsHost = $('#tabs');
+          tabsHost.innerHTML = '';
+          schemaTabs.forEach(t=>{
+            const b=document.createElement('button');
+            b.type='button'; b.className='tab'+(t.name===currentTab?' active':''); b.textContent=t.name;
+            b.onclick=()=>{ currentTab=t.name; buildEditorForm(); Array.from(tabsHost.children).forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+            tabsHost.appendChild(b);
+          });
+          buildEditorForm();
+        }
+
+        function buildEditorForm(values={}){
+          const tab = schemaTabs.find(t=>t.name===currentTab) || schemaTabs[0];
+          const frm = $('#frm'); frm.innerHTML = tab.fields.map(fieldHtml).join('');
+          // fill
+          tab.fields.forEach(([key,,type])=>{
+            const el = frm.querySelector(`[name="${key}"]`);
+            if(!el) return;
+            if(type==='checkbox'){ el.checked = !!values[key]; }
+            else { if(values[key] != null) el.value = values[key]; }
+          });
+        }
+
+        function readForm(){
+          const out = {};
+          schemaTabs.forEach(t=>{
+            t.fields.forEach(([key,,type])=>{
+              const el = document.querySelector(`#frm [name="${key}"]`);
+              if(!el) return;
+              if(type==='checkbox') out[key] = !!el.checked;
+              else out[key] = el.value || null;
+            });
+          });
+          // derive full_name for toasts
+          out.full_name = [out.first_name, out.last_name].filter(Boolean).join(' ');
+          return out;
+        }
+
+        function resetForm(){
+          editingId = null; currentTab='Basics';
+          $('#dTitle').textContent = 'New candidate';
+          $('#dRef').textContent = '—';
+          buildEditorShell();
+        }
+
+        function openEditor(values={}){
+          buildEditorShell();
+          // populate all tabs (so switching preserves values)
+          schemaTabs.forEach(t=>{
+            t.fields.forEach(([key,,type])=>{
+              const el = document.querySelector(`#frm [name="${key}"]`);
+              if(!el) return;
+              if(type==='checkbox') el.checked = !!values[key];
+              else if(values[key] != null) el.value = values[key];
+            });
+          });
+          $('#dTitle').textContent = values?.full_name || 'Edit candidate';
+          $('#dRef').textContent = values?.ref || values?.id || '—';
+          openDrawer();
+        }
+
+        async function save(closeAfter=false){
+          try{
+            const body = readForm();
+            if (editingId) body.id = editingId;
+            const res = await api('admin-candidates-save','POST', body);
+            toast('Saved ' + (res?.full_name || body.full_name || 'candidate'), 'ok', 1800);
+            if (closeAfter) closeDrawer();
+            await load();
+            // If new, switch to editing the saved one
+            if (!editingId && res?.id) { editingId = res.id; }
+          }catch(e){
+            console.error('[candidates] save error', e);
+            toast('Save failed: ' + (e.message || e), 'error', 4200);
+          }
+        }
+
         // ----- wire UI -----
-        sel('#btnRefresh') && (sel('#btnRefresh').onclick = load);
-        sel('#btnDelete')  && (sel('#btnDelete').onclick  = delSelected);
-        sel('#btnNew')     && (sel('#btnNew').onclick     = () => location.href = './candidate-profile.html');
-        sel('#btnExport')  && (sel('#btnExport').onclick  = exportCSV);
-        sel('#btnImport')  && (sel('#btnImport').onclick  = importCSVClick);
-        sel('#csv') && sel('#csv').addEventListener('change', (e)=>{
+        $('#btnRefresh') && ($('#btnRefresh').onclick = load);
+        $('#btnDelete')  && ($('#btnDelete').onclick  = delSelected);
+        $('#btnNew')     && ($('#btnNew').onclick     = ()=>{ resetForm(); openDrawer(); });
+        $('#btnExport')  && ($('#btnExport').onclick  = exportCSV);
+        $('#btnImport')  && ($('#btnImport').onclick  = importCSVClick);
+        $('#csv') && $('#csv').addEventListener('change', (e)=>{
           const f = e.target.files && e.target.files[0];
           if (f) importCSVDo(f);
         });
-        sel('#q')      && sel('#q').addEventListener('input',  () => load());
-        sel('#status') && sel('#status').addEventListener('change', () => load());
+        $('#q')      && $('#q').addEventListener('input',  () => load());
+        $('#status') && $('#status').addEventListener('change', () => load());
+        $('#btnSaveDraft') && ($('#btnSaveDraft').onclick = ()=>save(false));
+        $('#btnSaveClose') && ($('#btnSaveClose').onclick = ()=>save(true));
 
         // Shortcuts
         document.addEventListener('keydown',(e)=>{
           if ((e.ctrlKey||e.metaKey) && e.key==='r'){ e.preventDefault(); load(); }
           if ((e.ctrlKey||e.metaKey) && e.key==='e'){ e.preventDefault(); exportCSV(); }
+          if ((e.ctrlKey||e.metaKey) && e.key==='s'){ e.preventDefault(); save(false); }
+          if (e.key === 'Escape' && drawer?.classList.contains('open')) { e.preventDefault(); closeDrawer(); }
         });
 
         // ----- go -----
