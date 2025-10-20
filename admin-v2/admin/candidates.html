@@ -6,17 +6,16 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Candidates — Admin | HMJ Global</title>
 
-  <!-- 1) Netlify Identity FIRST (deferred, order preserved) -->
+  <!-- Identity widget FIRST (defer = doesn’t block parse) -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-  <!-- 1b) Proactive init (no-op if already init'd) -->
+  <!-- Proactive init once DOM exists (safe if already inited) -->
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', () => {
       try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch {}
     });
   </script>
 
-  <!-- 2) Shared admin bootstrap (ABSOLUTE path + cache-bust) -->
+  <!-- Shared admin bootstrap (ABSOLUTE path; bump version when changing file) -->
   <script defer src="/admin-v2/admin/common.js?v=11"></script>
 
   <style>
@@ -27,7 +26,6 @@
       --danger:#dc2626; --ok:#16a34a; --warn:#f59e0b;
     }
     html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    /* Header */
     .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
     .row{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
     .brand{font-weight:800;display:flex;gap:10px;align-items:center}
@@ -39,7 +37,6 @@
     .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
     .btn.light{background:#fff;color:var(--blue);border-color:#fff}
     .btn.danger{background:#7a1f28;border-color:#a42e3b}
-    /* Page */
     .wrap{max-width:1200px;margin:20px auto;padding:0 16px;display:grid;gap:12px}
     .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
     .muted{color:var(--muted)}
@@ -54,7 +51,6 @@
     .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
     .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
     .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-    /* Drawer (placeholder for future editor) */
     .drawer{position:fixed;inset:0;display:none;background:rgba(2,6,23,.44);z-index:40}
     .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:820px;max-width:100%;background:#fff;border-left:1px solid var(--stroke);padding:16px;overflow:auto}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -64,8 +60,8 @@
     .section{margin:12px 0 6px;font-weight:800}
   </style>
 </head>
-
 <body>
+
   <!-- Header -->
   <div class="top"><div class="row">
     <div class="brand">
@@ -111,62 +107,49 @@
   <!-- Toast host -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- 3) SINGLE page boot script (no duplicates) -->
+  <!-- Single page boot (no duplicates) -->
   <script>
-  (function bootCandidates() {
-    const $ = (s, r=document) => r.querySelector(s);
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    function showGate(msg) {
-      const g = $('#gate'), app = $('#app');
-      if (app) app.style.display = 'none';
-      if (g) g.style.display = '';
-      const why = g && g.querySelector('.why');
-      if (why) why.textContent = msg || 'Sign in required.';
-    }
-    function hardFail(msg) {
-      console.error('[candidates] ' + msg);
-      showGate(msg);
-      alert('Admin bootstrap failed:\n' + msg + '\n\nCheck that /admin-v2/admin/common.js?v=11 loads (Network tab).');
-    }
-
-    async function waitDeps(maxMs = 7000) {
-      const start = Date.now();
-      while (Date.now() - start < maxMs) {
-        if (window.netlifyIdentity && window.Admin && window.Admin.bootAdmin) return true;
-        await sleep(40);
+    (function startCandidates(){
+      // Wait until common.js has attached Admin + the identity widget exists
+      if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.netlifyIdentity) {
+        return setTimeout(startCandidates, 30);
       }
-      return false;
-    }
 
-    (async () => {
-      try { window.netlifyIdentity?.init?.(); } catch {}
-      if (!(await waitDeps())) return hardFail('Required scripts not ready (Identity or common.js).');
-
-      Admin.bootAdmin(async ({ api, sel = $, toast, identity, getTrace }) => {
-        const chips = $('#diagChips');
+      // One and only boot path
+      Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
+        // --- diag chips ---
+        const chips = document.getElementById('diagChips');
         const chip = (t, tone='ok') => {
           if (!chips) return;
-          const s = document.createElement('span');
-          s.className = 'pill ' + (tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
-          s.textContent = t; chips.appendChild(s);
+          const s=document.createElement('span');
+          s.className='pill '+(tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
+          s.textContent=t; chips.appendChild(s);
         };
-        chip('candidates:init', 'ok');
+        chip('candidates:init','ok');
 
+        // Identity snapshot (helps debug gating)
         const who = await identity('admin');
         if (!who || !who.ok) {
-          chip('role: blocked', 'bad');
-          return showGate('Restricted. Sign in with an admin account.');
+          chip('role: blocked','bad');
+          const g = document.getElementById('gate'), app = document.getElementById('app');
+          if (app) app.style.display = 'none';
+          if (g) { g.style.display = ''; const why=g.querySelector('.why'); if (why) why.textContent='Restricted. Sign in with an admin account.'; }
+          return;
         }
-        chip('role: admin', 'ok');
-        chip('trace: ' + getTrace().slice(0,10), 'ok');
+        chip('role: admin','ok');
+        chip('trace: '+getTrace().slice(0,10),'ok');
 
+        // ----- state -----
         let rows = [];
         let selected = new Set();
-        const enableDelete = () => { const b = $('#btnDelete'); if (b) b.disabled = selected.size === 0; };
 
-        function render() {
-          const wrap = $('#listWrap'); if (!wrap) return;
+        // ----- helpers -----
+        const enableDelete = () => { const b=sel('#btnDelete'); if (b) b.disabled = selected.size===0; };
+
+        function render(){
+          const wrap = sel('#listWrap');
+          if (!wrap) return;
+
           if (!rows.length) { wrap.textContent = 'No candidates found.'; return; }
 
           const thead = `<thead><tr>
@@ -188,113 +171,120 @@
 
           wrap.innerHTML = `<table>${thead}<tbody>${tbody}</tbody></table>`;
 
-          const ckAll = $('#ckAll');
-          if (ckAll) ckAll.onclick = (e) => {
-            if (e.target.checked) rows.forEach(r => selected.add(r.id));
-            else rows.forEach(r => selected.delete(r.id));
+          const ckAll = document.getElementById('ckAll');
+          if (ckAll) ckAll.onclick = (e)=>{
+            if (e.target.checked) rows.forEach(r=>selected.add(r.id));
+            else rows.forEach(r=>selected.delete(r.id));
             enableDelete(); render();
           };
-          wrap.querySelectorAll('input[type=checkbox][data-id]').forEach(c => {
-            c.onchange = () => {
+
+          wrap.querySelectorAll('input[type=checkbox][data-id]').forEach(c=>{
+            c.onchange = ()=>{
               const id = Number(c.getAttribute('data-id'));
               if (c.checked) selected.add(id); else selected.delete(id);
               enableDelete();
             };
           });
-          wrap.querySelectorAll('[data-open]').forEach(b => {
-            b.onclick = () => openOne(Number(b.getAttribute('data-open')));
+
+          wrap.querySelectorAll('[data-open]').forEach(b=>{
+            b.onclick = ()=> openOne(Number(b.getAttribute('data-open')));
           });
         }
 
-        async function load() {
-          const wrap = $('#listWrap'); if (wrap) wrap.textContent = 'Loading…';
-          try {
-            const res = await api('admin-candidates-list', 'POST', {
-              q: ($('#q')?.value || '').trim(),
-              status: $('#status')?.value || ''
+        // ----- data ops -----
+        async function load(){
+          const wrap = sel('#listWrap'); if (wrap) wrap.textContent = 'Loading…';
+          try{
+            const res = await api('admin-candidates-list','POST',{
+              q: (sel('#q')?.value || '').trim(),
+              status: sel('#status')?.value || ''
             });
             rows = Array.isArray(res) ? res : (res.rows || []);
             render();
-          } catch (e) {
+          }catch(e){
+            console.error('[candidates] list error', e);
             if (wrap) wrap.textContent = 'Error: ' + (e.message || e);
           }
         }
 
-        async function openOne(id) {
-          try {
-            const r = await api('admin-candidate-open', 'POST', { id });
+        async function openOne(id){
+          try{
+            const r = await api('admin-candidate-open','POST',{ id });
             toast('Opened ' + (r.full_name || ('ID ' + id)), 'info', 1800);
-            // future: open drawer/editor here
-          } catch (e) {
+            // drawer/editor could be added here
+          }catch(e){
+            console.error('[candidates] open error', e);
             toast('Open failed: ' + (e.message || e), 'error', 4200);
           }
         }
 
-        async function delSelected() {
+        async function delSelected(){
           if (!selected.size) return;
           if (!confirm(`Delete ${selected.size} candidate(s)?`)) return;
-          try {
-            await api('admin-candidate-delete', 'POST', { ids: Array.from(selected) });
-            toast('Deleted', 'ok', 1800);
+          try{
+            await api('admin-candidate-delete','POST',{ ids: Array.from(selected) });
+            toast('Deleted','ok',1800);
             selected.clear(); enableDelete(); load();
-          } catch (e) {
+          }catch(e){
+            console.error('[candidates] delete error', e);
             toast('Delete failed: ' + (e.message || e), 'error', 4200);
           }
         }
 
-        async function exportCSV() {
-          try {
-            const csv = await api('admin-candidates-export','POST', {
-              q: ($('#q')?.value || '').trim(),
-              status: $('#status')?.value || ''
+        // ----- export/import -----
+        async function exportCSV(){
+          try{
+            const csv = await api('admin-candidates-export','POST',{
+              q: (sel('#q')?.value || '').trim(),
+              status: sel('#status')?.value || ''
             });
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const blob = new Blob([csv], { type:'text/csv' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'candidates.csv'; a.click();
+            const a=document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
             URL.revokeObjectURL(url);
-            toast('Exported', 'ok', 1400);
-          } catch (e) {
+            toast('Exported','ok',1400);
+          }catch(e){
+            console.error('[candidates] export error', e);
             toast('Export failed: ' + (e.message || e), 'error', 4200);
           }
         }
-        function importCSVClick(){ $('#csv')?.click(); }
+        function importCSVClick(){ sel('#csv')?.click(); }
         async function importCSVDo(file){
           try{
             const text = await file.text();
-            const res = await api('admin-candidates-import','POST',{ csv:text });
-            toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2000);
+            const res  = await api('admin-candidates-import','POST',{ csv:text });
+            toast(`Imported ${res?.inserted ?? 0}`,'ok',2000);
             load();
           }catch(e){
+            console.error('[candidates] import error', e);
             toast('Import failed: ' + (e.message || e), 'error', 4200);
           }
         }
 
-        // Wire UI
-        $('#btnRefresh') && ($('#btnRefresh').onclick = load);
-        $('#btnDelete')  && ($('#btnDelete').onclick = delSelected);
-        $('#btnNew')     && ($('#btnNew').onclick = () => location.href = './candidate-profile.html');
-        $('#btnExport')  && ($('#btnExport').onclick = exportCSV);
-        $('#btnImport')  && ($('#btnImport').onclick = importCSVClick);
-        $('#csv') && $('#csv').addEventListener('change', (e) => {
+        // ----- wire UI -----
+        sel('#btnRefresh') && (sel('#btnRefresh').onclick = load);
+        sel('#btnDelete')  && (sel('#btnDelete').onclick  = delSelected);
+        sel('#btnNew')     && (sel('#btnNew').onclick     = () => location.href = './candidate-profile.html');
+        sel('#btnExport')  && (sel('#btnExport').onclick  = exportCSV);
+        sel('#btnImport')  && (sel('#btnImport').onclick  = importCSVClick);
+        sel('#csv') && sel('#csv').addEventListener('change', (e)=>{
           const f = e.target.files && e.target.files[0];
           if (f) importCSVDo(f);
         });
-        $('#q') && $('#q').addEventListener('input', () => load());
-        $('#status') && $('#status').addEventListener('change', () => load());
+        sel('#q')      && sel('#q').addEventListener('input',  () => load());
+        sel('#status') && sel('#status').addEventListener('change', () => load());
 
         // Shortcuts
-        document.addEventListener('keydown', (e) => {
-          if ((e.ctrlKey || e.metaKey) && e.key === 'r') { e.preventDefault(); load(); }
-          if ((e.ctrlKey || e.metaKey) && e.key === 'e') { e.preventDefault(); exportCSV(); }
+        document.addEventListener('keydown',(e)=>{
+          if ((e.ctrlKey||e.metaKey) && e.key==='r'){ e.preventDefault(); load(); }
+          if ((e.ctrlKey||e.metaKey) && e.key==='e'){ e.preventDefault(); exportCSV(); }
         });
 
+        // ----- go -----
         await load();
         enableDelete();
-        console.log('[candidates] boot complete ✓');
       });
-    })().catch(err => hardFail(err?.message || String(err)));
-  })();
+    })();
   </script>
 </body>
 </html>
