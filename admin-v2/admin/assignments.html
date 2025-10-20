@@ -1,519 +1,572 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>Assignments — Admin</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- Pin Identity to the canonical instance (Survival Guide) -->
-  <script>
-    window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';
-    window.ADMIN_BUILD = 'preview';
-  </script>
+  <!-- App icon & fonts -->
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <!-- Fonts / Icons -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"/>
-
-  <!-- Netlify Identity widget -->
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-  <!-- IMPORTANT: correct path to shared bootstrap -->
-  <script defer src="/admin-v2/admin/common.js?v=12"></script>
-
+  <!-- Theme: light base with HMJ blue accents -->
   <style>
     :root{
-      --hmj-blue:#1f4c8e;
-      --hmj-blue-50:#f3f6fb;
-      --ink:#1b1f24;
-      --muted:#6b7280;
-      --line:#e6e8ef;
-      --ok:#10b981;
-      --warn:#f59e0b;
-      --bad:#ef4444;
-      --chip:#eef2ff;
-      --bg:#ffffff;
-      --card:#ffffff;
-      --shadow:0 6px 20px rgba(31,76,142,.08);
-      --radius:14px;
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --muted: #6b7280;      /* gray-500 */
+      --text: #0f172a;       /* slate-900 */
+      --line: #e5e7eb;       /* gray-200 */
+      --chip: #f3f4f6;       /* gray-100 */
+      --accent: #295aa6;     /* HMJ blue (slightly lighter) */
+      --accent-600:#1f4a8a;  /* darker hover */
+      --accent-100:#e8f0ff;
+      --success:#16a34a;
+      --warn:#eab308;
+      --danger:#dc2626;
+      --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+      --radius: 12px;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--bg)}
-
-    .top{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--line)}
-    .top-inner{max-width:1200px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:12px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--hmj-blue)}
-    .logo{width:28px;height:28px;border-radius:8px;background:var(--hmj-blue);display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:var(--shadow)}
-    .top-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:12px;background:var(--chip);color:var(--hmj-blue);border:1px solid #e0e7ff}
-    .signout{border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;border-radius:10px;cursor:pointer}
-    .signout:hover{border-color:#d4d7df}
-
-    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
-    .h1{font-size:22px;font-weight:700;margin:0 0 12px}
-    .toolbar{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin:12px 0 18px}
-    .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
-    .search input{border:0;outline:0;width:100%;font-size:14px}
-    .select,.btn{border:1px solid var(--line);border-radius:12px;background:#fff;height:40px;padding:0 12px;font-size:14px}
-    .btn.primary{background:var(--hmj-blue);color:#fff;border-color:transparent;box-shadow:var(--shadow)}
-    .btn.danger{background:#fff;color:var(--bad);border:1px solid #fecaca}
-    .btn:disabled{opacity:.5;pointer-events:none}
-
-    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .card-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
-    .pill{display:inline-block;font-size:12px;padding:4px 8px;border-radius:999px;background:#f3f4f6;color:#374151}
-    .pill.ok{background:#ecfdf5;color:#065f46}
-    .pill.warn{background:#fffbeb;color:#92400e}
-    .pill.bad{background:#fef2f2;color:#991b1b}
-
-    table{width:100%;border-collapse:collapse}
-    thead th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.03em;padding:12px 14px;color:var(--muted);border-bottom:1px solid var(--line)}
-    tbody td{padding:14px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
-    tbody tr:hover{background:var(--hmj-blue-50)}
-    .row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-
-    .pager{display:flex;justify-content:space-between;align-items:center;padding:12px 14px}
-    .muted{color:var(--muted)}
-
-    .drawer-backdrop{position:fixed;inset:0;background:rgba(17,24,39,.4);display:none;z-index:70}
-    .drawer{position:fixed;right:0;top:0;bottom:0;width:min(560px,100%);background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,.15);transform:translateX(100%);transition:transform .25s ease;z-index:80;display:flex;flex-direction:column}
-    .drawer.open + .drawer-backdrop{display:block}
-    .drawer.open{transform:none}
-    .drawer-head{padding:16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
-    .drawer-body{padding:16px;overflow:auto}
-    .grid{display:grid;gap:12px}
-    .grid.cols-2{grid-template-columns:1fr 1fr}
-    .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-    .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;background:#fff}
-    .drawer-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
-
-    #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:90}
-    .toast{background:#111827;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);font-size:14px;margin-top:8px}
-
-    @media (max-width:720px){
-      .toolbar{grid-template-columns:1fr}
-      .grid.cols-2{grid-template-columns:1fr}
-      thead{display:none}
-      tbody tr{display:grid;grid-template-columns:1fr;gap:8px}
-      tbody td{border:0;padding:10px 14px}
-      tbody td[data-th]::before{content:attr(data-th);display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
+    * { box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
     }
+    .wrap{ max-width:1200px; margin:0 auto; padding:16px 16px 80px; }
+    header.top{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; padding:12px 0 6px;
+    }
+    .brand{ display:flex; align-items:center; gap:10px; }
+    .brand .logo{
+      width:28px; height:28px; display:grid; place-items:center;
+      border-radius:7px; background:var(--accent); color:#fff; font-weight:700;
+      box-shadow:var(--shadow);
+    }
+    .brand .title{ font-weight:600; font-size:15px; color:var(--muted); }
+    .toolbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+    /* Controls row */
+    .controls{
+      display:grid; grid-template-columns: 1fr max-content max-content max-content max-content;
+      gap:10px; align-items:center; margin-top:12px;
+    }
+    @media (max-width: 860px){
+      .controls{ grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px){
+      .controls{ grid-template-columns: 1fr; }
+    }
+    .search{
+      display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line);
+      border-radius:10px; padding:10px 12px;
+    }
+    .search input{
+      width:100%; border:0; outline:0; font-size:14px; background:transparent; color:var(--text);
+    }
+    select, .btn{
+      height:38px; border-radius:10px; border:1px solid var(--line); background:#fff; color:var(--text);
+      padding:0 12px; font-size:14px;
+    }
+    .btn{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; }
+    .btn.primary{
+      background:var(--accent); color:#fff; border-color:transparent;
+    }
+    .btn.primary:hover{ background:var(--accent-600); }
+    .btn.ghost{ background:#fff; }
+    .btn.danger{ background:#fff; color:var(--danger); border-color:#fecaca; }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    /* Card & table */
+    .card{
+      margin-top:14px; background:var(--panel); border:1px solid var(--line);
+      border-radius: var(--radius); box-shadow:var(--shadow);
+    }
+    .card .head{
+      padding:12px 14px; border-bottom:1px solid var(--line);
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .card .head .subtitle{ font-size:13px; color:var(--muted); }
+    .table-wrap{ width:100%; overflow:auto; }
+    table{ width:100%; border-collapse: collapse; font-size:14px; }
+    thead th{
+      text-align:left; font-weight:600; color:#111827; background:var(--accent-100);
+      border-bottom:1px solid var(--line); padding:10px 12px; white-space:nowrap;
+    }
+    tbody td{
+      border-bottom:1px solid var(--line); padding:12px; vertical-align:top;
+    }
+    tbody tr:hover{ background:#fafafa; }
+    .muted{ color:var(--muted); }
+    .status{
+      display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+      padding:4px 8px; border-radius:999px; background:var(--chip); color:#111827; border:1px solid var(--line);
+    }
+    .status.complete{ background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+    .status.progress{ background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+    .status.archived{ background:#f3f4f6; color:#374151; }
+
+    .actions{ display:flex; gap:6px; flex-wrap:wrap; }
+    .chip{ background:var(--chip); border:1px solid var(--line); padding:3px 8px; border-radius:999px; font-size:12px; color:#111827; }
+
+    .footer{
+      display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px;
+    }
+    .pager{ display:flex; gap:8px; align-items:center; }
+    .pill{ border-radius:999px; padding:2px 8px; font-size:12px; background:var(--chip); border:1px solid var(--line); }
+
+    /* Drawer (create/edit) */
+    .drawer{
+      position:fixed; inset:0; display:none;
+      background: rgba(15,23,42,.42); z-index:40;
+    }
+    .drawer.open{ display:block; }
+    .drawer .panel{
+      position:absolute; right:0; top:0; height:100%; width:min(640px, 100%);
+      background:#fff; border-left:1px solid var(--line); box-shadow: var(--shadow);
+      display:flex; flex-direction:column;
+    }
+    .drawer .panel header{
+      display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 16px; border-bottom:1px solid var(--line);
+    }
+    .drawer .panel main{ padding:16px; overflow:auto; }
+    .drawer .panel footer{
+      margin-top:auto; padding:12px 16px; border-top:1px solid var(--line);
+      display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;
+    }
+    .grid{
+      display:grid; gap:12px;
+      grid-template-columns: repeat(12, minmax(0,1fr));
+    }
+    .col-12{ grid-column: span 12 / span 12; }
+    .col-6{ grid-column: span 6 / span 6; }
+    .col-4{ grid-column: span 4 / span 4; }
+    .field label{ display:block; font-size:12px; color:#374151; margin-bottom:6px; }
+    .field input, .field select, .field textarea{
+      width:100%; height:38px; border-radius:10px; border:1px solid var(--line); padding:8px 10px; font-size:14px;
+    }
+    .field textarea{ height:92px; resize:vertical; }
+
+    @media (max-width:900px){
+      .col-6, .col-4{ grid-column:span 12 / span 12; }
+    }
+
+    /* Toast */
+    #toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:50; display:flex; flex-direction:column; gap:8px; }
+    .toast{ background:#111827; color:#fff; padding:10px 12px; border-radius:10px; box-shadow:var(--shadow); font-size:13px; }
+    .toast.warn{ background:#92400e; } .toast.bad{ background:#7f1d1d; } .toast.ok{ background:#065f46; }
+
+    /* Small utilities */
+    .sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .hide{ display:none!important; }
   </style>
+
+  <!-- Shared admin helpers (Identity gate + api wrapper + debug UI) -->
+  <script defer src="/admin/common.js?v=20"></script>
 </head>
 <body>
-  <header class="top">
-    <div class="top-inner">
+  <div class="wrap">
+    <header class="top">
       <div class="brand">
         <div class="logo">H</div>
-        <div>HMJ Global — Admin</div>
+        <div class="title">HMJ Global — Admin</div>
       </div>
-      <div class="top-actions">
-        <span class="chip"><i class="fa-solid fa-user-shield"></i><span id="chipRole">role: —</span></span>
-        <span class="chip"><i class="fa-regular fa-circle-check"></i><span id="chipToken">token: …</span></span>
-        <span class="chip"><i class="fa-solid fa-code-branch"></i><span id="chipBuild">build: preview</span></span>
-        <button id="btnSignOut" class="signout">Sign out</button>
+      <div class="toolbar">
+        <!-- debug chips are drawn by common.js if enabled -->
       </div>
-    </div>
-  </header>
+    </header>
 
-  <main class="wrap">
-    <h1 class="h1">Assignments</h1>
+    <h2 style="margin:8px 0 0;font-size:22px;">Assignments</h2>
 
-    <div class="toolbar">
-      <label class="search" aria-label="Search assignments">
-        <i class="fa-solid fa-magnifying-glass" style="color:var(--muted)"></i>
-        <input id="q" placeholder="Search (title, ref, client, candidate)..." />
+    <!-- Controls -->
+    <div class="controls" id="controls">
+      <label class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 20.3 16.7 16A7.2 7.2 0 1 0 15.97 16l4.33 4.33a.85.85 0 0 0 1.2-1.2zM4.4 10.8a6.4 6.4 0 1 1 12.8 0a6.4 6.4 0 0 1-12.8 0"/></svg>
+        <input id="q" type="search" placeholder="Search (title, ref, client, candidate)..." />
       </label>
 
-      <select id="status" class="select" title="Filter by status">
+      <select id="status">
         <option value="">All statuses</option>
-        <option>in_progress</option>
-        <option>complete</option>
-        <option>archived</option>
+        <option value="In progress">In progress</option>
+        <option value="Complete">Complete</option>
+        <option value="Archived">Archived</option>
       </select>
 
-      <div style="display:flex;gap:8px;justify-self:end">
-        <button id="btnRefresh" class="btn" title="Refresh"><i class="fa-solid fa-rotate"></i>&nbsp;Refresh</button>
-        <button id="btnNew" class="btn primary"><i class="fa-solid fa-plus"></i>&nbsp;New assignment</button>
-        <button id="btnDelete" class="btn danger" disabled><i class="fa-regular fa-trash-can"></i>&nbsp;Delete</button>
-        <button id="btnExport" class="btn" title="Export CSV"><i class="fa-solid fa-file-csv"></i></button>
-      </div>
+      <button class="btn ghost" id="refresh">↻ Refresh</button>
+      <button class="btn primary" id="new"><span>＋</span> New assignment</button>
+      <button class="btn danger" id="delete" disabled>🗑 Delete</button>
     </div>
 
-    <section class="card">
-      <div class="card-head">
-        <div><strong>All assignments</strong></div>
-        <div class="pill" id="totalPill">0 total</div>
+    <!-- Table -->
+    <div class="card">
+      <div class="head">
+        <div class="subtitle">All assignments</div>
+        <div class="pill" id="total">0 total</div>
       </div>
 
-      <div style="overflow:auto">
-        <table id="tbl">
+      <div class="table-wrap">
+        <table id="table">
           <thead>
-            <tr>
-              <th style="width:36px"><input id="checkAll" type="checkbox" /></th>
-              <th>Title</th>
-              <th>Client</th>
-              <th>Candidate</th>
-              <th>Dates</th>
-              <th>Status</th>
-              <th style="width:220px">Actions</th>
-            </tr>
+          <tr>
+            <th style="width:36px;"><input type="checkbox" id="checkAll" aria-label="Select all"/></th>
+            <th>TITLE</th>
+            <th>CLIENT</th>
+            <th>CANDIDATE</th>
+            <th>DATES</th>
+            <th>STATUS</th>
+            <th style="width:160px;">ACTIONS</th>
+          </tr>
           </thead>
-          <tbody id="rows">
-            <tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Loading…</td></tr>
+          <tbody id="tbody">
+          <tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Loading…</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="pager">
-        <div style="display:flex;gap:8px">
-          <button id="prev" class="btn">&larr; Prev</button>
-          <button id="next" class="btn">Next &rarr;</button>
+      <div class="footer">
+        <div class="pager">
+          <button class="btn" id="prev">← Prev</button>
+          <button class="btn" id="next">Next →</button>
         </div>
-        <div class="muted">
-          Page <span id="page">1</span>
-          &nbsp;&nbsp;
-          <select id="pageSize" class="select" style="height:32px">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="muted" style="font-size:12px;">Page</span>
+          <div class="pill" id="pageText">1</div>
+          <select id="pageSize">
             <option>10</option><option selected>20</option><option>50</option>
           </select>
         </div>
       </div>
-    </section>
-  </main>
-
-  <!-- Drawer -->
-  <aside id="drawer" class="drawer" aria-hidden="true" aria-label="Assignment editor">
-    <div class="drawer-head">
-      <strong id="drawerTitle">New assignment</strong>
-      <button id="drawerClose" class="btn">Close</button>
     </div>
-    <div class="drawer-body">
-      <form id="form" class="grid cols-2">
-        <input type="hidden" id="id" />
+  </div>
 
-        <div class="field">
-          <label for="title">Job title *</label>
-          <input id="title" required />
+  <!-- Drawer: create/edit -->
+  <div class="drawer" id="drawer" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+      <header>
+        <div>
+          <div id="drawerTitle" style="font-weight:600;">New assignment</div>
+          <div class="muted" id="drawerSub" style="font-size:12px;"></div>
         </div>
+        <button class="btn" id="closeDrawer">✕</button>
+      </header>
 
-        <div class="field">
-          <label for="po">PO number</label>
-          <input id="po" maxlength="50" />
-        </div>
+      <main>
+        <form id="form" class="grid" autocomplete="off">
+          <input type="hidden" id="id" />
 
-        <div class="field">
-          <label for="start">Start date</label>
-          <input id="start" type="date" />
-        </div>
+          <div class="col-12 field">
+            <label for="title">Job title *</label>
+            <input id="title" required />
+          </div>
 
-        <div class="field">
-          <label for="end">End date</label>
-          <input id="end" type="date" />
-        </div>
+          <div class="col-6 field">
+            <label for="po">PO number</label>
+            <input id="po" />
+          </div>
 
-        <div class="field">
-          <label for="client_id">Client</label>
-          <select id="client_id"></select>
-        </div>
+          <div class="col-6 field">
+            <label for="shift">Shift</label>
+            <select id="shift">
+              <option>Day</option>
+              <option>Night</option>
+            </select>
+          </div>
 
-        <div class="field">
-          <label for="client_site_id">Client site</label>
-          <select id="client_site_id"></select>
-        </div>
+          <div class="col-6 field">
+            <label for="start">Start date</label>
+            <input id="start" type="date" />
+          </div>
 
-        <div class="field">
-          <label for="candidate_id">Candidate</label>
-          <select id="candidate_id"></select>
-        </div>
+          <div class="col-6 field">
+            <label for="end">End date</label>
+            <input id="end" type="date" />
+          </div>
 
-        <div class="field">
-          <label for="shift">Shift</label>
-          <select id="shift">
-            <option value="Day">Day</option>
-            <option value="Night">Night</option>
-          </select>
-        </div>
+          <div class="col-6 field">
+            <label for="client">Client</label>
+            <select id="client"></select>
+          </div>
 
-        <div class="field">
-          <label for="expected_hours">Expected days / hours</label>
-          <input id="expected_hours" placeholder="e.g. Mon–Fri, 08:00–17:00" />
-        </div>
+          <div class="col-6 field">
+            <label for="site">Client site</label>
+            <select id="site"></select>
+          </div>
 
-        <div class="field" style="grid-column:1/-1">
-          <label for="notes">Internal notes</label>
-          <textarea id="notes" rows="4" placeholder="Internal notes…"></textarea>
-        </div>
-      </form>
+          <div class="col-6 field">
+            <label for="candidate">Candidate</label>
+            <select id="candidate"></select>
+          </div>
+
+          <div class="col-6 field">
+            <label for="hours">Expected days / hours</label>
+            <input id="hours" placeholder="e.g. Mon–Fri, 8–5" />
+          </div>
+
+          <div class="col-12 field">
+            <label for="notes">Internal notes</label>
+            <textarea id="notes" placeholder="Internal notes…"></textarea>
+          </div>
+        </form>
+      </main>
+
+      <footer>
+        <button class="btn" id="cancel">Cancel</button>
+        <button class="btn primary" id="save">Save</button>
+      </footer>
     </div>
-    <div class="drawer-foot">
-      <button id="btnSave" class="btn primary"><i class="fa-solid fa-floppy-disk"></i>&nbsp;Save</button>
-      <button id="btnCancel" class="btn">Cancel</button>
-    </div>
-  </aside>
-  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  </div>
 
-  <!-- Toast area -->
+  <!-- Toast outlet -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
+  <!-- Page logic -->
   <script>
-  // ---------- small helpers ----------
-  const $ = (s, r=document) => r.querySelector(s);
-  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
-  const sleep = (ms) => new Promise(r=>setTimeout(r, ms));
-  const toast = (t, tone='info', ms=2200) => {
-    const host = $('#toast'); const el = document.createElement('div');
-    el.className = 'toast'; el.textContent = t; host.appendChild(el);
-    setTimeout(()=>el.remove(), ms);
-  };
-  const pill = (t, tone='') => { const s=document.createElement('span'); s.className='pill'+(tone?' '+tone:''); s.textContent=t; return s; };
-  const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString() : '—');
+    // Wait for common.js to register the Admin namespace
+    window.addEventListener('DOMContentLoaded', () => {
+      const start = () => Admin.bootAdmin(async ({ api, sel, toast }) => {
+        // ---------------- UI helpers
+        const $ = (q, el=document) => el.querySelector(q);
+        const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+        const formatDates = (a, b) => {
+          const fmt = s => s ? new Date(s).toLocaleDateString() : '—';
+          return `${fmt(a)} → ${fmt(b)}`;
+        };
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const waitForAdmin = async () => {
-      let tries=0;
-      while(!window.Admin && tries<120){ tries++; await sleep(50); }
-      if(!window.Admin){ console.error('common.js missing'); toast('Boot error: common.js not found','bad',3500); return; }
+        // ---------------- State
+        let page=1, pageSize=20, total=0, rows=[], selected=new Set(), current=null, cacheDropdowns=null;
+        const state = () => ({ page, pageSize, search: $('#q').value.trim(), status: $('#status').value });
 
-      // ✔ Use only what bootAdmin passes us (no Admin.getIdentity())
-      Admin.bootAdmin(async ({ api, sel, toast: adminToast, who }) => {
-        // chips
-        $('#chipBuild').textContent = `build: ${window.ADMIN_BUILD || '—'}`;
-        if (who){
-          if (who.role) $('#chipRole').textContent = `role: ${who.role}`;
-          $('#chipToken').textContent = 'token: ok';
-        } else {
-          $('#chipRole').textContent = 'role: —';
-          $('#chipToken').textContent = 'token: —';
+        // ---------------- Elements
+        const tbody = $('#tbody'), totalEl = $('#total'), pageText = $('#pageText');
+        const btnPrev = $('#prev'), btnNext = $('#next'), btnNew = $('#new'), btnDel = $('#delete');
+        const selAll = $('#checkAll'), drawer = $('#drawer');
+
+        // ---------------- Chips + wiring
+        const enableDelete = () => btnDel.disabled = (selected.size===0);
+        const openDrawer = () => { drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); };
+        const closeDrawer= () => { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); current=null; };
+
+        // ---------------- Dropdown cache (client / site / candidate)
+        async function dropdowns() {
+          if (cacheDropdowns) return cacheDropdowns;
+          const res = await api('/admin-assignments-dropdowns');
+          cacheDropdowns = res || { clients:[], clientSites:[], candidates:[] };
+          return cacheDropdowns;
         }
-
-        // signout
-        $('#btnSignOut').onclick = () => {
-          if (window.netlifyIdentity && typeof netlifyIdentity.logout === 'function'){
-            netlifyIdentity.logout();
-          } else {
-            location.href = '/admin-v2/admin/';
+        function fillSelect(sel, items, {value='id', label='name', placeholder='Please select…'}={}) {
+          sel.innerHTML = '';
+          const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent = placeholder; sel.appendChild(opt0);
+          for (const it of items) {
+            const o = document.createElement('option');
+            o.value = it[value]; o.textContent = it[label]; sel.appendChild(o);
           }
-        };
+        }
 
-        // ---- state
-        let page=1, pageSize=20, total=0, rows=[];
-        let selected = new Set();
-        const enableDelete = () => { $('#btnDelete').disabled = (selected.size===0); };
-        $('#btnDelete').disabled = true;
-
-        // ---- events (filters / paging)
-        $('#q').addEventListener('input', () => { clearTimeout(window.__deb); window.__deb=setTimeout(load,280); });
-        $('#status').addEventListener('change', load);
-        $('#btnRefresh').addEventListener('click', load);
-        $('#btnNew').addEventListener('click', () => openDrawer());
-        $('#btnExport').addEventListener('click', exportCsv);
-        $('#prev').onclick = () => { if(page>1){ page--; load(); } };
-        $('#next').onclick = () => { if(rows.length===pageSize){ page++; load(); } };
-        $('#pageSize').onchange = () => { pageSize = Number($('#pageSize').value); page = 1; load(); };
-        $('#checkAll').onchange = (e) => {
-          if (!rows?.length) return;
-          selected.clear();
-          if (e.target.checked) rows.forEach(r => selected.add(r.id));
-          $$('#rows input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
-          enableDelete();
-        };
-        $('#btnDelete').onclick = async () => {
-          if (!selected.size) return;
-          if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
-          const ids = Array.from(selected);
-          const res = await api('admin-assignments-delete','POST',{ ids });
-          if (res?.ok){ toast('Deleted'); selected.clear(); $('#checkAll').checked=false; load(); }
-          else toast('Delete failed','bad',3000);
-        };
-
-        // ---- drawer
-        const openDrawer = async (id=null) => {
-          $('#drawer').classList.add('open'); $('#drawer').setAttribute('aria-hidden','false'); $('#drawerBackdrop').style.display='block';
-          $('#drawerTitle').textContent = id ? 'Edit assignment' : 'New assignment';
-          $('#form').reset(); $('#id').value = id || '';
-          await preloadLookups();
-          if (id){
-            const res = await api('admin-assignment-get','POST',{ id });
-            if(res?.ok && res.body){
-              const a = res.body;
-              $('#id').value = a.id || '';
-              $('#title').value = a.title || '';
-              $('#po').value = a.po || '';
-              $('#start').value = a.start_date ? a.start_date.substring(0,10) : '';
-              $('#end').value = a.end_date ? a.end_date.substring(0,10) : '';
-              $('#client_id').value = a.client_id || '';
-              await reloadClientSites();
-              $('#client_site_id').value = a.client_site_id || '';
-              $('#candidate_id').value = a.candidate_id || '';
-              $('#shift').value = a.shift || 'Day';
-              $('#expected_hours').value = a.expected_hours || '';
-              $('#notes').value = a.notes || '';
-            }
+        // ---------------- Render table
+        function drawRows() {
+          tbody.innerHTML = '';
+          if (!rows.length) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td'); td.colSpan=7; td.className='muted'; td.style.textAlign='center'; td.style.padding='24px'; td.textContent='No assignments found.';
+            tr.appendChild(td); tbody.appendChild(tr); return;
           }
-        };
-        const closeDrawer = () => {
-          $('#drawer').classList.remove('open'); $('#drawer').setAttribute('aria-hidden','true'); $('#drawerBackdrop').style.display='none';
-        };
-        $('#drawerBackdrop').onclick = closeDrawer;
-        $('#drawerClose').onclick = closeDrawer;
-        $('#btnCancel').onclick = closeDrawer;
+          for (const r of rows) {
+            const tr = document.createElement('tr');
+            const isSel = selected.has(r.id);
 
-        $('#client_id').addEventListener('change', reloadClientSites);
+            // checkbox
+            const td0 = document.createElement('td');
+            const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=isSel;
+            cb.addEventListener('change', () => { if (cb.checked) selected.add(r.id); else selected.delete(r.id); enableDelete(); });
+            td0.appendChild(cb); tr.appendChild(td0);
 
-        async function preloadLookups(){
-          const [clients, candidates] = await Promise.all([
-            api('admin-clients-list','POST',{ all:true }),
-            api('admin-candidates-lists','POST',{ all:true })
-          ]);
+            // title
+            const td1 = document.createElement('td');
+            td1.innerHTML = `<div style="font-weight:600">${r.title || '—'}</div><div class="muted" style="font-size:12px">Ref: ${r.ref || '—'}</div>`;
+            tr.appendChild(td1);
 
-          const clientSel = $('#client_id');
-          clientSel.innerHTML = '<option value="">Please select…</option>';
-          (clients?.body||[]).forEach(c => {
-            const o = document.createElement('option'); o.value=c.id; o.textContent=c.name; clientSel.appendChild(o);
-          });
+            // client
+            const td2 = document.createElement('td');
+            td2.textContent = r.client_name || '—'; tr.appendChild(td2);
 
-          const candSel = $('#candidate_id');
-          candSel.innerHTML = '<option value="">Please select…</option>';
-          (candidates?.body||[]).forEach(c => {
-            const o = document.createElement('option'); o.value=c.id; o.textContent=`${c.first_name ?? ''} ${c.last_name ?? ''}`.trim(); candSel.appendChild(o);
-          });
+            // candidate
+            const td3 = document.createElement('td');
+            td3.textContent = r.candidate_name || '—'; tr.appendChild(td3);
+
+            // dates
+            const td4 = document.createElement('td');
+            td4.textContent = formatDates(r.start_date, r.end_date); tr.appendChild(td4);
+
+            // status
+            const td5 = document.createElement('td');
+            const st = document.createElement('span'); st.className='status';
+            const s = (r.status||'').toLowerCase();
+            if (s.includes('complete')) st.classList.add('complete');
+            else if (s.includes('progress')) st.classList.add('progress');
+            else if (s.includes('arch')) st.classList.add('archived');
+            st.textContent = r.status || '—';
+            td5.appendChild(st); tr.appendChild(td5);
+
+            // actions
+            const td6 = document.createElement('td'); td6.className='actions';
+            const btnEdit = document.createElement('button'); btnEdit.className='btn'; btnEdit.textContent='Edit';
+            btnEdit.addEventListener('click', () => edit(r.id));
+            const btnView = document.createElement('button'); btnView.className='btn ghost'; btnView.textContent='View';
+            btnView.addEventListener('click', () => view(r.id));
+            td6.append(btnEdit, btnView); tr.appendChild(td6);
+
+            tbody.appendChild(tr);
+          }
         }
 
-        async function reloadClientSites(){
-          const cid = $('#client_id').value;
-          const siteSel = $('#client_site_id');
-          siteSel.innerHTML = '<option value="">Please select…</option>';
-          if(!cid) return;
-          const res = await api('admin-client-sites-list','POST',{ client_id: cid });
-          (res?.body||[]).forEach(s=>{
-            const o = document.createElement('option'); o.value=s.id; o.textContent=s.name; siteSel.appendChild(o);
-          });
+        // ---------------- API calls
+        async function list() {
+          const { search, status } = state();
+          const body = { page, pageSize, search, status };
+          try {
+            const res = await api('/admin-assignments-list', { method:'POST', body });
+            rows = res.items || [];
+            total = res.total || rows.length;
+            totalEl.textContent = `${total} total`;
+            pageText.textContent = `${page}`;
+            drawRows();
+          } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;padding:24px;">Failed to load.</td></tr>`;
+            toast('Could not load assignments', 'bad');
+          }
         }
 
-        $('#btnSave').onclick = async () => {
+        async function view(id) {
+          try {
+            const r = await api(`/admin-assignments-get?id=${encodeURIComponent(id)}`);
+            // Simple quick view: toast – you can swap this to a side-panel
+            toast(`Assignment: ${r.title || '—'} • ${r.client_name || '—'}`, 'info');
+          } catch (e){ console.error(e); toast('Could not open assignment', 'bad'); }
+        }
+
+        async function edit(id) {
+          try {
+            const [r, dd] = await Promise.all([
+              api(`/admin-assignments-get?id=${encodeURIComponent(id)}`),
+              dropdowns()
+            ]);
+            current = r.id;
+            $('#drawerTitle').textContent = 'Edit assignment';
+            $('#drawerSub').textContent = `Ref ${r.ref || '—'}`;
+            // fill dropdowns & values
+            fillSelect($('#client'), dd.clients, { value:'id', label:'name' });
+            fillSelect($('#site'), dd.clientSites, { value:'id', label:'name' });
+            fillSelect($('#candidate'), dd.candidates, { value:'id', label:'name' });
+
+            $('#id').value = r.id || '';
+            $('#title').value = r.title || '';
+            $('#po').value = r.po_number || '';
+            $('#shift').value = r.shift || 'Day';
+            $('#start').value = r.start_date ? r.start_date.substring(0,10) : '';
+            $('#end').value = r.end_date ? r.end_date.substring(0,10) : '';
+            $('#client').value = r.client_id || '';
+            $('#site').value = r.client_site_id || '';
+            $('#candidate').value = r.candidate_id || '';
+            $('#hours').value = r.estimated_hours || '';
+            $('#notes').value = r.notes || '';
+
+            openDrawer();
+          } catch (e){ console.error(e); toast('Could not open editor', 'bad'); }
+        }
+
+        async function createNew() {
+          try {
+            const dd = await dropdowns();
+            current = null;
+            $('#form').reset();
+            $('#drawerTitle').textContent = 'New assignment';
+            $('#drawerSub').textContent = '';
+            fillSelect($('#client'), dd.clients, { value:'id', label:'name' });
+            fillSelect($('#site'), dd.clientSites, { value:'id', label:'name' });
+            fillSelect($('#candidate'), dd.candidates, { value:'id', label:'name' });
+            $('#shift').value = 'Day';
+            openDrawer();
+          } catch(e){ console.error(e); toast('Could not start new assignment', 'bad'); }
+        }
+
+        async function save() {
+          // Validate
+          if (!$('#title').value.trim()) { toast('Job title is required', 'warn'); $('#title').focus(); return; }
           const payload = {
             id: $('#id').value || null,
             title: $('#title').value.trim(),
-            po: $('#po').value.trim(),
+            po_number: $('#po').value.trim() || null,
+            shift: $('#shift').value || 'Day',
             start_date: $('#start').value || null,
             end_date: $('#end').value || null,
-            client_id: $('#client_id').value || null,
-            client_site_id: $('#client_site_id').value || null,
-            candidate_id: $('#candidate_id').value || null,
-            shift: $('#shift').value || 'Day',
-            expected_hours: $('#expected_hours').value.trim(),
-            notes: $('#notes').value.trim(),
+            client_id: $('#client').value || null,
+            client_site_id: $('#site').value || null,
+            candidate_id: $('#candidate').value || null,
+            estimated_hours: $('#hours').value || null,
+            notes: $('#notes').value || null
           };
-          if(!payload.title){ toast('Title is required','bad',2500); $('#title').focus(); return; }
-
-          const res = await api('admin-assignments-save','POST', payload);
-          if (res?.ok){ toast('Saved'); closeDrawer(); load(); }
-          else toast('Save failed','bad',3000);
-        };
-
-        async function exportCsv(){
-          const res = await api('admin-assignments-export','POST',{ q: $('#q').value.trim(), status: $('#status').value });
-          if (res?.ok && res.body){
-            const blob = new Blob([res.body], { type:'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = Object.assign(document.createElement('a'),{ href:url, download:'assignments.csv' });
-            document.body.appendChild(a); a.click(); a.remove();
-            URL.revokeObjectURL(url);
-          } else {
-            toast('Export failed','bad',3000);
-          }
+          try {
+            await api('/admin-assignments-save', { method:'POST', body: payload });
+            closeDrawer(); toast('Saved', 'ok'); await list();
+          } catch (e){ console.error(e); toast('Save failed', 'bad'); }
         }
 
-        async function load(){
-          $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Loading…</td></tr>`;
-          $('#checkAll').checked=false; selected.clear(); enableDelete();
-
-          const res = await api('admin-assignments-list','POST',{
-            q: $('#q').value.trim(),
-            status: $('#status').value,
-            page, pageSize
-          });
-
-          if(!res?.ok){
-            $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">Failed to load</td></tr>`;
-            return;
-          }
-
-          rows = res.body?.rows || [];
-          total = Number(res.body?.total || 0);
-          $('#page').textContent = String(page);
-          $('#totalPill').textContent = `${total} total`;
-
-          if(!rows.length){
-            $('#rows').innerHTML = `<tr><td colspan="7" class="muted" style="padding:24px;text-align:center">No results</td></tr>`;
-            return;
-          }
-
-          const frag = document.createDocumentFragment();
-          rows.forEach(r=>{
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td data-th=""><input type="checkbox" data-id="${r.id}"></td>
-              <td data-th="Title">
-                <div style="font-weight:600">${r.title ?? '—'}</div>
-                <div class="muted" style="font-size:12px">${r.po ? 'PO '+r.po : '—'}</div>
-              </td>
-              <td data-th="Client">${r.client_name ?? '—'}</td>
-              <td data-th="Candidate">${r.candidate_name ?? '—'}</td>
-              <td data-th="Dates">${fmtDate(r.start_date)} – ${fmtDate(r.end_date)}</td>
-              <td data-th="Status">
-                ${(() => {
-                  const s = (r.status || '').toLowerCase();
-                  const span = pill(s || '—', s==='complete' ? 'ok' : s==='in_progress' ? 'warn' : '');
-                  return span.outerHTML;
-                })()}
-              </td>
-              <td data-th="Actions">
-                <div class="row-actions">
-                  <button class="btn" data-open="${r.id}"><i class="fa-regular fa-pen-to-square"></i>&nbsp;Open</button>
-                  <button class="btn" data-copy="${r.id}"><i class="fa-regular fa-clone"></i>&nbsp;Duplicate</button>
-                </div>
-              </td>
-            `;
-            frag.appendChild(tr);
-          });
-          $('#rows').innerHTML = '';
-          $('#rows').appendChild(frag);
-
-          $$('#rows input[type=checkbox]').forEach(cb=>{
-            cb.onchange = (e) => {
-              const id = e.target.getAttribute('data-id');
-              if(e.target.checked) selected.add(id); else selected.delete(id);
-              enableDelete();
-            };
-          });
-          $$('#rows [data-open]').forEach(btn=>{
-            btn.onclick = () => openDrawer(btn.getAttribute('data-open'));
-          });
-          $$('#rows [data-copy]').forEach(btn=>{
-            btn.onclick = async () => {
-              const id = btn.getAttribute('data-copy');
-              const res = await api('admin-assignment-get','POST',{ id });
-              if(res?.ok && res.body){
-                const a = res.body;
-                a.id = null; a.title = a.title ? `${a.title} (copy)` : 'New assignment';
-                const save = await api('admin-assignments-save','POST', a);
-                if(save?.ok){ toast('Duplicated'); load(); }
-                else toast('Duplicate failed','bad',3000);
-              }
-            };
-          });
+        async function removeSelected() {
+          if (!selected.size) return;
+          if (!confirm(`Delete ${selected.size} assignment(s)? This cannot be undone.`)) return;
+          try {
+            await api('/admin-assignments-delete', { method:'POST', body:{ ids: Array.from(selected) } });
+            selected.clear(); enableDelete(); toast('Deleted', 'ok'); await list();
+          } catch(e){ console.error(e); toast('Delete failed', 'bad'); }
         }
 
-        // initial load
-        await load();
-      }); // bootAdmin
-    };
+        // ---------------- Events
+        $('#q').addEventListener('input', debounce(() => { page=1; list(); }, 300));
+        $('#status').addEventListener('change', () => { page=1; list(); });
+        $('#pageSize').addEventListener('change', e => { pageSize = parseInt(e.target.value,10)||20; page=1; list(); });
+        btnPrev.addEventListener('click', () => { if (page>1){ page--; list(); } });
+        btnNext.addEventListener('click', () => { const max = Math.max(1, Math.ceil(total/pageSize)); if (page<max){ page++; list(); } });
+        $('#refresh').addEventListener('click', () => list());
+        btnNew.addEventListener('click', () => createNew());
+        btnDel.addEventListener('click', () => removeSelected());
+        $('#closeDrawer').addEventListener('click', closeDrawer);
+        $('#cancel').addEventListener('click', closeDrawer);
+        $('#save').addEventListener('click', () => save());
+        selAll.addEventListener('change', () => {
+          if (selAll.checked) rows.forEach(r => selected.add(r.id));
+          else selected.clear();
+          enableDelete(); drawRows();
+        });
 
-    waitForAdmin();
-  });
+        // click outside panel closes drawer
+        drawer.addEventListener('click', (e) => { if (e.target === drawer) closeDrawer(); });
+
+        // simple debounce
+        function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+
+        // Kickoff
+        await list();
+        toast('ready', 'ok');
+      });
+
+      if (window.Admin && typeof Admin.bootAdmin === 'function') {
+        start();
+      } else {
+        // Safety: if common.js loads a tick later
+        const t = setInterval(() => {
+          if (window.Admin && typeof Admin.bootAdmin === 'function') {
+            clearInterval(t); start();
+          }
+        }, 50);
+        setTimeout(()=>clearInterval(t), 5000);
+      }
+    });
   </script>
 </body>
 </html>
