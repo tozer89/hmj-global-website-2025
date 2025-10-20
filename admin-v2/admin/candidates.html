@@ -17,8 +17,6 @@
       try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch (e) {}
     });
   </script>
-
-  <!-- 2) Shared admin bootstrap (ABSOLUTE path + bump ?v= when you change the file) -->
   <script defer src="/admin-v2/admin/common.js?v=10"></script>
 
   <style>
@@ -374,6 +372,126 @@
 })();
 </script>
 
+
+
+
+<script>
+(function () {
+  // loud helper if something blocks the page
+  function hardFail(msg){
+    console.error('[candidates] ' + msg);
+    const g = document.getElementById('gate');
+    if (g) { g.style.display=''; const why=g.querySelector('.why'); if (why) why.textContent = msg; }
+    alert('Admin bootstrap failed:\n' + msg + '\n\nCheck Network tab for /admin-v2/admin/common.js?v=10.');
+  }
+
+  function start() {
+    // wait until DOM nodes exist
+    if (!document.getElementById('gate') || !document.getElementById('app')) {
+      return setTimeout(start, 20);
+    }
+    // wait until common.js has created Admin
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+      return setTimeout(start, 20);
+    }
+
+    try {
+      Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
+        // quick health chips (optional)
+        const host = document.getElementById('diagChips');
+        const chip = (t, tone='ok') => {
+          if (!host) return;
+          const s=document.createElement('span');
+          s.className='pill '+(tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
+          s.textContent=t; host.appendChild(s);
+        };
+        chip('candidates: boot', 'ok');
+
+        // ---------- your page wiring ----------
+        let rows=[], selected=new Set();
+        const enableDelete = ()=> sel('#btnDelete').disabled = selected.size===0;
+
+        function render(){
+          if(!rows.length){ sel('#listWrap').textContent='No candidates found.'; return; }
+          const head=`<thead><tr>
+            <th style="width:28px"><input id="ckAll" type="checkbox"></th>
+            <th>Ref</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th></th>
+          </tr></thead>`;
+          const body=rows.map(r=>`
+            <tr>
+              <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
+              <td>${r.ref||r.id}</td>
+              <td>${r.full_name||'—'}</td>
+              <td>${r.email||'—'}</td>
+              <td>${r.phone||'—'}</td>
+              <td><span class="pill ${r.status==='active'?'b-ok':r.status==='inactive'?'b-warn':'b-bad'}">${r.status||'inactive'}</span></td>
+              <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
+            </tr>`).join('');
+          sel('#listWrap').innerHTML=`<table>${head}<tbody>${body}</tbody></table>`;
+          sel('#ckAll').onclick=(e)=>{ if(e.target.checked){ rows.forEach(r=>selected.add(r.id)); } else { rows.forEach(r=>selected.delete(r.id)); } enableDelete(); render(); };
+          sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=> c.onchange=()=>{ const id=Number(c.getAttribute('data-id')); if(c.checked) selected.add(id); else selected.delete(id); enableDelete(); });
+          sel('#listWrap').querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openOne(Number(b.getAttribute('data-open'))));
+        }
+
+        async function load(){
+          sel('#listWrap').textContent='Loading…';
+          try{
+            const res = await api('admin-candidates-list','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
+            rows = res.rows || res || [];
+            render();
+          }catch(e){ sel('#listWrap').textContent='Error: '+e.message; }
+        }
+
+        async function openOne(id){
+          try{
+            const r = await api('admin-candidate-open','POST',{ id });
+            toast('Opened '+(r.full_name||('ID '+id)),'info',2000);
+          }catch(e){ toast('Open failed: '+e.message,'error',4000); }
+        }
+
+        async function delSelected(){
+          if(!selected.size) return;
+          if(!confirm(`Delete ${selected.size} candidate(s)?`)) return;
+          try{
+            await api('admin-candidate-delete','POST',{ ids:[...selected] });
+            selected.clear(); enableDelete(); toast('Deleted','ok',1800); load();
+          }catch(e){ toast('Delete failed: '+e.message,'error',4000); }
+        }
+
+        // UI events
+        sel('#btnRefresh').onclick=load;
+        sel('#btnDelete').onclick=delSelected;
+        sel('#btnNew').onclick=()=> location.href='./candidate-profile.html';
+        sel('#btnExport').onclick=async()=>{ try{
+          const csv = await api('admin-candidates-export','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
+          const url = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+          const a=document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click(); URL.revokeObjectURL(url);
+        }catch(e){ toast('Export failed: '+e.message,'error',4000); }};
+        sel('#btnImport').onclick=()=> sel('#csv').click();
+        sel('#csv').addEventListener('change', async ()=>{
+          const f=sel('#csv').files[0]; if(!f) return;
+          try{
+            const text=await f.text();
+            const res=await api('admin-candidates-import','POST',{ csv:text });
+            toast(`Imported ${res?.inserted ?? 0}`,'ok',2200); load();
+          }catch(e){ toast('Import failed: '+e.message,'error',4000); }
+        });
+        ['#q','#status'].forEach(s=> sel(s).addEventListener('input', load));
+
+        await load();
+      });
+    } catch (e) {
+      hardFail(e && e.message ? e.message : String(e));
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
 
 
 
