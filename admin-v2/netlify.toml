@@ -1,20 +1,20 @@
 # Netlify will serve the static site from the repo root
 [build]
   publish = "."
-  functions = "netlify/functions"   # production/default site uses these
+  functions = "netlify/functions"   # <-- prod/default functions
 
-# Use the *root* functions folder for PR deploy previews
+# Use the v2 functions for PR deploy previews
 [context.deploy-preview]
-  functions = "functions"
+  functions = "admin-v2/functions"
 
-# (Optional) Also use root functions for branch deploys
+# (Optional) Also use v2 for branch deploys (non-PR branches)
 [context.branch-deploy]
-  functions = "functions"
+  functions = "admin-v2/functions"
 
-# Be explicit for production (mirrors [build])
+# Be explicit for production (optional, mirrors [build])
 [context.production]
   functions = "netlify/functions"
 
 # (Optional) if you run `netlify dev` locally and want to test v2:
 [dev]
-  functions = "functions"
+  functions = "admin-v2/functions"
