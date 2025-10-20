@@ -75,9 +75,13 @@ const ADMIN_EMAIL_ALLOWLIST = [
   async function initIdentity() {
     const id = await waitIdentityReady(4000);
     if (!id) return null;
-    try { id.init && id.init(); } catch {}
+    try {
+      // ✅ Force the canonical Identity endpoint so previews share the same session/roles
+      id.init({ APIUrl: 'https://hmjg.netlify.app/.netlify/identity' });
+    } catch {}
     return id;
   }
+
 
   async function getIdentityUser() {
     try {
@@ -99,23 +103,31 @@ const ADMIN_EMAIL_ALLOWLIST = [
     try { user = await getIdentityUser(); } catch {}
     try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
 
-    // Start with roles from Identity
-    let roles = (user?.app_metadata?.roles || user?.roles || []).slice();
+    // roles from Identity (normalised to lowercase)
+    let roles = (user?.app_metadata?.roles || user?.roles || [])
+                  .map(r => String(r).toLowerCase());
 
-    // --- QUICK UNBLOCK: allow-list emails get admin role automatically ---
+    // email (lowercased)
     const email = (user?.email || '').toLowerCase();
-    if (email && ADMIN_EMAIL_ALLOWLIST.includes(email) && !roles.includes('admin')) {
-      roles.push('admin');
-    }
+
+    // --- Allow-list: treat allow-listed emails as admin (UI bootstrap safety) ---
+    const allowlistedAdmin = !!email && ADMIN_EMAIL_ALLOWLIST.includes(email);
+    if (allowlistedAdmin && !roles.includes('admin')) roles.push('admin');
 
     const role = roles.includes('admin') ? 'admin'
               : roles.includes('recruiter') ? 'recruiter'
               : roles.includes('client') ? 'client'
               : (roles[0] || '');
 
-    const ok = !!token && (!requiredRole || roles.includes(requiredRole) || role === requiredRole);
+    // OK if:
+    //  - we have a JWT and (no role required OR user has it)
+    //  - OR (allow-listed) and the requiredRole is exactly 'admin' (lets UI boot on previews)
+    const ok = ( !!token && (!requiredRole || roles.includes(requiredRole)) )
+            || ( allowlistedAdmin && requiredRole === 'admin' );
+
     return { ok, user, token, role, email };
   }
+
 
   // Console helpers
   window.getIdentity = identity;
