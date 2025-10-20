@@ -5,14 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Candidates — Admin | HMJ Global</title>
 
-  <!-- Netlify Identity first (defer keeps order; safe in <head>) -->
+  <!-- 1) Identity first (defer so it doesn't block parse) -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script>
-    // Force-init widget once DOM is ready (harmless if already ready)
-    document.addEventListener('DOMContentLoaded', function () {
-      try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch(e){}
-    });
-  </script>
+
+  <!-- 2) Shared admin bootstrap (ABSOLUTE path + cache-bust) -->
+  <script defer src="/admin-v2/admin/common.js?v=7"></script>
 
   <style>
     :root{
@@ -22,7 +19,6 @@
       --danger:#dc2626; --ok:#16a34a; --warn:#f59e0b;
     }
     html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-
     /* Header */
     .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
     .row{max-width:1200px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
@@ -35,7 +31,6 @@
     .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
     .btn.light{background:#fff;color:var(--blue);border-color:#fff}
     .btn.danger{background:#7a1f28;border-color:#a42e3b}
-
     /* Page */
     .wrap{max-width:1200px;margin:20px auto;padding:0 16px;display:grid;gap:12px}
     .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
@@ -51,7 +46,6 @@
     .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
     .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
     .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-
     /* Drawer */
     .drawer{position:fixed;inset:0;display:none;background:rgba(2,6,23,.44);z-index:40}
     .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:820px;max-width:100%;background:#fff;border-left:1px solid var(--stroke);padding:16px;overflow:auto}
@@ -72,7 +66,7 @@
       <span class="pill">Candidates</span>
     </div>
     <div class="sp"></div>
-    <div class="chips" id="chips"></div>
+    <div id="diagChips" class="chips"></div>
     <a class="btn ghost" href="./">⟵ Admin</a>
     <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
   </div></div>
@@ -88,391 +82,140 @@
 
   <!-- App -->
   <div class="wrap" id="app" style="display:none">
-    <!-- Toolbar -->
     <div class="card bar">
-      <input id="q" placeholder="Search name, ref, email…" style="min-width:260px">
+      <input id="q" placeholder="Search name, email, ref…" style="min-width:260px">
       <select id="status">
         <option value="">Status: any</option>
         <option>active</option><option>inactive</option><option>archived</option>
       </select>
-      <select id="has_docs">
-        <option value="">Docs: any</option>
-        <option value="true">Complete</option>
-        <option value="false">Missing</option>
-      </select>
-
       <button class="btn" id="btnRefresh">Refresh</button>
       <div class="sp"></div>
-
       <input type="file" id="csv" accept=".csv" style="display:none">
       <button class="btn ghost" id="btnExport">Export CSV</button>
       <button class="btn ghost" id="btnImport">Import CSV</button>
-
       <button class="btn" id="btnNew">+ New candidate</button>
       <button class="btn danger" id="btnDelete" disabled>Delete</button>
     </div>
 
-    <!-- List -->
     <div class="card" id="listWrap">Loading…</div>
-
-    <!-- Audit mini -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div class="section" style="margin:0">Recent activity</div>
-        <button class="btn ghost" id="btnAudit">Refresh</button>
-      </div>
-      <div id="audit" class="muted">—</div>
-    </div>
   </div>
 
-  <!-- Drawer editor -->
-  <div class="drawer" id="drawer" aria-modal="true" role="dialog">
-    <div class="panel">
-      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
-        <h2 id="edTitle" style="margin:0">Candidate</h2>
-        <div class="right" style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn ghost" id="btnSave">Save</button>
-          <button class="btn danger" id="btnDelOne">Delete</button>
-          <button class="btn ghost" id="btnClose">Close</button>
-        </div>
-      </div>
-
-      <!-- Core details -->
-      <div class="section">Core</div>
-      <div class="grid">
-        <label>Reference <input id="ref" placeholder="Auto/Manual"></label>
-        <label>Status
-          <select id="status_edit"><option>active</option><option>inactive</option><option>archived</option></select>
-        </label>
-        <label>Full Name <input id="full_name" placeholder="Jane Doe"></label>
-        <label>Job Role <input id="job_role" placeholder="e.g., Data Centre Engineer"></label>
-        <label>Email <input id="email" type="email"></label>
-        <label>Phone <input id="phone" type="tel"></label>
-        <label>Address <input id="address"></label>
-        <label>NI / Tax ID <input id="tax_id"></label>
-        <label>Start Date <input id="start_date" type="date"></label>
-        <label>End Date <input id="end_date" type="date"></label>
-        <label>Client Assignment <input id="client_name" placeholder="Linked client"></label>
-        <label>Assignment Ref <input id="assignment_ref" placeholder="Linked assignment"></label>
-      </div>
-
-      <!-- Payroll -->
-      <div class="section">Payroll</div>
-      <div class="grid">
-        <label>Bank Name <input id="bank_name"></label>
-        <label>Account Number <input id="bank_account"></label>
-        <label>Sort / Routing <input id="bank_sort"></label>
-        <label>IBAN <input id="bank_iban"></label>
-      </div>
-
-      <!-- Compliance -->
-      <div class="section">Compliance & Docs</div>
-      <div class="grid">
-        <label>RTW Verified
-          <select id="rtw_ok"><option value="false">No</option><option value="true">Yes</option></select>
-        </label>
-        <label>T&Cs Accepted
-          <select id="terms_ok"><option value="false">No</option><option value="true">Yes</option></select>
-        </label>
-        <label>Emergency Contact <input id="emergency_contact" placeholder="Name & phone"></label>
-      </div>
-
-      <!-- Document upload -->
-      <div class="section">Documents</div>
-      <div class="twocol">
-        <div class="card" style="background:#fff">
-          <div style="font-weight:700;margin-bottom:6px">Right-to-Work</div>
-          <div id="doc_rtw_info" class="muted">No file.</div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input type="file" id="doc_rtw" accept="application/pdf,image/*">
-            <button class="btn ghost" data-upload="rtw">Upload</button>
-          </div>
-        </div>
-        <div class="card" style="background:#fff">
-          <div style="font-weight:700;margin-bottom:6px">Contract</div>
-          <div id="doc_contract_info" class="muted">No file.</div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input type="file" id="doc_contract" accept="application/pdf,image/*">
-            <button class="btn ghost" data-upload="contract">Upload</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Notes -->
-      <div class="section">Notes</div>
-      <textarea id="notes" rows="4" placeholder="Internal notes…"></textarea>
-    </div>
-  </div>
-
-  <!-- Toast host (common.js will reuse if present) -->
+  <!-- Toast host -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Shared admin bootstrap (ABSOLUTE PATH + version bump) -->
-  <script defer src="/admin/common.js?v=10"></script>
-
+  <!-- 3) Page script LAST. Boot only when Admin exists. -->
   <script>
-  // Page logic (runs only after admin gate passes)
-  Admin.bootAdmin(async ({ api, sel, toast }) => {
-    // Tiny chip/toast so we know it actually ran
-    console.log('Candidates bootAdmin running');
-    const chip = (t,tone='info') => {
-      const span=document.createElement('span'); span.className='pill'; span.textContent=t;
-      if(tone==='ok') span.classList.add('b-ok');
-      if(tone==='warn') span.classList.add('b-warn');
-      if(tone==='bad') span.classList.add('b-bad');
-      sel('#chips').appendChild(span); return span;
-    };
-    chip('ready','ok');
-
-    // State
-    let page=1, pageSize=20, total=0, rows=[], selected=new Set(), current=null;
-
-    function enableDelete(){ sel('#btnDelete').disabled = selected.size===0; }
-    function openDrawer(){ sel('#drawer').style.display='block'; }
-    function closeDrawer(){ sel('#drawer').style.display='none'; current=null; }
-
-    function renderList(){
-      if(!rows.length){ sel('#listWrap').textContent='No candidates found.'; return; }
-      const head = `<thead><tr>
-        <th style="width:28px"><input id="ckAll" type="checkbox"></th>
-        <th>Ref</th><th>Name</th><th>Email</th><th>Phone</th>
-        <th>Status</th><th>Client</th><th>Docs</th><th></th>
-      </tr></thead>`;
-      const body = rows.map(r=>{
-        const docs = (r.rtw_ok ? 'RTW✓ ' : '') + (r.terms_ok ? 'T&Cs✓' : '');
-        const pillClass = r.status==='active'?'b-ok':(r.status==='archived'?'b-bad':'b-warn');
-        return `<tr>
-          <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
-          <td>${r.ref || r.id}</td>
-          <td>${r.full_name||'—'}</td>
-          <td>${r.email||'—'}</td>
-          <td>${r.phone||'—'}</td>
-          <td><span class="pill ${pillClass}">${r.status||'inactive'}</span></td>
-          <td>${r.client_name||'—'}</td>
-          <td>${docs || '—'}</td>
-          <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
-        </tr>`;
-      }).join('');
-      const pager = `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px">
-        <div class="muted">Showing ${(page-1)*pageSize+1}-${Math.min(page*pageSize,total)} of ${total}</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn ghost" id="pPrev" ${page<=1?'disabled':''}>Prev</button>
-          <button class="btn ghost" id="pNext" ${(page*pageSize)>=total?'disabled':''}>Next</button>
-        </div></div>`;
-      sel('#listWrap').innerHTML = `<table>${head}<tbody>${body}</tbody></table>${pager}`;
-
-      sel('#ckAll').onclick = (e)=>{ if(e.target.checked){ rows.forEach(r=>selected.add(r.id)); } else { rows.forEach(r=>selected.delete(r.id)); } enableDelete(); renderList(); };
-      sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=> c.onchange=()=>{ const id=Number(c.getAttribute('data-id')); if(c.checked) selected.add(id); else selected.delete(id); enableDelete(); });
-      sel('#listWrap').querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openCandidate(Number(b.getAttribute('data-open'))));
-      sel('#pPrev').onclick=()=>{ page--; load(); };
-      sel('#pNext').onclick=()=>{ page++; load(); };
+  (function bootWhenReady(){
+    // Small helper so we can be very loud if common.js didn’t load:
+    function hardFail(msg){
+      console.error('[candidates] ' + msg);
+      var g = document.getElementById('gate');
+      if (g) { g.style.display=''; var why=g.querySelector('.why'); if (why) why.textContent = msg; }
+      alert('Admin bootstrap failed:\n' + msg + '\n\nCheck that /admin-v2/admin/common.js?v=7 loads (Network tab).');
     }
 
-    async function load(){
-      sel('#listWrap').textContent='Loading…';
-      try{
-        const res = await api('admin-candidate-list','POST',{
-          q: sel('#q').value||'',
-          status: sel('#status').value||'',
-          has_docs: sel('#has_docs').value||'',
-          page, pageSize
+    // Wait until both deferred scripts have executed
+    if (!window.netlifyIdentity || !window.Admin) {
+      // Try again shortly (defer scripts run after parse)
+      return setTimeout(bootWhenReady, 30);
+    }
+
+    try {
+      Admin.bootAdmin(async ({ api, sel, toast }) => {
+        // Debug chips for quick health
+        const chipHost = document.getElementById('diagChips');
+        const chip = (t, tone='ok') => {
+          const s = document.createElement('span');
+          s.className = 'pill ' + (tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
+          s.textContent = t; chipHost && chipHost.appendChild(s); return s;
+        };
+        chip('candidates: ready', 'ok');
+
+        // Wiring
+        let rows = [], selected = new Set();
+        function enableDelete(){ sel('#btnDelete').disabled = selected.size===0; }
+
+        function render(){
+          if (!rows.length) { sel('#listWrap').textContent = 'No candidates found.'; return; }
+          const head = `<thead><tr>
+            <th style="width:28px"><input id="ckAll" type="checkbox"></th>
+            <th>Ref</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th></th>
+          </tr></thead>`;
+          const body = rows.map(r => `
+            <tr>
+              <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
+              <td>${r.ref || r.id}</td>
+              <td>${r.full_name || '—'}</td>
+              <td>${r.email || '—'}</td>
+              <td>${r.phone || '—'}</td>
+              <td><span class="pill ${r.status==='active'?'b-ok':r.status==='inactive'?'b-warn':'b-bad'}">${r.status||'inactive'}</span></td>
+              <td><button class="btn ghost" data-open="${r.id}">Open</button></td>
+            </tr>
+          `).join('');
+          sel('#listWrap').innerHTML = `<table>${head}<tbody>${body}</tbody></table>`;
+
+          sel('#ckAll').onclick = (e)=>{ if(e.target.checked){ rows.forEach(r=>selected.add(r.id)); } else { rows.forEach(r=>selected.delete(r.id)); } enableDelete(); render(); };
+          sel('#listWrap').querySelectorAll('input[type=checkbox][data-id]').forEach(c=> c.onchange=()=>{ const id=Number(c.getAttribute('data-id')); if(c.checked) selected.add(id); else selected.delete(id); enableDelete(); });
+          sel('#listWrap').querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openOne(Number(b.getAttribute('data-open'))));
+        }
+
+        async function load(){
+          sel('#listWrap').textContent = 'Loading…';
+          try{
+            const res = await api('admin-candidates-list','POST', { q: sel('#q').value||'', status: sel('#status').value||'' });
+            rows = res.rows || res || [];
+            render();
+          }catch(e){
+            sel('#listWrap').textContent = 'Error: ' + e.message;
+          }
+        }
+
+        async function openOne(id){
+          try{
+            const r = await api('admin-candidate-open','POST',{ id });
+            toast('Opened ' + (r.full_name||('ID ' + id)), 'info', 2000);
+            // (Your drawer/editor could go here)
+          }catch(e){ toast('Open failed: ' + e.message, 'error', 4000); }
+        }
+
+        async function delSelected(){
+          if(!selected.size) return;
+          if(!confirm(`Delete ${selected.size} candidate(s)?`)) return;
+          try{
+            await api('admin-candidate-delete','POST',{ ids: Array.from(selected) });
+            selected.clear(); enableDelete(); toast('Deleted', 'ok', 1800); load();
+          }catch(e){ toast('Delete failed: ' + e.message, 'error', 4000); }
+        }
+
+        // Wire UI
+        sel('#btnRefresh').onclick = load;
+        sel('#btnDelete').onclick = delSelected;
+        sel('#btnNew').onclick = () => window.location.href = './candidate-profile.html'; // or open drawer
+        sel('#btnExport').onclick = async () => {
+          try{
+            const csv = await api('admin-candidates-export','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
+            const url = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+            const a=document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click(); URL.revokeObjectURL(url);
+          }catch(e){ toast('Export failed: ' + e.message, 'error', 4000); }
+        };
+        sel('#btnImport').onclick = ()=> sel('#csv').click();
+        sel('#csv').addEventListener('change', async ()=>{
+          const f = sel('#csv').files[0]; if(!f) return;
+          try{
+            const text = await f.text();
+            const res = await api('admin-candidates-import','POST',{ csv: text });
+            toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2200); load();
+          }catch(e){ toast('Import failed: ' + e.message, 'error', 4000); }
         });
-        rows = res.rows || res || [];
-        total = res.total ?? rows.length;
-        renderList();
-      }catch(e){
-        sel('#listWrap').textContent='Error: '+e.message;
-      }
+        ['#q','#status'].forEach(s => sel(s).addEventListener('input', load));
+
+        // Initial load
+        await load();
+      });
+    } catch (err) {
+      hardFail(err && err.message ? err.message : String(err));
     }
-
-    async function loadAudit(){
-      try{
-        const list = await api('admin-audit-list','POST',{ entity:'candidate', limit: 10 });
-        sel('#audit').innerHTML = list.length ? `<ul style="margin:6px 0;padding-left:18px">
-          ${list.map(a=>`<li><span class="muted">${a.created_at?.replace('T',' ').slice(0,16)||''}</span> — ${a.action} #${a.entity_id||''} by ${a.actor_email||'—'}</li>`).join('')}
-        </ul>` : '—';
-      }catch(e){ sel('#audit').textContent='Audit unavailable: '+e.message; }
-    }
-
-    // Open editor
-    async function openCandidate(id){
-      try{
-        const r = await api('admin-candidate-open','POST',{ id });
-        current = r;
-        sel('#edTitle').textContent = `Candidate #${r.id}`;
-        const set = (k,v)=>{ const el=sel('#'+k); if(el) el.value = (v ?? ''); };
-        set('ref', r.ref);
-        set('status_edit', r.status||'active');
-        set('full_name', r.full_name);
-        set('job_role', r.job_role);
-        set('email', r.email);
-        set('phone', r.phone);
-        set('address', r.address);
-        set('tax_id', r.tax_id);
-        set('start_date', (r.start_date||'').slice(0,10));
-        set('end_date', (r.end_date||'').slice(0,10));
-        set('client_name', r.client_name);
-        set('assignment_ref', r.assignment_ref);
-        set('bank_name', r.bank_name);
-        set('bank_account', r.bank_account);
-        set('bank_sort', r.bank_sort);
-        set('bank_iban', r.bank_iban);
-        sel('#rtw_ok').value = String(!!r.rtw_ok);
-        sel('#terms_ok').value = String(!!r.terms_ok);
-        set('emergency_contact', r.emergency_contact);
-        set('notes', r.notes);
-
-        sel('#doc_rtw_info').innerHTML = r.doc_rtw_url ? `<a href="${r.doc_rtw_url}" target="_blank">View RTW</a>` : 'No file.';
-        sel('#doc_contract_info').innerHTML = r.doc_contract_url ? `<a href="${r.doc_contract_url}" target="_blank">View Contract</a>` : 'No file.';
-
-        openDrawer();
-      }catch(e){
-        toast('Open failed: '+e.message,'err',5000);
-      }
-    }
-
-    // New
-    function newCandidate(){
-      current = { id:null, status:'active' };
-      ['ref','full_name','job_role','email','phone','address','tax_id','start_date','end_date',
-       'client_name','assignment_ref','bank_name','bank_account','bank_sort','bank_iban',
-       'emergency_contact','notes'].forEach(k=>{ const el=sel('#'+k); if(el) el.value=''; });
-      sel('#status_edit').value='active';
-      sel('#rtw_ok').value='false';
-      sel('#terms_ok').value='false';
-      sel('#doc_rtw_info').textContent='No file.';
-      sel('#doc_contract_info').textContent='No file.';
-      openDrawer();
-    }
-
-    // Save
-    async function save(){
-      const get = id => sel('#'+id)?.value || null;
-      const payload = {
-        id: current?.id || null,
-        ref: get('ref'),
-        status: get('status_edit'),
-        full_name: get('full_name'),
-        job_role: get('job_role'),
-        email: get('email'),
-        phone: get('phone'),
-        address: get('address'),
-        tax_id: get('tax_id'),
-        start_date: get('start_date') || null,
-        end_date: get('end_date') || null,
-        client_name: get('client_name'),
-        assignment_ref: get('assignment_ref'),
-        bank_name: get('bank_name'),
-        bank_account: get('bank_account'),
-        bank_sort: get('bank_sort'),
-        bank_iban: get('bank_iban'),
-        rtw_ok: sel('#rtw_ok')?.value === 'true',
-        terms_ok: sel('#terms_ok')?.value === 'true',
-        emergency_contact: get('emergency_contact'),
-        notes: get('notes')
-      };
-      try{
-        await api('admin-candidate-save','POST', payload);
-        toast('Saved','ok',2000); closeDrawer(); load();
-      }catch(e){ toast('Save failed: '+e.message,'err',5000); }
-    }
-
-    // Delete (bulk)
-    async function delSelected(){
-      if(!selected.size) return;
-      if(!confirm(`Delete ${selected.size} candidate(s)?`)) return;
-      try{ await api('admin-candidate-delete','POST',{ ids: Array.from(selected) });
-        selected.clear(); enableDelete(); toast('Deleted','ok',2000); load();
-      }catch(e){ toast('Delete failed: '+e.message,'err',5000); }
-    }
-    async function delOne(){ if(!current?.id) return; selected=new Set([current.id]); await delSelected(); closeDrawer(); }
-
-    // Upload docs
-    async function upload(kind){
-      const input = sel(kind === 'rtw' ? '#doc_rtw' : '#doc_contract');
-      const f = input.files?.[0]; if(!f){ toast('Choose a file first','warn',2500); return; }
-      try{
-        const sign = await api('admin-uploads-presign','POST',{ entity:'candidate', entity_id: current?.id, kind, filename:f.name, type:f.type });
-        await fetch(sign.url,{ method:'PUT', headers:sign.headers||{}, body:f });
-        const attachFn = kind === 'rtw' ? 'admin-candidate-attach-rtw' : 'admin-candidate-attach-contract';
-        await api(attachFn,'POST',{ id: current?.id, url: sign.public_url });
-        if(kind==='rtw') sel('#doc_rtw_info').innerHTML = `<a href="${sign.public_url}" target="_blank">View RTW</a>`;
-        else sel('#doc_contract_info').innerHTML = `<a href="${sign.public_url}" target="_blank">View Contract</a>`;
-        toast('Uploaded','ok',1800);
-      }catch(e){ toast('Upload failed: '+e.message,'err',5000); }
-    }
-
-    // Export / Import
-    async function exportCSV(){
-      try{
-        const blob = await api('admin-candidate-export','POST',{ q: sel('#q').value||'', status: sel('#status').value||'' });
-        const url = URL.createObjectURL(new Blob([blob],{type:'text/csv'}));
-        const a=document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click(); URL.revokeObjectURL(url);
-      }catch(e){ toast('Export failed: '+e.message,'err',5000); }
-    }
-    function importCSV(){ sel('#csv').click(); }
-    sel('#csv').addEventListener('change', async ()=>{
-      const f = sel('#csv').files[0]; if(!f) return;
-      const text = await f.text();
-      try{
-        const res = await api('admin-candidate-import','POST',{ csv:text });
-        toast(`Imported ${res?.inserted ?? 0}`, 'ok', 2500); load();
-      }catch(e){ toast('Import failed: '+e.message,'err',5000); }
-    });
-
-    // Wire UI
-    sel('#btnRefresh').onclick=load;
-    sel('#btnNew').onclick=newCandidate;
-    sel('#btnSave').onclick=save;
-    sel('#btnDelete').onclick=delSelected;
-    sel('#btnDelOne').onclick=delOne;
-    sel('#btnClose').onclick=()=>{ closeDrawer(); };
-    sel('[data-upload="rtw"]').onclick=()=>upload('rtw');
-    sel('[data-upload="contract"]').onclick=()=>upload('contract');
-    sel('#btnAudit').onclick=loadAudit;
-    sel('#btnExport').onclick=exportCSV;
-    sel('#btnImport').onclick=importCSV;
-
-    ['#q','#status','#has_docs'].forEach(s=> sel(s).addEventListener('change', ()=>{ page=1; load(); }));
-
-    // Shortcuts
-    document.addEventListener('keydown',(e)=>{
-      if(e.key==='n' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); newCandidate(); }
-      if(e.key==='s' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); if(sel('#drawer').style.display==='block') save(); }
-      if(e.key==='e' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); exportCSV(); }
-      if(e.key==='Escape' && sel('#drawer').style.display==='block'){ e.preventDefault(); closeDrawer(); }
-    });
-
-    // Initial loads
-    await load();
-    await loadAudit();
-  });
+  })();
   </script>
-
-
-<!-- 2) Put these two just before </body>, in this exact order -->
-<script src="./common.js?v=8"></script>
-
-<script>
-  // Defensive: show a helpful message if common.js didn’t load
-  if (!window.Admin || !window.Admin.bootAdmin) {
-    console.error('common.js not loaded or cached stale — bump ?v= and hard refresh');
-    const warn = document.createElement('pre');
-    warn.style.cssText = 'padding:12px;border:1px solid #f59e0b;background:#fff7ed;color:#7c2d12;border-radius:8px;max-width:680px;margin:16px';
-    warn.textContent = 'Admin bootstrap missing (common.js). Try a hard refresh (⌘⇧R) or bump ?v= on the script tag.';
-    document.body.appendChild(warn);
-  } else {
-    Admin.bootAdmin(async ({ api, sel, toast }) => {
-      // ... your page code goes here ...
-      // If you already have a big inline block, just keep it here unchanged.
-      console.log('[candidates] boot ok');
-      // Example: prove the gate opened
-      const app = document.getElementById('app'); if (app) app.style.display = '';
-    });
-  }
-</script>
-
-
-
 </body>
 </html>
