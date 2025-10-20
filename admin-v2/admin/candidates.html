@@ -351,6 +351,30 @@
 })();
 </script>
 
+<script>
+(function bootWhenReady(){
+  // If deps aren’t ready yet (deferred scripts), retry shortly.
+  if (!window.Admin || !window.Admin.bootAdmin || !window.netlifyIdentity) {
+    return setTimeout(bootWhenReady, 30);
+  }
+
+  // Call the framework boot once.
+  Admin.bootAdmin(async ({ sel, toast }) => {
+    // Optional visual “it worked” proof the first time
+    try {
+      const chips = document.getElementById('diagChips');
+      if (chips) { const s=document.createElement('span'); s.className='pill b-ok'; s.textContent='boot ok'; chips.appendChild(s); }
+      toast('Candidates booted ✅', 'info', 1600);
+    } catch {}
+
+    // TODO: your page logic will run here (list, open, delete, etc.)
+    // If you already have a longer page script, it can stay exactly as-is,
+    // just wrap it inside this Admin.bootAdmin block.
+  });
+})();
+</script>
+
+
 
 
 </body>
