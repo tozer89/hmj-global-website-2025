@@ -1,12 +1,8 @@
 // admin-candidate-docs-upload.js
 // Uploads a candidate document to Supabase Storage and records it in DB.
+// Expects multipart/form-data with fields: id (candidate id), label (optional), file
 //
-// Expects multipart/form-data with fields:
-//   - id:            candidate id (number)
-//   - label:         optional label for display
-//   - file:          file input
-//
-// Returns: { ok:true, id, url } on success
+// Response (success): { ok:true, id, url, filename, sizeBytes, contentType }
 
 const Busboy = require('busboy');
 const { randomUUID, createHash } = require('crypto');
@@ -15,21 +11,25 @@ const { requireRole } = require('./_auth');
 
 // --- Tunables ----------------------------------------------------------------
 const BUCKET = 'candidate-docs';
-const PREFIX = 'candidate-docs'; // folder inside bucket (mirrors bucket, change if you wish)
-const MAX_SIZE_MB = 20;          // hard cap
+const PREFIX = 'candidate-docs';              // folder inside bucket
+const TABLE  = 'candidate_documents';
+const MAX_SIZE_MB = 20;
 const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024;
-const ALLOW_EXT = ['pdf','doc','docx','png','jpg','jpeg','txt'];
+
+const ALLOW_EXT  = ['pdf','doc','docx','png','jpg','jpeg','txt'];
 const ALLOW_MIME = [
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/png', 'image/jpeg', 'text/plain'
+  'image/png',
+  'image/jpeg',
+  'text/plain'
 ];
 
 // ------------------------------------------------------------------------------
 exports.handler = async (event) => {
   try {
-    // CORS (optional, keeps browsers happy if you call from frontends)
+    // CORS preflight
     if (event.httpMethod === 'OPTIONS') {
       return ok(204, null, cors());
     }
@@ -43,18 +43,14 @@ exports.handler = async (event) => {
 
     // Content type must be multipart
     const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
-    if (!contentType.toLowerCase().includes('multipart/form-data')) {
+    if (!String(contentType).toLowerCase().includes('multipart/form-data')) {
       return err(400, 'Expected multipart/form-data');
     }
 
     // Parse multipart with Busboy
     const busboy = Busboy({
       headers: { 'content-type': contentType },
-      limits: {
-        files: 1,
-        fileSize: MAX_SIZE,
-        fields: 10
-      }
+      limits: { files: 1, fileSize: MAX_SIZE, fields: 20, parts: 30 }
     });
 
     let candidateId = null;
@@ -63,7 +59,7 @@ exports.handler = async (event) => {
     let fileBuffer = Buffer.alloc(0);
     let fileMime = 'application/octet-stream';
     let fileSize = 0;
-    let fileExt = 'bin';
+    let fileExt  = 'bin';
     let fileHash = '';
 
     const bbPromise = new Promise((resolve, reject) => {
@@ -73,16 +69,16 @@ exports.handler = async (event) => {
           if (!Number.isFinite(n) || n <= 0) return reject(new Error('Invalid candidate id'));
           candidateId = n;
         } else if (name === 'label') {
-          label = String(val).trim().slice(0, 256); // keep it sensible
+          label = String(val).trim().slice(0, 256);
         }
       });
 
       busboy.on('file', (name, file, info = {}) => {
         filename = sanitizeFilename(info.filename || 'upload.bin');
-        fileMime = (info.mimetype || guessContentType(filename)) || 'application/octet-stream';
-        fileExt = extOf(filename);
+        fileMime = normalizeMime(info.mimetype) || guessContentType(filename);
+        fileExt  = extOf(filename);
 
-        // Validate early
+        // Early validation
         if (ALLOW_EXT.length && !ALLOW_EXT.includes(fileExt)) {
           file.resume();
           return reject(new Error(`File type not allowed (.${fileExt})`));
@@ -101,7 +97,8 @@ exports.handler = async (event) => {
           hash.update(d);
         });
 
-        file.on('limit', () => reject(new Error(`File too large (>${MAX_SIZE_MB} MB)`)));
+        file.on('limit', () => reject(limitErr(`File too large (>${MAX_SIZE_MB} MB)`)));
+        file.on('error', reject);
 
         file.on('end', () => {
           fileBuffer = Buffer.concat(chunks);
@@ -109,12 +106,20 @@ exports.handler = async (event) => {
         });
       });
 
+      // Extra limits -> clearer errors
+      busboy.on('filesLimit', () => reject(new Error('Too many files')));
+      busboy.on('fieldsLimit', () => reject(new Error('Too many fields')));
+      busboy.on('partsLimit',  () => reject(new Error('Too many parts')));
+
       busboy.on('error', reject);
       busboy.on('finish', resolve);
     });
 
     // Feed Busboy the raw body
-    const raw = event.isBase64Encoded ? Buffer.from(event.body || '', 'base64') : Buffer.from(event.body || '');
+    const raw = event.isBase64Encoded
+      ? Buffer.from(event.body || '', 'base64')
+      : Buffer.from(event.body || '');
+
     busboy.end(raw);
     await bbPromise;
 
@@ -140,13 +145,13 @@ exports.handler = async (event) => {
 
     if (upErr) return err(500, `Upload failed: ${upErr.message}`);
 
-    // Public URL (assuming bucket is public; if not, return storage key only)
+    // Public URL (if bucket is public)
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(key);
     const url = pub?.publicUrl || null;
 
-    // Insert DB row
+    // Insert DB row (include checksum + size/type)
     const { data: ins, error: insErr } = await supabase
-      .from('candidate_documents')
+      .from(TABLE)
       .insert({
         candidate_id: candidateId,
         label: label || null,
@@ -154,7 +159,8 @@ exports.handler = async (event) => {
         storage_key: key,
         url,
         content_type: fileMime,
-        size_bytes: fileSize
+        size_bytes: fileSize,
+        checksum: fileHash
       })
       .select()
       .single();
@@ -165,18 +171,36 @@ exports.handler = async (event) => {
       return err(500, `DB insert failed: ${insErr.message}`);
     }
 
-    return ok(200, { ok: true, id: ins.id, url, filename: ins.filename }, cors());
+    return ok(200, {
+      ok: true,
+      id: ins.id,
+      url,
+      filename: ins.filename,
+      sizeBytes: fileSize,
+      contentType: fileMime
+    }, cors());
   } catch (e) {
+    if (e && e.code === 'PAYLOAD_TOO_LARGE') {
+      return err(413, e.message);
+    }
     return err(500, String(e.message || e));
   }
 };
 
 // ------------------------------ helpers --------------------------------------
 function ok(status, body, headers = {}) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : '' };
+  return {
+    statusCode: status,
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: body ? JSON.stringify(body) : ''
+  };
 }
 function err(status, message, extra = {}) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify({ error: message, ...extra }) };
+  return {
+    statusCode: status,
+    headers: { 'Content-Type': 'application/json', ...cors() },
+    body: JSON.stringify({ error: message, ...extra })
+  };
 }
 function cors() {
   return {
@@ -185,7 +209,14 @@ function cors() {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
   };
 }
-
+function limitErr(message){
+  const e = new Error(message);
+  e.code = 'PAYLOAD_TOO_LARGE';
+  return e;
+}
+function normalizeMime(m) {
+  return (m && typeof m === 'string') ? m.toLowerCase() : '';
+}
 function guessContentType(name = '') {
   const n = name.toLowerCase();
   if (n.endsWith('.pdf'))  return 'application/pdf';
@@ -196,7 +227,6 @@ function guessContentType(name = '') {
   if (n.endsWith('.txt'))  return 'text/plain';
   return 'application/octet-stream';
 }
-
 function sanitizeFilename(name = 'file') {
   // remove path bits and any risky chars; keep spaces and dashes
   const just = String(name).split('/').pop().split('\\').pop();
