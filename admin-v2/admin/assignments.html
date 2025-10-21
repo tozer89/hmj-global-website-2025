@@ -1,270 +1,496 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta name="robots" content="noindex,nofollow"/>
-  <title>Assignments — Admin | HMJ Global</title>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Assignments — Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Identity + Admin bootstrap -->
-  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="/admin-v2/admin/common.js?v=17"></script>
-
+  <!-- Theme -->
   <style>
     :root{
-      --ink:#101828; --bg:#f9fafb; --muted:#667085;
-      --blue:#1f3b7a; --blue-light:#274ca1;
-      --border:#e5e7eb; --card:#fff;
-      --success:#16a34a; --warn:#f59e0b; --danger:#dc2626;
+      --bg:#fff;
+      --ink:#0f172a;           /* slate-900 */
+      --muted:#64748b;         /* slate-500 */
+      --line:#e2e8f0;          /* slate-200 */
+      --blue:#1f428a;          /* HMJ blue (softer) */
+      --blue-ink:#14315f;
+      --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
+      --chip:#eef2ff;
+      --panel:#f8fafc;
+      --shadow:0 .5px 0 rgba(2,8,23,.06), 0 10px 24px rgba(2,8,23,.06);
       --radius:14px;
-      --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 10px rgba(0,0,0,.08);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font:15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:var(--bg);color:var(--ink)}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+      font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Inter,Roboto,Helvetica,Arial}
+    a{color:var(--blue-ink);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .container{max-width:1280px;margin:0 auto;padding:16px}
 
-    /* HEADER */
-    .top{background:var(--blue);color:#fff;position:sticky;top:0;z-index:100;border-bottom:2px solid #0b225b}
-    .top .bar{display:flex;align-items:center;gap:12px;max-width:1400px;margin:0 auto;padding:12px 18px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .brand .logo{width:30px;height:30px;background:#fff;color:var(--blue);display:grid;place-items:center;border-radius:8px;font-weight:900}
-    .btn{border:none;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;user-select:none}
-    .btn:hover{opacity:.9}
-    .btn.primary{background:var(--blue);color:#fff}
-    .btn.ghost{background:rgba(255,255,255,.15);color:#fff}
-    .btn.danger{background:var(--danger);color:#fff}
-    .btn.light{background:#fff;color:var(--blue)}
-    .chips{display:flex;gap:6px;flex-wrap:wrap}
-    .chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:3px 10px;font-weight:600;font-size:13px}
-    .chip.ok{background:#e8fff3;color:#0a4f24}
-    .chip.warn{background:#fffbe8;color:#735d02}
-    .chip.bad{background:#ffebeb;color:#6a1a1a}
+    /* App bar */
+    .appbar{position:sticky;top:0;z-index:20;background:#eff4ff;border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(2,8,23,.04)}
+    .appbar .row{display:flex;align-items:center;gap:12px;padding:10px 16px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#0b1d3c}
+    .brand .logo{width:28px;height:28px;border-radius:7px;background:var(--blue);display:inline-grid;place-items:center;color:#fff}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{background:#edf2ff;border:1px solid #dbeafe;color:#0b1d3c;border-radius:999px;padding:6px 10px;font-weight:700}
+    .chip.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
+    .chip.warn{background:#fffbeb;border-color:#fde68a;color:#7c5800}
+    .chip.bad{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
 
-    /* BODY */
-    .wrap{max-width:1400px;margin:18px auto;padding:0 18px;animation:fadein .4s ease}
-    @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
-    input,select,textarea{border:1px solid var(--border);border-radius:10px;padding:9px 12px;font:inherit}
-    input[type=search]{min-width:240px}
-    table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-    th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--border)}
-    th{background:#f8fafc;font-weight:700;font-size:13px;color:#475569}
-    tr:hover td{background:#f3f4f6}
-    .empty{padding:30px;text-align:center;color:var(--muted)}
-
-    .grid{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
-    @media(max-width:1000px){.grid{grid-template-columns:1fr}}
-
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-    .card h3{margin:0 0 10px;font-size:17px}
-    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:14px}
-    .kv .k{color:var(--muted)}
-    .status{display:inline-block;padding:3px 10px;border-radius:9999px;font-weight:700;font-size:12px;text-transform:capitalize}
-    .status.live{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
-    .status.draft{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
-    .status.complete{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
-
-    /* Drawer */
-    .drawer{position:fixed;inset:0 0 0 auto;max-width:760px;width:95vw;background:#fff;box-shadow:-5px 0 30px rgba(0,0,0,.2);transform:translateX(100%);transition:transform .25s ease;z-index:200;display:grid;grid-template-rows:auto 1fr auto}
-    .drawer.open{transform:none}
-    .drawer h2{margin:0}
-    .drawer .head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:#f8fafc}
-    .drawer .body{padding:18px;overflow:auto}
-    .drawer .foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#fff}
-    .field{display:grid;gap:4px}
-    .field label{font-weight:700;font-size:13px}
-    .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+    .actions{margin-left:auto;display:flex;gap:10px}
+    .btn{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn:hover{box-shadow:var(--shadow)}
+    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    .btn.ghost{background:#fff}
+    .btn.danger{background:#fee2e2;border-color:#fecaca;color:#7f1d1d}
 
     /* Hints */
-    .hint{background:#eef2ff;border-left:4px solid var(--blue);padding:10px 14px;border-radius:8px;font-size:14px;color:#1e3a8a;margin:8px 0}
-    .hint strong{display:block;font-weight:800;color:var(--blue)}
+    .hint{background:var(--panel);border:1px dashed var(--line);padding:12px 14px;border-radius:12px;margin:12px 0;color:#1f2937}
+    .hint strong{font-weight:800}
 
-    /* Toast placeholder */
-    #toast{position:fixed;bottom:18px;right:18px;z-index:500}
+    /* Toolbar */
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+    .search{flex:1;min-width:230px;position:relative}
+    .search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--line);border-radius:12px;background:#fff}
+    .search .ico{position:absolute;left:10px;top:9px;color:var(--muted)}
+    .select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
 
+    /* Layout */
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
+
+    .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card .h{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;background:#f8fafc;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius)}
+    .card .b{padding:12px 14px}
+
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    th,td{padding:12px;border-bottom:1px solid var(--line)}
+    th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:#f1f5f9}
+    tr:hover td{background:#fbfdff}
+    .row-actions{display:flex;gap:8px}
+
+    .status{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:800;font-size:12px}
+    .status.live{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
+    .status.complete{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+    .status.draft{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px}
+    .kv .k{color:var(--muted)}
+    .empty{color:var(--muted)}
+
+    .table-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+    .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none}
+
+    dialog{border:none;border-radius:16px;max-width:760px;width:min(96vw,760px);box-shadow:var(--shadow)}
+    dialog::backdrop{background:rgba(2,8,23,.35)}
   </style>
 </head>
+
 <body>
-  <div class="top">
-    <div class="bar">
-      <div class="brand"><div class="logo">H</div> HMJ Global</div>
-      <span class="chip">Admin</span>
-      <span class="chip">Assignments</span>
-      <div style="flex:1"></div>
-      <a href="./index.html" class="btn light">← Dashboard</a>
-      <div id="diagChips" class="chips"></div>
-      <button class="btn ghost" onclick="window.netlifyIdentity?.logout()">Sign out</button>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div id="gate" style="display:none" class="card">
-      <h3>Admin Access Required</h3>
-      <p class="muted why">Verifying session…</p>
-      <button class="btn primary" onclick="window.netlifyIdentity?.open('login')">Sign in</button>
-    </div>
-
-    <div id="app" style="display:none">
-      <div class="hint">
-        <strong>Assignments overview</strong>
-        This page lists all current and past assignments, showing client, candidate, and contract dates.
-        Use the search bar to filter by job title, client, or candidate name.
-        Status tags like <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.
+  <!-- App bar -->
+  <header class="appbar">
+    <div class="row">
+      <div class="brand">
+        <span class="logo">H</span>
+        HMJ Global — Admin
       </div>
 
-      <div class="toolbar card">
-        <input type="search" id="q" placeholder="Search (title, ref, client, candidate)…"/>
-        <select id="status">
-          <option value="">All statuses</option>
-          <option>Draft</option><option>Live</option><option>Complete</option>
-        </select>
-        <button id="btnRefresh" class="btn primary">↻ Refresh</button>
-        <div style="flex:1"></div>
+      <a class="btn ghost" href="./index.html">← Dashboard</a>
+
+      <!-- Diagnostic chips (populated by common.js + this page) -->
+      <nav class="chips" id="diagChips"></nav>
+
+      <div class="actions">
+        <button id="btnRefresh" class="btn">↻ Refresh</button>
         <button id="btnNew" class="btn primary">＋ New</button>
-        <button id="btnDelete" class="btn danger" disabled>🗑 Delete</button>
+        <button id="btnDelete" class="btn danger">🗑 Delete</button>
+        <button id="btnSignOut" class="btn ghost">Sign out</button>
       </div>
+    </div>
+  </header>
 
-      <div class="grid">
-        <div>
-          <div id="listWrap" class="card"><div class="empty">Loading assignments…</div></div>
+  <main class="container">
+
+    <!-- Friendly page explainer (helps new staff + adds context) -->
+    <div class="hint" id="pageIntro">
+      <strong>Assignments overview.</strong> This page lists all current and past assignments, showing client, candidate, and
+      contract dates. Use the search bar to filter by job title, client, or candidate name. Status tags such as <em>Live</em>
+      or <em>Complete</em> update automatically from the Timesheets system.
+    </div>
+
+    <!-- Controls -->
+    <div class="toolbar">
+      <div class="search">
+        <span class="ico">🔍</span>
+        <input id="q" placeholder="Search (title, ref, client, candidate) — press Enter" />
+      </div>
+      <select id="status" class="select" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="draft">Draft</option>
+        <option value="complete">Complete</option>
+        <option value="live">Live</option>
+        <option value="archived">Archived</option>
+      </select>
+      <button id="btnRefresh2" class="btn">↻ Refresh</button>
+    </div>
+
+    <div id="envHint" class="hint" style="display:none"></div>
+
+    <div class="grid">
+      <!-- List -->
+      <section class="card" aria-label="Assignments list">
+        <div class="h">
+          All assignments
+          <span id="total" style="color:var(--muted);font-weight:700"></span>
         </div>
-        <aside>
-          <div class="card">
-            <h3>Quick view — Assignment</h3>
-            <div id="qvBody" class="kv"><div class="empty">Select an assignment to view details.</div></div>
+        <div class="b" style="padding:0">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px;"></th>
+                <th>TITLE</th>
+                <th>CLIENT</th>
+                <th>CANDIDATE</th>
+                <th>DATES</th>
+                <th>STATUS</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr><td colspan="7" class="empty" style="padding:26px;text-align:center">Loading assignments…</td></tr>
+            </tbody>
+          </table>
+
+          <div class="table-footer">
+            <div>
+              <button id="prev" class="btn" title="← Previous (Alt+←)">← Prev</button>
+              <button id="next" class="btn" title="Next → (Alt+→)">Next →</button>
+              <span id="pageLabel" style="margin-left:8px;color:var(--muted)"></span>
+            </div>
+            <div>
+              <select id="pageSize" class="select" title="Rows per page">
+                <option>20</option>
+                <option>50</option>
+                <option>100</option>
+              </select>
+            </div>
           </div>
-          <div class="card" style="margin-top:12px">
-            <h3>Latest timesheet</h3>
-            <div id="qvTS" class="kv"><div class="empty">Not live — no timesheets yet.</div></div>
-          </div>
-        </aside>
+        </div>
+      </section>
+
+      <!-- Quick view -->
+      <aside class="card" aria-label="Quick view panel">
+        <div class="h">Quick view — Assignment</div>
+        <div class="b">
+          <div id="quick" class="empty">Select an assignment to preview details here.</div>
+        </div>
+
+        <div class="h">Latest timesheet</div>
+        <div class="b">
+          <div id="latestTS" class="empty">Not live — no timesheets yet.</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Drawer (New assignment) -->
+  <dialog id="drawer">
+    <form method="dialog" id="formNew" style="padding:16px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">New assignment</h3>
+        <div style="display:flex; gap:8px">
+          <button class="btn ghost" value="cancel" type="button" id="closeDrawer">Close</button>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Drawer -->
-  <aside id="drawer" class="drawer" aria-hidden="true">
-    <div class="head">
-      <h2>New Assignment</h2>
-      <button id="btnClose" class="btn ghost">✕ Close</button>
-    </div>
-    <div class="body">
-      <div class="hint"><strong>Tip:</strong> You can assign a candidate later. Only the job title and client are required to create a draft.</div>
-      <form id="frm" autocomplete="off">
-        <div class="field"><label>Job Title *</label><input name="title" required></div>
-        <div class="grid2">
-          <div class="field"><label>PO Number</label><input name="po_number"></div>
-          <div class="field"><label>Shift</label><select name="shift"><option>Day</option><option>Night</option></select></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>Start Date</label><input type="date" name="start_date"></div>
-          <div class="field"><label>End Date</label><input type="date" name="end_date"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>Client</label><input name="client"></div>
-          <div class="field"><label>Client Site</label><input name="client_site"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>Candidate</label><input name="candidate" placeholder="Leave blank if not yet assigned"></div>
-          <div class="field"><label>Expected Hours</label><input name="estimated_hours" placeholder="e.g. Mon–Fri, 40h"></div>
-        </div>
-        <div class="field" style="margin-top:8px"><label>Internal Notes</label><textarea name="notes" rows="3"></textarea></div>
-      </form>
-    </div>
-    <div class="foot">
-      <div class="muted">Entries saved here appear instantly in the Assignments list.</div>
-      <div>
-        <button id="btnSave" class="btn primary">💾 Save</button>
+      <div class="hint" style="margin-top:0">
+        <strong>Tip:</strong> You can leave Candidate blank and link later.  
+        Status will flip to <em>Live</em> automatically once linked and timesheets are raised.
       </div>
-    </div>
-  </aside>
 
-  <div id="toast"></div>
+      <div style="display:grid;gap:12px">
+        <label>Job title *<br><input id="title" required class="select" style="width:100%" placeholder="e.g. Senior Electrician"></label>
 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label>PO number<br><input id="po" class="select" style="width:100%" placeholder="Optional"></label>
+          <label>Shift<br>
+            <select id="shift" class="select" style="width:100%">
+              <option value="Day">Day</option>
+              <option value="Night">Night</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label>Start date<br><input id="start" type="date" class="select" style="width:100%"></label>
+          <label>End date<br><input id="end" type="date" class="select" style="width:100%"></label>
+        </div>
+
+        <div class="kv" style="margin-top:6px">
+          <div class="k">Client</div><div><input id="client" class="select" placeholder="Client name / ref"></div>
+          <div class="k">Client site</div><div><input id="site" class="select" placeholder="Optional site"></div>
+          <div class="k">Candidate</div><div><input id="candidate" class="select" placeholder="Assign later is OK"></div>
+          <div class="k">Expected days / hours</div><div><input id="hours" class="select" placeholder="e.g. Mon–Fri, 40h"></div>
+          <div class="k">Internal notes</div><div><textarea id="notes" class="select" rows="3" placeholder="Internal notes…"></textarea></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+        <button class="btn" value="cancel" type="button" id="cancelNew">Cancel</button>
+        <button class="btn primary" id="saveNew" value="default">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Page logic (uses Admin helpers from common.js) -->
   <script>
-  (function initPage(){
-    if (!window.Admin || !window.netlifyIdentity) return setTimeout(initPage,30);
+    // The actual work is deferred to Admin.bootAdmin which common.js defines.
+    // This block *only* runs once Admin is ready (so no "Can't find variable: Admin").
+    (function waitForAdmin(){
+      if (window.Admin && typeof Admin.bootAdmin === 'function') init();
+      else setTimeout(waitForAdmin, 20);
+    })();
 
-    Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
-      const gate = sel('#gate'), app = sel('#app');
-      const who = await identity('admin');
-      if (!who.ok){ gate.style.display=''; app.style.display='none'; return; }
-      app.style.display='';
+    function init(){
+      Admin.bootAdmin(async ({ api, sel, toast, Debug }) => {
+        Debug.chip('assignments:init','ok');
 
-      const diag = sel('#diagChips');
-      const chip = (t,cls='ok')=>{ const s=document.createElement('span');s.className='chip '+cls;s.textContent=t;diag.appendChild(s); };
-      chip('init: ok'); chip('identity: ok'); chip('role: admin'); chip('token: ok');
+        const $rows = sel('#rows');
+        const $total = sel('#total');
+        const $pageLabel = sel('#pageLabel');
+        const $q = sel('#q');
+        const $status = sel('#status');
+        const $pageSize = sel('#pageSize');
+        const $envHint = sel('#envHint');
 
-      let rows=[]; let selected=new Set();
+        let page = 1;
+        let total = 0;
+        let pageSize = Number($pageSize.value || 20);
+        const selected = new Set();
+        let current = null;
 
-      function render(list){
-        const wrap=sel('#listWrap');
-        if(!list.length){ wrap.innerHTML='<div class="empty">No assignments found.</div>'; return;}
-        const html=['<table><thead><tr><th></th><th>Title</th><th>Client</th><th>Candidate</th><th>Dates</th><th>Status</th><th></th></tr></thead><tbody>'];
-        for(const x of list){
-          html.push(`<tr data-id="${x.id}">
-            <td><input type="checkbox" data-id="${x.id}" ${selected.has(x.id)?'checked':''}></td>
-            <td><a href="#" data-open="${x.id}">${x.title||'—'}</a></td>
-            <td>${x.client_name||'—'}</td>
-            <td>${x.candidate_name||'—'}</td>
-            <td>${(x.start_date||'—')} → ${(x.end_date||'—')}</td>
-            <td><span class="status ${x.status?.toLowerCase()||'draft'}">${x.status||'draft'}</span></td>
-            <td><button class="btn ghost" data-quick="${x.id}">Quick view</button></td>
-          </tr>`);
+        // Helpers
+        const fmtDate = x => x ? new Date(x).toLocaleDateString() : '—';
+        const fmtDates = (a,b) => (!a && !b) ? '—' : `${fmtDate(a)} → ${fmtDate(b)}`;
+        const pill = s => `<span class="status ${String(s||'draft').toLowerCase()}">${s||'draft'}</span>`;
+
+        function setLoading(msg='Loading assignments…'){
+          $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${msg}</td></tr>`;
         }
-        html.push('</tbody></table>');
-        wrap.innerHTML=html.join('');
-        wrap.querySelectorAll('[data-open]').forEach(a=>a.onclick=e=>{e.preventDefault();openQuick(a.dataset.open);});
-        wrap.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{c.checked?selected.add(+c.dataset.id):selected.delete(+c.dataset.id);sel('#btnDelete').disabled=!selected.size;});
-        wrap.querySelectorAll('[data-quick]').forEach(b=>b.onclick=e=>{e.stopPropagation();openQuick(b.dataset.quick);});
-      }
 
-      async function load(){
-        try{
-          const res=await api('admin-assignments-list','POST',{});
-          rows=res.items||[]; render(rows);
-        }catch(e){console.error(e);toast('Error loading assignments','bad',4000);}
-      }
+        function renderRows(items){
+          if(!items?.length){
+            setLoading('No assignments found.');
+            return;
+          }
+          const html = items.map(x => {
+            const live = (x.status||'').toLowerCase()==='live';
+            const cand = x.candidate_name || '—';
+            const client = x.client_name || '—';
+            return `
+              <tr data-id="${x.id}">
+                <td><input type="checkbox" class="rowChk" data-id="${x.id}"></td>
+                <td><a href="#" class="rowLink" data-id="${x.id}">${x.title || x.job_title || '—'}</a></td>
+                <td>${client}</td>
+                <td>${cand}</td>
+                <td>${fmtDates(x.start_date, x.end_date)}</td>
+                <td>${pill(x.status)}</td>
+                <td class="row-actions">
+                  <button class="btn ghost act-open" data-id="${x.id}">Open</button>
+                  ${live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(x.id)}">Timesheets</a>` : ''}
+                </td>
+              </tr>
+            `;
+          }).join('');
+          $rows.innerHTML = html;
+        }
 
-      async function openQuick(id){
-        try{
-          const d=await api('admin-assignments-detail','POST',{id});
-          sel('#qvBody').innerHTML=`<div class="kv">
-            <div class="k">Client</div><div>${d.client_name||'—'}</div>
-            <div class="k">Candidate</div><div>${d.candidate_name||'—'}</div>
-            <div class="k">PO</div><div>${d.po_number||'—'}</div>
-            <div class="k">Dates</div><div>${d.start_date||'—'} → ${d.end_date||'—'}</div>
-          </div>`;
-          toast('Loaded assignment','ok',1200);
-        }catch(e){toast('Failed to open','bad',3000);}
-      }
+        // Centralised error -> UX
+        function showServerMisconfigIfAny(message){
+          if (!message) { $envHint.style.display='none'; return; }
+          const isKeyError = /supabaseKey is required/i.test(message);
+          if (isKeyError){
+            $envHint.innerHTML =
+              `<strong>Server configuration required.</strong> The assignments API needs a Supabase key at runtime.<br>
+               Fix in Netlify → <code>Site settings → Build &amp; deploy → Environment variables</code><br>
+               Add <code>SUPABASE_KEY</code> and set it equal to your existing service key, e.g.
+               <code>SUPABASE_KEY = \${SUPABASE_SERVICE_ROLE_KEY}</code>. Then redeploy.`;
+            $envHint.style.display = 'block';
+            Debug.chip('env:supabaseKey','bad');
+          }
+        }
 
-      async function saveNew(){
-        const body=Object.fromEntries(new FormData(sel('#frm')).entries());
-        if(!body.title){toast('Title is required','warn',1500);return;}
-        try{await api('admin-assignments-create','POST',body);toast('Saved','ok',1500);closeDrawer();load();}
-        catch(e){toast('Failed to save','bad',3000);}
-      }
+        async function load(){
+          try{
+            setLoading();
+            const q = $q.value.trim();
+            const status = $status.value.trim();
+            const res = await api('admin-assignments-list', { page, pageSize, q, status });
 
-      async function del(){
-        if(!selected.size)return;
-        if(!confirm('Delete selected?'))return;
-        try{await api('admin-assignments-delete','POST',{ids:[...selected]});toast('Deleted','ok',1500);selected.clear();load();}
-        catch(e){toast('Failed','bad',3000);}
-      }
+            // Support either {items,total} or {rows,total}
+            const items = res.items || res.rows || [];
+            total = res.total ?? items.length;
 
-      const drawer=sel('#drawer');
-      const openDrawer=()=>drawer.classList.add('open');
-      const closeDrawer=()=>drawer.classList.remove('open');
-      sel('#btnClose').onclick=closeDrawer;
-      sel('#btnNew').onclick=openDrawer;
-      sel('#btnSave').onclick=saveNew;
-      sel('#btnDelete').onclick=del;
+            renderRows(items);
+            $total.textContent = `(${total} total)`;
+            $pageLabel.textContent = `Page ${page}`;
+            Debug.ok('assignments:list', { page, pageSize, q, status, total });
+            showServerMisconfigIfAny('');
+          }catch(err){
+            const msg = String(err && (err.message || err));
+            Debug.err('[assignments] list error', err);
+            setLoading('Failed to load. Check console for details.');
+            toast('Error loading assignments', 'bad', 5000);
+            showServerMisconfigIfAny(msg);
+          }
+        }
 
-      await load();
-    });
-  })();
+        async function openQuickView(id){
+          try{
+            current = id;
+            const d = await api('admin-assignments-detail', { id });
+            const live = (d?.status||'').toLowerCase()==='live';
+
+            sel('#quick').innerHTML = `
+              <div class="kv">
+                <div class="k">Status</div><div>${pill(d?.status)}</div>
+                <div class="k">Client</div><div>${d?.client_name||'—'}</div>
+                <div class="k">Candidate</div><div>${d?.candidate_name||'—'}</div>
+                <div class="k">PO number</div><div>${d?.po_number||'—'}</div>
+                <div class="k">Dates</div><div>${fmtDates(d?.start_date, d?.end_date)}</div>
+                <div class="k">Shift</div><div>${d?.shift||'Day'}</div>
+                <div class="k">Expected hrs</div><div>${d?.estimated_hours||'—'}</div>
+              </div>
+              <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+                <a class="btn ghost" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
+                ${ live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : '' }
+              </div>
+            `;
+
+            if(live){
+              try{
+                const tsr = await api('admin-timesheets-list', { assignmentId:id, limit:1 });
+                const item = tsr?.items?.[0] || tsr?.rows?.[0];
+                if(item){
+                  sel('#latestTS').innerHTML = `
+                    <div class="kv">
+                      <div class="k">Week</div><div>${item.week_commencing || '—'}</div>
+                      <div class="k">Hours</div><div>${item.total_hours ?? '—'}</div>
+                      <div class="k">Status</div><div>${pill(item.status||'draft')}</div>
+                    </div>
+                    <div style="margin-top:8px">
+                      <a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
+                    </div>
+                  `;
+                } else {
+                  sel('#latestTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
+                }
+              }catch(e){
+                Debug.warn('timesheets load failed', e);
+                sel('#latestTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
+              }
+            } else {
+              sel('#latestTS').innerHTML = `<div class="empty">Not live — no timesheets yet.</div>`;
+            }
+
+            toast('Opened assignment','ok');
+          }catch(err){
+            Debug.err('openQuickView error', err);
+            toast('Failed to open assignment','bad', 4500);
+          }
+        }
+
+        // Events
+        sel('#btnRefresh, #btnRefresh2').forEach?.call
+          ? sel('#btnRefresh, #btnRefresh2').forEach(el=>el.addEventListener('click',()=>{ page=1; load(); }))
+          : (sel('#btnRefresh').onclick = sel('#btnRefresh2').onclick = ()=>{ page=1; load(); });
+
+        $q.addEventListener('keydown',e=>{ if(e.key==='Enter'){ page=1; load(); } });
+        $status.addEventListener('change', ()=>{ page=1; load(); });
+        $pageSize.addEventListener('change', ()=>{ pageSize=Number($pageSize.value||20); page=1; load(); });
+        sel('#prev').addEventListener('click',()=>{ if(page>1){ page--; load(); }});
+        sel('#next').addEventListener('click',()=>{ page++; load(); });
+
+        document.addEventListener('click', (e)=>{
+          const open = e.target.closest('.act-open, .rowLink');
+          if(open){
+            e.preventDefault();
+            const id = open.dataset.id || open.closest('tr')?.dataset?.id;
+            if(id) openQuickView(id);
+          }
+          const chk = e.target.classList?.contains('rowChk') ? e.target : null;
+          if(chk){
+            if(chk.checked) selected.add(chk.dataset.id);
+            else selected.delete(chk.dataset.id);
+          }
+        });
+
+        // Keyboard paging (Alt+← / Alt+→)
+        document.addEventListener('keydown', (e)=>{
+          if(e.altKey && e.key==='ArrowLeft'){ if(page>1){ page--; load(); } }
+          if(e.altKey && e.key==='ArrowRight'){ page++; load(); }
+        });
+
+        // Drawer open/close
+        const drawer = document.querySelector('#drawer');
+        sel('#btnNew').addEventListener('click', ()=>drawer.showModal());
+        sel('#closeDrawer').addEventListener('click', ()=>drawer.close());
+        sel('#cancelNew').addEventListener('click', ()=>drawer.close());
+
+        // Create
+        sel('#formNew').addEventListener('submit', async (e)=>{
+          e.preventDefault();
+          try{
+            const payload = {
+              title: sel('#title').value.trim(),
+              po_number: sel('#po').value.trim() || null,
+              shift: sel('#shift').value || 'Day',
+              start_date: sel('#start').value||null,
+              end_date: sel('#end').value||null,
+              client: sel('#client').value.trim() || null,
+              client_site: sel('#site').value.trim() || null,
+              candidate: sel('#candidate').value.trim() || null,
+              estimated_hours: sel('#hours').value.trim() || null,
+              notes: sel('#notes').value.trim() || null
+            };
+            if(!payload.title){ toast('Job title is required','warn'); return; }
+            await api('admin-assignments-create', payload);
+            drawer.close();
+            toast('Assignment created','ok');
+            page=1; load();
+          }catch(err){
+            Debug.err('create error',err);
+            toast('Failed to create assignment','bad', 5000);
+          }
+        });
+
+        // Delete
+        sel('#btnDelete').addEventListener('click', async ()=>{
+          if(!selected.size){ toast('Select at least one row','warn'); return; }
+          if(!confirm(`Delete ${selected.size} assignment(s)?`)) return;
+          try{
+            await api('admin-assignments-delete', { ids:[...selected] });
+            selected.clear();
+            toast('Deleted','ok'); load();
+          }catch(err){
+            Debug.err('delete error', err);
+            toast('Delete failed','bad', 5000);
+          }
+        });
+
+        // Initial load
+        await load();
+      });
+    }
   </script>
+
+  <!-- Netlify Identity for auth + sign-out menu -->
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <!-- Shared Admin helpers -->
+  <script defer src="./common.js?v=16"></script>
 </body>
 </html>
