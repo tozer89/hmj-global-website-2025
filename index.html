@@ -206,18 +206,14 @@
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
-        <!-- In your nav menu -->
-<!--  <li><a href="/timesheets.html" id="nav-timesheets">Timesheets</a></li> -->
-<li><a href="#" id="nav-login" onclick="if(window.netlifyIdentity){ netlifyIdentity.open('login'); } return false;">Timesheets</a></li>
-<li><a href="#" id="nav-logout" style="display:none" onclick="if(window.netlifyIdentity){ netlifyIdentity.logout(); } return false;">Timesheets</a></li>
-<li><a href="/admin/" id="nav-admin" aria-disabled="true" class="requires-admin">Admin Login</a></li>
+        <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
 
 <script>
-  // Swap Login/Logout depending on session and expose admin link for roles
+    // Gate timesheets/admin access depending on session and roles
   document.addEventListener('DOMContentLoaded', () => {
-    const login = document.getElementById('nav-login');
-    const logout = document.getElementById('nav-logout');
     const admin = document.getElementById('nav-admin');
+    const timesheets = document.getElementById('nav-timesheets');
     const identity = window.netlifyIdentity;
 
     const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
@@ -226,72 +222,75 @@
         ? user.roles
         : [];
 
-    function renderFor(user) {
-      if (login && logout) {
-        if (user) {
-          login.style.display = 'none';
-          logout.style.display = 'inline-block';
-        } else {
-          login.style.display = 'inline-block';
-          logout.style.display = 'none';
-        }
+    function requireLogin(event, destination) {
+      if (event) event.preventDefault();
+      if (!identity) {
+        if (destination) window.location.href = destination;
+        return;
       }
+      if (destination) sessionStorage.setItem('afterLogin', destination);
+      identity.open('login');
+    }
 
+    function setTimesheets(user) {
+      if (!timesheets) return;
+      if (user) {
+        timesheets.href = '/timesheets.html';
+        timesheets.removeAttribute('aria-disabled');
+        timesheets.title = 'Open timesheets';
+      } else {
+        timesheets.href = '#';
+        timesheets.setAttribute('aria-disabled', 'true');
+        timesheets.title = 'Sign in to access timesheets';
+      }
+    }
+
+    function setAdmin(user) {
       if (!admin) return;
       const roles = rolesOf(user);
       const isAdmin = roles.includes('admin');
-
-      admin.style.display = 'inline-block';
       if (isAdmin) {
-        admin.textContent = 'Admin Dashboard';
+        admin.style.display = 'inline-block';
         admin.href = '/admin/';
         admin.removeAttribute('aria-disabled');
         admin.classList.remove('requires-admin');
+        admin.textContent = 'Admin Dashboard';
         admin.title = 'Open the admin dashboard';
-      } else if (user) {
-        admin.textContent = 'Admin (restricted)';
-        admin.href = '#';
-        admin.setAttribute('aria-disabled', 'true');
-        admin.classList.add('requires-admin');
-        admin.title = 'Your account does not have the admin role';
       } else {
-        admin.textContent = 'Admin Login';
-        admin.href = '#';
+        admin.style.display = 'none';
+        admin.href = '/admin/';
         admin.setAttribute('aria-disabled', 'true');
         admin.classList.add('requires-admin');
-        admin.title = 'Sign in with an admin account';
+        admin.textContent = 'Admin Dashboard';
+        admin.title = 'Admin access only';
       }
     }
 
-    function currentUser() {
-      try { return identity?.currentUser?.() || null; }
-      catch { return null; }
+    function renderFor(user) {
+      setTimesheets(user);
+      setAdmin(user);
     }
 
-    renderFor(currentUser());
-
+    timesheets?.addEventListener('click', (event) => {
+      const user = identity?.currentUser?.();
+      if (user) return;
+      requireLogin(event, '/timesheets.html');
+    });
     admin?.addEventListener('click', (event) => {
-      const user = currentUser();
-      const roles = rolesOf(user);
-      const isAdmin = roles.includes('admin');
-      if (isAdmin) {
-        admin.removeAttribute('aria-disabled');
-        sessionStorage.setItem('afterLogin', '/admin/');
-        return; // allow default navigation to /admin/
-      }
-      event.preventDefault();
-      if (!user) {
-        sessionStorage.setItem('afterLogin', '/admin/');
-        identity?.open('login');
-      } else {
-        sessionStorage.removeItem('afterLogin');
-        window.alert('Admin access only. Please contact your administrator for access.');
-      }
+      const user = identity?.currentUser?.();
+      if (user) return;
+      requireLogin(event, '/admin/');
     });
 
     identity?.on('init', (user) => renderFor(user));
     identity?.on('login', (user) => renderFor(user));
     identity?.on('logout', () => renderFor(null));
+
+    try {
+      renderFor(identity?.currentUser?.() || null);
+    } catch {
+      renderFor(null);
+    }
   });
 </script>
 
