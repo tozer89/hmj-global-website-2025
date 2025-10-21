@@ -6,6 +6,7 @@
   <title>Assignments — Admin | HMJ Global</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Styles: same design language as Candidates, plus a few extras -->
   <style>
     :root{
       --bg:#ffffff;
@@ -13,89 +14,91 @@
       --ink:#0f172a;
       --muted:#64748b;
       --line:#e2e8f0;
-      --blue:#0f3570;
+      --blue:#1f4c8f;
       --blue-ink:#113465;
+      --chip:#eef2ff;
+      --pill:#f1f5f9;
       --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
       --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.06);
       --radius:14px;
-      --pill:#f1f5f9;
     }
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";}
     a{color:var(--blue-ink);text-decoration:none}
     a:hover{text-decoration:underline}
-
-    .appbar{position:sticky;top:0;z-index:40;background:#102b63;color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
-    .appbar .row{display:flex;align-items:center;gap:12px;padding:12px 18px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .brand .logo{width:28px;height:28px;border-radius:7px;background:#fff;display:inline-grid;place-items:center;color:#0b1d3c;font-weight:900}
+    .container{max-width:1200px;margin:0 auto;padding:18px}
+    .appbar{position:sticky;top:0;z-index:30;background:#0f2658;border-bottom:1px solid #0b1d3c}
+    .appbar .row{display:flex;align-items:center;gap:12px;padding:10px 18px}
+    .brand{display:flex;align-items:center;gap:10px;color:#c6d6ff;font-weight:700}
+    .brand .logo{width:28px;height:28px;border-radius:7px;background:#3b82f6;display:inline-grid;place-items:center;color:#fff;font-weight:800}
+    .tabs{display:flex;gap:10px;margin-left:8px}
+    .tab{padding:6px 12px;border-radius:999px;background:#15387a;color:#e6eeff;font-weight:600}
     .chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:16px}
     .chip{background:#eaf2ff;color:#0b1d3c;border:1px solid #dbeafe;padding:6px 10px;border-radius:999px;font-weight:600}
     .chip.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
     .chip.warn{background:#fffbeb;border-color:#fde68a;color:#7c5800}
     .chip.bad{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
-
-    .actions{margin-left:auto;display:flex;gap:8px}
-    .btn{border:1px solid #1d3e86;background:#123a84;color:#fff;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
-    .btn.ghost{background:#fff;color:#0b1d3c;border:1px solid var(--line)}
-    .btn.danger{background:#fee2e2;border-color:#fecaca;color:#7f1d1d}
+    .actions{margin-left:auto;display:flex;gap:10px}
+    .btn{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
     .btn:hover{box-shadow:var(--shadow)}
-
-    .container{max-width:1200px;margin:0 auto;padding:18px}
-
-    .tip{margin:12px 0;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;background:#f8fafc;color:#0b1d3c}
-    .tip b{font-weight:800}
-    .tip small{display:block;color:var(--muted)}
-
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    .btn.ghost{background:#fff}
+    .btn.danger{background:#fee2e2;border-color:#fecaca;color:#7f1d1d}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
     .search{flex:1;min-width:240px;position:relative}
     .search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--line);border-radius:12px;background:#fff}
     .search .ico{position:absolute;left:10px;top:9px;color:var(--muted)}
     .select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
-
     .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
     @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
     .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
     .card .h{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;color:#0b1d3c;background:#f8fafc;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius)}
     .card .b{padding:12px 14px}
-
     table{width:100%;border-collapse:separate;border-spacing:0}
-    th,td{padding:12px;border-bottom:1px solid var(--line)}
-    th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#475569;background:#eef2f7}
+    th,td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:#f1f5f9}
     tr:hover td{background:#fafafa}
-    .row-actions{display:flex;gap:8px}
-
     .status{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:700;font-size:12px}
     .status.live{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
     .status.complete{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
     .status.draft{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
-    .status.pending{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
-
     .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px}
     .kv .k{color:var(--muted)}
-
+    .empty{color:var(--muted)}
+    .row-actions{display:flex;gap:8px}
     .table-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
-
-    .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none;z-index:60}
-
-    dialog#drawer{border:none;max-width:780px;width:96%;border-radius:14px;box-shadow:var(--shadow)}
-    .drawer-head{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
-    .hint{font-size:12px;color:#475569;background:var(--pill);border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+    .hint{color:#475569;background:#f1f5f9;border:1px dashed #cbd5e1;padding:10px 12px;border-radius:12px;font-size:13px}
+    .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none}
+    .sticky-help{margin-top:10px;font-size:12px;color:#64748b}
+    dialog#drawer::backdrop{background:rgba(15,23,42,.45)}
+    .drawer-hint{font-size:12px;color:#64748b;margin-top:6px}
+    .pill{display:inline-block;background:#eef2ff;border:1px solid #dbeafe;color:#1e40af;padding:4px 8px;border-radius:999px;font-weight:700;font-size:12px}
   </style>
+
+  <!-- Common helpers for Admin (must be before the page script). -->
+  <script defer src="./common.js"></script>
 </head>
 
 <body>
+  <!-- Header -->
   <header class="appbar">
     <div class="row">
       <div class="brand">
         <span class="logo">H</span>
         HMJ Global — Admin
       </div>
-      <a class="btn ghost" href="./index.html">← Dashboard</a>
+
+      <nav class="tabs">
+        <a href="./index.html" class="tab">Dashboard</a>
+        <span class="tab" style="background:#0b2a61;border:1px solid #1b3d82">Assignments</span>
+      </nav>
+
+      <!-- diagnostics like Candidates -->
       <nav class="chips" id="diagChips"></nav>
+
       <div class="actions">
-        <button id="btnRefresh" class="btn ghost">↻ Refresh</button>
-        <button id="btnNew" class="btn">＋ New</button>
+        <button id="btnRefresh" class="btn">↻ Refresh</button>
+        <button id="btnNew" class="btn primary">＋ New</button>
         <button id="btnDelete" class="btn danger">🗑 Delete</button>
         <button id="btnSignOut" class="btn ghost">Sign out</button>
       </div>
@@ -103,37 +106,42 @@
   </header>
 
   <main class="container">
-    <div class="tip">
-      <b>Assignments overview.</b>
+    <p class="hint">
+      <strong>Assignments overview.</strong>
       This page lists all current and past assignments with client, candidate, and contract dates.
       Use the search bar to filter by job title, client, or candidate name.
-      <small>Tip: press <b>Enter</b> in the search box to run a quick filter. Click a row to open the <em>Quick view</em>. Status tags like <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.</small>
-    </div>
+      Status tags such as <span class="pill">Live</span> or <span class="pill">Complete</span> update automatically from the Timesheets system.
+      <br class="sticky-help" />
+      <span class="sticky-help">Tip: press <kbd>Enter</kbd> in the search box to run a quick filter. Click a row to open the <em>Quick view</em>.</span>
+    </p>
 
+    <!-- Controls -->
     <div class="toolbar">
       <div class="search">
         <span class="ico">🔍</span>
         <input id="q" placeholder="Search (title, ref, client, candidate) — press Enter" />
       </div>
-      <select id="status" class="select" title="Filter by status">
+      <select id="status" class="select" aria-label="Status filter">
         <option value="">All statuses</option>
         <option value="draft">Draft</option>
-        <option value="pending">Pending</option>
-        <option value="live">Live</option>
         <option value="complete">Complete</option>
+        <option value="live">Live</option>
         <option value="archived">Archived</option>
       </select>
-      <button id="btnRefresh2" class="btn ghost">↻ Refresh</button>
+      <button id="btnRefresh2" class="btn">↻ Refresh</button>
     </div>
 
     <div class="grid">
-      <section class="card">
-        <div class="h">All assignments <span id="total" style="color:#64748b;font-weight:600"></span></div>
+      <!-- List -->
+      <section class="card" aria-labelledby="tblHdr">
+        <div class="h" id="tblHdr">
+          All assignments <span id="total" style="color:var(--muted);font-weight:600"></span>
+        </div>
         <div class="b" style="padding:0">
-          <table id="tbl" aria-label="Assignments">
+          <table id="tbl">
             <thead>
               <tr>
-                <th style="width:36px;"></th>
+                <th style="width:36px;"><input type="checkbox" id="chkAll" aria-label="Select all"/></th>
                 <th>TITLE</th>
                 <th>CLIENT</th>
                 <th>CANDIDATE</th>
@@ -143,17 +151,18 @@
               </tr>
             </thead>
             <tbody id="rows">
-              <tr><td colspan="7" style="padding:26px;text-align:center;color:#64748b">Loading assignments...</td></tr>
+              <tr><td colspan="7" class="empty" style="padding:26px;text-align:center">Loading assignments…</td></tr>
             </tbody>
           </table>
 
           <div class="table-footer">
-            <div class="hint">Use ←/→ or the buttons to page. Defaults to newest first.</div>
-            <div style="display:flex;gap:10px;align-items:center">
-              <button id="prev" class="btn ghost">← Prev</button>
-              <button id="next" class="btn ghost">Next →</button>
-              <span id="pageLabel" style="margin-left:8px;color:#64748b"></span>
-              <select id="pageSize" class="select" title="Rows per page">
+            <div>
+              <button id="prev" class="btn">← Prev</button>
+              <button id="next" class="btn">Next →</button>
+              <span id="pageLabel" style="margin-left:8px;color:var(--muted)"></span>
+            </div>
+            <div>
+              <select id="pageSize" class="select" aria-label="Rows per page">
                 <option>20</option>
                 <option>50</option>
                 <option>100</option>
@@ -161,16 +170,23 @@
             </div>
           </div>
         </div>
+        <div class="b" style="border-top:1px dashed var(--line);background:#fcfcff">
+          <div class="hint">
+            <strong>Quick tips:</strong> Use <kbd>←/→</kbd> to page. Defaults to newest first. Toggle the “All statuses” menu to narrow by lifecycle.
+            When an assignment is <em>Live</em>, the “Timesheets” button appears inline for a 1-click jump.
+          </div>
+        </div>
       </section>
 
-      <aside class="card">
-        <div class="h">Quick view — Assignment</div>
+      <!-- Quick view -->
+      <aside class="card" aria-labelledby="qvHdr">
+        <div class="h" id="qvHdr">Quick view — Assignment</div>
         <div class="b">
-          <div id="quick" class="empty" style="color:#64748b">Select an assignment to preview details here.</div>
+          <div id="quick" class="empty">Select an assignment to preview details here.</div>
         </div>
         <div class="h">Latest timesheet</div>
         <div class="b">
-          <div id="latestTS" class="empty" style="color:#64748b">Not live — no timesheets yet.</div>
+          <div id="latestTS" class="empty">Not live — no timesheets yet.</div>
         </div>
       </aside>
     </div>
@@ -178,24 +194,19 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <dialog id="drawer">
+  <!-- Drawer (New assignment) -->
+  <dialog id="drawer" style="border:none;max-width:740px;width:96%;border-radius:14px;box-shadow:var(--shadow)">
     <form method="dialog" id="formNew" style="padding:16px 18px">
-      <div class="drawer-head">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
         <h3 style="margin:0">New assignment</h3>
         <div style="display:flex;gap:8px">
-          <button class="btn ghost" id="drawerCloseX" value="cancel" type="button">✕ Close</button>
+          <button class="btn ghost" id="btnDrawerCloseTop" value="cancel" type="button">✕ Close</button>
         </div>
       </div>
-
-      <div class="hint" style="margin-bottom:12px">
-        Minimal fields are fine — you can link a candidate later. PO number and dates help Finance/T&amp;M downstream.
-      </div>
-
       <div style="display:grid;gap:12px">
-        <label>Job title *<br><input id="title" required class="select" style="width:100%"></label>
-
+        <label>Job title *<br><input id="title" required class="select" style="width:100%" placeholder="e.g. Band 6 Nurse (Ward A)"></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label>PO number<br><input id="po" class="select" style="width:100%"></label>
+          <label>PO number<br><input id="po" class="select" style="width:100%" placeholder="PO-00123"></label>
           <label>Shift<br>
             <select id="shift" class="select" style="width:100%">
               <option value="Day">Day</option>
@@ -203,57 +214,53 @@
             </select>
           </label>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label>Start date<br><input id="start" type="date" class="select" style="width:100%"></label>
           <label>End date<br><input id="end" type="date" class="select" style="width:100%"></label>
         </div>
-
         <div class="kv" style="margin-top:6px">
-          <div class="k">Client</div><div><input id="client" class="select" placeholder="Client name / ref"></div>
-          <div class="k">Client site</div><div><input id="site" class="select" placeholder="Ward / location (optional)"></div>
+          <div class="k">Client</div><div><input id="client" class="select" placeholder="Client name"></div>
+          <div class="k">Client site</div><div><input id="site" class="select" placeholder="(optional)"></div>
           <div class="k">Candidate</div><div><input id="candidate" class="select" placeholder="Assign later is OK"></div>
           <div class="k">Expected days / hours</div><div><input id="hours" class="select" placeholder="e.g. Mon–Fri, 40h"></div>
-          <div class="k">Internal notes</div><div><textarea id="notes" class="select" rows="3" placeholder="Internal notes… visible to Admin only."></textarea></div>
+          <div class="k">Internal notes</div><div><textarea id="notes" class="select" rows="3" placeholder="Internal notes…"></textarea></div>
         </div>
+        <div class="drawer-hint">Tip: you can leave Candidate empty and assign later from the assignment page.</div>
       </div>
-
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
-        <button class="btn ghost" value="cancel" type="button" id="drawerClose">Cancel</button>
-        <button class="btn" id="saveNew" value="default">Save</button>
+        <button class="btn" id="btnDrawerCloseBottom" value="cancel" type="button">Cancel</button>
+        <button class="btn primary" id="saveNew" value="default">Save</button>
       </div>
     </form>
   </dialog>
 
-  <!-- IMPORTANT: load shared helpers (defines window.Admin, api(), Debug, toast, etc.) -->
-  <script defer src="./common.js"></script>
-
+  <!-- Page logic (runs only after common.js exposes window.Admin) -->
   <script>
-    // Boot once common.js has loaded
-    (async function bootWhenReady(){
-      const until = Date.now() + 10000; // 10s guard
-      while (!window.Admin && Date.now() < until) {
-        await new Promise(r => setTimeout(r, 30));
-      }
-      if (!window.Admin) {
-        // last-resort message if common.js path is wrong
-        const t = document.getElementById('toast');
-        t.textContent = 'common.js not found — check the script path.';
-        t.style.display = 'block';
-        return;
-      }
+    // Helper: wait until common.js has created window.Admin
+    function waitForAdmin(){
+      return new Promise(resolve=>{
+        const t = setInterval(()=>{
+          if(window.Admin && typeof window.Admin.bootAdmin === 'function'){
+            clearInterval(t); resolve();
+          }
+        }, 30);
+      });
+    }
 
+    (async () => {
+      await waitForAdmin();
+
+      // Boot the page through shared helpers from common.js
       Admin.bootAdmin(async ({ api, sel, toast, Debug }) => {
+        // Diagnostic chips (same vibe as Candidates)
+        const chips = document.getElementById('diagChips');
         const addChip = (text, ok=true) => {
-          const host = document.getElementById('diagChips');
-          if (!host) return;
-          const sp = document.createElement('span');
-          sp.className = 'chip ' + (ok ? 'ok':'bad');
-          sp.textContent = text;
-          host.appendChild(sp);
+          const s = document.createElement('span');
+          s.className = 'chip ' + (ok?'ok':'bad');
+          s.textContent = text;
+          chips.appendChild(s);
         };
-
-        addChip('init: ok', true);
+        try { addChip('init: ok', true); } catch {}
 
         const $rows = sel('#rows');
         const $total = sel('#total');
@@ -261,6 +268,7 @@
         const $q = sel('#q');
         const $status = sel('#status');
         const $pageSize = sel('#pageSize');
+        const $chkAll = sel('#chkAll');
 
         let page = 1;
         let total = 0;
@@ -268,26 +276,34 @@
         const selected = new Set();
         let current = null;
 
-        const setLoading = (msg='Loading assignments...') => {
-          $rows.innerHTML = `<tr><td colspan="7" style="padding:26px;text-align:center;color:#64748b">${msg}</td></tr>`;
-        };
-        const fmtDate = d => d ? new Date(d).toLocaleDateString() : '—';
-        const fmtDates = (a,b) => (!a && !b) ? '—' : `${fmtDate(a)} → ${fmtDate(b)}`;
-        const renderStatus = s => {
+        function fmtDates(a,b){
+          const f = x => x ? new Date(x).toLocaleDateString() : '—';
+          if(!a && !b) return '—';
+          return `${f(a)} → ${f(b)}`;
+        }
+        function renderStatus(s){
           s = (s||'draft').toLowerCase();
           return `<span class="status ${s}">${s}</span>`;
-        };
-
+        }
+        function setLoading(msg='Loading assignments…'){
+          $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${msg}</td></tr>`;
+        }
         function renderRows(items){
-          if(!items?.length){ setLoading('No assignments found.'); return; }
+          if(!items?.length){
+            setLoading('No assignments found.');
+            return;
+          }
           const html = items.map(x => {
             const live = (x.status||'').toLowerCase()==='live';
+            const cand = x.candidate_name || '—';
+            const client = x.client_name || '—';
+            const title = x.title || x.job_title || '—';
             return `
               <tr data-id="${x.id}">
                 <td><input type="checkbox" class="rowChk" data-id="${x.id}" /></td>
-                <td><a href="#" class="rowLink" data-id="${x.id}">${x.title||x.job_title||'—'}</a></td>
-                <td>${x.client_name || '—'}</td>
-                <td>${x.candidate_name || '—'}</td>
+                <td><a href="#" class="rowLink" data-id="${x.id}">${title}</a></td>
+                <td>${client}</td>
+                <td>${cand}</td>
                 <td>${fmtDates(x.start_date, x.end_date)}</td>
                 <td>${renderStatus(x.status)}</td>
                 <td class="row-actions">
@@ -305,31 +321,27 @@
             setLoading();
             const q = $q.value.trim();
             const status = $status.value.trim();
-
-            const res = await api('admin-assignments-list', { page, pageSize, q, status });
-
-            // tolerate either {items,total} or {rows,total}
-            const items = res?.items ?? res?.rows ?? [];
-            total = res?.total ?? items.length;
-
-            addChip('token: ok', true);
-            Debug && Debug.ok && Debug.ok('assignments:list', { page, pageSize, q, status, total, got: items.length });
-
-            renderRows(items);
+            const res = await api('admin-assignments-list', 'POST', { page, pageSize, q, status });
+            // Functions return: { rows, total }
+            total = res?.total ?? 0;
+            renderRows(res?.rows || res?.items || []);
             $total.textContent = `(${total} total)`;
             $pageLabel.textContent = `Page ${page}`;
+            Debug.ok?.('assignments:list', { page, pageSize, q, status, total });
+            addChip('token: ok', true);
+            addChip('role: admin', true);
           }catch(err){
-            addChip('load: err', false);
-            console.error('[assignments] list error', err);
+            Debug.err?.('[assignments] list error', err);
             setLoading('Failed to load. Check console for details.');
-            toast && toast('Error loading assignments', 'error', 5000);
+            toast('Error loading assignments', 'error', 5000);
+            addChip('list: error', false);
           }
         }
 
         async function openQuickView(id){
           try{
             current = id;
-            const detail = await api('admin-assignments-detail', { id });
+            const detail = await api('admin-assignments-detail', 'POST', { id });
             const live = (detail?.status||'').toLowerCase()==='live';
             sel('#quick').innerHTML = `
               <div class="kv">
@@ -338,46 +350,57 @@
                 <div class="k">Candidate</div><div>${detail?.candidate_name||'—'}</div>
                 <div class="k">PO number</div><div>${detail?.po_number||detail?.po_ref||'—'}</div>
                 <div class="k">Dates</div><div>${fmtDates(detail?.start_date, detail?.end_date)}</div>
-                <div class="k">Shift</div><div>${detail?.shift || detail?.shift_type || 'Day'}</div>
+                <div class="k">Shift</div><div>${detail?.shift||detail?.shift_type||'Day'}</div>
                 <div class="k">Expected hrs</div><div>${detail?.estimated_hours||'—'}</div>
               </div>
-              <div style="margin-top:10px;display:flex;gap:8px">
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
                 <a class="btn ghost" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
                 ${ live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : '' }
               </div>
             `;
 
-            if (live){
+            if(live){
               try{
-                const tsr = await api('admin-timesheets-list', { assignmentId:id, limit:1 });
+                const tsr = await api('admin-timesheets-list','POST',{ assignmentId:id, limit:1 });
                 const item = tsr?.items?.[0];
-                sel('#latestTS').innerHTML = item ? `
-                  <div class="kv">
-                    <div class="k">Week</div><div>${item.week_commencing || item.week_start || '—'}</div>
-                    <div class="k">Hours</div><div>${item.total_hours ?? '—'}</div>
-                    <div class="k">Status</div><div><span class="status ${item.status||'draft'}">${item.status||'draft'}</span></div>
-                  </div>
-                ` : `<div class="empty" style="color:#64748b">No timesheets yet.</div>`;
-              }catch(e){
-                sel('#latestTS').innerHTML = `<div class="empty" style="color:#64748b">Could not load latest timesheet.</div>`;
+                if(item){
+                  sel('#latestTS').innerHTML = `
+                    <div class="kv">
+                      <div class="k">Week</div><div>${item.week_commencing || item.week_start || '—'}</div>
+                      <div class="k">Hours</div><div>${item.total_hours ?? '—'}</div>
+                      <div class="k">Status</div><div><span class="status ${item.status||'draft'}">${item.status||'draft'}</span></div>
+                    </div>
+                    <div style="margin-top:8px">
+                      <a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
+                    </div>
+                  `;
+                }else{
+                  sel('#latestTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
+                }
+              }catch(tsErr){
+                Debug.warn?.('timesheets load failed', tsErr);
+                sel('#latestTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
               }
-            } else {
-              sel('#latestTS').innerHTML = `<div class="empty" style="color:#64748b">Not live — no timesheets yet.</div>`;
+            }else{
+              sel('#latestTS').innerHTML = `<div class="empty">Not live — no timesheets yet.</div>`;
             }
+
+            toast('Opened assignment','ok');
           }catch(err){
-            console.error('openQuickView error', err);
+            Debug.err?.('openQuickView error', err);
+            toast('Failed to open assignment','error', 4500);
           }
         }
 
-        const onReload = ()=>{ page=1; load(); };
-        document.querySelector('#btnRefresh').addEventListener('click', onReload);
-        document.querySelector('#btnRefresh2').addEventListener('click', onReload);
+        // ——— Events ———
+        sel('#btnRefresh').addEventListener('click',()=>{ page=1; load(); });
+        sel('#btnRefresh2').addEventListener('click',()=>{ page=1; load(); });
         $q.addEventListener('keydown',e=>{ if(e.key==='Enter'){ page=1; load(); } });
         $status.addEventListener('change', ()=>{ page=1; load(); });
-        $pageSize.addEventListener('change', ()=>{ pageSize = Number($pageSize.value||20); page=1; load(); });
+        $pageSize.addEventListener('change', ()=>{ pageSize=Number($pageSize.value||20); page=1; load(); });
 
-        document.querySelector('#prev').addEventListener('click',()=>{ if(page>1){ page--; load(); }});
-        document.querySelector('#next').addEventListener('click',()=>{ page++; load(); });
+        sel('#prev').addEventListener('click',()=>{ if(page>1){ page--; load(); }});
+        sel('#next').addEventListener('click',()=>{ page++; load(); });
 
         document.addEventListener('click', (e)=>{
           const open = e.target.closest('.act-open, .rowLink');
@@ -386,65 +409,76 @@
             const id = open.dataset.id || open.closest('tr')?.dataset?.id;
             if(id) openQuickView(id);
           }
-          if (e.target.classList?.contains('rowChk')){
-            const id = e.target.dataset.id;
-            if (e.target.checked) selected.add(id);
-            else selected.delete(id);
+          const chk = e.target.classList?.contains('rowChk') ? e.target : null;
+          if(chk){
+            if(chk.checked) selected.add(chk.dataset.id);
+            else selected.delete(chk.dataset.id);
           }
         });
 
-        // Drawer
-        const drawer = document.querySelector('#drawer');
-        document.querySelector('#btnNew').addEventListener('click', ()=>drawer.showModal());
-        document.querySelector('#drawerClose').addEventListener('click', ()=>drawer.close());
-        document.querySelector('#drawerCloseX').addEventListener('click', ()=>drawer.close());
+        // Select all
+        $chkAll.addEventListener('change', ()=>{
+          const all = [...document.querySelectorAll('.rowChk')];
+          selected.clear();
+          all.forEach(cb=>{
+            cb.checked = $chkAll.checked;
+            if(cb.checked) selected.add(cb.dataset.id);
+          });
+        });
 
-        document.querySelector('#formNew').addEventListener('submit', async (e)=>{
+        // Drawer (new)
+        const drawer = document.querySelector('#drawer');
+        sel('#btnNew').addEventListener('click', ()=>drawer.showModal());
+        sel('#btnDrawerCloseTop').addEventListener('click', ()=>drawer.close());
+        sel('#btnDrawerCloseBottom').addEventListener('click', ()=>drawer.close());
+
+        sel('#formNew').addEventListener('submit', async (e)=>{
           e.preventDefault();
           try{
             const payload = {
-              title: document.querySelector('#title').value.trim(),
-              po_number: document.querySelector('#po').value.trim(),
-              shift: document.querySelector('#shift').value,
-              start_date: document.querySelector('#start').value||null,
-              end_date: document.querySelector('#end').value||null,
-              client: document.querySelector('#client').value.trim(),
-              client_site: document.querySelector('#site').value.trim(),
-              candidate: document.querySelector('#candidate').value.trim(),
-              estimated_hours: document.querySelector('#hours').value.trim(),
-              notes: document.querySelector('#notes').value.trim()
+              title: sel('#title').value.trim(),
+              po_number: sel('#po').value.trim(),
+              shift: sel('#shift').value,
+              start_date: sel('#start').value||null,
+              end_date: sel('#end').value||null,
+              client: sel('#client').value.trim(),
+              client_site: sel('#site').value.trim(),
+              candidate: sel('#candidate').value.trim(),
+              estimated_hours: sel('#hours').value.trim(),
+              notes: sel('#notes').value.trim()
             };
             if(!payload.title){ toast('Job title is required','warn'); return; }
-            await api('admin-assignments-create', payload);
+            await api('admin-assignments-create','POST', payload);
             drawer.close();
             toast('Assignment created','ok');
             page=1; load();
           }catch(err){
-            console.error('create error',err);
+            Debug.err?.('create error',err);
             toast('Failed to create assignment','error', 5000);
           }
         });
 
         // Delete
-        document.querySelector('#btnDelete').addEventListener('click', async ()=>{
+        sel('#btnDelete').addEventListener('click', async ()=>{
           if(!selected.size){ toast('Select at least one row','warn'); return; }
           if(!confirm(`Delete ${selected.size} assignment(s)?`)) return;
           try{
-            await api('admin-assignments-delete', { ids:[...selected] });
+            await api('admin-assignments-delete','POST', { ids:[...selected] });
             selected.clear();
             toast('Deleted','ok'); load();
           }catch(err){
-            console.error('delete error', err);
+            Debug.err?.('delete error', err);
             toast('Delete failed','error', 5000);
           }
         });
 
+        // Initial load
         await load();
       });
     })();
   </script>
 
-  <!-- Netlify Identity (token + sign-out) -->
+  <!-- Netlify Identity (for account + token chip / sign-out) -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </body>
 </html>
