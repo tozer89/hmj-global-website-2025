@@ -526,10 +526,13 @@
       const scrim  = document.querySelector('.hmj-scrim');
 
       // highlight current page
-      const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
-      menu.querySelectorAll('a').forEach(a=>{
-        const file = a.getAttribute('href').toLowerCase();
-        if(file === path){ a.setAttribute('aria-current','page'); }
+      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'index.html').toLowerCase();
+      const currentNormalized = currentSegment.replace(/^\//, '');
+      menu.querySelectorAll('a[href]').forEach(a=>{
+        const href = (a.getAttribute('href') || '').trim();
+        if (!href || href.includes('://')) return;
+        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
+        if(target === currentNormalized){ a.setAttribute('aria-current','page'); }
       });
 
       function openMenu(open){
