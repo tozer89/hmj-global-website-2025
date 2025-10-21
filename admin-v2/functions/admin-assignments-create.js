@@ -1,8 +1,7 @@
-// /netlify/functions/admin-assignments-create.js
-// Create a new assignment row. Safe shim for SUPABASE_KEY so other pages
-// using _supabase.js remain untouched.
+// admin-assignments-create.js
+// Creates a new assignment row for the admin UI.
 
-/* ---- IMPORTANT: make sure _supabase.js sees a key at import time ---- */
+/* ---------- Assignments-only env alias (do not edit _supabase.js) ---------- */
 process.env.SUPABASE_KEY =
   process.env.SUPABASE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -11,69 +10,49 @@ process.env.SUPABASE_KEY =
   process.env.SUPABASE_ANON_KEY ||
   '';
 
-const { getClient } = require('./_supabase');
+/* --------------------------------- shared ---------------------------------- */
+const { sb } = require('./_supabase');   // <-- use sb, not getClient
 const { requireRole } = require('./_auth');
-const supabase = getClient();
 
-/* --------------------------- CORS / helpers --------------------------- */
+const supabase = sb();
+
+/* --------------------------------- utils ----------------------------------- */
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
-const ok = (status, body) => ({
-  statusCode: status,
-  headers: { 'Content-Type': 'application/json', ...CORS },
-  body: body ? JSON.stringify(body) : '',
-});
-const err = (status, message, extra = {}) => ({
-  statusCode: status,
-  headers: { 'Content-Type': 'application/json', ...CORS },
-  body: JSON.stringify({ error: message, ...extra }),
-});
+const ok  = (s, b) => ({ statusCode: s, headers: { 'Content-Type': 'application/json', ...CORS }, body: b ? JSON.stringify(b) : '' });
+const err = (s, m, extra={}) => ({ statusCode: s, headers: { 'Content-Type': 'application/json', ...CORS }, body: JSON.stringify({ error: m, ...extra }) });
 
-const clean = (s, max = 500) =>
-  (s == null ? null : String(s).trim().slice(0, max)) || null;
-
+const clean = (v, n=500) => (v == null ? null : String(v).trim().slice(0, n)) || null;
 const toDateOrNull = (s) => {
   if (!s) return null;
   const d = new Date(s);
-  return Number.isFinite(+d) ? d.toISOString().slice(0, 10) : null; // YYYY-MM-DD
+  return Number.isFinite(+d) ? d.toISOString().slice(0,10) : null;
 };
 
 async function findClientIdByName(name) {
   if (!name) return null;
-  const { data, error } = await supabase
-    .from('clients')
-    .select('id')
-    .ilike('name', `%${name}%`)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await supabase.from('clients').select('id').ilike('name', name).limit(1).maybeSingle();
   if (error) throw error;
   return data?.id || null;
 }
-
 async function findCandidateIdByName(name) {
   if (!name) return null;
-  const { data, error } = await supabase
-    .from('candidates')
-    .select('id')
-    .ilike('full_name', `%${name}%`)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await supabase.from('candidates').select('id').ilike('full_name', name).limit(1).maybeSingle();
   if (error) throw error;
   return data?.id || null;
 }
 
-/* -------------------------------- handler ----------------------------- */
+/* -------------------------------- handler ---------------------------------- */
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'OPTIONS') return ok(204);
-    if (event.httpMethod !== 'POST') return err(405, 'Method Not Allowed');
-
-    if (!process.env.SUPABASE_KEY) return err(400, 'supabaseKey is required.');
+    if (event.httpMethod !== 'POST')    return err(405, 'Method Not Allowed');
 
     await requireRole(event, 'admin');
+    if (!process.env.SUPABASE_KEY) return err(400, 'supabaseKey is required.');
 
     const body = event.body ? JSON.parse(event.body) : {};
 
@@ -95,25 +74,18 @@ exports.handler = async (event) => {
 
     if (!payload.title) return err(400, 'title is required');
 
-    // Best-effort lookups by name if IDs not supplied
     try {
-      if (!payload.client_id && payload.client_name) {
+      if (!payload.client_id && payload.client_name)
         payload.client_id = await findClientIdByName(payload.client_name);
-      }
-      if (!payload.candidate_id && payload.candidate_name) {
+      if (!payload.candidate_id && payload.candidate_name)
         payload.candidate_id = await findCandidateIdByName(payload.candidate_name);
-      }
-    } catch (lookupErr) {
-      // Non-fatal: keep going with the display names
-      console.warn('[assignments-create] lookup warning:', lookupErr?.message || lookupErr);
-    }
+    } catch { /* non-fatal */ }
 
-    // Build the row for insert
     const row = {
       title: payload.title,
       status: 'draft',
       po_number: payload.po_number,
-      shift: payload.shift,
+      shift_type: payload.shift,            // matches your schema (shift_type)
       start_date: payload.start_date,
       end_date: payload.end_date,
       estimated_hours: payload.estimated_hours,
@@ -145,13 +117,13 @@ exports.handler = async (event) => {
       client_name: inserted.client_name || payload.client_name || null,
       candidate_id: inserted.candidate_id || null,
       candidate_name: inserted.candidate_name || payload.candidate_name || null,
-      shift: inserted.shift || 'Day',
+      shift: inserted.shift_type || 'Day',
       po_number: inserted.po_number || null,
       estimated_hours: inserted.estimated_hours || null,
     };
 
     return ok(200, { ok: true, assignment: out });
   } catch (e) {
-    return err(400, e?.message || String(e));
+    return err(502, e?.message || String(e));
   }
 };
