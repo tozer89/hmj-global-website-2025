@@ -1,441 +1,442 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="robots" content="noindex,nofollow"/>
   <title>Assignments — Admin | HMJ Global</title>
 
-  <!-- Identity + shared helpers (kept exactly as the rest of the portal expects) -->
+  <!-- Pin Identity to the production site (same approach as candidates.html) -->
+  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+
+  <!-- Identity FIRST, then shared admin bootstrap -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="/admin-v2/admin/common.js?v=15"></script>
 
   <style>
     :root{
-      --bg:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
-      --blue:#1f4c8f; --blue-ink:#113465; --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
-      --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.08);
-      --radius:14px;
+      --ink:#101828; --bg:#ffffff; --muted:#667085;
+      --blue:#1f3b7a; --blue-2:#29478f;
+      --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
+      --success:#16a34a; --danger:#dc2626; --warn:#f59e0b; --chip:#eef2ff;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:#fff;color:var(--ink);
-      font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,"Helvetica Neue","Noto Sans",Arial;}
-    a{color:var(--blue-ink);text-decoration:none} a:hover{text-decoration:underline}
-    button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible{
-      outline:3px solid #bfd6ff; outline-offset:2px; border-radius:10px;
-    }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
 
-    .appbar{position:sticky;top:0;z-index:30;background:#eff4ff;
-      border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(2,8,23,.04)}
-    .appbar .row{display:flex;align-items:center;gap:12px;padding:10px 18px}
-    .brand{display:flex;align-items:center;gap:8px;font-weight:800;color:#0b1d3c}
-    .brand .logo{width:28px;height:28px;border-radius:7px;background:var(--blue);
-      display:inline-grid;place-items:center;color:#fff}
-
+    /* Top bar */
+    .top{position:sticky;top:0;z-index:50;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+    .row{max-width:1400px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+    .brand{font-weight:800;letter-spacing:.2px;display:flex;gap:10px;align-items:center}
+    .brand a{display:inline-flex;gap:8px;align-items:center;color:#fff;text-decoration:none}
+    .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;display:grid;place-items:center;color:var(--blue);font-weight:900}
+    .sp{flex:1}
+    .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
+    .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
     .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{background:#eaf2ff;color:#0b1d3c;border:1px solid #dbeafe;
-      padding:6px 10px;border-radius:999px;font-weight:700}
-    .chip.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
-    .chip.warn{background:#fffbeb;border-color:#fde68a;color:#7c5800}
-    .chip.bad{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
 
-    .actions{margin-left:auto;display:flex;gap:10px}
-    .btn{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:12px;font-weight:700;cursor:pointer}
-    .btn:hover{box-shadow:var(--shadow)}
-    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
-    .btn.light{background:#f8fafc}
-    .btn.danger{background:#fee2e2;border-color:#fecaca;color:#7f1d1d}
+    .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none}
+    .btn:hover{background:var(--blue-2)}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
+    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
+    .btn.small{padding:6px 10px;border-radius:10px}
+    .btn.danger{background:#7a1f28;border-color:#7a1f28}
+    .btn.icon{display:inline-grid;grid-auto-flow:column;gap:8px;align-items:center}
 
-    .container{max-width:1200px;margin:0 auto;padding:18px}
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0}
-    .search{flex:1;min-width:220px;position:relative}
-    .search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--line);
-      border-radius:12px;background:#fff}
-    .search .ico{position:absolute;left:10px;top:9px;color:var(--muted)}
-    .select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
+    .wrap{max-width:1400px;margin:20px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
+    .bar{position:sticky;top:64px;z-index:45;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
-    @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+    input[type=text], input[type=search], input[type=date], select, textarea{
+      border:1px solid var(--stroke);background:#fff;border-radius:12px;padding:9px 12px;min-width:180px;font:inherit
+    }
+    input[type=search]{min-width:280px}
 
-    .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .card .h{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;color:#0b1d3c;background:#f8fafc;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius)}
-    .card .b{padding:12px 14px}
+    table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
+    thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:10px 12px;font-weight:800}
+    tbody td{border-top:1px solid var(--stroke);padding:10px 12px;vertical-align:middle}
+    tbody tr:hover{background:#f8fafc}
+    .muted{color:var(--muted)}
 
-    table{width:100%;border-collapse:separate;border-spacing:0}
-    th,td{padding:12px;border-bottom:1px solid var(--line)}
-    th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:#f1f5f9}
-    tr:hover td{background:#fafafa}
+    /* Layout with Quick View */
+    .grid-main{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start}
+    @media (max-width:1100px){ .grid-main{grid-template-columns:1fr} }
+    .qv{position:sticky;top:116px;background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:14px;min-height:120px}
+    .qv h4{margin:0 0 8px}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px}
+    .kv b{color:#334155}
+    .empty{padding:28px;text-align:center;color:var(--muted)}
 
-    .status{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:800;font-size:12px}
-    .status.live{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
-    .status.complete{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
-    .status.draft{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    /* Drawer (New assignment) */
+    .drawer{position:fixed;inset:0 0 0 auto;max-width:760px;width:95vw;background:#fff;box-shadow:-4px 0 24px rgba(2,6,23,.24);transform:translateX(100%);transition:transform .24s ease;z-index:60;display:grid;grid-template-rows:auto 1fr auto}
+    .drawer.open{transform:translateX(0)}
+    .d-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--stroke);background:var(--card)}
+    .d-body{padding:16px;overflow:auto}
+    .d-foot{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--stroke);background:#fff}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px}
+    @media (max-width:820px){ .grid{grid-template-columns:1fr} }
+    .field{display:grid;gap:6px}
+    .field label{font-weight:700;font-size:13px}
+    .hr{height:1px;background:var(--stroke);margin:8px 0 4px}
 
-    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px}
-    .kv .k{color:var(--muted)}
-    .empty{color:var(--muted)}
-    .row-actions{display:flex;gap:8px}
-    .table-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
-
-    dialog#drawer{border:none;max-width:760px;width:96%;border-radius:16px;box-shadow:var(--shadow)}
-    dialog::backdrop{background:rgba(15,23,42,.35)}
-    .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none}
+    .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
+    .status-pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
+    .status-live{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .status-complete{background:#f1f5f9;border-color:#cbd5e1;color:#334155}
+    .status-draft{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
   </style>
 </head>
 
 <body>
   <!-- Header -->
-  <header class="appbar">
-    <div class="row">
-      <div class="brand"><span class="logo">H</span> HMJ Global — Admin</div>
-      <a class="btn light" href="./index.html">← Dashboard</a>
-      <nav id="diagChips" class="chips"></nav>
-      <div class="actions">
-        <button id="btnRefresh" class="btn">↻ Refresh</button>
-        <button id="btnNew" class="btn primary">＋ New assignment</button>
-        <button id="btnDelete" class="btn danger">🗑 Delete</button>
-        <button id="btnSignOut" class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
-      </div>
+  <div class="top"><div class="row">
+    <div class="brand">
+      <a href="../"><span class="logo">H</span> HMJ Global</a>
+      <span class="pill">Admin</span>
+      <span class="pill">Assignments</span>
     </div>
-  </header>
+    <a class="btn ghost" href="./index.html">⟵ Dashboard</a>
+    <div class="sp"></div>
+    <div id="diagChips" class="chips"></div>
+    <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+  </div></div>
 
-  <!-- Main -->
-  <main class="container">
-    <div class="toolbar">
-      <div class="search">
-        <span class="ico">🔍</span>
-        <input id="q" placeholder="Search (title, ref, client, candidate)…"/>
-      </div>
-      <select id="status" class="select" title="Filter status">
+  <!-- Gate (when not admin) -->
+  <div class="wrap" id="gate" style="display:none">
+    <div class="card">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div class="wrap" id="app" style="display:none">
+    <!-- toolbar -->
+    <div class="card bar">
+      <input id="q" type="search" placeholder="Search (title, ref, client, candidate)…"/>
+      <select id="status" style="min-width:180px">
         <option value="">All statuses</option>
-        <option value="draft">Draft</option>
-        <option value="complete">Complete</option>
-        <option value="live">Live</option>
-        <option value="archived">Archived</option>
+        <option value="Draft">Draft</option>
+        <option value="Complete">Complete</option>
+        <option value="Live">Live</option>
+        <option value="Archived">Archived</option>
       </select>
-      <button id="btnRefresh2" class="btn">↻ Refresh</button>
+      <button class="btn small" id="btnRefresh">Refresh</button>
+      <div class="sp"></div>
+      <button class="btn small" id="btnNew">+ New assignment</button>
+      <button class="btn danger small" id="btnDelete" disabled>Delete</button>
     </div>
 
-    <div class="grid">
-      <section class="card">
-        <div class="h">All assignments <span id="total" class="empty"></span></div>
-        <div class="b" style="padding:0">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:36px;"></th>
-                <th>TITLE</th>
-                <th>CLIENT</th>
-                <th>CANDIDATE</th>
-                <th>DATES</th>
-                <th>STATUS</th>
-                <th>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody id="rows">
-              <tr><td colspan="7" class="empty" style="padding:26px;text-align:center">Loading…</td></tr>
-            </tbody>
-          </table>
-
-          <div class="table-footer">
-            <div>
-              <button id="prev" class="btn">← Prev</button>
-              <button id="next" class="btn">Next →</button>
-              <span id="pageLabel" class="empty" style="margin-left:8px"></span>
-            </div>
-            <div>
-              <select id="pageSize" class="select">
-                <option selected>20</option>
-                <option>50</option>
-                <option>100</option>
-              </select>
-            </div>
-          </div>
+    <!-- main grid: table + quick view -->
+    <div class="grid-main">
+      <div>
+        <div class="card" id="listWrap">
+          <div class="empty">Loading…</div>
         </div>
-      </section>
+        <div class="pager" id="pager" style="display:none">
+          <div class="muted" id="pgInfo"></div>
+          <div class="sp"></div>
+          <select id="pgSize"><option>20</option><option>50</option><option>100</option></select>
+          <button class="btn small ghost" id="pgPrev">◀</button>
+          <button class="btn small ghost" id="pgNext">▶</button>
+        </div>
+      </div>
 
-      <aside class="card">
-        <div class="h">Quick view — Assignment</div>
-        <div class="b"><div id="quick" class="empty">Select an assignment to preview details here.</div></div>
-        <div class="h">Latest timesheet</div>
-        <div class="b"><div id="latestTS" class="empty">Not live — no timesheets yet.</div></div>
+      <aside class="qv" id="qv" aria-live="polite">
+        <h4>Quick view — Assignment</h4>
+        <div class="kv" id="qvBody">
+          <div class="empty">Select an assignment to preview details here.</div>
+        </div>
+        <div class="hr"></div>
+        <div>
+          <h4>Latest timesheet</h4>
+          <div id="qvTS" class="kv"><div class="empty">Not live — no timesheets yet.</div></div>
+        </div>
       </aside>
     </div>
-  </main>
+  </div>
 
-  <!-- Toast -->
-  <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+  <!-- Drawer (new/edit) -->
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="d-head">
+      <strong id="dTitle">New assignment</strong>
+      <span class="sp"></span>
+      <button class="btn ghost small" id="btnClose">✕ Close</button>
+    </div>
+    <div class="d-body">
+      <form id="frm" class="grid" autocomplete="off">
+        <div class="field" style="grid-column:1/-1"><label>Job title *</label><input name="title" required></div>
 
-  <!-- Drawer -->
-  <dialog id="drawer">
-    <form method="dialog" id="formNew" style="padding:16px 18px;max-height:80vh;overflow:auto">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h3 style="margin:0">New assignment</h3>
-        <button class="btn light" value="cancel">Close</button>
-      </div>
-
-      <div style="display:grid;gap:12px">
-        <label>Job title *<br/><input id="title" required class="select" style="width:100%"/></label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label>PO number<br/><input id="po" class="select" style="width:100%"/></label>
-          <label>Shift<br/>
-            <select id="shift" class="select" style="width:100%">
-              <option value="Day">Day</option>
-              <option value="Night">Night</option>
-            </select>
-          </label>
+        <div class="field"><label>PO number</label><input name="po_number"></div>
+        <div class="field"><label>Shift</label>
+          <select name="shift"><option>Day</option><option>Night</option></select>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label>Start date<br/><input id="start" type="date" class="select" style="width:100%"/></label>
-          <label>End date<br/><input id="end" type="date" class="select" style="width:100%"/></label>
-        </div>
-        <div class="kv" style="margin-top:6px">
-          <div class="k">Client</div><div><input id="client" class="select" placeholder="Client name / ref"/></div>
-          <div class="k">Client site</div><div><input id="site" class="select" placeholder="(optional)"/></div>
-          <div class="k">Candidate</div><div><input id="candidate" class="select" placeholder="Assign later is OK"/></div>
-          <div class="k">Expected days / hours</div><div><input id="hours" class="select" placeholder="e.g. Mon–Fri, 40h"/></div>
-          <div class="k">Internal notes</div><div><textarea id="notes" class="select" rows="3" placeholder="Internal notes…"></textarea></div>
-        </div>
-      </div>
 
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
-        <button class="btn" value="cancel">Cancel</button>
-        <button class="btn primary" id="saveNew" value="default">Save</button>
-      </div>
-    </form>
-  </dialog>
+        <div class="field"><label>Start date</label><input name="start_date" type="date"></div>
+        <div class="field"><label>End date</label><input name="end_date" type="date"></div>
 
-  <!-- Page script -->
+        <div class="field"><label>Client</label><input name="client"></div>
+        <div class="field"><label>Client site</label><input name="client_site"></div>
+
+        <div class="field"><label>Candidate</label><input name="candidate" placeholder="Optional (can link later)"></div>
+        <div class="field"><label>Expected days / hours</label><input name="estimated_hours" placeholder="e.g. Mon–Fri, 40h"></div>
+
+        <div class="field" style="grid-column:1/-1"><label>Internal notes</label><textarea name="notes" rows="3"></textarea></div>
+      </form>
+    </div>
+    <div class="d-foot">
+      <div class="muted" id="dHint">Status: Draft</div>
+      <div>
+        <button class="btn ghost" id="btnSaveDraft" type="button">Save</button>
+        <button class="btn" id="btnSaveClose" type="button">Save & Close</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Toast host (common.js will use this) -->
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+
   <script>
-    (function bootWhenReady(){
-      if (!window.Admin || !window.Admin.bootAdmin) return setTimeout(bootWhenReady, 25);
+  (function startAssignments(){
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.netlifyIdentity) {
+      return setTimeout(startAssignments, 30);
+    }
 
-      Admin.bootAdmin(async (ctx) => {
-        const { sel, toast, Debug } = ctx;
-        const D = Debug || { chip(){}, ok:console.log, warn:console.warn, err:console.error };
+    Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
+      // --- chips like candidates ---
+      const chips = sel('#diagChips');
+      const chip = (t, tone='ok')=>{
+        if (!chips) return;
+        const s=document.createElement('span');
+        s.className='pill '+(tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
+        s.textContent=t; chips.appendChild(s);
+      };
+      chip('init: ok');
 
-        // ---------------- Local function caller (clean fetch) -----------------
-        async function getToken(){
-          try{
-            const id = window.netlifyIdentity;
-            const u = id && id.currentUser ? id.currentUser() : null;
-            return u ? await u.jwt() : null;
-          }catch(_){ return null; }
-        }
-        async function fn(name, payload){
-          const t = await getToken();
-          if (!t){ throw new Error('No identity token'); }
+      const who = await identity('admin');
+      if (!who || !who.ok) {
+        chip('role: blocked','bad');
+        const g = sel('#gate'), app = sel('#app');
+        if (app) app.style.display='none';
+        if (g) { g.style.display=''; const why=g.querySelector('.why'); if (why) why.textContent='Restricted. Sign in with an admin account.'; }
+        return;
+      }
+      chip('identity: ok'); chip('role: admin'); chip('token: ok'); chip('trace: '+getTrace().slice(0,10));
 
-          // Optional preview-only key shim: read from localStorage (never hardcoded)
-          const previewKey = localStorage.getItem('hmj.supabaseKey');
-          if (previewKey) payload = Object.assign({}, payload, { supabaseKey: previewKey });
+      // ---------- State ----------
+      let rowsAll = [];
+      let rowsView = [];
+      let selected = new Set();
+      let page = 1, pageSize = 20;
+      let activeStatus = '';
+      const $ = sel;
 
-          const res = await fetch(`/.netlify/functions/${name}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${t}`
-            },
-            body: JSON.stringify(payload||{})
+      // ---------- Helpers ----------
+      const fmtDates = (a,b)=>{
+        const f = x => x ? new Date(x).toLocaleDateString() : '—';
+        if(!a && !b) return '—';
+        return `${f(a)} → ${f(b)}`;
+      };
+      const pillStatus = (s)=>{
+        const v = (s||'Draft');
+        const cls = v.toLowerCase()==='live' ? 'status-live' : v.toLowerCase()==='complete' ? 'status-complete' : 'status-draft';
+        return `<span class="status-pill ${cls}">${v}</span>`;
+      };
+
+      function renderTable(){
+        const wrap = $('#listWrap');
+        if (!rowsView.length) { wrap.innerHTML = `<div class="empty">No assignments match your filters.</div>`; $('#pager').style.display='none'; return; }
+
+        const start = (page-1)*pageSize;
+        const slice = rowsView.slice(start, start+pageSize);
+
+        const head = `
+          <thead><tr>
+            <th style="width:28px"><input id="ckAll" type="checkbox" ${slice.length && selected.size>=slice.length?'checked':''}></th>
+            <th>Title</th><th>Client</th><th>Candidate</th><th>Dates</th><th>Status</th><th style="width:160px"></th>
+          </tr></thead>`;
+
+        const body = slice.map(r=>{
+          const live = (r.status||'').toLowerCase()==='live';
+          return `<tr data-row="${r.id}">
+            <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
+            <td><a href="#" data-open="${r.id}">${r.title||'—'}</a></td>
+            <td>${r.client_name||'—'}</td>
+            <td>${r.candidate_name||'—'}</td>
+            <td>${fmtDates(r.start_date, r.end_date)}</td>
+            <td>${pillStatus(r.status)}</td>
+            <td>
+              <button class="btn small ghost" data-quick="${r.id}">Quick view</button>
+              ${live ? `<a class="btn small ghost" href="./timesheets.html?assignment=${encodeURIComponent(r.id)}">Timesheets</a>` : ''}
+            </td>
+          </tr>`;
+        }).join('');
+
+        wrap.innerHTML = `<table>${head}<tbody>${body}</tbody></table>`;
+
+        // wires
+        $('#ckAll')?.addEventListener('click', (e)=>{
+          slice.forEach(r=>{ if (e.target.checked) selected.add(r.id); else selected.delete(r.id); });
+          renderTable(); enableDelete();
+        });
+        wrap.querySelectorAll('input[type=checkbox][data-id]').forEach(c=>{
+          c.onchange = ()=>{ const id=Number(c.getAttribute('data-id')); if (c.checked) selected.add(id); else selected.delete(id); enableDelete(); };
+        });
+        wrap.querySelectorAll('[data-open]').forEach(a=>{
+          a.onclick = (e)=>{ e.preventDefault(); openQuick(Number(a.getAttribute('data-open'))); };
+        });
+        wrap.querySelectorAll('[data-quick]').forEach(b=>{
+          b.onclick = (e)=>{ e.stopPropagation(); openQuick(Number(b.getAttribute('data-quick'))); };
+        });
+
+        // pager
+        const totalPages = Math.max(1, Math.ceil(rowsView.length / pageSize));
+        $('#pager').style.display='';
+        $('#pgInfo').textContent = `Page ${page} of ${totalPages} (${rowsView.length} items)`;
+        $('#pgPrev').disabled = page<=1;
+        $('#pgNext').disabled = page>=totalPages;
+      }
+
+      function applyFilters(){
+        const q = ($('#q')?.value || '').toLowerCase().trim();
+        rowsView = rowsAll.filter(r=>{
+          const hit = (v)=>String(v||'').toLowerCase().includes(q);
+          const okQ = !q || hit(r.title)||hit(r.ref)||hit(r.client_name)||hit(r.candidate_name);
+          const okS = !activeStatus || (r.status||'Draft')===activeStatus;
+          return okQ && okS;
+        });
+        page = 1;
+      }
+
+      function enableDelete(){ $('#btnDelete').disabled = selected.size===0; }
+
+      // ---------- Data ----------
+      async function load(){
+        const wrap = $('#listWrap'); wrap.innerHTML = `<div class="empty">Loading…</div>`;
+        try{
+          const res = await api('admin-assignments-list','POST',{
+            q: ($('#q')?.value || '').trim(),
+            status: activeStatus || '',
+            page, pageSize
           });
-
-          if (!res.ok){
-            const text = await res.text().catch(()=>res.statusText);
-            throw new Error(`${res.status} ${res.statusText}: ${text}`);
-          }
-          return res.json();
+          rowsAll = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : []);
+          applyFilters(); renderTable();
+        }catch(e){
+          console.error('[assignments] list error', e);
+          wrap.innerHTML = `<div class="empty">Failed to load. Check console for details.</div>`;
+          toast('Error: failed to load assignments','error', 4200);
         }
+      }
 
-        // Chips (same look/feel as candidates)
-        const chips = sel('#diagChips');
-        const addChip = (t, kind='ok')=>{
-          const d = document.createElement('span');
-          d.className = 'chip ' + kind; d.textContent = t;
-          chips.appendChild(d);
-        };
-        addChip('init: ok','ok');
-        addChip('identity: ok','ok');
-        addChip('role: admin','ok');
-        addChip(localStorage.getItem('hmj.supabaseKey') ? 'preview-key: set' : 'preview-key: none',
-                localStorage.getItem('hmj.supabaseKey') ? 'ok' : 'warn');
+      async function openQuick(id){
+        try{
+          const detail = await api('admin-assignments-detail','POST',{ id });
+          const live = (detail?.status||'').toLowerCase()==='live';
+          $('#qvBody').innerHTML = `
+            <div class="kv">
+              <b>Status</b><div>${pillStatus(detail?.status)}</div>
+              <b>Client</b><div>${detail?.client_name||'—'}</div>
+              <b>Candidate</b><div>${detail?.candidate_name||'—'}</div>
+              <b>PO number</b><div>${detail?.po_number||'—'}</div>
+              <b>Dates</b><div>${fmtDates(detail?.start_date, detail?.end_date)}</div>
+              <b>Shift</b><div>${detail?.shift||'Day'}</div>
+              <b>Expected hrs</b><div>${detail?.estimated_hours||'—'}</div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px">
+              <a class="btn small" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
+              ${live ? `<a class="btn small ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : ''}
+            </div>`;
 
-        // Refs & state
-        const $rows = sel('#rows'), $total = sel('#total'),
-              $pageLabel = sel('#pageLabel'), $q = sel('#q'),
-              $status = sel('#status'), $pageSize = sel('#pageSize');
-
-        let page = 1, total = 0, pageSize = Number($pageSize.value||20);
-        const selected = new Set(); let current = null;
-
-        // helpers
-        const fDate = x => x ? new Date(x).toLocaleDateString() : '—';
-        const fRange = (a,b) => (!a && !b) ? '—' : `${fDate(a)} → ${fDate(b)}`;
-        const pill = s => `<span class="status ${s}">${s}</span>`;
-        const setLoading = (m='Loading…') =>
-          $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${m}</td></tr>`;
-
-        function renderRows(items){
-          if (!items?.length){ setLoading('No assignments found.'); return; }
-          $rows.innerHTML = items.map(x=>{
-            const live = (x.status||'').toLowerCase()==='live';
-            return `
-              <tr data-id="${x.id}">
-                <td><input type="checkbox" class="rowChk" data-id="${x.id}"/></td>
-                <td><a href="#" class="rowLink" data-id="${x.id}">${x.title||'—'}</a></td>
-                <td>${x.client_name||'—'}</td>
-                <td>${x.candidate_name||'—'}</td>
-                <td>${fRange(x.start_date, x.end_date)}</td>
-                <td>${pill((x.status||'draft').toLowerCase())}</td>
-                <td class="row-actions">
-                  <button class="btn light act-open" data-id="${x.id}">Open</button>
-                  ${live ? `<a class="btn light" href="./timesheets.html?assignment=${encodeURIComponent(x.id)}">Timesheets</a>` : ''}
-                </td>
-              </tr>`;
-          }).join('');
-        }
-
-        async function load(){
-          try{
-            setLoading();
-            const q = $q.value.trim();
-            const status = $status.value.trim();
-            const res = await fn('admin-assignments-list', { page, pageSize, q, status });
-            total = res?.total ?? 0;
-            renderRows(res?.items||[]);
-            $total.textContent = `(${total} total)`;
-            $pageLabel.textContent = `Page ${page}`;
-            addChip('token: ok','ok');
-            D.ok('assignments:list',{page,pageSize,q,status,total});
-          }catch(err){
-            D.err('[assignments] list error', err);
-            setLoading('Failed to load. Check console for details.');
-            toast('Error: failed to load assignments','bad', 5000);
-          }
-        }
-
-        async function openQuickView(id){
-          try{
-            current = id;
-            const detail = await fn('admin-assignments-detail', { id });
-            const live = (detail?.status||'').toLowerCase()==='live';
-
-            sel('#quick').innerHTML = `
-              <div class="kv">
-                <div class="k">Status</div><div>${pill((detail?.status||'draft').toLowerCase())}</div>
-                <div class="k">Client</div><div>${detail?.client_name||'—'}</div>
-                <div class="k">Candidate</div><div>${detail?.candidate_name||'—'}</div>
-                <div class="k">PO number</div><div>${detail?.po_number||'—'}</div>
-                <div class="k">Dates</div><div>${fRange(detail?.start_date, detail?.end_date)}</div>
-                <div class="k">Shift</div><div>${detail?.shift||'Day'}</div>
-                <div class="k">Expected hrs</div><div>${detail?.estimated_hours||'—'}</div>
-              </div>
-              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-                <a class="btn light" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
-                ${live ? `<a class="btn light" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : ''}
-              </div>`;
-
-            if (live){
-              try{
-                const tsr = await fn('admin-timesheets-list', { assignmentId:id, limit:1 });
-                const item = tsr?.items?.[0];
-                if (item){
-                  sel('#latestTS').innerHTML = `
-                    <div class="kv">
-                      <div class="k">Week</div><div>${item.week_commencing || '—'}</div>
-                      <div class="k">Hours</div><div>${item.total_hours ?? '—'}</div>
-                      <div class="k">Status</div><div>${pill((item.status||'draft').toLowerCase())}</div>
-                    </div>
-                    <div style="margin-top:8px">
-                      <a class="btn light" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
-                    </div>`;
-                } else {
-                  sel('#latestTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
-                }
-              }catch(tsErr){
-                D.warn('timesheets load failed', tsErr);
-                sel('#latestTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
+          if (live) {
+            try{
+              const ts = await api('admin-timesheets-list','POST',{ assignmentId:id, limit:1 });
+              const item = ts?.items?.[0];
+              if (item){
+                $('#qvTS').innerHTML = `
+                  <div class="kv">
+                    <b>Week</b><div>${item.week_commencing || '—'}</div>
+                    <b>Hours</b><div>${item.total_hours ?? '—'}</div>
+                    <b>Status</b><div>${pillStatus(item.status || 'Draft')}</div>
+                  </div>
+                  <div style="margin-top:8px">
+                    <a class="btn small ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
+                  </div>`;
+              } else {
+                $('#qvTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
               }
-            } else {
-              sel('#latestTS').innerHTML = `<div class="empty">Not live — no timesheets yet.</div>`;
+            }catch(e){
+              $('#qvTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
             }
-
-            toast('Opened assignment','ok');
-          }catch(err){
-            D.err('openQuickView error', err);
-            toast('Failed to open assignment','bad', 4500);
+          } else {
+            $('#qvTS').innerHTML = `<div class="empty">Not live — no timesheets yet.</div>`;
           }
+        }catch(e){
+          console.error('openQuick error', e);
+          toast('Failed to open assignment','error', 4200);
         }
+      }
 
-        // Events
-        sel('#btnRefresh').addEventListener('click', ()=>{ page=1; load(); });
-        sel('#btnRefresh2').addEventListener('click', ()=>{ page=1; load(); });
-        $q.addEventListener('keydown', e => { if(e.key==='Enter'){ page=1; load(); }});
-        $status.addEventListener('change', ()=>{ page=1; load(); });
-        $pageSize.addEventListener('change', ()=>{ pageSize = Number($pageSize.value||20); page=1; load(); });
-        sel('#prev').addEventListener('click', ()=>{ if(page>1){ page--; load(); }});
-        sel('#next').addEventListener('click', ()=>{ page++; load(); });
+      async function createOrSave(closeAfter=false){
+        const f = $('#frm');
+        const body = Object.fromEntries(new FormData(f).entries());
+        // normalize empties to null
+        Object.keys(body).forEach(k=>{ if (body[k] === '') body[k] = null; });
+        if (!body.title) { toast('Job title is required','warn',1800); return; }
+        try{
+          await api('admin-assignments-create','POST', body);
+          toast('Assignment saved','ok',1600);
+          if (closeAfter) closeDrawer();
+          await load();
+        }catch(e){
+          console.error('[assignments] save error', e);
+          toast('Failed to save assignment','error', 4200);
+        }
+      }
 
-        document.addEventListener('click', (e)=>{
-          const open = e.target.closest('.act-open, .rowLink');
-          if (open){
-            e.preventDefault();
-            const id = open.dataset.id || open.closest('tr')?.dataset?.id;
-            if (id) openQuickView(id);
-          }
-          const chk = e.target.classList?.contains('rowChk') ? e.target : null;
-          if (chk){
-            if (chk.checked) selected.add(chk.dataset.id);
-            else selected.delete(chk.dataset.id);
-          }
-        });
+      async function delSelected(){
+        if (!selected.size) return;
+        if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
+        try{
+          await api('admin-assignments-delete','POST',{ ids:[...selected] });
+          toast('Deleted','ok',1500);
+          selected.clear(); enableDelete(); load();
+        }catch(e){
+          console.error('[assignments] delete error', e);
+          toast('Delete failed','error', 4200);
+        }
+      }
 
-        // Drawer
-        const drawer = sel('#drawer');
-        sel('#btnNew').addEventListener('click', ()=>drawer.showModal());
-        sel('#formNew').addEventListener('submit', async (e)=>{
-          e.preventDefault();
-          try{
-            const payload = {
-              title: sel('#title').value.trim(),
-              po_number: sel('#po').value.trim(),
-              shift: sel('#shift').value,
-              start_date: sel('#start').value || null,
-              end_date: sel('#end').value || null,
-              client: sel('#client').value.trim(),
-              client_site: sel('#site').value.trim(),
-              candidate: sel('#candidate').value.trim(),
-              estimated_hours: sel('#hours').value.trim(),
-              notes: sel('#notes').value.trim()
-            };
-            if (!payload.title){ toast('Job title is required','warn'); return; }
-            await fn('admin-assignments-create', payload);
-            drawer.close();
-            toast('Assignment created','ok');
-            page=1; load();
-          }catch(err){
-            D.err('create error', err);
-            toast('Failed to create assignment','bad', 5000);
-          }
-        });
+      // ---------- Drawer ----------
+      const drawer = $('#drawer');
+      const openDrawer = ()=> drawer.classList.add('open');
+      const closeDrawer = ()=> drawer.classList.remove('open');
+      $('#btnClose').onclick = closeDrawer;
+      $('#btnNew').onclick = ()=>{ $('#frm').reset(); $('#dTitle').textContent='New assignment'; $('#dHint').textContent='Status: Draft'; openDrawer(); };
+      $('#btnSaveDraft').onclick = ()=>createOrSave(false);
+      $('#btnSaveClose').onclick = ()=>createOrSave(true);
 
-        // Delete
-        sel('#btnDelete').addEventListener('click', async ()=>{
-          if (!selected.size){ toast('Select at least one row','warn'); return; }
-          if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
-          try{
-            await fn('admin-assignments-delete', { ids:[...selected] });
-            selected.clear();
-            toast('Deleted','ok'); load();
-          }catch(err){
-            D.err('delete error', err);
-            toast('Delete failed','bad', 5000);
-          }
-        });
+      // ---------- UI wires ----------
+      $('#btnRefresh').onclick = load;
+      $('#btnDelete').onclick  = delSelected;
+      $('#q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ applyFilters(); renderTable(); }});
+      $('#status').addEventListener('change', e=>{ activeStatus = e.target.value; applyFilters(); renderTable(); });
+      $('#pgPrev').onclick = ()=>{ if (page>1){ page--; renderTable(); } };
+      $('#pgNext').onclick = ()=>{ page++; renderTable(); };
+      $('#pgSize').onchange = (e)=>{ pageSize = Number(e.target.value)||20; page=1; renderTable(); };
 
-        // First load
-        await load();
+      document.addEventListener('keydown',(e)=>{
+        if ((e.ctrlKey||e.metaKey) && e.key==='r'){ e.preventDefault(); load(); }
+        if ((e.ctrlKey||e.metaKey) && e.key==='s' && drawer.classList.contains('open')){ e.preventDefault(); createOrSave(false); }
+        if (e.key==='Escape' && drawer.classList.contains('open')){ e.preventDefault(); closeDrawer(); }
       });
-    })();
+
+      // ---------- Go ----------
+      await load();
+      enableDelete();
+    });
+  })();
   </script>
 </body>
 </html>
