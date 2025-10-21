@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HMJ Admin v2</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <img src="../images/logo.png" alt="HMJ Global" class="logo" />
+      <div class="header-content">
+        <h1>Admin v2 Preview</h1>
+        <p class="tagline">Modernised workspace for assignments, clients and candidates.</p>
+      </div>
+    </header>
+
+    <main id="app" class="app">
+      <nav class="sidebar" aria-label="Admin sections">
+        <button class="sidebar__link" data-view="overview" aria-current="page">Overview</button>
+        <button class="sidebar__link" data-view="assignments">Assignments</button>
+        <button class="sidebar__link" data-view="clients">Clients</button>
+        <button class="sidebar__link" data-view="candidates">Candidates</button>
+        <button class="sidebar__link" data-view="reports">Reports</button>
+      </nav>
+      <section class="panel" id="view-container" aria-live="polite"></section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Need the production admin? <a href="/admin/" class="footer__link">Open legacy dashboard</a>.
+      </p>
+    </footer>
+
+    <template id="view-template">
+      <article class="panel__card">
+        <header class="panel__header">
+          <h2 class="panel__title"></h2>
+        </header>
+        <p class="panel__body"></p>
+        <div class="panel__cta">
+          <a class="panel__button" target="_blank" rel="noopener"></a>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
