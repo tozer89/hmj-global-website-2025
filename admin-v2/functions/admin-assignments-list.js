@@ -1,36 +1,23 @@
-// Inside your handler, before you call sb()
-const fallbackKey =
-  process.env.SUPABASE_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.SUPABASE_ADMIN_KEY ||
-  process.env.SUPABASE_ANON_KEY || '';
+import { sb, ok, bad, pre, bodyOf } from './_lib.js';
 
-if (!fallbackKey) {
-  return bad('supabaseKey is required.');
-}
+export async function handler(event) {
+  const pf = pre(event); if (pf) return pf;
 
-// Make sure _lib / sb() reads from process.env.SUPABASE_KEY:
-process.env.SUPABASE_KEY = fallbackKey;
-
-
-// --- FIX: ensure SUPABASE_KEY is defined for assignments only ---
-process.env.SUPABASE_KEY =
+  // 🔑 Resolve a usable key for this request
+  const fallbackKey =
     process.env.SUPABASE_KEY ||
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SERVICE_KEY ||
     process.env.SUPABASE_ADMIN_KEY ||
-    process.env.SUPABASE_ANON_KEY;
+    process.env.SUPABASE_ANON_KEY || '';
 
+  if (!fallbackKey) return bad('supabaseKey is required.');
+  process.env.SUPABASE_KEY = fallbackKey;
 
-// admin-assignments-list.js
-import { sb, ok, bad, pre, bodyOf } from './_lib.js';
-
-export async function handler(event){
-  const pf = pre(event); if (pf) return pf;
-  const { q='', status='', consultant='', client='', page=1, pageSize=20 } = bodyOf(event);
   try {
+    const { q='', status='', consultant='', client='', page=1, pageSize=20 } = bodyOf(event);
     const supa = sb();
+
     let query = supa.from('assignments_view')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -43,6 +30,9 @@ export async function handler(event){
 
     const { data, error, count } = await query;
     if (error) throw error;
-    return ok({ rows: data, total: count ?? (data?.length||0) });
-  } catch (e) { return bad(e.message); }
+
+    return ok({ rows: data, total: count ?? (data?.length || 0) });
+  } catch (e) {
+    return bad(e.message);
+  }
 }
