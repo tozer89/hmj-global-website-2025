@@ -1,38 +1,60 @@
-import { sb, ok, bad, pre, bodyOf } from './_lib.js';
+// admin-assignments-list.js
 
-export async function handler(event) {
+process.env.SUPABASE_KEY =
+  process.env.SUPABASE_KEY
+  || process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_SERVICE_KEY
+  || process.env.SUPABASE_ADMIN_KEY
+  || process.env.SUPABASE_ANON_KEY
+  || '';
+
+// 2) Now it's safe to load helpers (they'll see SUPABASE_KEY)
+const { sb, ok, bad, pre, bodyOf } = require('./_lib.js');
+
+exports.handler = async (event) => {
   const pf = pre(event); if (pf) return pf;
 
-  // 🔑 Resolve a usable key for this request
-  const fallbackKey =
-    process.env.SUPABASE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_KEY ||
-    process.env.SUPABASE_ADMIN_KEY ||
-    process.env.SUPABASE_ANON_KEY || '';
-
-  if (!fallbackKey) return bad('supabaseKey is required.');
-  process.env.SUPABASE_KEY = fallbackKey;
+  if (!process.env.SUPABASE_KEY) {
+    return bad('supabaseKey is required.');
+  }
 
   try {
-    const { q='', status='', consultant='', client='', page=1, pageSize=20 } = bodyOf(event);
+    const {
+      q = '',
+      status = '',
+      consultant = '',
+      client = '',
+      page = 1,
+      pageSize = 20,
+    } = bodyOf(event);
+
     const supa = sb();
 
-    let query = supa.from('assignments_view')
+    // Use the view you created (assignments_view)
+    let query = supa
+      .from('assignments_view')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range((page-1)*pageSize, page*pageSize-1);
+      .range((page - 1) * pageSize, page * pageSize - 1);
 
     if (status)     query = query.eq('status', status);
     if (consultant) query = query.ilike('consultant_name', `%${consultant}%`);
     if (client)     query = query.ilike('client_name', `%${client}%`);
-    if (q)          query = query.or(`job_title.ilike.%${q}%,candidate_name.ilike.%${q}%,client_name.ilike.%${q}%,as_ref.ilike.%${q}%`);
+    if (q)          query = query.or(
+      [
+        `title.ilike.%${q}%`,
+        `candidate_name.ilike.%${q}%`,
+        `client_name.ilike.%${q}%`,
+        `po_number.ilike.%${q}%`,
+        `as_ref.ilike.%${q}%`
+      ].join(',')
+    );
 
     const { data, error, count } = await query;
     if (error) throw error;
 
-    return ok({ rows: data, total: count ?? (data?.length || 0) });
+    return ok({ items: data, total: count ?? (data?.length || 0) });
   } catch (e) {
-    return bad(e.message);
+    return bad(String(e.message || e));
   }
-}
+};

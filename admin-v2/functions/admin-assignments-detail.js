@@ -1,159 +1,138 @@
-// Inside your handler, before you call sb()
-const fallbackKey =
-  process.env.SUPABASE_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.SUPABASE_ADMIN_KEY ||
-  process.env.SUPABASE_ANON_KEY || '';
-
-if (!fallbackKey) {
-  return bad('supabaseKey is required.');
-}
-
-// Make sure _lib / sb() reads from process.env.SUPABASE_KEY:
-process.env.SUPABASE_KEY = fallbackKey;
-
-
-
-
 // /netlify/functions/admin-assignments-detail.js
-// Returns one assignment with friendly, denormalised fields.
-//
-// Used by admin-v2/admin/assignments.html -> api('admin-assignments-detail', { id })
+// Return one assignment in a UI-friendly shape (used by Quick view).
 
-/* -------------------- SAFE, LOCAL SHIM (assignments-only) ------------------ */
-// Do NOT edit _supabase.js. Some envs expose different key names.
-// This alias ensures _supabase.js sees SUPABASE_KEY.
+/* ---- IMPORTANT: make sure _supabase.js sees a key at import time ---- */
 process.env.SUPABASE_KEY =
   process.env.SUPABASE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_ADMIN_KEY ||
-  process.env.SUPABASE_ANON_KEY;
+  process.env.SUPABASE_ANON_KEY ||
+  '';
 
-/* --------------------------- shared helpers -------------------------------- */
 const { getClient } = require('./_supabase');
 const { requireRole } = require('./_auth');
-
 const supabase = getClient();
 
-/* -------------------------------- CORS ------------------------------------- */
-const corsHeaders = {
+/* --------------------------- CORS / helpers --------------------------- */
+const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
-
-/* --------------------------------- util ------------------------------------ */
 const ok = (status, body) => ({
   statusCode: status,
-  headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  headers: { 'Content-Type': 'application/json', ...CORS },
   body: body ? JSON.stringify(body) : '',
 });
-
 const err = (status, message, extra = {}) => ({
   statusCode: status,
-  headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  headers: { 'Content-Type': 'application/json', ...CORS },
   body: JSON.stringify({ error: message, ...extra }),
 });
 
+function parseId(event) {
+  const qs = event.queryStringParameters || {};
+  const body = event.httpMethod === 'POST' && event.body ? JSON.parse(event.body) : {};
+  const id = Number(qs.id ?? body.id);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+/** Normalise any row (from base table or view) to the UI shape */
+function mapAssignment(row) {
+  if (!row) return null;
+
+  const title =
+    row.title != null ? row.title :
+    row.job_title != null ? row.job_title :
+    null;
+
+  const shift =
+    row.shift != null ? row.shift :
+    row.shift_type != null ? row.shift_type :
+    'Day';
+
+  // estimated_hours: accept preformatted string, or build from days_per_week/hours_per_day
+  let estimated_hours = null;
+  if (row.estimated_hours != null && String(row.estimated_hours).trim() !== '') {
+    estimated_hours = row.estimated_hours;
+  } else if (row.days_per_week != null && row.hours_per_day != null) {
+    estimated_hours = `${row.days_per_week} days/wk, ${row.hours_per_day} h/day`;
+  }
+
+  // Client name (view field, denormalised field, or nested foreign table)
+  let client_name = null;
+  if (row.client_name) client_name = row.client_name;
+  else if (row.client && typeof row.client === 'object' && row.client.name) client_name = row.client.name;
+
+  // Candidate name (view field, denormalised field, or nested)
+  let candidate_name = null;
+  if (row.candidate_name) {
+    candidate_name = row.candidate_name;
+  } else if (row.candidate && typeof row.candidate === 'object') {
+    if (row.candidate.full_name) {
+      candidate_name = row.candidate.full_name;
+    } else {
+      const fn = row.candidate.first_name || '';
+      const ln = row.candidate.last_name || '';
+      const combined = `${fn} ${ln}`.trim();
+      candidate_name = combined || null;
+    }
+  }
+
+  return {
+    id: row.id,
+    title,
+    status: row.status || 'draft',
+    po_number: row.po_number || row.po_ref || null,
+    shift,
+    estimated_hours,
+    start_date: row.start_date || null,
+    end_date:   row.end_date   || null,
+    client_name,
+    candidate_name,
+    client_id:    row.client_id    ?? null,
+    candidate_id: row.candidate_id ?? null,
+  };
+}
+
+/* -------------------------------- handler ----------------------------- */
 exports.handler = async (event) => {
   try {
-    // CORS preflight
     if (event.httpMethod === 'OPTIONS') return ok(204);
+    if (!['GET', 'POST'].includes(event.httpMethod)) return err(405, 'Method Not Allowed');
 
-    // Only GET/POST are supported
-    if (!['GET', 'POST'].includes(event.httpMethod)) {
-      return err(405, 'Method Not Allowed');
-    }
+    if (!process.env.SUPABASE_KEY) return err(400, 'supabaseKey is required.');
 
-    // Must be an admin
     await requireRole(event, 'admin');
 
-    // Accept id from query string (?id=) or POST body { id }
-    const qs = event.queryStringParameters || {};
-    const body = event.httpMethod === 'POST' && event.body ? JSON.parse(event.body) : {};
-    const id = Number(qs.id ?? body.id);
+    const id = parseId(event);
+    if (!id) return err(400, 'Invalid or missing id');
 
-    if (!Number.isFinite(id) || id <= 0) {
-      return err(400, 'Invalid or missing id');
-    }
-
-    // First try: fetch the row + related names via foreign-table select.
-    // (Works if FK relationships are configured in Supabase.)
+    // Prefer the base table; if not found, fall back to the view
     let { data, error } = await supabase
       .from('assignments')
-      .select(`
-        id, title, status, po_number, shift, estimated_hours,
-        start_date, end_date, client_id, candidate_id,
-        client:clients ( name ),
-        candidate:candidates ( full_name, first_name, last_name )
-      `)
+      .select('*')
       .eq('id', id)
       .maybeSingle();
 
     if (error) throw error;
+
+    if (!data) {
+      const alt = await supabase
+        .from('assignments_view')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (alt.error) throw alt.error;
+      data = alt.data;
+    }
+
     if (!data) return err(404, 'Assignment not found');
 
-    // Derive display names
-    const client_name =
-      data.client?.name ?? data.client_name ?? null;
-
-    const candidate_name =
-      data.candidate?.full_name
-      ?? (data.candidate?.first_name || data.candidate?.last_name
-          ? `${data.candidate?.first_name || ''} ${data.candidate?.last_name || ''}`.trim()
-          : (data.candidate_name ?? null));
-
-    // If the project doesn’t have foreign-table selects wired up,
-    // fetch names in two tiny queries (only if missing).
-    let fetchedClientName = client_name;
-    let fetchedCandidateName = candidate_name;
-
-    if (!fetchedClientName && data.client_id) {
-      const { data: cRow, error: cErr } = await supabase
-        .from('clients')
-        .select('name')
-        .eq('id', data.client_id)
-        .maybeSingle();
-      if (cErr) throw cErr;
-      fetchedClientName = cRow?.name ?? null;
-    }
-
-    if (!fetchedCandidateName && data.candidate_id) {
-      const { data: pRow, error: pErr } = await supabase
-        .from('candidates')
-        .select('full_name, first_name, last_name')
-        .eq('id', data.candidate_id)
-        .maybeSingle();
-      if (pErr) throw pErr;
-      fetchedCandidateName =
-        pRow?.full_name
-        ?? (pRow?.first_name || pRow?.last_name
-            ? `${pRow?.first_name || ''} ${pRow?.last_name || ''}`.trim()
-            : null);
-    }
-
-    // Shape exactly what the UI expects
-    const out = {
-      id: data.id,
-      title: data.title,
-      status: data.status || 'draft',
-      po_number: data.po_number || null,
-      shift: data.shift || 'Day',
-      estimated_hours: data.estimated_hours || null,
-      start_date: data.start_date || null,
-      end_date: data.end_date || null,
-      client_name: fetchedClientName || null,
-      candidate_name: fetchedCandidateName || null,
-      client_id: data.client_id || null,
-      candidate_id: data.candidate_id || null,
-    };
-
+    const out = mapAssignment(data);
     return ok(200, out);
   } catch (e) {
-    // Normalise error text for easy console reading
-    const message = e?.message || String(e);
-    return err(400, message);
+    return err(400, e?.message || String(e));
   }
 };
