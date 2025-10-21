@@ -3,10 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Assignments — Admin</title>
+  <title>Assignments — Admin | HMJ Global</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- System fonts + theme -->
   <style>
     :root{
       --bg:#ffffff;
@@ -14,74 +13,76 @@
       --ink:#0f172a;         /* slate-900 */
       --muted:#64748b;       /* slate-500 */
       --line:#e2e8f0;        /* slate-200 */
-      --blue:#1f4c8f;        /* HMJ blue (softer) */
+      --blue:#0f3570;        /* HMJ blue */
       --blue-ink:#113465;
-      --chip:#eef2ff;
       --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
       --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.06);
       --radius:14px;
+      --pill:#f1f5f9;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
-      font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";}
     a{color:var(--blue-ink);text-decoration:none}
     a:hover{text-decoration:underline}
 
-    .container{max-width:1200px;margin:0 auto;padding:18px}
-    .appbar{position:sticky;top:0;z-index:20;background:#0f2a5a; /* deep HMJ */
-      border-bottom:1px solid rgba(255,255,255,.08);box-shadow:0 1px 0 rgba(2,8,23,.04);color:#fff}
+    .appbar{position:sticky;top:0;z-index:40;background:#102b63;color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
     .appbar .row{display:flex;align-items:center;gap:12px;padding:12px 18px}
     .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .brand .logo{width:28px;height:28px;border-radius:7px;background:#fff;display:inline-grid;place-items:center;color:#0f2a5a;font-weight:800}
-    .topnav{display:flex;gap:8px;align-items:center;margin-left:8px}
-    .nav-pill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 12px;border-radius:999px;font-weight:700}
-    .nav-pill:hover{background:rgba(255,255,255,.2)}
-    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:10px}
-    .chip{background:#ecfdf5;border:1px solid #bbf7d0;color:#064e3b;padding:6px 10px;border-radius:999px;font-weight:700}
-    .chip.bad{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
+    .brand .logo{width:28px;height:28px;border-radius:7px;background:#fff;display:inline-grid;place-items:center;color:#0b1d3c;font-weight:900}
+    .brand .txt{opacity:.95}
+
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:16px}
+    .chip{background:#eaf2ff;color:#0b1d3c;border:1px solid #dbeafe;padding:6px 10px;border-radius:999px;font-weight:600}
+    .chip.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
     .chip.warn{background:#fffbeb;border-color:#fde68a;color:#7c5800}
-    .actions{margin-left:auto;display:flex;gap:10px}
-    .btn{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
-    .btn:hover{box-shadow:var(--shadow)}
-    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
-    .btn.ghost{background:#fff}
+    .chip.bad{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
+
+    .actions{margin-left:auto;display:flex;gap:8px}
+    .btn{border:1px solid #1d3e86;background:#123a84;color:#fff;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.ghost{background:#fff;color:#0b1d3c;border:1px solid var(--line)}
     .btn.danger{background:#fee2e2;border-color:#fecaca;color:#7f1d1d}
+    .btn:hover{box-shadow:var(--shadow)}
 
-    .banner{margin:16px 0;padding:12px 14px;background:#f1f5f9;border:1px solid var(--line);border-radius:12px}
-    .banner strong{display:block;margin-bottom:6px}
-    .hint{color:var(--muted)}
+    .container{max-width:1200px;margin:0 auto;padding:18px}
 
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0}
-    .search{flex:1;min-width:220px;position:relative}
+    .tip{margin:12px 0;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;background:#f8fafc;color:#0b1d3c}
+    .tip b{font-weight:800}
+    .tip small{display:block;color:var(--muted)}
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+    .search{flex:1;min-width:240px;position:relative}
     .search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--line);border-radius:12px;background:#fff}
     .search .ico{position:absolute;left:10px;top:9px;color:var(--muted)}
     .select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
 
     .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
     @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
-
     .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
     .card .h{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;color:#0b1d3c;background:#f8fafc;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius)}
     .card .b{padding:12px 14px}
 
     table{width:100%;border-collapse:separate;border-spacing:0}
     th,td{padding:12px;border-bottom:1px solid var(--line)}
-    th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:#f1f5f9}
+    th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#475569;background:#eef2f7}
     tr:hover td{background:#fafafa}
+    .row-actions{display:flex;gap:8px}
 
-    .status{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:800;font-size:12px}
+    .status{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:700;font-size:12px}
     .status.live{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
     .status.complete{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
     .status.draft{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    .status.pending{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
 
     .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px}
     .kv .k{color:var(--muted)}
-    .empty{color:var(--muted);text-align:center;padding:24px}
-    .row-actions{display:flex;gap:8px}
-    .table-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
-    .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none}
 
-    .foot-hint{margin-top:10px;color:var(--muted);font-size:12px}
+    .table-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+
+    .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none;z-index:60}
+
+    dialog#drawer{border:none;max-width:780px;width:96%;border-radius:14px;box-shadow:var(--shadow)}
+    .drawer-head{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
+    .hint{font-size:12px;color:#475569;background:var(--pill);border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
   </style>
 </head>
 
@@ -91,19 +92,17 @@
     <div class="row">
       <div class="brand">
         <span class="logo">H</span>
-        HMJ Global — Admin
+        <span class="txt">HMJ Global — Admin</span>
       </div>
 
-      <nav class="topnav">
-        <a class="nav-pill" href="./index.html">← Dashboard</a>
-        <a class="nav-pill" href="./candidates.html">Candidates</a>
-      </nav>
+      <a class="btn ghost" href="./index.html">← Dashboard</a>
 
+      <!-- diagnostic chips like Candidates -->
       <nav class="chips" id="diagChips"></nav>
 
       <div class="actions">
-        <button id="btnRefresh" class="btn">↻ Refresh</button>
-        <button id="btnNew" class="btn primary">＋ New</button>
+        <button id="btnRefresh" class="btn ghost">↻ Refresh</button>
+        <button id="btnNew" class="btn">＋ New</button>
         <button id="btnDelete" class="btn danger">🗑 Delete</button>
         <button id="btnSignOut" class="btn ghost">Sign out</button>
       </div>
@@ -111,36 +110,36 @@
   </header>
 
   <main class="container">
-    <!-- Helpful banner (small “how to”) -->
-    <div class="banner">
-      <strong>Assignments overview.</strong>
-      This page lists all current and past assignments with client, candidate, and contract dates. Use the search bar to filter by job title,
-      client, or candidate name. Status tags such as <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.
-      <div class="foot-hint">Tip: press <kbd>Enter</kbd> in the search box to run a quick filter. Click a row to open the quick view.</div>
+    <!-- top guidance -->
+    <div class="tip">
+      <b>Assignments overview.</b>
+      This page lists all current and past assignments with client, candidate, and contract dates.
+      Use the search bar to filter by job title, client, or candidate name.  
+      <small>Tip: press <b>Enter</b> in the search box to run a quick filter. Click a row to open the <em>Quick view</em>. Status tags like <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.</small>
     </div>
 
-    <!-- Controls -->
     <div class="toolbar">
-      <div class="search" title="Press Enter to search">
+      <div class="search">
         <span class="ico">🔍</span>
         <input id="q" placeholder="Search (title, ref, client, candidate) — press Enter" />
       </div>
       <select id="status" class="select" title="Filter by status">
         <option value="">All statuses</option>
         <option value="draft">Draft</option>
-        <option value="complete">Complete</option>
+        <option value="pending">Pending</option>
         <option value="live">Live</option>
+        <option value="complete">Complete</option>
         <option value="archived">Archived</option>
       </select>
-      <button id="btnRefresh2" class="btn">↻ Refresh</button>
+      <button id="btnRefresh2" class="btn ghost">↻ Refresh</button>
     </div>
 
     <div class="grid">
       <!-- List -->
       <section class="card">
-        <div class="h">All assignments <span id="total" style="color:var(--muted);font-weight:600"></span></div>
+        <div class="h">All assignments <span id="total" style="color:#64748b;font-weight:600"></span></div>
         <div class="b" style="padding:0">
-          <table id="tbl" aria-live="polite">
+          <table id="tbl" aria-label="Assignments">
             <thead>
               <tr>
                 <th style="width:36px;"></th>
@@ -149,21 +148,20 @@
                 <th>CANDIDATE</th>
                 <th>DATES</th>
                 <th>STATUS</th>
-                <th>ACTIONS</th>
+                <th style="width:220px">ACTIONS</th>
               </tr>
             </thead>
             <tbody id="rows">
-              <tr><td colspan="7" class="empty">Loading assignments…</td></tr>
+              <tr><td colspan="7" class="empty" style="padding:26px;text-align:center;color:#64748b">Loading assignments...</td></tr>
             </tbody>
           </table>
 
           <div class="table-footer">
-            <div>
-              <button id="prev" class="btn" aria-label="Previous page">← Prev</button>
-              <button id="next" class="btn" aria-label="Next page">Next →</button>
-              <span id="pageLabel" style="margin-left:8px;color:var(--muted)"></span>
-            </div>
-            <div>
+            <div class="hint">Use ←/→ or the buttons to page. Defaults to newest first.</div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <button id="prev" class="btn ghost">← Prev</button>
+              <button id="next" class="btn ghost">Next →</button>
+              <span id="pageLabel" style="margin-left:8px;color:#64748b"></span>
               <select id="pageSize" class="select" title="Rows per page">
                 <option>20</option>
                 <option>50</option>
@@ -178,39 +176,35 @@
       <aside class="card">
         <div class="h">Quick view — Assignment</div>
         <div class="b">
-          <div id="quick" class="empty">Select an assignment to preview details here.</div>
+          <div id="quick" class="empty" style="color:#64748b">Select an assignment to preview details here.</div>
         </div>
         <div class="h">Latest timesheet</div>
         <div class="b">
-          <div id="latestTS" class="empty">Not live — no timesheets yet.</div>
+          <div id="latestTS" class="empty" style="color:#64748b">Not live — no timesheets yet.</div>
         </div>
       </aside>
-    </div>
-
-    <div class="foot-hint">
-      Need a full record? Use <em>Open full assignment</em> in the quick view. Live assignments show a shortcut to Timesheets.
     </div>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Drawer (New assignment) -->
-  <dialog id="drawer" style="border:none;max-width:740px;width:96%;border-radius:14px;box-shadow:var(--shadow)">
+  <dialog id="drawer">
     <form method="dialog" id="formNew" style="padding:16px 18px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="drawer-head">
         <h3 style="margin:0">New assignment</h3>
         <div style="display:flex;gap:8px">
-          <button class="btn ghost" value="cancel" type="button" id="drawerCloseTop">Close</button>
+          <button class="btn ghost" id="drawerCloseX" value="cancel" type="button">✕ Close</button>
         </div>
       </div>
 
-      <p class="hint" style="margin-top:0">
-        Fill in the basics now — you can link the candidate later. Status becomes <strong>Live</strong> once a candidate is linked and
-        Timesheets can be raised against it.
-      </p>
+      <div class="hint" style="margin-bottom:12px">
+        Minimal fields are fine — you can link a candidate later. PO number and dates help Finance/T&amp;M downstream.
+      </div>
 
       <div style="display:grid;gap:12px">
         <label>Job title *<br><input id="title" required class="select" style="width:100%"></label>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label>PO number<br><input id="po" class="select" style="width:100%"></label>
           <label>Shift<br>
@@ -220,59 +214,45 @@
             </select>
           </label>
         </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label>Start date<br><input id="start" type="date" class="select" style="width:100%"></label>
           <label>End date<br><input id="end" type="date" class="select" style="width:100%"></label>
         </div>
+
         <div class="kv" style="margin-top:6px">
           <div class="k">Client</div><div><input id="client" class="select" placeholder="Client name / ref"></div>
-          <div class="k">Client site</div><div><input id="site" class="select" placeholder="(optional)"></div>
+          <div class="k">Client site</div><div><input id="site" class="select" placeholder="Ward / location (optional)"></div>
           <div class="k">Candidate</div><div><input id="candidate" class="select" placeholder="Assign later is OK"></div>
           <div class="k">Expected days / hours</div><div><input id="hours" class="select" placeholder="e.g. Mon–Fri, 40h"></div>
-          <div class="k">Internal notes</div><div><textarea id="notes" class="select" rows="3" placeholder="Internal notes…"></textarea></div>
+          <div class="k">Internal notes</div><div><textarea id="notes" class="select" rows="3" placeholder="Internal notes… visible to Admin only."></textarea></div>
         </div>
       </div>
+
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
-        <button class="btn" value="cancel" type="button" id="drawerCloseBottom">Cancel</button>
-        <button class="btn primary" id="saveNew" value="default">Save</button>
+        <button class="btn ghost" value="cancel" type="button" id="drawerClose">Cancel</button>
+        <button class="btn" id="saveNew" value="default">Save</button>
       </div>
     </form>
   </dialog>
 
-  <!-- Page logic -->
   <script>
-    (function startWhenReady(){
-      // Wait for common.js to load and expose Admin
-      const again = () => setTimeout(startWhenReady, 40);
-      if (!window.Admin || !Admin.bootAdmin) return again();
+    // Wait until common helpers are available
+    (async function waitForAdmin(){
+      if (window.Admin) return;
+      await new Promise(r => {
+        const t = setInterval(()=>{ if (window.Admin) { clearInterval(t); r(); } }, 30);
+      });
+    })().then(() => {
+      Admin.bootAdmin(async ({ api, sel, toast, Debug }) => {
+        Debug.chip('init: ok', 'ok');
 
-      Admin.bootAdmin(async (helpers) => {
-        // Be tolerant to Debug/debug naming differences
-        const { api, sel, toast } = helpers;
-        const D = helpers.Debug || helpers.debug || window.Debug || {
-          chip:(t)=>console.log('[chip]',t),
-          ok:(...a)=>console.log('[ok]',...a),
-          warn:(...a)=>console.warn('[warn]',...a),
-          err:(...a)=>console.error('[err]',...a),
-          log:(...a)=>console.log('[log]',...a)
-        };
-
-        // chips like candidates page
+        // quick chips (identity / role)
         try {
-          const diag = document.querySelector('#diagChips');
-          if (diag) {
-            diag.innerHTML = '';
-            const add = (text, ok=true) => {
-              const s = document.createElement('span');
-              s.className = 'chip' + (ok ? '' : ' bad');
-              s.textContent = text;
-              diag.appendChild(s);
-            };
-            add('init: ok', true);
-          }
+          Debug.chip('identity: ok','ok');
+          Debug.chip('role: admin','ok');
         } catch {}
 
-        // ---------- DOM handles ----------
         const $rows = sel('#rows');
         const $total = sel('#total');
         const $pageLabel = sel('#pageLabel');
@@ -286,53 +266,55 @@
         const selected = new Set();
         let current = null;
 
-        // ---------- Helpers ----------
-        function setLoading(msg='Loading assignments…'){
-          $rows.innerHTML = `<tr><td colspan="7" class="empty">${msg}</td></tr>`;
-        }
-        function fmtDate(x){ return x ? new Date(x).toLocaleDateString() : '—'; }
-        function fmtDates(a,b){ if(!a && !b) return '—'; return `${fmtDate(a)} → ${fmtDate(b)}`; }
-        function renderStatus(s){ s=(s||'draft').toLowerCase(); return `<span class="status ${s}">${s}</span>`; }
+        const setLoading = (msg='Loading assignments...') => {
+          $rows.innerHTML = `<tr><td colspan="7" style="padding:26px;text-align:center;color:#64748b">${msg}</td></tr>`;
+        };
+        const fmtDate = d => d ? new Date(d).toLocaleDateString() : '—';
+        const fmtDates = (a,b) => (!a && !b) ? '—' : `${fmtDate(a)} → ${fmtDate(b)}`;
+        const renderStatus = s => {
+          s = (s||'draft').toLowerCase();
+          return `<span class="status ${s}">${s}</span>`;
+        };
 
         function renderRows(items){
           if(!items?.length){ setLoading('No assignments found.'); return; }
-          const html = items.map(x=>{
+          const html = items.map(x => {
             const live = (x.status||'').toLowerCase()==='live';
-            const cand = x.candidate_name || '—';
-            const client = x.client_name || '—';
             return `
               <tr data-id="${x.id}">
                 <td><input type="checkbox" class="rowChk" data-id="${x.id}" /></td>
-                <td><a href="#" class="rowLink" data-id="${x.id}">${x.title||'—'}</a></td>
-                <td>${client}</td>
-                <td>${cand}</td>
+                <td><a href="#" class="rowLink" data-id="${x.id}">${x.title||x.job_title||'—'}</a></td>
+                <td>${x.client_name || '—'}</td>
+                <td>${x.candidate_name || '—'}</td>
                 <td>${fmtDates(x.start_date, x.end_date)}</td>
                 <td>${renderStatus(x.status)}</td>
                 <td class="row-actions">
                   <button class="btn ghost act-open" data-id="${x.id}">Open</button>
-                  ${ live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(x.id)}">Timesheets</a>` : '' }
+                  ${live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(x.id)}">Timesheets</a>` : ''}
                 </td>
-              </tr>`;
+              </tr>
+            `;
           }).join('');
           $rows.innerHTML = html;
         }
 
-        // ---------- Data loaders ----------
         async function load(){
           try{
             setLoading();
             const q = $q.value.trim();
             const status = $status.value.trim();
+
+            // NOTE: tolerate either {items,total} or {rows,total}
             const res = await api('admin-assignments-list', { page, pageSize, q, status });
-            // functions may return { rows, total } or { items, total } depending on version
-            const items = res?.items || res?.rows || [];
+            const items = res?.items ?? res?.rows ?? [];
             total = res?.total ?? items.length;
+
+            Debug.ok('assignments:list', { page, pageSize, q, status, total, got: items.length });
             renderRows(items);
             $total.textContent = `(${total} total)`;
             $pageLabel.textContent = `Page ${page}`;
-            D.ok('assignments:list', { page, pageSize, q, status, total });
           }catch(err){
-            D.err('[assignments] list error', err);
+            Debug.err('bootAdmin error:', err);
             setLoading('Failed to load. Check console for details.');
             toast('Error loading assignments', 'error', 5000);
           }
@@ -349,56 +331,48 @@
                 <div class="k">Status</div><div>${renderStatus(detail?.status)}</div>
                 <div class="k">Client</div><div>${detail?.client_name||'—'}</div>
                 <div class="k">Candidate</div><div>${detail?.candidate_name||'—'}</div>
-                <div class="k">PO number</div><div>${detail?.po_number||'—'}</div>
+                <div class="k">PO number</div><div>${detail?.po_number||detail?.po_ref||'—'}</div>
                 <div class="k">Dates</div><div>${fmtDates(detail?.start_date, detail?.end_date)}</div>
-                <div class="k">Shift</div><div>${detail?.shift||'Day'}</div>
+                <div class="k">Shift</div><div>${detail?.shift || detail?.shift_type || 'Day'}</div>
                 <div class="k">Expected hrs</div><div>${detail?.estimated_hours||'—'}</div>
               </div>
-              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <div style="margin-top:10px;display:flex;gap:8px">
                 <a class="btn ghost" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
                 ${ live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : '' }
               </div>
             `;
 
-            if(live){
+            if (live){
               try{
                 const tsr = await api('admin-timesheets-list', { assignmentId:id, limit:1 });
-                const item = (tsr?.items && tsr.items[0]) || (tsr?.rows && tsr.rows[0]) || null;
-                if(item){
-                  sel('#latestTS').innerHTML = `
-                    <div class="kv">
-                      <div class="k">Week</div><div>${item.week_commencing || '—'}</div>
-                      <div class="k">Hours</div><div>${item.total_hours ?? '—'}</div>
-                      <div class="k">Status</div><div><span class="status ${item.status||'draft'}">${item.status||'draft'}</span></div>
-                    </div>
-                    <div style="margin-top:8px">
-                      <a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
-                    </div>`;
-                } else {
-                  sel('#latestTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
-                }
-              }catch(tsErr){
-                D.warn('timesheets load failed', tsErr);
-                sel('#latestTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
+                const item = tsr?.items?.[0];
+                sel('#latestTS').innerHTML = item ? `
+                  <div class="kv">
+                    <div class="k">Week</div><div>${item.week_commencing || item.week_start || '—'}</div>
+                    <div class="k">Hours</div><div>${item.total_hours ?? '—'}</div>
+                    <div class="k">Status</div><div><span class="status ${item.status||'draft'}">${item.status||'draft'}</span></div>
+                  </div>
+                ` : `<div class="empty" style="color:#64748b">No timesheets yet.</div>`;
+              }catch(e){
+                Debug.warn('timesheets latest failed', e);
+                sel('#latestTS').innerHTML = `<div class="empty" style="color:#64748b">Could not load latest timesheet.</div>`;
               }
             } else {
-              sel('#latestTS').innerHTML = `<div class="empty">Not live — no timesheets yet.</div>`;
+              sel('#latestTS').innerHTML = `<div class="empty" style="color:#64748b">Not live — no timesheets yet.</div>`;
             }
-
-            toast('Opened assignment','ok');
           }catch(err){
-            D.err('openQuickView error', err);
-            toast('Failed to open assignment','bad', 4500);
+            Debug.err('openQuickView error', err);
+            toast('Failed to open assignment','error', 4500);
           }
         }
 
-        // ---------- Events ----------
-        const multi = (selStr, fn) => document.querySelectorAll(selStr).forEach(fn);
-
-        multi('#btnRefresh, #btnRefresh2', el => el.addEventListener('click', ()=>{ page=1; load(); }));
+        // Events
+        const onReload = ()=>{ page=1; load(); };
+        document.querySelector('#btnRefresh').addEventListener('click', onReload);
+        document.querySelector('#btnRefresh2').addEventListener('click', onReload);
         $q.addEventListener('keydown',e=>{ if(e.key==='Enter'){ page=1; load(); } });
         $status.addEventListener('change', ()=>{ page=1; load(); });
-        $pageSize.addEventListener('change', ()=>{ pageSize=Number($pageSize.value||20); page=1; load(); });
+        $pageSize.addEventListener('change', ()=>{ pageSize = Number($pageSize.value||20); page=1; load(); });
 
         document.querySelector('#prev').addEventListener('click',()=>{ if(page>1){ page--; load(); }});
         document.querySelector('#next').addEventListener('click',()=>{ page++; load(); });
@@ -410,33 +384,33 @@
             const id = open.dataset.id || open.closest('tr')?.dataset?.id;
             if(id) openQuickView(id);
           }
-          const chk = e.target.classList?.contains('rowChk') ? e.target : null;
-          if(chk){
-            if(chk.checked) selected.add(chk.dataset.id);
-            else selected.delete(chk.dataset.id);
+          if (e.target.classList?.contains('rowChk')){
+            const id = e.target.dataset.id;
+            if (e.target.checked) selected.add(id);
+            else selected.delete(id);
           }
         });
 
-        // Drawer
+        // Drawer (new)
         const drawer = document.querySelector('#drawer');
         document.querySelector('#btnNew').addEventListener('click', ()=>drawer.showModal());
-        document.querySelector('#drawerCloseTop').addEventListener('click', ()=>drawer.close());
-        document.querySelector('#drawerCloseBottom').addEventListener('click', ()=>drawer.close());
+        document.querySelector('#drawerClose').addEventListener('click', ()=>drawer.close());
+        document.querySelector('#drawerCloseX').addEventListener('click', ()=>drawer.close());
 
         document.querySelector('#formNew').addEventListener('submit', async (e)=>{
           e.preventDefault();
           try{
             const payload = {
-              title: (document.querySelector('#title').value||'').trim(),
-              po_number: (document.querySelector('#po').value||'').trim(),
+              title: document.querySelector('#title').value.trim(),
+              po_number: document.querySelector('#po').value.trim(),
               shift: document.querySelector('#shift').value,
               start_date: document.querySelector('#start').value||null,
               end_date: document.querySelector('#end').value||null,
-              client: (document.querySelector('#client').value||'').trim(),
-              client_site: (document.querySelector('#site').value||'').trim(),
-              candidate: (document.querySelector('#candidate').value||'').trim(),
-              estimated_hours: (document.querySelector('#hours').value||'').trim(),
-              notes: (document.querySelector('#notes').value||'').trim()
+              client: document.querySelector('#client').value.trim(),
+              client_site: document.querySelector('#site').value.trim(),
+              candidate: document.querySelector('#candidate').value.trim(),
+              estimated_hours: document.querySelector('#hours').value.trim(),
+              notes: document.querySelector('#notes').value.trim()
             };
             if(!payload.title){ toast('Job title is required','warn'); return; }
             await api('admin-assignments-create', payload);
@@ -444,8 +418,8 @@
             toast('Assignment created','ok');
             page=1; load();
           }catch(err){
-            D.err('create error', err);
-            toast('Failed to create assignment','bad', 5000);
+            Debug.err('create error',err);
+            toast('Failed to create assignment','error', 5000);
           }
         });
 
@@ -458,26 +432,18 @@
             selected.clear();
             toast('Deleted','ok'); load();
           }catch(err){
-            D.err('delete error', err);
-            toast('Delete failed','bad', 5000);
+            Debug.err('delete error', err);
+            toast('Delete failed','error', 5000);
           }
         });
 
-        // Sign out button – piggy-backs on common.js identity helper
-        document.querySelector('#btnSignOut')?.addEventListener('click', ()=> {
-          try { window.netlifyIdentity?.logout?.(); } catch {}
-          location.href = './index.html';
-        });
-
-        // Initial load
+        // First load
         await load();
       });
-    })();
-  </script>
+    });
 
-  <!-- Netlify Identity (account + token; harmless if already present) -->
+    // Netlify Identity widget (for token/sign-out button you already use)
+  </script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <!-- common.js must be included by your layout/build; this page assumes it’s already loaded
-       and exposes window.Admin.bootAdmin(...) just like on the candidates page. -->
 </body>
 </html>
