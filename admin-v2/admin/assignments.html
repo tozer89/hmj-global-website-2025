@@ -6,10 +6,10 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Assignments — Admin | HMJ Global</title>
 
-  <!-- Make Identity point to the live site (same pattern as candidates.html) -->
+  <!-- Make Identity point to the site (same pattern as candidates.html) -->
   <meta name="netlify-identity-url" content="https://hmjg.netlify.app/.netlify/identity"/>
 
-  <!-- Identity FIRST, then shared Admin bootstrap -->
+  <!-- Load Identity and the shared Admin bootstrap -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="/admin-v2/admin/common.js?v=15"></script>
 
@@ -19,7 +19,7 @@
       --ink:#0f172a;
       --muted:#64748b;
       --line:#e2e8f0;
-      --blue:#1f4c8f;          /* HMJ blue (softer) */
+      --blue:#1f4c8f;
       --blue-ink:#113465;
       --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
       --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.08);
@@ -216,23 +216,51 @@
     </form>
   </dialog>
 
-  <!-- Page script: waits for Admin then boots safely -->
+  <!-- Page script: wait for Admin, then use a local fetch wrapper (no common.js api header bug) -->
   <script>
     (function bootWhenReady(){
       if (!window.Admin || !window.Admin.bootAdmin) return setTimeout(bootWhenReady, 25);
 
       Admin.bootAdmin(async (ctx) => {
-        const { api, sel, toast, Debug } = ctx;
-        // Safe Debug shim so calls never explode
-        const D = Debug || {
-          chip(){}, ok: (...a)=>console.log(...a),
-          warn: (...a)=>console.warn(...a), err: (...a)=>console.error(...a)
+        const { sel, toast, Debug } = ctx;
+        const D = Debug || { chip(){}, ok:console.log, warn:console.warn, err:console.error };
+
+        // ---- Local function caller (bypasses buggy api() header handling) ----
+        async function getToken(){
+          try{
+            const id = window.netlifyIdentity;
+            const u = id && id.currentUser ? id.currentUser() : null;
+            return u ? await u.jwt() : null;
+          }catch(_){ return null; }
+        }
+        async function fn(name, payload){
+          const t = await getToken();
+          if (!t){ throw new Error('No identity token'); }
+          const res = await fetch(`/.netlify/functions/${name}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${t}`
+            },
+            body: JSON.stringify(payload||{})
+          });
+          if (!res.ok){
+            const text = await res.text().catch(()=>res.statusText);
+            throw new Error(`${res.status} ${res.statusText}: ${text}`);
+          }
+          return res.json();
+        }
+
+        // Diag chips like the candidates page
+        const chips = sel('#diagChips');
+        const addChip = (t, kind='ok')=>{
+          const d = document.createElement('span');
+          d.className = 'chip ' + kind; d.textContent = t;
+          chips.appendChild(d);
         };
+        addChip('init: ok','ok');
 
-        // Diag chips
-        D.chip('init','ok');
-
-        // DOM
+        // DOM refs
         const $rows = sel('#rows');
         const $total = sel('#total');
         const $pageLabel = sel('#pageLabel');
@@ -246,12 +274,11 @@
         const selected = new Set();
         let current = null;
 
-        // Helpers
+        // helpers
         const fDate = x => x ? new Date(x).toLocaleDateString() : '—';
         const fRange = (a,b) => (!a && !b) ? '—' : `${fDate(a)} → ${fDate(b)}`;
         const pill = s => `<span class="status ${s}">${s}</span>`;
-        const setLoading = (msg='Loading…') =>
-          $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${msg}</td></tr>`;
+        const setLoading = (m='Loading…') => $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${m}</td></tr>`;
 
         function renderRows(items){
           if (!items?.length){ setLoading('No assignments found.'); return; }
@@ -278,12 +305,13 @@
             setLoading();
             const q = $q.value.trim();
             const status = $status.value.trim();
-            const res = await api('admin-assignments-list', { page, pageSize, q, status });
+            const res = await fn('admin-assignments-list', { page, pageSize, q, status });
             total = res?.total ?? 0;
             renderRows(res?.items||[]);
             $total.textContent = `(${total} total)`;
             $pageLabel.textContent = `Page ${page}`;
-            D.ok('assignments:list', {page,pageSize,q,status,total});
+            addChip('token: ok','ok'); // visible proof token worked
+            D.ok('assignments:list',{page,pageSize,q,status,total});
           }catch(err){
             D.err('[assignments] list error', err);
             setLoading('Failed to load. Check console for details.');
@@ -294,7 +322,7 @@
         async function openQuickView(id){
           try{
             current = id;
-            const detail = await api('admin-assignments-detail', { id });
+            const detail = await fn('admin-assignments-detail', { id });
             const live = (detail?.status||'').toLowerCase()==='live';
 
             sel('#quick').innerHTML = `
@@ -314,7 +342,7 @@
 
             if (live){
               try{
-                const tsr = await api('admin-timesheets-list', { assignmentId:id, limit:1 });
+                const tsr = await fn('admin-timesheets-list', { assignmentId:id, limit:1 });
                 const item = tsr?.items?.[0];
                 if (item){
                   sel('#latestTS').innerHTML = `
@@ -386,7 +414,7 @@
               notes: sel('#notes').value.trim()
             };
             if (!payload.title){ toast('Job title is required','warn'); return; }
-            await api('admin-assignments-create', payload);
+            await fn('admin-assignments-create', payload);
             drawer.close();
             toast('Assignment created','ok');
             page=1; load();
@@ -401,7 +429,7 @@
           if (!selected.size){ toast('Select at least one row','warn'); return; }
           if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
           try{
-            await api('admin-assignments-delete', { ids:[...selected] });
+            await fn('admin-assignments-delete', { ids:[...selected] });
             selected.clear();
             toast('Deleted','ok'); load();
           }catch(err){
