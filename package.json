@@ -2,7 +2,13 @@
   "name": "hmj-global",
   "private": true,
   "type": "commonjs",
+  "scripts": {
+    "dev": "netlify dev --port 8888"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.32.1"
   }
 }

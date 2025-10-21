@@ -23,11 +23,36 @@ function rolesFromClaims(claims) {
   return claims?.app_metadata?.roles || claims?.roles || [];
 }
 
+function readEnvValue(...names) {
+  for (const name of names) {
+    const raw = process.env[name];
+    if (typeof raw === 'string' && raw.trim()) {
+      return { value: raw.trim(), source: name };
+    }
+  }
+  return { value: '', source: '' };
+}
+
 function getSupabaseAdmin() {
-  const url = (process.env.SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_KEY || '').trim();
-  if (!url) throw coded(500, 'SUPABASE_URL missing');
-  if (!key) throw coded(500, 'SUPABASE_SERVICE_KEY missing');
+  const { value: url } = readEnvValue('SUPABASE_URL', 'VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
+  const { value: key, source: keySource } = readEnvValue(
+    'SUPABASE_SERVICE_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'SUPABASE_SERVICE_ROLE',
+    'SUPABASE_SERVICE_ROLE_SECRET',
+    'SUPABASE_SERVICE_TOKEN',
+    'SUPABASE_ANON_KEY'
+  );
+
+  if (!url) {
+    throw coded(500, 'Supabase URL missing (set SUPABASE_URL or VITE_SUPABASE_URL)');
+  }
+  if (!key) {
+    throw coded(500, 'Supabase service key missing (set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY)');
+  }
+  if (keySource === 'SUPABASE_ANON_KEY') {
+    console.warn('[auth] Using SUPABASE_ANON_KEY as service key. Prefer SUPABASE_SERVICE_KEY to avoid RLS issues.');
+  }
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
