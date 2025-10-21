@@ -5,7 +5,7 @@ const { getContext } = require('./_auth.js');
 exports.handler = async (event, context) => {
   try {
     // Require admin role
-    await getContext(context, { requireAdmin: true });
+    await getContext(event, context, { requireAdmin: true });
 
     // Accept optional { q } for search
     const { q } = JSON.parse(event.body || '{}');

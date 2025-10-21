@@ -12,7 +12,7 @@ async function audit(actor, action, entity, entity_id, details) {
 
 exports.handler = async (event, context) => {
   try {
-    const { user } = await getContext(context, { requireAdmin: true });
+    const { user } = await getContext(event, context, { requireAdmin: true });
     const { id } = JSON.parse(event.body || '{}');
     if (!id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing id' }) };
 
