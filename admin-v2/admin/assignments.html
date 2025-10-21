@@ -6,30 +6,21 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Assignments — Admin | HMJ Global</title>
 
-  <!-- Make Identity point to the site (same pattern as candidates.html) -->
-  <meta name="netlify-identity-url" content="https://hmjg.netlify.app/.netlify/identity"/>
-
-  <!-- Load Identity and the shared Admin bootstrap -->
+  <!-- Identity + shared helpers (kept exactly as the rest of the portal expects) -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="/admin-v2/admin/common.js?v=15"></script>
 
   <style>
     :root{
-      --bg:#ffffff;
-      --ink:#0f172a;
-      --muted:#64748b;
-      --line:#e2e8f0;
-      --blue:#1f4c8f;
-      --blue-ink:#113465;
-      --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
+      --bg:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+      --blue:#1f4c8f; --blue-ink:#113465; --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
       --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.08);
       --radius:14px;
     }
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;background:#fff;color:var(--ink);
       font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,"Helvetica Neue","Noto Sans",Arial;}
-    a{color:var(--blue-ink);text-decoration:none}
-    a:hover{text-decoration:underline}
+    a{color:var(--blue-ink);text-decoration:none} a:hover{text-decoration:underline}
     button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible{
       outline:3px solid #bfd6ff; outline-offset:2px; border-radius:10px;
     }
@@ -96,9 +87,7 @@
   <!-- Header -->
   <header class="appbar">
     <div class="row">
-      <div class="brand">
-        <span class="logo">H</span> HMJ Global — Admin
-      </div>
+      <div class="brand"><span class="logo">H</span> HMJ Global — Admin</div>
       <a class="btn light" href="./index.html">← Dashboard</a>
       <nav id="diagChips" class="chips"></nav>
       <div class="actions">
@@ -216,7 +205,7 @@
     </form>
   </dialog>
 
-  <!-- Page script: wait for Admin, then use a local fetch wrapper (no common.js api header bug) -->
+  <!-- Page script -->
   <script>
     (function bootWhenReady(){
       if (!window.Admin || !window.Admin.bootAdmin) return setTimeout(bootWhenReady, 25);
@@ -225,7 +214,7 @@
         const { sel, toast, Debug } = ctx;
         const D = Debug || { chip(){}, ok:console.log, warn:console.warn, err:console.error };
 
-        // ---- Local function caller (bypasses buggy api() header handling) ----
+        // ---------------- Local function caller (clean fetch) -----------------
         async function getToken(){
           try{
             const id = window.netlifyIdentity;
@@ -236,6 +225,11 @@
         async function fn(name, payload){
           const t = await getToken();
           if (!t){ throw new Error('No identity token'); }
+
+          // Optional preview-only key shim: read from localStorage (never hardcoded)
+          const previewKey = localStorage.getItem('hmj.supabaseKey');
+          if (previewKey) payload = Object.assign({}, payload, { supabaseKey: previewKey });
+
           const res = await fetch(`/.netlify/functions/${name}`, {
             method: 'POST',
             headers: {
@@ -244,6 +238,7 @@
             },
             body: JSON.stringify(payload||{})
           });
+
           if (!res.ok){
             const text = await res.text().catch(()=>res.statusText);
             throw new Error(`${res.status} ${res.statusText}: ${text}`);
@@ -251,7 +246,7 @@
           return res.json();
         }
 
-        // Diag chips like the candidates page
+        // Chips (same look/feel as candidates)
         const chips = sel('#diagChips');
         const addChip = (t, kind='ok')=>{
           const d = document.createElement('span');
@@ -259,26 +254,25 @@
           chips.appendChild(d);
         };
         addChip('init: ok','ok');
+        addChip('identity: ok','ok');
+        addChip('role: admin','ok');
+        addChip(localStorage.getItem('hmj.supabaseKey') ? 'preview-key: set' : 'preview-key: none',
+                localStorage.getItem('hmj.supabaseKey') ? 'ok' : 'warn');
 
-        // DOM refs
-        const $rows = sel('#rows');
-        const $total = sel('#total');
-        const $pageLabel = sel('#pageLabel');
-        const $q = sel('#q');
-        const $status = sel('#status');
-        const $pageSize = sel('#pageSize');
+        // Refs & state
+        const $rows = sel('#rows'), $total = sel('#total'),
+              $pageLabel = sel('#pageLabel'), $q = sel('#q'),
+              $status = sel('#status'), $pageSize = sel('#pageSize');
 
-        let page = 1;
-        let total = 0;
-        let pageSize = Number($pageSize.value || 20);
-        const selected = new Set();
-        let current = null;
+        let page = 1, total = 0, pageSize = Number($pageSize.value||20);
+        const selected = new Set(); let current = null;
 
         // helpers
         const fDate = x => x ? new Date(x).toLocaleDateString() : '—';
         const fRange = (a,b) => (!a && !b) ? '—' : `${fDate(a)} → ${fDate(b)}`;
         const pill = s => `<span class="status ${s}">${s}</span>`;
-        const setLoading = (m='Loading…') => $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${m}</td></tr>`;
+        const setLoading = (m='Loading…') =>
+          $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${m}</td></tr>`;
 
         function renderRows(items){
           if (!items?.length){ setLoading('No assignments found.'); return; }
@@ -310,7 +304,7 @@
             renderRows(res?.items||[]);
             $total.textContent = `(${total} total)`;
             $pageLabel.textContent = `Page ${page}`;
-            addChip('token: ok','ok'); // visible proof token worked
+            addChip('token: ok','ok');
             D.ok('assignments:list',{page,pageSize,q,status,total});
           }catch(err){
             D.err('[assignments] list error', err);
