@@ -16,14 +16,25 @@ exports.handler = async (event, context) => {
     const { assignment } = JSON.parse(event.body || '{}');
     if (!assignment) return { statusCode: 400, body: JSON.stringify({ error: 'Missing assignment' }) };
 
+    const active = typeof assignment.active === 'boolean'
+      ? assignment.active
+      : assignment.active === 'true'
+        ? true
+        : assignment.active === 'false'
+          ? false
+          : null;
+
     const payload = {
       id: assignment.id ?? undefined,
       contractor_id: assignment.contractor_id,
       project_id: assignment.project_id,
+      site_id: assignment.site_id ?? null,
       rate_std: assignment.rate_std ?? null,
       rate_ot: assignment.rate_ot ?? null,
       charge_std: assignment.charge_std ?? null,
       charge_ot: assignment.charge_ot ?? null,
+      po_number: assignment.po_number ?? null,
+      active,
       start_date: assignment.start_date,
       end_date: assignment.end_date ?? null
     };

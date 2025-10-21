@@ -78,15 +78,18 @@
 <script>
 async function main({ api, sel, toast }){
   const listWrap=sel('#listWrap'); const ed=sel('#editor');
-  let cur=null;
+  let cur=null; let cache=[];
 
-  async function loadList(){
-    listWrap.textContent='Loading…';
-    const rows = await api('/admin-assignments-list','POST',{ q: sel('#q').value||'', active: sel('#active').value||'' });
+  function renderList(rows){
+    const q=(sel('#q').value||'').trim().toLowerCase();
+    const view = q ? rows.filter(r=>{
+      const hay=[r.contractor_email,r.client_name,r.project_name,r.site_name,r.po_number];
+      return hay.some(v=>String(v||'').toLowerCase().includes(q));
+    }) : rows;
     listWrap.innerHTML=`
       <table><thead><tr><th>ID</th><th>Contractor</th><th>Client</th><th>Project</th><th>Site</th><th>Active</th><th></th></tr></thead>
       <tbody>
-        ${rows.map(r=>`
+        ${view.map(r=>`
           <tr>
            <td>${r.id}</td>
            <td>${r.contractor_email||'—'}</td>
@@ -98,6 +101,17 @@ async function main({ api, sel, toast }){
           </tr>`).join('')}
       </tbody></table>`;
     listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick=()=>openEd(Number(b.dataset.open)));
+  }
+
+  async function loadList(){
+    listWrap.textContent='Loading…';
+    const filters={};
+    const activeVal=sel('#active').value;
+    if(activeVal==='true') filters.active=true;
+    else if(activeVal==='false') filters.active=false;
+    const rows = await api('/admin-assignments-list','POST', filters);
+    cache = Array.isArray(rows) ? rows : [];
+    renderList(cache);
   }
 
   function setEd(a){
@@ -132,7 +146,7 @@ async function main({ api, sel, toast }){
   }
 
   async function openEd(id){
-    cur = await api('/admin-assignments-open','POST',{ id });
+    cur = await api('/admin-assignments-get','POST',{ id });
     setEd(cur); ed.style.display='block';
   }
 
@@ -140,11 +154,13 @@ async function main({ api, sel, toast }){
   sel('#btnClose').onclick= ()=>{ ed.style.display='none'; };
   sel('#btnSave').onclick = async ()=>{
     try{
-      const saved = await api('/admin-assignments-save','POST', getEd());
+      const saved = await api('/admin-assignments-save','POST', { assignment: getEd() });
       toast('Saved'); if(saved?.id) { cur = saved; setEd(saved); } loadList();
     }catch(e){ toast('Save failed: '+e.message); }
   };
   sel('#btnRefresh').onclick = loadList;
+  sel('#q').addEventListener('input', ()=>renderList(cache));
+  sel('#active').addEventListener('change', loadList);
 
   loadList();
 }
