@@ -10,10 +10,10 @@
     :root{
       --bg:#ffffff;
       --card:#fff;
-      --ink:#0f172a;         /* slate-900 */
-      --muted:#64748b;       /* slate-500 */
-      --line:#e2e8f0;        /* slate-200 */
-      --blue:#0f3570;        /* HMJ blue */
+      --ink:#0f172a;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --blue:#0f3570;
       --blue-ink:#113465;
       --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
       --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.06);
@@ -29,8 +29,6 @@
     .appbar .row{display:flex;align-items:center;gap:12px;padding:12px 18px}
     .brand{display:flex;align-items:center;gap:10px;font-weight:800}
     .brand .logo{width:28px;height:28px;border-radius:7px;background:#fff;display:inline-grid;place-items:center;color:#0b1d3c;font-weight:900}
-    .brand .txt{opacity:.95}
-
     .chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:16px}
     .chip{background:#eaf2ff;color:#0b1d3c;border:1px solid #dbeafe;padding:6px 10px;border-radius:999px;font-weight:600}
     .chip.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
@@ -87,19 +85,14 @@
 </head>
 
 <body>
-  <!-- Header -->
   <header class="appbar">
     <div class="row">
       <div class="brand">
         <span class="logo">H</span>
-        <span class="txt">HMJ Global — Admin</span>
+        HMJ Global — Admin
       </div>
-
       <a class="btn ghost" href="./index.html">← Dashboard</a>
-
-      <!-- diagnostic chips like Candidates -->
       <nav class="chips" id="diagChips"></nav>
-
       <div class="actions">
         <button id="btnRefresh" class="btn ghost">↻ Refresh</button>
         <button id="btnNew" class="btn">＋ New</button>
@@ -110,11 +103,10 @@
   </header>
 
   <main class="container">
-    <!-- top guidance -->
     <div class="tip">
       <b>Assignments overview.</b>
       This page lists all current and past assignments with client, candidate, and contract dates.
-      Use the search bar to filter by job title, client, or candidate name.  
+      Use the search bar to filter by job title, client, or candidate name.
       <small>Tip: press <b>Enter</b> in the search box to run a quick filter. Click a row to open the <em>Quick view</em>. Status tags like <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.</small>
     </div>
 
@@ -135,7 +127,6 @@
     </div>
 
     <div class="grid">
-      <!-- List -->
       <section class="card">
         <div class="h">All assignments <span id="total" style="color:#64748b;font-weight:600"></span></div>
         <div class="b" style="padding:0">
@@ -152,7 +143,7 @@
               </tr>
             </thead>
             <tbody id="rows">
-              <tr><td colspan="7" class="empty" style="padding:26px;text-align:center;color:#64748b">Loading assignments...</td></tr>
+              <tr><td colspan="7" style="padding:26px;text-align:center;color:#64748b">Loading assignments...</td></tr>
             </tbody>
           </table>
 
@@ -172,7 +163,6 @@
         </div>
       </section>
 
-      <!-- Quick view -->
       <aside class="card">
         <div class="h">Quick view — Assignment</div>
         <div class="b">
@@ -188,7 +178,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Drawer (New assignment) -->
   <dialog id="drawer">
     <form method="dialog" id="formNew" style="padding:16px 18px">
       <div class="drawer-head">
@@ -236,22 +225,35 @@
     </form>
   </dialog>
 
-  <script>
-    // Wait until common helpers are available
-    (async function waitForAdmin(){
-      if (window.Admin) return;
-      await new Promise(r => {
-        const t = setInterval(()=>{ if (window.Admin) { clearInterval(t); r(); } }, 30);
-      });
-    })().then(() => {
-      Admin.bootAdmin(async ({ api, sel, toast, Debug }) => {
-        Debug.chip('init: ok', 'ok');
+  <!-- IMPORTANT: load shared helpers (defines window.Admin, api(), Debug, toast, etc.) -->
+  <script defer src="./common.js"></script>
 
-        // quick chips (identity / role)
-        try {
-          Debug.chip('identity: ok','ok');
-          Debug.chip('role: admin','ok');
-        } catch {}
+  <script>
+    // Boot once common.js has loaded
+    (async function bootWhenReady(){
+      const until = Date.now() + 10000; // 10s guard
+      while (!window.Admin && Date.now() < until) {
+        await new Promise(r => setTimeout(r, 30));
+      }
+      if (!window.Admin) {
+        // last-resort message if common.js path is wrong
+        const t = document.getElementById('toast');
+        t.textContent = 'common.js not found — check the script path.';
+        t.style.display = 'block';
+        return;
+      }
+
+      Admin.bootAdmin(async ({ api, sel, toast, Debug }) => {
+        const addChip = (text, ok=true) => {
+          const host = document.getElementById('diagChips');
+          if (!host) return;
+          const sp = document.createElement('span');
+          sp.className = 'chip ' + (ok ? 'ok':'bad');
+          sp.textContent = text;
+          host.appendChild(sp);
+        };
+
+        addChip('init: ok', true);
 
         const $rows = sel('#rows');
         const $total = sel('#total');
@@ -304,19 +306,23 @@
             const q = $q.value.trim();
             const status = $status.value.trim();
 
-            // NOTE: tolerate either {items,total} or {rows,total}
             const res = await api('admin-assignments-list', { page, pageSize, q, status });
+
+            // tolerate either {items,total} or {rows,total}
             const items = res?.items ?? res?.rows ?? [];
             total = res?.total ?? items.length;
 
-            Debug.ok('assignments:list', { page, pageSize, q, status, total, got: items.length });
+            addChip('token: ok', true);
+            Debug && Debug.ok && Debug.ok('assignments:list', { page, pageSize, q, status, total, got: items.length });
+
             renderRows(items);
             $total.textContent = `(${total} total)`;
             $pageLabel.textContent = `Page ${page}`;
           }catch(err){
-            Debug.err('bootAdmin error:', err);
+            addChip('load: err', false);
+            console.error('[assignments] list error', err);
             setLoading('Failed to load. Check console for details.');
-            toast('Error loading assignments', 'error', 5000);
+            toast && toast('Error loading assignments', 'error', 5000);
           }
         }
 
@@ -325,7 +331,6 @@
             current = id;
             const detail = await api('admin-assignments-detail', { id });
             const live = (detail?.status||'').toLowerCase()==='live';
-
             sel('#quick').innerHTML = `
               <div class="kv">
                 <div class="k">Status</div><div>${renderStatus(detail?.status)}</div>
@@ -354,19 +359,16 @@
                   </div>
                 ` : `<div class="empty" style="color:#64748b">No timesheets yet.</div>`;
               }catch(e){
-                Debug.warn('timesheets latest failed', e);
                 sel('#latestTS').innerHTML = `<div class="empty" style="color:#64748b">Could not load latest timesheet.</div>`;
               }
             } else {
               sel('#latestTS').innerHTML = `<div class="empty" style="color:#64748b">Not live — no timesheets yet.</div>`;
             }
           }catch(err){
-            Debug.err('openQuickView error', err);
-            toast('Failed to open assignment','error', 4500);
+            console.error('openQuickView error', err);
           }
         }
 
-        // Events
         const onReload = ()=>{ page=1; load(); };
         document.querySelector('#btnRefresh').addEventListener('click', onReload);
         document.querySelector('#btnRefresh2').addEventListener('click', onReload);
@@ -391,7 +393,7 @@
           }
         });
 
-        // Drawer (new)
+        // Drawer
         const drawer = document.querySelector('#drawer');
         document.querySelector('#btnNew').addEventListener('click', ()=>drawer.showModal());
         document.querySelector('#drawerClose').addEventListener('click', ()=>drawer.close());
@@ -418,7 +420,7 @@
             toast('Assignment created','ok');
             page=1; load();
           }catch(err){
-            Debug.err('create error',err);
+            console.error('create error',err);
             toast('Failed to create assignment','error', 5000);
           }
         });
@@ -432,18 +434,17 @@
             selected.clear();
             toast('Deleted','ok'); load();
           }catch(err){
-            Debug.err('delete error', err);
+            console.error('delete error', err);
             toast('Delete failed','error', 5000);
           }
         });
 
-        // First load
         await load();
       });
-    });
-
-    // Netlify Identity widget (for token/sign-out button you already use)
+    })();
   </script>
+
+  <!-- Netlify Identity (token + sign-out) -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </body>
 </html>
