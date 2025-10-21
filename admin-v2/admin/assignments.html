@@ -2,18 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="robots" content="noindex,nofollow"/>
   <title>Assignments — Admin | HMJ Global</title>
 
-  <!-- Pin Identity to the live site's Identity instance (same as candidates.html) -->
-  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
-  <!-- Or: <meta name="netlify-identity-url" content="https://hmjg.netlify.app/.netlify/identity"> -->
+  <!-- Make Identity point to the live site (same pattern as candidates.html) -->
+  <meta name="netlify-identity-url" content="https://hmjg.netlify.app/.netlify/identity"/>
 
-  <!-- Identity widget FIRST -->
+  <!-- Identity FIRST, then shared Admin bootstrap -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-  <!-- Shared admin bootstrap (single copy; bump query when common.js changes) -->
   <script defer src="/admin-v2/admin/common.js?v=15"></script>
 
   <style>
@@ -22,19 +19,20 @@
       --ink:#0f172a;
       --muted:#64748b;
       --line:#e2e8f0;
-      --blue:#1f4c8f;            /* HMJ blue (softer) */
+      --blue:#1f4c8f;          /* HMJ blue (softer) */
       --blue-ink:#113465;
-      --chip:#eaf2ff;
       --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
       --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.08);
       --radius:14px;
     }
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;background:#fff;color:var(--ink);
-      font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,
-            "Helvetica Neue","Noto Sans","Liberation Sans",Arial;}
+      font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,"Helvetica Neue","Noto Sans",Arial;}
     a{color:var(--blue-ink);text-decoration:none}
     a:hover{text-decoration:underline}
+    button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible{
+      outline:3px solid #bfd6ff; outline-offset:2px; border-radius:10px;
+    }
 
     .appbar{position:sticky;top:0;z-index:30;background:#eff4ff;
       border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(2,8,23,.04)}
@@ -42,16 +40,16 @@
     .brand{display:flex;align-items:center;gap:8px;font-weight:800;color:#0b1d3c}
     .brand .logo{width:28px;height:28px;border-radius:7px;background:var(--blue);
       display:inline-grid;place-items:center;color:#fff}
+
     .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{background:var(--chip);color:#0b1d3c;border:1px solid #dbeafe;
+    .chip{background:#eaf2ff;color:#0b1d3c;border:1px solid #dbeafe;
       padding:6px 10px;border-radius:999px;font-weight:700}
     .chip.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
     .chip.warn{background:#fffbeb;border-color:#fde68a;color:#7c5800}
     .chip.bad{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
 
     .actions{margin-left:auto;display:flex;gap:10px}
-    .btn{border:1px solid var(--line);background:#fff;padding:8px 12px;
-      border-radius:12px;font-weight:700;cursor:pointer}
+    .btn{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:12px;font-weight:700;cursor:pointer}
     .btn:hover{box-shadow:var(--shadow)}
     .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
     .btn.light{background:#f8fafc}
@@ -91,22 +89,18 @@
     dialog#drawer{border:none;max-width:760px;width:96%;border-radius:16px;box-shadow:var(--shadow)}
     dialog::backdrop{background:rgba(15,23,42,.35)}
     .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none}
-    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#f1f5f9}
   </style>
 </head>
 
 <body>
-  <!-- App bar -->
+  <!-- Header -->
   <header class="appbar">
     <div class="row">
       <div class="brand">
         <span class="logo">H</span> HMJ Global — Admin
       </div>
       <a class="btn light" href="./index.html">← Dashboard</a>
-
-      <!-- live diag chips (filled by common.js Debug helper) -->
       <nav id="diagChips" class="chips"></nav>
-
       <div class="actions">
         <button id="btnRefresh" class="btn">↻ Refresh</button>
         <button id="btnNew" class="btn primary">＋ New assignment</button>
@@ -116,20 +110,8 @@
     </div>
   </header>
 
-  <!-- Gate shown while checking role/session -->
-  <div class="container" id="gate" style="display:none">
-    <div class="card">
-      <div class="b">
-        <strong>Admin only.</strong>
-        <p class="empty why">Checking your session…</p>
-        <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Main app -->
-  <main class="container" id="app" style="display:none">
-    <!-- Controls -->
+  <!-- Main -->
+  <main class="container">
     <div class="toolbar">
       <div class="search">
         <span class="ico">🔍</span>
@@ -146,7 +128,6 @@
     </div>
 
     <div class="grid">
-      <!-- List -->
       <section class="card">
         <div class="h">All assignments <span id="total" class="empty"></span></div>
         <div class="b" style="padding:0">
@@ -184,7 +165,6 @@
         </div>
       </section>
 
-      <!-- Quick view / latest timesheet -->
       <aside class="card">
         <div class="h">Quick view — Assignment</div>
         <div class="b"><div id="quick" class="empty">Select an assignment to preview details here.</div></div>
@@ -194,21 +174,19 @@
     </div>
   </main>
 
+  <!-- Toast -->
   <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Drawer (New assignment) -->
+  <!-- Drawer -->
   <dialog id="drawer">
     <form method="dialog" id="formNew" style="padding:16px 18px;max-height:80vh;overflow:auto">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <h3 style="margin:0">New assignment</h3>
-        <div style="display:flex;gap:8px">
-          <button class="btn light" value="cancel">Close</button>
-        </div>
+        <button class="btn light" value="cancel">Close</button>
       </div>
 
       <div style="display:grid;gap:12px">
         <label>Job title *<br/><input id="title" required class="select" style="width:100%"/></label>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label>PO number<br/><input id="po" class="select" style="width:100%"/></label>
           <label>Shift<br/>
@@ -218,12 +196,10 @@
             </select>
           </label>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label>Start date<br/><input id="start" type="date" class="select" style="width:100%"/></label>
           <label>End date<br/><input id="end" type="date" class="select" style="width:100%"/></label>
         </div>
-
         <div class="kv" style="margin-top:6px">
           <div class="k">Client</div><div><input id="client" class="select" placeholder="Client name / ref"/></div>
           <div class="k">Client site</div><div><input id="site" class="select" placeholder="(optional)"/></div>
@@ -240,28 +216,23 @@
     </form>
   </dialog>
 
-  <!-- Page script: waits for Admin + Identity, then boots page -->
+  <!-- Page script: waits for Admin then boots safely -->
   <script>
-    (function startWhenReady(){
-      const ready = () => window.Admin && window.netlifyIdentity;
-      if (!ready()) return setTimeout(startWhenReady, 25);
+    (function bootWhenReady(){
+      if (!window.Admin || !window.Admin.bootAdmin) return setTimeout(bootWhenReady, 25);
 
-      // Mirror the candidates.html gate sequence
-      Admin.bootAdmin(async ({ gate, app, id, token, role, Debug, sel, api, toast }) => {
+      Admin.bootAdmin(async (ctx) => {
+        const { api, sel, toast, Debug } = ctx;
+        // Safe Debug shim so calls never explode
+        const D = Debug || {
+          chip(){}, ok: (...a)=>console.log(...a),
+          warn: (...a)=>console.warn(...a), err: (...a)=>console.error(...a)
+        };
+
         // Diag chips
-        Debug.chip('init', 'ok');
-        Debug.chip('identity', id ? 'ok' : '—', id ? 'ok' : 'warn');
-        Debug.chip('role', role || '—', role === 'admin' ? 'ok' : 'warn');
-        Debug.chip('token', token ? 'ok' : '—', token ? 'ok' : 'warn');
+        D.chip('init','ok');
 
-        // Gate
-        if (role !== 'admin' || !token) {
-          gate.show('Restricted. Sign in with an admin account.');
-          return;
-        }
-        gate.hide(); app.show();
-
-        // --------- DOM refs
+        // DOM
         const $rows = sel('#rows');
         const $total = sel('#total');
         const $pageLabel = sel('#pageLabel');
@@ -275,15 +246,15 @@
         const selected = new Set();
         let current = null;
 
-        // --------- helpers
-        const fmtDate = x => x ? new Date(x).toLocaleDateString() : '—';
-        const fmtRange = (a,b) => (!a && !b) ? '—' : `${fmtDate(a)} → ${fmtDate(b)}`;
+        // Helpers
+        const fDate = x => x ? new Date(x).toLocaleDateString() : '—';
+        const fRange = (a,b) => (!a && !b) ? '—' : `${fDate(a)} → ${fDate(b)}`;
         const pill = s => `<span class="status ${s}">${s}</span>`;
         const setLoading = (msg='Loading…') =>
           $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${msg}</td></tr>`;
 
         function renderRows(items){
-          if (!items?.length) { setLoading('No assignments found.'); return; }
+          if (!items?.length){ setLoading('No assignments found.'); return; }
           $rows.innerHTML = items.map(x=>{
             const live = (x.status||'').toLowerCase()==='live';
             return `
@@ -292,7 +263,7 @@
                 <td><a href="#" class="rowLink" data-id="${x.id}">${x.title||'—'}</a></td>
                 <td>${x.client_name||'—'}</td>
                 <td>${x.candidate_name||'—'}</td>
-                <td>${fmtRange(x.start_date, x.end_date)}</td>
+                <td>${fRange(x.start_date, x.end_date)}</td>
                 <td>${pill((x.status||'draft').toLowerCase())}</td>
                 <td class="row-actions">
                   <button class="btn light act-open" data-id="${x.id}">Open</button>
@@ -312,18 +283,17 @@
             renderRows(res?.items||[]);
             $total.textContent = `(${total} total)`;
             $pageLabel.textContent = `Page ${page}`;
-            Debug.ok('assignments:list', {page,pageSize,q,status,total});
+            D.ok('assignments:list', {page,pageSize,q,status,total});
           }catch(err){
-            Debug.err('[assignments] list error', err);
+            D.err('[assignments] list error', err);
             setLoading('Failed to load. Check console for details.');
-            toast('Error: failed to load assignments', 'bad', 5000);
+            toast('Error: failed to load assignments','bad', 5000);
           }
         }
 
         async function openQuickView(id){
           try{
             current = id;
-
             const detail = await api('admin-assignments-detail', { id });
             const live = (detail?.status||'').toLowerCase()==='live';
 
@@ -333,15 +303,14 @@
                 <div class="k">Client</div><div>${detail?.client_name||'—'}</div>
                 <div class="k">Candidate</div><div>${detail?.candidate_name||'—'}</div>
                 <div class="k">PO number</div><div>${detail?.po_number||'—'}</div>
-                <div class="k">Dates</div><div>${fmtRange(detail?.start_date, detail?.end_date)}</div>
+                <div class="k">Dates</div><div>${fRange(detail?.start_date, detail?.end_date)}</div>
                 <div class="k">Shift</div><div>${detail?.shift||'Day'}</div>
                 <div class="k">Expected hrs</div><div>${detail?.estimated_hours||'—'}</div>
               </div>
               <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
                 <a class="btn light" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
                 ${live ? `<a class="btn light" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : ''}
-              </div>
-            `;
+              </div>`;
 
             if (live){
               try{
@@ -361,30 +330,28 @@
                   sel('#latestTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
                 }
               }catch(tsErr){
-                Debug.warn('timesheets load failed', tsErr);
+                D.warn('timesheets load failed', tsErr);
                 sel('#latestTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
               }
             } else {
               sel('#latestTS').innerHTML = `<div class="empty">Not live — no timesheets yet.</div>`;
             }
 
-            toast('Opened assignment', 'ok');
+            toast('Opened assignment','ok');
           }catch(err){
-            Debug.err('openQuickView error', err);
-            toast('Failed to open assignment', 'bad', 4500);
+            D.err('openQuickView error', err);
+            toast('Failed to open assignment','bad', 4500);
           }
         }
 
         // Events
-        document.querySelector('#btnRefresh').addEventListener('click', ()=>{ page=1; load(); });
-        document.querySelector('#btnRefresh2').addEventListener('click', ()=>{ page=1; load(); });
-
+        sel('#btnRefresh').addEventListener('click', ()=>{ page=1; load(); });
+        sel('#btnRefresh2').addEventListener('click', ()=>{ page=1; load(); });
         $q.addEventListener('keydown', e => { if(e.key==='Enter'){ page=1; load(); }});
         $status.addEventListener('change', ()=>{ page=1; load(); });
         $pageSize.addEventListener('change', ()=>{ pageSize = Number($pageSize.value||20); page=1; load(); });
-
-        document.querySelector('#prev').addEventListener('click', ()=>{ if(page>1){ page--; load(); }});
-        document.querySelector('#next').addEventListener('click', ()=>{ page++; load(); });
+        sel('#prev').addEventListener('click', ()=>{ if(page>1){ page--; load(); }});
+        sel('#next').addEventListener('click', ()=>{ page++; load(); });
 
         document.addEventListener('click', (e)=>{
           const open = e.target.closest('.act-open, .rowLink');
@@ -401,9 +368,9 @@
         });
 
         // Drawer
-        const drawer = document.querySelector('#drawer');
-        document.querySelector('#btnNew').addEventListener('click', ()=>drawer.showModal());
-        document.querySelector('#formNew').addEventListener('submit', async (e)=>{
+        const drawer = sel('#drawer');
+        sel('#btnNew').addEventListener('click', ()=>drawer.showModal());
+        sel('#formNew').addEventListener('submit', async (e)=>{
           e.preventDefault();
           try{
             const payload = {
@@ -422,15 +389,15 @@
             await api('admin-assignments-create', payload);
             drawer.close();
             toast('Assignment created','ok');
-            page = 1; load();
+            page=1; load();
           }catch(err){
-            Debug.err('create error', err);
+            D.err('create error', err);
             toast('Failed to create assignment','bad', 5000);
           }
         });
 
         // Delete
-        document.querySelector('#btnDelete').addEventListener('click', async ()=>{
+        sel('#btnDelete').addEventListener('click', async ()=>{
           if (!selected.size){ toast('Select at least one row','warn'); return; }
           if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
           try{
@@ -438,12 +405,12 @@
             selected.clear();
             toast('Deleted','ok'); load();
           }catch(err){
-            Debug.err('delete error', err);
+            D.err('delete error', err);
             toast('Delete failed','bad', 5000);
           }
         });
 
-        // Initial load
+        // First load
         await load();
       });
     })();
