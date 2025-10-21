@@ -6,435 +6,263 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Assignments — Admin | HMJ Global</title>
 
-  <!-- Pin Identity to the production site (same approach as candidates.html) -->
+  <!-- Identity + Admin bootstrap -->
   <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
-
-  <!-- Identity FIRST, then shared admin bootstrap -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="/admin-v2/admin/common.js?v=15"></script>
+  <script defer src="/admin-v2/admin/common.js?v=17"></script>
 
   <style>
     :root{
-      --ink:#101828; --bg:#ffffff; --muted:#667085;
-      --blue:#1f3b7a; --blue-2:#29478f;
-      --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
-      --success:#16a34a; --danger:#dc2626; --warn:#f59e0b; --chip:#eef2ff;
+      --ink:#101828; --bg:#f9fafb; --muted:#667085;
+      --blue:#1f3b7a; --blue-light:#274ca1;
+      --border:#e5e7eb; --card:#fff;
+      --success:#16a34a; --warn:#f59e0b; --danger:#dc2626;
+      --radius:14px;
+      --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 10px rgba(0,0,0,.08);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    html,body{margin:0;padding:0;font:15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:var(--bg);color:var(--ink)}
 
-    /* Top bar */
-    .top{position:sticky;top:0;z-index:50;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
-    .row{max-width:1400px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
-    .brand{font-weight:800;letter-spacing:.2px;display:flex;gap:10px;align-items:center}
-    .brand a{display:inline-flex;gap:8px;align-items:center;color:#fff;text-decoration:none}
-    .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;display:grid;place-items:center;color:var(--blue);font-weight:900}
-    .sp{flex:1}
-    .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
-    .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-    .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
-    .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    /* HEADER */
+    .top{background:var(--blue);color:#fff;position:sticky;top:0;z-index:100;border-bottom:2px solid #0b225b}
+    .top .bar{display:flex;align-items:center;gap:12px;max-width:1400px;margin:0 auto;padding:12px 18px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .brand .logo{width:30px;height:30px;background:#fff;color:var(--blue);display:grid;place-items:center;border-radius:8px;font-weight:900}
+    .btn{border:none;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;user-select:none}
+    .btn:hover{opacity:.9}
+    .btn.primary{background:var(--blue);color:#fff}
+    .btn.ghost{background:rgba(255,255,255,.15);color:#fff}
+    .btn.danger{background:var(--danger);color:#fff}
+    .btn.light{background:#fff;color:var(--blue)}
+    .chips{display:flex;gap:6px;flex-wrap:wrap}
+    .chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:3px 10px;font-weight:600;font-size:13px}
+    .chip.ok{background:#e8fff3;color:#0a4f24}
+    .chip.warn{background:#fffbe8;color:#735d02}
+    .chip.bad{background:#ffebeb;color:#6a1a1a}
 
-    .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none}
-    .btn:hover{background:var(--blue-2)}
-    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
-    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
-    .btn.small{padding:6px 10px;border-radius:10px}
-    .btn.danger{background:#7a1f28;border-color:#7a1f28}
-    .btn.icon{display:inline-grid;grid-auto-flow:column;gap:8px;align-items:center}
+    /* BODY */
+    .wrap{max-width:1400px;margin:18px auto;padding:0 18px;animation:fadein .4s ease}
+    @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-    .wrap{max-width:1400px;margin:20px auto;padding:0 16px}
-    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
-    .bar{position:sticky;top:64px;z-index:45;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+    input,select,textarea{border:1px solid var(--border);border-radius:10px;padding:9px 12px;font:inherit}
+    input[type=search]{min-width:240px}
+    table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+    th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--border)}
+    th{background:#f8fafc;font-weight:700;font-size:13px;color:#475569}
+    tr:hover td{background:#f3f4f6}
+    .empty{padding:30px;text-align:center;color:var(--muted)}
 
-    input[type=text], input[type=search], input[type=date], select, textarea{
-      border:1px solid var(--stroke);background:#fff;border-radius:12px;padding:9px 12px;min-width:180px;font:inherit
-    }
-    input[type=search]{min-width:280px}
+    .grid{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+    @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 
-    table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
-    thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:10px 12px;font-weight:800}
-    tbody td{border-top:1px solid var(--stroke);padding:10px 12px;vertical-align:middle}
-    tbody tr:hover{background:#f8fafc}
-    .muted{color:var(--muted)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .card h3{margin:0 0 10px;font-size:17px}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:14px}
+    .kv .k{color:var(--muted)}
+    .status{display:inline-block;padding:3px 10px;border-radius:9999px;font-weight:700;font-size:12px;text-transform:capitalize}
+    .status.live{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
+    .status.draft{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    .status.complete{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
 
-    /* Layout with Quick View */
-    .grid-main{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start}
-    @media (max-width:1100px){ .grid-main{grid-template-columns:1fr} }
-    .qv{position:sticky;top:116px;background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:14px;min-height:120px}
-    .qv h4{margin:0 0 8px}
-    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px}
-    .kv b{color:#334155}
-    .empty{padding:28px;text-align:center;color:var(--muted)}
-
-    /* Drawer (New assignment) */
-    .drawer{position:fixed;inset:0 0 0 auto;max-width:760px;width:95vw;background:#fff;box-shadow:-4px 0 24px rgba(2,6,23,.24);transform:translateX(100%);transition:transform .24s ease;z-index:60;display:grid;grid-template-rows:auto 1fr auto}
-    .drawer.open{transform:translateX(0)}
-    .d-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--stroke);background:var(--card)}
-    .d-body{padding:16px;overflow:auto}
-    .d-foot{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--stroke);background:#fff}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px}
-    @media (max-width:820px){ .grid{grid-template-columns:1fr} }
-    .field{display:grid;gap:6px}
+    /* Drawer */
+    .drawer{position:fixed;inset:0 0 0 auto;max-width:760px;width:95vw;background:#fff;box-shadow:-5px 0 30px rgba(0,0,0,.2);transform:translateX(100%);transition:transform .25s ease;z-index:200;display:grid;grid-template-rows:auto 1fr auto}
+    .drawer.open{transform:none}
+    .drawer h2{margin:0}
+    .drawer .head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:#f8fafc}
+    .drawer .body{padding:18px;overflow:auto}
+    .drawer .foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#fff}
+    .field{display:grid;gap:4px}
     .field label{font-weight:700;font-size:13px}
-    .hr{height:1px;background:var(--stroke);margin:8px 0 4px}
+    .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
 
-    .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
-    .status-pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
-    .status-live{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-    .status-complete{background:#f1f5f9;border-color:#cbd5e1;color:#334155}
-    .status-draft{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+    /* Hints */
+    .hint{background:#eef2ff;border-left:4px solid var(--blue);padding:10px 14px;border-radius:8px;font-size:14px;color:#1e3a8a;margin:8px 0}
+    .hint strong{display:block;font-weight:800;color:var(--blue)}
+
+    /* Toast placeholder */
+    #toast{position:fixed;bottom:18px;right:18px;z-index:500}
+
   </style>
 </head>
-
 <body>
-  <!-- Header -->
-  <div class="top"><div class="row">
-    <div class="brand">
-      <a href="../"><span class="logo">H</span> HMJ Global</a>
-      <span class="pill">Admin</span>
-      <span class="pill">Assignments</span>
-    </div>
-    <a class="btn ghost" href="./index.html">⟵ Dashboard</a>
-    <div class="sp"></div>
-    <div id="diagChips" class="chips"></div>
-    <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
-  </div></div>
-
-  <!-- Gate (when not admin) -->
-  <div class="wrap" id="gate" style="display:none">
-    <div class="card">
-      <strong>Admin only.</strong>
-      <p class="muted why">Checking your session…</p>
-      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+  <div class="top">
+    <div class="bar">
+      <div class="brand"><div class="logo">H</div> HMJ Global</div>
+      <span class="chip">Admin</span>
+      <span class="chip">Assignments</span>
+      <div style="flex:1"></div>
+      <a href="./index.html" class="btn light">← Dashboard</a>
+      <div id="diagChips" class="chips"></div>
+      <button class="btn ghost" onclick="window.netlifyIdentity?.logout()">Sign out</button>
     </div>
   </div>
 
-  <!-- App -->
-  <div class="wrap" id="app" style="display:none">
-    <!-- toolbar -->
-    <div class="card bar">
-      <input id="q" type="search" placeholder="Search (title, ref, client, candidate)…"/>
-      <select id="status" style="min-width:180px">
-        <option value="">All statuses</option>
-        <option value="Draft">Draft</option>
-        <option value="Complete">Complete</option>
-        <option value="Live">Live</option>
-        <option value="Archived">Archived</option>
-      </select>
-      <button class="btn small" id="btnRefresh">Refresh</button>
-      <div class="sp"></div>
-      <button class="btn small" id="btnNew">+ New assignment</button>
-      <button class="btn danger small" id="btnDelete" disabled>Delete</button>
+  <div class="wrap">
+    <div id="gate" style="display:none" class="card">
+      <h3>Admin Access Required</h3>
+      <p class="muted why">Verifying session…</p>
+      <button class="btn primary" onclick="window.netlifyIdentity?.open('login')">Sign in</button>
     </div>
 
-    <!-- main grid: table + quick view -->
-    <div class="grid-main">
-      <div>
-        <div class="card" id="listWrap">
-          <div class="empty">Loading…</div>
-        </div>
-        <div class="pager" id="pager" style="display:none">
-          <div class="muted" id="pgInfo"></div>
-          <div class="sp"></div>
-          <select id="pgSize"><option>20</option><option>50</option><option>100</option></select>
-          <button class="btn small ghost" id="pgPrev">◀</button>
-          <button class="btn small ghost" id="pgNext">▶</button>
-        </div>
+    <div id="app" style="display:none">
+      <div class="hint">
+        <strong>Assignments overview</strong>
+        This page lists all current and past assignments, showing client, candidate, and contract dates.
+        Use the search bar to filter by job title, client, or candidate name.
+        Status tags like <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.
       </div>
 
-      <aside class="qv" id="qv" aria-live="polite">
-        <h4>Quick view — Assignment</h4>
-        <div class="kv" id="qvBody">
-          <div class="empty">Select an assignment to preview details here.</div>
-        </div>
-        <div class="hr"></div>
+      <div class="toolbar card">
+        <input type="search" id="q" placeholder="Search (title, ref, client, candidate)…"/>
+        <select id="status">
+          <option value="">All statuses</option>
+          <option>Draft</option><option>Live</option><option>Complete</option>
+        </select>
+        <button id="btnRefresh" class="btn primary">↻ Refresh</button>
+        <div style="flex:1"></div>
+        <button id="btnNew" class="btn primary">＋ New</button>
+        <button id="btnDelete" class="btn danger" disabled>🗑 Delete</button>
+      </div>
+
+      <div class="grid">
         <div>
-          <h4>Latest timesheet</h4>
-          <div id="qvTS" class="kv"><div class="empty">Not live — no timesheets yet.</div></div>
+          <div id="listWrap" class="card"><div class="empty">Loading assignments…</div></div>
         </div>
-      </aside>
+        <aside>
+          <div class="card">
+            <h3>Quick view — Assignment</h3>
+            <div id="qvBody" class="kv"><div class="empty">Select an assignment to view details.</div></div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <h3>Latest timesheet</h3>
+            <div id="qvTS" class="kv"><div class="empty">Not live — no timesheets yet.</div></div>
+          </div>
+        </aside>
+      </div>
     </div>
   </div>
 
-  <!-- Drawer (new/edit) -->
+  <!-- Drawer -->
   <aside id="drawer" class="drawer" aria-hidden="true">
-    <div class="d-head">
-      <strong id="dTitle">New assignment</strong>
-      <span class="sp"></span>
-      <button class="btn ghost small" id="btnClose">✕ Close</button>
+    <div class="head">
+      <h2>New Assignment</h2>
+      <button id="btnClose" class="btn ghost">✕ Close</button>
     </div>
-    <div class="d-body">
-      <form id="frm" class="grid" autocomplete="off">
-        <div class="field" style="grid-column:1/-1"><label>Job title *</label><input name="title" required></div>
-
-        <div class="field"><label>PO number</label><input name="po_number"></div>
-        <div class="field"><label>Shift</label>
-          <select name="shift"><option>Day</option><option>Night</option></select>
+    <div class="body">
+      <div class="hint"><strong>Tip:</strong> You can assign a candidate later. Only the job title and client are required to create a draft.</div>
+      <form id="frm" autocomplete="off">
+        <div class="field"><label>Job Title *</label><input name="title" required></div>
+        <div class="grid2">
+          <div class="field"><label>PO Number</label><input name="po_number"></div>
+          <div class="field"><label>Shift</label><select name="shift"><option>Day</option><option>Night</option></select></div>
         </div>
-
-        <div class="field"><label>Start date</label><input name="start_date" type="date"></div>
-        <div class="field"><label>End date</label><input name="end_date" type="date"></div>
-
-        <div class="field"><label>Client</label><input name="client"></div>
-        <div class="field"><label>Client site</label><input name="client_site"></div>
-
-        <div class="field"><label>Candidate</label><input name="candidate" placeholder="Optional (can link later)"></div>
-        <div class="field"><label>Expected days / hours</label><input name="estimated_hours" placeholder="e.g. Mon–Fri, 40h"></div>
-
-        <div class="field" style="grid-column:1/-1"><label>Internal notes</label><textarea name="notes" rows="3"></textarea></div>
+        <div class="grid2">
+          <div class="field"><label>Start Date</label><input type="date" name="start_date"></div>
+          <div class="field"><label>End Date</label><input type="date" name="end_date"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Client</label><input name="client"></div>
+          <div class="field"><label>Client Site</label><input name="client_site"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Candidate</label><input name="candidate" placeholder="Leave blank if not yet assigned"></div>
+          <div class="field"><label>Expected Hours</label><input name="estimated_hours" placeholder="e.g. Mon–Fri, 40h"></div>
+        </div>
+        <div class="field" style="margin-top:8px"><label>Internal Notes</label><textarea name="notes" rows="3"></textarea></div>
       </form>
     </div>
-    <div class="d-foot">
-      <div class="muted" id="dHint">Status: Draft</div>
+    <div class="foot">
+      <div class="muted">Entries saved here appear instantly in the Assignments list.</div>
       <div>
-        <button class="btn ghost" id="btnSaveDraft" type="button">Save</button>
-        <button class="btn" id="btnSaveClose" type="button">Save & Close</button>
+        <button id="btnSave" class="btn primary">💾 Save</button>
       </div>
     </div>
   </aside>
 
-  <!-- Toast host (common.js will use this) -->
-  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast"></div>
 
   <script>
-  (function startAssignments(){
-    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.netlifyIdentity) {
-      return setTimeout(startAssignments, 30);
-    }
+  (function initPage(){
+    if (!window.Admin || !window.netlifyIdentity) return setTimeout(initPage,30);
 
-    Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
-      // --- chips like candidates ---
-      const chips = sel('#diagChips');
-      const chip = (t, tone='ok')=>{
-        if (!chips) return;
-        const s=document.createElement('span');
-        s.className='pill '+(tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
-        s.textContent=t; chips.appendChild(s);
-      };
-      chip('init: ok');
-
+    Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
+      const gate = sel('#gate'), app = sel('#app');
       const who = await identity('admin');
-      if (!who || !who.ok) {
-        chip('role: blocked','bad');
-        const g = sel('#gate'), app = sel('#app');
-        if (app) app.style.display='none';
-        if (g) { g.style.display=''; const why=g.querySelector('.why'); if (why) why.textContent='Restricted. Sign in with an admin account.'; }
-        return;
-      }
-      chip('identity: ok'); chip('role: admin'); chip('token: ok'); chip('trace: '+getTrace().slice(0,10));
+      if (!who.ok){ gate.style.display=''; app.style.display='none'; return; }
+      app.style.display='';
 
-      // ---------- State ----------
-      let rowsAll = [];
-      let rowsView = [];
-      let selected = new Set();
-      let page = 1, pageSize = 20;
-      let activeStatus = '';
-      const $ = sel;
+      const diag = sel('#diagChips');
+      const chip = (t,cls='ok')=>{ const s=document.createElement('span');s.className='chip '+cls;s.textContent=t;diag.appendChild(s); };
+      chip('init: ok'); chip('identity: ok'); chip('role: admin'); chip('token: ok');
 
-      // ---------- Helpers ----------
-      const fmtDates = (a,b)=>{
-        const f = x => x ? new Date(x).toLocaleDateString() : '—';
-        if(!a && !b) return '—';
-        return `${f(a)} → ${f(b)}`;
-      };
-      const pillStatus = (s)=>{
-        const v = (s||'Draft');
-        const cls = v.toLowerCase()==='live' ? 'status-live' : v.toLowerCase()==='complete' ? 'status-complete' : 'status-draft';
-        return `<span class="status-pill ${cls}">${v}</span>`;
-      };
+      let rows=[]; let selected=new Set();
 
-      function renderTable(){
-        const wrap = $('#listWrap');
-        if (!rowsView.length) { wrap.innerHTML = `<div class="empty">No assignments match your filters.</div>`; $('#pager').style.display='none'; return; }
-
-        const start = (page-1)*pageSize;
-        const slice = rowsView.slice(start, start+pageSize);
-
-        const head = `
-          <thead><tr>
-            <th style="width:28px"><input id="ckAll" type="checkbox" ${slice.length && selected.size>=slice.length?'checked':''}></th>
-            <th>Title</th><th>Client</th><th>Candidate</th><th>Dates</th><th>Status</th><th style="width:160px"></th>
-          </tr></thead>`;
-
-        const body = slice.map(r=>{
-          const live = (r.status||'').toLowerCase()==='live';
-          return `<tr data-row="${r.id}">
-            <td><input type="checkbox" data-id="${r.id}" ${selected.has(r.id)?'checked':''}></td>
-            <td><a href="#" data-open="${r.id}">${r.title||'—'}</a></td>
-            <td>${r.client_name||'—'}</td>
-            <td>${r.candidate_name||'—'}</td>
-            <td>${fmtDates(r.start_date, r.end_date)}</td>
-            <td>${pillStatus(r.status)}</td>
-            <td>
-              <button class="btn small ghost" data-quick="${r.id}">Quick view</button>
-              ${live ? `<a class="btn small ghost" href="./timesheets.html?assignment=${encodeURIComponent(r.id)}">Timesheets</a>` : ''}
-            </td>
-          </tr>`;
-        }).join('');
-
-        wrap.innerHTML = `<table>${head}<tbody>${body}</tbody></table>`;
-
-        // wires
-        $('#ckAll')?.addEventListener('click', (e)=>{
-          slice.forEach(r=>{ if (e.target.checked) selected.add(r.id); else selected.delete(r.id); });
-          renderTable(); enableDelete();
-        });
-        wrap.querySelectorAll('input[type=checkbox][data-id]').forEach(c=>{
-          c.onchange = ()=>{ const id=Number(c.getAttribute('data-id')); if (c.checked) selected.add(id); else selected.delete(id); enableDelete(); };
-        });
-        wrap.querySelectorAll('[data-open]').forEach(a=>{
-          a.onclick = (e)=>{ e.preventDefault(); openQuick(Number(a.getAttribute('data-open'))); };
-        });
-        wrap.querySelectorAll('[data-quick]').forEach(b=>{
-          b.onclick = (e)=>{ e.stopPropagation(); openQuick(Number(b.getAttribute('data-quick'))); };
-        });
-
-        // pager
-        const totalPages = Math.max(1, Math.ceil(rowsView.length / pageSize));
-        $('#pager').style.display='';
-        $('#pgInfo').textContent = `Page ${page} of ${totalPages} (${rowsView.length} items)`;
-        $('#pgPrev').disabled = page<=1;
-        $('#pgNext').disabled = page>=totalPages;
-      }
-
-      function applyFilters(){
-        const q = ($('#q')?.value || '').toLowerCase().trim();
-        rowsView = rowsAll.filter(r=>{
-          const hit = (v)=>String(v||'').toLowerCase().includes(q);
-          const okQ = !q || hit(r.title)||hit(r.ref)||hit(r.client_name)||hit(r.candidate_name);
-          const okS = !activeStatus || (r.status||'Draft')===activeStatus;
-          return okQ && okS;
-        });
-        page = 1;
-      }
-
-      function enableDelete(){ $('#btnDelete').disabled = selected.size===0; }
-
-      // ---------- Data ----------
-      async function load(){
-        const wrap = $('#listWrap'); wrap.innerHTML = `<div class="empty">Loading…</div>`;
-        try{
-          const res = await api('admin-assignments-list','POST',{
-            q: ($('#q')?.value || '').trim(),
-            status: activeStatus || '',
-            page, pageSize
-          });
-          rowsAll = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : []);
-          applyFilters(); renderTable();
-        }catch(e){
-          console.error('[assignments] list error', e);
-          wrap.innerHTML = `<div class="empty">Failed to load. Check console for details.</div>`;
-          toast('Error: failed to load assignments','error', 4200);
+      function render(list){
+        const wrap=sel('#listWrap');
+        if(!list.length){ wrap.innerHTML='<div class="empty">No assignments found.</div>'; return;}
+        const html=['<table><thead><tr><th></th><th>Title</th><th>Client</th><th>Candidate</th><th>Dates</th><th>Status</th><th></th></tr></thead><tbody>'];
+        for(const x of list){
+          html.push(`<tr data-id="${x.id}">
+            <td><input type="checkbox" data-id="${x.id}" ${selected.has(x.id)?'checked':''}></td>
+            <td><a href="#" data-open="${x.id}">${x.title||'—'}</a></td>
+            <td>${x.client_name||'—'}</td>
+            <td>${x.candidate_name||'—'}</td>
+            <td>${(x.start_date||'—')} → ${(x.end_date||'—')}</td>
+            <td><span class="status ${x.status?.toLowerCase()||'draft'}">${x.status||'draft'}</span></td>
+            <td><button class="btn ghost" data-quick="${x.id}">Quick view</button></td>
+          </tr>`);
         }
+        html.push('</tbody></table>');
+        wrap.innerHTML=html.join('');
+        wrap.querySelectorAll('[data-open]').forEach(a=>a.onclick=e=>{e.preventDefault();openQuick(a.dataset.open);});
+        wrap.querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{c.checked?selected.add(+c.dataset.id):selected.delete(+c.dataset.id);sel('#btnDelete').disabled=!selected.size;});
+        wrap.querySelectorAll('[data-quick]').forEach(b=>b.onclick=e=>{e.stopPropagation();openQuick(b.dataset.quick);});
+      }
+
+      async function load(){
+        try{
+          const res=await api('admin-assignments-list','POST',{});
+          rows=res.items||[]; render(rows);
+        }catch(e){console.error(e);toast('Error loading assignments','bad',4000);}
       }
 
       async function openQuick(id){
         try{
-          const detail = await api('admin-assignments-detail','POST',{ id });
-          const live = (detail?.status||'').toLowerCase()==='live';
-          $('#qvBody').innerHTML = `
-            <div class="kv">
-              <b>Status</b><div>${pillStatus(detail?.status)}</div>
-              <b>Client</b><div>${detail?.client_name||'—'}</div>
-              <b>Candidate</b><div>${detail?.candidate_name||'—'}</div>
-              <b>PO number</b><div>${detail?.po_number||'—'}</div>
-              <b>Dates</b><div>${fmtDates(detail?.start_date, detail?.end_date)}</div>
-              <b>Shift</b><div>${detail?.shift||'Day'}</div>
-              <b>Expected hrs</b><div>${detail?.estimated_hours||'—'}</div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px">
-              <a class="btn small" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
-              ${live ? `<a class="btn small ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : ''}
-            </div>`;
-
-          if (live) {
-            try{
-              const ts = await api('admin-timesheets-list','POST',{ assignmentId:id, limit:1 });
-              const item = ts?.items?.[0];
-              if (item){
-                $('#qvTS').innerHTML = `
-                  <div class="kv">
-                    <b>Week</b><div>${item.week_commencing || '—'}</div>
-                    <b>Hours</b><div>${item.total_hours ?? '—'}</div>
-                    <b>Status</b><div>${pillStatus(item.status || 'Draft')}</div>
-                  </div>
-                  <div style="margin-top:8px">
-                    <a class="btn small ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
-                  </div>`;
-              } else {
-                $('#qvTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
-              }
-            }catch(e){
-              $('#qvTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
-            }
-          } else {
-            $('#qvTS').innerHTML = `<div class="empty">Not live — no timesheets yet.</div>`;
-          }
-        }catch(e){
-          console.error('openQuick error', e);
-          toast('Failed to open assignment','error', 4200);
-        }
+          const d=await api('admin-assignments-detail','POST',{id});
+          sel('#qvBody').innerHTML=`<div class="kv">
+            <div class="k">Client</div><div>${d.client_name||'—'}</div>
+            <div class="k">Candidate</div><div>${d.candidate_name||'—'}</div>
+            <div class="k">PO</div><div>${d.po_number||'—'}</div>
+            <div class="k">Dates</div><div>${d.start_date||'—'} → ${d.end_date||'—'}</div>
+          </div>`;
+          toast('Loaded assignment','ok',1200);
+        }catch(e){toast('Failed to open','bad',3000);}
       }
 
-      async function createOrSave(closeAfter=false){
-        const f = $('#frm');
-        const body = Object.fromEntries(new FormData(f).entries());
-        // normalize empties to null
-        Object.keys(body).forEach(k=>{ if (body[k] === '') body[k] = null; });
-        if (!body.title) { toast('Job title is required','warn',1800); return; }
-        try{
-          await api('admin-assignments-create','POST', body);
-          toast('Assignment saved','ok',1600);
-          if (closeAfter) closeDrawer();
-          await load();
-        }catch(e){
-          console.error('[assignments] save error', e);
-          toast('Failed to save assignment','error', 4200);
-        }
+      async function saveNew(){
+        const body=Object.fromEntries(new FormData(sel('#frm')).entries());
+        if(!body.title){toast('Title is required','warn',1500);return;}
+        try{await api('admin-assignments-create','POST',body);toast('Saved','ok',1500);closeDrawer();load();}
+        catch(e){toast('Failed to save','bad',3000);}
       }
 
-      async function delSelected(){
-        if (!selected.size) return;
-        if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
-        try{
-          await api('admin-assignments-delete','POST',{ ids:[...selected] });
-          toast('Deleted','ok',1500);
-          selected.clear(); enableDelete(); load();
-        }catch(e){
-          console.error('[assignments] delete error', e);
-          toast('Delete failed','error', 4200);
-        }
+      async function del(){
+        if(!selected.size)return;
+        if(!confirm('Delete selected?'))return;
+        try{await api('admin-assignments-delete','POST',{ids:[...selected]});toast('Deleted','ok',1500);selected.clear();load();}
+        catch(e){toast('Failed','bad',3000);}
       }
 
-      // ---------- Drawer ----------
-      const drawer = $('#drawer');
-      const openDrawer = ()=> drawer.classList.add('open');
-      const closeDrawer = ()=> drawer.classList.remove('open');
-      $('#btnClose').onclick = closeDrawer;
-      $('#btnNew').onclick = ()=>{ $('#frm').reset(); $('#dTitle').textContent='New assignment'; $('#dHint').textContent='Status: Draft'; openDrawer(); };
-      $('#btnSaveDraft').onclick = ()=>createOrSave(false);
-      $('#btnSaveClose').onclick = ()=>createOrSave(true);
+      const drawer=sel('#drawer');
+      const openDrawer=()=>drawer.classList.add('open');
+      const closeDrawer=()=>drawer.classList.remove('open');
+      sel('#btnClose').onclick=closeDrawer;
+      sel('#btnNew').onclick=openDrawer;
+      sel('#btnSave').onclick=saveNew;
+      sel('#btnDelete').onclick=del;
 
-      // ---------- UI wires ----------
-      $('#btnRefresh').onclick = load;
-      $('#btnDelete').onclick  = delSelected;
-      $('#q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ applyFilters(); renderTable(); }});
-      $('#status').addEventListener('change', e=>{ activeStatus = e.target.value; applyFilters(); renderTable(); });
-      $('#pgPrev').onclick = ()=>{ if (page>1){ page--; renderTable(); } };
-      $('#pgNext').onclick = ()=>{ page++; renderTable(); };
-      $('#pgSize').onchange = (e)=>{ pageSize = Number(e.target.value)||20; page=1; renderTable(); };
-
-      document.addEventListener('keydown',(e)=>{
-        if ((e.ctrlKey||e.metaKey) && e.key==='r'){ e.preventDefault(); load(); }
-        if ((e.ctrlKey||e.metaKey) && e.key==='s' && drawer.classList.contains('open')){ e.preventDefault(); createOrSave(false); }
-        if (e.key==='Escape' && drawer.classList.contains('open')){ e.preventDefault(); closeDrawer(); }
-      });
-
-      // ---------- Go ----------
       await load();
-      enableDelete();
     });
   })();
   </script>
