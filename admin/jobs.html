@@ -1,401 +1,793 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Jobs — Admin | HMJ-Global</title>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-<link rel="stylesheet" href="/css/style.css"/>
-<style>
-  :root{--bg:#0b101d;--panel:#111b2c;--border:#1f2a3f;--accent:#4c7bff;--text:#e6f0ff;--muted:#9fb1ce;--chip:#18253d}
-  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto}
-  a{color:inherit}
-  .top{position:sticky;top:0;z-index:20;background:#0d1525;border-bottom:1px solid rgba(255,255,255,.06)}
-  .row{max-width:1280px;margin:0 auto;padding:14px 18px;display:flex;gap:12px;align-items:center}
-  .brand{font-weight:800;font-size:18px}
-  .sp{flex:1}
-  .btn{background:#172641;border:1px solid rgba(255,255,255,.12);color:#fff;padding:9px 14px;border-radius:12px;font-weight:600;cursor:pointer;transition:border-color .2s,transform .1s,box-shadow .2s}
-  .btn:hover{border-color:rgba(255,255,255,.3);transform:translateY(-1px);box-shadow:0 10px 20px rgba(0,0,0,.25)}
-  .btn.secondary{background:#0f172a}
-  .btn.ghost{background:transparent;border-color:rgba(76,123,255,.4);color:#9fb9ff}
-  .btn.danger{background:#2b1216;border-color:#6f1d26}
-  .wrap{max-width:1280px;margin:28px auto;padding:0 18px;display:grid;gap:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 38px rgba(0,0,0,.25)}
-  .muted{color:var(--muted)}
-  input,select,textarea{width:100%;box-sizing:border-box;background:#0f172a;color:#e6f0ff;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:11px 12px;font-size:14px;font-family:inherit}
-  input:focus,select:focus,textarea:focus{outline:2px solid rgba(76,123,255,.55);border-color:rgba(76,123,255,.35)}
-  label{display:grid;gap:6px;font-weight:600;font-size:13px;color:var(--muted)}
-  textarea{min-height:120px;resize:vertical}
-  .layout{display:grid;grid-template-columns: minmax(260px, 360px) minmax(340px, 1fr);gap:16px;align-items:start}
-  @media(max-width:1100px){.layout{grid-template-columns:1fr}}
-  .job-list{display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow:auto;padding-right:6px}
-  .job-item{border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px 14px;display:grid;gap:4px;background:#101b30;cursor:pointer;transition:border-color .2s,background .2s,transform .1s}
-  .job-item:hover{border-color:rgba(76,123,255,.35)}
-  .job-item.active{border-color:var(--accent);background:rgba(76,123,255,.12)}
-  .job-item h4{margin:0;font-size:15px;color:#f5f8ff}
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.05em;border:1px solid rgba(255,255,255,.12)}
-  .pill.live{background:rgba(33,158,72,.18);color:#6ce89f;border-color:rgba(33,158,72,.45)}
-  .pill.interviewing{background:rgba(255,193,7,.18);color:#ffe28c;border-color:rgba(255,193,7,.35)}
-  .pill.closed{background:rgba(221,90,90,.18);color:#f7b1b1;border-color:rgba(221,90,90,.35)}
-  .subline{font-size:12px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap}
-  .filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .filter-row input{max-width:220px}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:var(--chip);border:1px solid rgba(255,255,255,.08);padding:7px 12px;border-radius:999px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer}
-  .chip.active{background:rgba(76,123,255,.2);color:#d6e3ff;border-color:rgba(76,123,255,.55)}
-  .editor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-  .editor-wide{display:grid;gap:14px;margin-top:18px}
-  .editor-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:20px}
-  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:10px;font-size:12px;background:rgba(255,255,255,.08);color:var(--muted)}
-  .split{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-  .checkbox{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--muted)}
-  .checkbox input{width:auto}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Jobs — Admin | HMJ Global</title>
+
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/admin/common.js?v=16"></script>
+
+  <style>
+    :root{
+      --bg:#050910; --panel:#0b1422; --border:#162237; --highlight:#3b82f6; --accent:#60a5fa;
+      --ink:#f8fbff; --muted:#93a5c7; --chip:#111b28; --danger:#c2410c; --ok:#10b981;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit}
+
+    .top{position:sticky;top:0;z-index:100;background:rgba(5,9,16,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.05)}
+    .row{max-width:1420px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em;font-size:16px}
+    .sp{flex:1}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);color:#cbd7ff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+
+    .btn{background:#12203a;color:#f1f5ff;border:1px solid rgba(255,255,255,.14);padding:9px 15px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(0,0,0,.32);border-color:rgba(96,165,250,.55)}
+    .btn.ghost{background:transparent;color:#cbd7ff;border-color:rgba(203,215,255,.25)}
+    .btn.primary{background:linear-gradient(180deg,rgba(59,130,246,.25),rgba(59,130,246,.15));border-color:rgba(96,165,250,.55);color:#eaf2ff}
+    .btn.danger{background:rgba(194,65,12,.25);border-color:rgba(248,113,113,.45);color:#fecaca}
+    .btn.small{padding:7px 12px;font-size:13px;border-radius:10px}
+
+    .wrap{max-width:1420px;margin:24px auto;padding:0 20px;display:grid;gap:18px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:18px;box-shadow:0 24px 60px rgba(2,6,23,.4)}
+    .panel h2{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
+    .muted{color:var(--muted)}
+
+    .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .filters-grid .search{grid-column:span 2;display:flex;align-items:center;gap:8px;background:#0d1a2d;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:6px 10px}
+    .filters-grid .search input{flex:1;background:transparent;border:0;color:var(--ink);font:inherit;padding:4px 0}
+    .filters-grid select{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#0d1a2d;color:var(--ink);font-weight:600}
+    .filters-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+
+    .chip-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid rgba(96,165,250,.25);background:var(--chip);cursor:pointer;font-weight:700;font-size:13px;color:#dbe5ff;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .chip .dot{width:8px;height:8px;border-radius:999px;background:#60a5fa;box-shadow:0 0 0 2px rgba(59,130,246,.25)}
+    .chip.active{border-color:rgba(96,165,250,.6);background:rgba(96,165,250,.18);transform:translateY(-1px);box-shadow:0 12px 24px rgba(59,130,246,.25)}
+
+    .section-form{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .section-form input{flex:1;min-width:220px;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#0d1a2d;color:var(--ink);font-weight:600}
+
+    .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:start}
+    .column{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:14px;display:grid;gap:10px;min-height:240px;position:relative}
+    .column.drag-target{border-color:rgba(96,165,250,.65);box-shadow:0 0 0 2px rgba(96,165,250,.45)}
+    .column-header{display:flex;align-items:center;gap:8px;justify-content:space-between}
+    .column-header h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
+    .column-header .count{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;color:#e2e8ff;font-weight:700}
+    .column-body{display:grid;gap:10px;min-height:150px}
+    .drop-zone{flex:1;border:1px dashed rgba(255,255,255,.12);border-radius:14px;padding:20px;display:grid;place-items:center;color:var(--muted);font-weight:600}
+
+    .card{background:#0f1d33;border:1px solid rgba(96,165,250,.18);border-radius:16px;padding:12px 14px;display:grid;gap:6px;cursor:grab;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .card:active{cursor:grabbing}
+    .card:hover{transform:translateY(-2px);box-shadow:0 18px 32px rgba(15,29,51,.45);border-color:rgba(96,165,250,.55)}
+    .card h4{margin:0;font-size:15px;color:#f8fbff;display:flex;align-items:center;gap:6px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(255,255,255,.12);color:#e2e8ff;text-transform:uppercase;letter-spacing:.05em}
+    .badge.live{background:rgba(16,185,129,.14);color:#bbf7d0;border:1px solid rgba(16,185,129,.4)}
+    .badge.interviewing{background:rgba(250,204,21,.14);color:#fef08a;border:1px solid rgba(250,204,21,.4)}
+    .badge.closed{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.4)}
+    .tags{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+    .tags span{padding:3px 7px;border-radius:999px;background:rgba(59,130,246,.18);border:1px solid rgba(96,165,250,.35);color:#cbd7ff;font-weight:600}
+    .card footer{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+    .card footer button{background:transparent;border:0;color:#93c5fd;font-weight:700;cursor:pointer}
+    .card footer button:hover{text-decoration:underline}
+
+    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(680px,92vw);background:#091425;border-left:1px solid rgba(96,165,250,.25);box-shadow:-30px 0 60px rgba(2,6,23,.6);transform:translateX(100%);transition:transform .24s ease;display:grid;grid-template-rows:auto 1fr auto;z-index:200}
+    .drawer.open{transform:translateX(0)}
+    .drawer-head{padding:18px 22px;border-bottom:1px solid rgba(96,165,250,.25);display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    .drawer-body{padding:18px 22px;overflow:auto;display:grid;gap:18px}
+    .drawer-foot{padding:16px 22px;border-top:1px solid rgba(96,165,250,.18);display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end}
+    .drawer h3{margin:0;font-size:18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .field{display:grid;gap:6px}
+    .field label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#0d1c31;color:#f1f5ff;font-weight:600;font-size:14px}
+    .field textarea{min-height:110px;resize:vertical}
+    .switch{display:flex;align-items:center;gap:10px;font-weight:700;color:#cbd7ff}
+    .switch input{width:18px;height:18px}
+    .tag-editor{display:flex;flex-wrap:wrap;gap:8px;background:#0b192d;border:1px solid rgba(59,130,246,.25);border-radius:12px;padding:10px}
+    .tag-editor .token{padding:6px 10px;border-radius:999px;background:rgba(59,130,246,.25);display:inline-flex;align-items:center;gap:6px;font-weight:700}
+    .tag-editor .token button{background:transparent;border:0;color:#dbeafe;font-weight:900;cursor:pointer}
+    .tag-editor input{flex:1;min-width:140px;border:0;background:transparent;color:#f1f5ff;font-weight:600;padding:4px}
+
+    .share-box{display:grid;gap:10px;background:#0d1c31;border:1px solid rgba(96,165,250,.25);border-radius:14px;padding:14px}
+    .share-box code{word-break:break-all;font-size:13px;background:rgba(15,27,51,.6);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.08)}
+    .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#08101d;color:#f1f5ff;font-weight:600}
+
+    #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#0d1c31;border:1px solid rgba(59,130,246,.45);box-shadow:0 18px 34px rgba(2,6,23,.45);font-weight:700}
+
+    @media(max-width:820px){
+      .filters-grid .search{grid-column:span 1}
+      .column{min-height:200px}
+    }
+  </style>
 </head>
 <body>
-<div class="top"><div class="row">
-  <div class="brand">Jobs — Admin</div><div class="sp"></div>
-  <a class="btn ghost" href="/admin/">⟵ Admin home</a>
-  <button class="btn secondary" onclick="netlifyIdentity?.logout()">Sign out</button>
-</div></div>
+  <div class="top"><div class="row">
+    <div class="brand">Jobs Console</div>
+    <span class="pill">Admin</span>
+    <div class="sp"></div>
+    <button class="btn ghost" id="btnDiag" title="Show diagnostics">◉</button>
+    <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
+    <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+  </div></div>
 
-<div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <p class="why muted"></p>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
-</div>
-
-<div class="wrap" id="app" style="display:none">
-  <div class="card">
-    <div class="filter-row">
-      <input id="search" type="search" placeholder="Search title, location, keywords" aria-label="Search jobs"/>
-      <select id="sectionFilter" aria-label="Filter by section">
-        <option value="all">All sections</option>
-        <option value="commercial">Commercial</option>
-        <option value="dc">Data Centre Delivery</option>
-        <option value="substations">Substations & Energy</option>
-        <option value="pharma">Life Sciences & Pharma</option>
-        <option value="ict">ICT & Commissioning</option>
-      </select>
-      <select id="statusFilter" aria-label="Filter by status">
-        <option value="all">Any status</option>
-        <option value="live">Live</option>
-        <option value="interviewing">Interviewing</option>
-        <option value="closed">Closed</option>
-      </select>
-      <div class="sp"></div>
-      <button class="btn ghost" id="btnRefresh">Refresh</button>
-      <button class="btn" id="btnNew">＋ New job</button>
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <h2>Restricted</h2>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn primary" onclick="window.netlifyIdentity?.open('login')">Log in</button>
     </div>
   </div>
 
-  <div class="layout">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="margin:0;font-size:16px">Board</h3>
-        <span class="badge" id="countBadge">0 jobs</span>
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel" id="filtersPanel">
+      <div class="filters-grid">
+        <div class="search"><svg width="16" height="16" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="m11 11 4 4"/></svg><input id="filterSearch" type="search" placeholder="Search title, location, keywords" autocomplete="off"/></div>
+        <select id="filterStatus">
+          <option value="all">Any status</option>
+          <option value="live">Live</option>
+          <option value="interviewing">Interviewing</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select id="filterType">
+          <option value="all">Any type</option>
+          <option value="permanent">Permanent</option>
+          <option value="contract">Contract</option>
+          <option value="fixed-term">Fixed term</option>
+        </select>
+        <select id="filterPublished">
+          <option value="all">All visibility</option>
+          <option value="published">Published</option>
+          <option value="drafts">Draft only</option>
+        </select>
+        <select id="filterSection">
+          <option value="all">All categories</option>
+        </select>
       </div>
-      <div class="job-list" id="jobList"></div>
+      <div class="filters-actions">
+        <div class="muted" id="resultMeta">0 jobs</div>
+        <div class="sp"></div>
+        <button class="btn ghost small" id="clearFilters">Clear filters</button>
+        <button class="btn ghost small" id="btnRefresh">Refresh</button>
+        <button class="btn primary small" id="btnNew">＋ New job</button>
+      </div>
+      <div class="chip-list" id="tagFilterChips"></div>
+      <form class="section-form" id="addSectionForm">
+        <input id="newSectionInput" placeholder="Add new category heading (e.g. Critical Infrastructure)" autocomplete="off"/>
+        <button class="btn ghost small" type="submit">Add category</button>
+      </form>
+    </section>
+
+    <section class="board" id="boardColumns" aria-live="polite"></section>
+  </div>
+
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div style="flex:1">
+        <h3 id="drawerTitle">Job editor</h3>
+        <div class="muted" id="drawerMeta"></div>
+      </div>
+      <label class="switch"><input type="checkbox" id="edPublished"/> Published</label>
+      <button class="btn ghost small" id="btnClose">✕ Close</button>
     </div>
-
-    <div class="card" id="editor" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-        <div>
-          <h3 style="margin:0 0 4px" id="edTitle">Job</h3>
-          <div class="muted" id="edMeta"></div>
-        </div>
-        <label class="checkbox"><input type="checkbox" id="edPublished"/> Published</label>
-      </div>
-
-      <form id="jobForm">
-        <div class="editor-grid" style="margin-top:16px">
-          <label>Job ID (slug)<input id="edId" placeholder="auto-generated if blank"/></label>
-          <label>Title<input id="edTitleInput" required/></label>
-          <label>Status
-            <select id="edStatus">
-              <option value="live">Live</option>
-              <option value="interviewing">Interviewing</option>
-              <option value="closed">Closed</option>
-            </select>
-          </label>
-          <label>Section
-            <select id="edSection">
-              <option value="commercial">Commercial</option>
-              <option value="dc">Data Centre Delivery</option>
-              <option value="substations">Substations & Energy</option>
-              <option value="pharma">Life Sciences & Pharma</option>
-              <option value="ict">ICT & Commissioning</option>
-            </select>
-          </label>
-          <label>Discipline<input id="edDiscipline" placeholder="e.g. Data Centre"/></label>
-          <label>Employment type
-            <select id="edType">
-              <option value="permanent">Permanent</option>
-              <option value="contract">Contract</option>
-              <option value="fixed-term">Fixed term</option>
-            </select>
-          </label>
-          <label>Location text<input id="edLocationText" placeholder="e.g. London, UK"/></label>
-          <label>Location code<input id="edLocationCode" placeholder="slug for filters"/></label>
-          <label>Sort order<input id="edSortOrder" type="number" min="0" step="1"/></label>
-          <label>Apply URL<input id="edApply" placeholder="Defaults to contact form"/></label>
-          <label>Keywords<textarea id="edKeywords" placeholder="Comma separated keywords" style="min-height:90px"></textarea></label>
+    <div class="drawer-body">
+      <form id="jobForm" autocomplete="off">
+        <div class="grid">
+          <div class="field"><label for="edId">Job slug / ID</label><input id="edId" placeholder="auto"/></div>
+          <div class="field"><label for="edTitle">Title</label><input id="edTitle" required/></div>
+          <div class="field"><label for="edStatus">Status</label><select id="edStatus"><option value="live">Live</option><option value="interviewing">Interviewing</option><option value="closed">Closed</option></select></div>
+          <div class="field"><label for="edSection">Category heading</label><input id="edSection" list="sectionOptions" placeholder="e.g. Data Centre Delivery"/></div>
+          <div class="field"><label for="edDiscipline">Discipline</label><input id="edDiscipline"/></div>
+          <div class="field"><label for="edType">Employment type</label><select id="edType"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="fixed-term">Fixed term</option></select></div>
+          <div class="field"><label for="edLocationText">Location (display)</label><input id="edLocationText"/></div>
+          <div class="field"><label for="edLocationCode">Location code</label><input id="edLocationCode" placeholder="slug for filters"/></div>
+          <div class="field"><label for="edApply">Apply URL</label><input id="edApply" placeholder="Defaults to contact form"/></div>
+          <div class="field"><label for="edSortOrder">Sort weight</label><input id="edSortOrder" type="number" step="1" min="0"/></div>
         </div>
 
-        <div class="editor-wide">
-          <label>Overview<textarea id="edOverview" placeholder="Short overview shown in card"></textarea></label>
-          <div class="split">
-            <label>Responsibilities (one per line)<textarea id="edResponsibilities"></textarea></label>
-            <label>Requirements (one per line)<textarea id="edRequirements"></textarea></label>
-          </div>
+        <div class="field">
+          <label>Tags</label>
+          <div class="tag-editor" id="tagEditor"><input id="tagInput" placeholder="Type tag and press Enter"/></div>
         </div>
 
-        <div class="editor-actions">
-          <button type="button" class="btn danger" id="btnDelete">Delete</button>
-          <button type="button" class="btn ghost" id="btnClose">Close</button>
-          <button type="submit" class="btn">Save job</button>
+        <div class="field"><label for="edOverview">Card overview</label><textarea id="edOverview" placeholder="Short intro shown on jobs page"></textarea></div>
+
+        <div class="grid">
+          <div class="field"><label for="edResponsibilities">Responsibilities (one per line)</label><textarea id="edResponsibilities"></textarea></div>
+          <div class="field"><label for="edRequirements">Requirements (one per line)</label><textarea id="edRequirements"></textarea></div>
         </div>
       </form>
+
+      <div class="share-box">
+        <div><strong>Shareable spec</strong><p class="muted">Generate a standalone advert page for this job. Links expire automatically.</p></div>
+        <button class="btn ghost small" id="btnShare">Generate share link</button>
+        <div id="shareResult" style="display:none">
+          <code id="shareMeta"></code>
+          <input id="shareUrl" readonly/>
+          <button class="btn ghost small" id="btnCopyShare">Copy link</button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
+    <div class="drawer-foot">
+      <button class="btn ghost" id="btnDelete">Delete</button>
+      <button class="btn primary" id="btnSave">Save job</button>
+    </div>
+  </aside>
 
-<div id="toast"></div>
+  <datalist id="sectionOptions"></datalist>
+  <div id="toast"></div>
 
-<script>
-Admin.bootAdmin(async ({ api, sel, toast }) => {
-  const jobList = sel('#jobList');
-  const countBadge = sel('#countBadge');
-  const editor = sel('#editor');
-  const form = sel('#jobForm');
-  const statusFilter = sel('#statusFilter');
-  const sectionFilter = sel('#sectionFilter');
-  const searchInput = sel('#search');
-  const publishedInput = sel('#edPublished');
-
-  const SECTION_LABELS = {
-    commercial: 'Commercial',
-    dc: 'Data Centre Delivery',
-    substations: 'Substations & Energy',
-    pharma: 'Life Sciences & Pharma',
-    ict: 'ICT & Commissioning'
-  };
-
-  const STATUS_CLASS = { live: 'live', interviewing: 'interviewing', closed: 'closed' };
-
-  let jobs = [];
-  let filtered = [];
-  let current = null;
-
-  function renderList() {
-    const q = (searchInput.value || '').trim().toLowerCase();
-    const section = sectionFilter.value;
-    const status = statusFilter.value;
-
-    filtered = jobs.filter(job => {
-      if (section !== 'all' && job.section !== section) return false;
-      if (status !== 'all' && job.status !== status) return false;
-      if (!q) return true;
-      const hay = [job.title, job.locationText, job.locationCode, job.keywords, job.discipline];
-      return hay.some(v => String(v || '').toLowerCase().includes(q));
-    });
-
-    countBadge.textContent = `${filtered.length} job${filtered.length === 1 ? '' : 's'}`;
-
-    jobList.innerHTML = filtered.map(job => {
-      const active = current && current.id === job.id ? 'active' : '';
-      return `
-        <div class="job-item ${active}" data-id="${job.id}">
-          <h4>${job.title || 'Untitled role'}</h4>
-          <div class="subline">
-            <span>${SECTION_LABELS[job.section] || job.section || 'Unsectioned'}</span>
-            ${job.locationText ? `<span>${job.locationText}</span>` : ''}
-          </div>
-          <div class="subline">
-            <span class="pill ${STATUS_CLASS[job.status] || 'live'}">${job.status || 'live'}</span>
-            ${job.published ? '<span class="pill" style="background:rgba(76,123,255,.16);border-color:rgba(76,123,255,.4);color:#d6e3ff">Published</span>' : '<span class="pill" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);color:#aab8d6">Draft</span>'}
-            ${Number.isFinite(job.sortOrder) ? `<span>#${job.sortOrder}</span>` : ''}
-          </div>
-        </div>`;
-    }).join('');
-
-    jobList.querySelectorAll('.job-item').forEach(el => {
-      el.addEventListener('click', () => {
-        const id = el.dataset.id;
-        const job = jobs.find(j => j.id === id);
-        if (job) openJob(job.id);
-      });
-    });
-  }
-
-  function joinList(list) {
-    return Array.isArray(list) ? list.join('\n') : '';
-  }
-
-  function fillForm(job) {
-    current = job;
-    sel('#edTitle').textContent = job.title || 'Job';
-    sel('#edMeta').textContent = job.updatedAt ? `Updated ${new Date(job.updatedAt).toLocaleString()}` : '';
-    sel('#edId').value = job.id || '';
-    sel('#edTitleInput').value = job.title || '';
-    sel('#edStatus').value = job.status || 'live';
-    sel('#edSection').value = job.section || 'dc';
-    sel('#edDiscipline').value = job.discipline || '';
-    sel('#edType').value = job.type || 'permanent';
-    sel('#edLocationText').value = job.locationText || '';
-    sel('#edLocationCode').value = job.locationCode || '';
-    sel('#edSortOrder').value = Number.isFinite(job.sortOrder) ? job.sortOrder : '';
-    sel('#edApply').value = job.applyUrl || '';
-    sel('#edKeywords').value = job.keywords || '';
-    sel('#edOverview').value = job.overview || '';
-    sel('#edResponsibilities').value = joinList(job.responsibilities);
-    sel('#edRequirements').value = joinList(job.requirements);
-    publishedInput.checked = !!job.published;
-    editor.style.display = 'block';
-  }
-
-  function readForm() {
-    return {
-      id: sel('#edId').value.trim() || undefined,
-      title: sel('#edTitleInput').value.trim(),
-      status: sel('#edStatus').value,
-      section: sel('#edSection').value,
-      discipline: sel('#edDiscipline').value.trim(),
-      type: sel('#edType').value,
-      locationText: sel('#edLocationText').value.trim(),
-      locationCode: sel('#edLocationCode').value.trim(),
-      sortOrder: sel('#edSortOrder').value === '' ? null : Number(sel('#edSortOrder').value),
-      applyUrl: sel('#edApply').value.trim(),
-      keywords: sel('#edKeywords').value.trim(),
-      overview: sel('#edOverview').value.trim(),
-      responsibilities: sel('#edResponsibilities').value.split('\n').map(v => v.trim()).filter(Boolean),
-      requirements: sel('#edRequirements').value.split('\n').map(v => v.trim()).filter(Boolean),
-      published: publishedInput.checked,
-    };
-  }
-
-  async function loadJobs() {
-    jobList.innerHTML = '<div class="muted">Loading…</div>';
-    try {
-      const res = await api('/admin-jobs-list', 'POST', {});
-      jobs = Array.isArray(res.jobs) ? res.jobs : [];
-    } catch (e) {
-      jobs = [];
-      toast('Failed to load jobs: ' + e.message, 'error');
+  <script>
+  (function startJobs(){
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+      return setTimeout(startJobs, 40);
     }
-    renderList();
-  }
 
-  async function openJob(id) {
-    try {
-      const res = await api('/admin-jobs-get', 'POST', { id });
-      if (res && res.job) {
-        fillForm(res.job);
-        renderList();
+    Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
+      const state = {
+        jobs: [],
+        filters: { q:'', status:'all', type:'all', published:'all', section:'all', tags:new Set() },
+        sectionOrder: [],
+        tags: [],
+        dragging: null,
+        editing: null,
+        editingTags: [],
+        shareLink: null,
+        diagnostics: false,
+      };
+
+      const board = sel('#boardColumns');
+      const filterStatus = sel('#filterStatus');
+      const filterType = sel('#filterType');
+      const filterPublished = sel('#filterPublished');
+      const filterSection = sel('#filterSection');
+      const filterSearch = sel('#filterSearch');
+      const tagChips = sel('#tagFilterChips');
+      const resultMeta = sel('#resultMeta');
+      const addSectionForm = sel('#addSectionForm');
+      const newSectionInput = sel('#newSectionInput');
+      const sectionOptions = sel('#sectionOptions');
+      const drawer = sel('#drawer');
+      const drawerTitle = sel('#drawerTitle');
+      const drawerMeta = sel('#drawerMeta');
+      const shareBox = sel('#shareResult');
+      const shareMeta = sel('#shareMeta');
+      const shareUrl = sel('#shareUrl');
+      const tagEditor = sel('#tagEditor');
+      const tagInput = sel('#tagInput');
+      const btnDiag = sel('#btnDiag');
+
+      const form = {
+        id: sel('#edId'),
+        title: sel('#edTitle'),
+        status: sel('#edStatus'),
+        section: sel('#edSection'),
+        discipline: sel('#edDiscipline'),
+        type: sel('#edType'),
+        locationText: sel('#edLocationText'),
+        locationCode: sel('#edLocationCode'),
+        overview: sel('#edOverview'),
+        responsibilities: sel('#edResponsibilities'),
+        requirements: sel('#edRequirements'),
+        apply: sel('#edApply'),
+        published: sel('#edPublished'),
+        sortOrder: sel('#edSortOrder'),
+      };
+
+      const statusBadgeClass = (status) => {
+        const v = (status || '').toLowerCase();
+        if (v === 'live') return 'badge live';
+        if (v === 'closed') return 'badge closed';
+        return 'badge interviewing';
+      };
+
+      function slugify(text) {
+        return (text || '')
+          .toString()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80);
       }
-    } catch (e) {
-      toast('Unable to open job: ' + e.message, 'error');
-    }
-  }
 
-  function newJob() {
-    const job = {
-      id: '',
-      title: '',
-      status: 'live',
-      section: sectionFilter.value !== 'all' ? sectionFilter.value : 'dc',
-      discipline: '',
-      type: 'permanent',
-      locationText: '',
-      locationCode: '',
-      sortOrder: jobs.length ? Math.max(...jobs.map(j => j.sortOrder || 0)) + 10 : 1000,
-      applyUrl: '',
-      keywords: '',
-      overview: '',
-      responsibilities: [],
-      requirements: [],
-      published: false,
-    };
-    fillForm(job);
-  }
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const payload = readForm();
-    if (!payload.title) {
-      toast('Title is required', 'warn');
-      return;
-    }
-    const originalId = current?.id || null;
-    try {
-      const res = await api('/admin-jobs-save', 'POST', { job: payload });
-      if (res && res.job) {
-        toast('Job saved', 'info');
-        if (originalId && originalId !== res.job.id) {
-          try { await api('/admin-jobs-delete', 'POST', { id: originalId }); }
-          catch (err) { console.warn('Failed to remove old job id', err); }
-          jobs = jobs.filter(j => j.id !== originalId);
-        }
-        const idx = jobs.findIndex(j => j.id === res.job.id);
-        if (idx >= 0) jobs[idx] = res.job; else jobs.push(res.job);
-        jobs.sort((a,b) => {
-          if (a.section !== b.section) return (a.section || '').localeCompare(b.section || '');
-          const ao = Number.isFinite(a.sortOrder) ? a.sortOrder : 0;
-          const bo = Number.isFinite(b.sortOrder) ? b.sortOrder : 0;
-          if (ao !== bo) return ao - bo;
-          return (a.title || '').localeCompare(b.title || '');
+      function buildSections() {
+        const seen = new Map();
+        state.jobs.forEach((job) => {
+          const key = job.sectionKey || slugify(job.section || job.sectionLabel || 'General') || 'general';
+          const label = job.sectionLabel || job.section || 'General';
+          if (!seen.has(key)) seen.set(key, label);
+          job.sectionKey = key;
+          job.sectionLabel = label;
+          job.section = label;
         });
-        fillForm(res.job);
-        renderList();
+        if (!seen.size) {
+          seen.set('general', 'General');
+        }
+        state.sectionOrder = Array.from(seen.entries()).map(([key, label]) => ({ key, label }));
+        state.sectionOrder.sort((a, b) => a.label.localeCompare(b.label));
+        updateSectionSelect();
       }
-    } catch (e) {
-      toast('Save failed: ' + e.message, 'error');
-    }
-  });
 
-  sel('#btnDelete').addEventListener('click', async () => {
-    if (!current || !current.id) {
-      editor.style.display = 'none';
-      return;
-    }
-    if (!confirm('Delete this job?')) return;
-    try {
-      await api('/admin-jobs-delete', 'POST', { id: current.id });
-      toast('Job deleted', 'info');
-      jobs = jobs.filter(j => j.id !== current.id);
-      current = null;
-      editor.style.display = 'none';
-      renderList();
-    } catch (e) {
-      toast('Delete failed: ' + e.message, 'error');
-    }
-  });
+      function updateSectionSelect() {
+        filterSection.innerHTML = '<option value="all">All categories</option>' + state.sectionOrder.map((s) => `<option value="${s.key}">${s.label}</option>`).join('');
+        sectionOptions.innerHTML = state.sectionOrder.map((s) => `<option value="${s.label}">`).join('');
+      }
 
-  sel('#btnClose').addEventListener('click', () => {
-    editor.style.display = 'none';
-    current = null;
-    jobList.querySelectorAll('.job-item').forEach(el => el.classList.remove('active'));
-  });
+      function buildTags() {
+        const set = new Set();
+        state.jobs.forEach((job) => (job.tags || []).forEach((t) => set.add(t.toLowerCase())));
+        state.tags = Array.from(set).sort();
+      }
 
-  sel('#btnNew').addEventListener('click', () => {
-    newJob();
-    renderList();
-  });
+      function applyFilters(job) {
+        const { q, status, type, published, section, tags } = state.filters;
+        if (status !== 'all' && (job.status || '').toLowerCase() !== status) return false;
+        if (type !== 'all' && (job.type || '').toLowerCase() !== type) return false;
+        if (published === 'published' && !job.published) return false;
+        if (published === 'drafts' && job.published) return false;
+        if (section !== 'all' && (job.sectionKey || 'general') !== section) return false;
+        if (tags.size) {
+          const jobTags = new Set((job.tags || []).map((t) => t.toLowerCase()));
+          for (const tag of tags) {
+            if (!jobTags.has(tag)) return false;
+          }
+        }
+        if (q) {
+          const hay = [job.title, job.overview, job.locationText, job.locationCode, job.discipline, job.sectionLabel, job.applyUrl, job.keywords]
+            .concat(job.tags || [])
+            .join(' ')
+            .toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      }
 
-  sel('#btnRefresh').addEventListener('click', loadJobs);
-  searchInput.addEventListener('input', renderList);
-  sectionFilter.addEventListener('change', () => {
-    renderList();
-    if (!current) return;
-    if (sectionFilter.value !== 'all' && current.section !== sectionFilter.value) {
-      editor.style.display = 'none';
-      current = null;
-    }
-  });
-  statusFilter.addEventListener('change', renderList);
+      function filteredJobs() {
+        return state.jobs.filter(applyFilters);
+      }
 
-  await loadJobs();
-});
-</script>
+      function renderTagChips() {
+        if (!tagChips) return;
+        tagChips.innerHTML = '';
+        if (!state.tags.length) {
+          const span = document.createElement('span');
+          span.className = 'muted';
+          span.textContent = 'Tags appear once jobs include them.';
+          tagChips.appendChild(span);
+          return;
+        }
+        state.tags.forEach((tag) => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'chip' + (state.filters.tags.has(tag) ? ' active' : '');
+          chip.innerHTML = `<span class="dot"></span>${tag}`;
+          chip.onclick = () => {
+            if (state.filters.tags.has(tag)) state.filters.tags.delete(tag);
+            else state.filters.tags.add(tag);
+            renderAll();
+          };
+          tagChips.appendChild(chip);
+        });
+      }
+
+      function formatDate(d) {
+        if (!d) return '';
+        try {
+          return new Date(d).toLocaleString();
+        } catch { return ''; }
+      }
+
+      function reindexColumn(key) {
+        const label = state.sectionOrder.find((s) => s.key === key)?.label || 'General';
+        const column = state.jobs
+          .filter((job) => (job.sectionKey || 'general') === key)
+          .sort((a, b) => ((a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
+        column.forEach((job, idx) => {
+          job.sortOrder = idx * 100 + 10;
+          job.sectionKey = key;
+          job.sectionLabel = label;
+          job.section = label;
+        });
+        return column;
+      }
+
+      async function persistOrder(jobs) {
+        if (!jobs.length) return;
+        try {
+          const payload = jobs.map((job) => ({ id: job.id, section: job.section, sortOrder: job.sortOrder }));
+          const res = await api('admin-jobs-reorder', 'POST', { updates: payload });
+          if (Array.isArray(res?.jobs)) {
+            res.jobs.forEach((updated) => {
+              const found = state.jobs.find((j) => j.id === updated.id);
+              if (found) Object.assign(found, updated);
+            });
+          }
+        } catch (e) {
+          console.error('[jobs] reorder failed', e);
+          toast('Reorder failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      function moveJob(jobId, targetKey, beforeId) {
+        const job = state.jobs.find((j) => j.id === jobId);
+        if (!job) return;
+        const originKey = job.sectionKey || 'general';
+        if (!targetKey) targetKey = 'general';
+        const targetLabel = state.sectionOrder.find((s) => s.key === targetKey)?.label || 'General';
+        job.sectionKey = targetKey;
+        job.sectionLabel = targetLabel;
+        job.section = targetLabel;
+
+        const targetJobs = state.jobs.filter((j) => (j.sectionKey || 'general') === targetKey && j.id !== jobId);
+        if (beforeId) {
+          const idx = targetJobs.findIndex((j) => j.id === beforeId);
+          if (idx === -1) targetJobs.push(job);
+          else targetJobs.splice(idx, 0, job);
+        } else {
+          targetJobs.push(job);
+        }
+        targetJobs.forEach((j, idx) => { j.sortOrder = idx * 100 + 10; j.section = targetLabel; j.sectionLabel = targetLabel; j.sectionKey = targetKey; });
+
+        let touched = [...targetJobs];
+        if (originKey !== targetKey) {
+          touched = touched.concat(reindexColumn(originKey));
+        }
+        renderBoard();
+        persistOrder(Array.from(new Map(touched.map((j) => [j.id, j])).values()));
+      }
+
+      function renderBoard() {
+        if (!board) return;
+        board.innerHTML = '';
+        const groups = new Map();
+        state.sectionOrder.forEach((s) => groups.set(s.key, []));
+        const matches = filteredJobs();
+        matches.forEach((job) => {
+          const key = job.sectionKey || 'general';
+          if (!groups.has(key)) {
+            const label = job.sectionLabel || job.section || 'General';
+            groups.set(key, []);
+            state.sectionOrder.push({ key, label });
+          }
+          groups.get(key).push(job);
+        });
+        state.sectionOrder = Array.from(new Map(state.sectionOrder.map((s) => [s.key, s])).values());
+        updateSectionSelect();
+        let total = 0;
+        groups.forEach((list) => { total += list.length; });
+        resultMeta.textContent = `${matches.length} of ${state.jobs.length} jobs`;
+
+        const frag = document.createDocumentFragment();
+        for (const section of state.sectionOrder) {
+          const column = document.createElement('section');
+          column.className = 'column';
+          column.dataset.key = section.key;
+          column.innerHTML = `
+            <div class="column-header">
+              <h3>${section.label}</h3>
+              <span class="count">${(groups.get(section.key) || []).length}</span>
+            </div>
+            <div class="column-body" data-body="${section.key}"></div>
+          `;
+          const body = column.querySelector('.column-body');
+          const jobs = (groups.get(section.key) || []).sort((a, b) => ((a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
+          if (!jobs.length) {
+            const empty = document.createElement('div');
+            empty.className = 'drop-zone';
+            empty.textContent = 'Drop job here';
+            body.appendChild(empty);
+          } else {
+            jobs.forEach((job) => body.appendChild(renderCard(job)));
+          }
+          setupDropZone(column, section.key);
+          frag.appendChild(column);
+        }
+        board.appendChild(frag);
+      }
+
+      function renderCard(job) {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.setAttribute('draggable', 'true');
+        card.dataset.id = job.id;
+        card.innerHTML = `
+          <h4>${job.title || 'Untitled'} ${job.published ? '' : '<span class="badge">Draft</span>'}</h4>
+          <span class="badge ${statusBadgeClass(job.status)}">${(job.status || '').toUpperCase()}</span>
+          <div class="muted">${job.locationText || 'Location TBC'}</div>
+          ${(job.tags || []).length ? `<div class="tags">${job.tags.map((t) => `<span>${t}</span>`).join('')}</div>` : ''}
+          <footer>
+            <span>${job.type || ''}</span>
+            <button type="button">Edit</button>
+          </footer>
+        `;
+        card.addEventListener('click', (e) => {
+          if (e.target.tagName === 'BUTTON') {
+            openEditor(job);
+          } else if (!state.dragging) {
+            openEditor(job);
+          }
+        });
+        card.addEventListener('dragstart', (e) => {
+          state.dragging = job.id;
+          e.dataTransfer.setData('text/plain', job.id);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', () => {
+          state.dragging = null;
+        });
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          card.classList.add('drag-target');
+        });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-target'));
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-target');
+          const jobId = e.dataTransfer.getData('text/plain') || state.dragging;
+          if (!jobId || jobId === job.id) return;
+          moveJob(jobId, job.sectionKey || 'general', job.id);
+        });
+        return card;
+      }
+
+      function setupDropZone(column, key) {
+        column.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          column.classList.add('drag-target');
+        });
+        column.addEventListener('dragleave', () => column.classList.remove('drag-target'));
+        column.addEventListener('drop', (e) => {
+          e.preventDefault();
+          column.classList.remove('drag-target');
+          const jobId = e.dataTransfer.getData('text/plain') || state.dragging;
+          if (!jobId) return;
+          moveJob(jobId, key, null);
+        });
+      }
+
+      function renderTagTokens() {
+        if (!tagEditor) return;
+        const tokens = tagEditor.querySelectorAll('.token');
+        tokens.forEach((t) => t.remove());
+        state.editingTags.forEach((tag, idx) => {
+          const token = document.createElement('span');
+          token.className = 'token';
+          token.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">×</button>`;
+          token.querySelector('button').onclick = () => {
+            state.editingTags.splice(idx, 1);
+            renderTagTokens();
+          };
+          tagEditor.insertBefore(token, tagInput);
+        });
+      }
+
+      function openDrawer() {
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        setTimeout(() => {
+          state.editing = null;
+          state.editingTags = [];
+          shareBox.style.display = 'none';
+          shareUrl.value = '';
+          shareMeta.textContent = '';
+        }, 150);
+      }
+
+      function fillForm(job) {
+        form.id.value = job?.id || '';
+        form.title.value = job?.title || '';
+        form.status.value = (job?.status || 'live').toLowerCase();
+        form.section.value = job?.sectionLabel || job?.section || '';
+        form.discipline.value = job?.discipline || '';
+        form.type.value = (job?.type || 'permanent').toLowerCase();
+        form.locationText.value = job?.locationText || '';
+        form.locationCode.value = job?.locationCode || '';
+        form.overview.value = job?.overview || '';
+        form.responsibilities.value = (job?.responsibilities || []).join('\n');
+        form.requirements.value = (job?.requirements || []).join('\n');
+        form.apply.value = job?.applyUrl || '';
+        form.published.checked = !!job?.published;
+        form.sortOrder.value = Number.isFinite(job?.sortOrder) ? job.sortOrder : '';
+        state.editingTags = Array.isArray(job?.tags) ? [...job.tags] : [];
+        renderTagTokens();
+      }
+
+      function openEditor(job) {
+        state.editing = job ? { ...job } : null;
+        drawerTitle.textContent = job?.title || 'New job';
+        drawerMeta.textContent = job ? `Updated ${formatDate(job.updatedAt || job.createdAt)}` : 'Draft not yet saved';
+        fillForm(job);
+        shareBox.style.display = 'none';
+        shareUrl.value = '';
+        shareMeta.textContent = '';
+        openDrawer();
+      }
+
+      function readForm() {
+        return {
+          id: form.id.value.trim() || undefined,
+          title: form.title.value.trim(),
+          status: form.status.value,
+          section: form.section.value.trim(),
+          discipline: form.discipline.value.trim(),
+          type: form.type.value,
+          locationText: form.locationText.value.trim(),
+          locationCode: form.locationCode.value.trim(),
+          overview: form.overview.value.trim(),
+          responsibilities: form.responsibilities.value,
+          requirements: form.requirements.value,
+          applyUrl: form.apply.value.trim(),
+          published: form.published.checked,
+          sortOrder: form.sortOrder.value ? Number(form.sortOrder.value) : undefined,
+          tags: [...state.editingTags],
+        };
+      }
+
+      async function saveJob() {
+        try {
+          const payload = readForm();
+          const res = await api('admin-jobs-save', 'POST', { job: payload });
+          const job = res?.job;
+          if (job) {
+            const existing = state.jobs.find((j) => j.id === job.id);
+            if (existing) Object.assign(existing, job);
+            else state.jobs.push(job);
+            buildSections();
+            buildTags();
+            renderAll();
+            openEditor(job);
+            toast('Job saved', 'ok', 1800);
+          }
+        } catch (e) {
+          console.error('[jobs] save failed', e);
+          toast('Save failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      async function deleteJob() {
+        if (!state.editing?.id) return;
+        if (!confirm('Delete this job?')) return;
+        try {
+          await api('admin-jobs-delete', 'POST', { id: state.editing.id });
+          state.jobs = state.jobs.filter((j) => j.id !== state.editing.id);
+          buildSections();
+          buildTags();
+          renderAll();
+          closeDrawer();
+          toast('Job deleted', 'ok', 1800);
+        } catch (e) {
+          toast('Delete failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      async function shareJob(job) {
+        if (!job?.id) {
+          toast('Save the job before generating a share link', 'warn', 2600);
+          return;
+        }
+        try {
+          const res = await api('admin-job-share-create', 'POST', { jobId: job.id });
+          shareMeta.textContent = `Slug ${res.slug} · Expires ${res.expires_at || 'never'}`;
+          shareUrl.value = res.url || '';
+          shareBox.style.display = '';
+          toast('Share link created', 'ok', 2000);
+        } catch (e) {
+          toast('Share failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      async function loadJobs() {
+        try {
+          const res = await api('admin-jobs-list', 'POST', { includeDrafts: true });
+          state.jobs = Array.isArray(res?.jobs) ? res.jobs : [];
+          buildSections();
+          buildTags();
+          renderAll();
+        } catch (e) {
+          console.error('[jobs] load failed', e);
+          toast('Load failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      function renderAll() {
+        renderTagChips();
+        renderBoard();
+      }
+
+      function addSection(label) {
+        const clean = label.trim();
+        if (!clean) return;
+        const key = slugify(clean) || `section-${Date.now().toString(36)}`;
+        if (!state.sectionOrder.find((s) => s.key === key)) {
+          state.sectionOrder.push({ key, label: clean });
+          state.sectionOrder.sort((a, b) => a.label.localeCompare(b.label));
+          updateSectionSelect();
+          toast(`Category “${clean}” ready`, 'info', 1800);
+        }
+      }
+
+      // ---- Event wires ----
+      sel('#btnRefresh').onclick = loadJobs;
+      sel('#btnNew').onclick = () => openEditor(null);
+      sel('#btnClose').onclick = closeDrawer;
+      sel('#btnSave').onclick = (e) => { e.preventDefault(); saveJob(); };
+      sel('#btnDelete').onclick = (e) => { e.preventDefault(); deleteJob(); };
+      sel('#btnShare').onclick = (e) => { e.preventDefault(); shareJob(state.editing || readForm()); };
+      sel('#btnCopyShare').onclick = (e) => {
+        e.preventDefault();
+        if (!shareUrl.value) return;
+        navigator.clipboard?.writeText(shareUrl.value).then(() => toast('Copied', 'ok', 1200));
+      };
+      sel('#clearFilters').onclick = () => {
+        state.filters = { q:'', status:'all', type:'all', published:'all', section:'all', tags:new Set() };
+        filterSearch.value = '';
+        filterStatus.value = 'all';
+        filterType.value = 'all';
+        filterPublished.value = 'all';
+        filterSection.value = 'all';
+        renderAll();
+      };
+
+      filterStatus.onchange = () => { state.filters.status = filterStatus.value; renderAll(); };
+      filterType.onchange = () => { state.filters.type = filterType.value; renderAll(); };
+      filterPublished.onchange = () => { state.filters.published = filterPublished.value; renderAll(); };
+      filterSection.onchange = () => { state.filters.section = filterSection.value; renderAll(); };
+      filterSearch.addEventListener('input', () => { state.filters.q = filterSearch.value.trim().toLowerCase(); renderAll(); });
+
+      addSectionForm.onsubmit = (e) => {
+        e.preventDefault();
+        addSection(newSectionInput.value || '');
+        newSectionInput.value = '';
+        updateSectionSelect();
+      };
+
+      tagInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          const value = tagInput.value.trim();
+          if (value && !state.editingTags.includes(value)) {
+            state.editingTags.push(value);
+            renderTagTokens();
+          }
+          tagInput.value = '';
+        } else if (e.key === 'Backspace' && !tagInput.value && state.editingTags.length) {
+          state.editingTags.pop();
+          renderTagTokens();
+        }
+      });
+
+      btnDiag.onclick = async () => {
+        state.diagnostics = !state.diagnostics;
+        btnDiag.textContent = state.diagnostics ? '◎' : '◉';
+        if (state.diagnostics) {
+          const who = await identity('admin');
+          toast(`Trace active. User ${who.email || 'n/a'}`, 'info', 2600);
+        }
+      };
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          if (drawer.classList.contains('open')) saveJob();
+        }
+        if (e.key === 'Escape' && drawer.classList.contains('open')) {
+          e.preventDefault();
+          closeDrawer();
+        }
+      });
+
+      await loadJobs();
+    });
+  })();
+  </script>
 </body>
 </html>

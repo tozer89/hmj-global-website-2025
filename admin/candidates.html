@@ -13,6 +13,8 @@
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
   <!-- Shared admin bootstrap -->
+  <script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.js"></script>
   <script defer src="/admin/common.js?v=15"></script>
 
   <style>
@@ -57,6 +59,10 @@
     .chips{display:flex;gap:8px;flex-wrap:wrap}
     .chip{padding:6px 10px;border-radius:9999px;border:1px solid var(--stroke);cursor:pointer;background:#fff;font-weight:700}
     .chip.active{background:var(--chip)}
+    .doc-list{display:grid;gap:8px;background:#fff;border:1px solid var(--stroke);border-radius:12px;padding:10px;max-height:200px;overflow:auto}
+    .doc-row{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:13px}
+    .doc-row a{color:var(--blue);text-decoration:none;font-weight:700}
+    .doc-row button{border:0;background:transparent;color:var(--danger);font-weight:700;cursor:pointer}
     .metrics{display:flex;gap:12px;flex-wrap:wrap}
     .metric{background:#fff;border:1px solid var(--stroke);border-radius:12px;padding:10px 12px;font-weight:800}
     .menu{position:relative}
@@ -188,6 +194,15 @@
     <div class="d-body">
       <div class="tabs" id="tabs"></div>
       <form id="frm" class="grid" autocomplete="off"></form>
+      <div class="field" id="docField">
+        <label>Documents &amp; CV</label>
+        <div class="doc-list" id="docList"><div class="muted">No documents yet.</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn ghost small" id="btnParseCv" type="button">Parse CV</button>
+          <button class="btn ghost small" id="btnUploadCv" type="button">Upload file</button>
+          <input type="file" id="cvInput" accept=".pdf,.doc,.docx,.txt" style="display:none"/>
+        </div>
+      </div>
     </div>
     <div class="d-foot">
       <div class="muted">Ref: <span id="dRef">—</span></div>
@@ -235,6 +250,7 @@
       let selected = new Set();
       let sort = { key:'id', dir:'desc' };
       let editing = null;
+      let draft = {};
       let currentTab = 'Basics';
       let page = 1, pageSize = 25;
       let activeStatus = '';
@@ -249,6 +265,17 @@
         { key:'client_name',label:'Client', show:false },
         { key:'updated_at', label:'Updated', show:false, width:'150px' },
       ];
+
+      const docList = sel('#docList');
+      const cvInput = sel('#cvInput');
+      const btnParseCv = sel('#btnParseCv');
+      const btnUploadCv = sel('#btnUploadCv');
+      let currentDocs = [];
+      let pendingUpload = null;
+      let cvMode = 'parse';
+      if (window.pdfjsLib?.GlobalWorkerOptions) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.js';
+      }
 
       const $ = sel;
       const enableDelete = () => { $('#btnDelete').disabled = selected.size===0; $('#btnExportSel').disabled = selected.size===0; };
@@ -555,69 +582,279 @@
                 <input id="${id}" name="${key}" type="${type}"></div>`;
       }
 
+      function captureCurrentTab(){
+        const frm = $('#frm');
+        if (!frm) return;
+        frm.querySelectorAll('[name]').forEach((el) => {
+          if (el.type === 'checkbox') draft[el.name] = !!el.checked;
+          else draft[el.name] = el.value || null;
+        });
+      }
+
       function buildEditorShell(){
         const tabsHost = $('#tabs'); tabsHost.innerHTML = '';
-        schemaTabs.forEach(t=>{
-          const b=document.createElement('button');
-          b.type='button'; b.className='tab'+(t.name===currentTab?' active':''); b.textContent=t.name;
-          b.onclick=()=>{ currentTab=t.name; buildEditorForm(editing||{}); Array.from(tabsHost.children).forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+        schemaTabs.forEach((t) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'tab' + (t.name === currentTab ? ' active' : '');
+          b.textContent = t.name;
+          b.onclick = () => {
+            captureCurrentTab();
+            currentTab = t.name;
+            Array.from(tabsHost.children).forEach((x) => x.classList.remove('active'));
+            b.classList.add('active');
+            buildEditorForm();
+          };
           tabsHost.appendChild(b);
         });
-        buildEditorForm(editing||{});
+        buildEditorForm();
       }
-      function buildEditorForm(values={}){
-        const tab = schemaTabs.find(t=>t.name===currentTab) || schemaTabs[0];
-        const frm = $('#frm'); frm.innerHTML = tab.fields.map(fieldHtml).join('');
-        tab.fields.forEach(([key,,type])=>{
+
+      function buildEditorForm(){
+        const tab = schemaTabs.find((t) => t.name === currentTab) || schemaTabs[0];
+        const frm = $('#frm');
+        frm.innerHTML = tab.fields.map(fieldHtml).join('');
+        tab.fields.forEach(([key,, type]) => {
           const el = frm.querySelector(`[name="${key}"]`);
-          if(!el) return;
-          if(type==='checkbox') el.checked = !!values[key];
-          else if(values[key] != null) el.value = values[key];
+          if (!el) return;
+          const value = draft[key];
+          if (type === 'checkbox') el.checked = !!value;
+          else if (value != null) el.value = value;
+          else el.value = '';
         });
       }
+
       function readForm(){
-        const out = {};
-        schemaTabs.forEach(t=>{
-          t.fields.forEach(([key,,type])=>{
-            const el = document.querySelector(`#frm [name="${key}"]`);
-            if(!el) return;
-            if(type==='checkbox') out[key] = !!el.checked;
-            else out[key] = el.value || null;
-          });
-        });
+        captureCurrentTab();
+        const out = { ...draft };
         out.full_name = [out.first_name, out.last_name].filter(Boolean).join(' ');
         return out;
       }
+
       function resetForm(){
-        editing = null; currentTab='Basics';
+        editing = null;
+        draft = {};
+        currentTab = 'Basics';
         $('#dTitle').textContent = 'New candidate';
         $('#dRef').textContent = '—';
+        renderDocs([]);
+        pendingUpload = null;
         buildEditorShell();
       }
-      function openEditor(values={}){
+
+      function openEditor(values = {}){
         editing = values || null;
+        draft = { ...(values || {}) };
         buildEditorShell();
-        schemaTabs.forEach(t=>{
-          t.fields.forEach(([key,,type])=>{
-            const el = document.querySelector(`#frm [name="${key}"]`);
-            if(!el) return;
-            if(type==='checkbox') el.checked = !!values[key];
-            else if(values[key] != null) el.value = values[key];
-          });
-        });
-        $('#dTitle').textContent = values?.full_name || `${values.first_name||''} ${values.last_name||''}`.trim() || 'Edit candidate';
+        $('#dTitle').textContent = values?.full_name || `${values.first_name || ''} ${values.last_name || ''}`.trim() || 'Edit candidate';
         $('#dRef').textContent = values?.ref || values?.id || '—';
         openDrawer();
+        pendingUpload = null;
+        if (values?.id) loadDocuments(values.id); else renderDocs([]);
+      }
+
+
+      function renderDocs(docs) {
+        if (!docList) return;
+        currentDocs = Array.isArray(docs) ? docs : [];
+        if (!currentDocs.length) {
+          docList.innerHTML = '<div class="muted">No documents yet.</div>';
+          return;
+        }
+        docList.innerHTML = '';
+        currentDocs.forEach((doc) => {
+          const row = document.createElement('div');
+          row.className = 'doc-row';
+          const safeLabel = doc.label || doc.filename || `File ${doc.id}`;
+          const link = doc.url ? `<a href="${doc.url}" target="_blank" rel="noopener">${safeLabel}</a>` : `<span>${safeLabel}</span>`;
+          row.innerHTML = `${link}<button type="button" data-doc="${doc.id}">Delete</button>`;
+          docList.appendChild(row);
+        });
+        docList.querySelectorAll('button[data-doc]').forEach((btn) => {
+          btn.onclick = () => deleteDoc(Number(btn.dataset.doc));
+        });
+      }
+
+      async function loadDocuments(candidateId) {
+        if (!candidateId) {
+          renderDocs([]);
+          return;
+        }
+        try {
+          const res = await api('admin-candidate-docs-list', 'POST', { candidateId });
+          renderDocs(res?.documents || []);
+        } catch (err) {
+          console.error('[candidates] docs load failed', err);
+          renderDocs([]);
+        }
+      }
+
+      async function deleteDoc(id) {
+        if (!id) return;
+        if (!confirm('Delete this document?')) return;
+        try {
+          await api('admin-candidate-doc-delete', 'POST', { id });
+          currentDocs = currentDocs.filter((doc) => doc.id !== id);
+          renderDocs(currentDocs);
+          toast('Document removed', 'ok', 1800);
+        } catch (err) {
+          toast('Delete failed: ' + (err.message || err), 'error', 3200);
+        }
+      }
+
+      function toBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result;
+            if (typeof result === 'string') {
+              const base64 = result.split(',')[1];
+              resolve(base64);
+            } else {
+              reject(new Error('Unable to read file'));
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadDocument(candidateId, file, label) {
+        try {
+          const data = await toBase64(file);
+          const res = await api('admin-candidate-doc-upload', 'POST', {
+            candidateId,
+            name: file.name,
+            label: label || file.name,
+            contentType: file.type || 'application/octet-stream',
+            data,
+          });
+          if (res?.document) {
+            currentDocs = [res.document, ...currentDocs];
+            renderDocs(currentDocs);
+            toast('Document uploaded', 'ok', 1800);
+          }
+        } catch (err) {
+          console.error('[candidates] upload error', err);
+          toast('Upload failed: ' + (err.message || err), 'error', 3600);
+        }
+      }
+
+      async function parseCvFile(file) {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (ext === 'docx' && window.mammoth) {
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await window.mammoth.convertToPlainText({ arrayBuffer });
+          return result.value || '';
+        }
+        if (ext === 'pdf' && window.pdfjsLib) {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          let text = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map((item) => item.str).join(' ') + '
+';
+          }
+          return text;
+        }
+        return await file.text();
+      }
+
+      function extractCvData(text) {
+        const clean = (text || '').replace(/\r/g, '\n');
+        const lines = clean.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+        const emailMatch = clean.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+        const phoneMatch = clean.match(/\+?\d[\d\s().-]{7,}/);
+        const nameLine = lines.find((line) => /[A-Za-z]/.test(line) && line.split(/\s+/).length >= 2 && line.length < 60);
+        const locationLine = lines.find((line) => /(uk|ireland|germany|netherlands|finland|france|london|dublin|helsinki|manager|consultant)/i.test(line));
+        return {
+          text: clean,
+          email: emailMatch ? emailMatch[0] : '',
+          phone: phoneMatch ? phoneMatch[0] : '',
+          name: nameLine || '',
+          location: locationLine || '',
+        };
+      }
+
+      function applyCvData(data) {
+        if (!data) return;
+        captureCurrentTab();
+        if (data.name) {
+          const parts = data.name.split(/\s+/);
+          draft.first_name = parts.shift() || draft.first_name;
+          draft.last_name = parts.join(' ') || draft.last_name;
+        }
+        if (data.email) draft.email = data.email;
+        if (data.phone) draft.phone = data.phone;
+        if (data.location && !draft.town) draft.town = data.location;
+        if (data.text) {
+          const snippet = (data.text || '').slice(0, 2000);
+          if (snippet && !(draft.notes || '').includes(snippet)) {
+            draft.notes = [draft.notes || '', snippet].filter(Boolean).join('\n\n');
+          }
+        }
+        buildEditorForm();
+        toast('CV parsed. Review the fields before saving.', 'info', 2600);
+      }
+
+      async function handleCvInputChange(event) {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+        if (cvMode === 'parse') {
+          try {
+            const text = await parseCvFile(file);
+            const extracted = extractCvData(text);
+            applyCvData(extracted);
+            if (editing?.id) {
+              await uploadDocument(editing.id, file, 'CV');
+            } else {
+              pendingUpload = { file, label: 'CV' };
+              toast('CV ready. Save the candidate to upload the file.', 'info', 2600);
+            }
+          } catch (err) {
+            toast('CV parse failed: ' + (err.message || err), 'error', 3600);
+          }
+        } else {
+          if (editing?.id) {
+            await uploadDocument(editing.id, file, file.name);
+          } else {
+            pendingUpload = { file, label: file.name };
+            toast('File queued. Save the candidate to upload.', 'info', 2400);
+          }
+        }
       }
       async function save(closeAfter=false){
         try{
           const body = readForm();
-          if (editing?.id) body.id = editing.id;
+          const existingId = editing?.id || null;
+          if (existingId) body.id = existingId;
+
           const res = await api('admin-candidates-save','POST', body);
-          toast('Saved ' + (res?.full_name || body.full_name || 'candidate'), 'ok', 1800);
-          if (closeAfter) closeDrawer();
+          const savedId = res?.id || existingId || null;
+          const savedName = res?.full_name || body.full_name || 'candidate';
+
+          toast('Saved ' + savedName, 'ok', 1800);
+
+          if (savedId) {
+            editing = { ...(editing || {}), ...body, id: savedId, full_name: savedName };
+            draft = { ...editing };
+
+            if (pendingUpload) {
+              const upload = pendingUpload;
+              pendingUpload = null;
+              await uploadDocument(savedId, upload.file, upload.label);
+            } else {
+              await loadDocuments(savedId);
+            }
+          } else {
+            pendingUpload = null;
+          }
+
           await load();
-          if (!editing?.id && res?.id) editing = { ...body, id: res.id };
+          if (closeAfter) closeDrawer();
         }catch(e){
           console.error('[candidates] save error', e);
           toast('Save failed: ' + (e.message || e), 'error', 4200);
@@ -640,6 +877,9 @@
       $('#pgSize').onchange = (e)=>{ pageSize = Number(e.target.value)||25; page=1; render(); };
       $('#btnSaveDraft').onclick = ()=>save(false);
       $('#btnSaveClose').onclick = ()=>save(true);
+      if (btnParseCv) btnParseCv.onclick = ()=>{ cvMode = 'parse'; cvInput?.click(); };
+      if (btnUploadCv) btnUploadCv.onclick = ()=>{ cvMode = 'upload'; cvInput?.click(); };
+      if (cvInput) cvInput.addEventListener('change', handleCvInputChange);
       document.addEventListener('keydown',(e)=>{
         if ((e.ctrlKey||e.metaKey) && e.key==='r'){ e.preventDefault(); load(); }
         if ((e.ctrlKey||e.metaKey) && e.key==='e'){ e.preventDefault(); exportCSV(false); }

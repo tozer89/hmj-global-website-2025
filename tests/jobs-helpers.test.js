@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { toJob, toDbPayload, cleanArray } = require('../netlify/functions/_jobs-helpers.js');
+const { toJob, toDbPayload, cleanArray, slugify, resolveSection } = require('../netlify/functions/_jobs-helpers.js');
 
-test('toJob normalises database row fields', () => {
+test('toJob normalises database row fields and derives tags/section meta', () => {
   const row = {
     id: ' role-1 ',
     title: '  Lead Engineer  ',
@@ -27,7 +27,9 @@ test('toJob normalises database row fields', () => {
   const job = toJob(row);
   assert.equal(job.id, 'role-1');
   assert.equal(job.status, 'live'); // default fallback
-  assert.equal(job.section, 'dc'); // default fallback
+  assert.equal(job.section, 'General');
+  assert.equal(job.sectionLabel, 'General');
+  assert.equal(job.sectionKey, 'general');
   assert.equal(job.type, 'permanent');
   assert.equal(job.locationText, 'London');
   assert.equal(job.locationCode, 'uk-lon');
@@ -39,14 +41,15 @@ test('toJob normalises database row fields', () => {
   assert.equal(job.sortOrder, 10);
   assert.equal(job.createdAt, '2025-01-01T00:00:00Z');
   assert.equal(job.updatedAt, '2025-01-02T00:00:00Z');
+  assert.deepEqual(job.tags, ['power', 'hv']);
 });
 
-test('toDbPayload trims values and converts arrays', () => {
+test('toDbPayload trims values, converts arrays, and flattens tags to keywords string', () => {
   const payload = toDbPayload({
     id: ' role-2 ',
     title: ' Project Manager ',
     status: 'closed',
-    section: 'substations',
+    section: 'Critical Infrastructure',
     discipline: 'HV',
     type: 'contract',
     locationText: ' Dublin ',
@@ -54,7 +57,7 @@ test('toDbPayload trims values and converts arrays', () => {
     overview: 'Manage works',
     responsibilities: [' Plan ', ' Execute ', ''],
     requirements: ' - PMP\n - Experience ',
-    keywords: 'pm, hv',
+    tags: ['PM', 'HV'],
     applyUrl: 'https://apply',
     published: false,
     sortOrder: 5,
@@ -64,7 +67,7 @@ test('toDbPayload trims values and converts arrays', () => {
     id: 'role-2',
     title: 'Project Manager',
     status: 'closed',
-    section: 'substations',
+    section: 'Critical Infrastructure',
     discipline: 'HV',
     type: 'contract',
     location_text: 'Dublin',
@@ -72,15 +75,25 @@ test('toDbPayload trims values and converts arrays', () => {
     overview: 'Manage works',
     responsibilities: ['Plan', 'Execute'],
     requirements: ['PMP', 'Experience'],
-    keywords: 'pm, hv',
+    keywords: 'PM, HV',
     apply_url: 'https://apply',
     published: false,
     sort_order: 5,
   });
 });
 
-test('cleanArray supports newline and bullet-separated strings', () => {
-  assert.deepEqual(cleanArray(' - One\n* Two\n\u2022 Three '), ['One', 'Two', 'Three']);
+test('cleanArray supports newline, comma, and bullet-separated strings', () => {
+  assert.deepEqual(cleanArray(' - One\n* Two\n\u2022 Three , Four'), ['One', 'Two', 'Three', 'Four']);
   assert.deepEqual(cleanArray([' A ', null, 'B ']), ['A', 'B']);
   assert.deepEqual(cleanArray(undefined), []);
+});
+
+test('slugify and resolveSection provide stable keys', () => {
+  assert.equal(slugify('Data Centre Delivery'), 'data-centre-delivery');
+  const resolved = resolveSection('dc');
+  assert.equal(resolved.label, 'Data Centre Delivery');
+  assert.equal(resolved.key, 'dc');
+  const custom = resolveSection('Critical Infrastructure');
+  assert.equal(custom.label, 'Critical Infrastructure');
+  assert.equal(custom.key, 'critical-infrastructure');
 });
