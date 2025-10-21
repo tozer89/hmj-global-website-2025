@@ -6,39 +6,40 @@
   <title>Assignments — Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Theme -->
+  <!-- System fonts + theme -->
   <style>
     :root{
-      --bg:#fff;
-      --ink:#0f172a;           /* slate-900 */
-      --muted:#64748b;         /* slate-500 */
-      --line:#e2e8f0;          /* slate-200 */
-      --blue:#1f428a;          /* HMJ blue (softer) */
-      --blue-ink:#14315f;
-      --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
+      --bg:#ffffff;
+      --card:#fff;
+      --ink:#0f172a;         /* slate-900 */
+      --muted:#64748b;       /* slate-500 */
+      --line:#e2e8f0;        /* slate-200 */
+      --blue:#1f4c8f;        /* HMJ blue (softer) */
+      --blue-ink:#113465;
       --chip:#eef2ff;
-      --panel:#f8fafc;
-      --shadow:0 .5px 0 rgba(2,8,23,.06), 0 10px 24px rgba(2,8,23,.06);
+      --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
+      --shadow:0 1px 2px rgba(2,8,23,.06), 0 8px 24px rgba(2,8,23,.06);
       --radius:14px;
     }
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
-      font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Inter,Roboto,Helvetica,Arial}
+      font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";}
     a{color:var(--blue-ink);text-decoration:none}
     a:hover{text-decoration:underline}
-    .container{max-width:1280px;margin:0 auto;padding:16px}
 
-    /* App bar */
-    .appbar{position:sticky;top:0;z-index:20;background:#eff4ff;border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(2,8,23,.04)}
-    .appbar .row{display:flex;align-items:center;gap:12px;padding:10px 16px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#0b1d3c}
-    .brand .logo{width:28px;height:28px;border-radius:7px;background:var(--blue);display:inline-grid;place-items:center;color:#fff}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{background:#edf2ff;border:1px solid #dbeafe;color:#0b1d3c;border-radius:999px;padding:6px 10px;font-weight:700}
-    .chip.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
-    .chip.warn{background:#fffbeb;border-color:#fde68a;color:#7c5800}
+    .container{max-width:1200px;margin:0 auto;padding:18px}
+    .appbar{position:sticky;top:0;z-index:20;background:#0f2a5a; /* deep HMJ */
+      border-bottom:1px solid rgba(255,255,255,.08);box-shadow:0 1px 0 rgba(2,8,23,.04);color:#fff}
+    .appbar .row{display:flex;align-items:center;gap:12px;padding:12px 18px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
+    .brand .logo{width:28px;height:28px;border-radius:7px;background:#fff;display:inline-grid;place-items:center;color:#0f2a5a;font-weight:800}
+    .topnav{display:flex;gap:8px;align-items:center;margin-left:8px}
+    .nav-pill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 12px;border-radius:999px;font-weight:700}
+    .nav-pill:hover{background:rgba(255,255,255,.2)}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:10px}
+    .chip{background:#ecfdf5;border:1px solid #bbf7d0;color:#064e3b;padding:6px 10px;border-radius:999px;font-weight:700}
     .chip.bad{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
-
+    .chip.warn{background:#fffbeb;border-color:#fde68a;color:#7c5800}
     .actions{margin-left:auto;display:flex;gap:10px}
     .btn{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
     .btn:hover{box-shadow:var(--shadow)}
@@ -46,30 +47,27 @@
     .btn.ghost{background:#fff}
     .btn.danger{background:#fee2e2;border-color:#fecaca;color:#7f1d1d}
 
-    /* Hints */
-    .hint{background:var(--panel);border:1px dashed var(--line);padding:12px 14px;border-radius:12px;margin:12px 0;color:#1f2937}
-    .hint strong{font-weight:800}
+    .banner{margin:16px 0;padding:12px 14px;background:#f1f5f9;border:1px solid var(--line);border-radius:12px}
+    .banner strong{display:block;margin-bottom:6px}
+    .hint{color:var(--muted)}
 
-    /* Toolbar */
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
-    .search{flex:1;min-width:230px;position:relative}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0}
+    .search{flex:1;min-width:220px;position:relative}
     .search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--line);border-radius:12px;background:#fff}
     .search .ico{position:absolute;left:10px;top:9px;color:var(--muted)}
     .select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
 
-    /* Layout */
     .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
-    @media (max-width:1100px){ .grid{grid-template-columns:1fr} }
+    @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
 
-    .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .card .h{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;background:#f8fafc;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card .h{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;color:#0b1d3c;background:#f8fafc;border-top-left-radius:var(--radius);border-top-right-radius:var(--radius)}
     .card .b{padding:12px 14px}
 
     table{width:100%;border-collapse:separate;border-spacing:0}
     th,td{padding:12px;border-bottom:1px solid var(--line)}
     th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:#f1f5f9}
-    tr:hover td{background:#fbfdff}
-    .row-actions{display:flex;gap:8px}
+    tr:hover td{background:#fafafa}
 
     .status{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:800;font-size:12px}
     .status.live{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
@@ -78,18 +76,17 @@
 
     .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px}
     .kv .k{color:var(--muted)}
-    .empty{color:var(--muted)}
-
+    .empty{color:var(--muted);text-align:center;padding:24px}
+    .row-actions{display:flex;gap:8px}
     .table-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
     .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;display:none}
 
-    dialog{border:none;border-radius:16px;max-width:760px;width:min(96vw,760px);box-shadow:var(--shadow)}
-    dialog::backdrop{background:rgba(2,8,23,.35)}
+    .foot-hint{margin-top:10px;color:var(--muted);font-size:12px}
   </style>
 </head>
 
 <body>
-  <!-- App bar -->
+  <!-- Header -->
   <header class="appbar">
     <div class="row">
       <div class="brand">
@@ -97,9 +94,11 @@
         HMJ Global — Admin
       </div>
 
-      <a class="btn ghost" href="./index.html">← Dashboard</a>
+      <nav class="topnav">
+        <a class="nav-pill" href="./index.html">← Dashboard</a>
+        <a class="nav-pill" href="./candidates.html">Candidates</a>
+      </nav>
 
-      <!-- Diagnostic chips (populated by common.js + this page) -->
       <nav class="chips" id="diagChips"></nav>
 
       <div class="actions">
@@ -112,21 +111,21 @@
   </header>
 
   <main class="container">
-
-    <!-- Friendly page explainer (helps new staff + adds context) -->
-    <div class="hint" id="pageIntro">
-      <strong>Assignments overview.</strong> This page lists all current and past assignments, showing client, candidate, and
-      contract dates. Use the search bar to filter by job title, client, or candidate name. Status tags such as <em>Live</em>
-      or <em>Complete</em> update automatically from the Timesheets system.
+    <!-- Helpful banner (small “how to”) -->
+    <div class="banner">
+      <strong>Assignments overview.</strong>
+      This page lists all current and past assignments with client, candidate, and contract dates. Use the search bar to filter by job title,
+      client, or candidate name. Status tags such as <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.
+      <div class="foot-hint">Tip: press <kbd>Enter</kbd> in the search box to run a quick filter. Click a row to open the quick view.</div>
     </div>
 
     <!-- Controls -->
     <div class="toolbar">
-      <div class="search">
+      <div class="search" title="Press Enter to search">
         <span class="ico">🔍</span>
         <input id="q" placeholder="Search (title, ref, client, candidate) — press Enter" />
       </div>
-      <select id="status" class="select" aria-label="Filter by status">
+      <select id="status" class="select" title="Filter by status">
         <option value="">All statuses</option>
         <option value="draft">Draft</option>
         <option value="complete">Complete</option>
@@ -136,17 +135,12 @@
       <button id="btnRefresh2" class="btn">↻ Refresh</button>
     </div>
 
-    <div id="envHint" class="hint" style="display:none"></div>
-
     <div class="grid">
       <!-- List -->
-      <section class="card" aria-label="Assignments list">
-        <div class="h">
-          All assignments
-          <span id="total" style="color:var(--muted);font-weight:700"></span>
-        </div>
+      <section class="card">
+        <div class="h">All assignments <span id="total" style="color:var(--muted);font-weight:600"></span></div>
         <div class="b" style="padding:0">
-          <table>
+          <table id="tbl" aria-live="polite">
             <thead>
               <tr>
                 <th style="width:36px;"></th>
@@ -159,14 +153,14 @@
               </tr>
             </thead>
             <tbody id="rows">
-              <tr><td colspan="7" class="empty" style="padding:26px;text-align:center">Loading assignments…</td></tr>
+              <tr><td colspan="7" class="empty">Loading assignments…</td></tr>
             </tbody>
           </table>
 
           <div class="table-footer">
             <div>
-              <button id="prev" class="btn" title="← Previous (Alt+←)">← Prev</button>
-              <button id="next" class="btn" title="Next → (Alt+→)">Next →</button>
+              <button id="prev" class="btn" aria-label="Previous page">← Prev</button>
+              <button id="next" class="btn" aria-label="Next page">Next →</button>
               <span id="pageLabel" style="margin-left:8px;color:var(--muted)"></span>
             </div>
             <div>
@@ -181,42 +175,44 @@
       </section>
 
       <!-- Quick view -->
-      <aside class="card" aria-label="Quick view panel">
+      <aside class="card">
         <div class="h">Quick view — Assignment</div>
         <div class="b">
           <div id="quick" class="empty">Select an assignment to preview details here.</div>
         </div>
-
         <div class="h">Latest timesheet</div>
         <div class="b">
           <div id="latestTS" class="empty">Not live — no timesheets yet.</div>
         </div>
       </aside>
     </div>
+
+    <div class="foot-hint">
+      Need a full record? Use <em>Open full assignment</em> in the quick view. Live assignments show a shortcut to Timesheets.
+    </div>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Drawer (New assignment) -->
-  <dialog id="drawer">
+  <dialog id="drawer" style="border:none;max-width:740px;width:96%;border-radius:14px;box-shadow:var(--shadow)">
     <form method="dialog" id="formNew" style="padding:16px 18px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <h3 style="margin:0">New assignment</h3>
-        <div style="display:flex; gap:8px">
-          <button class="btn ghost" value="cancel" type="button" id="closeDrawer">Close</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" value="cancel" type="button" id="drawerCloseTop">Close</button>
         </div>
       </div>
 
-      <div class="hint" style="margin-top:0">
-        <strong>Tip:</strong> You can leave Candidate blank and link later.  
-        Status will flip to <em>Live</em> automatically once linked and timesheets are raised.
-      </div>
+      <p class="hint" style="margin-top:0">
+        Fill in the basics now — you can link the candidate later. Status becomes <strong>Live</strong> once a candidate is linked and
+        Timesheets can be raised against it.
+      </p>
 
       <div style="display:grid;gap:12px">
-        <label>Job title *<br><input id="title" required class="select" style="width:100%" placeholder="e.g. Senior Electrician"></label>
-
+        <label>Job title *<br><input id="title" required class="select" style="width:100%"></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <label>PO number<br><input id="po" class="select" style="width:100%" placeholder="Optional"></label>
+          <label>PO number<br><input id="po" class="select" style="width:100%"></label>
           <label>Shift<br>
             <select id="shift" class="select" style="width:100%">
               <option value="Day">Day</option>
@@ -224,48 +220,65 @@
             </select>
           </label>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <label>Start date<br><input id="start" type="date" class="select" style="width:100%"></label>
           <label>End date<br><input id="end" type="date" class="select" style="width:100%"></label>
         </div>
-
         <div class="kv" style="margin-top:6px">
           <div class="k">Client</div><div><input id="client" class="select" placeholder="Client name / ref"></div>
-          <div class="k">Client site</div><div><input id="site" class="select" placeholder="Optional site"></div>
+          <div class="k">Client site</div><div><input id="site" class="select" placeholder="(optional)"></div>
           <div class="k">Candidate</div><div><input id="candidate" class="select" placeholder="Assign later is OK"></div>
           <div class="k">Expected days / hours</div><div><input id="hours" class="select" placeholder="e.g. Mon–Fri, 40h"></div>
           <div class="k">Internal notes</div><div><textarea id="notes" class="select" rows="3" placeholder="Internal notes…"></textarea></div>
         </div>
       </div>
-
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
-        <button class="btn" value="cancel" type="button" id="cancelNew">Cancel</button>
+        <button class="btn" value="cancel" type="button" id="drawerCloseBottom">Cancel</button>
         <button class="btn primary" id="saveNew" value="default">Save</button>
       </div>
     </form>
   </dialog>
 
-  <!-- Page logic (uses Admin helpers from common.js) -->
+  <!-- Page logic -->
   <script>
-    // The actual work is deferred to Admin.bootAdmin which common.js defines.
-    // This block *only* runs once Admin is ready (so no "Can't find variable: Admin").
-    (function waitForAdmin(){
-      if (window.Admin && typeof Admin.bootAdmin === 'function') init();
-      else setTimeout(waitForAdmin, 20);
-    })();
+    (function startWhenReady(){
+      // Wait for common.js to load and expose Admin
+      const again = () => setTimeout(startWhenReady, 40);
+      if (!window.Admin || !Admin.bootAdmin) return again();
 
-    function init(){
-      Admin.bootAdmin(async ({ api, sel, toast, Debug }) => {
-        Debug.chip('assignments:init','ok');
+      Admin.bootAdmin(async (helpers) => {
+        // Be tolerant to Debug/debug naming differences
+        const { api, sel, toast } = helpers;
+        const D = helpers.Debug || helpers.debug || window.Debug || {
+          chip:(t)=>console.log('[chip]',t),
+          ok:(...a)=>console.log('[ok]',...a),
+          warn:(...a)=>console.warn('[warn]',...a),
+          err:(...a)=>console.error('[err]',...a),
+          log:(...a)=>console.log('[log]',...a)
+        };
 
+        // chips like candidates page
+        try {
+          const diag = document.querySelector('#diagChips');
+          if (diag) {
+            diag.innerHTML = '';
+            const add = (text, ok=true) => {
+              const s = document.createElement('span');
+              s.className = 'chip' + (ok ? '' : ' bad');
+              s.textContent = text;
+              diag.appendChild(s);
+            };
+            add('init: ok', true);
+          }
+        } catch {}
+
+        // ---------- DOM handles ----------
         const $rows = sel('#rows');
         const $total = sel('#total');
         const $pageLabel = sel('#pageLabel');
         const $q = sel('#q');
         const $status = sel('#status');
         const $pageSize = sel('#pageSize');
-        const $envHint = sel('#envHint');
 
         let page = 1;
         let total = 0;
@@ -273,99 +286,75 @@
         const selected = new Set();
         let current = null;
 
-        // Helpers
-        const fmtDate = x => x ? new Date(x).toLocaleDateString() : '—';
-        const fmtDates = (a,b) => (!a && !b) ? '—' : `${fmtDate(a)} → ${fmtDate(b)}`;
-        const pill = s => `<span class="status ${String(s||'draft').toLowerCase()}">${s||'draft'}</span>`;
-
+        // ---------- Helpers ----------
         function setLoading(msg='Loading assignments…'){
-          $rows.innerHTML = `<tr><td colspan="7" class="empty" style="padding:26px;text-align:center">${msg}</td></tr>`;
+          $rows.innerHTML = `<tr><td colspan="7" class="empty">${msg}</td></tr>`;
         }
+        function fmtDate(x){ return x ? new Date(x).toLocaleDateString() : '—'; }
+        function fmtDates(a,b){ if(!a && !b) return '—'; return `${fmtDate(a)} → ${fmtDate(b)}`; }
+        function renderStatus(s){ s=(s||'draft').toLowerCase(); return `<span class="status ${s}">${s}</span>`; }
 
         function renderRows(items){
-          if(!items?.length){
-            setLoading('No assignments found.');
-            return;
-          }
-          const html = items.map(x => {
+          if(!items?.length){ setLoading('No assignments found.'); return; }
+          const html = items.map(x=>{
             const live = (x.status||'').toLowerCase()==='live';
             const cand = x.candidate_name || '—';
             const client = x.client_name || '—';
             return `
               <tr data-id="${x.id}">
-                <td><input type="checkbox" class="rowChk" data-id="${x.id}"></td>
-                <td><a href="#" class="rowLink" data-id="${x.id}">${x.title || x.job_title || '—'}</a></td>
+                <td><input type="checkbox" class="rowChk" data-id="${x.id}" /></td>
+                <td><a href="#" class="rowLink" data-id="${x.id}">${x.title||'—'}</a></td>
                 <td>${client}</td>
                 <td>${cand}</td>
                 <td>${fmtDates(x.start_date, x.end_date)}</td>
-                <td>${pill(x.status)}</td>
+                <td>${renderStatus(x.status)}</td>
                 <td class="row-actions">
                   <button class="btn ghost act-open" data-id="${x.id}">Open</button>
-                  ${live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(x.id)}">Timesheets</a>` : ''}
+                  ${ live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(x.id)}">Timesheets</a>` : '' }
                 </td>
-              </tr>
-            `;
+              </tr>`;
           }).join('');
           $rows.innerHTML = html;
         }
 
-        // Centralised error -> UX
-        function showServerMisconfigIfAny(message){
-          if (!message) { $envHint.style.display='none'; return; }
-          const isKeyError = /supabaseKey is required/i.test(message);
-          if (isKeyError){
-            $envHint.innerHTML =
-              `<strong>Server configuration required.</strong> The assignments API needs a Supabase key at runtime.<br>
-               Fix in Netlify → <code>Site settings → Build &amp; deploy → Environment variables</code><br>
-               Add <code>SUPABASE_KEY</code> and set it equal to your existing service key, e.g.
-               <code>SUPABASE_KEY = \${SUPABASE_SERVICE_ROLE_KEY}</code>. Then redeploy.`;
-            $envHint.style.display = 'block';
-            Debug.chip('env:supabaseKey','bad');
-          }
-        }
-
+        // ---------- Data loaders ----------
         async function load(){
           try{
             setLoading();
             const q = $q.value.trim();
             const status = $status.value.trim();
             const res = await api('admin-assignments-list', { page, pageSize, q, status });
-
-            // Support either {items,total} or {rows,total}
-            const items = res.items || res.rows || [];
-            total = res.total ?? items.length;
-
+            // functions may return { rows, total } or { items, total } depending on version
+            const items = res?.items || res?.rows || [];
+            total = res?.total ?? items.length;
             renderRows(items);
             $total.textContent = `(${total} total)`;
             $pageLabel.textContent = `Page ${page}`;
-            Debug.ok('assignments:list', { page, pageSize, q, status, total });
-            showServerMisconfigIfAny('');
+            D.ok('assignments:list', { page, pageSize, q, status, total });
           }catch(err){
-            const msg = String(err && (err.message || err));
-            Debug.err('[assignments] list error', err);
+            D.err('[assignments] list error', err);
             setLoading('Failed to load. Check console for details.');
-            toast('Error loading assignments', 'bad', 5000);
-            showServerMisconfigIfAny(msg);
+            toast('Error loading assignments', 'error', 5000);
           }
         }
 
         async function openQuickView(id){
           try{
             current = id;
-            const d = await api('admin-assignments-detail', { id });
-            const live = (d?.status||'').toLowerCase()==='live';
+            const detail = await api('admin-assignments-detail', { id });
+            const live = (detail?.status||'').toLowerCase()==='live';
 
             sel('#quick').innerHTML = `
               <div class="kv">
-                <div class="k">Status</div><div>${pill(d?.status)}</div>
-                <div class="k">Client</div><div>${d?.client_name||'—'}</div>
-                <div class="k">Candidate</div><div>${d?.candidate_name||'—'}</div>
-                <div class="k">PO number</div><div>${d?.po_number||'—'}</div>
-                <div class="k">Dates</div><div>${fmtDates(d?.start_date, d?.end_date)}</div>
-                <div class="k">Shift</div><div>${d?.shift||'Day'}</div>
-                <div class="k">Expected hrs</div><div>${d?.estimated_hours||'—'}</div>
+                <div class="k">Status</div><div>${renderStatus(detail?.status)}</div>
+                <div class="k">Client</div><div>${detail?.client_name||'—'}</div>
+                <div class="k">Candidate</div><div>${detail?.candidate_name||'—'}</div>
+                <div class="k">PO number</div><div>${detail?.po_number||'—'}</div>
+                <div class="k">Dates</div><div>${fmtDates(detail?.start_date, detail?.end_date)}</div>
+                <div class="k">Shift</div><div>${detail?.shift||'Day'}</div>
+                <div class="k">Expected hrs</div><div>${detail?.estimated_hours||'—'}</div>
               </div>
-              <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
                 <a class="btn ghost" href="./assignment.html?id=${encodeURIComponent(id)}">Open full assignment</a>
                 ${ live ? `<a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>` : '' }
               </div>
@@ -374,23 +363,22 @@
             if(live){
               try{
                 const tsr = await api('admin-timesheets-list', { assignmentId:id, limit:1 });
-                const item = tsr?.items?.[0] || tsr?.rows?.[0];
+                const item = (tsr?.items && tsr.items[0]) || (tsr?.rows && tsr.rows[0]) || null;
                 if(item){
                   sel('#latestTS').innerHTML = `
                     <div class="kv">
                       <div class="k">Week</div><div>${item.week_commencing || '—'}</div>
                       <div class="k">Hours</div><div>${item.total_hours ?? '—'}</div>
-                      <div class="k">Status</div><div>${pill(item.status||'draft')}</div>
+                      <div class="k">Status</div><div><span class="status ${item.status||'draft'}">${item.status||'draft'}</span></div>
                     </div>
                     <div style="margin-top:8px">
                       <a class="btn ghost" href="./timesheets.html?assignment=${encodeURIComponent(id)}">Open in Timesheets</a>
-                    </div>
-                  `;
+                    </div>`;
                 } else {
                   sel('#latestTS').innerHTML = `<div class="empty">No timesheets yet.</div>`;
                 }
-              }catch(e){
-                Debug.warn('timesheets load failed', e);
+              }catch(tsErr){
+                D.warn('timesheets load failed', tsErr);
                 sel('#latestTS').innerHTML = `<div class="empty">Could not load latest timesheet.</div>`;
               }
             } else {
@@ -399,21 +387,21 @@
 
             toast('Opened assignment','ok');
           }catch(err){
-            Debug.err('openQuickView error', err);
+            D.err('openQuickView error', err);
             toast('Failed to open assignment','bad', 4500);
           }
         }
 
-        // Events
-        sel('#btnRefresh, #btnRefresh2').forEach?.call
-          ? sel('#btnRefresh, #btnRefresh2').forEach(el=>el.addEventListener('click',()=>{ page=1; load(); }))
-          : (sel('#btnRefresh').onclick = sel('#btnRefresh2').onclick = ()=>{ page=1; load(); });
+        // ---------- Events ----------
+        const multi = (selStr, fn) => document.querySelectorAll(selStr).forEach(fn);
 
+        multi('#btnRefresh, #btnRefresh2', el => el.addEventListener('click', ()=>{ page=1; load(); }));
         $q.addEventListener('keydown',e=>{ if(e.key==='Enter'){ page=1; load(); } });
         $status.addEventListener('change', ()=>{ page=1; load(); });
         $pageSize.addEventListener('change', ()=>{ pageSize=Number($pageSize.value||20); page=1; load(); });
-        sel('#prev').addEventListener('click',()=>{ if(page>1){ page--; load(); }});
-        sel('#next').addEventListener('click',()=>{ page++; load(); });
+
+        document.querySelector('#prev').addEventListener('click',()=>{ if(page>1){ page--; load(); }});
+        document.querySelector('#next').addEventListener('click',()=>{ page++; load(); });
 
         document.addEventListener('click', (e)=>{
           const open = e.target.closest('.act-open, .rowLink');
@@ -429,33 +417,26 @@
           }
         });
 
-        // Keyboard paging (Alt+← / Alt+→)
-        document.addEventListener('keydown', (e)=>{
-          if(e.altKey && e.key==='ArrowLeft'){ if(page>1){ page--; load(); } }
-          if(e.altKey && e.key==='ArrowRight'){ page++; load(); }
-        });
-
-        // Drawer open/close
+        // Drawer
         const drawer = document.querySelector('#drawer');
-        sel('#btnNew').addEventListener('click', ()=>drawer.showModal());
-        sel('#closeDrawer').addEventListener('click', ()=>drawer.close());
-        sel('#cancelNew').addEventListener('click', ()=>drawer.close());
+        document.querySelector('#btnNew').addEventListener('click', ()=>drawer.showModal());
+        document.querySelector('#drawerCloseTop').addEventListener('click', ()=>drawer.close());
+        document.querySelector('#drawerCloseBottom').addEventListener('click', ()=>drawer.close());
 
-        // Create
-        sel('#formNew').addEventListener('submit', async (e)=>{
+        document.querySelector('#formNew').addEventListener('submit', async (e)=>{
           e.preventDefault();
           try{
             const payload = {
-              title: sel('#title').value.trim(),
-              po_number: sel('#po').value.trim() || null,
-              shift: sel('#shift').value || 'Day',
-              start_date: sel('#start').value||null,
-              end_date: sel('#end').value||null,
-              client: sel('#client').value.trim() || null,
-              client_site: sel('#site').value.trim() || null,
-              candidate: sel('#candidate').value.trim() || null,
-              estimated_hours: sel('#hours').value.trim() || null,
-              notes: sel('#notes').value.trim() || null
+              title: (document.querySelector('#title').value||'').trim(),
+              po_number: (document.querySelector('#po').value||'').trim(),
+              shift: document.querySelector('#shift').value,
+              start_date: document.querySelector('#start').value||null,
+              end_date: document.querySelector('#end').value||null,
+              client: (document.querySelector('#client').value||'').trim(),
+              client_site: (document.querySelector('#site').value||'').trim(),
+              candidate: (document.querySelector('#candidate').value||'').trim(),
+              estimated_hours: (document.querySelector('#hours').value||'').trim(),
+              notes: (document.querySelector('#notes').value||'').trim()
             };
             if(!payload.title){ toast('Job title is required','warn'); return; }
             await api('admin-assignments-create', payload);
@@ -463,13 +444,13 @@
             toast('Assignment created','ok');
             page=1; load();
           }catch(err){
-            Debug.err('create error',err);
+            D.err('create error', err);
             toast('Failed to create assignment','bad', 5000);
           }
         });
 
         // Delete
-        sel('#btnDelete').addEventListener('click', async ()=>{
+        document.querySelector('#btnDelete').addEventListener('click', async ()=>{
           if(!selected.size){ toast('Select at least one row','warn'); return; }
           if(!confirm(`Delete ${selected.size} assignment(s)?`)) return;
           try{
@@ -477,20 +458,26 @@
             selected.clear();
             toast('Deleted','ok'); load();
           }catch(err){
-            Debug.err('delete error', err);
+            D.err('delete error', err);
             toast('Delete failed','bad', 5000);
           }
+        });
+
+        // Sign out button – piggy-backs on common.js identity helper
+        document.querySelector('#btnSignOut')?.addEventListener('click', ()=> {
+          try { window.netlifyIdentity?.logout?.(); } catch {}
+          location.href = './index.html';
         });
 
         // Initial load
         await load();
       });
-    }
+    })();
   </script>
 
-  <!-- Netlify Identity for auth + sign-out menu -->
+  <!-- Netlify Identity (account + token; harmless if already present) -->
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <!-- Shared Admin helpers -->
-  <script defer src="./common.js?v=16"></script>
+  <!-- common.js must be included by your layout/build; this page assumes it’s already loaded
+       and exposes window.Admin.bootAdmin(...) just like on the candidates page. -->
 </body>
 </html>
