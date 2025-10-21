@@ -1,151 +1,110 @@
 // /netlify/functions/admin-assignments-list.js
-// List assignments for the Admin UI with paging + filters.
+// Lists assignments for the Admin page with filters + paging.
 
-/* ---- Make sure _supabase.js sees a key at import time ---- */
+/* ---------------- Assignments-only env alias (do NOT edit _supabase.js) --- */
 process.env.SUPABASE_KEY =
   process.env.SUPABASE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_ADMIN_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  '';
+  process.env.SUPABASE_ANON_KEY || '';
 
+/* --------------------------------- shared ---------------------------------- */
 const { getClient } = require('./_supabase');
 const { requireRole } = require('./_auth');
+
 const supabase = getClient();
 
-/* --------------------------- CORS / helpers --------------------------- */
+/* --------------------------------- utils ----------------------------------- */
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
 const ok = (status, body) => ({
   statusCode: status,
   headers: { 'Content-Type': 'application/json', ...CORS },
   body: body ? JSON.stringify(body) : '',
 });
+
 const err = (status, message, extra = {}) => ({
   statusCode: status,
   headers: { 'Content-Type': 'application/json', ...CORS },
   body: JSON.stringify({ error: message, ...extra }),
 });
 
-/** Parse body safely */
-function bodyOf(event) {
-  try { return event.body ? JSON.parse(event.body) : {}; }
-  catch { return {}; }
-}
-
-/** Normalise any row (table or view) to the UI’s list shape */
-function mapRow(r) {
-  const title =
-    r.title != null ? r.title :
-    r.job_title != null ? r.job_title : null;
-
-  const shift =
-    r.shift != null ? r.shift :
-    r.shift_type != null ? r.shift_type : 'Day';
-
-  let estimated_hours = null;
-  if (r.estimated_hours != null && String(r.estimated_hours).trim() !== '') {
-    estimated_hours = r.estimated_hours;
-  } else if (r.days_per_week != null && r.hours_per_day != null) {
-    estimated_hours = `${r.days_per_week} days/wk, ${r.hours_per_day} h/day`;
+function parseBody(event) {
+  if (event.httpMethod === 'POST' && event.body) {
+    try { return JSON.parse(event.body); } catch (_) { /* below */ }
+    throw new Error('Invalid JSON body');
   }
-
-  return {
-    id: r.id,
-    title,
-    client_name: r.client_name ?? (r.client && r.client.name) ?? null,
-    candidate_name:
-      r.candidate_name ??
-      (r.candidate && (r.candidate.full_name ||
-        `${r.candidate.first_name || ''} ${r.candidate.last_name || ''}`.trim())) ||
-      null,
-    start_date: r.start_date || null,
-    end_date: r.end_date || null,
-    status: r.status || 'draft',
-    po_number: r.po_number || r.po_ref || null,
-    shift,
-    estimated_hours,
-  };
+  return {};
 }
 
-/* -------------------------------- handler ----------------------------- */
+function pickNum(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/* ------------------------------ handler ------------------------------------ */
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'OPTIONS') return ok(204);
-    if (event.httpMethod !== 'POST') return err(405, 'Method Not Allowed');
 
-    if (!process.env.SUPABASE_KEY) return err(400, 'supabaseKey is required.');
+    if (!['GET', 'POST'].includes(event.httpMethod)) {
+      return err(405, 'Method Not Allowed');
+    }
 
-    // Must be admin
+    // Auth: admin only
     await requireRole(event, 'admin');
 
-    const {
-      q = '',
-      status = '',
-      consultant = '',
-      client = '',
-      page = 1,
-      pageSize = 20,
-    } = bodyOf(event);
-
-    const from = (Number(page) - 1) * Number(pageSize);
-    const to = from + Number(pageSize) - 1;
-
-    // Prefer the base table; if it doesn’t exist or errors, fallback to the view.
-    const run = async (source) => {
-      let query = supabase.from(source)
-        .select('*', { count: 'exact' })
-        // created_at is on your view; for the base table we coalesce below by end/start dates.
-        .order('created_at', { ascending: false, nullsFirst: false })
-        .range(from, to);
-
-      if (status)     query = query.eq('status', status);
-      if (consultant) query = query.ilike('consultant_name', `%${consultant}%`);
-      if (client)     query = query.ilike('client_name', `%${client}%`);
-      if (q) {
-        // match common list columns
-        query = query.or([
-          `title.ilike.%${q}%`,
-          `job_title.ilike.%${q}%`,
-          `candidate_name.ilike.%${q}%`,
-          `client_name.ilike.%${q}%`,
-          `po_number.ilike.%${q}%`,
-          `po_ref.ilike.%${q}%`,
-          `as_ref.ilike.%${q}%`,
-        ].join(','));
-      }
-      return query;
-    };
-
-    let data, count;
-
-    // Try base table first
-    let res = await run('assignments');
-    if (res.error) {
-      // Fallback to the view (e.g. when created_at exists there)
-      res = await run('assignments_view');
-      if (res.error) throw res.error;
-    }
-    data = res.data || [];
-    count = res.count ?? data.length;
-
-    // If the base table was used and doesn’t have created_at, emulate a stable order
-    if (data.length && !('created_at' in data[0])) {
-      data.sort((a, b) => {
-        // prefer closed_at/start_date/end_date descending-ish
-        const av = new Date(a.closed_at || a.start_date || a.end_date || 0).getTime();
-        const bv = new Date(b.closed_at || b.start_date || b.end_date || 0).getTime();
-        return bv - av;
-      });
+    // Ensure we actually have a key (otherwise Supabase client 500s later)
+    if (!process.env.SUPABASE_KEY) {
+      return err(400, 'supabaseKey is required.');
     }
 
-    const rows = data.map(mapRow);
-    return ok(200, { rows, total: count });
+    // Accept filters from GET (?q=&status=&client=&consultant=&page=&pageSize=)
+    // or POST body { q, status, client, consultant, page, pageSize }
+    const qs = event.queryStringParameters || {};
+    const body = parseBody(event);
+
+    const q          = (body.q          ?? qs.q          ?? '').trim();
+    const status     = (body.status     ?? qs.status     ?? '').trim();
+    const client     = (body.client     ?? qs.client     ?? '').trim();
+    const consultant = (body.consultant ?? qs.consultant ?? '').trim();
+
+    const page     = pickNum(body.page     ?? qs.page, 1);
+    const pageSize = pickNum(body.pageSize ?? qs.pageSize, 20);
+
+    // Query the *view* so we always have denormalised names available
+    let query = supabase
+      .from('assignments_view')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range((page - 1) * pageSize, page * pageSize - 1);
+
+    if (status)     query = query.eq('status', status);
+    if (client)     query = query.ilike('client_name', `%${client}%`);
+    if (consultant) query = query.ilike('consultant_name', `%${consultant}%`);
+    if (q) {
+      // broad search across common fields
+      query = query.or([
+        `title.ilike.%${q}%`,
+        `candidate_name.ilike.%${q}%`,
+        `client_name.ilike.%${q}%`,
+        `as_ref.ilike.%${q}%`,
+        `po_number.ilike.%${q}%`
+      ].join(','));
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+
+    return ok(200, { rows: data || [], total: count ?? (data?.length || 0), page, pageSize });
   } catch (e) {
-    return err(400, e?.message || String(e));
+    // Surface the reason instead of a 502 so the UI can show it.
+    console.error('[admin-assignments-list] error:', e?.message || e);
+    return err(502, e?.message || String(e));
   }
 };
