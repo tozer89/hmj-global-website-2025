@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin — HMJ Global</title>
+
+
+
+
+
+<style>
+  :root{
+    --ink:#101828;           /* default text */
+    --bg:#ffffff;            /* page bg */
+    --muted:#667085;         /* muted text */
+    --blue:#1f3b7a;          /* header + buttons */
+    --blue-2:#29478f;        /* hover */
+    --card:#f8fafc;          /* card bg */
+    --stroke:#e5e7eb;        /* borders */
+    --ring:#c7d2fe;          /* focus ring */
+    --chip:#eef2ff;
+    --success:#16a34a; --danger:#dc2626; --warn:#f59e0b;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  /* Header */
+  .top{position:sticky;top:0;z-index:30;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+  .row{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+  .brand{font-weight:800;letter-spacing:.2px;display:flex;gap:10px;align-items:center}
+  .brand a{display:inline-flex;gap:8px;align-items:center;color:#fff;text-decoration:none}
+  .brand .logo{width:28px;height:28px;border-radius:6px;background:#fff;display:grid;place-items:center;color:var(--blue);font-weight:900}
+  .sp{flex:1}
+  .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--blue-2)}
+  .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
+  .btn.light{background:#fff;color:var(--blue);border-color:#fff}
+  /* Page */
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:16px}
+  @media (max-width:820px){ .grid{grid-template-columns:1fr} }
+  .tile{display:flex;justify-content:space-between;gap:10px;align-items:center;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:18px}
+  .tile:hover{border-color:#cbd5e1;box-shadow:0 2px 0 rgba(0,0,0,.03)}
+  .tile h3{margin:0}
+  .muted{color:var(--muted)}
+  .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  /* Gate */
+  .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:16px}
+  /* Toasts */
+  #toast{position:fixed;bottom:16px;right:16px;z-index:9999;display:grid;gap:10px}
+  .toast{padding:10px 12px;border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.18);font-weight:600;color:#fff;border:1px solid rgba(255,255,255,.08)}
+  .t-info{background:#1f3b7a} .t-ok{background:#14532d} .t-warn{background:#7c4a03} .t-err{background:#7a1f28}
+  /* Debug (hidden unless ?debug=1) */
+  #dbg{display:none;position:fixed;bottom:12px;left:12px;z-index:9998;background:#0b1020;color:#e8eef7;border:1px solid #243055;border-radius:8px;padding:8px;max-width:70vw;max-height:40vh;overflow:auto;font:12px/1.4 ui-monospace,Menlo,Consolas}
+  /* Focus */
+  :focus{outline:3px solid var(--ring);outline-offset:2px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="top"><div class="row">
+  <div class="brand">
+    <a href="../" title="Back to homepage"><span class="logo">H</span> HMJ Global</a>
+    <span class="pill">Admin</span>
+  </div>
+  <div class="sp"></div>
+
+  <!-- Smart chips -->
+  <div class="chips" id="chips" aria-live="polite"></div>
+
+  <button class="btn ghost" id="btnPayroll" title="Open payroll">Payroll</button>
+  <button class="btn ghost" id="btnShortcuts" title="Keyboard shortcuts ( ? )">?</button>
+  <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+</div></div>
+
+<!-- Gate (shown until Identity + admin role ok) -->
+<div class="wrap" id="gate" style="display:none">
+  <div class="card">
+    <strong>Admin only.</strong>
+    <p class="muted why" style="margin:8px 0 12px">Checking your session…</p>
+    <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+  </div>
+</div>
+
+<!-- App -->
+<div class="wrap" id="app" style="display:none">
+  <div class="grid" style="margin-top:4px">
+    <a class="tile" href="./timesheets.html">
+      <div><h3>Timesheets</h3><div class="muted">Approve, edit, raise on behalf</div></div> <span>→</span>
+    </a>
+    <a class="tile" href="./assignments.html">
+      <div><h3>Assignments</h3><div class="muted">Create & manage placements</div></div> <span>→</span>
+    </a>
+    <a class="tile" href="./clients.html">
+      <div><h3>Clients</h3><div class="muted">Profiles, terms, assignments</div></div> <span>→</span>
+    </a>
+    <a class="tile" href="./candidates.html">
+      <div><h3>Candidates</h3><div class="muted">People & compliance</div></div> <span>→</span>
+    </a>
+    <a class="tile" href="./reports.html">
+      <div><h3>Reports</h3><div class="muted">Audit & export</div></div> <span>→</span>
+    </a>
+  </div>
+</div>
+
+<!-- Toast + debug hosts -->
+<div id="toast" aria-live="polite" aria-atomic="true"></div>
+<pre id="dbg">[debug]\n</pre>
+
+<script>
+/* ---------- tiny helpers ---------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const show = el => el && (el.style.display = '');
+const hide = el => el && (el.style.display = 'none');
+const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
+const debugOn = /\bdebug=1\b/.test(location.search);
+const log = (...a)=>{ if(debugOn){ const d=$('#dbg'); d.style.display='block'; d.textContent += a.join(' ') + '\\n'; } }; 
+
+function toast(msg, type='info', ms=3600){
+  const host = $('#toast');
+  const n = document.createElement('div');
+  n.className = 'toast ' + (type==='ok'?'t-ok':type==='warn'?'t-warn':type==='err'?'t-err':'t-info');
+  n.textContent = msg; host.appendChild(n); setTimeout(()=>n.remove(), ms);
+}
+
+/* ---------- smart UI chips ---------- */
+function chip(text, tone='info'){ 
+  const span = document.createElement('span');
+  span.className='pill';
+  span.textContent = text;
+  if(tone==='ok'){span.style.background='#ecfdf5';span.style.borderColor='#a7f3d0';span.style.color='#065f46';}
+  if(tone==='warn'){span.style.background='#fffbeb';span.style.borderColor='#fde68a';span.style.color='#92400e';}
+  if(tone==='bad'){span.style.background='#fef2f2';span.style.borderColor='#fecaca';span.style.color='#991b1b';}
+  $('#chips').appendChild(span);
+  return span;
+}
+
+/* ---------- identity boot & gate ---------- */
+function boot(){
+  const id = window.netlifyIdentity;
+  if(!(id && typeof id.on==='function')){
+    // widget loads async
+    let tries=0; const t=setInterval(()=>{
+      const i=window.netlifyIdentity;
+      if(i && typeof i.on==='function'){ clearInterval(t); start(i); }
+      else if(++tries>60){ clearInterval(t); show($('#gate')); $('.why').textContent='Identity widget did not load.'; }
+    },50);
+    return;
+  }
+  start(id);
+}
+
+async function start(id){
+  try{ id.init && id.init(); }catch(_){}
+  id.on('login', ()=>location.reload());
+  id.on('logout',()=>location.href='../'); // back home on logout
+
+  const u = id.currentUser ? id.currentUser() : null;
+  log('user?', !!u, u?.email||'');
+
+  if(!u){ show($('#gate')); $('.why').textContent='Not signed in.'; return; }
+  if(!isAdmin(u)){ show($('#gate')); $('.why').textContent='Missing admin role.'; return; }
+
+  // show app
+  show($('#app')); hide($('#gate'));
+
+  // chips: user + role
+  chip(u.email || 'user', 'ok');
+  chip('role: admin', 'ok');
+
+  // online/offline
+  const onlineChip = chip(navigator.onLine ? 'online' : 'offline', navigator.onLine?'ok':'bad');
+  window.addEventListener('online', ()=>{ onlineChip.textContent='online'; onlineChip.setAttribute('style',''); chip('reconnected','ok'); });
+  window.addEventListener('offline',()=>{ onlineChip.textContent='offline'; onlineChip.setAttribute('style','background:#fef2f2;border-color:#fecaca;color:#991b1b'); });
+
+  // JWT expiry countdown
+  try{
+    const t = await u.jwt();
+    const exp = JSON.parse(atob(t.split('.')[1])).exp * 1000;
+    const c = chip('token: …', 'warn');
+    const tick = ()=>{ 
+      const s = Math.max(0, Math.floor((exp - Date.now())/1000));
+      c.textContent = 'token: ' + (s>0 ? (s+'s left') : 'expired');
+      c.setAttribute('style', s>60 ? '' : (s>0 ? 'background:#fffbeb;border-color:#fde68a;color:#92400e' : 'background:#fef2f2;border-color:#fecaca;color:#991b1b'));
+      if(s<=0) { toast('Session expired. Please sign in again.','warn',5000); }
+    };
+    tick(); setInterval(tick,1000);
+  }catch(e){ log('jwt decode failed', e?.message || e); }
+
+  // Build/version chip (from Netlify deploy info if present)
+  try{
+    const d = document.querySelector('[data-netlify-deploy-id]'); 
+    if(d){ chip('build: '+(d.getAttribute('data-netlify-deploy-id')||'preview')); }
+  }catch{}
+
+  toast('Welcome back 👋', 'ok', 2500);
+}
+
+/* ---------- keyboard shortcuts ---------- */
+function shortcuts(){
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === '?' || (e.shiftKey && e.key === '/')){ e.preventDefault(); alert(`Shortcuts:
+g h → Home
+g t → Timesheets
+g a → Assignments
+g c → Clients
+g d → Candidates
+g r → Reports`); return; }
+    if(e.key==='g'){ window._goPress=true; setTimeout(()=>window._goPress=false,800); return; }
+    if(!window._goPress) return;
+    if(e.key==='h'){ e.preventDefault(); location.href='../'; }
+    if(e.key==='t'){ e.preventDefault(); location.href='./timesheets.html'; }
+    if(e.key==='a'){ e.preventDefault(); location.href='./assignments.html'; }
+    if(e.key==='c'){ e.preventDefault(); location.href='./clients.html'; }
+    if(e.key==='d'){ e.preventDefault(); location.href='./candidates.html'; }
+    if(e.key==='r'){ e.preventDefault(); location.href='./reports.html'; }
+  });
+}
+
+/* ---------- misc wiring ---------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  boot();
+  shortcuts();
+  // Payroll button (edit the URL to your payroll page)
+  $('#btnPayroll').onclick = ()=>{ location.href = './payroll.html'; };
+  // Help button
+  $('#btnShortcuts').onclick = ()=>{ const evt = new KeyboardEvent('keydown',{key:'?'}); document.dispatchEvent(evt); };
+});
+</script>
+
+<!-- Optional: Netlify deploy meta (if the Drawer injects it) -->
+<div data-netlify-deploy-id="" style="position:fixed;inset:auto auto 8px 8px;opacity:.001;pointer-events:none"></div>
+
+<!-- 1) Netlify Identity widget -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+<!-- Meta tag: -->
+<meta name="netlify-identity-url" content="https://hmjg.netlify.app/.netlify/identity">
+
+
+<!-- 2) Force-init the widget as soon as DOM is ready -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch (e) {}
+  });
+</script>
+
+<!-- 3) Shared admin bootstrap (cache-busted) -->
+<script src="./common.js?v=10"></script>
+
+<!-- 4) Must call bootAdmin to pass the gate and render -->
+<script>
+  Admin.bootAdmin(async ({ sel, identity, toast }) => {
+    // simple smoke test so we know identity worked
+    const who = await identity('admin');
+    if (who && who.ok) {
+      console.log('[admin] candidates boot ok for', who.email);
+      // OPTIONAL: show a tiny toast the first time it works
+      toast('Candidates loaded ✓', 'info', 2000);
+    }
+    // your page-specific code would go here
+  });
+</script>
+
+
+<!-- 2) Put these two just before </body>, in this exact order -->
+<script src="./common.js?v=8"></script>
+
+<script>
+  // Defensive: show a helpful message if common.js didn’t load
+  if (!window.Admin || !window.Admin.bootAdmin) {
+    console.error('common.js not loaded or cached stale — bump ?v= and hard refresh');
+    const warn = document.createElement('pre');
+    warn.style.cssText = 'padding:12px;border:1px solid #f59e0b;background:#fff7ed;color:#7c2d12;border-radius:8px;max-width:680px;margin:16px';
+    warn.textContent = 'Admin bootstrap missing (common.js). Try a hard refresh (⌘⇧R) or bump ?v= on the script tag.';
+    document.body.appendChild(warn);
+  } else {
+    Admin.bootAdmin(async ({ api, sel, toast }) => {
+      // ... your page code goes here ...
+      // If you already have a big inline block, just keep it here unchanged.
+      console.log('[candidates] boot ok');
+      // Example: prove the gate opened
+      const app = document.getElementById('app'); if (app) app.style.display = '';
+    });
+  }
+</script>
+
+
+</body>
+</html>

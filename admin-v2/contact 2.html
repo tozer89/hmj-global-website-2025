@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Apply | HMJ-Global</title>
+  <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    :root{
+      --ink:#1A1A2E; --accent:#3A66B3; --bg:#0f1322; --muted:#6b7280;
+      --chip:#eef3ff; --card:#ffffff; --border:rgba(26,26,46,.14);
+    }
+    *,*::before,*::after{box-sizing:border-box}
+
+    /* ===== Header / Nav (match site) ===== */
+    .hmj-header{position:sticky;top:0;z-index:50;background:var(--bg);color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
+    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+    .hmj-logo img{height:40px;display:block}
+    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
+    .hmj-menu a{display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;color:#eaf0ff;text-decoration:none}
+    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
+    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
+    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
+    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px}
+    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
+    @media (max-width:900px){
+      .hmj-burger{display:inline-block}
+      .hmj-menu{
+        position:fixed;right:12px;left:12px;top:64px;background:var(--bg);
+        border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.35);
+        display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;transition:max-height .28s ease,padding .2s ease;
+      }
+      .hmj-menu.open{max-height:70vh;padding:10px}
+      .hmj-menu a{padding:14px 12px;width:100%}
+      .hmj-scrim[hidden]{display:none}
+    }
+
+    /* ===== Page header (with “electric” scan) ===== */
+    .page-header{
+      min-height:38vh;display:grid;place-items:center;padding:110px 20px 70px;
+      text-align:center;color:#fff;position:relative;background:url('images/hero.jpg') center/cover no-repeat;
+    }
+    .page-header::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55))}
+    .page-header::after{
+      content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 8px),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 10px);
+      animation:scanMove 18s linear infinite;
+    }
+    @keyframes scanMove { to { transform:translateX(16px); } }
+    .page-header>*{position:relative;z-index:1}
+    .page-header h1{font-size:clamp(30px,4vw,46px);margin:0 0 .3rem;line-height:1.15}
+    .page-header p{opacity:.9;margin:0}
+    .power-underline{width:min(88vw,740px); height:14px; margin:12px auto 0; opacity:.9}
+    .power-underline path{stroke:#5f86ff; stroke-width:2; fill:none; stroke-linecap:round; stroke-dasharray:6 8; animation:flow 2.8s linear infinite;}
+    @keyframes flow { to { stroke-dashoffset:-280; } }
+
+    /* ===== Form Card ===== */
+    .apply-wrap{max-width:1000px;margin:40px auto 80px;padding:0 20px;display:grid;gap:22px}
+    .apply-card{background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%),#fff;border:1px solid var(--border);border-radius:16px;padding:18px 18px 20px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .apply-card h2{margin:0 0 10px 0;color:var(--ink)}
+    .helper{font-size:.9rem;color:var(--muted)}
+
+    /* Grid */
+    .apply-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .apply-grid .full{grid-column:1/-1}
+    @media (max-width:780px){ .apply-grid{grid-template-columns:1fr} }
+
+    /* Floating fields */
+    .field{position:relative}
+    .field input,.field select,.field textarea{
+      width:100%;height:44px;padding:12px 14px;border:1px solid rgba(26,26,46,.2);border-radius:12px;font-size:1rem;outline:none;
+      transition:border-color .15s ease, box-shadow .15s ease, background .2s ease;
+      background:#fff;
+    }
+    .field textarea{min-height:120px;height:auto;resize:vertical;line-height:1.35}
+    .field label{
+      position:absolute;left:12px;top:12px;padding:0 4px;background:#fff;color:#6b7280;border-radius:6px;
+      pointer-events:none;transition:transform .15s ease, color .15s ease, top .15s ease, font-size .15s ease;
+    }
+    .field input:focus,.field textarea:focus,.field select:focus{
+      border-color:rgba(58,102,179,.55);box-shadow:0 0 0 4px rgba(122,162,255,.18)
+    }
+    .field.filled label,
+    .field input:focus + label,
+    .field textarea:focus + label{
+      top:-10px;font-size:.85rem;color:#5266a8;
+    }
+
+    /* Select normalisation + custom chevron */
+    .field.select select{
+      -webkit-appearance:none;appearance:none;background:#fff;padding-right:42px;line-height:1.25;height:44px;
+      -webkit-padding-end:42px;
+    }
+    .field.select{position:relative}
+    .field.select::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:16px;color:#7a8bb2;pointer-events:none}
+    .field.select label{top:-10px !important;font-size:.85rem !important;color:var(--muted)}
+
+    /* Drag & drop — fixed: make input cover zone so browser handles click & drop natively */
+    .drop{
+      position:relative;
+      border:2px dashed rgba(26,26,46,.2);
+      border-radius:12px;
+      padding:18px 14px;
+      text-align:center;color:var(--muted);
+      transition:border-color .2s ease, background .2s ease;
+    }
+    .drop.dragover{border-color:#5f86ff;background:#f6f8ff}
+    .drop input[type="file"]{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      opacity:0;
+      cursor:pointer;
+    }
+    .file-note{margin-top:6px;font-size:.9rem;color:var(--muted)}
+
+    /* Row actions */
+    .form-actions{margin-top:14px;display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+    .btn-primary{padding:12px 18px;border-radius:12px;border:1px solid rgba(58,102,179,.28);background:linear-gradient(180deg,rgba(58,102,179,.14),rgba(58,102,179,.06)),#fff;color:var(--accent);font-weight:800;cursor:pointer}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(58,102,179,.18);background:#e8f0ff}
+
+    /* Consent + helper layout */
+    .consent{display:flex;gap:10px;align-items:flex-start}
+    .consent input{transform:translateY(3px)}
+    .consent small{color:#4b5563}
+
+    /* Footer (match site) */
+    footer{ text-align:center; padding:28px 16px; background:#0f1322; color:#cfd7ff; border-top:1px solid rgba(255,255,255,.06) }
+  </style>
+</head>
+<body>
+  <!-- ===== Header / Navbar ===== -->
+  <header class="hmj-header">
+    <nav class="hmj-nav" aria-label="Main">
+      <a class="hmj-logo" href="index.html">
+        <img src="images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
+      </a>
+      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+        <span></span><span></span><span></span>
+      </button>
+      <ul id="hmj-menu" class="hmj-menu">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="candidates.html">Candidates</a></li>
+        <li><a href="clients.html">Clients</a></li>
+        <li><a href="jobs.html">Jobs</a></li>
+        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
+      </ul>
+      <div class="hmj-scrim" hidden></div>
+    </nav>
+  </header>
+
+  <!-- ===== Page header ===== -->
+  <section class="page-header">
+    <h1>Apply</h1>
+    <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
+      <path d="M2 7 C 100 7, 140 7, 180 7
+               C 220 7, 240 2, 260 7
+               C 280 12, 300 7, 340 7
+               C 380 7, 420 7, 460 7
+               C 500 7, 520 2, 540 7
+               C 560 12, 580 7, 620 7
+               C 660 7, 720 7, 798 7" />
+    </svg>
+    <p>Send your application securely. We’ll review and get back quickly.</p>
+  </section>
+
+  <!-- ===== Apply content ===== -->
+  <section class="apply-wrap">
+
+    <!-- quick contact card -->
+    <div class="apply-card">
+      <div class="helper" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <span><strong>Questions?</strong> Call <strong>0808 808 0000</strong> or message on
+          <a href="https://wa.me/447842550187?text=Hi%20HMJ-Global,%20I%20saw%20your%20website%20and%20would%20like%20to%20apply." target="_blank" style="color:#3A66B3;text-decoration:underline">WhatsApp</a>.
+        </span>
+        <span id="roleHint" style="font-weight:700;color:#3A66B3"></span>
+      </div>
+    </div>
+
+    <!-- application form card -->
+    <div class="apply-card">
+      <h2>Application form</h2>
+      <p id="applyingFor" class="helper" style="margin-top:-4px;"></p>
+
+      <!-- Netlify form -->
+      <form name="contact"
+            method="POST"
+            action="/jobs.html?submitted=1"
+            data-netlify="true"
+            netlify-honeypot="bot-field"
+            enctype="multipart/form-data"
+            id="applyForm"
+            novalidate>
+        <!-- REQUIRED for Netlify detection -->
+        <input type="hidden" name="form-name" value="contact" />
+
+        <!-- Honeypot -->
+        <p style="position:absolute;left:-9999px;visibility:hidden;height:0;overflow:hidden;">
+          <label>Don’t fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
+        </p>
+
+        <!-- Subject filled from ?role= -->
+        <input type="hidden" id="subject" name="subject" />
+
+        <div class="apply-grid">
+
+          <!-- Names -->
+          <div class="field">
+            <input id="firstName" name="first_name" type="text" required autocomplete="given-name">
+            <label for="firstName">First name *</label>
+          </div>
+          <div class="field">
+            <input id="surname" name="surname" type="text" required autocomplete="family-name">
+            <label for="surname">Surname *</label>
+          </div>
+
+          <!-- Location / Email -->
+          <div class="field">
+            <input id="location" name="current_location" type="text" placeholder="e.g., Dublin, Ireland" required>
+            <label for="location">Current location (City, Country) *</label>
+          </div>
+          <div class="field">
+            <input id="email" name="email" type="email" required autocomplete="email">
+            <label for="email">Email address *</label>
+          </div>
+
+          <!-- Phone / Salary -->
+          <div class="field">
+            <input id="phone" name="phone" type="tel" placeholder="+353 85 123 4567"
+              pattern="^\+?[0-9\s\-()]{7,}$" title="Include country code, e.g. +353 85 123 4567" required autocomplete="tel">
+            <label for="phone">Contact telephone (incl. country code) *</label>
+          </div>
+          <div class="field">
+            <input id="salary" name="salary_expectation" type="number" inputmode="numeric" min="0" step="500" placeholder="e.g., 85000" required>
+            <label for="salary">Salary expectation (annual) *</label>
+          </div>
+
+          <!-- Notice / RTW -->
+          <div class="field select">
+            <select id="notice" name="notice_period" required>
+              <option value="">Select…</option>
+              <option>Immediate</option><option>1 week</option><option>2 weeks</option>
+              <option>4 weeks</option><option>8+ weeks</option>
+            </select>
+            <label for="notice">Notice period *</label>
+          </div>
+
+          <div class="field select">
+            <select id="workAuth" name="right_to_work" required>
+              <option value="">Select…</option>
+              <option>Yes – no sponsorship needed</option>
+              <option>No – require sponsorship</option>
+              <option>Unsure / discuss</option>
+            </select>
+            <label for="workAuth">Right to work *</label>
+          </div>
+
+          <!-- Relocation / LinkedIn -->
+          <div class="field select">
+            <select id="relocate" name="relocation" required>
+              <option value="">Select…</option>
+              <option>Yes</option><option>No</option><option>Maybe</option>
+            </select>
+            <label for="relocate">Open to relocation *</label>
+          </div>
+
+          <div class="field">
+            <input id="linkedin" name="linkedin" type="url" placeholder="https://www.linkedin.com/in/…">
+            <label for="linkedin">LinkedIn profile</label>
+          </div>
+
+          <!-- Message -->
+          <div class="field full">
+            <textarea id="message" name="message" rows="5" maxlength="1200" placeholder="Tell us about your application or enquiry…"></textarea>
+            <label for="message">Message / cover note</label>
+            <div class="helper" style="margin-top:6px"><span id="charCounter">0</span>/1200</div>
+          </div>
+
+          <!-- CV -->
+          <div class="full">
+            <div id="drop" class="drop">
+              <strong>Attach CV (PDF/DOC/DOCX) *</strong><br>
+              <small>Drag &amp; drop here or click to choose.</small>
+              <!-- IMPORTANT: keep a stable field name for Zapier -->
+              <input id="cv" name="cv" type="file" accept=".pdf,.doc,.docx" required>
+            </div>
+            <div id="fileNote" class="file-note" aria-live="polite"></div>
+          </div>
+
+          <!-- Consent -->
+          <div class="full consent">
+            <input type="checkbox" id="consent" name="consent" required>
+            <label for="consent">
+              I agree that <strong>HMJ Global Limited</strong> may process my information to source suitable roles.
+              I understand my personal data will be handled securely and sensitively in line with applicable data protection laws.
+            </label>
+          </div>
+          <div class="full"><small class="helper">By submitting, you confirm the details are accurate and you consent to being contacted about relevant opportunities.</small></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Submit Application</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <p><strong>HMJ-Global Ltd</strong> — Data Centre &amp; Infrastructure Recruitment Specialists</p>
+    <p>Email: <a href="mailto:info@HMJ-Global.com">info@HMJ-Global.com</a> · WhatsApp: <a href="https://wa.me/447842550187" target="_blank">Message Us</a> ·
+       <a href="https://www.linkedin.com/company/hmj-global/" target="_blank">LinkedIn</a></p>
+    <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
+  </footer>
+
+  <!-- ===== Scripts ===== -->
+  <script>
+    /* ---------- Nav ---------- */
+    const burger = document.querySelector('.hmj-burger');
+    const menu   = document.getElementById('hmj-menu');
+    const scrim  = document.querySelector('.hmj-scrim');
+    function openMenu(open){
+      burger.setAttribute('aria-expanded', String(open));
+      menu.classList.toggle('open', open);
+      scrim.hidden = !open;
+      document.documentElement.style.overflow = open ? 'hidden' : '';
+    }
+    burger.addEventListener('click', ()=>openMenu(burger.getAttribute('aria-expanded')!=='true'));
+    scrim.addEventListener('click', ()=>openMenu(false));
+
+    /* ---------- Floating labels / filled state ---------- */
+    const fields = document.querySelectorAll('.field input, .field textarea, .field select');
+    const setFilled = el => el.closest('.field').classList.toggle('filled', !!el.value);
+    fields.forEach(el=>{
+      setFilled(el);
+      el.addEventListener('input', ()=>setFilled(el));
+      el.addEventListener('change', ()=>setFilled(el));
+    });
+
+    /* ---------- Role autofill from ?role= ---------- */
+    const params = new URLSearchParams(location.search);
+    const role = params.get('role');
+    const subjectEl = document.getElementById('subject');
+    const applyingFor = document.getElementById('applyingFor');
+    const roleHint = document.getElementById('roleHint');
+    if (role){
+      subjectEl.value = `Application: ${role}`;
+      applyingFor.textContent = `Applying for: ${role}`;
+      roleHint.textContent = `Role: ${role}`;
+    } else {
+      subjectEl.value = 'General application';
+    }
+
+    /* ---------- Character counter ---------- */
+    const msg = document.getElementById('message');
+    const counter = document.getElementById('charCounter');
+    const updateCount = () => counter.textContent = (msg.value||'').length;
+    msg.addEventListener('input', updateCount); updateCount();
+
+    /* ---------- Drag & drop CV (native handling) ---------- */
+    const drop = document.getElementById('drop');
+    const cvInput = document.getElementById('cv');
+    const fileNote = document.getElementById('fileNote');
+
+    // just visuals for drag state
+    ['dragenter','dragover'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.add('dragover'); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; })
+    );
+    ['dragleave','drop'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragover'); })
+    );
+
+    // show selected file name
+    cvInput.addEventListener('change', () => {
+      const f = cvInput.files && cvInput.files[0];
+      fileNote.textContent = f ? `Selected: ${f.name}` : '';
+      setFilled(cvInput);
+    });
+
+    /* ---------- Guard invalid submit (preserves Netlify) ---------- */
+    document.getElementById('applyForm').addEventListener('submit', (e)=>{
+      const form = e.target;
+      if(!form.checkValidity()){
+        e.preventDefault(); form.reportValidity();
+      }
+    });
+
+    /* ---------- Make select labels appear raised on load (mobile fix) ---------- */
+    document.querySelectorAll('.field.select').forEach(w => w.classList.add('filled'));
+  </script>
+
+  <!-- OPTIONAL toast for jobs.html?submitted=1 is the same as before -->
+</body>
+</html>

@@ -1,0 +1,86 @@
+// netlify/functions/timesheets-submit.js
+const { supabase, weekEndingSaturdayISO, getContext, ensureTimesheet } = require('./_timesheet-helpers');
+
+const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
+const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
+
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const isDay = d => DAYS.includes(d);
+
+async function upsertEntry(tsId, day, row) {
+  const payload = {
+    p_timesheet_id: tsId,
+    p_day: day,
+    p_std: Number(row.std || 0),
+    p_ot: Number(row.ot || 0),
+    p_note: row.note || ''
+  };
+
+  try {
+    const { error } = await supabase.rpc('upsert_timesheet_entry', payload);
+    if (!error) return;
+    throw error;
+  } catch {
+    const { error: upErr } = await supabase
+      .from('timesheet_entries')
+      .upsert({
+        timesheet_id: tsId,
+        day,
+        hours_std: payload.p_std,
+        hours_ot: payload.p_ot,
+        note: payload.p_note
+      }, { onConflict: 'timesheet_id,day' });
+    if (upErr) throw upErr;
+  }
+}
+
+exports.handler = async (event, context) => {
+  try {
+    if (event.httpMethod !== 'POST') return respond(405, { error: 'Method Not Allowed' });
+
+    let body = {};
+    try { body = JSON.parse(event.body || '{}'); }
+    catch { return respond(400, { error: 'Invalid JSON' }); }
+
+    const entries = body.entries && typeof body.entries === 'object' ? body.entries : {};
+
+    const { assignment } = await getContext(context);
+    const week_ending = weekEndingSaturdayISO();
+    const ts = await ensureTimesheet(assignment.id, week_ending);
+
+    const tasks = [];
+    for (const [day, row] of Object.entries(entries)) {
+      if (!isDay(day)) continue;
+      const safe = {
+        std: Math.max(0, Number(row?.std || 0)),
+        ot:  Math.max(0, Number(row?.ot  || 0)),
+        note: (row?.note || '').toString().slice(0, 500)
+      };
+      tasks.push(upsertEntry(ts.id, day, safe));
+    }
+    await Promise.all(tasks);
+
+    const now = new Date().toISOString();
+    const upd = await supabase
+      .from('timesheets')
+      .update({ status: 'submitted', submitted_at: now })
+      .eq('id', ts.id)
+      .select('id,status,submitted_at')
+      .single();
+
+    if (upd.error) {
+      console.error('timesheet submit update error:', upd.error);
+      return respond(500, { error: 'Database error (timesheets submit)' });
+    }
+
+    return respond(200, { ok: true, status: upd.data.status, submitted_at: upd.data.submitted_at });
+  } catch (e) {
+    const msg = e?.message || 'Failed to submit';
+    const status =
+      e?.code === 401 || msg === 'Unauthorized' ? 401 :
+      e?.code === 404 ? 404 : 500;
+
+    console.error('timesheets-submit exception:', e);
+    return respond(status, { error: msg });
+  }
+};
