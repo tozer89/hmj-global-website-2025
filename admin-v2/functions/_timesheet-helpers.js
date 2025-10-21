@@ -1,3 +1,20 @@
+// Inside your handler, before you call sb()
+const fallbackKey =
+  process.env.SUPABASE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_ADMIN_KEY ||
+  process.env.SUPABASE_ANON_KEY || '';
+
+if (!fallbackKey) {
+  return bad('supabaseKey is required.');
+}
+
+// Make sure _lib / sb() reads from process.env.SUPABASE_KEY:
+process.env.SUPABASE_KEY = fallbackKey;
+
+
+
 // netlify/functions/_timesheet-helpers.js
 const { supabase } = require('./_supabase');
 
