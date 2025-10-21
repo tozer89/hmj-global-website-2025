@@ -671,7 +671,18 @@
   <!-- ===== Scripts ===== -->
   <script>
   (async function(){
-    /* ------ NEW: Load /data/jobs.json and render cards ------ */
+    /* ------ Load jobs from Netlify function (falls back to JSON) ------ */
+    async function loadJobsFromApi(){
+      try{
+        const res = await fetch('/.netlify/functions/jobs-list', { cache:'no-store' });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        return Array.isArray(data.jobs) ? data.jobs : null;
+      }catch(e){
+        console.warn('jobs-list API failed', e);
+        return null;
+      }
+    }
     async function loadJobsJSON(){
       try{
         const res = await fetch('data/jobs.json', {cache:'no-store'});
@@ -679,6 +690,9 @@
         const data = await res.json();
         return Array.isArray(data.jobs) ? data.jobs : null;
       }catch(e){ return null; }
+    }
+    async function resolveJobs(){
+      return await loadJobsFromApi() || await loadJobsJSON();
     }
     function sectionId(sec){
       return ({commercial:'jobsBoard-commercial', dc:'jobsBoard-dc', substations:'jobsBoard-substations', pharma:'jobsBoard-pharma', ict:'jobsBoard-ict'}[sec] || 'jobsBoard-dc');
@@ -720,8 +734,8 @@
         </div>
       </div>`;
     }
-    async function maybeRenderFromJSON(){
-      const jobs = await loadJobsJSON();
+    async function renderJobs(){
+      const jobs = await resolveJobs();
       if(!jobs) return;
       ['commercial','dc','substations','pharma','ict'].forEach(sec=>{
         const board=document.getElementById(sectionId(sec));
@@ -732,8 +746,8 @@
         if(board) board.insertAdjacentHTML('beforeend', renderOne(job));
       });
     }
-    /* Ensure JSON render completes before we query .job cards for filters etc. */
-    await maybeRenderFromJSON();
+    /* Ensure render completes before we query .job cards for filters etc. */
+    await renderJobs();
 
     /* ---------- Nav ---------- */
     const burger=document.querySelector('.hmj-burger');
