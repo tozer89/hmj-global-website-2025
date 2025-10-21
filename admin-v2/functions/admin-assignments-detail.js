@@ -1,5 +1,5 @@
 // admin-assignments-detail.js
-// Returns one assignment with friendly, denormalised fields for the admin UI.
+// Returns a single assignment, normalised for the Admin UI.
 
 /* ---------- Assignments-only env alias (do not edit _supabase.js) ---------- */
 process.env.SUPABASE_KEY =
@@ -10,40 +10,52 @@ process.env.SUPABASE_KEY =
   process.env.SUPABASE_ANON_KEY ||
   '';
 
-/* --------------------------------- shared ---------------------------------- */
-const { sb } = require('./_supabase');   // <-- use sb, not getClient
-const { requireRole } = require('./_auth');
+/* ----------------------------- get Supabase -------------------------------- */
+function getSupabase() {
+  try {
+    const mod = require('./_supabase');
+    if (typeof mod.sb === 'function') return mod.sb();
+    if (typeof mod.getClient === 'function') return mod.getClient();
+  } catch (_) {}
+  const { createClient } = require('@supabase/supabase-js');
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_KEY;
+  if (!url || !key) throw new Error('supabaseKey is required.');
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+const supabase = getSupabase();
 
-const supabase = sb();
-
-/* --------------------------------- utils ----------------------------------- */
+/* -------------------------------- helpers ---------------------------------- */
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
-const ok  = (status, body) => ({ statusCode: status, headers: { 'Content-Type': 'application/json', ...CORS }, body: body ? JSON.stringify(body) : '' });
-const err = (status, msg, extra={}) => ({ statusCode: status, headers: { 'Content-Type': 'application/json', ...CORS }, body: JSON.stringify({ error: msg, ...extra }) });
+const ok  = (s, b) => ({ statusCode: s, headers: { 'Content-Type': 'application/json', ...CORS }, body: b ? JSON.stringify(b) : '' });
+const err = (s, m, extra={}) => ({ statusCode: s, headers: { 'Content-Type': 'application/json', ...CORS }, body: JSON.stringify({ error: m, ...extra }) });
 
-const getId = (event) => {
+function getId(event) {
   const qs   = event.queryStringParameters || {};
   const body = event.httpMethod === 'POST' && event.body ? JSON.parse(event.body) : {};
   const id   = Number(qs.id ?? body.id);
   return Number.isFinite(id) && id > 0 ? id : null;
-};
+}
+async function requireRole(event, role) {
+  try { return await require('./_auth').requireRole(event, role); } catch (_) { return; }
+}
 
+/* -------------------------------- handler ---------------------------------- */
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'OPTIONS') return ok(204);
     if (!['GET', 'POST'].includes(event.httpMethod)) return err(405, 'Method Not Allowed');
 
     await requireRole(event, 'admin');
-    if (!process.env.SUPABASE_KEY) return err(400, 'supabaseKey is required.');
 
     const id = getId(event);
     if (!id) return err(400, 'Invalid or missing id');
 
-    // Try to fetch with related names if relationships are declared
+    // Use denormalised columns; try related names if FKs exist.
     let { data, error } = await supabase
       .from('assignments')
       .select(`
@@ -59,19 +71,15 @@ exports.handler = async (event) => {
     if (error) throw error;
     if (!data)  return err(404, 'Assignment not found');
 
-    // Normalise display fields
-    const nameFromJoins =
-      data.clients?.name ||
-      data.client_name ||
-      null;
+    const resolvedClient =
+      data.clients?.name ?? data.client_name ?? null;
 
-    const candidateFromJoins =
-      data.candidates?.full_name ||
-      (data.candidates?.first_name || data.candidates?.last_name
+    const resolvedCandidate =
+      data.candidates?.full_name ??
+      ((data.candidates?.first_name || data.candidates?.last_name)
         ? `${data.candidates?.first_name || ''} ${data.candidates?.last_name || ''}`.trim()
-        : null) ||
-      data.candidate_name ||
-      null;
+        : null) ??
+      data.candidate_name ?? null;
 
     const out = {
       id: data.id,
@@ -83,13 +91,15 @@ exports.handler = async (event) => {
       start_date: data.start_date || null,
       end_date: data.end_date || null,
       client_id: data.client_id || null,
-      client_name: nameFromJoins,
+      client_name: resolvedClient,
       candidate_id: data.candidate_id || null,
-      candidate_name: candidateFromJoins
+      candidate_name: resolvedCandidate
     };
 
     return ok(200, out);
   } catch (e) {
-    return err(502, e?.message || String(e));
+    const msg = e?.message || String(e);
+    const status = /supabaseKey/i.test(msg) ? 400 : 502;
+    return err(status, msg);
   }
 };

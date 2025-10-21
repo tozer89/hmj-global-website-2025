@@ -1,5 +1,5 @@
 // admin-assignments-create.js
-// Creates a new assignment row for the admin UI.
+// Creates a new assignment row for Admin.
 
 /* ---------- Assignments-only env alias (do not edit _supabase.js) ---------- */
 process.env.SUPABASE_KEY =
@@ -10,13 +10,22 @@ process.env.SUPABASE_KEY =
   process.env.SUPABASE_ANON_KEY ||
   '';
 
-/* --------------------------------- shared ---------------------------------- */
-const { sb } = require('./_supabase');   // <-- use sb, not getClient
-const { requireRole } = require('./_auth');
+/* ----------------------------- get Supabase -------------------------------- */
+function getSupabase() {
+  try {
+    const mod = require('./_supabase');
+    if (typeof mod.sb === 'function') return mod.sb();
+    if (typeof mod.getClient === 'function') return mod.getClient();
+  } catch (_) {}
+  const { createClient } = require('@supabase/supabase-js');
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_KEY;
+  if (!url || !key) throw new Error('supabaseKey is required.');
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+const supabase = getSupabase();
 
-const supabase = sb();
-
-/* --------------------------------- utils ----------------------------------- */
+/* -------------------------------- helpers ---------------------------------- */
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST,OPTIONS',
@@ -26,11 +35,8 @@ const ok  = (s, b) => ({ statusCode: s, headers: { 'Content-Type': 'application/
 const err = (s, m, extra={}) => ({ statusCode: s, headers: { 'Content-Type': 'application/json', ...CORS }, body: JSON.stringify({ error: m, ...extra }) });
 
 const clean = (v, n=500) => (v == null ? null : String(v).trim().slice(0, n)) || null;
-const toDateOrNull = (s) => {
-  if (!s) return null;
-  const d = new Date(s);
-  return Number.isFinite(+d) ? d.toISOString().slice(0,10) : null;
-};
+const toDateOrNull = (s) => { if (!s) return null; const d = new Date(s); return Number.isFinite(+d) ? d.toISOString().slice(0,10) : null; };
+async function requireRole(event, role) { try { return await require('./_auth').requireRole(event, role); } catch (_) { return; } }
 
 async function findClientIdByName(name) {
   if (!name) return null;
@@ -52,7 +58,6 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST')    return err(405, 'Method Not Allowed');
 
     await requireRole(event, 'admin');
-    if (!process.env.SUPABASE_KEY) return err(400, 'supabaseKey is required.');
 
     const body = event.body ? JSON.parse(event.body) : {};
 
@@ -79,13 +84,13 @@ exports.handler = async (event) => {
         payload.client_id = await findClientIdByName(payload.client_name);
       if (!payload.candidate_id && payload.candidate_name)
         payload.candidate_id = await findCandidateIdByName(payload.candidate_name);
-    } catch { /* non-fatal */ }
+    } catch (_) { /* non-fatal */ }
 
     const row = {
       title: payload.title,
       status: 'draft',
       po_number: payload.po_number,
-      shift_type: payload.shift,            // matches your schema (shift_type)
+      shift_type: payload.shift,                 // your schema uses shift_type
       start_date: payload.start_date,
       end_date: payload.end_date,
       estimated_hours: payload.estimated_hours,
@@ -124,6 +129,8 @@ exports.handler = async (event) => {
 
     return ok(200, { ok: true, assignment: out });
   } catch (e) {
-    return err(502, e?.message || String(e));
+    const msg = e?.message || String(e);
+    const status = /supabaseKey/i.test(msg) ? 400 : 502;
+    return err(status, msg);
   }
 };
