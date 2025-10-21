@@ -1,3 +1,14 @@
+
+// --- FIX: ensure SUPABASE_KEY is defined for assignments only ---
+  process.env.SUPABASE_KEY =
+    process.env.SUPABASE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_ADMIN_KEY ||
+    process.env.SUPABASE_ANON_KEY;
+
+
+
 // admin-assignments-meta.js
 import { sb, ok, bad, pre } from './_lib.js';
 export async function handler(event){
