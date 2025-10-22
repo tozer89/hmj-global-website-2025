@@ -11,6 +11,28 @@ const SECTION_PRESETS = new Map([
   ['ict-commissioning', 'ICT & Commissioning'],
 ]);
 
+function safeRequire(path) {
+  try {
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    return require(path);
+  } catch (err) {
+    console.warn('[jobs] dataset load failed (%s): %s', path, err?.message || err);
+    return null;
+  }
+}
+
+function extractJobs(source) {
+  if (!source) return [];
+  if (Array.isArray(source?.jobs)) return source.jobs;
+  if (Array.isArray(source)) return source;
+  return [];
+}
+
+const LOCAL_DATA = safeRequire('../../data/jobs.json');
+const SEEDED_DATA = safeRequire('./_data/jobs.seed.json');
+const EMBEDDED_RAW = [...extractJobs(LOCAL_DATA), ...extractJobs(SEEDED_DATA)];
+let STATIC_JOBS = Array.isArray(EMBEDDED_RAW) ? EMBEDDED_RAW.slice() : [];
+
 function slugify(value = '') {
   return String(value || '')
     .toLowerCase()
@@ -135,27 +157,12 @@ function toDbPayload(job = {}) {
   };
 }
 
-let STATIC_JOBS = [];
 function preloadJobs() {
   if (STATIC_JOBS.length) return STATIC_JOBS;
-  const sources = [
-    () => require('../../data/jobs.json'),
-    () => require('./_data/jobs.seed.json'),
-  ];
-  for (const load of sources) {
-    try {
-      const seed = load();
-      const rows = Array.isArray(seed?.jobs) ? seed.jobs : Array.isArray(seed) ? seed : [];
-      if (rows.length) {
-        STATIC_JOBS = rows;
-        return STATIC_JOBS;
-      }
-    } catch (err) {
-      console.warn('[jobs] unable to preload dataset source', err?.message || err);
-    }
-  }
+  STATIC_JOBS = extractJobs(LOCAL_DATA).concat(extractJobs(SEEDED_DATA));
   return STATIC_JOBS;
 }
+
 preloadJobs();
 
 function loadStaticJobs() {

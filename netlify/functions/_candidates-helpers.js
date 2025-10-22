@@ -6,27 +6,33 @@
 // function. Falling back to fs.readFileSync meant the JSON file was missing in
 // the deployed lambda bundle, which left preview environments with empty
 // results even though the seed data existed locally.
-let staticCandidates = [];
+function safeRequire(path) {
+  try {
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    return require(path);
+  } catch (err) {
+    console.warn('[candidates] dataset load failed (%s): %s', path, err?.message || err);
+    return null;
+  }
+}
+
+function extractCandidates(source) {
+  if (!source) return [];
+  if (Array.isArray(source?.candidates)) return source.candidates;
+  if (Array.isArray(source)) return source;
+  return [];
+}
+
+const LOCAL_DATA = safeRequire('../../data/candidates.json');
+const SEEDED_DATA = safeRequire('./_data/candidates.seed.json');
+let staticCandidates = extractCandidates(LOCAL_DATA).concat(extractCandidates(SEEDED_DATA));
+
 function preloadCandidates() {
   if (staticCandidates.length) return staticCandidates;
-  const sources = [
-    () => require('../../data/candidates.json'),
-    () => require('./_data/candidates.seed.json'),
-  ];
-  for (const load of sources) {
-    try {
-      const seed = load();
-      const rows = Array.isArray(seed?.candidates) ? seed.candidates : Array.isArray(seed) ? seed : [];
-      if (rows.length) {
-        staticCandidates = rows;
-        return staticCandidates;
-      }
-    } catch (err) {
-      console.warn('[candidates] unable to pre-load dataset source', err?.message || err);
-    }
-  }
+  staticCandidates = extractCandidates(LOCAL_DATA).concat(extractCandidates(SEEDED_DATA));
   return staticCandidates;
 }
+
 preloadCandidates();
 
 function normaliseBoolean(value) {

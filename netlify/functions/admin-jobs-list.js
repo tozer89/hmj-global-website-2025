@@ -32,17 +32,16 @@ exports.handler = async (event, context) => {
     await getContext(event, context, { requireAdmin: true });
 
     if (!hasSupabase()) {
-      if (fallback.length) {
-        return {
-          statusCode: 200,
-          headers: JSON_HEADERS,
-          body: JSON.stringify({ jobs: fallback, source: 'static', readOnly: true, supabase: supabaseStatus() }),
-        };
-      }
       return {
-        statusCode: 503,
+        statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ error: 'Supabase client unavailable', supabase: supabaseStatus() }),
+        body: JSON.stringify({
+          jobs: fallback,
+          source: fallback.length ? 'static' : 'empty',
+          readOnly: true,
+          warning: fallback.length ? undefined : 'Supabase client unavailable',
+          supabase: supabaseStatus(),
+        }),
       };
     }
 
@@ -75,26 +74,24 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({ jobs: seeded, source: 'static', seeded: true, supabase: supabaseStatus() }),
       };
     }
-    return { statusCode: 200, headers: JSON_HEADERS, body: JSON.stringify({ jobs, supabase: supabaseStatus() }) };
-  } catch (e) {
-    if (fallback.length) {
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
-          jobs: fallback,
-          readOnly: true,
-          source: 'static',
-          error: e.message,
-          supabase: supabaseStatus(),
-        }),
-      };
-    }
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return {
-      statusCode: status,
+      statusCode: 200,
       headers: JSON_HEADERS,
-      body: JSON.stringify({ error: e.message || 'Unexpected error', supabase: supabaseStatus() }),
+      body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus() }),
+    };
+  } catch (e) {
+    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
+    const source = fallback.length ? 'static' : 'empty';
+    return {
+      statusCode: fallback.length ? 200 : status,
+      headers: JSON_HEADERS,
+      body: JSON.stringify({
+        jobs: fallback,
+        readOnly: true,
+        source,
+        error: e.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
+        supabase: supabaseStatus(),
+      }),
     };
   }
 };
