@@ -1,2 +1,10 @@
 # Local Netlify folder
 .netlify
+
+# Node dependencies (installed locally only)
+node_modules/
+netlify/functions/node_modules/
+
+# Build artifacts
+dist/
+.DS_Store

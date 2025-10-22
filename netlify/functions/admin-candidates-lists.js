@@ -48,7 +48,7 @@ exports.handler = async (event, context) => {
   let ctx;
   try {
     // We always require admin for this endpoint
-    ctx = await getContext(event, { requireAdmin: true });
+    ctx = await getContext(event, context, { requireAdmin: true });
   } catch (e) {
     const code = e.code || 500;
     return {

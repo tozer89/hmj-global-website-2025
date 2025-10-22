@@ -289,7 +289,7 @@
       </div>
       <div class="chipline" style="align-items:center">
         <span id="statusBadge" class="badge draft" aria-live="polite">draft</span>
-        <button class="btn chip" id="btnCloseModal" aria-label="Close">Close</button>
+        <button class="btn chip" id="btnCloseModal" aria-label="Close">Close without saving</button>
       </div>
     </div>
     <div class="bd">
@@ -777,6 +777,19 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // small mobile tweaks
   if(isMobile){ calendarWrap.style.display='none'; chartWrap.style.display='none'; }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const start = () => Admin.bootAdmin(main);
+
+  netlifyIdentity?.on('init', start);
+  netlifyIdentity?.on('login', () => location.reload());
+  netlifyIdentity?.on('logout', () => location.href = '/admin/');
+
+  setTimeout(() => {
+    if (netlifyIdentity?.currentUser()) start();
+    else (document.querySelector('#gate') || {}).style.display = 'grid';
+  }, 600);
+});
 
 /* Bootstrap via /admin/common.js */
 </script>

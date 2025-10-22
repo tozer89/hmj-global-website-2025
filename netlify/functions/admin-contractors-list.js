@@ -4,7 +4,7 @@ const { getContext, coded } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    await getContext(context, { requireAdmin: true });
+    await getContext(event, context, { requireAdmin: true });
     const q = event.body ? JSON.parse(event.body) : {};
     const term = (q.search||'').trim().toLowerCase();
     let query = supabase.from('contractors')

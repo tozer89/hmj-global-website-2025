@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Jobs — Admin | HMJ Global</title>
+<link rel="stylesheet" href="/css/style.css"/>
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script defer src="/admin/common.js"></script>
+<style>
+  :root{
+    --bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#93a3c2;--accent:#5f86ff;--chip:#1a2238;
+    --danger:#c23b4f;--success:#24a971;--surface:#0f172a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  a{color:inherit}
+  .top{position:sticky;top:0;z-index:20;background:#0c1222;border-bottom:1px solid var(--border)}
+  .row{max-width:1180px;margin:0 auto;padding:14px 18px;display:flex;gap:12px;align-items:center}
+  .brand{font-weight:800;font-size:18px}
+  .btn{background:var(--chip);color:#fff;border:1px solid rgba(95,134,255,.32);padding:9px 14px;border-radius:12px;font-weight:600;cursor:pointer;transition:border-color .2s,transform .2s}
+  .btn:hover{border-color:rgba(95,134,255,.6);transform:translateY(-1px)}
+  .btn.secondary{background:#142038;border-color:rgba(46,79,140,.45)}
+  .btn.danger{background:#33141d;border-color:rgba(194,59,79,.4)}
+  .btn.flat{background:transparent;color:var(--muted);border:1px dashed rgba(95,134,255,.3)}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;background:#101a2c;border:1px solid rgba(95,134,255,.25);font-weight:600;color:#9fb4d6}
+  .muted{color:var(--muted)}
+  .wrap{max-width:1180px;margin:26px auto;padding:0 18px;display:grid;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .controls .search{flex:1;min-width:220px}
+  input,select,textarea{background:#0f172a;border:1px solid #2c3853;border-radius:10px;color:#e8eef7;padding:10px;font:inherit}
+  textarea{min-height:120px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(95,134,255,.4);border-color:rgba(95,134,255,.65)}
+  .filters{display:grid;gap:12px;background:#10182b}
+  .filters.collapsed{display:none}
+  .filters .row{display:flex;flex-wrap:wrap;gap:10px}
+  .filters label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+  .board{display:grid;gap:14px}
+  .section{background:#10182b;border:1px solid rgba(95,134,255,.18);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-height:180px}
+  .section-header{padding:14px 16px;border-bottom:1px solid rgba(95,134,255,.18);display:flex;align-items:center;gap:10px}
+  .section-header h3{margin:0;font-size:15px}
+  .section-body{padding:16px;display:grid;gap:12px;min-height:120px}
+  .section-body.empty{display:grid;place-items:center;color:var(--muted);font-weight:600;font-size:13px}
+  .job-card{background:#121f35;border:1px solid rgba(95,134,255,.22);border-radius:14px;padding:14px;display:grid;gap:10px;cursor:grab}
+  .job-card.dragging{opacity:.45}
+  .job-card h4{margin:0;color:#fff}
+  .job-card .meta{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#8fa3d1}
+  .job-card .meta span{background:rgba(95,134,255,.18);padding:4px 8px;border-radius:999px}
+  .job-card .actions{display:flex;flex-wrap:wrap;gap:8px}
+  .job-card button{border-radius:10px;border:1px solid rgba(95,134,255,.28);background:#0f172a;color:#dbe6ff;padding:7px 12px;font-weight:600;cursor:pointer}
+  .job-card button:hover{background:#17294c}
+  .job-card .share{font-size:12px;color:#6f88b2;word-break:break-all}
+  .section-footer{padding:0 16px 16px}
+  .section-footer button{width:100%;background:transparent;border:1px dashed rgba(95,134,255,.35);color:#8ca6d8;padding:10px;border-radius:12px;cursor:pointer}
+  .sections-admin{display:grid;gap:10px}
+  .sections-admin .section-row{display:flex;align-items:center;gap:10px;background:#101a2c;border:1px solid rgba(95,134,255,.16);padding:12px;border-radius:12px}
+  .sections-admin .section-row span{flex:1;font-weight:600}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(8,12,22,.65);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal-backdrop.show{display:flex}
+  .modal{background:#111b2f;border:1px solid rgba(95,134,255,.22);border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.55);width:min(960px,94vw);max-height:88vh;display:flex;flex-direction:column}
+  .modal .hd{padding:18px 20px;border-bottom:1px solid rgba(95,134,255,.18);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .modal .bd{padding:18px 20px;overflow:auto;display:grid;gap:14px}
+  .modal .ft{padding:16px 20px;border-top:1px solid rgba(95,134,255,.18);display:flex;justify-content:flex-end;gap:10px}
+  .modal h2{margin:0;font-size:18px}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .form-grid label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);font-weight:600}
+  .form-grid textarea{min-height:140px}
+  .stack{display:grid;gap:10px}
+  .switch{display:flex;align-items:center;gap:8px}
+  .switch input{width:18px;height:18px}
+  .hidden{display:none !important}
+  @media (max-width:900px){
+    .controls{grid-template-columns:1fr}
+    .board{grid-template-columns:1fr}
+    .section{min-height:auto}
+  }
+</style>
+</head>
+<body>
+<div class="top"><div class="row">
+  <div class="brand">Jobs — Admin</div>
+  <span style="flex:1"></span>
+  <a class="btn secondary" href="/admin/">⟵ Admin home</a>
+  <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
+</div></div>
+
+<div id="gate" class="wrap" style="display:none">
+  <div class="card"><strong>Admin only.</strong>
+    <p class="muted">Sign in with an admin Netlify Identity account to manage jobs.</p>
+    <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+  </div>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <div class="card controls">
+    <div class="search"><input id="filterSearch" type="search" placeholder="Search title, location, keywords"/></div>
+    <select id="filterStatus">
+      <option value="">Status: any</option>
+      <option value="live">Live</option>
+      <option value="interviewing">Interviewing</option>
+      <option value="closed">Closed</option>
+      <option value="draft">Draft</option>
+    </select>
+    <select id="filterSection">
+      <option value="">Section: any</option>
+    </select>
+    <select id="filterType">
+      <option value="">Type: any</option>
+      <option value="permanent">Permanent</option>
+      <option value="contract">Contract</option>
+    </select>
+    <label class="switch" style="margin-left:6px"><input id="filterPublished" type="checkbox"/> Published only</label>
+    <button class="btn secondary" id="btnToggleFilters" type="button" aria-expanded="false" aria-controls="filterPanel">Show advanced filters</button>
+    <button class="btn" id="btnApplyFilters" type="button">Apply</button>
+    <button class="btn flat" id="btnClearFilters" type="button">Clear</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="btnRefresh" type="button">Refresh</button>
+    <button class="btn" id="btnNew" type="button">New job</button>
+  </div>
+
+  <div class="card filters collapsed" id="filterPanel" aria-hidden="true">
+    <h3 style="margin:0;font-size:15px">Advanced filters</h3>
+    <p class="muted" style="margin:4px 0 12px">Fine-tune by discipline, location codes, or assignment references. Your choices are saved locally.</p>
+    <div class="row">
+      <label>Discipline
+        <input id="filterDiscipline" placeholder="Match discipline"/>
+      </label>
+      <label>Location code
+        <input id="filterLocation" placeholder="e.g. uk, london"/>
+      </label>
+      <label>Match assignment id
+        <input id="filterAssignment" placeholder="assignment ref"/>
+      </label>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="card sections-admin">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3 style="margin:0">Sections</h3>
+      <button class="btn flat" id="btnAddSection" type="button">Add section</button>
+    </div>
+    <p class="muted" style="margin:0">Rename sections to control the column headings and user-facing filters.</p>
+    <div id="sectionList" class="stack"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editorModal">
+  <div class="modal">
+    <div class="hd">
+      <h2 id="editorTitle">Job</h2>
+      <div class="chip" id="editorMeta"></div>
+    </div>
+    <div class="bd">
+      <div class="form-grid">
+        <label>Job title
+          <input id="edTitle" required />
+        </label>
+        <label>Section
+          <input list="sectionsData" id="edSection" placeholder="e.g. Commercial" />
+          <datalist id="sectionsData"></datalist>
+        </label>
+        <label>Display label
+          <input id="edSectionLabel" placeholder="Optional friendly name"/>
+        </label>
+        <label>Status
+          <select id="edStatus">
+            <option value="draft">Draft</option>
+            <option value="live">Live</option>
+            <option value="interviewing">Interviewing</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+        <label>Type
+          <select id="edType">
+            <option value="">Not set</option>
+            <option value="permanent">Permanent</option>
+            <option value="contract">Contract</option>
+            <option value="temporary">Temporary</option>
+          </select>
+        </label>
+        <label>Discipline
+          <input id="edDiscipline" placeholder="e.g. Data Centre"/>
+        </label>
+        <label>Location (display)
+          <input id="edLocationText" placeholder="London, UK"/>
+        </label>
+        <label>Location code
+          <input id="edLocationCode" placeholder="london"/>
+        </label>
+        <label>Apply URL
+          <input id="edApplyUrl" placeholder="https://..."/>
+        </label>
+        <label>Keywords
+          <input id="edKeywords" placeholder="comma or space separated"/>
+        </label>
+        <label>Assignment ref
+          <input id="edMatchAssignment" placeholder="Optional assignment id"/>
+        </label>
+      </div>
+      <label class="stack">Overview
+        <textarea id="edOverview"></textarea>
+      </label>
+      <label class="stack">Responsibilities (one per line)
+        <textarea id="edResponsibilities"></textarea>
+      </label>
+      <label class="stack">Requirements (one per line)
+        <textarea id="edRequirements"></textarea>
+      </label>
+      <div style="display:flex;flex-wrap:wrap;gap:18px">
+        <label class="switch"><input type="checkbox" id="edPublished"/> Published</label>
+        <label class="switch"><input type="checkbox" id="edLive"/> Candidate is live</label>
+      </div>
+    </div>
+    <div class="ft">
+      <button class="btn flat" id="btnEditorClose" type="button">Close without saving</button>
+      <button class="btn" id="btnEditorSave" type="button">Save job</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="emailModal">
+  <div class="modal" style="max-width:720px">
+    <div class="hd"><h2 style="margin:0">Send job via email</h2></div>
+    <div class="bd">
+      <div class="stack">
+        <label>Recipients (comma separated)
+          <textarea id="emailRecipients" placeholder="name@example.com"></textarea>
+        </label>
+        <label>Subject
+          <input id="emailSubject" placeholder="Role — HMJ Global"/>
+        </label>
+        <label>Intro paragraph (optional)
+          <textarea id="emailIntro" placeholder="Short personalised note"></textarea>
+        </label>
+        <label>Highlight ribbon text (optional)
+          <input id="emailHighlight" placeholder="e.g. Immediate start • EU travel"/>
+        </label>
+        <div id="emailStatus" class="muted"></div>
+      </div>
+    </div>
+    <div class="ft">
+      <button class="btn flat" id="btnEmailClose" type="button">Cancel</button>
+      <button class="btn" id="btnEmailSend" type="button">Send email</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_LIST = '/admin-jobs-list';
+const API_SAVE = '/admin-jobs-save';
+const API_REORDER = '/admin-jobs-reorder';
+const API_SHARE = '/admin-jobs-share';
+const API_EMAIL = '/admin-jobs-email';
+const API_SECTION_SAVE = '/admin-jobs-section-save';
+
+function toLines(arr){return (arr||[]).join('\n');}
+function fromTextarea(val){return val.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);}
+async function main({ api, sel, toast, setTrace, identity, isMobile }) {
+  setTrace();
+  const state = {
+    jobs: [],
+    sections: [],
+    filters: { q:'', status:'', section:'', type:'', published:false, discipline:'', location:'', assignment:'' },
+    currentId: null,
+    drag: { id:null, section:null }
+  };
+
+  const board = sel('#board');
+  const filterPanel = sel('#filterPanel');
+  const filterSearch = sel('#filterSearch');
+  const filterStatus = sel('#filterStatus');
+  const filterSection = sel('#filterSection');
+  const filterType = sel('#filterType');
+  const filterPublished = sel('#filterPublished');
+  const filterDiscipline = sel('#filterDiscipline');
+  const filterLocation = sel('#filterLocation');
+  const filterAssignment = sel('#filterAssignment');
+  const btnToggleFilters = sel('#btnToggleFilters');
+  const btnApplyFilters = sel('#btnApplyFilters');
+  const btnClearFilters = sel('#btnClearFilters');
+  const btnRefresh = sel('#btnRefresh');
+  const btnNew = sel('#btnNew');
+  const sectionList = sel('#sectionList');
+  const btnAddSection = sel('#btnAddSection');
+
+  const editorModal = sel('#editorModal');
+  const emailModal = sel('#emailModal');
+
+  function updateFilterToggle(){
+    const open = !filterPanel.classList.contains('collapsed');
+    btnToggleFilters.textContent = open ? 'Hide advanced filters' : 'Show advanced filters';
+    btnToggleFilters.setAttribute('aria-expanded', open ? 'true' : 'false');
+    filterPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+
+  const edTitle = sel('#edTitle');
+  const edSection = sel('#edSection');
+  const sectionsData = sel('#sectionsData');
+  const edSectionLabel = sel('#edSectionLabel');
+  const edStatus = sel('#edStatus');
+  const edType = sel('#edType');
+  const edDiscipline = sel('#edDiscipline');
+  const edLocationText = sel('#edLocationText');
+  const edLocationCode = sel('#edLocationCode');
+  const edApplyUrl = sel('#edApplyUrl');
+  const edKeywords = sel('#edKeywords');
+  const edOverview = sel('#edOverview');
+  const edResponsibilities = sel('#edResponsibilities');
+  const edRequirements = sel('#edRequirements');
+  const edMatchAssignment = sel('#edMatchAssignment');
+  const edPublished = sel('#edPublished');
+  const edLive = sel('#edLive');
+  const btnEditorClose = sel('#btnEditorClose');
+  const btnEditorSave = sel('#btnEditorSave');
+  const editorTitle = sel('#editorTitle');
+  const editorMeta = sel('#editorMeta');
+
+  const emailRecipients = sel('#emailRecipients');
+  const emailSubject = sel('#emailSubject');
+  const emailIntro = sel('#emailIntro');
+  const emailHighlight = sel('#emailHighlight');
+  const emailStatus = sel('#emailStatus');
+  const btnEmailClose = sel('#btnEmailClose');
+  const btnEmailSend = sel('#btnEmailSend');
+
+  function persistFilters(){
+    localStorage.setItem('hmj_jobs_filters', JSON.stringify(state.filters));
+  }
+
+  function restoreFilters(){
+    try {
+      const saved = JSON.parse(localStorage.getItem('hmj_jobs_filters')||'null');
+      if (saved) Object.assign(state.filters, saved);
+    } catch{}
+    filterSearch.value = state.filters.q || '';
+    filterStatus.value = state.filters.status || '';
+    filterSection.value = state.filters.section || '';
+    filterType.value = state.filters.type || '';
+    filterPublished.checked = !!state.filters.published;
+    filterDiscipline.value = state.filters.discipline || '';
+    filterLocation.value = state.filters.location || '';
+    filterAssignment.value = state.filters.assignment || '';
+    const hasAdvanced = !!(state.filters.discipline || state.filters.location || state.filters.assignment);
+    if(hasAdvanced) filterPanel.classList.remove('collapsed');
+    updateFilterToggle();
+  }
+
+  function syncSectionSelect(){
+    filterSection.innerHTML = '<option value="">Section: any</option>' + state.sections.map(sec=>`<option value="${sec.code}">${sec.label}</option>`).join('');
+    sectionsData.innerHTML = state.sections.map(sec=>`<option value="${sec.code}">${sec.label}</option>`).join('');
+  }
+
+  function deriveSections(jobs){
+    const seen = new Map();
+    for(const job of jobs){
+      const code = (job.section||'').trim();
+      if(!code) continue;
+      if(!seen.has(code)) seen.set(code,{ code, label: job.section_label||job.section||code, description: job.section_description||'', sort_order: job.sort_order||seen.size+1 });
+    }
+    return Array.from(seen.values()).sort((a,b)=> (a.sort_order||0)-(b.sort_order||0));
+  }
+
+  function renderSections(){
+    if(!state.sections.length) state.sections = deriveSections(state.jobs);
+    syncSectionSelect();
+    filterSection.value = state.filters.section || '';
+    sectionList.innerHTML = state.sections.map(sec=>`
+      <div class="section-row" data-code="${sec.code}">
+        <span>${sec.label}<small style="display:block;font-size:11px;color:var(--muted)">${sec.code}</small></span>
+        <button class="btn flat" data-action="rename" type="button">Rename</button>
+      </div>
+    `).join('');
+  }
+
+  function renderBoard(){
+    const map = new Map();
+    const sections = state.sections.length ? state.sections : deriveSections(state.jobs);
+    sections.forEach(sec=>{ map.set(sec.code,{ meta:sec, jobs:[] }); });
+    const orphans = [];
+    const sortedJobs = [...state.jobs].sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    for(const job of sortedJobs){
+      const code = (job.section||'').trim();
+      if(code && map.has(code)) map.get(code).jobs.push(job); else orphans.push(job);
+    }
+    if(orphans.length){
+      const ghost = { code:'__unassigned__', label:'Unassigned', description:'Jobs missing a section', sort_order:999 };
+      map.set(ghost.code,{ meta:ghost, jobs:orphans });
+    }
+    const columns = Array.from(map.values()).sort((a,b)=> (a.meta.sort_order||0)-(b.meta.sort_order||0));
+    board.innerHTML = columns.map(col=>`
+      <section class="section" data-section="${col.meta.code}">
+        <header class="section-header">
+          <h3>${col.meta.label}</h3>
+          ${col.meta.description?`<span class="muted" style="font-size:12px">${col.meta.description}</span>`:''}
+          <span style="flex:1"></span>
+          <button class="btn flat" data-action="edit-section" data-code="${col.meta.code}" type="button">Edit</button>
+        </header>
+        <div class="section-body ${col.jobs.length?'':'empty'}" data-dropzone="${col.meta.code}">
+          ${col.jobs.length?col.jobs.map(renderJobCard).join(''):`<div>Drag a job here</div>`}
+        </div>
+        <div class="section-footer"><button type="button" data-action="add" data-section="${col.meta.code}">Add job to ${col.meta.label}</button></div>
+      </section>
+    `).join('');
+  }
+
+  function renderJobCard(job){
+    const chips = [];
+    if(job.status) chips.push(`<span>${job.status}</span>`);
+    if(job.type) chips.push(`<span>${job.type}</span>`);
+    if(job.published) chips.push('<span>Published</span>');
+    if(job.is_live) chips.push('<span>Live</span>');
+    return `
+      <article class="job-card" draggable="true" data-id="${job.id}" data-section="${job.section||''}">
+        <div>
+          <h4>${job.title||'Untitled role'}</h4>
+          <div class="muted" style="font-size:13px">${job.location_text || ''}</div>
+        </div>
+        <div class="meta">${chips.join('')}</div>
+        <div class="muted" style="font-size:13px;line-height:1.5">${(job.overview||'').slice(0,220)}</div>
+        <div class="actions">
+          <button type="button" data-action="share">Generate link</button>
+          <button type="button" data-action="email">Send via email</button>
+          <button type="button" data-action="edit">Open</button>
+        </div>
+        <div class="share" data-share></div>
+      </article>`;
+  }
+
+  async function loadJobs(){
+    const payload = {
+      q: state.filters.q,
+      status: state.filters.status,
+      section: state.filters.section,
+      type: state.filters.type,
+      includeDrafts: !state.filters.published,
+      discipline: state.filters.discipline,
+      location: state.filters.location,
+      assignment: state.filters.assignment,
+    };
+    const res = await api(API_LIST,'POST',payload);
+    state.jobs = res.jobs || [];
+    state.sections = res.sections || deriveSections(state.jobs);
+    renderSections();
+    renderBoard();
+  }
+
+  function openModal(node){ node.classList.add('show'); }
+  function closeModal(node){ node.classList.remove('show'); }
+
+  function openEditor(id){
+    state.currentId = id || null;
+    const job = state.jobs.find(j=>j.id===id) || { status:'draft', published:false, is_live:false };
+    editorTitle.textContent = job.id ? `Edit ${job.title||job.id}` : 'New job';
+    editorMeta.textContent = job.id ? `ID ${job.id}` : 'New record';
+    edTitle.value = job.title||'';
+    const defaultSection = job.section || state.filters.section || '';
+    edSection.value = defaultSection;
+    const autoLabel = job.section_label || (defaultSection ? (state.sections.find(sec => sec.code === defaultSection)?.label || '') : '');
+    edSectionLabel.value = autoLabel;
+    edStatus.value = job.status||'draft';
+    edType.value = job.type||'';
+    edDiscipline.value = job.discipline||'';
+    edLocationText.value = job.location_text||'';
+    edLocationCode.value = job.location_code||'';
+    edApplyUrl.value = job.apply_url||'';
+    edKeywords.value = job.keywords||'';
+    edOverview.value = job.overview||'';
+    edResponsibilities.value = toLines(job.responsibilities||[]);
+    edRequirements.value = toLines(job.requirements||[]);
+    edMatchAssignment.value = job.match_assignment||'';
+    edPublished.checked = !!job.published;
+    edLive.checked = !!job.is_live;
+    openModal(editorModal);
+  }
+
+  function gatherEditor(){
+    return {
+      id: state.currentId,
+      title: edTitle.value.trim(),
+      section: edSection.value.trim(),
+      section_label: edSectionLabel.value.trim(),
+      status: edStatus.value,
+      type: edType.value,
+      discipline: edDiscipline.value.trim(),
+      location_text: edLocationText.value.trim(),
+      location_code: edLocationCode.value.trim(),
+      apply_url: edApplyUrl.value.trim(),
+      keywords: edKeywords.value.trim(),
+      overview: edOverview.value.trim(),
+      responsibilities: fromTextarea(edResponsibilities.value),
+      requirements: fromTextarea(edRequirements.value),
+      match_assignment: edMatchAssignment.value.trim(),
+      published: edPublished.checked,
+      is_live: edLive.checked,
+    };
+  }
+
+  async function saveEditor(){
+    const payload = gatherEditor();
+    if(!payload.title){ toast('Title required','error'); return; }
+    if(!payload.section){ toast('Section required','error'); return; }
+    const saved = await api(API_SAVE,'POST',payload);
+    toast('Job saved');
+    const updatedJob = saved.job || payload;
+    const idx = state.jobs.findIndex(j=>j.id===updatedJob.id);
+    if(idx>=0) state.jobs[idx]=updatedJob; else state.jobs.unshift(updatedJob);
+    state.currentId = updatedJob.id;
+    await loadJobs();
+    closeModal(editorModal);
+  }
+
+  async function reorder(){
+    const order = [];
+    board.querySelectorAll('.section').forEach(section => {
+      const code = section.dataset.section || '';
+      const ids = Array.from(section.querySelectorAll('.job-card')).map(card=>card.dataset.id);
+      order.push({ section: code === '__unassigned__' ? '' : code, ids });
+    });
+    await api(API_REORDER,'POST',{ order });
+    toast('Order saved');
+  }
+
+  async function generateShare(id, card){
+    try {
+      const res = await api(API_SHARE,'POST',{ id });
+      const url = res.shareUrl || '';
+      card.querySelector('[data-share]').textContent = url;
+      navigator.clipboard?.writeText(url).catch(()=>{});
+      toast(res.offline ? 'Static preview link copied' : 'Share link ready');
+    } catch(e){ toast('Share failed: '+e.message,'error'); }
+  }
+
+  function openEmail(id){
+    state.currentId = id;
+    const job = state.jobs.find(j=>j.id===id);
+    if(!job){ toast('Job not found','error'); return; }
+    emailRecipients.value = '';
+    emailSubject.value = `${job.title||'Role opportunity'} — HMJ Global`;
+    emailIntro.value = '';
+    emailHighlight.value = '';
+    emailStatus.textContent = '';
+    openModal(emailModal);
+  }
+
+  async function sendEmail(){
+    const recipients = emailRecipients.value.trim();
+    if(!recipients){ toast('Add at least one recipient','error'); return; }
+    try {
+      btnEmailSend.disabled = true;
+      emailStatus.textContent = 'Sending…';
+      const res = await api(API_EMAIL,'POST',{
+        id: state.currentId,
+        recipients,
+        subject: emailSubject.value,
+        intro: emailIntro.value,
+        highlight: emailHighlight.value,
+      });
+      emailStatus.textContent = res.sent ? 'Sent via '+(res.provider||'provider') : 'Not sent — provider unavailable';
+      toast(res.sent ? 'Email sent' : 'Email prepared (copy HTML from logs if needed)');
+      setTimeout(()=>closeModal(emailModal), res.sent ? 800 : 1600);
+    } catch(e){
+      emailStatus.textContent = 'Failed: '+e.message;
+      toast('Email failed: '+e.message,'error');
+    } finally {
+      btnEmailSend.disabled = false;
+    }
+  }
+
+  board.addEventListener('dragstart', ev => {
+    const card = ev.target.closest('.job-card');
+    if(!card) return;
+    card.classList.add('dragging');
+    ev.dataTransfer.setData('text/plain', card.dataset.id);
+    state.drag.id = card.dataset.id;
+    state.drag.section = card.dataset.section || '';
+  });
+
+  board.addEventListener('dragend', ev => {
+    const card = ev.target.closest('.job-card');
+    if(card) card.classList.remove('dragging');
+    state.drag = { id:null, section:null };
+  });
+
+  board.addEventListener('dragover', ev => {
+    if(!state.drag.id) return;
+    const zone = ev.target.closest('[data-dropzone]');
+    if(!zone) return;
+    ev.preventDefault();
+    const after = Array.from(zone.querySelectorAll('.job-card:not(.dragging)')).find(el=>{
+      const rect = el.getBoundingClientRect();
+      return ev.clientY < rect.top + rect.height/2;
+    });
+    const dragging = board.querySelector('.job-card.dragging');
+    if(!dragging) return;
+    if(after) zone.insertBefore(dragging, after); else zone.appendChild(dragging);
+  });
+
+  board.addEventListener('drop', async ev => {
+    ev.preventDefault();
+    const zone = ev.target.closest('[data-dropzone]');
+    if(!zone) return;
+    const newSection = zone.dataset.dropzone || '';
+    const card = board.querySelector('.job-card.dragging');
+    if(card){
+      card.dataset.section = newSection;
+      await reorder();
+      await loadJobs();
+    }
+  });
+
+  board.addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-action]');
+    if(!btn) return;
+    const card = ev.target.closest('.job-card') || board.querySelector(`.job-card[data-id="${btn.dataset.code}"]`);
+    const id = card?.dataset.id;
+    const action = btn.dataset.action;
+    if(action==='edit') openEditor(id);
+    else if(action==='share') generateShare(id, card);
+    else if(action==='email') openEmail(id);
+    else if(action==='edit-section') {
+      const code = btn.dataset.code;
+      renameSection(code);
+    } else if(action==='add') {
+      openEditor(null);
+      edSection.value = btn.dataset.section === '__unassigned__' ? '' : btn.dataset.section;
+    }
+  });
+
+  async function renameSection(code){
+    const current = state.sections.find(s=>s.code===code);
+    const nameInput = prompt('New label for section', current?.label||code);
+    if(nameInput === null) return;
+    const name = nameInput.trim();
+    if(!name) return;
+    await api(API_SECTION_SAVE,'POST',{ code, label:name });
+    toast('Section updated');
+    state.sections = state.sections.map(s=> s.code===code ? { ...s, label:name } : s);
+    renderSections();
+    renderBoard();
+  }
+
+  sectionList.addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-action="rename"]');
+    if(!btn) return;
+    const code = btn.closest('.section-row').dataset.code;
+    renameSection(code);
+  });
+
+  btnAddSection.onclick = async () => {
+    const rawCode = prompt('Internal code (no spaces)', '');
+    if(rawCode === null) return;
+    const code = rawCode.trim();
+    if(!code) return;
+    const rawLabel = prompt('Label to display', code);
+    if(rawLabel === null) return;
+    const label = rawLabel.trim() || code;
+    await api(API_SECTION_SAVE,'POST',{ code, label });
+    toast('Section created');
+    state.sections.push({ code, label, description:'', sort_order: state.sections.length+1 });
+    renderSections();
+    renderBoard();
+  };
+
+  btnToggleFilters.onclick = () => {
+    filterPanel.classList.toggle('collapsed');
+    updateFilterToggle();
+    if(!filterPanel.classList.contains('collapsed')){
+      try { filterDiscipline.focus({ preventScroll:true }); }
+      catch { filterDiscipline.focus(); }
+    }
+  };
+
+  btnApplyFilters.onclick = () => {
+    state.filters.q = filterSearch.value.trim();
+    state.filters.status = filterStatus.value;
+    state.filters.section = filterSection.value;
+    state.filters.type = filterType.value;
+    state.filters.published = filterPublished.checked;
+    state.filters.discipline = filterDiscipline.value.trim();
+    state.filters.location = filterLocation.value.trim();
+    state.filters.assignment = filterAssignment.value.trim();
+    persistFilters();
+    loadJobs();
+  };
+
+  btnClearFilters.onclick = () => {
+    state.filters = { q:'', status:'', section:'', type:'', published:false, discipline:'', location:'', assignment:'' };
+    restoreFilters();
+    persistFilters();
+    filterPanel.classList.add('collapsed');
+    updateFilterToggle();
+    loadJobs();
+  };
+
+  btnRefresh.onclick = loadJobs;
+  btnNew.onclick = () => openEditor(null);
+  btnEditorClose.onclick = () => closeModal(editorModal);
+  btnEditorSave.onclick = () => saveEditor().catch(e=>toast(e.message,'error'));
+  btnEmailClose.onclick = () => closeModal(emailModal);
+  btnEmailSend.onclick = () => sendEmail();
+
+  restoreFilters();
+  await loadJobs();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const start = () => Admin.bootAdmin(main);
+  netlifyIdentity?.on('init', start);
+  netlifyIdentity?.on('login', () => location.reload());
+  netlifyIdentity?.on('logout', () => location.href = '/admin/');
+  setTimeout(() => {
+    if (netlifyIdentity?.currentUser()) start();
+    else (document.querySelector('#gate') || {}).style.display = 'grid';
+  }, 600);
+});
+</script>
+</body>
+</html>

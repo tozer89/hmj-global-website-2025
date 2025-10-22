@@ -61,9 +61,24 @@ async function getContext(context) {
 }
 
 // Ensure there is a single timesheet row for (assignment_id, week_ending)
-async function ensureTimesheet(assignment_id, week_ending) {
+async function ensureTimesheet(arg1, arg2, arg3) {
+  // Allow ensureTimesheet(supabaseClient, assignment_id, week_ending)
+  // while keeping back-compat ensureTimesheet(assignment_id, week_ending).
+  let client = supabase;
+  let assignment_id = arg1;
+  let week_ending = arg2;
+
+  if (arg1 && typeof arg1.from === 'function') {
+    client = arg1;
+    assignment_id = arg2;
+    week_ending = arg3;
+  }
+
+  if (!client) throw new Error('supabase_unavailable');
+  if (!assignment_id || !week_ending) throw new Error('missing_timesheet_context');
+
   // Try to find one
-  const { data: existing, error: sErr } = await supabase
+  const { data: existing, error: sErr } = await client
     .from('timesheets')
     .select('id, week_ending, status')
     .eq('assignment_id', assignment_id)
@@ -74,7 +89,7 @@ async function ensureTimesheet(assignment_id, week_ending) {
   if (existing) return existing;
 
   // Create one (default draft)
-  const { data: created, error: iErr } = await supabase
+  const { data: created, error: iErr } = await client
     .from('timesheets')
     .insert({ assignment_id, week_ending, status: 'draft' })
     .select('id, week_ending, status')

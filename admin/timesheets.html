@@ -285,7 +285,7 @@
       </div>
       <div class="chipline" style="align-items:center">
         <span id="statusBadge" class="badge draft" aria-live="polite">draft</span>
-        <button class="btn chip" id="btnCloseModal" aria-label="Close">Close</button>
+        <button class="btn chip" id="btnCloseModal" aria-label="Close">Close without saving</button>
       </div>
     </div>
     <div class="bd">
@@ -388,6 +388,64 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // Import
   const fileImport = $('#fileImport'); const btnImport = $('#btnImport'); const importLog = $('#importLog');
 
+  // ---- Local cache (60 day TTL) ----
+  const CACHE_TTL_MS = 60 * 24 * 60 * 60 * 1000;
+  const CACHE_LIST_KEY = 'hmj_ts_cache_list_v1';
+  const CACHE_DETAIL_KEY = 'hmj_ts_cache_detail_v1';
+
+  const readCache = (key, fallback) => {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch { return fallback; }
+  };
+  const writeCache = (key, value) => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  };
+
+  function setCachedList(payload){
+    if(!payload || !Array.isArray(payload.items)) return;
+    writeCache(CACHE_LIST_KEY, { savedAt: Date.now(), filters: payload.filters||{}, items: payload.items });
+  }
+
+  function getCachedList(){
+    const cached = readCache(CACHE_LIST_KEY, null);
+    if(!cached) return null;
+    if(!cached.savedAt || (Date.now() - cached.savedAt) > CACHE_TTL_MS){
+      localStorage.removeItem(CACHE_LIST_KEY);
+      return null;
+    }
+    return cached;
+  }
+
+  function pruneDetailStore(store){
+    const now = Date.now();
+    let changed = false;
+    for(const key of Object.keys(store)){
+      const entry = store[key];
+      if(!entry?.savedAt || (now - entry.savedAt) > CACHE_TTL_MS){
+        delete store[key];
+        changed = true;
+      }
+    }
+    return { store, changed };
+  }
+
+  function setCachedDetail(id, data){
+    if(!id || !data) return;
+    const key = String(id);
+    const store = readCache(CACHE_DETAIL_KEY, {});
+    store[key] = { savedAt: Date.now(), data };
+    const pruned = pruneDetailStore(store);
+    writeCache(CACHE_DETAIL_KEY, pruned.store);
+  }
+
+  function getCachedDetail(id){
+    if(!id) return null;
+    const store = readCache(CACHE_DETAIL_KEY, {});
+    const pruned = pruneDetailStore(store);
+    if(pruned.changed) writeCache(CACHE_DETAIL_KEY, pruned.store);
+    return pruned.store[String(id)]?.data || null;
+  }
+
   // ---- Theme toggle ----
   const THEME_KEY='hmj_theme';
   function setTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY,t); btnTheme.innerHTML = t==='dark'?'🌞 Light':'🌙 Dark'; }
@@ -430,7 +488,27 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // Debug helpers
   let DEBUG=false;
   function dlog(line){ if(!DEBUG) return; debugCard.textContent = (debugCard.textContent?debugCard.textContent+'\n':'') + line; debugCard.scrollTop = debugCard.scrollHeight; }
-  function addChip(txt, ok){ const s=document.createElement('span'); s.className='tag'; s.style.borderColor = ok?'#35b37e':'#b73b3b'; s.textContent=txt; diagChips.append(s); }
+  function addChip(txt, ok, key){
+    if(diagChips && key){
+      const existing = diagChips.querySelector(`[data-chip="${key}"]`);
+      if(existing){
+        existing.textContent = txt;
+        existing.style.borderColor = ok?'#35b37e':'#b73b3b';
+        existing.style.color = ok?'#0f5132':'#842029';
+        existing.style.background = ok?'#e8f6ef':'#fdeeee';
+        return existing;
+      }
+    }
+    const s=document.createElement('span');
+    s.className='tag';
+    if(key) s.dataset.chip = key;
+    s.style.borderColor = ok?'#35b37e':'#b73b3b';
+    s.style.color = ok?'#0f5132':'#842029';
+    s.style.background = ok?'#e8f6ef':'#fdeeee';
+    s.textContent=txt;
+    diagChips.append(s);
+    return s;
+  }
 
   // title toast every ~10s (gentle)
   setInterval(()=> toast('Timesheets — Admin', 'info', 2000), 10000);
@@ -482,9 +560,9 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       const res = await api(FN_CLIENTS,'GET');
       if(Array.isArray(res)){
         clientId.innerHTML = '<option value="">All clients</option>' + res.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-        addChip('clients: ok', true);
-      } else { addChip('clients: unexpected', false); }
-    }catch(e){ addChip('clients: fail', false); dlog('[ERR] clients '+e.message); }
+        addChip('clients: ok', true, 'clients');
+      } else { addChip('clients: unexpected', false, 'clients'); }
+    }catch(e){ addChip('clients: fail', false, 'clients'); dlog('[ERR] clients '+e.message); }
   }
 
   // --------- Audit ---------
@@ -513,9 +591,24 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       const rows = Array.isArray(res) ? res : (res?.items||[]);
       LIST = rows||[];
       statTotal.textContent = String(LIST.length);
+      setCachedList({ filters, items: LIST });
+      addChip('timesheets: live', true, 'timesheets');
       filterAndRender();
       dlog(`[OK] POST ${FN_LIST} -> ${LIST.length} rows`);
-    }catch(e){ listEl.innerHTML='<div class="muted">List failed.</div>'; dlog(`[ERR] ${FN_LIST} ${e.message}`); toast('List failed: '+e.message,'error'); }
+    }catch(e){
+      dlog(`[ERR] ${FN_LIST} ${e.message}`);
+      const cached = getCachedList();
+      if(cached){
+        LIST = cached.items || [];
+        statTotal.textContent = String(LIST.length);
+        addChip('timesheets: cached', false, 'timesheets');
+        toast('Live data unavailable — showing cached list', 'warn', 4800);
+        filterAndRender();
+      }else{
+        listEl.innerHTML='<div class="muted">List failed.</div>';
+        toast('List failed: '+e.message,'error');
+      }
+    }
   }
 
   function filterAndRender(){
@@ -627,24 +720,60 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   }
 
   // ---- Modal open + edit ----
+  function curFromPayload(payload){
+    if(!payload) return null;
+    const entries = {};
+    const raw = payload.entries || {};
+    DAYS.forEach(d=>{
+      const row = raw[d] || {};
+      entries[d] = { std:Number(row.std||0), ot:Number(row.ot||0), note:row.note||'' };
+    });
+    return {
+      id: payload.id,
+      status: payload.status || 'draft',
+      week_ending: payload.week_ending,
+      contractor_email: payload.contractor_email||payload.contractor?.email||'',
+      assignment: payload.assignment || {},
+      rates: {
+        std: Number(payload?.assignment?.rate_std ?? payload?.rate_std ?? 0),
+        ot:  Number(payload?.assignment?.rate_ot ?? payload?.rate_ot ?? 0)
+      },
+      entries
+    };
+  }
+
   async function openSheet(id){
     sheetBody.innerHTML = '<tr><td colspan="4" class="muted" style="background:var(--soft);border:1px solid var(--border)">Loading…</td></tr>';
     openModal();
     try{
       const res = await api(FN_GET,'POST',{ id });
-      CUR = {
-        id: res.id, status: res.status || 'draft', week_ending: res.week_ending,
-        contractor_email: res.contractor_email||res.contractor?.email||'',
-        assignment: res.assignment||{},
-        rates: { std:Number(res?.assignment?.rate_std||res?.rate_std||0), ot:Number(res?.assignment?.rate_ot||res?.rate_ot||0) },
-        entries: res.entries || Object.fromEntries(DAYS.map(d=>[d,{std:0,ot:0,note:''}])),
-      };
+      setCachedDetail(id, res);
+      CUR = curFromPayload(res);
       sheetTitle.textContent = `Timesheet #${CUR.id}`;
       sheetSub.textContent = `Week ending ${CUR.week_ending}`;
       sheetMeta.textContent = `${[CUR.assignment.client_name,CUR.assignment.project_name,CUR.assignment.site_name].filter(Boolean).join(' • ')}`;
       rateStd.textContent = `Rate: ${money(CUR.rates.std)}/h`; rateOT.textContent  = `Rate: ${money(CUR.rates.ot)}/h`;
       badgeForStatus(CUR.status); renderRows();
-    }catch(e){ sheetBody.innerHTML='<tr><td colspan="4" class="muted" style="background:var(--soft);border:1px solid var(--border)">Failed to load timesheet.</td></tr>'; }
+      addChip('sheet: live', true, `sheet-${id}`);
+    }catch(e){
+      const cached = getCachedDetail(id);
+      if(cached){
+        CUR = curFromPayload(cached);
+        if(CUR){
+          sheetTitle.textContent = `Timesheet #${CUR.id}`;
+          sheetSub.textContent = `Week ending ${CUR.week_ending}`;
+          sheetMeta.textContent = `${[CUR.assignment.client_name,CUR.assignment.project_name,CUR.assignment.site_name].filter(Boolean).join(' • ')}`;
+          rateStd.textContent = `Rate: ${money(CUR.rates.std)}/h`; rateOT.textContent  = `Rate: ${money(CUR.rates.ot)}/h`;
+          badgeForStatus(CUR.status); renderRows();
+          toast('Live detail unavailable — showing cached copy', 'warn', 4800);
+          addChip('sheet: cached', false, `sheet-${id}`);
+          return;
+        }
+      }
+      sheetBody.innerHTML='<tr><td colspan="4" class="muted" style="background:var(--soft);border:1px solid var(--border)">Failed to load timesheet.</td></tr>';
+      toast('Failed to load timesheet: '+e.message, 'error');
+      addChip('sheet: failed', false, `sheet-${id}`);
+    }
   }
 
   function renderRows(){
@@ -757,32 +886,16 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // Restore filters from cache
   try{ const f=JSON.parse(localStorage.getItem('hmj_ts_filters')||'{}'); if(f){ q.value=f.q||''; status.value=f.status||''; clientId.value=f.client_id||''; week.value=f.week||''; } }catch{}
 
-  // New: consistently gate via the shared bootstrap
-  (async function initTimesheets(){
-    const helpers = await (window.adminReady ? window.adminReady({ role:'admin' }) : window.bootAdmin({ role:'admin' }));
-    if (!helpers || helpers.ok === false) {
-      // gate already rendered a message; just stop here.
-      return;
-    }
-    // pull helpers you already use
-    const { api, sel, toast } = helpers;
-
-    // If you previously had globals like API = api; keep them
-    window.API = api;
-
-    // Trigger your existing loaders the same way as before
-    try {
-      document.dispatchEvent(new CustomEvent('admin:refresh')); // keeps your R shortcut useful
-      // or directly call your page loaders here:
-      // await loadClients();
-      // await loadAudit();
-      // await loadList();
-    } catch (e) {
-      console.error(e);
-      toast('Init error: '+(e.message||e), 'error');
-    }
-  })();
-
+  // Identity + diagnostics chips
+  const diag = await identity();
+  diagChips.innerHTML='';
+  addChip('init: ok', true, 'init');
+  if(!diag.ok){ addChip('identity: no session', false, 'identity'); document.querySelector('#gate').style.display='grid'; return; }
+  addChip('identity: ok', true, 'identity');
+  addChip(diag.token ? 'token: ok' : 'token: missing', !!diag.token, 'token');
+  ROLE = diag.role || 'admin';
+  roleView.value = ROLE;
+  addChip('role: '+ROLE, true, 'role');
 
   // Load clients, audit, list
   await loadClients(); await loadAudit(); await loadList(); renderViews();
@@ -790,6 +903,19 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // small mobile tweaks
   if(isMobile){ calendarWrap.style.display='none'; chartWrap.style.display='none'; }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const start = () => Admin.bootAdmin(main);
+
+  netlifyIdentity?.on('init', start);
+  netlifyIdentity?.on('login', () => location.reload());
+  netlifyIdentity?.on('logout', () => location.href = '/admin/');
+
+  setTimeout(() => {
+    if (netlifyIdentity?.currentUser()) start();
+    else (document.querySelector('#gate') || {}).style.display = 'grid';
+  }, 600);
+});
 
 /* Bootstrap via /admin/common.js */
 </script>

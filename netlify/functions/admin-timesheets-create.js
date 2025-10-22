@@ -1,9 +1,10 @@
 // netlify/functions/admin-timesheets-create.js
-const { getContext, weekEndingSaturdayISO, ensureTimesheet } = require('./_timesheet-helpers');
+const { getContext } = require('./_auth.js');
+const { weekEndingSaturdayISO, ensureTimesheet } = require('./_timesheet-helpers');
 
 exports.handler = async (event, context) => {
   try {
-    const { user, supabase } = await getContext(context, { requireAdmin: true });
+    const { user, supabase } = await getContext(event, context, { requireAdmin: true });
     const { assignment_id, week_ending = weekEndingSaturdayISO() } = JSON.parse(event.body || '{}');
     if (!assignment_id) throw new Error('Missing assignment_id');
 

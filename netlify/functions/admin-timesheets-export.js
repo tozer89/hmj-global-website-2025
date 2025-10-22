@@ -1,9 +1,9 @@
 // netlify/functions/admin-timesheets-export.js
-const { getContext } = require('./_timesheet-helpers');
+const { getContext } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    const { supabase } = await getContext(context, { requireAdmin: true });
+    const { supabase } = await getContext(event, context, { requireAdmin: true });
     const body = JSON.parse(event.body || '{}');
     const { status = '', client_id = null, week = null, q = '' } = body;
 

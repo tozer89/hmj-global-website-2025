@@ -4,7 +4,7 @@ const { getContext, coded } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    await getContext(context, { requireAdmin: true });
+    await getContext(event, context, { requireAdmin: true });
     const { id, email } = JSON.parse(event.body||'{}');
     if (!id && !email) throw coded(400, 'id or email required');
     const query = id ? supabase.from('contractors').select('*').eq('id', id) 

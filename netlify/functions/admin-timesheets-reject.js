@@ -1,9 +1,9 @@
-// netlify/functions/admin-timesheet-reject.js
-const { getContext } = require('./_timesheet-helpers');
+// netlify/functions/admin-timesheets-reject.js
+const { getContext } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    const { user, supabase } = await getContext(context, { requireAdmin: true });
+    const { user, supabase } = await getContext(event, context, { requireAdmin: true });
     const { id, reason = '' } = JSON.parse(event.body || '{}');
     if (!id) throw new Error('Missing id');
 

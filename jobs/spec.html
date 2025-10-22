@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Job Spec | HMJ Global</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    :root{
+      --bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9;--accent:#5f86ff;
+      --chip:#1a2238;--cta:#5f86ff;--cta2:#7aa9ff;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Roboto,system-ui,-apple-system,Arial}
+    a{color:inherit}
+    header{position:sticky;top:0;background:#0c1222;border-bottom:1px solid rgba(95,134,255,.18);padding:16px 18px;z-index:10}
+    header .inner{max-width:960px;margin:0 auto;display:flex;align-items:center;gap:12px}
+    header img{height:34px}
+    main{max-width:960px;margin:32px auto;padding:0 18px 80px;display:grid;gap:18px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+    h1{margin:0;font-size:clamp(28px,5vw,40px);line-height:1.15;color:#fff}
+    .muted{color:var(--muted)}
+    .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:#101b31;border:1px solid rgba(95,134,255,.25);font-weight:600;color:#cfd8f5}
+    .body{display:grid;gap:16px;font-size:16px;line-height:1.65}
+    h2{margin:28px 0 12px;font-size:20px;color:#fff}
+    ul{margin:0 0 16px 20px;padding:0}
+    li{margin:0 0 8px}
+    .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+    .cta a{display:inline-flex;align-items:center;justify-content:center;padding:14px 22px;border-radius:14px;font-weight:700;text-decoration:none}
+    .btn-primary{background:linear-gradient(135deg,var(--cta),var(--cta2));color:#fff;box-shadow:0 12px 28px rgba(95,134,255,.45)}
+    .btn-secondary{border:1px solid rgba(95,134,255,.35);color:#cfd8f5;background:#121d33}
+    .notice{border-radius:14px;border:1px solid rgba(255,193,7,.45);background:rgba(255,193,7,.1);color:#ffecb5;padding:12px 16px;font-weight:600}
+    footer{padding:30px 18px;text-align:center;color:#7386b5;font-size:13px}
+    footer a{color:#9fb6ff;text-decoration:none}
+    @media (max-width:640px){
+      .card{padding:20px}
+    }
+  </style>
+</head>
+<body>
+<header><div class="inner">
+  <a href="/jobs.html" style="display:flex;align-items:center;gap:12px;text-decoration:none"><img src="/images/logo.png" alt="HMJ Global"/><span class="muted" style="font-weight:700">HMJ Global — Job Spec</span></a>
+  <span style="flex:1"></span>
+  <a class="muted" href="/jobs.html">Back to jobs</a>
+</div></header>
+<main>
+  <div id="message" class="card" style="display:none"></div>
+  <article id="spec" class="card" style="display:none">
+    <header>
+      <h1 id="jobTitle"></h1>
+      <div class="muted" id="jobLocation"></div>
+      <div class="meta" id="jobMeta"></div>
+    </header>
+    <section class="body">
+      <p id="jobOverview"></p>
+      <div id="jobResponsibilities"></div>
+      <div id="jobRequirements"></div>
+      <div class="cta">
+        <a id="applyLink" class="btn-primary" target="_blank" rel="noopener">Apply / Contact HMJ Global</a>
+        <a href="/contact.html" class="btn-secondary">View full website</a>
+      </div>
+    </section>
+  </article>
+</main>
+<footer>© <span id="year"></span> HMJ Global. All rights reserved. <a href="/contact.html">Contact us</a></footer>
+<script>
+const params = new URLSearchParams(location.search);
+const shareToken = params.get('share');
+const jobId = params.get('id');
+
+const el = {
+  spec: document.getElementById('spec'),
+  message: document.getElementById('message'),
+  title: document.getElementById('jobTitle'),
+  location: document.getElementById('jobLocation'),
+  meta: document.getElementById('jobMeta'),
+  overview: document.getElementById('jobOverview'),
+  resp: document.getElementById('jobResponsibilities'),
+  req: document.getElementById('jobRequirements'),
+  apply: document.getElementById('applyLink')
+};
+
+function showMessage(text, tone='info') {
+  el.message.style.display='block';
+  el.message.className='card';
+  el.message.innerHTML = `<div class="notice">${text}</div>`;
+}
+
+function render(job){
+  if(!job) {
+    showMessage('This job could not be found or is no longer available.','warn');
+    return;
+  }
+  el.spec.style.display='block';
+  el.title.textContent = job.title || 'HMJ Global role';
+  el.location.textContent = [job.location_text, job.section_label || job.section].filter(Boolean).join(' • ');
+  const meta = [];
+  if(job.status) meta.push(`<span class="chip">${job.status}</span>`);
+  if(job.type) meta.push(`<span class="chip">${job.type}</span>`);
+  if(job.discipline) meta.push(`<span class="chip">${job.discipline}</span>`);
+  if(job.match_assignment) meta.push(`<span class="chip">Ref ${job.match_assignment}</span>`);
+  el.meta.innerHTML = meta.join('');
+  el.overview.textContent = job.overview || '';
+
+  const respList = Array.isArray(job.responsibilities)? job.responsibilities : [];
+  const reqList = Array.isArray(job.requirements)? job.requirements : [];
+  el.resp.innerHTML = respList.length ? `<h2>Key Responsibilities</h2><ul>${respList.map(item=>`<li>${item}</li>`).join('')}</ul>` : '';
+  el.req.innerHTML = reqList.length ? `<h2>Ideal Experience</h2><ul>${reqList.map(item=>`<li>${item}</li>`).join('')}</ul>` : '';
+  const applyUrl = job.apply_url || `/contact.html?role=${encodeURIComponent(job.title || job.id || '')}`;
+  el.apply.href = applyUrl;
+}
+
+async function fetchJob(){
+  const base = '/.netlify/functions/job-spec';
+  const query = shareToken ? `share=${encodeURIComponent(shareToken)}` : jobId ? `id=${encodeURIComponent(jobId)}` : '';
+  if(!query){
+    showMessage('Missing job identifier. Please check the link you were sent.','warn');
+    return;
+  }
+  try{
+    const res = await fetch(`${base}?${query}`, { headers:{'x-trace': `job-spec-${Date.now()}`} });
+    if(res.ok){
+      const json = await res.json();
+      render(json.job);
+      if(json.share?.expires_at){
+        const expiry = new Date(json.share.expires_at).toLocaleDateString();
+        showMessage(`Private preview link. Expires ${expiry}.`);
+      }
+      return;
+    }
+    if(res.status === 410){
+      showMessage('This private preview link has expired. Please request a fresh link from HMJ Global.','warn');
+      return;
+    }
+  }catch(err){
+    console.warn('job-spec fetch failed', err);
+  }
+  await fallbackStatic();
+}
+
+async function fallbackStatic(){
+  try {
+    const res = await fetch('/data/jobs.json');
+    if(!res.ok) throw new Error('static not available');
+    const data = await res.json();
+    const job = (data.jobs||[]).find(j=> j.id === jobId);
+    if(job){
+      showMessage('Showing cached job data (offline mode).');
+      render(job);
+      return;
+    }
+  } catch(err) {
+    console.warn('static fallback failed', err);
+  }
+  showMessage('Job unavailable. Please contact HMJ Global for the latest specification.','warn');
+}
+
+document.getElementById('year').textContent = new Date().getFullYear();
+fetchJob();
+</script>
+</body>
+</html>

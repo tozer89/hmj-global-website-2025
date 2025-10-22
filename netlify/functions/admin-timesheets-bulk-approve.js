@@ -1,9 +1,9 @@
 // netlify/functions/admin-timesheets-bulk-approve.js
-const { getContext } = require('./_timesheet-helpers');
+const { getContext } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    const { user, supabase } = await getContext(context, { requireAdmin: true });
+    const { user, supabase } = await getContext(event, context, { requireAdmin: true });
     const { ids = [] } = JSON.parse(event.body || '{}');
     if (!ids.length) throw new Error('No ids');
 
