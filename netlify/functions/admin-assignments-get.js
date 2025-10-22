@@ -1,10 +1,9 @@
 // netlify/functions/admin-assignments-get.js
-const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    await getContext(event, context, { requireAdmin: true });
+    const { supabase } = await getContext(event, context, { requireAdmin: true });
     const { id } = JSON.parse(event.body || '{}');
     if (!id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing id' }) };
 

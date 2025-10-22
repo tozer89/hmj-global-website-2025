@@ -130,6 +130,10 @@
       <div>Read-only mode.</div>
       <div class="muted">Supabase credentials are missing so jobs are loaded from the static fallback. Configure the environment to enable editing.</div>
     </section>
+    <section class="panel notice" id="seedNotice" style="display:none">
+      <div>Imported from the legacy jobs board.</div>
+      <div class="muted">These jobs came from the static site. Save a job to import it into Supabase and unlock sharing.</div>
+    </section>
     <section class="panel" id="filtersPanel">
       <div class="filters-grid">
         <div class="search"><svg width="16" height="16" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="m11 11 4 4"/></svg><input id="filterSearch" type="search" placeholder="Search title, location, keywords" autocomplete="off"/></div>
@@ -246,6 +250,7 @@
         diagnostics: false,
         readOnly: false,
         fallbackSource: '',
+        seeded: false,
       };
 
       const board = sel('#boardColumns');
@@ -268,6 +273,7 @@
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
       const readOnlyNotice = sel('#readOnlyNotice');
+      const seedNotice = sel('#seedNotice');
       const readOnlyControls = Array.from(document.querySelectorAll('[data-readonly]'));
       const btnDiag = sel('#btnDiag');
 
@@ -277,12 +283,19 @@
           if (!el) return;
           if (state.readOnly) {
             el.classList.add('disabled');
-            el.setAttribute('disabled', 'true');
           } else {
             el.classList.remove('disabled');
-            el.removeAttribute('disabled');
+          }
+          el.toggleAttribute('disabled', !!state.readOnly);
+          if ('disabled' in el) {
+            el.disabled = !!state.readOnly;
           }
         });
+      }
+
+      function applySeedNotice() {
+        if (!seedNotice) return;
+        seedNotice.style.display = state.seeded ? '' : 'none';
       }
 
       const form = {
@@ -638,7 +651,11 @@
       function openEditor(job) {
         state.editing = job ? { ...job } : null;
         drawerTitle.textContent = job?.title || 'New job';
-        drawerMeta.textContent = job ? `Updated ${formatDate(job.updatedAt || job.createdAt)}` : 'Draft not yet saved';
+        if (job?.__seed) {
+          drawerMeta.textContent = 'Static import — save to sync with Supabase';
+        } else {
+          drawerMeta.textContent = job ? `Updated ${formatDate(job.updatedAt || job.createdAt)}` : 'Draft not yet saved';
+        }
         fillForm(job);
         shareBox.style.display = 'none';
         shareUrl.value = '';
@@ -677,13 +694,19 @@
           const job = res?.job;
           if (job) {
             const existing = state.jobs.find((j) => j.id === job.id);
-            if (existing) Object.assign(existing, job);
-            else state.jobs.push(job);
+            if (existing) {
+              Object.assign(existing, job);
+              delete existing.__seed;
+            } else {
+              state.jobs.push(job);
+            }
             buildSections();
             buildTags();
             renderAll();
             openEditor(job);
             toast('Job saved', 'ok', 1800);
+            state.seeded = state.jobs.some((j) => j.__seed);
+            applySeedNotice();
           }
         } catch (e) {
           console.error('[jobs] save failed', e);
@@ -716,16 +739,25 @@
           toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
           return;
         }
+        if (job?.__seed) {
+          toast('Save this job to Supabase before generating a share link.', 'warn', 3200);
+          return;
+        }
         if (!job?.id) {
           toast('Save the job before generating a share link', 'warn', 2600);
           return;
         }
         try {
           const res = await api('admin-job-share-create', 'POST', { jobId: job.id });
-          shareMeta.textContent = `Slug ${res.slug} · Expires ${res.expires_at || 'never'}`;
+          const fallback = !!res?.fallback;
+          if (fallback) {
+            shareMeta.textContent = 'Direct job link · No expiry (job_specs table missing)';
+          } else {
+            shareMeta.textContent = `Slug ${res.slug} · Expires ${res.expires_at || 'never'}`;
+          }
           shareUrl.value = res.url || '';
           shareBox.style.display = '';
-          toast('Share link created', 'ok', 2000);
+          toast(fallback ? 'Share link created (using direct job link)' : 'Share link created', 'ok', 2000);
         } catch (e) {
           toast('Share failed: ' + (e.message || e), 'error', 4200);
         }
@@ -737,6 +769,11 @@
           state.jobs = Array.isArray(res?.jobs) ? res.jobs : [];
           state.readOnly = !!res?.readOnly;
           state.fallbackSource = res?.source || '';
+          state.seeded = !!res?.seeded && state.jobs.length > 0;
+          applySeedNotice();
+          if (state.seeded) {
+            toast('Static jobs loaded — save them to sync with Supabase.', 'info', 2800);
+          }
           applyReadOnly();
           if (state.readOnly && res?.error) {
             toast('Supabase unavailable: ' + res.error, 'warn', 3600);

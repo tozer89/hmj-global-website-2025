@@ -34,6 +34,7 @@
     .card:hover{transform:translateY(-2px);box-shadow:0 22px 44px rgba(15,27,63,.18);border-color:rgba(47,78,162,.35)}
     .card h3{margin:0;font-size:18px}
     .card p{margin:0;color:var(--muted)}
+    .panel pre{background:#f8faff;border:1px solid var(--border);border-radius:12px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:13px;color:var(--muted)}
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.25);box-shadow:0 16px 30px rgba(15,27,63,.18);font-weight:700}
@@ -77,6 +78,10 @@
         <h3>Jobs</h3>
         <p>Control the live job board, categories, tags, and shareable specs.</p>
       </a>
+      <a class="card" href="/admin/payroll.html">
+        <h3>Payroll</h3>
+        <p>Review approved timesheets, verify banking details, and mark pay runs.</p>
+      </a>
       <a class="card" href="/admin/timesheets.html">
         <h3>Timesheets</h3>
         <p>Approve submissions, raise new sheets, and chase outstanding hours.</p>
@@ -85,6 +90,16 @@
         <h3>Reports</h3>
         <p>Access exports and audit logs for compliance and finance teams.</p>
       </a>
+    </section>
+
+    <section class="panel" id="netlifyTools">
+      <h3 style="margin:0 0 8px">Netlify tools</h3>
+      <p class="muted" style="margin:0 0 12px">Run a health check on the deployed functions or jump to the Netlify deploy dashboard.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn outline" id="btnHealth">Run Supabase health check</button>
+        <a class="btn" href="https://app.netlify.com/sites/hmjg/deploys" target="_blank" rel="noopener">Open Netlify deploys</a>
+      </div>
+      <pre id="healthResult" style="display:none;margin-top:14px"></pre>
     </section>
   </div>
 
@@ -104,6 +119,28 @@
         }
       } catch (e) {
         toast('Unable to load user details', 'warn', 2600);
+      }
+
+      const btnHealth = sel('#btnHealth');
+      const healthResult = sel('#healthResult');
+      if (btnHealth) {
+        btnHealth.onclick = async () => {
+          if (healthResult) {
+            healthResult.style.display = 'block';
+            healthResult.textContent = 'Checking Netlify function…';
+          }
+          try {
+            const res = await fetch('/.netlify/functions/supa-health', { credentials: 'include' });
+            const txt = await res.text();
+            let display = txt;
+            try { display = JSON.stringify(JSON.parse(txt), null, 2); } catch {}
+            if (healthResult) healthResult.textContent = display || 'OK';
+            toast('Health check complete', 'info', 2000);
+          } catch (err) {
+            if (healthResult) healthResult.textContent = 'Error: ' + (err.message || err);
+            toast('Health check failed', 'error', 3200);
+          }
+        };
       }
     });
   })();

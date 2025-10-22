@@ -55,12 +55,22 @@ exports.handler = async (event, context) => {
       expires_at: expires ? expires.toISOString() : null,
     };
 
-    const { error: insertError } = await supabase.from('job_specs').insert(record);
-    if (insertError) throw insertError;
+    const origin = `${event.headers['x-forwarded-proto'] || 'https'}://${event.headers['host'] || event.headers.Host || ''}`;
 
-    const url = `${event.headers['x-forwarded-proto'] || 'https'}://${event.headers['host'] || event.headers.Host || ''}/jobs/spec.html?slug=${encodeURIComponent(slug)}`;
-
-    return { statusCode: 200, body: JSON.stringify({ slug, url, expires_at: record.expires_at }) };
+    try {
+      const { error: insertError } = await supabase.from('job_specs').insert(record);
+      if (insertError) throw insertError;
+      const url = `${origin}/jobs/spec.html?slug=${encodeURIComponent(slug)}`;
+      return { statusCode: 200, body: JSON.stringify({ slug, url, expires_at: record.expires_at }) };
+    } catch (err) {
+      const missingTable = err?.code === '42P01' || /relation\s+"?job_specs"?/i.test(err?.message || '');
+      if (!missingTable) throw err;
+      const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(job.id)}`;
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ slug: job.id, url: fallbackUrl, expires_at: null, fallback: true }),
+      };
+    }
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };

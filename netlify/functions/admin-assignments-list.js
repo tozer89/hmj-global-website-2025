@@ -2,27 +2,120 @@
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 
+function normaliseLike(value = '') {
+  return String(value)
+    .replace(/[\%_]/g, (m) => `\\${m}`)
+    .trim();
+}
+
+function toNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function toCsv(rows = []) {
+  if (!rows.length) return 'id,reference,status,client,candidate,start_date,end_date,pay_rate,currency\n';
+  const header = ['ID', 'Reference', 'Status', 'Client', 'Candidate', 'Job title', 'Start date', 'End date', 'Pay rate', 'Charge rate', 'Currency'];
+  const lines = rows.map((row) => {
+    const cells = [
+      row.id,
+      row.as_ref || row.po_number || '',
+      row.status || '',
+      row.client_name || '',
+      row.candidate_name || row.contractor_name || '',
+      row.job_title || '',
+      row.start_date || '',
+      row.end_date || '',
+      row.rate_pay || row.rate_std || '',
+      row.charge_std || '',
+      row.currency || 'GBP',
+    ];
+    return cells.map((val) => {
+      const text = val === null || val === undefined ? '' : String(val);
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }).join(',');
+  });
+  return [header.join(','), ...lines].join('\n');
+}
+
 exports.handler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
-    const { contractor_id, client_id, active } = JSON.parse(event.body || '{}');
 
-    let query = supabase
-      .from('assignment_summary')
-      .select('id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, client_site, site_name, job_title, status, candidate_name, as_ref, rate_std, rate_pay, charge_std, charge_ot, start_date, end_date, currency, po_number, consultant_name, active')
-      .order('start_date', { ascending: false });
+    const body = JSON.parse(event.body || '{}');
+    const search = normaliseLike(body.q || '');
+    const status = String(body.status || '').trim();
+    const ids = Array.isArray(body.ids) ? body.ids.filter((v) => v !== null && v !== undefined && v !== '') : [];
+    const wantsCsv = String(body.format || '').toLowerCase() === 'csv';
+    const page = Math.max(toNumber(body.page, 1), 1);
+    const pageSize = Math.min(Math.max(toNumber(body.pageSize, 20), 10), 200);
+    const offset = (page - 1) * pageSize;
 
-    if (contractor_id) query = query.eq('contractor_id', contractor_id);
-    if (client_id)     query = query.eq('client_id', client_id);
-    if (active === true)  query = query.eq('active', true);
-    if (active === false) query = query.eq('active', false);
+    const baseFilters = (query) => {
+      let q = query;
+      if (ids.length) {
+        q = q.in('id', ids.map((id) => Number.isFinite(Number(id)) ? Number(id) : id));
+      }
+      if (status) {
+        q = q.ilike('status', status);
+      }
+      if (search) {
+        const like = `%${search}%`;
+        q = q.or(
+          [
+            `job_title.ilike.${like}`,
+            `client_name.ilike.${like}`,
+            `candidate_name.ilike.${like}`,
+            `as_ref.ilike.${like}`,
+            `po_number.ilike.${like}`,
+          ].join(',')
+        );
+      }
+      return q;
+    };
 
-    const { data, error } = await query;
+    const countQuery = baseFilters(
+      supabase
+        .from('assignment_summary')
+        .select('id', { count: 'exact', head: true })
+    );
+
+    const { count, error: countError } = await countQuery;
+    if (countError) throw countError;
+
+    let dataQuery = baseFilters(
+      supabase
+        .from('assignment_summary')
+        .select(
+          'id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, client_site, site_name, job_title, status, candidate_name, as_ref, rate_std, rate_pay, charge_std, charge_ot, start_date, end_date, currency, po_number, consultant_name, active'
+        )
+        .order('start_date', { ascending: false })
+    );
+
+    if (!wantsCsv) {
+      dataQuery = dataQuery.range(offset, offset + pageSize - 1);
+    }
+
+    const { data, error } = await dataQuery;
     if (error) throw error;
 
-    return { statusCode: 200, body: JSON.stringify(data || []) };
+    if (wantsCsv) {
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="assignments.csv"',
+        },
+        body: toCsv(data || []),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ rows: data || [], total: count ?? (data || []).length }),
+    };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
+    return { statusCode: status, body: JSON.stringify({ error: e.message || 'Failed to load assignments' }) };
   }
 };

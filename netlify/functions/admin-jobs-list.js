@@ -50,7 +50,11 @@ exports.handler = async (event, context) => {
     if (!jobs.length) {
       const fallback = loadStaticJobs();
       if (fallback.length) {
-        return { statusCode: 200, body: JSON.stringify({ jobs: fallback, readOnly: true, source: 'static' }) };
+        const seeded = fallback.map((job) => ({ ...job, __seed: true }));
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ jobs: seeded, source: 'static', seeded: true }),
+        };
       }
     }
     return { statusCode: 200, body: JSON.stringify({ jobs }) };

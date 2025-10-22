@@ -43,8 +43,8 @@
     }
     input[type=search]{min-width:280px}
     table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
-    thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:10px 12px;font-weight:800}
-    tbody td{border-top:1px solid var(--stroke);padding:10px 12px;vertical-align:middle}
+    thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:8px 10px;font-weight:800}
+    tbody td{border-top:1px solid var(--stroke);padding:8px 10px;vertical-align:middle}
     tbody tr:hover{background:#f8fafc}
     .muted{color:var(--muted)}
     .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
@@ -148,6 +148,8 @@
         <div class="sheet" id="colSheet"></div>
       </div>
 
+      <button class="btn ghost small" id="btnExportAll">Export CSV</button>
+      <button class="btn ghost small" id="btnExportSel" disabled>Export selected</button>
       <button class="btn small" id="btnNew">+ New</button>
       <button class="btn danger small" id="btnDelete" disabled>Delete</button>
     </div>
@@ -163,7 +165,7 @@
           <div class="muted" id="pgInfo"></div>
           <div class="sp"></div>
           <select id="pgSize">
-            <option>20</option><option>50</option><option>100</option>
+            <option>10</option><option>25</option><option>50</option><option>100</option>
           </select>
           <button class="btn small ghost" id="pgPrev">◀</button>
           <button class="btn small ghost" id="pgNext">▶</button>
@@ -244,7 +246,7 @@
       let total = 0;
       let selected = new Set();
       let sort = { key:'created_at', dir:'desc' };
-      let page = 1, pageSize = 20;
+      let page = 1, pageSize = 10;
       let activeStatus = '';
       let editing = null;
       let currentTab = 'Basics';
@@ -372,14 +374,14 @@
         if (ckAll) ckAll.onclick = (e)=>{
           const ids = rows.map(r=>r.id);
           if (e.target.checked) ids.forEach(id=>selected.add(id)); else ids.forEach(id=>selected.delete(id));
-          enableDelete(); render();
+          updateBulkButtons(); render();
         };
 
         wrap.querySelectorAll('input[type=checkbox][data-id]').forEach(c=>{
           c.onchange=()=>{
             const id=Number(c.getAttribute('data-id'));
             if (c.checked) selected.add(id); else selected.delete(id);
-            enableDelete();
+            updateBulkButtons();
           };
         });
         wrap.querySelectorAll('[data-open]').forEach(b=>{
@@ -387,6 +389,13 @@
         });
         wrap.querySelectorAll('[data-quick]').forEach(b=>{
           b.onclick=(e)=>{ e.stopPropagation(); quick(Number(b.getAttribute('data-quick'))); };
+        });
+        wrap.querySelectorAll('tr[data-row]').forEach(tr=>{
+          tr.addEventListener('click',(e)=>{
+            if (e.target.closest('button') || e.target.closest('input')) return;
+            const id = Number(tr.getAttribute('data-row'));
+            if (id) quick(id);
+          });
         });
 
         renderPager();
@@ -402,7 +411,13 @@
         $('#pgNext').disabled = page>=totalPages;
       }
 
-      function enableDelete(){ $('#btnDelete').disabled = selected.size===0; }
+      function updateBulkButtons(){
+        const disabled = selected.size === 0;
+        const delBtn = $('#btnDelete');
+        if (delBtn) delBtn.disabled = disabled;
+        const exportSelBtn = $('#btnExportSel');
+        if (exportSelBtn) exportSelBtn.disabled = disabled;
+      }
 
       async function load(){
         const wrap = $('#listWrap'); wrap.textContent='Loading assignments…';
@@ -414,7 +429,7 @@
           });
           rows = Array.isArray(res) ? res : (res.rows || []);
           total = res?.total ?? rows.length;
-          selected.clear(); enableDelete();
+          selected.clear(); updateBulkButtons();
           render();
           if (quickRecord?.id) {
             try {
@@ -457,10 +472,47 @@
         try{
           await api('admin-assignments-delete','POST',{ ids:[...selected] });
           toast('Deleted', 'ok', 1500);
-          selected.clear(); enableDelete();
+          selected.clear(); updateBulkButtons();
           load();
         }catch(e){
           toast('Delete failed: ' + (e.message||e), 'error', 4000);
+        }
+      }
+
+      async function exportCsv(selectedOnly){
+        if (selectedOnly && !selected.size) {
+          toast('No assignments selected', 'warn', 2200);
+          return;
+        }
+        try{
+          const who = await identity();
+          const token = who?.token || '';
+          const headers = {
+            'Content-Type':'application/json',
+            'x-trace': getTrace()
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch('/.netlify/functions/admin-assignments-list', {
+            method:'POST',
+            headers,
+            credentials:'include',
+            body: JSON.stringify({
+              q: ($('#q')?.value||'').trim(),
+              status: activeStatus || '',
+              ids: selectedOnly ? Array.from(selected) : undefined,
+              format: 'csv'
+            })
+          });
+          const text = await res.text();
+          if (!res.ok) throw new Error(text || res.statusText);
+          const blob = new Blob([text], { type:'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a=document.createElement('a');
+          a.href=url; a.download='assignments.csv'; a.click();
+          URL.revokeObjectURL(url);
+          toast('Export ready', 'ok', 1800);
+        }catch(e){
+          toast('Export failed: ' + (e.message||e), 'error', 4200);
         }
       }
 
@@ -894,6 +946,8 @@
       }
 
       $('#btnRefresh').onclick = ()=>{ refreshDropdowns(); load(); };
+      $('#btnExportAll').onclick = ()=>exportCsv(false);
+      $('#btnExportSel').onclick = ()=>exportCsv(true);
       $('#btnNew').onclick     = ()=>{ resetForm(); openDrawer(); };
       $('#btnDelete').onclick  = doDelete;
       const qvCloseBtn = $('#qvClose');
@@ -902,7 +956,7 @@
       $('#statusSel').onchange = e=>{ activeStatus=e.target.value; page=1; load(); };
       $('#pgPrev').onclick     = ()=>{ if(page>1){ page--; load(); } };
       $('#pgNext').onclick     = ()=>{ page++; load(); };
-      $('#pgSize').onchange    = e=>{ pageSize=Number(e.target.value)||20; page=1; load(); };
+      $('#pgSize').onchange    = e=>{ pageSize=Number(e.target.value)||10; page=1; load(); };
       $('#btnSaveDraft').onclick=()=>save(false);
       $('#btnSaveClose').onclick=()=>save(true);
 
@@ -915,7 +969,7 @@
       buildColMenu();
       await refreshDropdowns();
       await load();
-      enableDelete();
+      updateBulkButtons();
     });
   })();
   </script>
