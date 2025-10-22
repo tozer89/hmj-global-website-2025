@@ -759,6 +759,12 @@
             toast('Supabase unavailable — showing demo candidates (read-only).', 'warn', 4200);
           } else {
             wrap.textContent = 'Error: ' + (e.message || e);
+            if (allRows.length) {
+              chip('list: seed','warn','list');
+              chip('mode: read-only','warn','mode');
+              render();
+              renderQuick(null);
+            }
           }
         }
       }
@@ -1247,6 +1253,8 @@
       const seededRows = loadEmbeddedCandidates();
       if (Array.isArray(seededRows) && seededRows.length) {
         chip('list: seed','warn','list');
+        readOnlyMode = true;
+        applyReadOnly();
         allRows = seededRows;
         page = 1;
         selected.clear();

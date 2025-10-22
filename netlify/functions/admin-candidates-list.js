@@ -54,6 +54,11 @@ exports.handler = async (event, context) => {
   const identityMeta = { email: null, roles: [] };
   let supabaseErrorMessage = null;
 
+  const baseHeaders = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+  };
+
   function serveStatic(reason, extra = {}) {
     const staticRows = loadStaticCandidates();
     const normalised = staticRows.map(toCandidate);
@@ -122,7 +127,11 @@ exports.handler = async (event, context) => {
       };
     }
 
-    return { statusCode: extra.statusCode || 200, body: JSON.stringify(response) };
+    return {
+      statusCode: extra.statusCode || 200,
+      headers: { ...baseHeaders, ...(extra.headers || {}) },
+      body: JSON.stringify(response),
+    };
   }
 
   let ctx;
@@ -158,6 +167,7 @@ exports.handler = async (event, context) => {
     if (supabaseUnavailable) {
       return {
         statusCode: 200,
+        headers: baseHeaders,
         body: JSON.stringify({
           ok: false,
           error: supabaseError?.message || 'supabase_unavailable',
@@ -175,6 +185,7 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: headCount.error ? 500 : 200,
+      headers: baseHeaders,
       body: JSON.stringify({
         ok: !headCount.error,
         count: headCount.count || 0,
@@ -252,5 +263,5 @@ exports.handler = async (event, context) => {
     };
   }
 
-  return { statusCode: 200, body: JSON.stringify(response) };
+  return { statusCode: 200, headers: baseHeaders, body: JSON.stringify(response) };
 };
