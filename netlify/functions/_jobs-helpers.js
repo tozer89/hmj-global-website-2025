@@ -35,6 +35,7 @@ const SEED_PATH = path.join(__dirname, '_data', 'jobs.seed.json');
 const LOCAL_PATH = path.join(__dirname, '..', '..', 'data', 'jobs.json');
 
 let STATIC_JOBS = [];
+let STATIC_LOOKUP = null;
 
 function ensureStaticJobs() {
   if (STATIC_JOBS.length) return STATIC_JOBS;
@@ -69,6 +70,7 @@ function ensureStaticJobs() {
   }
 
   STATIC_JOBS = combined;
+  STATIC_LOOKUP = null; // reset memoised map so helpers rebuild with latest dataset
   return STATIC_JOBS;
 }
 
@@ -201,6 +203,32 @@ function loadStaticJobs() {
   return jobs.length ? jobs.map(toJob) : [];
 }
 
+function buildLookup() {
+  if (STATIC_LOOKUP) return STATIC_LOOKUP;
+  const map = new Map();
+  const jobs = ensureStaticJobs();
+  jobs.forEach((row) => {
+    const job = toJob(row);
+    if (!job.id) return;
+    const key = job.id.toLowerCase();
+    map.set(key, job);
+    const slug = slugify(job.title || job.id || '');
+    if (slug) map.set(slug.toLowerCase(), job);
+  });
+  STATIC_LOOKUP = map;
+  return STATIC_LOOKUP;
+}
+
+function findStaticJob(identifier) {
+  if (!identifier) return null;
+  const lookup = buildLookup();
+  const key = String(identifier).toLowerCase();
+  if (lookup.has(key)) {
+    return toJob(lookup.get(key));
+  }
+  return null;
+}
+
 module.exports = {
   toJob,
   toDbPayload,
@@ -209,4 +237,5 @@ module.exports = {
   resolveSection,
   loadStaticJobs,
   ensureStaticJobs,
+  findStaticJob,
 };

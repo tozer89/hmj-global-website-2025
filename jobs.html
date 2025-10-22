@@ -818,7 +818,9 @@
         const res = await fetch('/.netlify/functions/jobs-list', { cache:'no-store' });
         if(!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json();
-        return Array.isArray(data.jobs) ? data.jobs : null;
+        if (Array.isArray(data.jobs)) return data.jobs;
+        if (Array.isArray(data.rows)) return data.rows;
+        return null;
       }catch(e){
         console.warn('jobs-list API failed', e);
         return null;

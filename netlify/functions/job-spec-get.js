@@ -1,6 +1,6 @@
 // netlify/functions/job-spec-get.js
 const { getSupabase } = require('./_supabase.js');
-const { toJob } = require('./_jobs-helpers.js');
+const { toJob, findStaticJob } = require('./_jobs-helpers.js');
 
 const JOB_COLUMNS = `
   id,
@@ -23,39 +23,75 @@ const JOB_COLUMNS = `
 `;
 
 exports.handler = async (event) => {
-  const supabase = getSupabase(event);
   const params = event.queryStringParameters || {};
   const body = JSON.parse(event.body || '{}');
   const slug = params.slug || body.slug || null;
   const jobIdParam = params.id || params.job || body.id || body.job || null;
 
+  let supabase = null;
+  try {
+    supabase = getSupabase(event);
+  } catch (err) {
+    supabase = null;
+  }
+
+  function respondFallback(job) {
+    if (!job) {
+      return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) };
+    }
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        slug: job.id,
+        jobId: job.id,
+        title: job.title,
+        job,
+        expires_at: null,
+        created_at: job.updatedAt || job.createdAt || null,
+        fallback: true,
+      }),
+    };
+  }
+
   async function fetchJobById(id) {
     if (!id) return null;
+    if (!supabase) {
+      return findStaticJob(id);
+    }
     const { data, error } = await supabase.from('jobs').select(JOB_COLUMNS).eq('id', id).maybeSingle();
     if (error) throw error;
     if (!data) return null;
-    const job = toJob(data);
-    return {
-      slug: job.id,
-      jobId: job.id,
-      title: job.title,
-      job,
-      expires_at: null,
-      created_at: job.updatedAt || job.createdAt || null,
-    };
+    return toJob(data);
   }
 
   try {
     if (!slug && jobIdParam) {
       const result = await fetchJobById(jobIdParam);
       if (!result) {
-        return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) };
+        const fallback = findStaticJob(jobIdParam);
+        return respondFallback(fallback);
       }
-      return { statusCode: 200, body: JSON.stringify(result) };
+      if (!supabase) return respondFallback(result);
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          slug: result.id,
+          jobId: result.id,
+          title: result.title,
+          job: result,
+          expires_at: null,
+          created_at: result.updatedAt || result.createdAt || null,
+        }),
+      };
     }
 
     if (!slug) {
       return { statusCode: 400, body: JSON.stringify({ error: 'slug required' }) };
+    }
+
+    if (!supabase) {
+      const fallback = findStaticJob(slug) || findStaticJob(jobIdParam);
+      return respondFallback(fallback);
     }
 
     const nowIso = new Date().toISOString();
@@ -70,9 +106,23 @@ exports.handler = async (event) => {
       if (!data) {
         if (jobIdParam) {
           const fallback = await fetchJobById(jobIdParam);
-          if (fallback) return { statusCode: 200, body: JSON.stringify(fallback) };
+          if (fallback) {
+            return {
+              statusCode: 200,
+              body: JSON.stringify({
+                slug: jobIdParam,
+                jobId: jobIdParam,
+                title: fallback.title,
+                job: fallback,
+                expires_at: null,
+                created_at: fallback.updatedAt || fallback.createdAt || null,
+                fallback: !supabase,
+              }),
+            };
+          }
         }
-        return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) };
+        const staticJob = findStaticJob(slug);
+        return respondFallback(staticJob);
       }
 
       if (data.expires_at && data.expires_at < nowIso) {
@@ -96,9 +146,20 @@ exports.handler = async (event) => {
       if (!missingTable) throw err;
       const fallback = await fetchJobById(slug || jobIdParam);
       if (!fallback) {
-        return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) };
+        return respondFallback(findStaticJob(slug || jobIdParam));
       }
-      return { statusCode: 200, body: JSON.stringify(fallback) };
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          slug: slug || fallback.id,
+          jobId: fallback.id,
+          title: fallback.title,
+          job: fallback,
+          expires_at: null,
+          created_at: fallback.updatedAt || fallback.createdAt || null,
+          fallback: true,
+        }),
+      };
     }
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };

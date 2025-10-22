@@ -215,7 +215,7 @@
 
       <div class="share-box">
         <div><strong>Shareable spec</strong><p class="muted">Generate a standalone advert page for this job. Links expire automatically.</p></div>
-        <button class="btn ghost small" id="btnShare" data-readonly="true">Generate share link</button>
+        <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
         <div id="shareResult" style="display:none">
           <code id="shareMeta"></code>
           <input id="shareUrl" readonly/>
@@ -282,14 +282,12 @@
         if (readOnlyNotice) readOnlyNotice.style.display = state.readOnly ? '' : 'none';
         readOnlyControls.forEach((el) => {
           if (!el) return;
-          if (state.readOnly) {
-            el.classList.add('disabled');
-          } else {
-            el.classList.remove('disabled');
-          }
-          el.toggleAttribute('disabled', !!state.readOnly);
+          const mode = (el.dataset.readonly || 'hard').toLowerCase();
+          const disable = !!state.readOnly && mode !== 'soft';
+          el.classList.toggle('disabled', disable);
+          el.toggleAttribute('disabled', disable);
           if ('disabled' in el) {
-            el.disabled = !!state.readOnly;
+            el.disabled = disable;
           }
         });
       }
@@ -794,29 +792,42 @@
       }
 
       async function shareJob(job) {
-        if (state.readOnly) {
-          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+        const target = job && (job.id || job.title) ? job : state.editing || readForm();
+        if (!target || !(target.id || target.title)) {
+          toast('Select or save a job first', 'warn', 2400);
           return;
         }
-        if (job?.__seed) {
+
+        if (state.readOnly) {
+          const slug = target.id || slugify(target.title || 'job');
+          const base = location.origin || `${location.protocol}//${location.host}`;
+          shareUrl.value = `${base}/jobs/spec.html?id=${encodeURIComponent(slug)}`;
+          shareMeta.textContent = 'Static preview link · Supabase offline';
+          shareBox.style.display = '';
+          toast('Share link ready (static mode)', 'info', 2400);
+          return;
+        }
+
+        if (target?.__seed) {
           toast('Save this job to Supabase before generating a share link.', 'warn', 3200);
           return;
         }
-        if (!job?.id) {
+
+        if (!target?.id) {
           toast('Save the job before generating a share link', 'warn', 2600);
           return;
         }
         try {
-          const res = await api('admin-job-share-create', 'POST', { jobId: job.id });
+          const res = await api('admin-job-share-create', 'POST', { jobId: target.id });
           const fallback = !!res?.fallback;
           if (fallback) {
-            shareMeta.textContent = 'Direct job link · No expiry (job_specs table missing)';
+            shareMeta.textContent = 'Direct job link · No expiry (static fallback)';
           } else {
             shareMeta.textContent = `Slug ${res.slug} · Expires ${res.expires_at || 'never'}`;
           }
           shareUrl.value = res.url || '';
           shareBox.style.display = '';
-          toast(fallback ? 'Share link created (using direct job link)' : 'Share link created', 'ok', 2000);
+          toast(fallback ? 'Share link created (static fallback)' : 'Share link created', 'ok', 2000);
         } catch (e) {
           toast('Share failed: ' + (e.message || e), 'error', 4200);
         }

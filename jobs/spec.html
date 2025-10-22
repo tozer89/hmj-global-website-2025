@@ -63,17 +63,21 @@
     (async function(){
       const params = new URLSearchParams(location.search);
       const slug = params.get('slug');
+      const jobId = params.get('id') || params.get('job');
       const loading = document.getElementById('loading');
       const errorBox = document.getElementById('error');
       const card = document.getElementById('spec');
-      if (!slug) {
+      if (!slug && !jobId) {
         loading.style.display = 'none';
         errorBox.textContent = 'Missing share link. Please contact HMJ Global for a fresh link.';
         errorBox.style.display = 'block';
         return;
       }
       try {
-        const res = await fetch(`/.netlify/functions/job-spec-get?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+        const qs = new URLSearchParams();
+        if (slug) qs.set('slug', slug);
+        if (jobId) qs.set('id', jobId);
+        const res = await fetch(`/.netlify/functions/job-spec-get?${qs.toString()}`, { cache: 'no-store' });
         if (!res.ok) {
           const msg = await res.json().catch(()=>({}));
           throw new Error(msg.error || `Unable to load spec (${res.status})`);
@@ -112,9 +116,15 @@
         const apply = job.applyUrl && job.applyUrl.trim() ? job.applyUrl.trim() : `https://www.hmj-global.com/contact.html?role=${encodeURIComponent(job.title||'Role')}`;
         const applyBtn = document.getElementById('applyBtn');
         applyBtn.href = apply;
-        document.getElementById('meta').textContent = `Share code ${meta.slug} • ${meta.created_at ? new Date(meta.created_at).toLocaleString() : ''}${meta.expires_at ? ` • Expires ${new Date(meta.expires_at).toLocaleDateString()}` : ''}`;
+        const metaParts = [];
+        if (meta.slug) metaParts.push(`Share code ${meta.slug}`);
+        if (meta.created_at) metaParts.push(new Date(meta.created_at).toLocaleString());
+        if (meta.expires_at) metaParts.push(`Expires ${new Date(meta.expires_at).toLocaleDateString()}`);
+        if (meta.fallback) metaParts.push('Static preview');
+        document.getElementById('meta').textContent = metaParts.join(' • ');
         document.getElementById('copyBtn').addEventListener('click', () => {
-          const full = `${job.title}\n${job.locationText || ''}\n${apply}`;
+          const shareLink = location.href;
+          const full = `${job.title}\n${job.locationText || ''}\n${apply}\n${shareLink}`;
           navigator.clipboard?.writeText(full).then(()=>{
             document.getElementById('copyBtn').textContent = 'Link copied';
             setTimeout(()=>document.getElementById('copyBtn').textContent='Copy link',1800);
