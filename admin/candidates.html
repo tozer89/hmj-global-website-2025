@@ -219,8 +219,8 @@
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Embedded fallback dataset so previews always render something -->
-  <script type="application/json" id="candidatesFallbackData">
-    {
+  <script id="candidatesFallbackData">
+    window.CANDIDATES_FALLBACK = {
       "candidates": [
         {
           "id": 101,
@@ -374,7 +374,7 @@
           "timesheet_status": "Complete"
         }
       ]
-    }
+    };
   </script>
 
   <!-- Single page boot -->
@@ -668,8 +668,23 @@
 
       function loadEmbeddedCandidates(){
         try {
+          const globalSeed = window.CANDIDATES_FALLBACK;
+          if (globalSeed) {
+            const rows = Array.isArray(globalSeed?.candidates)
+              ? globalSeed.candidates
+              : Array.isArray(globalSeed)
+                ? globalSeed
+                : [];
+            if (rows.length) return normaliseCandidateRows(rows);
+          }
+        } catch (err) {
+          console.warn('[candidates] global fallback parse failed', err);
+        }
+        try {
           const el = document.getElementById('candidatesFallbackData');
           if (!el) return null;
+          const typeAttr = el.getAttribute('type') || '';
+          if (!/json/i.test(typeAttr)) return null;
           const raw = el.textContent || '';
           if (!raw.trim()) return null;
           const json = JSON.parse(raw);
