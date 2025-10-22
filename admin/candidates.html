@@ -14,8 +14,6 @@
 
   <!-- Shared admin bootstrap -->
   <script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-  <!-- Pin pdf.js to a widely mirrored release so previews do not 404 -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js" crossorigin="anonymous"></script>
   <script defer src="/admin/common.js?v=21"></script>
 
   <style>
@@ -450,12 +448,35 @@
       const cvInput = sel('#cvInput');
       const btnParseCv = sel('#btnParseCv');
       const btnUploadCv = sel('#btnUploadCv');
+      const PDF_SCRIPT_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
+      const PDF_WORKER_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      let pdfJsPromise = null;
+      function ensurePdfJs(){
+        if (window.pdfjsLib?.GlobalWorkerOptions) {
+          return Promise.resolve(window.pdfjsLib);
+        }
+        if (pdfJsPromise) return pdfJsPromise;
+        pdfJsPromise = new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = PDF_SCRIPT_SRC;
+          script.async = true;
+          script.onload = () => {
+            if (window.pdfjsLib?.GlobalWorkerOptions) {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
+            }
+            resolve(window.pdfjsLib);
+          };
+          script.onerror = () => {
+            pdfJsPromise = null;
+            reject(new Error('Failed to load PDF parser'));
+          };
+          document.head.appendChild(script);
+        });
+        return pdfJsPromise;
+      }
       let currentDocs = [];
       let pendingUpload = null;
       let cvMode = 'parse';
-      if (window.pdfjsLib?.GlobalWorkerOptions) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-      }
 
       const $ = sel;
       const enableDelete = () => {
@@ -1120,16 +1141,24 @@
           const result = await window.mammoth.convertToPlainText({ arrayBuffer });
           return result.value || '';
         }
-        if (ext === 'pdf' && window.pdfjsLib) {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          let text = '';
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            text += content.items.map((item) => item.str).join(' ') + '\n';
+        if (ext === 'pdf') {
+          try {
+            const pdfjs = await ensurePdfJs();
+            if (pdfjs?.getDocument) {
+              const arrayBuffer = await file.arrayBuffer();
+              const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+              let text = '';
+              for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map((item) => item.str).join(' ') + '\n';
+              }
+              return text;
+            }
+            console.warn('[candidates] pdf.js unavailable after load');
+          } catch (err) {
+            console.warn('[candidates] pdf parse fallback', err);
           }
-          return text;
         }
         return await file.text();
       }
