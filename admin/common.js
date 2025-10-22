@@ -195,19 +195,44 @@
     return null;
   }
 
+  async function getUserToken(user) {
+    if (!user) return '';
+    const attempts = [];
+    if (typeof user.token === 'function') attempts.push(() => user.token());
+    if (typeof user.jwt === 'function') {
+      attempts.push(() => user.jwt());
+      attempts.push(() => user.jwt(true));
+    }
+    for (const attempt of attempts) {
+      try {
+        const v = await attempt();
+        if (v) return v;
+      } catch (err) {
+        Debug.warn('token attempt failed', err);
+      }
+    }
+    return '';
+  }
+
   // Public, promise-based identity snapshot used by pages & console
   async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' | undefined */) {
     // try widget first, then cookie
     await waitIdentityReady(1200); // don’t block long
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
-    try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
+    try { token = await getUserToken(user); } catch {}
     const rolesRaw = user?.app_metadata?.roles || user?.roles || [];
     const roles = Array.isArray(rolesRaw) ? rolesRaw.map(r => String(r).toLowerCase()) : [];
     const role = roles.includes('admin') ? 'admin' :
                  roles.includes('recruiter') ? 'recruiter' :
                  roles.includes('client') ? 'client' : (roles[0] || '');
     const required = requiredRole ? String(requiredRole).toLowerCase() : '';
+    if (!token) {
+      try {
+        token = getNFJwtFromCookie();
+      } catch {}
+    }
+
     const ok = !!token && (!required || roles.includes(required) || role === required);
     return { ok, user, token, role, email: user?.email || '' };
   }
