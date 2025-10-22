@@ -9,18 +9,23 @@ function normaliseSupabaseRows(data = []) {
     const otHours = Number(row.ot_hours || 0);
     const rateStd = Number(row.rate_pay || 0);
     const rateOt = Number(row.rate_charge || 0);
+
+    const assignment = row.assignments || {};
+    const project = assignment.projects || assignment.project || {};
+    const client = project.clients || project.client || {};
+
     return {
       id: row.id,
       assignment_id: row.assignment_id,
-      candidate_id: row.candidate_id,
-      candidate_name: row.candidate_name,
-      contractor_id: row.assignments?.contractor_id,
-      contractor_name: row.contractor_name || row.assignments?.contractor_name,
-      contractor_email: row.contractor_email || row.assignments?.contractor_email,
-      client_id: row.assignments?.client_id,
-      client_name: row.client_name || row.assignments?.client_name,
-      project_id: row.assignments?.project_id,
-      project_name: row.project_name || row.assignments?.project_name,
+      candidate_id: row.candidate_id || assignment.candidate_id || null,
+      candidate_name: row.candidate_name || assignment.candidate_name || null,
+      contractor_id: assignment.contractor_id || null,
+      contractor_name: assignment.contractor_name || null,
+      contractor_email: assignment.contractor_email || null,
+      client_id: client.id || project.client_id || assignment.client_id || null,
+      client_name: row.client_name || assignment.client_name || client.name || null,
+      project_id: assignment.project_id || project.id || null,
+      project_name: row.project_name || project.name || null,
       status: row.status,
       week_start: row.week_start,
       week_ending: row.week_ending,
@@ -85,10 +90,10 @@ function filterRows(rows, { q, status, clientId, week }) {
     if (needle) {
       const haystack = [
         row.candidate_name,
-        row.contractor_email,
         row.client_name,
         row.project_name,
         row.assignment_ref,
+        row.ts_ref,
       ]
         .filter(Boolean)
         .join(' ')
@@ -97,6 +102,16 @@ function filterRows(rows, { q, status, clientId, week }) {
     }
     return true;
   });
+}
+
+function shouldFallback(err) {
+  if (!err) return false;
+  const msg = String(err.message || err);
+  if (/column .+ does not exist/i.test(msg)) return true;
+  if (/relation .+ does not exist/i.test(msg)) return true;
+  if (/permission denied/i.test(msg)) return true;
+  if (/violates row-level security/i.test(msg)) return true;
+  return false;
 }
 
 module.exports.handler = async (event, context) => {
@@ -136,10 +151,7 @@ module.exports.handler = async (event, context) => {
         assignment_id,
         candidate_id,
         candidate_name,
-        contractor_name,
-        contractor_email,
         client_name,
-        project_name,
         week_start,
         week_ending,
         status,
@@ -165,35 +177,47 @@ module.exports.handler = async (event, context) => {
         h_sat,
         h_sun,
         assignments:assignment_id!inner (
-          client_id,
-          client_name,
-          project_id,
-          project_name,
           contractor_id,
-          contractor_name,
-          contractor_email
+          project_id,
+          site_id,
+          client_name,
+          projects:project_id (
+            id,
+            name,
+            client_id
+          )
         )
       `)
       .order('week_ending', { ascending: false })
       .order('id', { ascending: false });
 
     if (status) query = query.eq('status', status);
-    if (clientId) query = query.eq('assignments.client_id', clientId);
     if (week) query = query.eq('week_ending', week);
     if (q) {
       query = query.or(
         [
-          `contractor_email.ilike.%${q}%`,
+          `candidate_name.ilike.%${q}%`,
           `client_name.ilike.%${q}%`,
-          `project_name.ilike.%${q}%`,
+          `assignment_ref.ilike.%${q}%`,
+          `ts_ref.ilike.%${q}%`,
         ].join(',')
       );
     }
 
     const { data, error } = await query;
-    if (error) return jsonError(500, 'query_failed', error.message, { trace });
+    if (error) {
+      if (shouldFallback(error)) {
+        const staticRows = normaliseStaticRows(loadStaticTimesheets());
+        const filtered = filterRows(staticRows, { q, status, clientId, week });
+        console.warn('[timesheets] supabase query failed (%s) — using static fallback', error.message);
+        return jsonOk({ ok: true, items: filtered, readOnly: true, source: 'static', supabase: supabaseStatus(), trace });
+      }
+      return jsonError(500, 'query_failed', error.message, { trace });
+    }
 
-    return jsonOk({ ok: true, items: normaliseSupabaseRows(data || []), trace });
+    const normalised = normaliseSupabaseRows(data || []);
+    const filtered = filterRows(normalised, { q, status, clientId, week });
+    return jsonOk({ ok: true, items: filtered, trace, supabase: supabaseStatus() });
   } catch (err) {
     return jsonError(500, 'unhandled', err.message || 'Unexpected error', { trace });
   }

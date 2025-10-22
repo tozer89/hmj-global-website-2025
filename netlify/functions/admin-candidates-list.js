@@ -65,11 +65,28 @@ exports.handler = async (event, context) => {
   const shouldFallback = (err) => {
     if (!err) return false;
     const msg = String(err.message || err);
-    return /column .+ does not exist/i.test(msg) || /relation .+ does not exist/i.test(msg);
+    if (/column .+ does not exist/i.test(msg)) return true;
+    if (/relation .+ does not exist/i.test(msg)) return true;
+    if (/permission denied/i.test(msg)) return true;
+    if (/violates row-level security/i.test(msg)) return true;
+    return false;
   };
 
   // Quick diag endpoint (still requires admin)
   if (isGET && (event.queryStringParameters?.diag === '1')) {
+    if (supabaseUnavailable) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          ok: false,
+          error: supabaseError?.message || 'supabase_unavailable',
+          who: { email: user?.email, roles },
+          usingServiceKey,
+          note: 'Supabase client missing — serving static data only.'
+        })
+      };
+    }
+
     // Try a cheap HEAD count to see if the table is even visible
     const headCount = await supabase
       .from('candidates')

@@ -12,7 +12,11 @@ exports.handler = async (event, context) => {
     const shouldFallback = (err) => {
       if (!err) return false;
       const msg = String(err.message || err);
-      return /column .+ does not exist/i.test(msg) || /relation .+ does not exist/i.test(msg);
+      if (/column .+ does not exist/i.test(msg)) return true;
+      if (/relation .+ does not exist/i.test(msg)) return true;
+      if (/permission denied/i.test(msg)) return true;
+      if (/violates row-level security/i.test(msg)) return true;
+      return false;
     };
 
     if (!supabase || typeof supabase.from !== 'function') {
