@@ -109,6 +109,7 @@
       <span class="pill">Candidates</span>
     </div>
     <div class="sp"></div>
+    <a class="btn ghost" href="/">← Website</a>
     <div id="diagChips" class="chips"></div>
     <a class="btn ghost" href="./">⟵ Admin</a>
     <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
@@ -176,9 +177,9 @@
         </div>
         <div class="hr"></div>
         <div class="right">
-          <a id="qvOpen" class="btn small" href="#" style="display:none">Open full profile</a>
-          <button id="qvEdit" class="btn ghost small" style="display:none">Edit</button>
-          <button id="qvClose" class="btn ghost small" style="display:none">Close</button>
+          <a id="qvOpen" class="btn light small" href="#" style="display:none">Open full profile</a>
+          <button id="qvEdit" class="btn light small" style="display:none">Edit</button>
+          <button id="qvClose" class="btn light small" style="display:none">Close</button>
         </div>
       </aside>
     </div>
@@ -621,8 +622,8 @@
             cells.push(`<td>${val}</td>`);
           });
           cells.push(`<td>
-            <button class="btn ghost small" data-open="${r.id}">Open</button>
-            <button class="btn ghost small" data-quick="${r.id}">Quick view</button>
+            <button class="btn light small" data-open="${r.id}">Open</button>
+            <button class="btn light small" data-quick="${r.id}">Quick view</button>
           </td>`);
           return `<tr data-row="${r.id}">${cells.join('')}</tr>`;
         }).join('');

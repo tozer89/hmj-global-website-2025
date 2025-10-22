@@ -188,10 +188,10 @@
         </div>
         <div class="hr"></div>
         <div class="right">
-          <a id="qvOpenCandidate" class="btn small" href="#" style="display:none">Open candidate</a>
-          <button id="qvLive" class="btn ghost small" style="display:none">Make live</button>
-          <button id="qvEdit" class="btn ghost small" style="display:none">Edit</button>
-          <button id="qvClose" class="btn ghost small" style="display:none">Close</button>
+          <a id="qvOpenCandidate" class="btn light small" href="#" style="display:none">Open candidate</a>
+          <button id="qvLive" class="btn light small" style="display:none">Make live</button>
+          <button id="qvEdit" class="btn light small" style="display:none">Edit</button>
+          <button id="qvClose" class="btn light small" style="display:none">Close</button>
         </div>
       </aside>
     </div>
@@ -362,8 +362,8 @@
             cells.push(`<td>${v}</td>`);
           });
           cells.push(`<td>
-            <button class="btn ghost small" data-open="${id}">Open</button>
-            <button class="btn ghost small" data-quick="${id}">Quick view</button>
+            <button class="btn light small" data-open="${id}">Open</button>
+            <button class="btn light small" data-quick="${id}">Quick view</button>
           </td>`);
           return `<tr data-row="${id}">${cells.join('')}</tr>`;
         }).join('');
