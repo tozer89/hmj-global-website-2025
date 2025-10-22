@@ -1,5 +1,5 @@
 // netlify/functions/_timesheet-helpers.js
-const { supabase } = require('./_supabase');
+const { supabase } = require('./_supabase.js');
 
 // Week ends Saturday, we display Sun..Sat
 function weekEndingSaturdayISO(date = new Date()) {

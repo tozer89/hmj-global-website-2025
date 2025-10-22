@@ -1,5 +1,5 @@
 // netlify/functions/admin-timesheets-create.js
-const { getContext, weekEndingSaturdayISO, ensureTimesheet } = require('./_timesheet-helpers');
+const { getContext, weekEndingSaturdayISO, ensureTimesheet } = require('./_timesheet-helpers.js');
 
 exports.handler = async (event, context) => {
   try {
