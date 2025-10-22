@@ -20,9 +20,16 @@ const DEBUG = /^1|true|yes|on|debug$/i.test(process.env.DEBUG_SUPA || '');
 
 // ---- SINGLETON CLIENT ----
 let supabase = null;
+let supabaseError = null;
 try {
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    console.error('[supa] Missing env: SUPABASE_URL or SERVICE KEY (SUPABASE_SERVICE_KEY/SERVICE_ROLE)');
+    const missing = !SUPABASE_URL && !SERVICE_KEY
+      ? 'SUPABASE_URL & SUPABASE_SERVICE_KEY'
+      : !SUPABASE_URL
+        ? 'SUPABASE_URL'
+        : 'SUPABASE_SERVICE_KEY';
+    supabaseError = new Error(`${missing} missing`);
+    console.error('[supa] Missing env: %s', missing);
   } else {
     supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
     if (DEBUG) console.log('[supa] Client created OK');
@@ -31,7 +38,12 @@ try {
     }
   }
 } catch (e) {
+  supabaseError = e;
   console.error('[supa] createClient failed:', e?.message || e);
+}
+
+function hasSupabase() {
+  return !!(supabase && typeof supabase.from === 'function');
 }
 
 // ---- TRACE & LOGGING ----
@@ -62,6 +74,13 @@ function assertSupabase(event) {
 }
 function getSupabase(event) {
   return assertSupabase(event);
+}
+
+function supabaseStatus() {
+  return {
+    ok: hasSupabase(),
+    error: supabaseError ? supabaseError.message : null,
+  };
 }
 
 // ---- JSON HELPERS (classic Netlify return shape) ----
@@ -101,6 +120,11 @@ function withSupabase(handler) {
   // });
   return async (event, context) => {
     const trace = traceFrom(event);
+    if (!hasSupabase()) {
+      const reason = supabaseError ? supabaseError.message : 'Supabase client unavailable';
+      console.warn('[supa][%s] fallback: %s', trace, reason);
+      return jsonError(503, 'supabase_unavailable', reason, { trace });
+    }
     try {
       const s = getSupabase(event);
       debugLog(event, 'handler start');
@@ -126,6 +150,7 @@ function withSupabase(handler) {
 module.exports = {
   // Back-compat
   supabase,
+  supabaseError,
   // Helpers
   getSupabase,
   assertSupabase,
@@ -134,4 +159,6 @@ module.exports = {
   jsonError,
   health,
   debugLog,
+  hasSupabase,
+  supabaseStatus,
 };

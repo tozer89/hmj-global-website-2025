@@ -68,6 +68,8 @@
   .stat{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:110px;height:72px;background:#fff;color:var(--ink);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
   [data-theme="dark"] .stat{background:#0f172a;color:var(--panel-ink)}
   .stat b{font-size:20px}
+  .week-base{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .week-base strong{font-weight:700}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .rowgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   @media(max-width:880px){ .rowgrid{grid-template-columns:1fr 1fr} }
@@ -85,12 +87,18 @@
   .badge.submitted{background:#2a2210;border-color:#5b4a19;color:#f0d48f}
   .badge.approved{background:#0e2418;border-color:#1f4a2f;color:#9cf0b2}
   .badge.rejected{background:#2a1010;border-color:#5b2b2b;color:#f6a7a7}
+  .badge.pay-paid{background:#0e2418;border-color:#1f4a2f;color:#9cf0b2}
+  .badge.pay-processing{background:#1a1f34;border-color:#2f3a63;color:#b5c6ff}
+  .badge.pay-pending{background:#2a2210;border-color:#5b4a19;color:#f0d48f}
+  .badge.pay-hold{background:#2a1010;border-color:#6b3636;color:#f6b7b7}
+  .badge.pay-missing{background:#2a1f38;border-color:#4b3c63;color:#d8cffe}
   .kbr{outline:none} .kbr:focus{box-shadow:0 0 0 3px rgba(58,102,179,.45)}
 
   /* Modal */
   .backdrop{position:fixed;inset:0;background:rgba(9,12,20,.5);display:none;align-items:center;justify-content:center;z-index:10000}
   .backdrop.show{display:flex}
   .modal{width:min(1080px,96vw);max-height:90vh;background:#fff;color:var(--ink);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+  .modal.small{width:min(520px,90vw)}
   [data-theme="dark"] .modal{background:#0f172a;color:#e8eef7;border-color:#25324a}
   .modal .hd{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;justify-content:space-between}
   .modal .bd{padding:14px;overflow:auto;max-height:66vh}
@@ -118,6 +126,9 @@
   /* Charts placeholder area */
   .chart{height:220px;background:#fff;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
   [data-theme="dark"] .chart{background:#0f172a;border-color:#2c3853}
+  .audit-panel{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff;color:var(--ink);box-shadow:var(--shadow);}
+  [data-theme="dark"] .audit-panel{background:#0f172a;color:var(--panel-ink);border-color:#2c3853;box-shadow:none}
+  .audit-panel[hidden]{display:none}
 
   /* Mobile simplifications */
   @media(max-width:720px){
@@ -162,6 +173,10 @@
       <div class="stat" title="Filtered rows"><div class="muted">Filtered</div><b id="statFiltered">0</b></div>
       <div class="stat" title="Selected rows for bulk actions"><div class="muted">Selected</div><b id="statSelected">0</b></div>
     </div>
+    <div class="muted week-base" style="font-size:13px">
+      <span>Fiscal Week 1 ends <strong id="weekBaseLabel">2 Nov 2025</strong></span>
+      <button class="btn chip" id="btnWeekConfig" type="button">Edit deadlines</button>
+    </div>
 
     <div class="toolbar">
       <button class="btn chip" id="btnRefresh" title="Reload list (R)">Refresh</button>
@@ -203,6 +218,9 @@
         </label>
         <label>Week ending
           <input id="week" type="date" class="kbr"/>
+        </label>
+        <label>Week number
+          <input id="weekNo" type="number" min="1" class="kbr"/>
         </label>
         <label class="hide-mobile">Role view
           <select id="roleView" class="kbr" title="UI view by role"><option value="admin">Admin</option><option value="recruiter">Recruiter</option><option value="client">Client</option></select>
@@ -247,8 +265,13 @@
 
     <hr style="border:0;border-top:1px solid var(--border);margin:16px 0"/>
 
-    <div style="font-weight:800;margin-bottom:8px">Audit (latest)</div>
-    <div id="auditBody" class="muted">Loading…</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
+      <div style="font-weight:800">Audit trail</div>
+      <button class="btn ghost" id="btnAuditToggle" type="button" aria-expanded="false" aria-controls="auditPanel">Show</button>
+    </div>
+    <div id="auditPanel" class="audit-panel" hidden>
+      <div id="auditBody" class="muted">Loading…</div>
+    </div>
 
     <hr style="border:0;border-top:1px solid var(--border);margin:16px 0"/>
 
@@ -272,6 +295,41 @@
     <input type="file" id="fileImport" accept=".csv" style="margin-top:6px"/>
     <button class="btn chip" id="btnImport" style="margin-top:8px">Import</button>
     <div id="importLog" class="muted" style="margin-top:8px;max-height:120px;overflow:auto"></div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="backdrop" id="configBackdrop" aria-hidden="true">
+  <div class="modal small" role="dialog" aria-modal="true" aria-labelledby="configTitle">
+    <div class="hd">
+      <div>
+        <div id="configTitle" style="font-weight:800">Fiscal calendar & deadlines</div>
+        <div class="muted" id="configSubtitle" style="font-size:12px">Controls week numbers and the contractor portal deadline message.</div>
+      </div>
+      <button class="btn chip" id="btnConfigClose" type="button">Close</button>
+    </div>
+    <div class="bd" style="display:grid;gap:14px">
+      <label>Week 1 ending
+        <input id="cfgWeekEnding" type="date" style="margin-top:6px" />
+      </label>
+      <label>Submission deadline message
+        <textarea id="cfgDeadline" rows="3" style="margin-top:6px" placeholder="e.g. Submit approved timesheets by Monday 10:00 (UK time)"></textarea>
+      </label>
+      <label>Deadline timezone
+        <select id="cfgTimezone" style="margin-top:6px">
+          <option value="Europe/London">Europe/London (UK)</option>
+          <option value="Europe/Dublin">Europe/Dublin (IE)</option>
+          <option value="Europe/Amsterdam">Europe/Amsterdam (NL)</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </label>
+      <p class="muted" style="margin:0">Week numbers increment every seven days after Week 1’s ending date. Updating this value affects payroll, reports, and calendar filters.</p>
+    </div>
+    <div class="ft">
+      <div class="muted" id="cfgSavedNote" style="margin-right:auto"></div>
+      <button class="btn ghost" id="btnConfigCancel" type="button">Cancel</button>
+      <button class="btn" id="btnConfigSave" type="button">Save changes</button>
+    </div>
   </div>
 </div>
 
@@ -323,6 +381,37 @@
         <div id="sumGross" class="pill" style="margin-top:6px">£0.00</div>
         <div id="autoChecks" class="muted" style="margin-top:6px"></div>
       </div>
+
+      <div class="card white" id="payrollSummary" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <div><b>Payroll status</b> <span id="payrollStatusBadge" class="badge pay-pending" style="margin-left:6px">pending</span></div>
+            <div class="muted" id="payrollMeta" style="margin-top:6px">Not yet processed via payroll.</div>
+          </div>
+          <a class="btn chip" id="payrollViewLink" href="/admin/payroll.html" target="_blank" rel="noopener">Open payroll</a>
+        </div>
+      </div>
+      <div class="card white" id="payrollBreakdown" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+          <div>
+            <div style="font-weight:700">Payment breakdown</div>
+            <div id="payrollNotice" class="muted" style="margin-top:4px">Live once payroll has been exported.</div>
+          </div>
+          <button class="btn chip" id="btnPayrollMore" type="button" aria-expanded="false" aria-controls="payrollDrawer">Click for more details</button>
+        </div>
+        <div id="payrollDrawer" hidden style="margin-top:12px;display:grid;gap:12px">
+          <div class="table-scroll" style="max-height:240px">
+            <table class="table-soft" id="payrollTable" aria-label="Payroll breakdown">
+              <thead><tr><th>Item</th><th>Amount</th><th>Currency</th><th>Notes</th></tr></thead>
+              <tbody><tr><td colspan="4" class="muted">No payroll data yet.</td></tr></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn ghost" id="btnOpenPayrollDetail" href="/admin/payroll.html" target="_blank" rel="noopener">Open payroll record</a>
+            <button class="btn chip" id="btnCopyPayroll" type="button">Copy summary</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="ft">
       <button class="btn"   id="btnSave">Save</button>
@@ -347,6 +436,12 @@
 ================================================================ */
 
 async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile }) {
+  const DEFAULTS = {
+    week1Ending: '2025-11-02',
+    deadlineNote: 'Submit approved timesheets by Monday 10:00 (UK time)',
+    deadlineTimezone: 'Europe/London',
+  };
+
   // ---- Function names (keep in sync with your functions) ----
   const FN_LIST     = '/admin-timesheets-list';
   const FN_GET      = '/admin-timesheets-get';
@@ -359,34 +454,49 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   const FN_CLIENTS  = '/admin-timesheets-clients';
   const FN_REMIND   = '/admin-timesheets-remind';
   const FN_CAND_SAVE = '/admin-candidates-save';
+  const FN_SETTINGS_GET = '/admin-settings-get';
+  const FN_SETTINGS_SAVE = '/admin-settings-save';
 
   // ---- DOM ----
   const $ = (s)=>sel(s);
   const debugWrap = $('#debugWrap'); const debugCard = $('#debugCard'); const diagChips = $('#diagChips');
   const listEl = $('#list'); const statTotal = $('#statTotal'); const statFiltered = $('#statFiltered'); const statSelected = $('#statSelected');
-  const q = $('#q'); const status = $('#status'); const clientId = $('#clientId'); const week = $('#week');
+  const q = $('#q'); const status = $('#status'); const clientId = $('#clientId'); const week = $('#week'); const weekNo = $('#weekNo');
   const roleView = $('#roleView'); const btnRefresh = $('#btnRefresh'); const btnCsv = $('#btnCsv');
   const btnBulkApprove = $('#btnBulkApprove'); const toggleAll = $('#toggleAll'); const btnToggleFilters = $('#btnToggleFilters');
   const savedViews = $('#savedViews'); const btnSaveView = $('#btnSaveView'); const btnDelView = $('#btnDelView');
   const btnCalendar = $('#btnCalendar'); const calendarWrap = $('#calendarWrap'); const calendar = $('#calendar');
   const btnChart = $('#btnChart'); const chartWrap = $('#chartWrap'); const chart = $('#chart');
   const btnDebug = $('#btnDebug'); const btnTheme = $('#btnTheme'); const pageTitle = $('#pageTitle');
+  const btnWeekConfig = $('#btnWeekConfig'); const weekBaseLabel = $('#weekBaseLabel');
   const toggleHints = $('#toggleHints');
 
   const createAssignmentId = $('#createAssignmentId'); const createWeekEnding = $('#createWeekEnding');
   const btnCreate = $('#btnCreate'); const btnOpenContractor = $('#btnOpenContractor');
 
-  const auditBody = $('#auditBody'); const remindResult = $('#remindResult');
+  const auditPanel = $('#auditPanel'); const auditBody = $('#auditBody'); const btnAuditToggle = $('#btnAuditToggle'); const remindResult = $('#remindResult');
   const chkRemindDry = $('#chkRemindDry'); const btnRunRemind = $('#btnRunRemind'); const btnOverdue = $('#btnOverdue');
 
   // Modal
   const backdrop = $('#sheetBackdrop'); const sheetTitle = $('#sheetTitle'); const sheetSub = $('#sheetSub'); const sheetMeta = $('#sheetMeta');
   const sheetBody = $('#sheetBody'); const statusBadge = $('#statusBadge');
   const rateStd = $('#rateStd'); const rateOT = $('#rateOT'); const sumStd = $('#sumStd'); const sumOT = $('#sumOT'); const sumGross = $('#sumGross'); const autoChecks = $('#autoChecks');
+  const payrollDrawer = $('#payrollDrawer'); const payrollTable = $('#payrollTable'); const payrollNotice = $('#payrollNotice');
+  const btnPayrollMore = $('#btnPayrollMore'); const btnCopyPayroll = $('#btnCopyPayroll'); const btnOpenPayrollDetail = $('#btnOpenPayrollDetail');
   const btnCloseModal = $('#btnCloseModal'); const btnSave = $('#btnSave'); const btnSubmit = $('#btnSubmit'); const btnApprove = $('#btnApprove'); const btnReject = $('#btnReject'); const btnDelete = $('#btnDelete');
 
   // Import
   const fileImport = $('#fileImport'); const btnImport = $('#btnImport'); const importLog = $('#importLog');
+
+  // Calendar settings modal
+  const configBackdrop = $('#configBackdrop');
+  const cfgWeekEnding = $('#cfgWeekEnding');
+  const cfgDeadline = $('#cfgDeadline');
+  const cfgTimezone = $('#cfgTimezone');
+  const btnConfigClose = $('#btnConfigClose');
+  const btnConfigCancel = $('#btnConfigCancel');
+  const btnConfigSave = $('#btnConfigSave');
+  const cfgSavedNote = $('#cfgSavedNote');
 
   // ---- Theme toggle ----
   const THEME_KEY='hmj_theme';
@@ -394,14 +504,52 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   setTheme(localStorage.getItem(THEME_KEY)||'light');
   btnTheme.onclick=()=>setTheme((localStorage.getItem(THEME_KEY)||'light')==='light'?'dark':'light');
 
+  function setAuditVisible(show){
+    if (!auditPanel || !btnAuditToggle) return;
+    auditPanel.hidden = !show;
+    btnAuditToggle.textContent = show ? 'Hide' : 'Show';
+    btnAuditToggle.setAttribute('aria-expanded', String(show));
+  }
+  setAuditVisible(false);
+  btnAuditToggle?.addEventListener('click', ()=>{
+    const next = auditPanel ? auditPanel.hidden : true;
+    setAuditVisible(next);
+  });
+
   // ---- State ----
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let LIST = []; let FILTERED = []; let SELECTED = new Set(); let CUR=null; let DIRTY=false;
+  let SETTINGS_CACHE = { ...DEFAULTS };
+  let WEEK_BASE = DEFAULTS.week1Ending;
   let ROLE = 'admin';  // ui-view override only; gate still enforces actual roles
 
   // ---- Utilities ----
-  const money = (n)=>Number(n||0).toLocaleString('en-GB',{style:'currency',currency:'GBP'});
+  const money = (n,c='GBP')=>{
+    const currency = (typeof c==='string' && c.length===3) ? c.toUpperCase() : 'GBP';
+    try{
+      return Number(n||0).toLocaleString('en-GB',{style:'currency',currency});
+    }catch{
+      const val = Number(n||0).toFixed(2);
+      return `${currency} ${val}`;
+    }
+  };
   const fmtDate = (d)=>d||'';
+  const fmtDateTime = (d)=>{
+    if(!d) return '';
+    try{ return new Date(d).toLocaleString(); }
+    catch{ return d; }
+  };
+  const fmtWeekLabel = (d)=>{
+    if(!d) return 'not set';
+    try{
+      const date = new Date(`${d}T00:00:00Z`);
+      return Number.isNaN(date.getTime()) ? d : date.toLocaleDateString('en-GB',{ day:'numeric', month:'short', year:'numeric' });
+    }catch{return d;}
+  };
+  function updateWeekLabel(){
+    if(weekBaseLabel) weekBaseLabel.textContent = fmtWeekLabel(WEEK_BASE);
+  }
+  updateWeekLabel();
   function badgeForStatus(s){ statusBadge.textContent = s||'-'; statusBadge.className='badge '+(s||'draft'); }
   function lockForStatus(s){
     const locked = (s !== 'draft' && s !== 'rejected');
@@ -409,11 +557,94 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     btnSave.disabled = locked; btnSubmit.disabled = locked;
     btnApprove.disabled = (s!=='submitted'); btnReject.disabled = (s!=='submitted');
   }
+
+  async function loadCalendarSettings(force=false){
+    if(!force && SETTINGS_CACHE) return SETTINGS_CACHE;
+    try{
+      const res = await api(FN_SETTINGS_GET,'POST',{ keys:['fiscal_week1_ending','timesheet_deadline_note','timesheet_deadline_timezone'] });
+      const settings = res?.settings || {};
+      SETTINGS_CACHE = {
+        week1Ending: settings.fiscal_week1_ending || DEFAULTS.week1Ending,
+        deadlineNote: settings.timesheet_deadline_note || DEFAULTS.deadlineNote,
+        deadlineTimezone: settings.timesheet_deadline_timezone || DEFAULTS.deadlineTimezone,
+      };
+      WEEK_BASE = SETTINGS_CACHE.week1Ending;
+      updateWeekLabel();
+      return SETTINGS_CACHE;
+    }catch(err){
+      addChip('settings: fail', false);
+      throw err;
+    }
+  }
+
+  function openConfigModal(){
+    loadCalendarSettings(true).then((settings)=>{
+      if(cfgWeekEnding) cfgWeekEnding.value = settings.week1Ending || '';
+      if(cfgDeadline) cfgDeadline.value = settings.deadlineNote || '';
+      if(cfgTimezone) cfgTimezone.value = settings.deadlineTimezone || DEFAULTS.deadlineTimezone;
+      if(cfgSavedNote) cfgSavedNote.textContent = '';
+      if(configBackdrop){
+        configBackdrop.classList.add('show');
+        configBackdrop.setAttribute('aria-hidden','false');
+      }
+      setTimeout(()=>cfgWeekEnding?.focus(), 30);
+    }).catch((err)=>{
+      toast('Failed to load calendar settings: '+(err.message||err), 'error', 3600);
+      const fallback = SETTINGS_CACHE || DEFAULTS;
+      if(cfgWeekEnding) cfgWeekEnding.value = fallback.week1Ending || '';
+      if(cfgDeadline) cfgDeadline.value = fallback.deadlineNote || '';
+      if(cfgTimezone) cfgTimezone.value = fallback.deadlineTimezone || DEFAULTS.deadlineTimezone;
+      if(cfgSavedNote) cfgSavedNote.textContent = '';
+      if(configBackdrop){
+        configBackdrop.classList.add('show');
+        configBackdrop.setAttribute('aria-hidden','false');
+      }
+      setTimeout(()=>cfgWeekEnding?.focus(), 30);
+    });
+  }
+
+  function closeConfigModal(){
+    if(configBackdrop){
+      configBackdrop.classList.remove('show');
+      configBackdrop.setAttribute('aria-hidden','true');
+    }
+    btnWeekConfig?.focus();
+  }
+
+  async function saveCalendarSettings(){
+    const payload = {
+      fiscal_week1_ending: cfgWeekEnding?.value || DEFAULTS.week1Ending,
+      timesheet_deadline_note: (cfgDeadline?.value || '').trim() || DEFAULTS.deadlineNote,
+      timesheet_deadline_timezone: cfgTimezone?.value || DEFAULTS.deadlineTimezone,
+    };
+    try{
+      await api(FN_SETTINGS_SAVE,'POST', payload);
+      SETTINGS_CACHE = {
+        week1Ending: payload.fiscal_week1_ending,
+        deadlineNote: payload.timesheet_deadline_note,
+        deadlineTimezone: payload.timesheet_deadline_timezone,
+      };
+      WEEK_BASE = SETTINGS_CACHE.week1Ending;
+      updateWeekLabel();
+      if(cfgSavedNote) cfgSavedNote.textContent = `Saved ${new Date().toLocaleTimeString()}`;
+      toast('Fiscal calendar updated', 'info', 2200);
+      closeConfigModal();
+      try{
+        await loadList();
+      }catch(reloadErr){
+        toast('Reload failed: '+(reloadErr.message||reloadErr), 'warn', 3200);
+      }
+    }catch(err){
+      toast('Save failed: '+(err.message||err), 'error', 3600);
+    }
+  }
+
   function sumHours(){
     const t = Object.values(CUR.entries||{}).reduce((a,r)=>({std:a.std+Number(r.std||0), ot:a.ot+Number(r.ot||0)}),{std:0,ot:0});
     sumStd.textContent = `${t.std}h`; sumOT.textContent = `${t.ot}h`;
     const gross = t.std*Number(CUR?.rates?.std||0) + t.ot*Number(CUR?.rates?.ot||0);
-    sumGross.textContent = money(gross);
+    CUR.hours = { std: t.std, ot: t.ot };
+    sumGross.textContent = money(gross, CUR?.currency || 'GBP');
     runAutoChecks(t.std, t.ot);
   }
   function runAutoChecks(std, ot){
@@ -444,13 +675,13 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     savedViews.innerHTML = views.length? '' : '<span class="tag">(none)</span>';
     views.forEach((v,i)=>{
       const b=document.createElement('button'); b.className='btn chip'; b.textContent=v.name; b.onclick=()=>{
-        q.value=v.q; status.value=v.status; clientId.value=v.client_id||''; week.value=v.week||''; loadList();
+        q.value=v.q; status.value=v.status; clientId.value=v.client_id||''; week.value=v.week||''; weekNo.value=v.week_number||''; loadList();
       }; savedViews.append(b);
     });
   }
   btnSaveView.onclick=()=>{
     const name=prompt('Name this view:','My filter'); if(!name) return;
-    const views=loadViews(); views.push({ name, q:q.value||'', status:status.value||'', client_id:clientId.value||'', week:week.value||'' });
+    const views=loadViews(); views.push({ name, q:q.value||'', status:status.value||'', client_id:clientId.value||'', week:week.value||'', week_number: weekNo.value||'' });
     saveViews(views); renderViews(); toast('View saved');
   };
   btnDelView.onclick=()=>{ const name=prompt('Delete view named:'); if(!name) return; const views=loadViews().filter(v=>v.name!==name); saveViews(views); renderViews(); toast('Deleted (if existed)'); };
@@ -506,11 +737,20 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // --------- List ---------
   async function loadList(){
     listEl.textContent='Loading…';
-    const filters = { q:q.value||'', status:status.value||'', client_id: clientId.value||'', week:week.value||'' };
+    const filters = { q:q.value||'', status:status.value||'', client_id: clientId.value||'', week:week.value||'', week_number: weekNo.value||'' };
     localStorage.setItem('hmj_ts_filters', JSON.stringify(filters)); // offline-ish
     try{
       const res = await api(FN_LIST,'POST',filters);
       const rows = Array.isArray(res) ? res : (res?.items||[]);
+      if(res?.config){
+        SETTINGS_CACHE = {
+          week1Ending: res.config.week1Ending || DEFAULTS.week1Ending,
+          deadlineNote: res.config.deadlineNote || DEFAULTS.deadlineNote,
+          deadlineTimezone: res.config.deadlineTimezone || DEFAULTS.deadlineTimezone,
+        };
+        WEEK_BASE = SETTINGS_CACHE.week1Ending;
+        updateWeekLabel();
+      }
       LIST = rows||[];
       statTotal.textContent = String(LIST.length);
       filterAndRender();
@@ -527,7 +767,8 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       const okS = !status.value || (r.status === status.value);
       const okC = !clientId.value || String(r.client_id) === String(clientId.value);
       const okW = !week.value || String(r.week_ending) === String(week.value);
-      return okQ && okS && okC && okW;
+      const okWN = !weekNo.value || Number(r.week_no||0) === Number(weekNo.value);
+      return okQ && okS && okC && okW && okWN;
     });
     statFiltered.textContent=String(FILTERED.length);
     renderList();
@@ -536,19 +777,45 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     updateSelectionStats();
   }
 
+  function payrollBadge(row){
+    const status = String(row.payroll_status || row.status || 'pending').toLowerCase();
+    const classMap = {
+      paid: 'pay-paid',
+      processing: 'pay-processing',
+      ready: 'pay-pending',
+      pending: 'pay-pending',
+      hold: 'pay-hold',
+      blocked: 'pay-hold',
+    };
+    const labelMap = {
+      paid: 'Paid',
+      processing: 'Processing',
+      ready: 'Ready',
+      pending: 'Pending',
+      hold: 'On hold',
+      blocked: 'Blocked',
+    };
+    const cls = classMap[status] || 'pay-missing';
+    const label = labelMap[status] || (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Pending');
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
   function renderList(){
     if(!FILTERED.length){ listEl.innerHTML='<div class="muted" style="padding:14px">No results.</div>'; return; }
     const canApprove = ROLE!=='client'; // clients can’t bulk approve in this view
     const rows = FILTERED.map(r=>{
       const gross = (Number(r.std||0)*Number(r.rate_std||0)) + (Number(r.ot||0)*Number(r.rate_ot||0));
       const badge = `<span class="badge ${r.status||'draft'}">${r.status||'draft'}</span>`;
+      const pay = payrollBadge(r);
       const chk = `<input type="checkbox" data-sel="${r.id}" ${SELECTED.has(r.id)?'checked':''} aria-label="select row">`;
       return `
         <tr>
           <td class="hide-mobile">${chk}</td>
           <td class="hide-mobile">${r.id}</td>
           <td>${fmtDate(r.week_ending)}</td>
+          <td class="hide-mobile">${r.week_no ?? '—'}</td>
           <td>${badge}</td>
+          <td class="hide-mobile">${pay}</td>
           <td class="hide-mobile">${r.contractor_email||'—'}</td>
           <td>${[r.client_name,r.project_name,r.site_name].filter(Boolean).join(' • ')||'—'}</td>
           <td class="hide-mobile">${r.std||0}</td>
@@ -565,7 +832,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       <table role="grid" aria-rowcount="${FILTERED.length}">
         <thead><tr>
           <th class="hide-mobile"></th>
-          <th class="hide-mobile">ID</th><th>Week ending</th><th>Status</th><th class="hide-mobile">Contractor</th>
+          <th class="hide-mobile">ID</th><th>Week ending</th><th class="hide-mobile">Week #</th><th>Status</th><th class="hide-mobile">Payroll</th><th class="hide-mobile">Contractor</th>
           <th>Client • Project • Site</th><th class="hide-mobile">Std</th><th class="hide-mobile">OT</th><th class="hide-mobile">Gross</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -589,7 +856,9 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     // render current month 5 weeks grid
     calendar.innerHTML = weeks.slice(0,7).map(w=>{
       const items = FILTERED.filter(r=>r.week_ending===w);
-      return `<div class="d"><b>${w}</b>${items.map(r=>`<div class="e">${r.contractor_email||'—'} • ${r.status}</div>`).join('')}</div>`;
+      const weekNo = items[0]?.week_no;
+      const heading = weekNo ? `${w} · Week ${weekNo}` : w;
+      return `<div class="d"><b>${heading}</b>${items.map(r=>`<div class="e">${r.contractor_email||'—'} • ${r.status}</div>`).join('')}</div>`;
     }).join('');
   }
 
@@ -632,18 +901,35 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     openModal();
     try{
       const res = await api(FN_GET,'POST',{ id });
+      const rowMeta = LIST.find(r => Number(r.id) === Number(id)) || {};
       CUR = {
         id: res.id, status: res.status || 'draft', week_ending: res.week_ending,
         contractor_email: res.contractor_email||res.contractor?.email||'',
         assignment: res.assignment||{},
-        rates: { std:Number(res?.assignment?.rate_std||res?.rate_std||0), ot:Number(res?.assignment?.rate_ot||res?.rate_ot||0) },
+        rates: { std:Number(res?.assignment?.rate_std||res?.rate_std||rowMeta.rate_std||0), ot:Number(res?.assignment?.rate_ot||res?.rate_ot||rowMeta.rate_ot||0) },
         entries: res.entries || Object.fromEntries(DAYS.map(d=>[d,{std:0,ot:0,note:''}])),
       };
+      CUR.currency = rowMeta.currency || res.currency || 'GBP';
+      CUR.hours = {
+        std: Number(rowMeta.std ?? res?.totals?.std ?? 0),
+        ot: Number(rowMeta.ot ?? res?.totals?.ot ?? 0),
+      };
+      CUR.payroll = {
+        status: (res.payroll_status || rowMeta.payroll_status || CUR.status || 'pending'),
+        paid_at: res.paid_at || rowMeta.paid_at || null,
+        payroll_batch: res.payroll_batch || rowMeta.payroll_batch || null,
+        payment_reference: res.payment_reference || rowMeta.payment_reference || null,
+        pay_amount: rowMeta.pay_amount ?? res.pay_amount ?? null,
+        charge_amount: rowMeta.charge_amount ?? res.charge_amount ?? null,
+        gp_amount: rowMeta.gp_amount ?? res.gp_amount ?? null,
+        currency: rowMeta.currency || res.currency || 'GBP',
+      };
       sheetTitle.textContent = `Timesheet #${CUR.id}`;
-      sheetSub.textContent = `Week ending ${CUR.week_ending}`;
+      const weekLabel = CUR.week_no ? `Week ${CUR.week_no}` : '';
+      sheetSub.textContent = `Week ending ${CUR.week_ending}${weekLabel ? ' · '+weekLabel : ''}`;
       sheetMeta.textContent = `${[CUR.assignment.client_name,CUR.assignment.project_name,CUR.assignment.site_name].filter(Boolean).join(' • ')}`;
       rateStd.textContent = `Rate: ${money(CUR.rates.std)}/h`; rateOT.textContent  = `Rate: ${money(CUR.rates.ot)}/h`;
-      badgeForStatus(CUR.status); renderRows();
+      badgeForStatus(CUR.status); renderRows(); updatePayrollCard();
     }catch(e){ sheetBody.innerHTML='<tr><td colspan="4" class="muted" style="background:var(--soft);border:1px solid var(--border)">Failed to load timesheet.</td></tr>'; }
   }
 
@@ -666,6 +952,95 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       sheetBody.append(tr);
     });
     lockForStatus(CUR.status); sumHours();
+  }
+
+  function renderPayrollBreakdown(){
+    if(!payrollTable) return;
+    const tbody = payrollTable.querySelector('tbody');
+    if(!tbody) return;
+    const currency = CUR?.payroll?.currency || CUR?.currency || 'GBP';
+    const pay = Number(CUR?.payroll?.pay_amount ?? 0);
+    const charge = Number(CUR?.payroll?.charge_amount ?? 0);
+    const gp = Number(CUR?.payroll?.gp_amount ?? (charge - pay));
+    const std = Number(CUR?.hours?.std ?? 0);
+    const ot = Number(CUR?.hours?.ot ?? 0);
+    const notes = [];
+    if(CUR?.payroll?.payment_reference) notes.push(`Reference ${CUR.payroll.payment_reference}`);
+    if(CUR?.payroll?.payroll_batch) notes.push(`Batch ${CUR.payroll.payroll_batch}`);
+    if(CUR?.payroll?.paid_at) notes.push(`Paid ${fmtDateTime(CUR.payroll.paid_at)}`);
+
+    const rows = [];
+    if(pay || charge || gp){
+      rows.push(`<tr><td>Contractor pay</td><td>${money(pay, currency)}</td><td>${currency}</td><td>Net amount owed</td></tr>`);
+      rows.push(`<tr><td>Client charge</td><td>${money(charge, currency)}</td><td>${currency}</td><td>Invoice value</td></tr>`);
+      rows.push(`<tr><td>Gross margin</td><td>${money(gp, currency)}</td><td>${currency}</td><td>Charge minus pay</td></tr>`);
+    }
+    if(std || ot){
+      rows.push(`<tr><td>Hours</td><td>${std}h std · ${ot}h ot</td><td>${currency}</td><td>Based on current entries</td></tr>`);
+    }
+    if(notes.length){
+      rows.push(`<tr><td>Meta</td><td colspan="3">${notes.join(' • ')}</td></tr>`);
+    }
+
+    if(btnPayrollMore){ btnPayrollMore.disabled = !rows.length; }
+    if(!rows.length){
+      tbody.innerHTML = '<tr><td colspan="4" class="muted">No payroll information captured yet.</td></tr>';
+      if(btnPayrollMore){ btnPayrollMore.setAttribute('aria-expanded','false'); }
+      if(payrollDrawer) payrollDrawer.hidden = true;
+      if(payrollNotice) payrollNotice.textContent = 'No payroll details recorded yet.';
+      return;
+    }
+
+    tbody.innerHTML = rows.join('');
+    if(btnPayrollMore){ btnPayrollMore.disabled = false; }
+    if(payrollNotice){
+      payrollNotice.textContent = 'Figures update automatically when payroll exports complete.';
+    }
+  }
+
+  function buildPayrollSummary(){
+    const currency = CUR?.payroll?.currency || CUR?.currency || 'GBP';
+    const pay = money(CUR?.payroll?.pay_amount ?? 0, currency);
+    const charge = money(CUR?.payroll?.charge_amount ?? 0, currency);
+    const gp = money(CUR?.payroll?.gp_amount ?? ((CUR?.payroll?.charge_amount ?? 0) - (CUR?.payroll?.pay_amount ?? 0)), currency);
+    const std = Number(CUR?.hours?.std ?? 0);
+    const ot = Number(CUR?.hours?.ot ?? 0);
+    const parts = [`Timesheet #${CUR?.id || '—'}`, `Status: ${(CUR?.payroll?.status || CUR?.status || 'pending')}`];
+    parts.push(`Pay ${pay}`);
+    parts.push(`Charge ${charge}`);
+    parts.push(`Margin ${gp}`);
+    parts.push(`Hours ${std} std / ${ot} ot`);
+    if(CUR?.payroll?.payment_reference) parts.push(`Ref ${CUR.payroll.payment_reference}`);
+    if(CUR?.payroll?.payroll_batch) parts.push(`Batch ${CUR.payroll.payroll_batch}`);
+    if(CUR?.payroll?.paid_at) parts.push(`Paid ${fmtDateTime(CUR.payroll.paid_at)}`);
+    return parts.join('\n');
+  }
+
+  function updatePayrollCard(){
+    const badge = $('#payrollStatusBadge');
+    const meta = $('#payrollMeta');
+    const link = $('#payrollViewLink');
+    const status = String(CUR?.payroll?.status || CUR?.status || 'pending').toLowerCase();
+    const labelMap = { paid:'Paid', processing:'Processing', ready:'Ready', pending:'Pending', hold:'On hold', blocked:'Blocked', draft:'Draft' };
+    const classMap = { paid:'pay-paid', processing:'pay-processing', ready:'pay-pending', pending:'pay-pending', hold:'pay-hold', blocked:'pay-hold', draft:'pay-missing' };
+    if(badge){
+      badge.className = `badge ${classMap[status] || 'pay-missing'}`;
+      badge.textContent = labelMap[status] || (status ? status.charAt(0).toUpperCase()+status.slice(1) : 'Pending');
+    }
+    if(meta){
+      const bits = [];
+      if(CUR?.payroll?.paid_at) bits.push(`Paid ${fmtDateTime(CUR.payroll.paid_at)}`);
+      if(CUR?.payroll?.payment_reference) bits.push(`Ref ${CUR.payroll.payment_reference}`);
+      if(CUR?.payroll?.payroll_batch) bits.push(`Batch ${CUR.payroll.payroll_batch}`);
+      meta.textContent = bits.length ? bits.join(' • ') : 'Not yet processed via payroll.';
+    }
+    if(link && CUR?.id){
+      link.href = `/admin/payroll.html?timesheet=${encodeURIComponent(CUR.id)}`;
+    }
+    if(btnOpenPayrollDetail && CUR?.id){
+      btnOpenPayrollDetail.href = `/admin/payroll.html?timesheet=${encodeURIComponent(CUR.id)}`;
+    }
+    renderPayrollBreakdown();
   }
 
   sheetBody.addEventListener('input', ev=>{
@@ -692,6 +1067,24 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   btnApprove.onclick= async ()=>{ try{ await api(FN_APPROVE,'POST',{ id: CUR.id }); toast('Approved'); CUR.status='approved'; badgeForStatus(CUR.status); lockForStatus(CUR.status); await loadList(); await loadAudit(); }catch(e){ toast('Approve failed: '+e.message,'error'); } };
   btnReject.onclick= async ()=>{ const reason=prompt('Reason for rejection:',''); if(reason===null) return; try{ await api(FN_REJECT,'POST',{ id: CUR.id, reason }); toast('Rejected'); CUR.status='rejected'; badgeForStatus(CUR.status); lockForStatus(CUR.status); await loadList(); await loadAudit(); }catch(e){ toast('Reject failed: '+e.message,'error'); } };
   btnDelete.onclick= async ()=>{ if(!confirm('Delete this timesheet?')) return; try{ await api(FN_DELETE,'POST',{ id: CUR.id }); toast('Deleted'); closeModal(); await loadList(); await loadAudit(); }catch(e){ toast('Delete failed: '+e.message,'error'); } };
+  btnPayrollMore?.addEventListener('click', ()=>{
+    if(!payrollDrawer || !btnPayrollMore) return;
+    const expanded = btnPayrollMore.getAttribute('aria-expanded') === 'true';
+    const next = !expanded;
+    btnPayrollMore.setAttribute('aria-expanded', String(next));
+    payrollDrawer.hidden = !next;
+    if(next){ try{ payrollDrawer.scrollIntoView({ behavior:'smooth', block:'nearest' }); }catch{} }
+  });
+  btnCopyPayroll?.addEventListener('click', async ()=>{
+    const summary = buildPayrollSummary();
+    if(!summary){ toast('No payroll data to copy yet','warn'); return; }
+    try{
+      await navigator.clipboard?.writeText(summary);
+      toast('Payroll summary copied','info',1800);
+    }catch{
+      toast('Copy failed','error');
+    }
+  });
 
   // Create draft
   btnCreate.onclick = async ()=>{
@@ -751,38 +1144,31 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     toast(`Import complete — OK ${ok}, Failed ${fail}`);
   };
 
+  // Calendar settings wires
+  btnWeekConfig?.addEventListener('click', openConfigModal);
+  btnConfigClose?.addEventListener('click', closeConfigModal);
+  btnConfigCancel?.addEventListener('click', closeConfigModal);
+  btnConfigSave?.addEventListener('click', (e)=>{ e.preventDefault(); saveCalendarSettings(); });
+  configBackdrop?.addEventListener('click', (e)=>{ if(e.target === configBackdrop) closeConfigModal(); });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape' && configBackdrop?.classList.contains('show')){
+      e.preventDefault();
+      closeConfigModal();
+    }
+  });
+
   // Refresh
   btnRefresh.onclick = loadList; btnCsv.onclick=exportCsv; btnToggleFilters.onclick=loadList;
 
   // Restore filters from cache
-  try{ const f=JSON.parse(localStorage.getItem('hmj_ts_filters')||'{}'); if(f){ q.value=f.q||''; status.value=f.status||''; clientId.value=f.client_id||''; week.value=f.week||''; } }catch{}
+  try{ const f=JSON.parse(localStorage.getItem('hmj_ts_filters')||'{}'); if(f){ q.value=f.q||''; status.value=f.status||''; clientId.value=f.client_id||''; week.value=f.week||''; weekNo.value=f.week_number||''; } }catch{}
 
-  // New: consistently gate via the shared bootstrap
-  (async function initTimesheets(){
-    const helpers = await (window.adminReady ? window.adminReady({ role:'admin' }) : window.bootAdmin({ role:'admin' }));
-    if (!helpers || helpers.ok === false) {
-      // gate already rendered a message; just stop here.
-      return;
-    }
-    // pull helpers you already use
-    const { api, sel, toast } = helpers;
-
-    // If you previously had globals like API = api; keep them
-    window.API = api;
-
-    // Trigger your existing loaders the same way as before
-    try {
-      document.dispatchEvent(new CustomEvent('admin:refresh')); // keeps your R shortcut useful
-      // or directly call your page loaders here:
-      // await loadClients();
-      // await loadAudit();
-      // await loadList();
-    } catch (e) {
-      console.error(e);
-      toast('Init error: '+(e.message||e), 'error');
-    }
-  })();
-
+  window.API = api;
+  try {
+    document.dispatchEvent(new CustomEvent('admin:refresh'));
+  } catch (e) {
+    console.warn('[timesheets] admin:refresh dispatch failed', e);
+  }
 
   // Load clients, audit, list
   await loadClients(); await loadAudit(); await loadList(); renderViews();
@@ -792,6 +1178,15 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 }
 
 /* Bootstrap via /admin/common.js */
+</script>
+
+<script>
+(function startTimesheets(){
+  if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+    return setTimeout(startTimesheets, 30);
+  }
+  window.Admin.bootAdmin(main);
+})();
 </script>
 
 

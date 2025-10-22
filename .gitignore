@@ -1,2 +1,10 @@
 # Local Netlify folder
 .netlify
+
+# Dependency directories
+node_modules/
+netlify/functions/node_modules/
+
+# Editor cruft
+.DS_Store
+Thumbs.db

@@ -1,5 +1,5 @@
 // netlify/functions/contractor-profile.js
-const { getContext } = require('./_timesheet-helpers');
+const { getContext } = require('./_timesheet-helpers.js');
 
 const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });

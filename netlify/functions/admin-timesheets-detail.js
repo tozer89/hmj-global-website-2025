@@ -1,5 +1,5 @@
 // netlify/functions/timesheets-detail.js
-const { supabase, getContext } = require('./_timesheet-helpers');
+const { supabase, getContext } = require('./_timesheet-helpers.js');
 
 const H = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const respond = (s, b) => ({ statusCode: s, headers: H, body: JSON.stringify(b) });

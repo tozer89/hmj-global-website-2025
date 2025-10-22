@@ -48,6 +48,8 @@
     .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff; transform:translateY(-1px)}
     .hmj-menu a:focus-visible{outline:2px solid #fff;outline-offset:2px}
     .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
+    .hmj-menu a[aria-disabled="true"]{opacity:.65;cursor:not-allowed}
+    .hmj-menu a.requires-admin::after{content:' \1F512';font-size:.85em}
 
     /* burger */
     .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
@@ -149,6 +151,16 @@
     details + details{ margin-top:10px; }
     details summary{ cursor:pointer; font-weight:700; }
 
+    /* ========= Social / Feed slider ========= */
+    .feed-slider{position:relative;overflow:hidden;border-radius:18px;border:1px solid rgba(26,26,46,.14);background:#fff;box-shadow:0 10px 26px rgba(0,0,0,.08);}
+    .feed-track{display:flex;gap:16px;padding:16px;animation:feedScroll 28s linear infinite;will-change:transform;}
+    .feed-card{min-width:260px;max-width:320px;background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 60%),#fff;border:1px solid rgba(26,26,46,.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 6px 18px rgba(0,0,0,.06);}
+    .feed-card strong{color:var(--accent);font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;}
+    .feed-card p{margin:0;color:#344055;line-height:1.45;}
+    .feed-card time{font-size:.8rem;color:#6b7280;}
+    @keyframes feedScroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+    @media (prefers-reduced-motion:reduce){.feed-track{animation:none;}}
+
     /* ========= Buttons (if your CSS doesn’t already have them) ========= */
     .btn-primary,.btn-secondary,.btn-tertiary{
       display:inline-block; padding:12px 16px; border-radius:12px; text-decoration:none; font-weight:800;
@@ -204,23 +216,91 @@
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
-        <!-- In your nav menu -->
-<!--  <li><a href="/timesheets.html" id="nav-timesheets">Timesheets</a></li> -->
-<li><a href="#" id="nav-login" onclick="if(window.netlifyIdentity){ netlifyIdentity.open('login'); } return false;">Timesheets</a></li>
-<li><a href="#" id="nav-logout" style="display:none" onclick="if(window.netlifyIdentity){ netlifyIdentity.logout(); } return false;">Timesheets</a></li>
+        <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
 
 <script>
-  // Swap Login/Logout depending on session
+    // Gate timesheets/admin access depending on session and roles
   document.addEventListener('DOMContentLoaded', () => {
-    const login = document.getElementById('nav-login');
-    const logout = document.getElementById('nav-logout');
-    const user = window.netlifyIdentity?.currentUser();
-    if (user) { login.style.display='none'; logout.style.display='inline-block'; }
-    window.netlifyIdentity?.on('init', u => {
-      if (u) { login.style.display='none'; logout.style.display='inline-block'; }
+    const admin = document.getElementById('nav-admin');
+    const timesheets = document.getElementById('nav-timesheets');
+    const identity = window.netlifyIdentity;
+
+    const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
+      ? user.app_metadata.roles
+      : Array.isArray(user?.roles)
+        ? user.roles
+        : [];
+
+    function requireLogin(event, destination) {
+      if (event) event.preventDefault();
+      if (!identity) {
+        if (destination) window.location.href = destination;
+        return;
+      }
+      if (destination) sessionStorage.setItem('afterLogin', destination);
+      identity.open('login');
+    }
+
+    function setTimesheets(user) {
+      if (!timesheets) return;
+      if (user) {
+        timesheets.href = '/timesheets.html';
+        timesheets.removeAttribute('aria-disabled');
+        timesheets.title = 'Open timesheets';
+      } else {
+        timesheets.href = '#';
+        timesheets.setAttribute('aria-disabled', 'true');
+        timesheets.title = 'Sign in to access timesheets';
+      }
+    }
+
+    function setAdmin(user) {
+      if (!admin) return;
+      const roles = rolesOf(user);
+      const isAdmin = roles.includes('admin');
+      if (isAdmin) {
+        admin.style.display = 'inline-block';
+        admin.href = '/admin/';
+        admin.removeAttribute('aria-disabled');
+        admin.classList.remove('requires-admin');
+        admin.textContent = 'Admin Dashboard';
+        admin.title = 'Open the admin dashboard';
+      } else {
+        admin.style.display = 'none';
+        admin.href = '/admin/';
+        admin.setAttribute('aria-disabled', 'true');
+        admin.classList.add('requires-admin');
+        admin.textContent = 'Admin Dashboard';
+        admin.title = 'Admin access only';
+      }
+    }
+
+    function renderFor(user) {
+      setTimesheets(user);
+      setAdmin(user);
+    }
+
+    timesheets?.addEventListener('click', (event) => {
+      const user = identity?.currentUser?.();
+      if (user) return;
+      requireLogin(event, '/timesheets.html');
     });
-    window.netlifyIdentity?.on('login', () => { login.style.display='none'; logout.style.display='inline-block'; });
-    window.netlifyIdentity?.on('logout', () => { login.style.display='inline-block'; logout.style.display='none'; });
+    admin?.addEventListener('click', (event) => {
+      const user = identity?.currentUser?.();
+      if (user) return;
+      requireLogin(event, '/admin/');
+    });
+
+    identity?.on('init', (user) => renderFor(user));
+    identity?.on('login', (user) => renderFor(user));
+    identity?.on('logout', () => renderFor(null));
+
+    try {
+      renderFor(identity?.currentUser?.() || null);
+    } catch {
+      renderFor(null);
+    }
   });
 </script>
 
@@ -382,6 +462,62 @@
     </div>
   </section>
 
+  <!-- ===== SOCIAL FEED ===== -->
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap">
+      <h2>Live from the HMJ Global network</h2>
+      <p class="trust-line" style="text-align:center;margin-bottom:16px;">Highlights from recent LinkedIn updates and project wins.</p>
+      <div class="feed-slider" aria-hidden="true">
+        <div class="feed-track" id="feedTrack">
+          <article class="feed-card">
+            <strong>Project win</strong>
+            <p>Mobilising a commissioning crew for a 90MW campus in the Netherlands. Multi-discipline start dates staggered over eight weeks.</p>
+            <time datetime="2025-02-10">10 Feb 2025</time>
+          </article>
+          <article class="feed-card">
+            <strong>Insight</strong>
+            <p>UK life sciences demand: CQV contractors requested up 34% year-on-year with a focus on sterile fill-finish expertise.</p>
+            <time datetime="2025-02-07">7 Feb 2025</time>
+          </article>
+          <article class="feed-card">
+            <strong>Payroll</strong>
+            <p>Timesheet deadline reminder: submit by Monday 10:00 UK to hit the Wednesday payroll run. Auto-email nudges now live.</p>
+            <time datetime="2025-02-05">5 Feb 2025</time>
+          </article>
+          <article class="feed-card">
+            <strong>Event</strong>
+            <p>Meet us at Data Centre World London – stand D214. Hosting a panel on resilient commissioning teams for hyperscale builds.</p>
+            <time datetime="2025-02-04">4 Feb 2025</time>
+          </article>
+          <article class="feed-card">
+            <strong>Compliance</strong>
+            <p>Rolled out digital RTW vault across EU markets – contractors upload docs once and stay audit ready for every project.</p>
+            <time datetime="2025-01-31">31 Jan 2025</time>
+          </article>
+          <article class="feed-card">
+            <strong>Feature</strong>
+            <p>New admin jobs workspace launched: drag & drop categories, shareable specs and live sync with the public jobs board.</p>
+            <time datetime="2025-01-28">28 Jan 2025</time>
+          </article>
+          <!-- Duplicate cards for seamless scroll -->
+          <article class="feed-card">
+            <strong>Project win</strong>
+            <p>Mobilising a commissioning crew for a 90MW campus in the Netherlands. Multi-discipline start dates staggered over eight weeks.</p>
+            <time datetime="2025-02-10">10 Feb 2025</time>
+          </article>
+          <article class="feed-card">
+            <strong>Insight</strong>
+            <p>UK life sciences demand: CQV contractors requested up 34% year-on-year with a focus on sterile fill-finish expertise.</p>
+            <time datetime="2025-02-07">7 Feb 2025</time>
+          </article>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:10px;">
+        <a class="btn-secondary" href="https://www.linkedin.com/company/hmj-global/" target="_blank" rel="noopener">Follow us on LinkedIn</a>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== LATEST ROLES TEASER ===== -->
   <section class="section">
     <div class="wrap">
@@ -456,10 +592,13 @@
       const scrim  = document.querySelector('.hmj-scrim');
 
       // highlight current page
-      const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
-      menu.querySelectorAll('a').forEach(a=>{
-        const file = a.getAttribute('href').toLowerCase();
-        if(file === path){ a.setAttribute('aria-current','page'); }
+      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'index.html').toLowerCase();
+      const currentNormalized = currentSegment.replace(/^\//, '');
+      menu.querySelectorAll('a[href]').forEach(a=>{
+        const href = (a.getAttribute('href') || '').trim();
+        if (!href || href.includes('://')) return;
+        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
+        if(target === currentNormalized){ a.setAttribute('aria-current','page'); }
       });
 
       function openMenu(open){
