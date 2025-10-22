@@ -1228,6 +1228,18 @@
       });
 
       buildColMenu();
+
+      const seededRows = loadEmbeddedCandidates();
+      if (Array.isArray(seededRows) && seededRows.length) {
+        chip('list: seed','warn','list');
+        allRows = seededRows;
+        page = 1;
+        selected.clear();
+        enableDelete();
+        render();
+        renderQuick(null);
+      }
+
       await load();
       enableDelete();
     });

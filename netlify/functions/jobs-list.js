@@ -1,5 +1,5 @@
 // netlify/functions/jobs-list.js
-const { getSupabase } = require('./_supabase.js');
+const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { toJob, loadStaticJobs } = require('./_jobs-helpers.js');
 
 const COLUMNS = `
@@ -22,6 +22,21 @@ const COLUMNS = `
 `;
 
 exports.handler = async (event) => {
+  const fallback = loadStaticJobs();
+
+  if (!hasSupabase()) {
+    if (fallback.length) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ jobs: fallback, source: 'static', supabase: supabaseStatus() }),
+      };
+    }
+    return {
+      statusCode: 503,
+      body: JSON.stringify({ error: 'Supabase client unavailable', supabase: supabaseStatus() }),
+    };
+  }
+
   try {
     const supabase = getSupabase(event);
 
@@ -38,18 +53,28 @@ exports.handler = async (event) => {
     if (error) throw error;
 
     const jobs = Array.isArray(data) ? data.map(toJob) : [];
-    if (!jobs.length) {
-      const fallback = loadStaticJobs();
-      if (fallback.length) {
-        return { statusCode: 200, body: JSON.stringify({ jobs: fallback, source: 'static' }) };
-      }
+    if (!jobs.length && fallback.length) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ jobs: fallback, source: 'static', supabase: supabaseStatus() }),
+      };
     }
-    return { statusCode: 200, body: JSON.stringify({ jobs }) };
+    return { statusCode: 200, body: JSON.stringify({ jobs, supabase: supabaseStatus() }) };
   } catch (e) {
-    const fallback = loadStaticJobs();
     if (fallback.length) {
-      return { statusCode: 200, body: JSON.stringify({ jobs: fallback, source: 'static', warning: e.message }) };
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          jobs: fallback,
+          source: 'static',
+          warning: e.message,
+          supabase: supabaseStatus(),
+        }),
+      };
     }
-    return { statusCode: 500, body: JSON.stringify({ error: e.message || 'Unable to load jobs' }) };
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: e.message || 'Unable to load jobs', supabase: supabaseStatus() }),
+    };
   }
 };
