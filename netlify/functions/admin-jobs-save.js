@@ -47,14 +47,39 @@ exports.handler = async (event, context) => {
     if (!Array.isArray(payload.responsibilities)) payload.responsibilities = [];
     if (!Array.isArray(payload.requirements)) payload.requirements = [];
 
-    const { data, error } = await supabase
-      .from('jobs')
-      .upsert(payload, { onConflict: 'id', ignoreDuplicates: false })
-      .select('*')
-      .single();
+    const working = { ...payload };
+    const dropped = new Set();
+    let attempt = 0;
+    let data;
+    let error;
 
-    if (error) {
+    while (attempt < 5) {
+      attempt += 1;
+      ({ data, error } = await supabase
+        .from('jobs')
+        .upsert(working, { onConflict: 'id', ignoreDuplicates: false })
+        .select('*')
+        .single());
+
+      if (!error) break;
+
       if (isSchemaError(error)) {
+        const message = String(error.message || '').toLowerCase();
+        if (message.includes('column')) {
+          const match = /column "?([a-z0-9_]+)"? does not exist/i.exec(error.message || '');
+          let missing = match ? match[1] : null;
+          if (!missing) {
+            if (message.includes('location_code')) missing = 'location_code';
+            else if (message.includes('requirements')) missing = 'requirements';
+            else if (message.includes('responsibilities')) missing = 'responsibilities';
+          }
+          if (missing && Object.prototype.hasOwnProperty.call(working, missing) && !dropped.has(missing)) {
+            console.warn('[jobs] dropping unknown column %s and retrying', missing);
+            delete working[missing];
+            dropped.add(missing);
+            continue;
+          }
+        }
         return {
           statusCode: 409,
           body: JSON.stringify({
@@ -63,6 +88,11 @@ exports.handler = async (event, context) => {
           }),
         };
       }
+
+      throw error;
+    }
+
+    if (error) {
       throw error;
     }
 

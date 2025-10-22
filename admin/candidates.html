@@ -47,8 +47,8 @@
     }
     input[type=search]{ min-width:280px; }
     table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
-    thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:10px 12px;font-weight:800}
-    tbody td{border-top:1px solid var(--stroke);padding:8px 10px;vertical-align:middle}
+    thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:8px 10px;font-weight:800}
+    tbody td{border-top:1px solid var(--stroke);padding:8px 10px;vertical-align:middle;line-height:1.35}
     tbody tr:hover{background:#f8fafc}
     .muted{color:var(--muted)}
     .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
@@ -58,10 +58,19 @@
     .chips{display:flex;gap:8px;flex-wrap:wrap}
     .chip{padding:6px 10px;border-radius:9999px;border:1px solid var(--stroke);cursor:pointer;background:#fff;font-weight:700}
     .chip.active{background:var(--chip)}
-    .doc-list{display:grid;gap:8px;background:#fff;border:1px solid var(--stroke);border-radius:12px;padding:10px;max-height:200px;overflow:auto}
-    .doc-row{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:13px}
+    .doc-sections{display:grid;gap:14px}
+    .doc-section{background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:12px;display:grid;gap:10px}
+    .doc-section h5{margin:0;font-size:14px;color:var(--ink);display:flex;align-items:center;gap:8px}
+    .doc-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .doc-actions button{border-radius:10px;font-weight:700}
+    .drop-zone{border:2px dashed var(--stroke);border-radius:12px;padding:14px;display:grid;place-items:center;text-align:center;font-size:13px;color:var(--muted);background:#f8fafc;transition:border-color .2s,color .2s,background .2s}
+    .drop-zone strong{color:var(--blue)}
+    .drop-zone.drag{border-color:var(--blue);color:var(--blue);background:#eef2ff}
+    .doc-list{display:grid;gap:8px;max-height:180px;overflow:auto}
+    .doc-row{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:13px;background:#fff;border:1px solid var(--stroke);border-radius:10px;padding:8px 10px}
     .doc-row a{color:var(--blue);text-decoration:none;font-weight:700}
     .doc-row button{border:0;background:transparent;color:var(--danger);font-weight:700;cursor:pointer}
+    .doc-row .meta{font-size:12px;color:var(--muted)}
     .metrics{display:flex;gap:12px;flex-wrap:wrap}
     .metric{background:#fff;border:1px solid var(--stroke);border-radius:12px;padding:10px 12px;font-weight:800}
     .menu{position:relative}
@@ -197,12 +206,32 @@
       <form id="frm" class="grid" autocomplete="off"></form>
       <div class="field" id="docField">
         <label>Documents &amp; CV</label>
-        <div class="doc-list" id="docList"><div class="muted">No documents yet.</div></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
-          <button class="btn ghost small" id="btnParseCv" type="button">Parse CV</button>
-          <button class="btn ghost small" id="btnUploadCv" type="button">Upload file</button>
-          <input type="file" id="cvInput" accept=".pdf,.doc,.docx,.txt" style="display:none"/>
+        <div class="doc-sections">
+          <div class="doc-section" aria-labelledby="generalDocsLabel">
+            <h5 id="generalDocsLabel">General documents</h5>
+            <div class="drop-zone" id="docDropGeneral" tabindex="0" role="button" aria-label="Drop general documents">
+              <div><strong>Drop files</strong> or use the buttons below.</div>
+            </div>
+            <div class="doc-actions">
+              <button class="btn ghost small" id="btnParseCv" type="button">Parse CV</button>
+              <button class="btn ghost small" id="btnUploadCv" type="button">Upload file</button>
+            </div>
+            <div class="doc-list" id="docListGeneral"><div class="muted">No documents yet.</div></div>
+          </div>
+          <div class="doc-section" aria-labelledby="complianceDocsLabel">
+            <h5 id="complianceDocsLabel">Compliance</h5>
+            <div class="drop-zone" id="docDropCompliance" tabindex="0" role="button" aria-label="Drop compliance documents">
+              <div><strong>Drop compliance files</strong> such as certificates or signed terms.</div>
+            </div>
+            <div class="doc-actions">
+              <button class="btn ghost small" id="btnUploadCompliance" type="button">Upload compliance file</button>
+              <button class="btn ghost small" id="btnSendTerms" type="button">Send terms for signature</button>
+            </div>
+            <div class="doc-list" id="docListCompliance"><div class="muted">No compliance documents yet.</div></div>
+            <div class="muted" id="termsStatus" style="font-size:12px"></div>
+          </div>
         </div>
+        <input type="file" id="cvInput" accept=".pdf,.doc,.docx,.txt" multiple style="display:none"/>
       </div>
     </div>
     <div class="d-foot">
@@ -446,10 +475,16 @@
         { key:'updated_at', label:'Updated', show:false, width:'150px' },
       ];
 
-      const docList = sel('#docList');
+      const docListGeneral = sel('#docListGeneral');
+      const docListCompliance = sel('#docListCompliance');
+      const docDropGeneral = sel('#docDropGeneral');
+      const docDropCompliance = sel('#docDropCompliance');
       const cvInput = sel('#cvInput');
       const btnParseCv = sel('#btnParseCv');
       const btnUploadCv = sel('#btnUploadCv');
+      const btnUploadCompliance = sel('#btnUploadCompliance');
+      const btnSendTerms = sel('#btnSendTerms');
+      const termsStatus = sel('#termsStatus');
       const PDF_SCRIPT_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
       const PDF_WORKER_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
       let pdfJsPromise = null;
@@ -477,8 +512,11 @@
         return pdfJsPromise;
       }
       let currentDocs = [];
-      let pendingUpload = null;
+      let localDocs = [];
+      let pendingUploads = [];
       let cvMode = 'parse';
+      let lastTermsSentAt = null;
+      const LOCAL_DOCS_KEY = 'hmj_candidate_docs_local';
 
       const $ = sel;
       const enableDelete = () => {
@@ -1031,6 +1069,21 @@
           else if (value != null) el.value = value;
           else el.value = '';
         });
+        if (tab.name === 'Compliance') {
+          const termsInput = frm.querySelector('[name="terms_ok"]');
+          if (termsInput) {
+            termsInput.onchange = () => {
+              draft.terms_ok = !!termsInput.checked;
+              if (termsInput.checked) {
+                draft.terms_accepted_at = draft.terms_accepted_at || new Date().toISOString();
+              } else {
+                draft.terms_accepted_at = null;
+              }
+              updateTermsStatus();
+            };
+          }
+          updateTermsStatus();
+        }
       }
 
       function readForm(){
@@ -1046,64 +1099,218 @@
         currentTab = 'Basics';
         $('#dTitle').textContent = 'New candidate';
         $('#dRef').textContent = '—';
+        pendingUploads = [];
+        localDocs = [];
+        lastTermsSentAt = null;
+        const draftStore = readLocalStore();
+        if (draftStore && draftStore.draft) {
+          delete draftStore.draft;
+          writeLocalStore(draftStore);
+        }
         renderDocs([]);
-        pendingUpload = null;
         buildEditorShell();
+        updateTermsStatus();
       }
 
       function openEditor(values = {}){
         editing = values || null;
         draft = { ...(values || {}) };
+        draft.terms_accepted_at = draft.terms_accepted_at || values?.terms_accepted_at || values?.termsAcceptedAt || null;
+        lastTermsSentAt = values?.terms_sent_at || values?.termsSentAt || values?.terms_signed_at || null;
+        pendingUploads = [];
         buildEditorShell();
         $('#dTitle').textContent = values?.full_name || `${values.first_name || ''} ${values.last_name || ''}`.trim() || 'Edit candidate';
         $('#dRef').textContent = values?.ref || values?.id || '—';
         openDrawer();
-        pendingUpload = null;
-        if (values?.id) loadDocuments(values.id); else renderDocs([]);
+        loadDocuments(values?.id || null);
+        updateTermsStatus();
       }
 
 
-      function renderDocs(docs) {
-        if (!docList) return;
-        currentDocs = Array.isArray(docs) ? docs : [];
-        if (!currentDocs.length) {
-          docList.innerHTML = '<div class="muted">No documents yet.</div>';
+      function readLocalStore() {
+        try {
+          return JSON.parse(localStorage.getItem(LOCAL_DOCS_KEY) || '{}');
+        } catch {
+          return {};
+        }
+      }
+
+      function writeLocalStore(store) {
+        localStorage.setItem(LOCAL_DOCS_KEY, JSON.stringify(store));
+      }
+
+      function loadLocalDocs(candidateId) {
+        const store = readLocalStore();
+        const key = String(candidateId || 'draft');
+        return Array.isArray(store[key]) ? store[key] : [];
+      }
+
+      function storeLocalDoc(candidateId, doc) {
+        const store = readLocalStore();
+        const key = String(candidateId || 'draft');
+        store[key] = Array.isArray(store[key]) ? store[key] : [];
+        store[key].unshift(doc);
+        writeLocalStore(store);
+      }
+
+      function removeLocalDoc(candidateId, localId) {
+        const store = readLocalStore();
+        const key = String(candidateId || 'draft');
+        if (!Array.isArray(store[key])) return;
+        store[key] = store[key].filter((doc) => doc.localId !== localId);
+        writeLocalStore(store);
+      }
+
+      function escHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function normaliseDoc(doc = {}) {
+        const rawLabel = doc.label || doc.filename || `File ${doc.id || doc.localId || ''}`;
+        const match = /^\[(.+?)\]\s*(.+)$/.exec(rawLabel || '');
+        const category = (doc.category || (match ? match[1] : 'general')).toLowerCase();
+        const displayLabel = match ? (match[2] || rawLabel) : rawLabel;
+        return {
+          ...doc,
+          category,
+          displayLabel,
+          rawLabel,
+        };
+      }
+
+      function renderDocSection(target, docs, emptyMessage) {
+        if (!target) return;
+        if (!docs.length) {
+          target.innerHTML = `<div class="muted">${escHtml(emptyMessage)}</div>`;
           return;
         }
-        docList.innerHTML = '';
-        currentDocs.forEach((doc) => {
+        target.innerHTML = '';
+        docs.forEach((doc) => {
+          const normalised = normaliseDoc(doc);
+          const linkLabel = escHtml(normalised.displayLabel);
+          const metaBits = [];
+          if (normalised.source === 'local') metaBits.push('Local only');
+          if (normalised.category === 'compliance') metaBits.push('Compliance');
+          if (normalised.created_at) {
+            try {
+              metaBits.push(new Date(normalised.created_at).toLocaleString());
+            } catch {
+              metaBits.push(normalised.created_at);
+            }
+          }
+          const meta = metaBits.length ? `<span class="meta">${escHtml(metaBits.join(' • '))}</span>` : '';
+          let linkAttrs = 'href="#" onclick="return false"';
+          if (normalised.url) {
+            linkAttrs = `href="${normalised.url}" target="_blank" rel="noopener"`;
+          } else if (normalised.dataUrl) {
+            const downloadName = escHtml(normalised.filename || normalised.displayLabel || 'document');
+            linkAttrs = `href="${normalised.dataUrl}" download="${downloadName}"`;
+          }
+          const idAttr = normalised.source === 'local'
+            ? `local:${normalised.localId}`
+            : String(normalised.id);
           const row = document.createElement('div');
           row.className = 'doc-row';
-          const safeLabel = doc.label || doc.filename || `File ${doc.id}`;
-          const link = doc.url ? `<a href="${doc.url}" target="_blank" rel="noopener">${safeLabel}</a>` : `<span>${safeLabel}</span>`;
-          row.innerHTML = `${link}<button type="button" data-doc="${doc.id}">Delete</button>`;
-          docList.appendChild(row);
+          row.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+              <a ${linkAttrs}>${linkLabel}</a>
+              ${meta}
+            </div>
+            <button type="button" data-doc="${escHtml(idAttr)}">Delete</button>
+          `;
+          target.appendChild(row);
         });
-        docList.querySelectorAll('button[data-doc]').forEach((btn) => {
-          btn.onclick = () => deleteDoc(Number(btn.dataset.doc));
+        target.querySelectorAll('button[data-doc]').forEach((btn) => {
+          btn.onclick = () => deleteDoc(btn.dataset.doc);
         });
+      }
+
+      function renderDocs(docs) {
+        const list = Array.isArray(docs) ? docs : [];
+        const normalised = list.map(normaliseDoc);
+        const complianceDocs = normalised.filter((doc) => doc.category === 'compliance');
+        const generalDocs = normalised.filter((doc) => doc.category !== 'compliance');
+        renderDocSection(docListGeneral, generalDocs, 'No documents yet.');
+        renderDocSection(docListCompliance, complianceDocs, 'No compliance documents yet.');
+      }
+
+      function formatTimestamp(value) {
+        if (!value) return null;
+        try {
+          return new Date(value).toLocaleString();
+        } catch {
+          return value;
+        }
+      }
+
+      function updateTermsStatus(extraNote) {
+        if (!termsStatus) return;
+        const parts = [];
+        if (draft?.terms_ok) {
+          const accepted = formatTimestamp(draft.terms_accepted_at);
+          parts.push(accepted ? `Terms accepted ${accepted}` : 'Terms accepted');
+        } else {
+          parts.push('Terms pending acceptance');
+        }
+        if (lastTermsSentAt) {
+          parts.push(`Sent ${formatTimestamp(lastTermsSentAt)}`);
+        }
+        if (extraNote) parts.push(extraNote);
+        termsStatus.textContent = parts.join(' • ');
       }
 
       async function loadDocuments(candidateId) {
+        const local = loadLocalDocs(candidateId).map((doc) => ({ ...doc, source: 'local' }));
+        localDocs = local;
         if (!candidateId) {
-          renderDocs([]);
+          currentDocs = [...localDocs];
+          renderDocs(currentDocs);
+          return;
+        }
+        if (readOnlyMode) {
+          currentDocs = [...localDocs];
+          renderDocs(currentDocs);
           return;
         }
         try {
           const res = await api('admin-candidate-docs-list', 'POST', { candidateId });
-          renderDocs(res?.documents || []);
+          const remote = (res?.documents || []).map((doc) => ({ ...doc, source: 'supabase' }));
+          currentDocs = [...remote, ...localDocs];
+          renderDocs(currentDocs);
         } catch (err) {
           console.error('[candidates] docs load failed', err);
-          renderDocs([]);
+          currentDocs = [...localDocs];
+          renderDocs(currentDocs);
         }
       }
 
-      async function deleteDoc(id) {
-        if (!id) return;
+      async function deleteDoc(idToken) {
+        if (!idToken) return;
+        if (String(idToken).startsWith('local:')) {
+          const localId = String(idToken).split(':')[1];
+          if (!localId) return;
+          if (!confirm('Remove this locally stored document?')) return;
+          removeLocalDoc(editing?.id, localId);
+          currentDocs = currentDocs.filter((doc) => doc.localId !== localId);
+          renderDocs(currentDocs);
+          toast('Local document removed', 'ok', 1800);
+          return;
+        }
+        if (readOnlyMode) {
+          toast('Preview deploy is read-only until Supabase is configured.', 'warn', 3200);
+          return;
+        }
+        const numericId = Number(idToken);
+        if (!numericId || Number.isNaN(numericId)) return;
         if (!confirm('Delete this document?')) return;
         try {
-          await api('admin-candidate-doc-delete', 'POST', { id });
-          currentDocs = currentDocs.filter((doc) => doc.id !== id);
+          await api('admin-candidate-doc-delete', 'POST', { id: numericId });
+          currentDocs = currentDocs.filter((doc) => doc.id !== numericId);
           renderDocs(currentDocs);
           toast('Document removed', 'ok', 1800);
         } catch (err) {
@@ -1128,18 +1335,47 @@
         });
       }
 
-      async function uploadDocument(candidateId, file, label) {
+      async function uploadDocument(candidateId, file, label, category = 'general') {
+        const prefix = category === 'compliance' ? '[Compliance] ' : '';
+        const finalLabel = `${prefix}${label || file.name}`;
+        if (readOnlyMode) {
+          try {
+            const base64 = await toBase64(file);
+            const dataUrl = `data:${file.type || 'application/octet-stream'};base64,${base64}`;
+            const localDoc = {
+              localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              label: finalLabel,
+              filename: file.name,
+              dataUrl,
+              category,
+              created_at: new Date().toISOString(),
+            };
+            storeLocalDoc(candidateId, localDoc);
+            localDocs = loadLocalDocs(candidateId).map((doc) => ({ ...doc, source: 'local' }));
+            currentDocs = [
+              ...currentDocs.filter((doc) => doc.source === 'supabase'),
+              ...localDocs,
+            ];
+            renderDocs(currentDocs);
+            toast('Document stored locally for preview', 'info', 2200);
+          } catch (err) {
+            console.error('[candidates] local upload error', err);
+            toast('Upload failed: ' + (err.message || err), 'error', 3600);
+          }
+          return;
+        }
+
         try {
           const data = await toBase64(file);
           const res = await api('admin-candidate-doc-upload', 'POST', {
             candidateId,
             name: file.name,
-            label: label || file.name,
+            label: finalLabel,
             contentType: file.type || 'application/octet-stream',
             data,
           });
           if (res?.document) {
-            currentDocs = [res.document, ...currentDocs];
+            currentDocs = [{ ...res.document, source: 'supabase' }, ...currentDocs.filter((doc) => doc.source !== 'supabase' || doc.id !== res.document.id)];
             renderDocs(currentDocs);
             toast('Document uploaded', 'ok', 1800);
           }
@@ -1216,32 +1452,106 @@
       }
 
       async function handleCvInputChange(event) {
-        const file = event.target.files?.[0];
+        const files = Array.from(event.target.files || []);
         event.target.value = '';
-        if (!file) return;
+        if (!files.length) return;
         if (cvMode === 'parse') {
+          const file = files[0];
           try {
             const text = await parseCvFile(file);
             const extracted = extractCvData(text);
             applyCvData(extracted);
             if (editing?.id) {
-              await uploadDocument(editing.id, file, 'CV');
+              await uploadDocument(editing.id, file, 'CV', 'general');
             } else {
-              pendingUpload = { file, label: 'CV' };
+              pendingUploads.push({ file, label: 'CV', category: 'general' });
               toast('CV ready. Save the candidate to upload the file.', 'info', 2600);
             }
           } catch (err) {
             toast('CV parse failed: ' + (err.message || err), 'error', 3600);
           }
         } else {
-          if (editing?.id) {
-            await uploadDocument(editing.id, file, file.name);
-          } else {
-            pendingUpload = { file, label: file.name };
-            toast('File queued. Save the candidate to upload.', 'info', 2400);
+          const category = cvMode === 'upload-compliance' ? 'compliance' : 'general';
+          await handleFiles(files, category);
+        }
+        cvMode = 'parse';
+      }
+
+      async function handleFiles(files, category = 'general') {
+        const items = Array.isArray(files) ? files : Array.from(files || []);
+        if (!items.length) return;
+        if (editing?.id) {
+          for (const file of items) {
+            await uploadDocument(editing.id, file, file.name, category);
           }
+        } else {
+          items.forEach((file) => {
+            pendingUploads.push({ file, label: file.name, category });
+          });
+          toast('File(s) queued. Save the candidate to upload.', 'info', 2400);
         }
       }
+
+      function setupDropZone(zone, category) {
+        if (!zone) return;
+        const highlight = () => zone.classList.add('drag');
+        const unhighlight = () => zone.classList.remove('drag');
+        ['dragenter', 'dragover'].forEach((evt) => {
+          zone.addEventListener(evt, (e) => { e.preventDefault(); highlight(); });
+        });
+        ['dragleave', 'dragend', 'drop'].forEach((evt) => {
+          zone.addEventListener(evt, (e) => { e.preventDefault(); unhighlight(); });
+        });
+        zone.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          unhighlight();
+          const files = Array.from(e.dataTransfer?.files || []);
+          if (files.length) {
+            await handleFiles(files, category);
+          }
+        });
+        zone.addEventListener('click', () => {
+          cvMode = category === 'compliance' ? 'upload-compliance' : 'upload';
+          cvInput?.click();
+        });
+        zone.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            zone.click();
+          }
+        });
+      }
+
+      async function sendTerms() {
+        if (!editing?.id) {
+          toast('Save the candidate before sending terms.', 'warn', 2600);
+          return;
+        }
+        if (readOnlyMode) {
+          toast('Preview deploy is read-only until Supabase is configured.', 'warn', 3200);
+          return;
+        }
+        try {
+          const payload = {
+            candidateId: editing.id,
+            name: editing.full_name || `${draft.first_name || ''} ${draft.last_name || ''}`.trim(),
+            email: draft.email || editing.email || null,
+            termsUrl: draft.contract_url || editing.contract_url || null,
+            provider: 'docusign',
+          };
+          const res = await api('admin-candidate-terms-send', 'POST', payload);
+          lastTermsSentAt = res?.sent_at || new Date().toISOString();
+          updateTermsStatus(res?.warning ? `Preview: ${res.warning}` : undefined);
+          if (res?.ok === false) {
+            toast('Terms logged locally — Supabase unavailable', 'warn', 3200);
+          } else {
+            toast('Terms dispatch logged', 'ok', 2200);
+          }
+        } catch (err) {
+          toast('Send failed: ' + (err.message || err), 'error', 3600);
+        }
+      }
+
       async function save(closeAfter=false){
         if (readOnlyMode) { toast('Preview deploy is read-only until Supabase is configured.', 'warn', 3200); return; }
         try{
@@ -1259,15 +1569,14 @@
             editing = { ...(editing || {}), ...body, id: savedId, full_name: savedName };
             draft = { ...editing };
 
-            if (pendingUpload) {
-              const upload = pendingUpload;
-              pendingUpload = null;
-              await uploadDocument(savedId, upload.file, upload.label);
-            } else {
-              await loadDocuments(savedId);
+            if (pendingUploads.length) {
+              for (const upload of pendingUploads.splice(0, pendingUploads.length)) {
+                await uploadDocument(savedId, upload.file, upload.label, upload.category || 'general');
+              }
             }
+            await loadDocuments(savedId);
           } else {
-            pendingUpload = null;
+            pendingUploads = [];
           }
 
           await load();
@@ -1297,6 +1606,10 @@
       $('#btnSaveClose').onclick = ()=>save(true);
       if (btnParseCv) btnParseCv.onclick = ()=>{ cvMode = 'parse'; cvInput?.click(); };
       if (btnUploadCv) btnUploadCv.onclick = ()=>{ cvMode = 'upload'; cvInput?.click(); };
+      if (btnUploadCompliance) btnUploadCompliance.onclick = ()=>{ cvMode = 'upload-compliance'; cvInput?.click(); };
+      if (btnSendTerms) btnSendTerms.onclick = ()=>sendTerms();
+      setupDropZone(docDropGeneral, 'general');
+      setupDropZone(docDropCompliance, 'compliance');
       if (cvInput) cvInput.addEventListener('change', handleCvInputChange);
       document.addEventListener('keydown',(e)=>{
         if ((e.ctrlKey||e.metaKey) && e.key==='r'){ e.preventDefault(); load(); }

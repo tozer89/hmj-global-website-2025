@@ -429,10 +429,12 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   const fmtDate = (d)=>d||'';
   function badgeForStatus(s){ statusBadge.textContent = s||'-'; statusBadge.className='badge '+(s||'draft'); }
   function lockForStatus(s){
-    const locked = (s !== 'draft' && s !== 'rejected');
+    const locked = false;
     sheetBody.querySelectorAll('input,textarea').forEach(i=> i.disabled = locked);
-    btnSave.disabled = locked; btnSubmit.disabled = locked;
-    btnApprove.disabled = (s!=='submitted'); btnReject.disabled = (s!=='submitted');
+    btnSave.disabled = locked;
+    btnSubmit.disabled = locked;
+    btnApprove.disabled = (s!=='submitted');
+    btnReject.disabled = (s!=='submitted');
   }
   function sumHours(){
     const t = Object.values(CUR.entries||{}).reduce((a,r)=>({std:a.std+Number(r.std||0), ot:a.ot+Number(r.ot||0)}),{std:0,ot:0});

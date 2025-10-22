@@ -86,6 +86,7 @@ exports.handler = async (event, context) => {
       timesheet_status: trim(body.timesheet_status),
       tax_id: trim(body.tax_id),
       notes: trim(body.notes),
+      terms_accepted_at: trim(body.terms_accepted_at),
     };
 
     if (hasSkills) {
@@ -102,6 +103,9 @@ exports.handler = async (event, context) => {
 
     if (!Object.prototype.hasOwnProperty.call(body, 'terms_ok')) {
       delete rec.terms_ok;
+    }
+    if (!rec.terms_accepted_at) {
+      delete rec.terms_accepted_at;
     }
 
     if (!rec.first_name || !rec.last_name) throw coded(400, 'First & last name are required');
@@ -127,6 +131,27 @@ exports.handler = async (event, context) => {
         .single();
     };
 
+    let originalTermsOk = null;
+    let originalTermsAt = null;
+    if (rec.id) {
+      try {
+        const { data: existing, error: existingError } = await supabase
+          .from('candidates')
+          .select('terms_ok, terms_accepted_at')
+          .eq('id', rec.id)
+          .maybeSingle();
+        if (!existingError && existing) {
+          originalTermsOk = existing.terms_ok ?? null;
+          originalTermsAt = existing.terms_accepted_at ?? null;
+        }
+      } catch (err) {
+        const msg = String(err?.message || '').toLowerCase();
+        if (!msg.includes('terms_accepted_at')) {
+          console.warn('[candidates] preload terms check failed', err?.message || err);
+        }
+      }
+    }
+
     let attempt = 0;
     let result;
     let error;
@@ -138,15 +163,19 @@ exports.handler = async (event, context) => {
       ({ data: result, error } = await doUpsert(working));
       if (!error) break;
 
-      const match = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(error.message || '');
-      if (match) {
-        const missingColumn = match[1];
-        if (missingColumn && missingColumn in working && !dropped.has(missingColumn)) {
-          console.warn('[candidates] dropping unknown column %s and retrying', missingColumn);
-          delete working[missingColumn];
-          dropped.add(missingColumn);
-          continue;
-        }
+      const message = String(error.message || '');
+      const match = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(message);
+      let missingColumn = match ? match[1] : null;
+      const lowerMessage = message.toLowerCase();
+      if (!missingColumn) {
+        if (lowerMessage.includes('address_json')) missingColumn = 'address_json';
+        else if (lowerMessage.includes('terms_accepted_at')) missingColumn = 'terms_accepted_at';
+      }
+      if (missingColumn && missingColumn in working && !dropped.has(missingColumn)) {
+        console.warn('[candidates] dropping unknown column %s and retrying', missingColumn);
+        delete working[missingColumn];
+        dropped.add(missingColumn);
+        continue;
       }
 
       throw coded(500, error.message);
@@ -155,14 +184,36 @@ exports.handler = async (event, context) => {
     if (error) throw coded(500, error.message);
 
     // Optional: audit trail
+    const auditMeta = { ...working, id: result.id };
+    if (auditMeta.terms_accepted_at && !working.terms_accepted_at) {
+      auditMeta.terms_accepted_at = auditMeta.terms_accepted_at;
+    }
+
     await supabase.from('admin_audit_logs').insert({
       actor_email: user.email,
       actor_id: user.sub || user.id || null,
       action: rec.id ? 'candidate.update' : 'candidate.insert',
       target_type: 'candidate',
       target_id: String(result.id),
-      meta: { ...working, id: result.id },
+      meta: auditMeta,
     });
+
+    const finalTermsOk = !!(result?.terms_ok ?? working.terms_ok ?? rec.terms_ok);
+    const acceptedAtValue = rec.terms_accepted_at || result?.terms_accepted_at || working.terms_accepted_at || auditMeta.terms_accepted_at || null;
+
+    if (finalTermsOk && !originalTermsOk) {
+      await supabase.from('admin_audit_logs').insert({
+        actor_email: user.email,
+        actor_id: user.sub || user.id || null,
+        action: 'candidate.terms_accept',
+        target_type: 'candidate',
+        target_id: String(result.id),
+        meta: {
+          accepted_at: acceptedAtValue || new Date().toISOString(),
+          previous_accepted_at: originalTermsAt,
+        },
+      });
+    }
 
     const took_ms = Date.now() - t0;
     return { statusCode: 200, body: JSON.stringify({ id: result.id, ok: true, took_ms }) };
