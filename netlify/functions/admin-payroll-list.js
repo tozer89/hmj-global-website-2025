@@ -1,5 +1,8 @@
 // netlify/functions/admin-payroll-list.js
 const { getContext } = require('./_auth.js');
+const { supabaseStatus } = require('./_supabase.js');
+const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
+const { loadStaticAssignments } = require('./_assignments-helpers.js');
 
 function toNumber(value) {
   const num = Number(value);
@@ -171,8 +174,120 @@ exports.handler = async (event, context) => {
     const searchNeedle = String(q || '').trim().toLowerCase();
 
     if (!supabase || typeof supabase.from !== 'function') {
-      const reason = supabaseError?.message || 'Supabase not configured';
-      return { statusCode: 503, body: JSON.stringify({ error: reason, code: 'supabase_unavailable' }) };
+      const staticTimesheets = loadStaticTimesheets();
+      if (!staticTimesheets.length) {
+        const reason = supabaseError?.message || 'Supabase not configured';
+        return { statusCode: 503, body: JSON.stringify({ error: reason, code: 'supabase_unavailable' }) };
+      }
+
+      const assignments = loadStaticAssignments();
+      const assignmentMap = new Map(assignments.map((a) => [Number(a.id), a]));
+
+      const filteredRows = staticTimesheets
+        .filter((ts) => {
+          if (Array.isArray(ids) && ids.length && !ids.map(String).includes(String(ts.id))) return false;
+          if (weekFrom && ts.week_ending < weekFrom) return false;
+          if (weekTo && ts.week_ending > weekTo) return false;
+          if (status && status !== 'all') {
+            const wanted = new Set(String(status).split(',').map((v) => v.trim().toLowerCase()).filter(Boolean));
+            if (wanted.size && !wanted.has(String(ts.payroll_status || ts.status || '').toLowerCase())) {
+              return false;
+            }
+          }
+          if (searchNeedle) {
+            const haystack = [
+              ts.id,
+              ts.candidate_name,
+              ts.assignment_ref,
+              ts.client_name,
+              ts.project_name,
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+            if (!haystack.includes(searchNeedle)) return false;
+          }
+          return true;
+        })
+        .map((ts) => {
+          const assignment = assignmentMap.get(Number(ts.assignment_id)) || ts.assignment || null;
+          const candidate = ts.candidate || null;
+          const payrollStatus = String(ts.payroll_status || ts.status || '').toLowerCase() || 'pending';
+          const bank = {
+            name: candidate?.bank?.name || candidate?.bank_name || null,
+            sortCode: candidate?.bank?.sort_code || candidate?.sort_code || candidate?.bank_sort_code || null,
+            account: candidate?.bank?.account_number || candidate?.bank_account || null,
+            iban: candidate?.bank?.iban || candidate?.bank_iban || null,
+            swift: candidate?.bank?.swift || candidate?.bank_swift || null,
+          };
+
+          return {
+            id: ts.id,
+            weekEnding: ts.week_ending,
+            weekStart: ts.week_start,
+            status: ts.status,
+            payrollStatus,
+            candidateId: ts.candidate_id,
+            candidateName: ts.candidate_name || candidate?.full_name || null,
+            candidate: candidate
+              ? {
+                  name: candidate.name || candidate.full_name || candidate.fullName || ts.candidate_name || null,
+                  payrollRef: candidate.payrollRef || candidate.payroll_ref || null,
+                  payType: candidate.payType || candidate.pay_type || null,
+                  email: candidate.email || null,
+                  phone: candidate.phone || null,
+                  bank,
+                }
+              : null,
+            assignmentId: ts.assignment_id,
+            assignment: assignment
+              ? {
+                  id: assignment.id,
+                  jobTitle: assignment.job_title || assignment.jobTitle || null,
+                  clientName: assignment.client_name || assignment.clientName || ts.client_name || null,
+                  ref: assignment.as_ref || assignment.ref || ts.assignment_ref || null,
+                  payFreq: assignment.pay_freq || null,
+                  currency: assignment.currency || ts.currency || 'GBP',
+                  poNumber: assignment.po_number || null,
+                }
+              : ts.assignment || null,
+            projectName: ts.project_name || assignment?.project_name || assignment?.projectName || null,
+            siteName: assignment?.site_name || assignment?.siteName || null,
+            totals: {
+              hours: Number(ts.total_hours || 0),
+              ot: Number(ts.ot_hours || 0),
+              pay: Number(ts.pay_amount || 0),
+              charge: Number(ts.charge_amount || 0),
+            },
+            rate: {
+              pay: Number(ts.rate_pay || (assignment && assignment.rate_pay) || 0),
+              charge: Number(ts.rate_charge || (assignment && assignment.charge_std) || 0),
+            },
+            currency: ts.currency || assignment?.currency || 'GBP',
+            approvedAt: ts.approved_at || null,
+            submittedAt: ts.submitted_at || null,
+            updatedAt: ts.approved_at || ts.submitted_at || ts.week_ending || null,
+            audit: null,
+            notes: ts.notes || '',
+          };
+        });
+
+      const stats = summarise(filteredRows);
+      const payload = { rows: filteredRows, stats, readOnly: true, source: 'static', supabase: supabaseStatus() };
+
+      if (wantsCsv) {
+        return {
+          statusCode: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="payroll.csv"',
+          },
+          body: toCsv(filteredRows),
+        };
+      }
+
+      console.warn('[payroll] using static fallback dataset (%d rows)', filteredRows.length);
+      return { statusCode: 200, body: JSON.stringify(payload) };
     }
 
     let query = supabase

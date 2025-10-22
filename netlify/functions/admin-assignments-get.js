@@ -1,11 +1,25 @@
 // netlify/functions/admin-assignments-get.js
 const { getContext } = require('./_auth.js');
+const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
+const { loadStaticAssignments } = require('./_assignments-helpers.js');
 
 exports.handler = async (event, context) => {
   try {
-    const { supabase } = await getContext(event, context, { requireAdmin: true });
+    await getContext(event, context, { requireAdmin: true });
     const { id } = JSON.parse(event.body || '{}');
     if (!id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing id' }) };
+
+    if (!hasSupabase()) {
+      const rows = loadStaticAssignments();
+      const match = rows.find((row) => String(row.id) === String(id));
+      if (!match) {
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ error: 'Assignment not found in static dataset', supabase: supabaseStatus() }),
+        };
+      }
+      return { statusCode: 200, body: JSON.stringify({ ...match, readOnly: true, source: 'static' }) };
+    }
 
     const { data, error } = await supabase
       .from('assignments')

@@ -1,6 +1,7 @@
 // netlify/functions/admin-assignments-list.js
-const { supabase } = require('./_supabase.js');
+const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
+const { loadStaticAssignments } = require('./_assignments-helpers.js');
 
 function normaliseLike(value = '') {
   return String(value)
@@ -73,6 +74,61 @@ exports.handler = async (event, context) => {
       }
       return q;
     };
+
+    if (!hasSupabase()) {
+      const fallback = loadStaticAssignments();
+      const idSet = new Set(ids.map((value) => String(value)));
+      const searchLower = search.toLowerCase();
+      const filtered = fallback.filter((row) => {
+        if (ids.length && !idSet.has(String(row.id))) return false;
+        if (status && String(row.status || '').toLowerCase() !== status.toLowerCase()) return false;
+        if (searchLower) {
+          const haystack = [
+            row.job_title,
+            row.client_name,
+            row.candidate_name,
+            row.as_ref,
+            row.po_number,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          if (!haystack.includes(searchLower)) return false;
+        }
+        return true;
+      });
+
+      const rows = wantsCsv
+        ? filtered
+        : filtered.slice(offset, offset + pageSize).map((row) => ({
+            ...row,
+            client_site: row.client_site || row.site_name || null,
+          }));
+
+      console.warn('[assignments] using static fallback dataset (%d rows)', filtered.length);
+
+      if (wantsCsv) {
+        return {
+          statusCode: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="assignments.csv"',
+          },
+          body: toCsv(filtered),
+        };
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          rows,
+          total: filtered.length,
+          readOnly: true,
+          source: 'static',
+          supabase: supabaseStatus(),
+        }),
+      };
+    }
 
     const countQuery = baseFilters(
       supabase

@@ -1,6 +1,7 @@
 // netlify/functions/admin-clients-list.js
-const { supabase } = require('./_supabase.js');
+const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
+const { loadStaticClients } = require('./_clients-helpers.js');
 
 exports.handler = async (event, context) => {
   try {
@@ -9,6 +10,20 @@ exports.handler = async (event, context) => {
 
     // Accept optional { q } for search
     const { q } = JSON.parse(event.body || '{}');
+
+    if (!hasSupabase()) {
+      const rows = loadStaticClients();
+      const needle = String(q || '').trim().toLowerCase();
+      const filtered = !needle
+        ? rows
+        : rows.filter((row) => row.name.toLowerCase().includes(needle));
+      console.warn('[clients] using static fallback dataset (%d rows)', filtered.length);
+      return {
+        statusCode: 200,
+        body: JSON.stringify(filtered),
+        headers: { 'x-hmj-fallback': 'static-clients' },
+      };
+    }
 
     // MINIMAL & SAFE selection — avoids missing column errors
     // Only select columns you're certain exist: id, name.
