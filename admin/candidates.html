@@ -218,6 +218,165 @@
   <!-- Toast host -->
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
+  <!-- Embedded fallback dataset so previews always render something -->
+  <script type="application/json" id="candidatesFallbackData">
+    {
+      "candidates": [
+        {
+          "id": 101,
+          "ref": "HMJ-101",
+          "first_name": "Ava",
+          "last_name": "Miles",
+          "email": "ava.miles@example.com",
+          "phone": "+44 7700 900101",
+          "status": "In progress",
+          "job_title": "Senior Quantity Surveyor",
+          "client_name": "Hull Pharma Fitout",
+          "pay_type": "PAYE",
+          "payroll_ref": "PAY101",
+          "internal_ref": "INT-101",
+          "address1": "10 Riverside Way",
+          "town": "Leeds",
+          "county": "West Yorkshire",
+          "postcode": "LS1 2AB",
+          "country": "United Kingdom",
+          "notes": "Immediately available. Data centre specialist with NEC4 experience.",
+          "created_at": "2024-01-04T09:30:00Z",
+          "updated_at": "2024-03-12T15:20:00Z",
+          "pay_type_label": "PAYE",
+          "payroll_rate": 450,
+          "bank_name": "NatWest",
+          "bank_sort_code": "12-34-56",
+          "bank_account": "12345678",
+          "emergency_name": "Oliver Miles",
+          "emergency_phone": "+44 7700 900501",
+          "tax_id": "NT123456C",
+          "timesheet_status": "In progress"
+        },
+        {
+          "id": 102,
+          "ref": "HMJ-102",
+          "first_name": "Leo",
+          "last_name": "Campbell",
+          "email": "leo.campbell@example.com",
+          "phone": "+44 7700 900102",
+          "status": "Complete",
+          "job_title": "MEP Project Manager",
+          "client_name": "Eemshaven Hyperscale",
+          "pay_type": "PSC",
+          "payroll_ref": "PSC102",
+          "internal_ref": "INT-204",
+          "address1": "48 Baltic Wharf",
+          "town": "Newcastle",
+          "county": "Tyne and Wear",
+          "postcode": "NE1 5XD",
+          "country": "United Kingdom",
+          "notes": "Dutch residency, fluent in English/German.",
+          "created_at": "2024-01-18T11:00:00Z",
+          "updated_at": "2024-04-28T09:10:00Z",
+          "pay_type_label": "PSC",
+          "payroll_rate": 520,
+          "bank_name": "Monzo",
+          "bank_sort_code": "04-00-04",
+          "bank_account": "22223334",
+          "emergency_name": "Charlotte Campbell",
+          "emergency_phone": "+44 7700 911102",
+          "timesheet_status": "Complete"
+        },
+        {
+          "id": 103,
+          "ref": "HMJ-103",
+          "first_name": "Ella",
+          "last_name": "Thompson",
+          "email": "ella.thompson@example.com",
+          "phone": "+44 7700 900103",
+          "status": "Archived",
+          "job_title": "CSA Package Manager",
+          "client_name": "Smith & Nephew",
+          "pay_type": "PAYE",
+          "payroll_ref": "PAY203",
+          "internal_ref": "INT-305",
+          "address1": "5 Orchard Way",
+          "town": "Cambridge",
+          "county": "Cambridgeshire",
+          "postcode": "CB1 3AX",
+          "country": "United Kingdom",
+          "notes": "Relocated to Canada. Keep for future remote roles.",
+          "created_at": "2023-11-10T10:15:00Z",
+          "updated_at": "2024-02-02T12:05:00Z",
+          "pay_type_label": "PAYE",
+          "payroll_rate": 380,
+          "bank_name": "HSBC",
+          "bank_sort_code": "40-11-60",
+          "bank_account": "44556677",
+          "emergency_name": "Daniel Thompson",
+          "emergency_phone": "+44 7700 921103",
+          "timesheet_status": "Archived"
+        },
+        {
+          "id": 104,
+          "ref": "HMJ-104",
+          "first_name": "Noah",
+          "last_name": "Patel",
+          "email": "noah.patel@example.com",
+          "phone": "+44 7700 900104",
+          "status": "In progress",
+          "job_title": "Electrical Supervisor",
+          "client_name": "DataSpark",
+          "pay_type": "Umbrella",
+          "payroll_ref": "UMB104",
+          "internal_ref": "INT-409",
+          "address1": "88 Foundry Lane",
+          "town": "Birmingham",
+          "county": "West Midlands",
+          "postcode": "B3 1DX",
+          "country": "United Kingdom",
+          "notes": "HV/MV background. Needs IPAF renewal in July.",
+          "created_at": "2024-02-12T08:00:00Z",
+          "updated_at": "2024-05-01T17:40:00Z",
+          "pay_type_label": "Umbrella",
+          "payroll_rate": 32,
+          "bank_name": "Barclays",
+          "bank_sort_code": "20-45-23",
+          "bank_account": "76543210",
+          "emergency_name": "Priya Patel",
+          "emergency_phone": "+44 7700 932104",
+          "timesheet_status": "In progress"
+        },
+        {
+          "id": 105,
+          "ref": "HMJ-105",
+          "first_name": "Sienna",
+          "last_name": "Hughes",
+          "email": "sienna.hughes@example.com",
+          "phone": "+44 7700 900105",
+          "status": "Complete",
+          "job_title": "Document Controller",
+          "client_name": "Hull Pharma Fitout",
+          "pay_type": "PAYE",
+          "payroll_ref": "PAY305",
+          "internal_ref": "INT-510",
+          "address1": "22 Dock Street",
+          "town": "Hull",
+          "county": "East Yorkshire",
+          "postcode": "HU1 1TB",
+          "country": "United Kingdom",
+          "notes": "Rolling off in June. Prefers hybrid roles.",
+          "created_at": "2024-03-05T13:45:00Z",
+          "updated_at": "2024-04-30T11:15:00Z",
+          "pay_type_label": "PAYE",
+          "payroll_rate": 220,
+          "bank_name": "Santander",
+          "bank_sort_code": "09-01-26",
+          "bank_account": "99887766",
+          "emergency_name": "George Hughes",
+          "emergency_phone": "+44 7700 943105",
+          "timesheet_status": "Complete"
+        }
+      ]
+    }
+  </script>
+
   <!-- Single page boot -->
   <script>
   (function startCandidates(){
@@ -500,14 +659,47 @@
         if (closeBtn) { closeBtn.style.display=''; closeBtn.onclick = ()=> renderQuick(null); }
       }
 
+      function normaliseCandidateRows(rows) {
+        return (rows || []).map((r) => ({
+          ...r,
+          name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+        }));
+      }
+
+      function loadEmbeddedCandidates(){
+        try {
+          const el = document.getElementById('candidatesFallbackData');
+          if (!el) return null;
+          const raw = el.textContent || '';
+          if (!raw.trim()) return null;
+          const json = JSON.parse(raw);
+          const rows = Array.isArray(json?.candidates)
+            ? json.candidates
+            : Array.isArray(json)
+              ? json
+              : [];
+          if (!rows.length) return null;
+          return normaliseCandidateRows(rows);
+        } catch (err) {
+          console.warn('[candidates] embedded fallback parse failed', err);
+          return null;
+        }
+      }
+
       async function loadFallbackCandidates(){
+        const embedded = loadEmbeddedCandidates();
+        if (embedded && embedded.length) return embedded;
         try {
           const res = await fetch('/data/candidates.json', { cache: 'no-store' });
           if (!res.ok) throw new Error('HTTP '+res.status);
           const json = await res.json();
-          const rows = Array.isArray(json?.candidates) ? json.candidates : [];
-          rows.forEach(r => { r.name = `${r.first_name||''} ${r.last_name||''}`.trim(); });
-          return rows;
+          const rows = Array.isArray(json?.candidates)
+            ? json.candidates
+            : Array.isArray(json)
+              ? json
+              : [];
+          if (!rows.length) return null;
+          return normaliseCandidateRows(rows);
         } catch (err) {
           console.error('[candidates] fallback load error', err);
           return null;
@@ -527,8 +719,7 @@
           if (res?.supabase?.ok) chip('supabase: live','ok','supabase');
           else chip('supabase: '+(res?.supabase?.error||'offline'),'warn','supabase');
           chip(readOnlyMode ? 'mode: read-only':'mode: editable', readOnlyMode?'warn':'ok','mode');
-          allRows = Array.isArray(res) ? res : (res.rows || []);
-          allRows.forEach(r=>{ r.name = `${r.first_name||''} ${r.last_name||''}`.trim(); });
+          allRows = normaliseCandidateRows(Array.isArray(res) ? res : (res.rows || []));
           page = 1; selected.clear(); enableDelete();
           render(); renderQuick(null);
           chip('list: ok','ok','list');

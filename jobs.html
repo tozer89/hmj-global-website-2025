@@ -859,14 +859,22 @@
       return { rows: [], source: 'empty' };
     }
 
+    function deriveSections(jobs){
+      const map = new Map();
+      jobs.forEach((job) => {
+        const key = job.sectionKey || slugify(job.sectionLabel || job.section || 'general') || 'general';
+        const label = job.sectionLabel || job.section || toTitle(key) || 'General';
+        if (!map.has(key)) map.set(key, label);
+      });
+      return Array.from(map, ([key, label]) => ({ key, label })).sort((a, b) => a.label.localeCompare(b.label));
+    }
+
     function buildDerivedCollections(jobs){
-      const sections = new Map();
       const locations = new Map();
       const disciplines = new Map();
       const tags = new Map();
 
       jobs.forEach((job) => {
-        sections.set(job.sectionKey, job.sectionLabel || job.section || toTitle(job.sectionKey));
         const locValue = job.locationCode || 'various';
         const locLabel = job.locationText || toTitle(locValue);
         if (!locations.has(locValue)) locations.set(locValue, locLabel);
@@ -879,7 +887,7 @@
         });
       });
 
-      jobsState.sections = Array.from(sections, ([key, label]) => ({ key, label })).sort((a, b) => a.label.localeCompare(b.label));
+      jobsState.sections = deriveSections(jobs);
       jobsState.locations = Array.from(locations, ([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
       jobsState.disciplines = Array.from(disciplines, ([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
       jobsState.tags = Array.from(tags, ([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
@@ -923,7 +931,17 @@
     function paintJobs(jobs){
       if (!jobsContainer) return;
       jobsContainer.innerHTML = '';
-      jobsState.sections.forEach((section) => {
+      const sections = (Array.isArray(jobsState.sections) && jobsState.sections.length)
+        ? jobsState.sections
+        : deriveSections(jobs);
+
+      if (!sections.length || !jobs.length) {
+        jobsContainer.innerHTML = '<div class="no-results">No jobs are available right now. Please check back soon.</div>';
+        refreshJobsElements();
+        return;
+      }
+
+      sections.forEach((section) => {
         const items = jobs.filter((job) => job.sectionKey === section.key);
         if (!items.length) return;
         const title = document.createElement('div');
@@ -936,6 +954,8 @@
         jobsContainer.appendChild(title);
         jobsContainer.appendChild(board);
       });
+
+      refreshJobsElements();
     }
 
     function populateLocationOptions(){
