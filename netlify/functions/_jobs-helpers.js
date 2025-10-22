@@ -1,4 +1,7 @@
 // netlify/functions/_jobs-helpers.js
+const path = require('path');
+const fs = require('fs');
+
 const SECTION_PRESETS = new Map([
   ['commercial', 'Commercial'],
   ['dc', 'Data Centre Delivery'],
@@ -11,12 +14,12 @@ const SECTION_PRESETS = new Map([
   ['ict-commissioning', 'ICT & Commissioning'],
 ]);
 
-function safeRequire(path) {
+function readJsonSafe(filePath) {
   try {
-    // eslint-disable-next-line global-require, import/no-dynamic-require
-    return require(path);
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(raw);
   } catch (err) {
-    console.warn('[jobs] dataset load failed (%s): %s', path, err?.message || err);
+    console.warn('[jobs] dataset read failed (%s): %s', filePath, err?.message || err);
     return null;
   }
 }
@@ -28,10 +31,46 @@ function extractJobs(source) {
   return [];
 }
 
-const LOCAL_DATA = safeRequire('../../data/jobs.json');
-const SEEDED_DATA = safeRequire('./_data/jobs.seed.json');
-const EMBEDDED_RAW = [...extractJobs(LOCAL_DATA), ...extractJobs(SEEDED_DATA)];
-let STATIC_JOBS = Array.isArray(EMBEDDED_RAW) ? EMBEDDED_RAW.slice() : [];
+const SEED_PATH = path.join(__dirname, '_data', 'jobs.seed.json');
+const LOCAL_PATH = path.join(__dirname, '..', '..', 'data', 'jobs.json');
+
+let STATIC_JOBS = [];
+
+function ensureStaticJobs() {
+  if (STATIC_JOBS.length) return STATIC_JOBS;
+
+  const embedded = extractJobs(readJsonSafe(SEED_PATH));
+  const local = extractJobs(readJsonSafe(LOCAL_PATH));
+
+  const combined = [...embedded, ...local];
+  if (!combined.length) {
+    console.warn('[jobs] no static datasets found — using hard-coded seed');
+    // Minimal inline seed so previews never break entirely.
+    combined.push({
+      id: 'hmj-demo-role',
+      title: 'Construction Manager — Data Centre',
+      status: 'live',
+      section: 'Data Centre Delivery',
+      location_text: 'London, UK',
+      overview: 'Preview data is active because Supabase could not be reached.',
+      requirements: [
+        '10+ years delivering hyperscale data centres',
+        'Tier 1 contractor or consultancy background',
+      ],
+      responsibilities: [
+        'Lead site teams across civils, MEP and commissioning',
+        'Interface with client PMO and suppliers',
+      ],
+      keywords: 'data centre,construction manager,preview',
+      apply_url: '/contact.html?role=Construction%20Manager',
+      published: true,
+      sort_order: 999,
+    });
+  }
+
+  STATIC_JOBS = combined;
+  return STATIC_JOBS;
+}
 
 function slugify(value = '') {
   return String(value || '')
@@ -157,18 +196,9 @@ function toDbPayload(job = {}) {
   };
 }
 
-function preloadJobs() {
-  if (STATIC_JOBS.length) return STATIC_JOBS;
-  STATIC_JOBS = extractJobs(LOCAL_DATA).concat(extractJobs(SEEDED_DATA));
-  return STATIC_JOBS;
-}
-
-preloadJobs();
-
 function loadStaticJobs() {
-  if (!STATIC_JOBS.length) preloadJobs();
-  if (!STATIC_JOBS.length) return [];
-  return STATIC_JOBS.map(toJob);
+  const jobs = ensureStaticJobs();
+  return jobs.length ? jobs.map(toJob) : [];
 }
 
 module.exports = {
@@ -178,4 +208,5 @@ module.exports = {
   slugify,
   resolveSection,
   loadStaticJobs,
+  ensureStaticJobs,
 };

@@ -1,6 +1,6 @@
 // netlify/functions/jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
-const { toJob, loadStaticJobs } = require('./_jobs-helpers.js');
+const { toJob, loadStaticJobs, ensureStaticJobs } = require('./_jobs-helpers.js');
 
 const COLUMNS = `
   id,
@@ -25,6 +25,7 @@ const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-
 
 exports.handler = async (event) => {
   const fallback = loadStaticJobs();
+  const fallbackCount = fallback.length;
 
   if (!hasSupabase()) {
     return {
@@ -35,6 +36,7 @@ exports.handler = async (event) => {
         source: fallback.length ? 'static' : 'empty',
         warning: fallback.length ? undefined : 'Supabase client unavailable',
         supabase: supabaseStatus(),
+        fallbackCount,
       }),
     };
   }
@@ -59,15 +61,16 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ jobs: fallback, source: 'static', supabase: supabaseStatus() }),
+        body: JSON.stringify({ jobs: fallback, source: 'static', supabase: supabaseStatus(), fallbackCount }),
       };
     }
     return {
       statusCode: 200,
       headers: JSON_HEADERS,
-      body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus() }),
+      body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus(), fallbackCount }),
     };
   } catch (e) {
+    ensureStaticJobs();
     return {
       statusCode: 200,
       headers: JSON_HEADERS,
@@ -76,6 +79,7 @@ exports.handler = async (event) => {
         source: fallback.length ? 'static' : 'empty',
         warning: e.message || 'Unable to load jobs',
         supabase: supabaseStatus(),
+        fallbackCount,
       }),
     };
   }

@@ -138,6 +138,7 @@
     .job-details ul{margin:.25rem 0 .6rem 1.1rem}
     .job-details .apply-row{display:flex;justify-content:flex-end;margin-top:.6rem}
     .no-results{grid-column:1/-1;text-align:center;padding:30px;border:1px dashed rgba(26,26,46,.18);border-radius:16px;color:var(--muted);font-weight:700}
+    .jobs-alert{max-width:1200px;margin:16px auto 0;padding:14px 18px;border-radius:14px;border:1px solid rgba(58,102,179,.32);background:rgba(58,102,179,.08);color:var(--ink);font-weight:700;display:block}
 
     /* Toast */
     .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0f1322;color:#eaf0ff;border:1px solid rgba(95,134,255,.5);padding:10px 14px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:9999}
@@ -351,6 +352,7 @@
 
   <!-- ===== Dynamic jobs board ===== -->
   <div id="jobsDynamic"></div>
+  <div id="jobsFallbackNotice" class="jobs-alert" hidden></div>
 
   <!-- Embedded fallback dataset (used when API and static JSON are unavailable) -->
   <script type="application/json" id="jobsFallbackData">
@@ -804,7 +806,7 @@
         const raw = Array.isArray(out.keywords) ? out.keywords : String(out.keywords || '').split(',');
         out.tags = raw.map((t) => t.trim()).filter(Boolean);
       }
-      out.tags = out.tags.map((t) => t.trim()).filter(Boolean);
+      out.tags = Array.isArray(out.tags) ? out.tags.map((t) => t.trim()).filter(Boolean) : [];
       out.applyUrl = out.applyUrl || out.apply_url || '';
       out.keywords = out.keywords || out.tags.join(', ');
       return out;
@@ -896,7 +898,8 @@
     function renderJobCard(job){
       const statusClass = job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live';
       const applyUrl = job.applyUrl ? job.applyUrl.trim() : `contact.html?role=${encodeURIComponent(job.title)}`;
-      const tags = job.tags.map((tag) => `<span class="tag">${tag}</span>`).join('');
+      const tagsList = Array.isArray(job.tags) ? job.tags : [];
+      const tags = tagsList.length ? tagsList.map((tag) => `<span class="tag">${tag}</span>`).join('') : '';
       const respList = (job.responsibilities || []).map((item) => `<li>${item}</li>`).join('');
       const reqList = (job.requirements || []).map((item) => `<li>${item}</li>`).join('');
       return `
@@ -907,7 +910,7 @@
            data-type="${job.type}"
            data-disc="${job.disciplineValue}"
            data-section="${job.sectionKey}"
-           data-tags="${job.tags.map((t) => t.toLowerCase()).join(',')}"
+           data-tags="${tagsList.map((t) => t.toLowerCase()).join(',')}"
            data-keywords="${(job.keywords || '').toLowerCase()}">
         <h3>${job.title}</h3>
         <span class="status ${statusClass}">${job.status === 'closed' ? 'Closed' : job.status === 'interviewing' ? 'Interviewing' : 'Taking Candidates'}</span>
@@ -999,18 +1002,34 @@
     }
 
     async function renderJobs(){
-      const { rows, source } = await resolveJobs();
-      jobsState.source = source;
-      const published = Array.isArray(rows) ? rows.filter(job => job.published !== false) : [];
-      jobsState.all = published.map(normaliseJob);
-      buildDerivedCollections(jobsState.all);
-      paintJobs(jobsState.all);
-      updateFilterSources();
-      refreshChips();
-      bindChipEvents();
-      bindJobCardEvents();
-      if(source !== 'api') {
-        console.warn(`jobs rendered using ${source} fallback (${jobsState.all.length} records)`);
+      const notice = document.getElementById('jobsFallbackNotice');
+      if (notice) notice.hidden = true;
+      try {
+        const { rows, source } = await resolveJobs();
+        jobsState.source = source;
+        const published = Array.isArray(rows) ? rows.filter(job => job && job.published !== false) : [];
+        jobsState.all = published.map(normaliseJob);
+        buildDerivedCollections(jobsState.all);
+        paintJobs(jobsState.all);
+        updateFilterSources();
+        refreshChips();
+        bindChipEvents();
+        bindJobCardEvents();
+        if(source !== 'api') {
+          console.warn(`jobs rendered using ${source} fallback (${jobsState.all.length} records)`);
+          if (notice) {
+            notice.hidden = false;
+            notice.textContent = jobsState.all.length
+              ? `Showing ${jobsState.all.length} preview roles because the live jobs database was unavailable (${source}).`
+              : 'Job data is temporarily unavailable. Please try again shortly.';
+          }
+        }
+      } catch (err) {
+        console.error('jobs render failed', err);
+        if (notice) {
+          notice.hidden = false;
+          notice.textContent = 'Job data failed to load. Please refresh or contact support.';
+        }
       }
     }
     renderJobs();

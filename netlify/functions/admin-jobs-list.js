@@ -1,7 +1,7 @@
 // netlify/functions/admin-jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, loadStaticJobs } = require('./_jobs-helpers.js');
+const { toJob, loadStaticJobs, ensureStaticJobs } = require('./_jobs-helpers.js');
 
 const COLUMNS = `
   id,
@@ -27,6 +27,7 @@ const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-
 
 exports.handler = async (event, context) => {
   const fallback = loadStaticJobs();
+  const fallbackCount = fallback.length;
 
   try {
     await getContext(event, context, { requireAdmin: true });
@@ -41,6 +42,7 @@ exports.handler = async (event, context) => {
           readOnly: true,
           warning: fallback.length ? undefined : 'Supabase client unavailable',
           supabase: supabaseStatus(),
+          fallbackCount,
         }),
       };
     }
@@ -71,17 +73,18 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ jobs: seeded, source: 'static', seeded: true, supabase: supabaseStatus() }),
+        body: JSON.stringify({ jobs: seeded, source: 'static', seeded: true, supabase: supabaseStatus(), fallbackCount }),
       };
     }
     return {
       statusCode: 200,
       headers: JSON_HEADERS,
-      body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus() }),
+      body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus(), fallbackCount }),
     };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     const source = fallback.length ? 'static' : 'empty';
+    ensureStaticJobs();
     return {
       statusCode: fallback.length ? 200 : status,
       headers: JSON_HEADERS,
@@ -91,6 +94,7 @@ exports.handler = async (event, context) => {
         source,
         error: e.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
         supabase: supabaseStatus(),
+        fallbackCount,
       }),
     };
   }
