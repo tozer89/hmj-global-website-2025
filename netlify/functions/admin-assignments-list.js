@@ -23,7 +23,7 @@ function toCsv(rows = []) {
       row.as_ref || row.po_number || '',
       row.status || '',
       row.client_name || '',
-      row.candidate_name || row.contractor_name || '',
+      row.candidate_name || '',
       row.job_title || '',
       row.start_date || '',
       row.end_date || '',
@@ -75,7 +75,7 @@ exports.handler = async (event, context) => {
       return q;
     };
 
-    if (!hasSupabase()) {
+    const respondWithStatic = () => {
       const fallback = loadStaticAssignments();
       const idSet = new Set(ids.map((value) => String(value)));
       const searchLower = search.toLowerCase();
@@ -100,10 +100,10 @@ exports.handler = async (event, context) => {
 
       const rows = wantsCsv
         ? filtered
-        : filtered.slice(offset, offset + pageSize).map((row) => ({
-            ...row,
-            client_site: row.client_site || row.site_name || null,
-          }));
+          : filtered.slice(offset, offset + pageSize).map((row) => ({
+              ...row,
+              client_site: row.client_site || null,
+            }));
 
       console.warn('[assignments] using static fallback dataset (%d rows)', filtered.length);
 
@@ -128,22 +128,61 @@ exports.handler = async (event, context) => {
           supabase: supabaseStatus(),
         }),
       };
+    };
+
+    const shouldFallback = (err) => {
+      if (!err) return false;
+      const msg = String(err.message || err);
+      return /column .+ does not exist/i.test(msg) || /relation .+ does not exist/i.test(msg);
+    };
+
+    if (!hasSupabase()) {
+      return respondWithStatic();
     }
 
     const countQuery = baseFilters(
       supabase
-        .from('assignment_summary')
+        .from('assignments')
         .select('id', { count: 'exact', head: true })
     );
 
     const { count, error: countError } = await countQuery;
-    if (countError) throw countError;
+    if (countError) {
+      if (shouldFallback(countError)) {
+        console.warn('[assignments] count failed (%s) — falling back to static dataset', countError.message);
+        return respondWithStatic();
+      }
+      throw countError;
+    }
 
     let dataQuery = baseFilters(
       supabase
-        .from('assignment_summary')
+        .from('assignments')
         .select(
-          'id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, site_name, job_title, status, candidate_name, as_ref, rate_std, rate_pay, charge_std, charge_ot, start_date, end_date, currency, po_number, consultant_name, active'
+          [
+            'id',
+            'contractor_id',
+            'project_id',
+            'site_id',
+            'job_title',
+            'status',
+            'candidate_name',
+            'client_name',
+            'client_site',
+            'as_ref',
+            'po_number',
+            'po_ref',
+            'rate_std',
+            'rate_pay',
+            'charge_std',
+            'charge_ot',
+            'rate_charge',
+            'start_date',
+            'end_date',
+            'currency',
+            'consultant_name',
+            'active',
+          ].join(',')
         )
         .order('start_date', { ascending: false })
     );
@@ -153,7 +192,13 @@ exports.handler = async (event, context) => {
     }
 
     const { data, error } = await dataQuery;
-    if (error) throw error;
+    if (error) {
+      if (shouldFallback(error)) {
+        console.warn('[assignments] data fetch failed (%s) — falling back to static dataset', error.message);
+        return respondWithStatic();
+      }
+      throw error;
+    }
 
     if (wantsCsv) {
       return {
@@ -168,7 +213,7 @@ exports.handler = async (event, context) => {
 
     const rows = (data || []).map((row) => ({
       ...row,
-      client_site: row.client_site || row.site_name || null,
+      client_site: row.client_site || null,
     }));
 
     return {

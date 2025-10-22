@@ -29,9 +29,13 @@ exports.handler = async (event, context) => {
     );
 
     const siteRows = await safeSelect(() =>
+      supabase.from('sites').select('id,name,client_id').order('name', { ascending: true })
+    );
+
+    const assignmentSites = await safeSelect(() =>
       supabase
-        .from('assignment_summary')
-        .select('site_id,site_name,client_site,client_name,project_id')
+        .from('assignments')
+        .select('site_id,client_site,client_name,project_id')
         .not('site_id', 'is', null)
     );
 
@@ -43,16 +47,27 @@ exports.handler = async (event, context) => {
     }));
 
     const siteMap = new Map();
+
     siteRows.forEach((row) => {
+      if (!row || row.id == null) return;
+      siteMap.set(row.id, {
+        id: row.id,
+        name: row.name || null,
+        client_name: clientMap.get(row.client_id)?.name || null,
+        project_id: null,
+      });
+    });
+
+    assignmentSites.forEach((row) => {
       if (!row || row.site_id == null) return;
-      if (!siteMap.has(row.site_id)) {
-        siteMap.set(row.site_id, {
-          id: row.site_id,
-          name: row.site_name || row.client_site || null,
-          client_name: row.client_name || null,
-          project_id: row.project_id || null,
-        });
-      }
+      const existing = siteMap.get(row.site_id) || { id: row.site_id };
+      siteMap.set(row.site_id, {
+        ...existing,
+        id: row.site_id,
+        name: existing.name || row.client_site || null,
+        client_name: existing.client_name || row.client_name || null,
+        project_id: row.project_id || existing.project_id || null,
+      });
     });
     const sites = Array.from(siteMap.values()).sort((a, b) => {
       const aName = (a.name || '').toLowerCase();
