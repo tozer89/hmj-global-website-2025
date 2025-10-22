@@ -46,72 +46,15 @@ exports.handler = async (event, context) => {
     debug = true
   } = payload;
 
-  let ctx;
-  try {
-    // We always require admin for this endpoint
-    ctx = await getContext(event, context, { requireAdmin: true, debug: true });
-  } catch (e) {
-    const code = e.code || 500;
-    return {
-      statusCode: code,
-      body: JSON.stringify({ error: e.message || 'Unauthorized' })
-    };
-  }
-
-  const { supabase, supabaseError, roles, user } = ctx;
-  const usingServiceKey = true; // getContext() uses SERVICE KEY under the hood
-
-  const supabaseUnavailable = !supabase || typeof supabase.from !== 'function';
-  const shouldFallback = (err) => {
-    if (!err) return false;
-    const msg = String(err.message || err);
-    if (/column .+ does not exist/i.test(msg)) return true;
-    if (/relation .+ does not exist/i.test(msg)) return true;
-    if (/permission denied/i.test(msg)) return true;
-    if (/violates row-level security/i.test(msg)) return true;
-    return false;
-  };
-
-  // Quick diag endpoint (still requires admin)
-  if (isGET && (event.queryStringParameters?.diag === '1')) {
-    if (supabaseUnavailable) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          ok: false,
-          error: supabaseError?.message || 'supabase_unavailable',
-          who: { email: user?.email, roles },
-          usingServiceKey,
-          note: 'Supabase client missing — serving static data only.'
-        })
-      };
-    }
-
-    // Try a cheap HEAD count to see if the table is even visible
-    const headCount = await supabase
-      .from('candidates')
-      .select('*', { count: 'exact', head: true });
-
-    return {
-      statusCode: headCount.error ? 500 : 200,
-      body: JSON.stringify({
-        ok: !headCount.error,
-        count: headCount.count || 0,
-        error: headCount.error?.message || null,
-        who: { email: user?.email, roles },
-        usingServiceKey,
-        note: 'If count > 0 here but normal listing is empty, a filter/where is removing rows.'
-      })
-    };
-  }
-
   const pageNum = Math.max(1, Number(page) || 1);
   const pageSize = Math.min(250, Math.max(1, Number(size) || 25));
   const from = (pageNum - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  // Build base query
-  function serveStatic(reason) {
+  const identityMeta = { email: null, roles: [] };
+  let supabaseErrorMessage = null;
+
+  function serveStatic(reason, extra = {}) {
     const staticRows = loadStaticCandidates();
     const normalised = staticRows.map(toCandidate);
     const filterText = (val) => String(val || '').toLowerCase();
@@ -164,7 +107,8 @@ exports.handler = async (event, context) => {
       pages,
       readOnly: true,
       source: 'static',
-      supabase: { ok: false, error: reason || supabaseError?.message || 'supabase_unavailable' },
+      supabase: { ok: false, error: reason || supabaseErrorMessage || null },
+      auth: extra.auth || null,
     };
 
     if (debug) {
@@ -172,15 +116,78 @@ exports.handler = async (event, context) => {
         took_ms: Date.now() - started,
         mode: 'static',
         usingServiceKey: false,
-        supabaseError: reason || supabaseError?.message || null,
+        supabaseError: reason || supabaseErrorMessage || null,
+        who: identityMeta,
+        auth: extra.auth || null,
       };
     }
 
-    return { statusCode: 200, body: JSON.stringify(response) };
+    return { statusCode: extra.statusCode || 200, body: JSON.stringify(response) };
+  }
+
+  let ctx;
+  try {
+    ctx = await getContext(event, context, { requireAdmin: true, debug: true });
+  } catch (e) {
+    console.warn('[candidates] auth failed — serving static dataset', e?.message || e);
+    return serveStatic(e?.message || 'auth_failed', {
+      auth: { ok: false, status: e?.code || 403, error: e?.message || 'Unauthorized' },
+      statusCode: 200,
+    });
+  }
+
+  const { supabase, supabaseError, roles, user } = ctx;
+  identityMeta.email = user?.email || null;
+  identityMeta.roles = Array.isArray(roles) ? roles : [];
+  supabaseErrorMessage = supabaseError?.message || null;
+  const usingServiceKey = !!supabase;
+
+  const supabaseUnavailable = !supabase || typeof supabase.from !== 'function';
+  const shouldFallback = (err) => {
+    if (!err) return false;
+    const msg = String(err.message || err);
+    if (/column .+ does not exist/i.test(msg)) return true;
+    if (/relation .+ does not exist/i.test(msg)) return true;
+    if (/permission denied/i.test(msg)) return true;
+    if (/violates row-level security/i.test(msg)) return true;
+    return false;
+  };
+
+  // Quick diag endpoint (still requires admin)
+  if (isGET && (event.queryStringParameters?.diag === '1')) {
+    if (supabaseUnavailable) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          ok: false,
+          error: supabaseError?.message || 'supabase_unavailable',
+          who: { email: user?.email, roles },
+          usingServiceKey,
+          note: 'Supabase client missing — serving static data only.'
+        })
+      };
+    }
+
+    // Try a cheap HEAD count to see if the table is even visible
+    const headCount = await supabase
+      .from('candidates')
+      .select('*', { count: 'exact', head: true });
+
+    return {
+      statusCode: headCount.error ? 500 : 200,
+      body: JSON.stringify({
+        ok: !headCount.error,
+        count: headCount.count || 0,
+        error: headCount.error?.message || null,
+        who: { email: user?.email, roles },
+        usingServiceKey,
+        note: 'If count > 0 here but normal listing is empty, a filter/where is removing rows.'
+      })
+    };
   }
 
   if (supabaseUnavailable) {
-    return serveStatic();
+    return serveStatic(supabaseError?.message || 'supabase_unavailable');
   }
 
   let query = supabase

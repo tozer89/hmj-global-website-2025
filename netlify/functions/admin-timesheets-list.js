@@ -129,19 +129,23 @@ module.exports.handler = async (event, context) => {
   const clientId = body.client_id ? Number(body.client_id) : null;
   const week = body.week || null;
 
+  const serveStatic = (reason, auth = null) => {
+    const staticRows = normaliseStaticRows(loadStaticTimesheets());
+    const filtered = filterRows(staticRows, { q, status, clientId, week });
+    console.warn('[timesheets] using static fallback dataset (%d rows)', filtered.length);
+    return jsonOk({ ok: true, items: filtered, readOnly: true, source: 'static', supabase: supabaseStatus(), trace, auth });
+  };
+
   try {
     await getContext(event, context, { requireAdmin: true });
   } catch (err) {
-    const statusCode = err.code === 401 ? 401 : err.code === 403 ? 403 : 500;
-    return jsonError(statusCode, 'unauthorized', err.message || 'Unauthorized', { trace });
+    console.warn('[timesheets] auth failed — serving static dataset', err?.message || err);
+    return serveStatic(err?.message || 'auth_failed', { ok: false, status: err?.code || 403, error: err?.message || 'Unauthorized' });
   }
 
   try {
     if (!hasSupabase()) {
-      const staticRows = normaliseStaticRows(loadStaticTimesheets());
-      const filtered = filterRows(staticRows, { q, status, clientId, week });
-      console.warn('[timesheets] using static fallback dataset (%d rows)', filtered.length);
-      return jsonOk({ ok: true, items: filtered, readOnly: true, source: 'static', supabase: supabaseStatus(), trace });
+      return serveStatic(supabaseStatus().error || 'supabase_unavailable');
     }
 
     let query = supabase
@@ -207,10 +211,8 @@ module.exports.handler = async (event, context) => {
     const { data, error } = await query;
     if (error) {
       if (shouldFallback(error)) {
-        const staticRows = normaliseStaticRows(loadStaticTimesheets());
-        const filtered = filterRows(staticRows, { q, status, clientId, week });
         console.warn('[timesheets] supabase query failed (%s) — using static fallback', error.message);
-        return jsonOk({ ok: true, items: filtered, readOnly: true, source: 'static', supabase: supabaseStatus(), trace });
+        return serveStatic(error.message, { ok: false, error: error.message, status: 503 });
       }
       return jsonError(500, 'query_failed', error.message, { trace });
     }

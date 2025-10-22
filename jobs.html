@@ -787,7 +787,7 @@
         .replace(/[_-]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .replace(/([a-z])/g, (m) => m.toUpperCase());
+        .replace(/\b([a-z])/g, (m) => m.toUpperCase());
     }
 
     function normaliseJob(job = {}) {
