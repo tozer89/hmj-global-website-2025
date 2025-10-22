@@ -34,14 +34,32 @@ function extractJobs(source) {
 const SEED_PATH = path.join(__dirname, '_data', 'jobs.seed.json');
 const LOCAL_PATH = path.join(__dirname, '..', '..', 'data', 'jobs.json');
 
+let EMBEDDED_DATA = null;
+try {
+  // Require at build time so the JSON ships with the bundle even if fs access fails at runtime.
+  EMBEDDED_DATA = require('./_data/jobs.seed.json');
+} catch (err) {
+  console.warn('[jobs] failed to preload embedded dataset', err?.message || err);
+}
+
 let STATIC_JOBS = [];
 let STATIC_LOOKUP = null;
 
 function ensureStaticJobs() {
   if (STATIC_JOBS.length) return STATIC_JOBS;
 
-  const embedded = extractJobs(readJsonSafe(SEED_PATH));
-  const local = extractJobs(readJsonSafe(LOCAL_PATH));
+  let embedded = extractJobs(EMBEDDED_DATA);
+  if (!embedded.length) {
+    embedded = extractJobs(readJsonSafe(SEED_PATH));
+  }
+
+  let local = [];
+  // In the Netlify bundle the data/ directory may sit outside __dirname, so fall back to cwd.
+  const localPaths = [LOCAL_PATH, path.join(process.cwd(), 'data', 'jobs.json')];
+  for (const candidate of localPaths) {
+    if (local.length) break;
+    local = extractJobs(readJsonSafe(candidate));
+  }
 
   const combined = [...embedded, ...local];
   if (!combined.length) {
