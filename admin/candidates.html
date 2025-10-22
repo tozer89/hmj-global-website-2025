@@ -15,7 +15,7 @@
   <!-- Shared admin bootstrap -->
   <script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <!-- Pin pdf.js to a widely mirrored release so previews do not 404 -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js" integrity="sha512-7PzwZ0pniS3pSke1Mt2rt7NmBGG99nmCaTKty+O+kO5RAwOB1p5MNDoAuCEi0aKBslZx2drXr/7EQo1leChX2A==" crossorigin="anonymous"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js" crossorigin="anonymous"></script>
   <script defer src="/admin/common.js?v=21"></script>
 
   <style>
@@ -1127,8 +1127,7 @@
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            text += content.items.map((item) => item.str).join(' ') + '
-';
+            text += content.items.map((item) => item.str).join(' ') + '\n';
           }
           return text;
         }
