@@ -87,7 +87,7 @@ exports.handler = async (event, context) => {
       supabase
         .from('assignment_summary')
         .select(
-          'id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, client_site, site_name, job_title, status, candidate_name, as_ref, rate_std, rate_pay, charge_std, charge_ot, start_date, end_date, currency, po_number, consultant_name, active'
+          'id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, site_name, job_title, status, candidate_name, as_ref, rate_std, rate_pay, charge_std, charge_ot, start_date, end_date, currency, po_number, consultant_name, active'
         )
         .order('start_date', { ascending: false })
     );
@@ -110,9 +110,14 @@ exports.handler = async (event, context) => {
       };
     }
 
+    const rows = (data || []).map((row) => ({
+      ...row,
+      client_site: row.client_site || row.site_name || null,
+    }));
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ rows: data || [], total: count ?? (data || []).length }),
+      body: JSON.stringify({ rows, total: count ?? rows.length }),
     };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
