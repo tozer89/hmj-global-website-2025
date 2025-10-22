@@ -39,18 +39,18 @@ exports.handler = async (event, context) => {
       .maybeSingle();
 
     if (error) {
-      if (shouldFallback(error)) {
-        const fallback = loadStaticCandidates().map(toCandidate);
-        const match = fallback.find((row) => String(row.id) === String(id));
-        if (!match) {
-          return { statusCode: 404, body: JSON.stringify({ error: 'Candidate not found', readOnly: true }) };
-        }
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ ...match, readOnly: true, source: 'static', warning: error.message }),
-        };
+      if (!shouldFallback(error)) {
+        console.warn('[candidates] get unexpected error — forcing static fallback', error.message || error);
       }
-      throw error;
+      const fallback = loadStaticCandidates().map(toCandidate);
+      const match = fallback.find((row) => String(row.id) === String(id));
+      if (!match) {
+        return { statusCode: 404, body: JSON.stringify({ error: 'Candidate not found', readOnly: true }) };
+      }
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ ...match, readOnly: true, source: 'static', warning: error.message }),
+      };
     }
     if (!data) throw new Error('Candidate not found');
 

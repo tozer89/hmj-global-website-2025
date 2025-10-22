@@ -228,13 +228,18 @@
     window.Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
       // --- diag chips ---
       const chips = sel('#diagChips');
-      const chip = (t, tone='ok') => {
+      const chip = (t, tone='ok', key='') => {
         if (!chips) return;
+        if (key) {
+          const existing = chips.querySelector(`[data-chip="${key}"]`);
+          if (existing) existing.remove();
+        }
         const s=document.createElement('span');
         s.className='pill '+(tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
+        if (key) s.dataset.chip = key;
         s.textContent=t; chips.appendChild(s);
       };
-      chip('candidates:init','ok');
+      chip('candidates:init','ok','init');
 
       const who = await identity('admin');
       if (!who || !who.ok) {
@@ -497,6 +502,7 @@
 
       async function load(){
         const wrap = $('#listWrap'); wrap.textContent = 'Loading…';
+        chip('list: loading','warn','list');
         try{
           const res = await api('admin-candidates-list','POST',{
             q: ($('#q')?.value || '').trim(),
@@ -504,12 +510,18 @@
           });
           readOnlyMode = !!res?.readOnly;
           applyReadOnly();
+          if (res?.supabase?.ok) chip('supabase: live','ok','supabase');
+          else chip('supabase: '+(res?.supabase?.error||'offline'),'warn','supabase');
+          chip(readOnlyMode ? 'mode: read-only':'mode: editable', readOnlyMode?'warn':'ok','mode');
           allRows = Array.isArray(res) ? res : (res.rows || []);
           allRows.forEach(r=>{ r.name = `${r.first_name||''} ${r.last_name||''}`.trim(); });
           page = 1; selected.clear(); enableDelete();
           render(); renderQuick(null);
+          chip('list: ok','ok','list');
         }catch(e){
           console.error('[candidates] list error', e);
+          chip('list:error','bad','list');
+          chip('supabase: '+(e.message||e),'bad','supabase');
           if (/supabase/i.test(String(e.message || e))) {
             readOnlyMode = true;
             applyReadOnly();

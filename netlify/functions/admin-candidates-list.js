@@ -111,7 +111,7 @@ exports.handler = async (event, context) => {
   const to = from + pageSize - 1;
 
   // Build base query
-  if (supabaseUnavailable) {
+  function serveStatic(reason) {
     const staticRows = loadStaticCandidates();
     const normalised = staticRows.map(toCandidate);
     const filterText = (val) => String(val || '').toLowerCase();
@@ -164,7 +164,7 @@ exports.handler = async (event, context) => {
       pages,
       readOnly: true,
       source: 'static',
-      supabase: { ok: false, error: supabaseError?.message || 'supabase_unavailable' },
+      supabase: { ok: false, error: reason || supabaseError?.message || 'supabase_unavailable' },
     };
 
     if (debug) {
@@ -172,11 +172,15 @@ exports.handler = async (event, context) => {
         took_ms: Date.now() - started,
         mode: 'static',
         usingServiceKey: false,
-        supabaseError: supabaseError?.message || null,
+        supabaseError: reason || supabaseError?.message || null,
       };
     }
 
     return { statusCode: 200, body: JSON.stringify(response) };
+  }
+
+  if (supabaseUnavailable) {
+    return serveStatic();
   }
 
   let query = supabase
@@ -203,30 +207,11 @@ exports.handler = async (event, context) => {
   const { data: rows, count, error } = await query;
 
   if (error) {
-    if (shouldFallback(error)) {
-      console.warn('[candidates] query failed (%s) — serving static fallback', error.message);
-      const staticRows = loadStaticCandidates().map(toCandidate);
-      const totalStatic = staticRows.length;
-      const pageRows = staticRows.slice(from, from + pageSize);
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          rows: pageRows,
-          total: totalStatic,
-          filtered: totalStatic,
-          pages: Math.max(1, Math.ceil(totalStatic / pageSize)),
-          readOnly: true,
-          source: 'static',
-          supabase: { ok: false, error: error.message },
-          debug: debug ? { took_ms: Date.now() - started, mode: 'static-fallback' } : undefined,
-        }),
-      };
+    console.warn('[candidates] supabase query failed — falling back to static data', error.message || error);
+    if (!shouldFallback(error)) {
+      console.warn('[candidates] forcing fallback for unexpected error');
     }
-
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message, supabaseError: error.details || null })
-    };
+    return serveStatic(error.message);
   }
 
   // Compute meta
