@@ -336,8 +336,6 @@
 
           <span class="filter-label" style="margin-left:12px">Discipline:</span>
           <div id="discChipWrap" class="chip-group" role="group" aria-label="Discipline filters"></div>
-          <span class="filter-label" style="margin-left:12px">Tags:</span>
-          <div id="tagFilterWrap" class="chip-group" role="group" aria-label="Tag filters"></div>
         </div>
       </div>
     </div>
@@ -353,6 +351,312 @@
 
   <!-- ===== Dynamic jobs board ===== -->
   <div id="jobsDynamic"></div>
+
+  <!-- Embedded fallback dataset (used when API and static JSON are unavailable) -->
+  <script type="application/json" id="jobsFallbackData">
+    {
+      "jobs": [
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20London%2C%20UK",
+          "locationText": "London, UK Data Centre",
+          "locationCode": "london",
+          "section": "commercial",
+          "keywords": "quantity surveyor,data centre,commercial,NEC,JCT,cost control,procurement,valuations",
+          "responsibilities": [
+            "Own commercial and contractual management of packages",
+            "Cost planning, budget control and forecasting",
+            "Procurement, subcontract management and payments",
+            "Prepare valuations, variations and commercial reports",
+            "Lead change control and risk/opportunity management",
+            "Ensure NEC/JCT compliance and audit-ready records",
+            "Liaise with PM, engineering and client teams"
+          ],
+          "published": true,
+          "requirements": [
+            "Quantity Surveying degree or equivalent",
+            "Data centre or complex build experience",
+            "Strong NEC/JCT exposure",
+            "Advanced Excel/reporting; forecasting accuracy",
+            "Stakeholder management and negotiation skills"
+          ],
+          "discipline": "Data Centre",
+          "status": "live",
+          "title": "Quantity Surveyor — Data Centre",
+          "overview": "QS role owning commercial delivery on a London data centre with full cost, contracts and change control responsibility.",
+          "type": "permanent",
+          "id": "qs-london-dc"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=MEP%20Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Eemshaven%2C%20Netherlands",
+          "locationText": "Eemshaven, Netherlands Data Centre",
+          "locationCode": "eemshaven",
+          "section": "commercial",
+          "keywords": "MEP SQS,data centre,commercial,procurement,reporting,forecasting,contracts,risk",
+          "responsibilities": [
+            "Lead MEP commercial strategy and execution",
+            "Manage procurement, payments and negotiations",
+            "Maintain cost reports, cash flow and forecasts",
+            "Administer contract changes, claims and EOT inputs",
+            "Identify and manage risks/opportunities",
+            "Build strong client and supply-chain relationships"
+          ],
+          "published": true,
+          "requirements": [
+            "Degree in QS/Construction Economics",
+            "Senior MEP commercial experience on large projects",
+            "Excellent cost reporting and contract knowledge",
+            "Negotiation, communication and leadership skills"
+          ],
+          "discipline": "Data Centre",
+          "status": "live",
+          "title": "MEP Senior Quantity Surveyor — Data Centre",
+          "overview": "Senior MEP QS for a flagship Netherlands data centre, driving value, risk and reporting across all MEP packages.",
+          "type": "permanent",
+          "id": "mep-sqs-eem"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=CSA%20Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Eemshaven%2C%20Netherlands",
+          "locationText": "Eemshaven, Netherlands Data Centre",
+          "locationCode": "eemshaven",
+          "section": "commercial",
+          "keywords": "CSA SQS,civil,structural,architectural,data centre,commercial,valuations,procurement",
+          "responsibilities": [
+            "Own CSA commercial function on major project",
+            "Procure, value and administer CSA subcontracts",
+            "Deliver accurate forecasts and financial reports",
+            "Drive value engineering and cost savings",
+            "Support delivery teams with contractual compliance"
+          ],
+          "published": true,
+          "requirements": [
+            "QS degree or equivalent",
+            "Significant CSA experience (data centre/infrastructure)",
+            "Contracts and cost management expertise",
+            "Strong analytical and stakeholder skills"
+          ],
+          "discipline": "Data Centre",
+          "status": "interviewing",
+          "title": "CSA Senior Quantity Surveyor — Data Centre",
+          "overview": "Lead CSA commercial activities on a landmark data centre, ensuring robust cost, contract and supplier management.",
+          "type": "permanent",
+          "id": "csa-sqs-eem"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
+          "locationText": "Dublin, Ireland Data Centre",
+          "locationCode": "dublin",
+          "section": "commercial",
+          "keywords": "senior qs,data centre,NEC,JCT,change control,procurement,claims,forecasting",
+          "responsibilities": [
+            "Lead commercial delivery across multiple work packages",
+            "Own change control, variations and claims strategy",
+            "Cash flow, CVRs, monthly reporting and forecasting",
+            "Supply chain procurement and performance management",
+            "Commercial risk management and governance"
+          ],
+          "published": true,
+          "requirements": [
+            "Senior QS experience on technical builds",
+            "NEC/JCT expertise and strong negotiation skills",
+            "Proven forecasting and reporting accuracy",
+            "Client-facing communication and leadership"
+          ],
+          "discipline": "Data Centre",
+          "status": "interviewing",
+          "title": "Senior Quantity Surveyor — Data Centre",
+          "overview": "Senior QS to steer commercial outcomes on a major Dublin data centre from procurement through final account.",
+          "type": "permanent",
+          "id": "sqs-dublin"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Project%20Planner%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
+          "locationText": "Dublin, Ireland Data Centre",
+          "locationCode": "dublin",
+          "section": "dc",
+          "keywords": "project planner,data centre,Primavera P6,Asta,programme,4D,reporting,controls",
+          "responsibilities": [
+            "Develop and maintain integrated master schedules",
+            "Produce lookahead plans, progress curves and reports",
+            "Interface with commercial, engineering and delivery teams",
+            "Support risk workshops and scenario analysis",
+            "Champion planning governance and change control"
+          ],
+          "published": true,
+          "requirements": [
+            "Planning experience on data centre or mission critical builds",
+            "Primavera P6 proficiency (Asta welcomed)",
+            "Construction methodology and sequencing knowledge",
+            "Strong reporting and stakeholder communication"
+          ],
+          "discipline": "Planning",
+          "status": "live",
+          "title": "Project Planner — Data Centre",
+          "overview": "Planner role covering schedule ownership for a hyperscale Dublin data centre with international stakeholder exposure.",
+          "type": "contract",
+          "id": "planner-dublin"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Electrical%20Project%20Manager%20%E2%80%94%20Substations%20%E2%80%94%20Frankfurt%2C%20Germany",
+          "locationText": "Frankfurt, Germany Substation",
+          "locationCode": "frankfurt",
+          "section": "substations",
+          "keywords": "electrical project manager,substation,HV,grid connection,project delivery,HVAC",
+          "responsibilities": [
+            "Deliver HV substation packages end-to-end",
+            "Manage contractors, budgets and schedule",
+            "Coordinate client, grid operator and stakeholders",
+            "Ensure safety, quality and technical compliance",
+            "Report progress, risks and commercial positions"
+          ],
+          "published": true,
+          "requirements": [
+            "Electrical engineering degree or similar",
+            "5+ years leading HV substation projects",
+            "German grid / TSO interface experience",
+            "Fluent English (German advantageous)",
+            "EU work rights"
+          ],
+          "discipline": "Energy",
+          "status": "live",
+          "title": "Electrical Project Manager — Substations",
+          "overview": "Deliver HV substation upgrades supporting data centre growth across Frankfurt for a leading European contractor.",
+          "type": "permanent",
+          "id": "epm-frankfurt"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Mechanical%20Commissioning%20Manager%20%E2%80%94%20Life%20Sciences%20%E2%80%94%20Helsinki%2C%20Finland",
+          "locationText": "Helsinki, Finland Life Sciences",
+          "locationCode": "helsinki",
+          "section": "pharma",
+          "keywords": "mechanical commissioning,life sciences,HVAC,clean room,validation,BMS",
+          "responsibilities": [
+            "Lead mechanical commissioning on pharma facility",
+            "Coordinate HVAC, piping and clean room systems",
+            "Manage documentation, FAT/SAT and validation",
+            "Interface with QA/QC and client teams",
+            "Ensure compliance with GMP and safety"
+          ],
+          "published": true,
+          "requirements": [
+            "Mechanical engineering background",
+            "Commissioning experience in GMP environments",
+            "Knowledge of clean room standards",
+            "Excellent coordination and reporting skills"
+          ],
+          "discipline": "Life Sciences",
+          "status": "interviewing",
+          "title": "Mechanical Commissioning Manager — Life Sciences",
+          "overview": "Commission mechanical systems on a Finnish life sciences facility, steering validation and client handover.",
+          "type": "contract",
+          "id": "mcm-helsinki"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Document%20Controller%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Amsterdam%2C%20Netherlands",
+          "locationText": "Amsterdam, Netherlands Data Centre",
+          "locationCode": "amsterdam",
+          "section": "dc",
+          "keywords": "document control,data centre,EDMS,QA,ISO9001,as-built",
+          "responsibilities": [
+            "Maintain EDMS and document workflows",
+            "Coordinate drawing and submittal reviews",
+            "Support quality audits and close-out",
+            "Ensure accurate as-built handover packages"
+          ],
+          "published": true,
+          "requirements": [
+            "Experience in construction document control",
+            "EDMS (Aconex/Asite/Procore) proficiency",
+            "Attention to detail and communication skills",
+            "Data centre or critical infrastructure exposure"
+          ],
+          "discipline": "Project Controls",
+          "status": "live",
+          "title": "Document Controller — Data Centre",
+          "overview": "Document control lead for a hyperscale Amsterdam build, ensuring traceable workflows and clean close-out.",
+          "type": "contract",
+          "id": "docctrl-amsterdam"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=CSA%20Project%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20London%2C%20UK",
+          "locationText": "London, UK Data Centre",
+          "locationCode": "london",
+          "section": "dc",
+          "keywords": "CSA project manager,data centre,fit out,delivery,leadership",
+          "responsibilities": [
+            "Lead CSA delivery on high-spec data centre fitout",
+            "Manage subcontractors, logistics and programme",
+            "Chair progress meetings and interface with client",
+            "Ensure safety, quality and commercial alignment"
+          ],
+          "published": true,
+          "requirements": [
+            "CSA project management background",
+            "Data centre or complex fit-out experience",
+            "Strong leadership and coordination skills",
+            "Excellent reporting and stakeholder engagement"
+          ],
+          "discipline": "Project Delivery",
+          "status": "live",
+          "title": "CSA Project Manager — Data Centre",
+          "overview": "CSA PM overseeing major London data centre build, owning safety, programme and quality for mission critical areas.",
+          "type": "permanent",
+          "id": "csa-pm-london"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Cost%20Engineer%20%E2%80%94%20Power%20Infrastructure%20%E2%80%94%20Macclesfield%2C%20UK",
+          "locationText": "Macclesfield, UK Power Infrastructure",
+          "locationCode": "macclesfield",
+          "section": "substations",
+          "keywords": "cost engineer,power infrastructure,estimating,cost control,reporting",
+          "responsibilities": [
+            "Develop cost plans and estimates for energy projects",
+            "Track budgets, forecasts and earned value",
+            "Support procurement and contract admin",
+            "Provide monthly reports and risk analysis"
+          ],
+          "published": true,
+          "requirements": [
+            "Cost engineering or QS background",
+            "Power or utilities project experience",
+            "Strong Excel and cost management tools",
+            "Analytical mindset and communication skills"
+          ],
+          "discipline": "Commercial",
+          "status": "live",
+          "title": "Cost Engineer — Power Infrastructure",
+          "overview": "Cost engineer to support UK-wide power upgrades from estimating through delivery, ensuring financial governance.",
+          "type": "permanent",
+          "id": "cost-eng-macc"
+        },
+        {
+          "applyUrl": "https://hmj-global.com/contact.html?role=Controls%20Engineer%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Groningen%2C%20Netherlands",
+          "locationText": "Groningen, Netherlands Data Centre",
+          "locationCode": "groningen",
+          "section": "dc",
+          "keywords": "controls engineer,BMS,SCADA,data centre,commissioning",
+          "responsibilities": [
+            "Commission BMS/controls systems for hyperscale build",
+            "Interface with mechanical/electrical teams",
+            "Optimise sequences and fault diagnostics",
+            "Produce handover documentation and training"
+          ],
+          "published": true,
+          "requirements": [
+            "Controls engineering experience",
+            "BMS/SCADA systems knowledge",
+            "Data centre or industrial commissioning",
+            "Problem solving and client communication"
+          ],
+          "discipline": "Engineering",
+          "status": "live",
+          "title": "Controls Engineer — Data Centre",
+          "overview": "Controls engineer supporting integrated commissioning on Dutch hyperscale programme with international team.",
+          "type": "contract",
+          "id": "controls-groningen"
+        }
+      ]
+    }
+  </script>
 
   <!-- ===== No results ===== -->
   <section class="jobs-board">
@@ -397,6 +701,7 @@
       locations: [],
       disciplines: [],
       tags: [],
+      source: 'api',
     };
     const jobsContainer = document.getElementById('jobsDynamic');
     let jobsEls = [];
@@ -522,10 +827,36 @@
         if(!res.ok) return null;
         const data = await res.json();
         return Array.isArray(data.jobs) ? data.jobs : null;
-      }catch(e){ return null; }
+      }catch(e){
+        console.warn('jobs JSON fallback failed', e);
+        return null;
+      }
+    }
+    function loadEmbeddedJobs(){
+      try{
+        const el = document.getElementById('jobsFallbackData');
+        if(!el) return null;
+        const raw = el.textContent || '';
+        if(!raw.trim()) return null;
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed?.jobs)) return parsed.jobs;
+        if(Array.isArray(parsed)) return parsed;
+      }catch(e){
+        console.warn('jobs embedded fallback parse failed', e);
+      }
+      return null;
     }
     async function resolveJobs(){
-      return await loadJobsFromApi() || await loadJobsJSON();
+      const fromApi = await loadJobsFromApi();
+      if(Array.isArray(fromApi) && fromApi.length) return { rows: fromApi, source: 'api' };
+
+      const fromJson = await loadJobsJSON();
+      if(Array.isArray(fromJson) && fromJson.length) return { rows: fromJson, source: 'static' };
+
+      const embedded = loadEmbeddedJobs();
+      if(Array.isArray(embedded) && embedded.length) return { rows: embedded, source: 'embedded' };
+
+      return { rows: [], source: 'empty' };
     }
 
     function buildDerivedCollections(jobs){
@@ -645,13 +976,12 @@
     function updateFilterSources(){
       populateLocationOptions();
       populateChipGroup('discChipWrap', 'disc', jobsState.disciplines);
-      populateChipGroup('tagFilterWrap', 'tag', jobsState.tags);
     }
 
     async function renderJobs(){
-      const raw = await resolveJobs();
-      if(!raw) return;
-      const published = raw.filter(job => job.published !== false);
+      const { rows, source } = await resolveJobs();
+      jobsState.source = source;
+      const published = Array.isArray(rows) ? rows.filter(job => job.published !== false) : [];
       jobsState.all = published.map(normaliseJob);
       buildDerivedCollections(jobsState.all);
       paintJobs(jobsState.all);
@@ -659,6 +989,9 @@
       refreshChips();
       bindChipEvents();
       bindJobCardEvents();
+      if(source !== 'api') {
+        console.warn(`jobs rendered using ${source} fallback (${jobsState.all.length} records)`);
+      }
     }
     renderJobs();
     /* ---------- Nav ---------- */
@@ -693,7 +1026,7 @@
     topBtn.addEventListener('click',()=>{ const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches; window.scrollTo({top:0,behavior:reduce?'auto':'smooth'}); });
 
     /* ---------- Filters, Search & Shortlist ---------- */
-    const state={status:'all',location:'all',type:'all',disc:'all',tag:'all',search:'',shortlistOnly:false};
+    const state={status:'all',location:'all',type:'all',disc:'all',search:'',shortlistOnly:false};
     const resultCount=document.getElementById('resultCount');
     const noResultsEl=document.getElementById('noResults');
     const locationSel=document.getElementById('locationFilter');
@@ -743,9 +1076,9 @@
     locationSel.addEventListener('change',()=>{ state.location=locationSel.value; applyFilters(); });
     clearBtn.addEventListener('click',()=>{
       refreshChips();
-      state.status='all'; state.location='all'; state.type='all'; state.disc='all'; state.tag='all'; state.search=''; state.shortlistOnly=false;
+      state.status='all'; state.location='all'; state.type='all'; state.disc='all'; state.search=''; state.shortlistOnly=false;
       locationSel.value='all'; searchBox&&(searchBox.value=''); searchBoxMobile&&(searchBoxMobile.value=''); shortlistBtn.classList.remove('btn-primary');
-      ['status','type','disc','tag'].forEach(group=>{
+      ['status','type','disc'].forEach(group=>{
         const list=chips.filter(c=>c.dataset.chip===group);
         list.forEach(c=>{ c.classList.remove('active'); c.setAttribute('aria-pressed','false'); });
         const allBtn=list.find(c=>c.dataset.value==='all'); if(allBtn){ allBtn.classList.add('active'); allBtn.setAttribute('aria-pressed','true'); }
@@ -756,13 +1089,7 @@
     function getAttr(el,name){ return (el.getAttribute(name)||'').toLowerCase(); }
     function matchSearch(job){ if(!state.search) return true; const hay=(job.dataset.keywords||job.textContent||'').toLowerCase(); return hay.includes(state.search); }
     function matchPins(job){ if(!state.shortlistOnly) return true; const pins=getPins(); const id=job.id||job.dataset.id||job.querySelector('h3')?.textContent?.trim(); return pins.has(id); }
-    function activeFiltersCount(){ let n=0; if(state.status!=='all') n++; if(state.location!=='all') n++; if(state.type!=='all') n++; if(state.disc!=='all') n++; if(state.tag!=='all') n++; if(state.search) n++; if(state.shortlistOnly) n++; return n; }
-
-    function matchTag(job){
-      if(state.tag==='all') return true;
-      const tags=(job.dataset.tags||'').split(',').filter(Boolean);
-      return tags.includes(state.tag);
-    }
+    function activeFiltersCount(){ let n=0; if(state.status!=='all') n++; if(state.location!=='all') n++; if(state.type!=='all') n++; if(state.disc!=='all') n++; if(state.search) n++; if(state.shortlistOnly) n++; return n; }
 
     function applyFilters(){
       let shown=0; const total=jobsEls.length;
@@ -771,12 +1098,14 @@
                    (state.location==='all'||getAttr(job,'data-location')===state.location) &&
                    (state.type==='all'||getAttr(job,'data-type')===state.type) &&
                    (state.disc==='all'||getAttr(job,'data-disc')===state.disc) &&
-                   matchTag(job) &&
                    matchSearch(job) && matchPins(job);
         job.style.display=keep?'block':'none'; if(keep) shown++;
       });
       noResultsEl.style.display=shown?'none':'block';
-      resultCount.textContent=shown===total?'Showing all jobs':`Showing ${shown} of ${total} jobs`;
+      const baseMsg = shown===total?'Showing all jobs':`Showing ${shown} of ${total} jobs`;
+      resultCount.textContent = jobsState.source && jobsState.source !== 'api'
+        ? `${baseMsg} — preview data (${jobsState.source})`
+        : baseMsg;
       if(activeCountEl) activeCountEl.textContent=activeFiltersCount();
     }
     applyFilters();

@@ -500,6 +500,20 @@
         if (closeBtn) { closeBtn.style.display=''; closeBtn.onclick = ()=> renderQuick(null); }
       }
 
+      async function loadFallbackCandidates(){
+        try {
+          const res = await fetch('/data/candidates.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP '+res.status);
+          const json = await res.json();
+          const rows = Array.isArray(json?.candidates) ? json.candidates : [];
+          rows.forEach(r => { r.name = `${r.first_name||''} ${r.last_name||''}`.trim(); });
+          return rows;
+        } catch (err) {
+          console.error('[candidates] fallback load error', err);
+          return null;
+        }
+      }
+
       async function load(){
         const wrap = $('#listWrap'); wrap.textContent = 'Loading…';
         chip('list: loading','warn','list');
@@ -526,11 +540,35 @@
             readOnlyMode = true;
             applyReadOnly();
           }
-          wrap.textContent = 'Error: ' + (e.message || e);
+          let fallbackRows = await loadFallbackCandidates();
+          if (fallbackRows && fallbackRows.length) {
+            chip('list: fallback','warn','list');
+            chip('supabase: offline','warn','supabase');
+            readOnlyMode = true;
+            applyReadOnly();
+            chip('mode: read-only','warn','mode');
+            allRows = fallbackRows;
+            page = 1; selected.clear(); enableDelete();
+            render(); renderQuick(null);
+            toast('Supabase unavailable — showing demo candidates (read-only).', 'warn', 4200);
+          } else {
+            wrap.textContent = 'Error: ' + (e.message || e);
+          }
         }
       }
 
       async function openOne(id){
+        if (readOnlyMode) {
+          const row = allRows.find((r) => String(r.id) === String(id));
+          if (row) {
+            editing = row;
+            openEditor(row);
+            toast('Preview data — edits disabled until Supabase is connected.', 'warn', 3200);
+          } else {
+            toast('Candidate not found in fallback dataset.', 'warn', 2800);
+          }
+          return;
+        }
         try{
           const r = await api('admin-candidates-get','POST',{ id });
           editing = r;
@@ -543,6 +581,11 @@
       }
 
       async function showQuick(id){
+        if (readOnlyMode) {
+          const row = allRows.find((r) => String(r.id) === String(id));
+          renderQuick(row || null);
+          return;
+        }
         try{
           const r = await api('admin-candidates-get','POST',{ id });
           renderQuick(r);
@@ -568,6 +611,38 @@
       async function exportCSV(selectedOnly=false){
         try{
           if (selectedOnly && !selected.size) { toast('No rows selected', 'warn', 2000); return; }
+          if (readOnlyMode) {
+            const rows = selectedOnly
+              ? allRows.filter(r => selected.has(r.id))
+              : viewRows.slice();
+            if (!rows.length) { toast('Nothing to export', 'warn', 2200); return; }
+            const esc = (val) => {
+              const text = val == null ? '' : String(val);
+              return '"' + text.replace(/"/g, '""') + '"';
+            };
+            const header = ['ID','Ref','First Name','Last Name','Email','Phone','Status','Job Title','Client'];
+            const lines = [header.map(esc).join(',')];
+            rows.forEach((r) => {
+              lines.push([
+                r.id,
+                r.ref,
+                r.first_name,
+                r.last_name,
+                r.email,
+                r.phone,
+                r.status,
+                r.job_title,
+                r.client_name
+              ].map(esc).join(','));
+            });
+            const csvText = lines.join('\n');
+            const blob = new Blob([csvText], { type:'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a=document.createElement('a'); a.href=url; a.download='candidates.csv'; a.click();
+            URL.revokeObjectURL(url);
+            toast('Exported fallback CSV','ok',1600);
+            return;
+          }
           const payload = selectedOnly ? { ids: Array.from(selected) } : {
             q: ($('#q')?.value || '').trim(),
             status: activeStatus || ''
