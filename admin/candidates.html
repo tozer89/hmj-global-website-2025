@@ -179,6 +179,7 @@
         <div class="right">
           <a id="qvOpen" class="btn small" href="#" style="display:none">Open full profile</a>
           <button id="qvEdit" class="btn ghost small" style="display:none">Edit</button>
+          <button id="qvClose" class="btn ghost small" style="display:none">Close</button>
         </div>
       </aside>
     </div>
@@ -429,7 +430,14 @@
 
       function renderQuick(r){
         const host = $('#qvRows');
-        if (!r){ host.innerHTML = `<div class="empty">Select a candidate to preview details here.</div>`; $('#qvOpen').style.display='none'; $('#qvEdit').style.display='none'; return; }
+        const closeBtn = $('#qvClose');
+        if (!r){
+          host.innerHTML = `<div class="empty">Select a candidate to preview details here.</div>`;
+          $('#qvOpen').style.display='none';
+          $('#qvEdit').style.display='none';
+          if (closeBtn) closeBtn.style.display='none';
+          return;
+        }
         const name = `${r.first_name||''} ${r.last_name||''}`.trim() || '—';
         host.innerHTML = `
           <div class="kv"><b>Name</b><div>${name}</div></div>
@@ -443,6 +451,7 @@
         const link = `/admin/candidate-profile.html?id=${encodeURIComponent(r.id)}`;
         $('#qvOpen').href = link; $('#qvOpen').style.display='';
         $('#qvEdit').style.display=''; $('#qvEdit').onclick = ()=> openEditor(r);
+        if (closeBtn) { closeBtn.style.display=''; closeBtn.onclick = ()=> renderQuick(null); }
       }
 
       async function load(){

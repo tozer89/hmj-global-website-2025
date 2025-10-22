@@ -181,7 +181,9 @@
         <div class="hr"></div>
         <div class="right">
           <a id="qvOpenCandidate" class="btn small" href="#" style="display:none">Open candidate</a>
+          <button id="qvLive" class="btn ghost small" style="display:none">Make live</button>
           <button id="qvEdit" class="btn ghost small" style="display:none">Edit</button>
+          <button id="qvClose" class="btn ghost small" style="display:none">Close</button>
         </div>
       </aside>
     </div>
@@ -247,6 +249,7 @@
       let editing = null;
       let currentTab = 'Basics';
       let dropdowns = { contractors: [], clients: [], projects: [], sites: [] };
+      let quickRecord = null;
 
       const columns = [
         { key:'as_ref',       label:'REF',     show:true,  width:'100px' },
@@ -328,8 +331,10 @@
             : '—';
 
           let candCell = r.candidate_name || '—';
-          if (r.candidate_id) {
-            candCell = `<a class="link" href="/admin/candidates.html?q=${encodeURIComponent(r.candidate_name||'')}" target="_blank" rel="noopener">${r.candidate_name||'Candidate'}</a>`;
+          if (r.contractor_id) {
+            const label = r.candidate_name || r.contractor_name || `Candidate #${r.contractor_id}`;
+            const query = encodeURIComponent(label);
+            candCell = `<a class="link" href="/admin/candidates.html?q=${query}" target="_blank" rel="noopener">${label}</a>`;
           } else if (r.candidate_name) {
             candCell = `<span>${r.candidate_name}</span>`;
           }
@@ -411,6 +416,14 @@
           total = res?.total ?? rows.length;
           selected.clear(); enableDelete();
           render();
+          if (quickRecord?.id) {
+            try {
+              const refreshed = await api('admin-assignments-get','POST',{ id: quickRecord.id });
+              renderQuick(refreshed);
+            } catch {
+              renderQuick(null);
+            }
+          }
         }catch(e){
           console.error('[assignments] list error', e);
           toast(e.message || 'Failed to load', 'error', 5000);
@@ -453,24 +466,81 @@
 
       function renderQuick(r){
         const host = $('#qvRows');
-        if (!r){ host.innerHTML = `<div class="empty">Select an assignment to preview details here.</div>`; $('#qvOpenCandidate').style.display='none'; $('#qvEdit').style.display='none'; return; }
+        const openBtn = $('#qvOpenCandidate');
+        const editBtn = $('#qvEdit');
+        const closeBtn = $('#qvClose');
+        const liveBtn = $('#qvLive');
+
+        if (!r) {
+          quickRecord = null;
+          if (host) host.innerHTML = `<div class="empty">Select an assignment to preview details here.</div>`;
+          if (openBtn) openBtn.style.display = 'none';
+          if (editBtn) editBtn.style.display = 'none';
+          if (closeBtn) closeBtn.style.display = 'none';
+          if (liveBtn) liveBtn.style.display = 'none';
+          return;
+        }
+
+        quickRecord = r;
         const dates = (r.start_date?fmtDate(r.start_date):'—') + ' — ' + (r.end_date?fmtDate(r.end_date):'open');
-        host.innerHTML = `
-          <div class="kv"><b>Title</b><div>${r.job_title||'—'}</div></div>
-          <div class="kv"><b>Status</b><div>${pillStatus(r.status||'')}</div></div>
-          <div class="kv"><b>Client</b><div>${r.client_name||'—'} ${r.client_site?('· '+r.client_site):''}</div></div>
-          <div class="kv"><b>Candidate</b><div>${r.candidate_name||'—'}</div></div>
-          <div class="kv"><b>Dates</b><div>${dates}</div></div>
-          <div class="kv"><b>Pay</b><div>${r.currency||'GBP'} ${r.rate_pay||r.rate_std||'—'}</div></div>
-          <div class="kv"><b>PO</b><div>${r.po_number||r.po_ref||'—'}</div></div>
-          <div class="kv"><b>Consultant</b><div>${r.consultant_name||'—'}</div></div>
-        `;
-        const link = r.candidate_id
-          ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name||'')}`
-          : null;
-        const a = $('#qvOpenCandidate');
-        if (link){ a.href=link; a.style.display=''; } else a.style.display='none';
-        $('#qvEdit').style.display=''; $('#qvEdit').onclick=()=>{ openEditor(r); };
+        if (host) {
+          host.innerHTML = `
+            <div class="kv"><b>Reference</b><div>${r.as_ref || '—'}</div></div>
+            <div class="kv"><b>Title</b><div>${r.job_title||'—'}</div></div>
+            <div class="kv"><b>Status</b><div>${pillStatus(r.status||'')}</div></div>
+            <div class="kv"><b>Client</b><div>${r.client_name||'—'} ${r.client_site?('· '+r.client_site):''}</div></div>
+            <div class="kv"><b>Candidate</b><div>${r.candidate_name||'—'}</div></div>
+            <div class="kv"><b>Dates</b><div>${dates}</div></div>
+            <div class="kv"><b>Pay</b><div>${r.currency||'GBP'} ${r.rate_pay||r.rate_std||'—'}</div></div>
+            <div class="kv"><b>PO</b><div>${r.po_number||r.po_ref||'—'}</div></div>
+            <div class="kv"><b>Consultant</b><div>${r.consultant_name||'—'}</div></div>
+          `;
+        }
+
+        const link = r.contractor_id
+          ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name || '')}`
+          : r.candidate_name
+            ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name)}`
+            : null;
+
+        if (openBtn) {
+          if (link) {
+            openBtn.href = link;
+            openBtn.style.display = '';
+          } else {
+            openBtn.style.display = 'none';
+          }
+        }
+
+        if (editBtn) {
+          editBtn.style.display = '';
+          editBtn.onclick = () => { openEditor(r); };
+        }
+
+        if (closeBtn) {
+          closeBtn.style.display = '';
+        }
+
+        if (liveBtn) {
+          const live = String(r.status || '').toLowerCase() === 'live';
+          liveBtn.style.display = live ? 'none' : '';
+          liveBtn.onclick = () => { if (quickRecord) makeLive(quickRecord.id); };
+        }
+      }
+
+      async function makeLive(id){
+        if (!id) return;
+        if (!confirm('Mark this assignment as live?')) return;
+        try{
+          const res = await api('admin-assignments-publish','POST',{ id });
+          toast(`Assignment live${res?.as_ref ? ' — ' + res.as_ref : ''}`, 'ok', 2000);
+          await load();
+          if (res && res.id){
+            renderQuick(res);
+          }
+        }catch(e){
+          toast('Publish failed: ' + (e.message||e), 'error', 4200);
+        }
       }
 
       const schema = [
@@ -826,6 +896,8 @@
       $('#btnRefresh').onclick = ()=>{ refreshDropdowns(); load(); };
       $('#btnNew').onclick     = ()=>{ resetForm(); openDrawer(); };
       $('#btnDelete').onclick  = doDelete;
+      const qvCloseBtn = $('#qvClose');
+      if (qvCloseBtn) qvCloseBtn.onclick = ()=>{ renderQuick(null); };
       $('#q').addEventListener('keydown', e=>{ if (e.key==='Enter') { e.preventDefault(); page=1; load(); } });
       $('#statusSel').onchange = e=>{ activeStatus=e.target.value; page=1; load(); };
       $('#pgPrev').onclick     = ()=>{ if(page>1){ page--; load(); } };

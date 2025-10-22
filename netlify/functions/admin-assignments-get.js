@@ -10,7 +10,7 @@ exports.handler = async (event, context) => {
 
     const { data, error } = await supabase
       .from('assignments')
-      .select('id, contractor_id, project_id, site_id, rate_std, rate_ot, charge_std, charge_ot, po_number, start_date, end_date, active')
+      .select('*')
       .eq('id', id)
       .single();
 

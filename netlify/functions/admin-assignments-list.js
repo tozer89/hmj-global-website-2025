@@ -9,7 +9,7 @@ exports.handler = async (event, context) => {
 
     let query = supabase
       .from('assignment_summary')
-      .select('id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, site_name, rate_std, rate_ot, charge_std, charge_ot, start_date, end_date, active')
+      .select('id, contractor_id, contractor_name, contractor_email, project_id, project_name, client_id, client_name, client_site, site_name, job_title, status, candidate_name, as_ref, rate_std, rate_pay, charge_std, charge_ot, start_date, end_date, currency, po_number, consultant_name, active')
       .order('start_date', { ascending: false });
 
     if (contractor_id) query = query.eq('contractor_id', contractor_id);
