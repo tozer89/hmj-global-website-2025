@@ -49,7 +49,7 @@ exports.handler = async (event, context) => {
   let ctx;
   try {
     // We always require admin for this endpoint
-    ctx = await getContext(event, { requireAdmin: true });
+    ctx = await getContext(event, context, { requireAdmin: true, debug: true });
   } catch (e) {
     const code = e.code || 500;
     return {
@@ -62,6 +62,11 @@ exports.handler = async (event, context) => {
   const usingServiceKey = true; // getContext() uses SERVICE KEY under the hood
 
   const supabaseUnavailable = !supabase || typeof supabase.from !== 'function';
+  const shouldFallback = (err) => {
+    if (!err) return false;
+    const msg = String(err.message || err);
+    return /column .+ does not exist/i.test(msg) || /relation .+ does not exist/i.test(msg);
+  };
 
   // Quick diag endpoint (still requires admin)
   if (isGET && (event.queryStringParameters?.diag === '1')) {
@@ -142,6 +147,7 @@ exports.handler = async (event, context) => {
       pages,
       readOnly: true,
       source: 'static',
+      supabase: { ok: false, error: supabaseError?.message || 'supabase_unavailable' },
     };
 
     if (debug) {
@@ -158,28 +164,7 @@ exports.handler = async (event, context) => {
 
   let query = supabase
     .from('candidates')
-    .select(
-      [
-        'id',
-        'first_name',
-        'last_name',
-        'email',
-        'phone',
-        'job_title',
-        'pay_type',
-        'status',
-        'payroll_ref',
-        'address',
-        'bank_sort_code',
-        'bank_account',
-        'bank_iban',
-        'bank_swift',
-        'notes',
-        'created_at',
-        'updated_at'
-      ].join(','),
-      { count: 'exact' }
-    );
+    .select('*', { count: 'exact' });
 
   // Filters
   const orFilter = buildOrFilter({ q: nz(q), emailHas: nz(emailHas), job: nz(job) });
@@ -201,9 +186,29 @@ exports.handler = async (event, context) => {
   const { data: rows, count, error } = await query;
 
   if (error) {
+    if (shouldFallback(error)) {
+      console.warn('[candidates] query failed (%s) — serving static fallback', error.message);
+      const staticRows = loadStaticCandidates().map(toCandidate);
+      const totalStatic = staticRows.length;
+      const pageRows = staticRows.slice(from, from + pageSize);
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          rows: pageRows,
+          total: totalStatic,
+          filtered: totalStatic,
+          pages: Math.max(1, Math.ceil(totalStatic / pageSize)),
+          readOnly: true,
+          source: 'static',
+          supabase: { ok: false, error: error.message },
+          debug: debug ? { took_ms: Date.now() - started, mode: 'static-fallback' } : undefined,
+        }),
+      };
+    }
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: error.message, supabaseError: error.details || null })
     };
   }
 
@@ -212,11 +217,15 @@ exports.handler = async (event, context) => {
   const filtered = total;         // We requested count against the filtered selection
   const pages = Math.max(1, Math.ceil(filtered / pageSize));
 
+  const normalisedRows = (rows || []).map(toCandidate);
+
   const response = {
-    rows: rows || [],
+    rows: normalisedRows,
     total,
     filtered,
-    pages
+    pages,
+    source: 'supabase',
+    supabase: { ok: true },
   };
 
   // Debug block (very helpful now)

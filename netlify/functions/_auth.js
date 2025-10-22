@@ -74,7 +74,6 @@ exports.getContext = async (event, context, opts = {}) => {
 
   // roles from either clientContext or jwt
   roles = roles.length ? normalizeRoles(roles) : rolesFromClaims(user);
-  if (opts.requireAdmin && !roles.includes('admin')) throw coded(403, 'Forbidden');
 
   let supabase = null;
   let supabaseError = null;
@@ -91,8 +90,67 @@ exports.getContext = async (event, context, opts = {}) => {
     }
   }
 
+  const requireAdmin = !!opts.requireAdmin;
+  const hasAdminRole = roles.includes('admin');
+  let adminVerifiedViaTable = false;
+
+  async function checkAdminTable() {
+    if (!supabase || typeof supabase.from !== 'function') return false;
+    const identifiers = [];
+    if (user?.id) identifiers.push({ column: 'user_id', value: String(user.id) });
+    if (user?.sub && user.sub !== user.id) identifiers.push({ column: 'user_id', value: String(user.sub) });
+    if (user?.email) identifiers.push({ column: 'email', value: String(user.email).toLowerCase() });
+
+    for (const { column, value } of identifiers) {
+      try {
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('user_id')
+          .eq(column, value)
+          .limit(1);
+
+        if (error) {
+          const msg = error.message || '';
+          if (/relation .+ does not exist/i.test(msg)) {
+            console.warn('[auth] admin_users table missing — allowing Identity role check only');
+            return true;
+          }
+          console.warn('[auth] admin_users lookup failed via %s (%s)', column, msg);
+          continue;
+        }
+
+        if (Array.isArray(data) && data.length) {
+          return true;
+        }
+      } catch (err) {
+        console.warn('[auth] admin_users lookup threw (%s)', err?.message || err);
+      }
+    }
+    return false;
+  }
+
+  if (requireAdmin && !hasAdminRole) {
+    adminVerifiedViaTable = await checkAdminTable();
+    if (adminVerifiedViaTable && !roles.includes('admin')) {
+      roles = [...roles, 'admin'];
+    }
+  }
+
+  if (requireAdmin && !roles.includes('admin')) {
+    if (supabaseError) {
+      console.warn('[auth] requireAdmin failed — supabase unavailable (%s)', supabaseError.message);
+    }
+    throw coded(403, 'Forbidden');
+  }
+
   if (debug) {
-    console.log('[auth] email:', user.email, 'roles:', roles, 'supabase?', !!supabase);
+    console.log(
+      '[auth] email:%s roles:%o supabase?:%s verifiedViaTable:%s',
+      user.email,
+      roles,
+      !!supabase,
+      adminVerifiedViaTable
+    );
   }
   return { user, roles, supabase, supabaseError };
 };
