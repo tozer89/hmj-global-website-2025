@@ -2,17 +2,15 @@
 // Lightweight helpers so admin candidate endpoints can fall back to local JSON data
 // when Supabase credentials are unavailable (for example on deploy previews).
 
-const path = require('path');
-
 // Load the static dataset at bundle time so Netlify packages it alongside the
 // function. Falling back to fs.readFileSync meant the JSON file was missing in
 // the deployed lambda bundle, which left preview environments with empty
 // results even though the seed data existed locally.
 let staticCandidates = [];
 try {
-  // ../../data relative to this helper inside netlify/functions/
-  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'candidates.json'));
+  const seed = require('../../data/candidates.json');
   if (Array.isArray(seed?.candidates)) staticCandidates = seed.candidates;
+  else if (Array.isArray(seed)) staticCandidates = seed;
 } catch (err) {
   console.warn('[candidates] unable to pre-load static dataset', err?.message || err);
 }

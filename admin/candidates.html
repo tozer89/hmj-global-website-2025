@@ -14,8 +14,8 @@
 
   <!-- Shared admin bootstrap -->
   <script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-  <!-- Use the legacy UMD build so the worker loads correctly in previews -->
-  <script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/legacy/build/pdf.min.js"></script>
+  <!-- Use a stable pdf.js mirror so the worker loads correctly in previews -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.107/pdf.min.js"></script>
   <script defer src="/admin/common.js?v=21"></script>
 
   <style>
@@ -441,7 +441,7 @@
       let pendingUpload = null;
       let cvMode = 'parse';
       if (window.pdfjsLib?.GlobalWorkerOptions) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/legacy/build/pdf.worker.min.js';
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.107/pdf.worker.min.js';
       }
 
       const $ = sel;

@@ -1,6 +1,4 @@
 // netlify/functions/_jobs-helpers.js
-const path = require('path');
-
 const SECTION_PRESETS = new Map([
   ['commercial', 'Commercial'],
   ['dc', 'Data Centre Delivery'],
@@ -137,18 +135,22 @@ function toDbPayload(job = {}) {
   };
 }
 
-function loadStaticJobs() {
-  try {
-    // Load at bundle time so the static dataset ships with the lambda.
-    const json = require(path.resolve(__dirname, '..', '..', 'data', 'jobs.json'));
-    const rows = Array.isArray(json?.jobs) ? json.jobs : [];
-    return rows.map(toJob);
-  } catch (err) {
-    console.warn('[jobs] unable to load static jobs.json', err?.message || err);
+let STATIC_JOBS = [];
+try {
+  // Use a static require so Netlify’s bundler packages the JSON file.
+  const seed = require('../../data/jobs.json');
+  if (Array.isArray(seed?.jobs)) {
+    STATIC_JOBS = seed.jobs;
+  } else if (Array.isArray(seed)) {
+    STATIC_JOBS = seed;
   }
+} catch (err) {
+  console.warn('[jobs] unable to preload static jobs dataset', err?.message || err);
+}
 
-  console.warn('[jobs] no static jobs fallback available');
-  return [];
+function loadStaticJobs() {
+  if (!STATIC_JOBS.length) return [];
+  return STATIC_JOBS.map(toJob);
 }
 
 module.exports = {

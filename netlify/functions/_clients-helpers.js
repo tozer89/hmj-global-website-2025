@@ -1,9 +1,8 @@
-const path = require('path');
-
 let staticClients = [];
 try {
-  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'clients.json'));
+  const seed = require('../../data/clients.json');
   if (Array.isArray(seed?.clients)) staticClients = seed.clients;
+  else if (Array.isArray(seed)) staticClients = seed;
 } catch (err) {
   console.warn('[clients] unable to pre-load static dataset', err?.message || err);
 }

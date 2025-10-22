@@ -1,9 +1,8 @@
-const path = require('path');
-
 let staticAssignments = [];
 try {
-  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'assignments.json'));
+  const seed = require('../../data/assignments.json');
   if (Array.isArray(seed?.assignments)) staticAssignments = seed.assignments;
+  else if (Array.isArray(seed)) staticAssignments = seed;
 } catch (err) {
   console.warn('[assignments] unable to pre-load static dataset', err?.message || err);
 }

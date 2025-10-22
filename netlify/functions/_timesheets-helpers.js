@@ -1,9 +1,8 @@
-const path = require('path');
-
 let staticTimesheets = [];
 try {
-  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'timesheets.json'));
+  const seed = require('../../data/timesheets.json');
   if (Array.isArray(seed?.timesheets)) staticTimesheets = seed.timesheets;
+  else if (Array.isArray(seed)) staticTimesheets = seed;
 } catch (err) {
   console.warn('[timesheets] unable to pre-load static dataset', err?.message || err);
 }
