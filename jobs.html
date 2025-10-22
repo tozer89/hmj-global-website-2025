@@ -852,16 +852,26 @@
       return null;
     }
     async function resolveJobs(){
+      const embedded = loadEmbeddedJobs();
+
       const fromApi = await loadJobsFromApi();
-      if(Array.isArray(fromApi) && fromApi.length) return { rows: fromApi, source: 'api' };
+      if(Array.isArray(fromApi) && fromApi.length){
+        return { rows: fromApi, source: 'api' };
+      }
 
       const fromJson = await loadJobsJSON();
-      if(Array.isArray(fromJson) && fromJson.length) return { rows: fromJson, source: 'static' };
+      if(Array.isArray(fromJson) && fromJson.length){
+        // API returned empty/failed but static JSON exists.
+        return { rows: fromJson, source: fromApi ? 'static-from-json' : 'static-json' };
+      }
 
-      const embedded = loadEmbeddedJobs();
-      if(Array.isArray(embedded) && embedded.length) return { rows: embedded, source: 'embedded' };
+      if(Array.isArray(embedded) && embedded.length){
+        const source = fromApi && Array.isArray(fromApi) ? 'embedded-after-api' : 'embedded';
+        return { rows: embedded, source };
+      }
 
-      return { rows: [], source: 'empty' };
+      // Nothing available – return whatever the API gave us (likely empty) for diagnostics.
+      return { rows: Array.isArray(fromApi) ? fromApi : [], source: 'empty' };
     }
 
     function deriveSections(jobs){
