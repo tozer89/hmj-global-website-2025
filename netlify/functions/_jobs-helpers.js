@@ -138,17 +138,47 @@ function toDbPayload(job = {}) {
   };
 }
 
+function findJobsFile() {
+  const candidates = [
+    path.resolve(__dirname, '..', 'data', 'jobs.json'),
+    path.resolve(__dirname, '..', '..', 'data', 'jobs.json'),
+    path.resolve(process.cwd(), 'data', 'jobs.json'),
+  ];
+  return candidates.find((filePath) => {
+    try {
+      return fs.existsSync(filePath);
+    } catch {
+      return false;
+    }
+  }) || null;
+}
+
 function loadStaticJobs() {
   try {
-    const file = path.join(__dirname, '..', 'data', 'jobs.json');
-    const raw = fs.readFileSync(file, 'utf8');
-    const parsed = JSON.parse(raw || '{}');
-    const rows = Array.isArray(parsed?.jobs) ? parsed.jobs : [];
-    return rows.map(toJob);
+    const file = findJobsFile();
+    if (file) {
+      const raw = fs.readFileSync(file, 'utf8');
+      const parsed = JSON.parse(raw || '{}');
+      const rows = Array.isArray(parsed?.jobs) ? parsed.jobs : [];
+      if (rows.length) return rows.map(toJob);
+    }
   } catch (err) {
     console.error('[jobs] failed to read static jobs.json', err?.message || err);
-    return [];
   }
+
+  try {
+    // As a final fallback, rely on Node’s require resolution so bundlers include the file
+    // even if the filesystem lookup above fails in production bundles.
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    const json = require('../../data/jobs.json');
+    const rows = Array.isArray(json?.jobs) ? json.jobs : [];
+    return rows.map(toJob);
+  } catch (err) {
+    console.warn('[jobs] fallback require for jobs.json failed', err?.message || err);
+  }
+
+  console.warn('[jobs] no static jobs fallback available');
+  return [];
 }
 
 module.exports = {

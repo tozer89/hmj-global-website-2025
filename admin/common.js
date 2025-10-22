@@ -403,7 +403,12 @@
       Debug.err('bootAdmin error:', e);
       toast('Init failed: ' + (e.message || e), 'error', 6000);
       // keep the gate visible
-      try { const g = $('#gate'); const app = $('#app'); if (g) g.style.display = ''; if (app) app.style.display = 'none'; } catch {}
+      try {
+        const g = $('#gate');
+        const app = $('#app');
+        if (g) g.style.display = '';
+        if (app) app.style.display = 'none';
+      } catch {}
     }
   };
 

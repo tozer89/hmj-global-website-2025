@@ -1,7 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { toJob, toDbPayload, cleanArray, slugify, resolveSection } = require('../netlify/functions/_jobs-helpers.js');
+const {
+  toJob,
+  toDbPayload,
+  cleanArray,
+  slugify,
+  resolveSection,
+  loadStaticJobs,
+} = require('../netlify/functions/_jobs-helpers.js');
 
 test('toJob normalises database row fields and derives tags/section meta', () => {
   const row = {
@@ -96,4 +103,11 @@ test('slugify and resolveSection provide stable keys', () => {
   const custom = resolveSection('Critical Infrastructure');
   assert.equal(custom.label, 'Critical Infrastructure');
   assert.equal(custom.key, 'critical-infrastructure');
+});
+
+test('loadStaticJobs loads seed data for offline fallback', () => {
+  const jobs = loadStaticJobs();
+  assert.ok(Array.isArray(jobs));
+  assert.ok(jobs.length > 0, 'expected seed jobs for fallback');
+  assert.ok(jobs.every((job) => job.title && job.sectionKey));
 });
