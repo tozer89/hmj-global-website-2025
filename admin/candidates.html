@@ -48,7 +48,7 @@
     input[type=search]{ min-width:280px; }
     table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
     thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:10px 12px;font-weight:800}
-    tbody td{border-top:1px solid var(--stroke);padding:10px 12px;vertical-align:middle}
+    tbody td{border-top:1px solid var(--stroke);padding:8px 10px;vertical-align:middle}
     tbody tr:hover{background:#f8fafc}
     .muted{color:var(--muted)}
     .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
@@ -162,7 +162,7 @@
           <div class="muted" id="pgInfo"></div>
           <div class="sp"></div>
           <select id="pgSize">
-            <option>25</option><option>50</option><option>100</option>
+            <option selected>10</option><option>25</option><option>50</option><option>100</option>
           </select>
           <button class="btn small ghost" id="pgPrev">◀</button>
           <button class="btn small ghost" id="pgNext">▶</button>
@@ -429,9 +429,10 @@
       let editing = null;
       let draft = {};
       let currentTab = 'Basics';
-      let page = 1, pageSize = 25;
+      let page = 1, pageSize = 10;
       let activeStatus = '';
       let readOnlyMode = false;
+      let firstLoadComplete = false;
 
       const columns = [
         { key:'ref',        label:'Ref',    show:true, width:'100px' },
@@ -678,6 +679,8 @@
           return;
         }
         const name = `${r.first_name||''} ${r.last_name||''}`.trim() || '—';
+        const assignmentsLink = `/admin/assignments.html?q=${encodeURIComponent(name || r.ref || '')}`;
+        const timesheetsLink = `/admin/timesheets.html?candidate=${encodeURIComponent(name || '')}`;
         host.innerHTML = `
           <div class="kv"><b>Name</b><div>${name}</div></div>
           <div class="kv"><b>Email</b><div>${r.email||'—'}</div></div>
@@ -685,6 +688,9 @@
           <div class="kv"><b>Status</b><div>${pillForStatus(r.status||'In progress')}</div></div>
           <div class="kv"><b>Job title</b><div>${r.job_title||'—'}</div></div>
           <div class="kv"><b>Client</b><div>${r.client_name||'—'}</div></div>
+          <div class="kv"><b>Payroll ref</b><div>${r.payroll_ref||'—'}</div></div>
+          <div class="kv"><b>Timesheets</b><div>${r.timesheet_status||'—'} · <a class="link" href="${timesheetsLink}" target="_blank" rel="noopener">Open board</a></div></div>
+          <div class="kv"><b>Assignments</b><div><a class="link" href="${assignmentsLink}" target="_blank" rel="noopener">View linked assignments</a></div></div>
           <div class="kv"><b>Address</b><div>${r.address1||''} ${r.address2||''} ${r.town||''} ${r.county||''} ${r.postcode||''} ${r.country||''}</div></div>
           <div class="kv"><b>Updated</b><div>${fmtDate(r.updated_at||r.created_at)}</div></div>`;
         const link = `/admin/candidate-profile.html?id=${encodeURIComponent(r.id)}`;
@@ -771,6 +777,10 @@
           allRows = normaliseCandidateRows(Array.isArray(res) ? res : (res.rows || []));
           page = 1; selected.clear(); enableDelete();
           render(); renderQuick(null);
+          if (!firstLoadComplete) {
+            toast(`Loaded ${allRows.length} candidates`, 'info', 2600);
+            firstLoadComplete = true;
+          }
           chip('list: ok','ok','list');
         }catch(e){
           console.error('[candidates] list error', e);
@@ -791,6 +801,10 @@
             page = 1; selected.clear(); enableDelete();
             render(); renderQuick(null);
             toast('Supabase unavailable — showing demo candidates (read-only).', 'warn', 4200);
+            if (!firstLoadComplete) {
+              toast(`${allRows.length} demo candidates ready`, 'warn', 3200);
+              firstLoadComplete = true;
+            }
           } else {
             wrap.textContent = 'Error: ' + (e.message || e);
             if (allRows.length) {
@@ -1276,7 +1290,8 @@
       });
       $('#pgPrev').onclick = ()=>{ if (page>1) { page--; render(); } };
       $('#pgNext').onclick = ()=>{ page++; render(); };
-      $('#pgSize').onchange = (e)=>{ pageSize = Number(e.target.value)||25; page=1; render(); };
+      $('#pgSize').value = String(pageSize);
+      $('#pgSize').onchange = (e)=>{ pageSize = Number(e.target.value)||10; page=1; render(); };
       $('#btnSaveDraft').onclick = ()=>save(false);
       $('#btnSaveClose').onclick = ()=>save(true);
       if (btnParseCv) btnParseCv.onclick = ()=>{ cvMode = 'parse'; cvInput?.click(); };

@@ -23,6 +23,8 @@ const COLUMNS = `
   updated_at
 `;
 
+const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+
 exports.handler = async (event, context) => {
   const fallback = loadStaticJobs();
 
@@ -33,11 +35,13 @@ exports.handler = async (event, context) => {
       if (fallback.length) {
         return {
           statusCode: 200,
+          headers: JSON_HEADERS,
           body: JSON.stringify({ jobs: fallback, source: 'static', readOnly: true, supabase: supabaseStatus() }),
         };
       }
       return {
         statusCode: 503,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ error: 'Supabase client unavailable', supabase: supabaseStatus() }),
       };
     }
@@ -67,14 +71,16 @@ exports.handler = async (event, context) => {
       const seeded = fallback.map((job) => ({ ...job, __seed: true }));
       return {
         statusCode: 200,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ jobs: seeded, source: 'static', seeded: true, supabase: supabaseStatus() }),
       };
     }
-    return { statusCode: 200, body: JSON.stringify({ jobs, supabase: supabaseStatus() }) };
+    return { statusCode: 200, headers: JSON_HEADERS, body: JSON.stringify({ jobs, supabase: supabaseStatus() }) };
   } catch (e) {
     if (fallback.length) {
       return {
         statusCode: 200,
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           jobs: fallback,
           readOnly: true,
@@ -87,6 +93,7 @@ exports.handler = async (event, context) => {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return {
       statusCode: status,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ error: e.message || 'Unexpected error', supabase: supabaseStatus() }),
     };
   }

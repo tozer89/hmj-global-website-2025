@@ -21,6 +21,8 @@ const COLUMNS = `
   updated_at
 `;
 
+const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+
 exports.handler = async (event) => {
   const fallback = loadStaticJobs();
 
@@ -28,11 +30,13 @@ exports.handler = async (event) => {
     if (fallback.length) {
       return {
         statusCode: 200,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ jobs: fallback, source: 'static', supabase: supabaseStatus() }),
       };
     }
     return {
       statusCode: 503,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ error: 'Supabase client unavailable', supabase: supabaseStatus() }),
     };
   }
@@ -56,14 +60,16 @@ exports.handler = async (event) => {
     if (!jobs.length && fallback.length) {
       return {
         statusCode: 200,
+        headers: JSON_HEADERS,
         body: JSON.stringify({ jobs: fallback, source: 'static', supabase: supabaseStatus() }),
       };
     }
-    return { statusCode: 200, body: JSON.stringify({ jobs, supabase: supabaseStatus() }) };
+    return { statusCode: 200, headers: JSON_HEADERS, body: JSON.stringify({ jobs, supabase: supabaseStatus() }) };
   } catch (e) {
     if (fallback.length) {
       return {
         statusCode: 200,
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           jobs: fallback,
           source: 'static',
@@ -74,6 +80,7 @@ exports.handler = async (event) => {
     }
     return {
       statusCode: 500,
+      headers: JSON_HEADERS,
       body: JSON.stringify({ error: e.message || 'Unable to load jobs', supabase: supabaseStatus() }),
     };
   }

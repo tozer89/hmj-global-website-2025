@@ -7,13 +7,27 @@
 // the deployed lambda bundle, which left preview environments with empty
 // results even though the seed data existed locally.
 let staticCandidates = [];
-try {
-  const seed = require('../../data/candidates.json');
-  if (Array.isArray(seed?.candidates)) staticCandidates = seed.candidates;
-  else if (Array.isArray(seed)) staticCandidates = seed;
-} catch (err) {
-  console.warn('[candidates] unable to pre-load static dataset', err?.message || err);
+function preloadCandidates() {
+  if (staticCandidates.length) return staticCandidates;
+  const sources = [
+    () => require('../../data/candidates.json'),
+    () => require('./_data/candidates.seed.json'),
+  ];
+  for (const load of sources) {
+    try {
+      const seed = load();
+      const rows = Array.isArray(seed?.candidates) ? seed.candidates : Array.isArray(seed) ? seed : [];
+      if (rows.length) {
+        staticCandidates = rows;
+        return staticCandidates;
+      }
+    } catch (err) {
+      console.warn('[candidates] unable to pre-load dataset source', err?.message || err);
+    }
+  }
+  return staticCandidates;
 }
+preloadCandidates();
 
 function normaliseBoolean(value) {
   if (typeof value === 'boolean') return value;
@@ -91,6 +105,7 @@ function toCandidate(row = {}) {
 }
 
 function loadStaticCandidates() {
+  if (!staticCandidates.length) preloadCandidates();
   if (!staticCandidates.length) return [];
   return staticCandidates.map(toCandidate);
 }

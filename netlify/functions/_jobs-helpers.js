@@ -136,19 +136,30 @@ function toDbPayload(job = {}) {
 }
 
 let STATIC_JOBS = [];
-try {
-  // Use a static require so Netlify’s bundler packages the JSON file.
-  const seed = require('../../data/jobs.json');
-  if (Array.isArray(seed?.jobs)) {
-    STATIC_JOBS = seed.jobs;
-  } else if (Array.isArray(seed)) {
-    STATIC_JOBS = seed;
+function preloadJobs() {
+  if (STATIC_JOBS.length) return STATIC_JOBS;
+  const sources = [
+    () => require('../../data/jobs.json'),
+    () => require('./_data/jobs.seed.json'),
+  ];
+  for (const load of sources) {
+    try {
+      const seed = load();
+      const rows = Array.isArray(seed?.jobs) ? seed.jobs : Array.isArray(seed) ? seed : [];
+      if (rows.length) {
+        STATIC_JOBS = rows;
+        return STATIC_JOBS;
+      }
+    } catch (err) {
+      console.warn('[jobs] unable to preload dataset source', err?.message || err);
+    }
   }
-} catch (err) {
-  console.warn('[jobs] unable to preload static jobs dataset', err?.message || err);
+  return STATIC_JOBS;
 }
+preloadJobs();
 
 function loadStaticJobs() {
+  if (!STATIC_JOBS.length) preloadJobs();
   if (!STATIC_JOBS.length) return [];
   return STATIC_JOBS.map(toJob);
 }
