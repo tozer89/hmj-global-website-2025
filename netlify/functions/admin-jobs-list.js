@@ -1,7 +1,7 @@
 // netlify/functions/admin-jobs-list.js
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob } = require('./_jobs-helpers.js');
+const { toJob, loadStaticJobs } = require('./_jobs-helpers.js');
 
 const COLUMNS = `
   id,
@@ -47,8 +47,21 @@ exports.handler = async (event, context) => {
     if (error) throw error;
 
     const jobs = Array.isArray(data) ? data.map(toJob) : [];
+    if (!jobs.length) {
+      const fallback = loadStaticJobs();
+      if (fallback.length) {
+        return { statusCode: 200, body: JSON.stringify({ jobs: fallback, readOnly: true, source: 'static' }) };
+      }
+    }
     return { statusCode: 200, body: JSON.stringify({ jobs }) };
   } catch (e) {
+    const fallback = loadStaticJobs();
+    if (fallback.length) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ jobs: fallback, readOnly: true, source: 'static', error: e.message }),
+      };
+    }
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };
   }

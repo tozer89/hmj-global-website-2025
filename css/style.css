@@ -8,7 +8,7 @@ body {
 
 /* Navbar */
 nav {
-  background: #1A1A2E;
+  background: #2f4ea2;
   color: #ffffff;
   display: flex;
   justify-content: space-between;
@@ -43,7 +43,7 @@ nav a {
 }
 
 nav a:hover {
-  color: #3A66B3;      /* accent blue on hover */
+  color: #f0f4ff;      /* accent lighter on hover */
 }
 
 /* Hero section */

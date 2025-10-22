@@ -69,23 +69,84 @@
     return getCookie('nf_jwt') || '';
   }
 
+  function brandIdentityWidget(id) {
+    try {
+      const styleText = `
+        .netlify-identity-logo {
+          background: transparent !important;
+        }
+        .netlify-identity-logo svg,
+        .netlify-identity-logo img {
+          display: none !important;
+        }
+        .netlify-identity-logo::after {
+          content: '';
+          display: block;
+          width: 72px;
+          height: 72px;
+          margin: 0 auto;
+          background: url(/images/logo.png) center/contain no-repeat;
+        }
+      `;
+
+      const hostDoc = document;
+      if (hostDoc && !hostDoc.getElementById('hmj-identity-brand-host')) {
+        const hostStyle = hostDoc.createElement('style');
+        hostStyle.id = 'hmj-identity-brand-host';
+        hostStyle.textContent = styleText;
+        hostDoc.head.appendChild(hostStyle);
+      }
+
+      const doc = id?.iframe?.contentWindow?.document;
+      if (doc && !doc.getElementById('hmj-identity-brand')) {
+        const style = doc.createElement('style');
+        style.id = 'hmj-identity-brand';
+        style.textContent = styleText;
+        doc.head.appendChild(style);
+      }
+    } catch (err) {
+      Debug.warn('identity brand failed', err);
+    }
+  }
+
+  function ensureIdentityInit() {
+    const id = window.netlifyIdentity;
+    if (!id || typeof id.init !== 'function' || id.__hmjInit) return id;
+
+    id.__hmjInit = true;
+    const opts = {};
+    const base = (window.ADMIN_IDENTITY_URL || '').replace(/\/$/, '');
+    if (base) opts.APIUrl = base;
+    try { id.init(opts); } catch (err) { Debug.warn('identity init failed', err); }
+
+    try {
+      id.on('init', () => brandIdentityWidget(id));
+      id.on('open', () => brandIdentityWidget(id));
+    } catch (err) {
+      Debug.warn('identity brand hook failed', err);
+    }
+
+    return id;
+  }
+
   async function waitIdentityReady(maxMs = 6000) {
     let waited = 0;
     while (waited < maxMs) {
-      if (window.netlifyIdentity && typeof window.netlifyIdentity.on === 'function') {
+      const id = ensureIdentityInit();
+      if (id && typeof id.on === 'function') {
         // Widget is live
-        return window.netlifyIdentity;
+        return id;
       }
       await sleep(100);
       waited += 100;
     }
-    return null; // allow fallback
+    return ensureIdentityInit(); // allow fallback
   }
 
   // Resolve active user (works with widget or cookie-only)
   async function getIdentityUser() {
     try {
-      const id = window.netlifyIdentity;
+      const id = ensureIdentityInit();
       if (id && typeof id.currentUser === 'function') {
         const u = id.currentUser();
         if (u) return u;

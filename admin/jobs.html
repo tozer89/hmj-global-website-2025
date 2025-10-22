@@ -6,97 +6,100 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Jobs — Admin | HMJ Global</title>
 
+  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="/admin/common.js?v=16"></script>
+  <script defer src="/admin/common.js?v=21"></script>
 
   <style>
     :root{
-      --bg:#050910; --panel:#0b1422; --border:#162237; --highlight:#3b82f6; --accent:#60a5fa;
-      --ink:#f8fbff; --muted:#93a5c7; --chip:#111b28; --danger:#c2410c; --ok:#10b981;
+      --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --accent:#3f66c7;
+      --ink:#0f1b3f; --muted:#5d6f9e; --chip:#eef2ff; --danger:#b42318; --ok:#138754;
     }
     *{box-sizing:border-box}
     html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
     a{color:inherit}
 
-    .top{position:sticky;top:0;z-index:100;background:rgba(5,9,16,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.05)}
+    .top{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 10px 28px rgba(15,27,63,.18)}
     .row{max-width:1420px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px}
     .brand{font-weight:800;letter-spacing:.02em;font-size:16px}
     .sp{flex:1}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);color:#cbd7ff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.32);color:#f5f7ff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
 
-    .btn{background:#12203a;color:#f1f5ff;border:1px solid rgba(255,255,255,.14);padding:9px 15px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
-    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(0,0,0,.32);border-color:rgba(96,165,250,.55)}
-    .btn.ghost{background:transparent;color:#cbd7ff;border-color:rgba(203,215,255,.25)}
-    .btn.primary{background:linear-gradient(180deg,rgba(59,130,246,.25),rgba(59,130,246,.15));border-color:rgba(96,165,250,.55);color:#eaf2ff}
-    .btn.danger{background:rgba(194,65,12,.25);border-color:rgba(248,113,113,.45);color:#fecaca}
+    .btn{background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.04));color:var(--ink);border:1px solid rgba(47,78,162,.25);padding:9px 15px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(47,78,162,.18);border-color:rgba(47,78,162,.45)}
+    .btn.ghost{background:#fff;border-color:rgba(47,78,162,.18);color:var(--highlight)}
+    .btn.primary{background:linear-gradient(180deg,rgba(47,78,162,.22),rgba(47,78,162,.12));border-color:rgba(47,78,162,.55);color:#fff;box-shadow:0 12px 28px rgba(47,78,162,.22)}
+    .btn.danger{background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08));border-color:rgba(180,35,24,.4);color:#fff}
     .btn.small{padding:7px 12px;font-size:13px;border-radius:10px}
+    .btn:disabled,.btn.disabled{cursor:not-allowed;opacity:.55;box-shadow:none;transform:none}
 
     .wrap{max-width:1420px;margin:24px auto;padding:0 20px;display:grid;gap:18px}
-    .panel{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:18px;box-shadow:0 24px 60px rgba(2,6,23,.4)}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(15,27,63,.12)}
+    .panel.notice{display:none;background:#eef2ff;border:1px solid rgba(47,78,162,.25);color:var(--highlight);font-weight:600;gap:6px}
     .panel h2{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
     .muted{color:var(--muted)}
 
     .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-    .filters-grid .search{grid-column:span 2;display:flex;align-items:center;gap:8px;background:#0d1a2d;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:6px 10px}
+    .filters-grid .search{grid-column:span 2;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid rgba(47,78,162,.15);border-radius:12px;padding:6px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
     .filters-grid .search input{flex:1;background:transparent;border:0;color:var(--ink);font:inherit;padding:4px 0}
-    .filters-grid select{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#0d1a2d;color:var(--ink);font-weight:600}
+    .filters-grid select{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink);font-weight:600}
     .filters-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
 
     .chip-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-    .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid rgba(96,165,250,.25);background:var(--chip);cursor:pointer;font-weight:700;font-size:13px;color:#dbe5ff;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
-    .chip .dot{width:8px;height:8px;border-radius:999px;background:#60a5fa;box-shadow:0 0 0 2px rgba(59,130,246,.25)}
-    .chip.active{border-color:rgba(96,165,250,.6);background:rgba(96,165,250,.18);transform:translateY(-1px);box-shadow:0 12px 24px rgba(59,130,246,.25)}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.25);background:var(--chip);cursor:pointer;font-weight:700;font-size:13px;color:var(--highlight);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .chip .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 2px rgba(47,78,162,.2)}
+    .chip.active{border-color:rgba(47,78,162,.55);background:rgba(47,78,162,.12);transform:translateY(-1px);box-shadow:0 12px 24px rgba(47,78,162,.18)}
 
     .section-form{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-    .section-form input{flex:1;min-width:220px;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#0d1a2d;color:var(--ink);font-weight:600}
+    .section-form input{flex:1;min-width:220px;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
 
     .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:start}
-    .column{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:14px;display:grid;gap:10px;min-height:240px;position:relative}
-    .column.drag-target{border-color:rgba(96,165,250,.65);box-shadow:0 0 0 2px rgba(96,165,250,.45)}
+    .column{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;display:grid;gap:10px;min-height:240px;position:relative}
+    .column.drag-target{border-color:rgba(47,78,162,.65);box-shadow:0 0 0 2px rgba(47,78,162,.35)}
     .column-header{display:flex;align-items:center;gap:8px;justify-content:space-between}
     .column-header h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
-    .column-header .count{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;color:#e2e8ff;font-weight:700}
+    .column-header .count{padding:2px 8px;border-radius:999px;background:#eef2ff;font-size:12px;color:var(--highlight);font-weight:700}
     .column-body{display:grid;gap:10px;min-height:150px}
-    .drop-zone{flex:1;border:1px dashed rgba(255,255,255,.12);border-radius:14px;padding:20px;display:grid;place-items:center;color:var(--muted);font-weight:600}
+    .drop-zone{flex:1;border:1px dashed rgba(47,78,162,.25);border-radius:14px;padding:20px;display:grid;place-items:center;color:var(--muted);font-weight:600;background:#f7f8ff}
 
-    .card{background:#0f1d33;border:1px solid rgba(96,165,250,.18);border-radius:16px;padding:12px 14px;display:grid;gap:6px;cursor:grab;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .card{background:#fff;border:1px solid rgba(47,78,162,.18);border-radius:16px;padding:12px 14px;display:grid;gap:6px;cursor:grab;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
     .card:active{cursor:grabbing}
-    .card:hover{transform:translateY(-2px);box-shadow:0 18px 32px rgba(15,29,51,.45);border-color:rgba(96,165,250,.55)}
-    .card h4{margin:0;font-size:15px;color:#f8fbff;display:flex;align-items:center;gap:6px}
-    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(255,255,255,.12);color:#e2e8ff;text-transform:uppercase;letter-spacing:.05em}
-    .badge.live{background:rgba(16,185,129,.14);color:#bbf7d0;border:1px solid rgba(16,185,129,.4)}
-    .badge.interviewing{background:rgba(250,204,21,.14);color:#fef08a;border:1px solid rgba(250,204,21,.4)}
-    .badge.closed{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.4)}
+    .card:hover{transform:translateY(-2px);box-shadow:0 18px 32px rgba(15,27,63,.18);border-color:rgba(47,78,162,.45)}
+    .card h4{margin:0;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:6px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(47,78,162,.12);color:var(--highlight);text-transform:uppercase;letter-spacing:.05em}
+    .badge.live{background:rgba(17,137,84,.12);color:#0f5132;border:1px solid rgba(17,137,84,.28)}
+    .badge.interviewing{background:rgba(250,204,21,.14);color:#854d0e;border:1px solid rgba(250,204,21,.35)}
+    .badge.closed{background:rgba(180,35,24,.12);color:#842029;border:1px solid rgba(180,35,24,.35)}
     .tags{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
-    .tags span{padding:3px 7px;border-radius:999px;background:rgba(59,130,246,.18);border:1px solid rgba(96,165,250,.35);color:#cbd7ff;font-weight:600}
+    .tags span{padding:3px 7px;border-radius:999px;background:rgba(47,78,162,.12);border:1px solid rgba(47,78,162,.35);color:var(--highlight);font-weight:600}
     .card footer{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
-    .card footer button{background:transparent;border:0;color:#93c5fd;font-weight:700;cursor:pointer}
+    .card footer button{background:transparent;border:0;color:var(--highlight);font-weight:700;cursor:pointer}
     .card footer button:hover{text-decoration:underline}
 
-    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(680px,92vw);background:#091425;border-left:1px solid rgba(96,165,250,.25);box-shadow:-30px 0 60px rgba(2,6,23,.6);transform:translateX(100%);transition:transform .24s ease;display:grid;grid-template-rows:auto 1fr auto;z-index:200}
+    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(680px,92vw);background:#f8f9ff;border-left:1px solid var(--border);box-shadow:-24px 0 60px rgba(15,27,63,.24);transform:translateX(100%);transition:transform .24s ease;display:grid;grid-template-rows:auto 1fr auto;z-index:200}
     .drawer.open{transform:translateX(0)}
-    .drawer-head{padding:18px 22px;border-bottom:1px solid rgba(96,165,250,.25);display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    .drawer-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:#fff}
     .drawer-body{padding:18px 22px;overflow:auto;display:grid;gap:18px}
-    .drawer-foot{padding:16px 22px;border-top:1px solid rgba(96,165,250,.18);display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end}
+    .drawer-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;background:#fff}
     .drawer h3{margin:0;font-size:18px}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
     .field{display:grid;gap:6px}
     .field label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
-    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#0d1c31;color:#f1f5ff;font-weight:600;font-size:14px}
+    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink);font-weight:600;font-size:14px}
     .field textarea{min-height:110px;resize:vertical}
-    .switch{display:flex;align-items:center;gap:10px;font-weight:700;color:#cbd7ff}
+    .switch{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--highlight)}
     .switch input{width:18px;height:18px}
-    .tag-editor{display:flex;flex-wrap:wrap;gap:8px;background:#0b192d;border:1px solid rgba(59,130,246,.25);border-radius:12px;padding:10px}
-    .tag-editor .token{padding:6px 10px;border-radius:999px;background:rgba(59,130,246,.25);display:inline-flex;align-items:center;gap:6px;font-weight:700}
-    .tag-editor .token button{background:transparent;border:0;color:#dbeafe;font-weight:900;cursor:pointer}
-    .tag-editor input{flex:1;min-width:140px;border:0;background:transparent;color:#f1f5ff;font-weight:600;padding:4px}
+    .tag-editor{display:flex;flex-wrap:wrap;gap:8px;background:#f4f6ff;border:1px solid rgba(47,78,162,.18);border-radius:12px;padding:10px}
+    .tag-editor .token{padding:6px 10px;border-radius:999px;background:rgba(47,78,162,.12);display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--highlight)}
+    .tag-editor .token button{background:transparent;border:0;color:var(--highlight);font-weight:900;cursor:pointer}
+    .tag-editor input{flex:1;min-width:140px;border:0;background:transparent;color:var(--ink);font-weight:600;padding:4px}
 
-    .share-box{display:grid;gap:10px;background:#0d1c31;border:1px solid rgba(96,165,250,.25);border-radius:14px;padding:14px}
-    .share-box code{word-break:break-all;font-size:13px;background:rgba(15,27,51,.6);padding:6px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.08)}
-    .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:#08101d;color:#f1f5ff;font-weight:600}
+    .share-box{display:grid;gap:10px;background:#f4f6ff;border:1px solid rgba(47,78,162,.2);border-radius:14px;padding:14px}
+    .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
+    .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
-    #toast .notice{padding:10px 12px;border-radius:12px;background:#0d1c31;border:1px solid rgba(59,130,246,.45);box-shadow:0 18px 34px rgba(2,6,23,.45);font-weight:700}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid rgba(47,78,162,.25);box-shadow:0 18px 34px rgba(15,27,63,.2);font-weight:700}
 
     @media(max-width:820px){
       .filters-grid .search{grid-column:span 1}
@@ -123,6 +126,10 @@
   </div>
 
   <div class="wrap" id="app" style="display:none">
+    <section class="panel notice" id="readOnlyNotice">
+      <div>Read-only mode.</div>
+      <div class="muted">Supabase credentials are missing so jobs are loaded from the static fallback. Configure the environment to enable editing.</div>
+    </section>
     <section class="panel" id="filtersPanel">
       <div class="filters-grid">
         <div class="search"><svg width="16" height="16" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="m11 11 4 4"/></svg><input id="filterSearch" type="search" placeholder="Search title, location, keywords" autocomplete="off"/></div>
@@ -152,7 +159,7 @@
         <div class="sp"></div>
         <button class="btn ghost small" id="clearFilters">Clear filters</button>
         <button class="btn ghost small" id="btnRefresh">Refresh</button>
-        <button class="btn primary small" id="btnNew">＋ New job</button>
+        <button class="btn primary small" id="btnNew" data-readonly="true">＋ New job</button>
       </div>
       <div class="chip-list" id="tagFilterChips"></div>
       <form class="section-form" id="addSectionForm">
@@ -203,17 +210,17 @@
 
       <div class="share-box">
         <div><strong>Shareable spec</strong><p class="muted">Generate a standalone advert page for this job. Links expire automatically.</p></div>
-        <button class="btn ghost small" id="btnShare">Generate share link</button>
+        <button class="btn ghost small" id="btnShare" data-readonly="true">Generate share link</button>
         <div id="shareResult" style="display:none">
           <code id="shareMeta"></code>
           <input id="shareUrl" readonly/>
-          <button class="btn ghost small" id="btnCopyShare">Copy link</button>
+          <button class="btn ghost small" id="btnCopyShare" data-readonly="true">Copy link</button>
         </div>
       </div>
     </div>
     <div class="drawer-foot">
-      <button class="btn ghost" id="btnDelete">Delete</button>
-      <button class="btn primary" id="btnSave">Save job</button>
+      <button class="btn ghost" id="btnDelete" data-readonly="true">Delete</button>
+      <button class="btn primary" id="btnSave" data-readonly="true">Save job</button>
     </div>
   </aside>
 
@@ -226,7 +233,7 @@
       return setTimeout(startJobs, 40);
     }
 
-    Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
+    window.Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
       const state = {
         jobs: [],
         filters: { q:'', status:'all', type:'all', published:'all', section:'all', tags:new Set() },
@@ -237,6 +244,8 @@
         editingTags: [],
         shareLink: null,
         diagnostics: false,
+        readOnly: false,
+        fallbackSource: '',
       };
 
       const board = sel('#boardColumns');
@@ -258,7 +267,23 @@
       const shareUrl = sel('#shareUrl');
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
+      const readOnlyNotice = sel('#readOnlyNotice');
+      const readOnlyControls = Array.from(document.querySelectorAll('[data-readonly]'));
       const btnDiag = sel('#btnDiag');
+
+      function applyReadOnly() {
+        if (readOnlyNotice) readOnlyNotice.style.display = state.readOnly ? '' : 'none';
+        readOnlyControls.forEach((el) => {
+          if (!el) return;
+          if (state.readOnly) {
+            el.classList.add('disabled');
+            el.setAttribute('disabled', 'true');
+          } else {
+            el.classList.remove('disabled');
+            el.removeAttribute('disabled');
+          }
+        });
+      }
 
       const form = {
         id: sel('#edId'),
@@ -395,7 +420,7 @@
       }
 
       async function persistOrder(jobs) {
-        if (!jobs.length) return;
+        if (state.readOnly || !jobs.length) return;
         try {
           const payload = jobs.map((job) => ({ id: job.id, section: job.section, sortOrder: job.sortOrder }));
           const res = await api('admin-jobs-reorder', 'POST', { updates: payload });
@@ -412,6 +437,7 @@
       }
 
       function moveJob(jobId, targetKey, beforeId) {
+        if (state.readOnly) return;
         const job = state.jobs.find((j) => j.id === jobId);
         if (!job) return;
         const originKey = job.sectionKey || 'general';
@@ -491,7 +517,11 @@
       function renderCard(job) {
         const card = document.createElement('article');
         card.className = 'card';
-        card.setAttribute('draggable', 'true');
+        if (!state.readOnly) {
+          card.setAttribute('draggable', 'true');
+        } else {
+          card.removeAttribute('draggable');
+        }
         card.dataset.id = job.id;
         card.innerHTML = `
           <h4>${job.title || 'Untitled'} ${job.published ? '' : '<span class="badge">Draft</span>'}</h4>
@@ -510,37 +540,41 @@
             openEditor(job);
           }
         });
-        card.addEventListener('dragstart', (e) => {
-          state.dragging = job.id;
-          e.dataTransfer.setData('text/plain', job.id);
-          e.dataTransfer.effectAllowed = 'move';
-        });
-        card.addEventListener('dragend', () => {
-          state.dragging = null;
-        });
-        card.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-          card.classList.add('drag-target');
-        });
-        card.addEventListener('dragleave', () => card.classList.remove('drag-target'));
-        card.addEventListener('drop', (e) => {
-          e.preventDefault();
-          card.classList.remove('drag-target');
-          const jobId = e.dataTransfer.getData('text/plain') || state.dragging;
-          if (!jobId || jobId === job.id) return;
-          moveJob(jobId, job.sectionKey || 'general', job.id);
-        });
+        if (!state.readOnly) {
+          card.addEventListener('dragstart', (e) => {
+            state.dragging = job.id;
+            e.dataTransfer.setData('text/plain', job.id);
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          card.addEventListener('dragend', () => {
+            state.dragging = null;
+          });
+          card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            card.classList.add('drag-target');
+          });
+          card.addEventListener('dragleave', () => card.classList.remove('drag-target'));
+          card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('drag-target');
+            const jobId = e.dataTransfer.getData('text/plain') || state.dragging;
+            if (!jobId || jobId === job.id) return;
+            moveJob(jobId, job.sectionKey || 'general', job.id);
+          });
+        }
         return card;
       }
 
       function setupDropZone(column, key) {
         column.addEventListener('dragover', (e) => {
+          if (state.readOnly) return;
           e.preventDefault();
           column.classList.add('drag-target');
         });
         column.addEventListener('dragleave', () => column.classList.remove('drag-target'));
         column.addEventListener('drop', (e) => {
+          if (state.readOnly) return;
           e.preventDefault();
           column.classList.remove('drag-target');
           const jobId = e.dataTransfer.getData('text/plain') || state.dragging;
@@ -633,6 +667,10 @@
       }
 
       async function saveJob() {
+        if (state.readOnly) {
+          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+          return;
+        }
         try {
           const payload = readForm();
           const res = await api('admin-jobs-save', 'POST', { job: payload });
@@ -654,6 +692,10 @@
       }
 
       async function deleteJob() {
+        if (state.readOnly) {
+          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+          return;
+        }
         if (!state.editing?.id) return;
         if (!confirm('Delete this job?')) return;
         try {
@@ -670,6 +712,10 @@
       }
 
       async function shareJob(job) {
+        if (state.readOnly) {
+          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+          return;
+        }
         if (!job?.id) {
           toast('Save the job before generating a share link', 'warn', 2600);
           return;
@@ -689,6 +735,12 @@
         try {
           const res = await api('admin-jobs-list', 'POST', { includeDrafts: true });
           state.jobs = Array.isArray(res?.jobs) ? res.jobs : [];
+          state.readOnly = !!res?.readOnly;
+          state.fallbackSource = res?.source || '';
+          applyReadOnly();
+          if (state.readOnly && res?.error) {
+            toast('Supabase unavailable: ' + res.error, 'warn', 3600);
+          }
           buildSections();
           buildTags();
           renderAll();
@@ -704,6 +756,10 @@
       }
 
       function addSection(label) {
+        if (state.readOnly) {
+          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+          return;
+        }
         const clean = label.trim();
         if (!clean) return;
         const key = slugify(clean) || `section-${Date.now().toString(36)}`;
@@ -717,13 +773,17 @@
 
       // ---- Event wires ----
       sel('#btnRefresh').onclick = loadJobs;
-      sel('#btnNew').onclick = () => openEditor(null);
+      sel('#btnNew').onclick = () => {
+        if (state.readOnly) { toast('Jobs are read-only until Supabase is configured.', 'warn', 3200); return; }
+        openEditor(null);
+      };
       sel('#btnClose').onclick = closeDrawer;
       sel('#btnSave').onclick = (e) => { e.preventDefault(); saveJob(); };
       sel('#btnDelete').onclick = (e) => { e.preventDefault(); deleteJob(); };
       sel('#btnShare').onclick = (e) => { e.preventDefault(); shareJob(state.editing || readForm()); };
       sel('#btnCopyShare').onclick = (e) => {
         e.preventDefault();
+        if (state.readOnly) { toast('Jobs are read-only until Supabase is configured.', 'warn', 3200); return; }
         if (!shareUrl.value) return;
         navigator.clipboard?.writeText(shareUrl.value).then(() => toast('Copied', 'ok', 1200));
       };
@@ -751,6 +811,7 @@
       };
 
       tagInput.addEventListener('keydown', (e) => {
+        if (state.readOnly) { e.preventDefault(); toast('Jobs are read-only until Supabase is configured.', 'warn', 3200); return; }
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
           const value = tagInput.value.trim();
@@ -785,9 +846,11 @@
         }
       });
 
+      applyReadOnly();
       await loadJobs();
     });
   })();
   </script>
+  <script async src="/.netlify/scripts/cdp"></script>
 </body>
 </html>

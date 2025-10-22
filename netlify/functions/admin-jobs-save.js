@@ -34,7 +34,15 @@ function slugify(text = '') {
 exports.handler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
-    const supabase = getSupabase(event);
+    let supabase;
+    try {
+      supabase = getSupabase(event);
+    } catch (err) {
+      return {
+        statusCode: 503,
+        body: JSON.stringify({ error: 'Supabase not configured', code: err.code || 'supabase_unavailable' }),
+      };
+    }
 
     const { job } = JSON.parse(event.body || '{}');
     if (!job || typeof job !== 'object') {

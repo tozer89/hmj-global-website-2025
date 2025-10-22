@@ -123,7 +123,7 @@
 
   // Boot the page. You can drop this block as-is into every admin page.
   document.addEventListener('DOMContentLoaded', () => {
-    const start = () => Admin.bootAdmin(main);
+    const start = () => window.Admin.bootAdmin(main);
 
     netlifyIdentity?.on('init', start);
     netlifyIdentity?.on('login', () => location.reload());

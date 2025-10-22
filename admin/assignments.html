@@ -11,12 +11,12 @@
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
   <!-- Shared Admin bootstrap + helpers -->
-  <script defer src="/admin/common.js?v=15"></script>
+  <script defer src="/admin/common.js?v=21"></script>
 
   <style>
     :root{
       --ink:#0f172a; --muted:#64748b; --bg:#ffffff;
-      --blue:#1f3b7a; --blue-2:#29478f;
+      --blue:#2f4ea2; --blue-2:#27408f;
       --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
       --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626; --chip:#eef2ff;
     }
@@ -216,7 +216,7 @@
       return setTimeout(startAssignments, 30);
     }
 
-    Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
+    window.Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
       const $ = sel;
 
       const chips = $('#diagChips');

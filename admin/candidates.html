@@ -15,12 +15,12 @@
   <!-- Shared admin bootstrap -->
   <script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.js"></script>
-  <script defer src="/admin/common.js?v=15"></script>
+  <script defer src="/admin/common.js?v=21"></script>
 
   <style>
     :root{
       --ink:#101828; --bg:#ffffff; --muted:#667085;
-      --blue:#1f3b7a; --blue-2:#29478f;
+      --blue:#2f4ea2; --blue-2:#27408f;
       --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
       --success:#16a34a; --danger:#dc2626; --warn:#f59e0b;
       --chip:#eef2ff;
@@ -223,7 +223,7 @@
       return setTimeout(startCandidates, 30);
     }
 
-    Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
+    window.Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
       // --- diag chips ---
       const chips = sel('#diagChips');
       const chip = (t, tone='ok') => {

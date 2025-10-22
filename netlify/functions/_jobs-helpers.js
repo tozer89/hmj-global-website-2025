@@ -1,4 +1,7 @@
 // netlify/functions/_jobs-helpers.js
+const fs = require('fs');
+const path = require('path');
+
 const SECTION_PRESETS = new Map([
   ['commercial', 'Commercial'],
   ['dc', 'Data Centre Delivery'],
@@ -135,10 +138,24 @@ function toDbPayload(job = {}) {
   };
 }
 
+function loadStaticJobs() {
+  try {
+    const file = path.join(__dirname, '..', 'data', 'jobs.json');
+    const raw = fs.readFileSync(file, 'utf8');
+    const parsed = JSON.parse(raw || '{}');
+    const rows = Array.isArray(parsed?.jobs) ? parsed.jobs : [];
+    return rows.map(toJob);
+  } catch (err) {
+    console.error('[jobs] failed to read static jobs.json', err?.message || err);
+    return [];
+  }
+}
+
 module.exports = {
   toJob,
   toDbPayload,
   cleanArray,
   slugify,
   resolveSection,
+  loadStaticJobs,
 };

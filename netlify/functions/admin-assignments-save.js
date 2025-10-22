@@ -1,14 +1,7 @@
 // netlify/functions/admin-assignments-save.js
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-
-async function audit(actor, action, entity, entity_id, details) {
-  await supabase.from('admin_audit_logs').insert({
-    actor_email: actor?.email || null,
-    action, entity, entity_id,
-    details
-  });
-}
+const { recordAudit } = require('./_audit.js');
 
 exports.handler = async (event, context) => {
   try {
@@ -51,7 +44,13 @@ exports.handler = async (event, context) => {
 
     if (error) throw error;
 
-    await audit(user, payload.id ? 'update' : 'create', 'assignment', data.id, payload);
+    await recordAudit({
+      actor: user,
+      action: payload.id ? 'update' : 'create',
+      targetType: 'assignment',
+      targetId: data?.id,
+      meta: payload,
+    });
     return { statusCode: 200, body: JSON.stringify(data) };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
