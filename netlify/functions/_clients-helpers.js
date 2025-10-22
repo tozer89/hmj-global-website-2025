@@ -1,19 +1,11 @@
-const fs = require('fs');
 const path = require('path');
 
-function findClientsFile() {
-  const candidates = [
-    path.resolve(__dirname, '..', 'data', 'clients.json'),
-    path.resolve(__dirname, '..', '..', 'data', 'clients.json'),
-    path.resolve(process.cwd(), 'data', 'clients.json'),
-  ];
-  return candidates.find((filePath) => {
-    try {
-      return fs.existsSync(filePath);
-    } catch {
-      return false;
-    }
-  }) || null;
+let staticClients = [];
+try {
+  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'clients.json'));
+  if (Array.isArray(seed?.clients)) staticClients = seed.clients;
+} catch (err) {
+  console.warn('[clients] unable to pre-load static dataset', err?.message || err);
 }
 
 function toClient(row = {}) {
@@ -32,17 +24,8 @@ function toClient(row = {}) {
 }
 
 function loadStaticClients() {
-  try {
-    const filePath = findClientsFile();
-    if (!filePath) return [];
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(raw || '{}');
-    const rows = Array.isArray(parsed?.clients) ? parsed.clients : [];
-    return rows.map(toClient);
-  } catch (err) {
-    console.error('[clients] failed to load static dataset', err?.message || err);
-    return [];
-  }
+  if (!staticClients.length) return [];
+  return staticClients.map(toClient);
 }
 
 module.exports = {

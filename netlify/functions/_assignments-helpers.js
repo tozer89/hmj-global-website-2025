@@ -1,19 +1,11 @@
-const fs = require('fs');
 const path = require('path');
 
-function findAssignmentsFile() {
-  const candidates = [
-    path.resolve(__dirname, '..', 'data', 'assignments.json'),
-    path.resolve(__dirname, '..', '..', 'data', 'assignments.json'),
-    path.resolve(process.cwd(), 'data', 'assignments.json'),
-  ];
-  return candidates.find((filePath) => {
-    try {
-      return fs.existsSync(filePath);
-    } catch {
-      return false;
-    }
-  }) || null;
+let staticAssignments = [];
+try {
+  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'assignments.json'));
+  if (Array.isArray(seed?.assignments)) staticAssignments = seed.assignments;
+} catch (err) {
+  console.warn('[assignments] unable to pre-load static dataset', err?.message || err);
 }
 
 function toAssignment(row = {}) {
@@ -47,17 +39,8 @@ function toAssignment(row = {}) {
 }
 
 function loadStaticAssignments() {
-  try {
-    const filePath = findAssignmentsFile();
-    if (!filePath) return [];
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(raw || '{}');
-    const rows = Array.isArray(parsed?.assignments) ? parsed.assignments : [];
-    return rows.map(toAssignment);
-  } catch (err) {
-    console.error('[assignments] failed to load static dataset', err?.message || err);
-    return [];
-  }
+  if (!staticAssignments.length) return [];
+  return staticAssignments.map(toAssignment);
 }
 
 module.exports = {

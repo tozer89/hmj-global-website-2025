@@ -2,8 +2,20 @@
 // Lightweight helpers so admin candidate endpoints can fall back to local JSON data
 // when Supabase credentials are unavailable (for example on deploy previews).
 
-const fs = require('fs');
 const path = require('path');
+
+// Load the static dataset at bundle time so Netlify packages it alongside the
+// function. Falling back to fs.readFileSync meant the JSON file was missing in
+// the deployed lambda bundle, which left preview environments with empty
+// results even though the seed data existed locally.
+let staticCandidates = [];
+try {
+  // ../../data relative to this helper inside netlify/functions/
+  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'candidates.json'));
+  if (Array.isArray(seed?.candidates)) staticCandidates = seed.candidates;
+} catch (err) {
+  console.warn('[candidates] unable to pre-load static dataset', err?.message || err);
+}
 
 function normaliseBoolean(value) {
   if (typeof value === 'boolean') return value;
@@ -80,36 +92,9 @@ function toCandidate(row = {}) {
   };
 }
 
-function findCandidatesFile() {
-  const attempts = [
-    path.resolve(__dirname, '..', 'data', 'candidates.json'),
-    path.resolve(__dirname, '..', '..', 'data', 'candidates.json'),
-    path.resolve(process.cwd(), 'data', 'candidates.json'),
-  ];
-  return attempts.find((filePath) => {
-    try {
-      return fs.existsSync(filePath);
-    } catch {
-      return false;
-    }
-  }) || null;
-}
-
 function loadStaticCandidates() {
-  const file = findCandidatesFile();
-  if (!file) {
-    console.warn('[candidates] static candidates.json not found');
-    return [];
-  }
-  try {
-    const raw = fs.readFileSync(file, 'utf8');
-    const parsed = JSON.parse(raw || '{}');
-    const rows = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
-    return rows.map(toCandidate);
-  } catch (err) {
-    console.error('[candidates] failed to read static candidates.json', err?.message || err);
-    return [];
-  }
+  if (!staticCandidates.length) return [];
+  return staticCandidates.map(toCandidate);
 }
 
 module.exports = {

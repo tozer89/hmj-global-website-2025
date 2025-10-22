@@ -1,19 +1,11 @@
-const fs = require('fs');
 const path = require('path');
 
-function findTimesheetsFile() {
-  const candidates = [
-    path.resolve(__dirname, '..', 'data', 'timesheets.json'),
-    path.resolve(__dirname, '..', '..', 'data', 'timesheets.json'),
-    path.resolve(process.cwd(), 'data', 'timesheets.json'),
-  ];
-  return candidates.find((filePath) => {
-    try {
-      return fs.existsSync(filePath);
-    } catch {
-      return false;
-    }
-  }) || null;
+let staticTimesheets = [];
+try {
+  const seed = require(path.resolve(__dirname, '..', '..', 'data', 'timesheets.json'));
+  if (Array.isArray(seed?.timesheets)) staticTimesheets = seed.timesheets;
+} catch (err) {
+  console.warn('[timesheets] unable to pre-load static dataset', err?.message || err);
 }
 
 function toTimesheet(row = {}) {
@@ -59,17 +51,8 @@ function toTimesheet(row = {}) {
 }
 
 function loadStaticTimesheets() {
-  try {
-    const filePath = findTimesheetsFile();
-    if (!filePath) return [];
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const parsed = JSON.parse(raw || '{}');
-    const rows = Array.isArray(parsed?.timesheets) ? parsed.timesheets : [];
-    return rows.map(toTimesheet);
-  } catch (err) {
-    console.error('[timesheets] failed to load static dataset', err?.message || err);
-    return [];
-  }
+  if (!staticTimesheets.length) return [];
+  return staticTimesheets.map(toTimesheet);
 }
 
 module.exports = {
