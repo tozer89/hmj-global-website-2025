@@ -165,6 +165,7 @@
       <div class="stat" title="Filtered rows"><div class="muted">Filtered</div><b id="statFiltered">0</b></div>
       <div class="stat" title="Selected rows for bulk actions"><div class="muted">Selected</div><b id="statSelected">0</b></div>
     </div>
+    <div class="muted" style="font-size:13px">Fiscal Week 1: <span id="weekBaseLabel">2 Nov 2025</span></div>
 
     <div class="toolbar">
       <button class="btn chip" id="btnRefresh" title="Reload list (R)">Refresh</button>
@@ -206,6 +207,9 @@
         </label>
         <label>Week ending
           <input id="week" type="date" class="kbr"/>
+        </label>
+        <label>Week number
+          <input id="weekNo" type="number" min="1" class="kbr"/>
         </label>
         <label class="hide-mobile">Role view
           <select id="roleView" class="kbr" title="UI view by role"><option value="admin">Admin</option><option value="recruiter">Recruiter</option><option value="client">Client</option></select>
@@ -372,7 +376,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   const $ = (s)=>sel(s);
   const debugWrap = $('#debugWrap'); const debugCard = $('#debugCard'); const diagChips = $('#diagChips');
   const listEl = $('#list'); const statTotal = $('#statTotal'); const statFiltered = $('#statFiltered'); const statSelected = $('#statSelected');
-  const q = $('#q'); const status = $('#status'); const clientId = $('#clientId'); const week = $('#week');
+  const q = $('#q'); const status = $('#status'); const clientId = $('#clientId'); const week = $('#week'); const weekNo = $('#weekNo');
   const roleView = $('#roleView'); const btnRefresh = $('#btnRefresh'); const btnCsv = $('#btnCsv');
   const btnBulkApprove = $('#btnBulkApprove'); const toggleAll = $('#toggleAll'); const btnToggleFilters = $('#btnToggleFilters');
   const savedViews = $('#savedViews'); const btnSaveView = $('#btnSaveView'); const btnDelView = $('#btnDelView');
@@ -417,6 +421,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // ---- State ----
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let LIST = []; let FILTERED = []; let SELECTED = new Set(); let CUR=null; let DIRTY=false;
+  let WEEK_BASE = null;
   let ROLE = 'admin';  // ui-view override only; gate still enforces actual roles
 
   // ---- Utilities ----
@@ -464,13 +469,13 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     savedViews.innerHTML = views.length? '' : '<span class="tag">(none)</span>';
     views.forEach((v,i)=>{
       const b=document.createElement('button'); b.className='btn chip'; b.textContent=v.name; b.onclick=()=>{
-        q.value=v.q; status.value=v.status; clientId.value=v.client_id||''; week.value=v.week||''; loadList();
+        q.value=v.q; status.value=v.status; clientId.value=v.client_id||''; week.value=v.week||''; weekNo.value=v.week_number||''; loadList();
       }; savedViews.append(b);
     });
   }
   btnSaveView.onclick=()=>{
     const name=prompt('Name this view:','My filter'); if(!name) return;
-    const views=loadViews(); views.push({ name, q:q.value||'', status:status.value||'', client_id:clientId.value||'', week:week.value||'' });
+    const views=loadViews(); views.push({ name, q:q.value||'', status:status.value||'', client_id:clientId.value||'', week:week.value||'', week_number: weekNo.value||'' });
     saveViews(views); renderViews(); toast('View saved');
   };
   btnDelView.onclick=()=>{ const name=prompt('Delete view named:'); if(!name) return; const views=loadViews().filter(v=>v.name!==name); saveViews(views); renderViews(); toast('Deleted (if existed)'); };
@@ -526,11 +531,16 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // --------- List ---------
   async function loadList(){
     listEl.textContent='Loading…';
-    const filters = { q:q.value||'', status:status.value||'', client_id: clientId.value||'', week:week.value||'' };
+    const filters = { q:q.value||'', status:status.value||'', client_id: clientId.value||'', week:week.value||'', week_number: weekNo.value||'' };
     localStorage.setItem('hmj_ts_filters', JSON.stringify(filters)); // offline-ish
     try{
       const res = await api(FN_LIST,'POST',filters);
       const rows = Array.isArray(res) ? res : (res?.items||[]);
+      if(res?.config?.week1Ending){
+        WEEK_BASE = res.config.week1Ending;
+        const label = document.getElementById('weekBaseLabel');
+        if(label) label.textContent = `Week 1 ends ${res.config.week1Ending}`;
+      }
       LIST = rows||[];
       statTotal.textContent = String(LIST.length);
       filterAndRender();
@@ -547,7 +557,8 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       const okS = !status.value || (r.status === status.value);
       const okC = !clientId.value || String(r.client_id) === String(clientId.value);
       const okW = !week.value || String(r.week_ending) === String(week.value);
-      return okQ && okS && okC && okW;
+      const okWN = !weekNo.value || Number(r.week_no||0) === Number(weekNo.value);
+      return okQ && okS && okC && okW && okWN;
     });
     statFiltered.textContent=String(FILTERED.length);
     renderList();
@@ -568,6 +579,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
           <td class="hide-mobile">${chk}</td>
           <td class="hide-mobile">${r.id}</td>
           <td>${fmtDate(r.week_ending)}</td>
+          <td class="hide-mobile">${r.week_no ?? '—'}</td>
           <td>${badge}</td>
           <td class="hide-mobile">${r.contractor_email||'—'}</td>
           <td>${[r.client_name,r.project_name,r.site_name].filter(Boolean).join(' • ')||'—'}</td>
@@ -585,7 +597,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       <table role="grid" aria-rowcount="${FILTERED.length}">
         <thead><tr>
           <th class="hide-mobile"></th>
-          <th class="hide-mobile">ID</th><th>Week ending</th><th>Status</th><th class="hide-mobile">Contractor</th>
+          <th class="hide-mobile">ID</th><th>Week ending</th><th class="hide-mobile">Week #</th><th>Status</th><th class="hide-mobile">Contractor</th>
           <th>Client • Project • Site</th><th class="hide-mobile">Std</th><th class="hide-mobile">OT</th><th class="hide-mobile">Gross</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -609,7 +621,9 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     // render current month 5 weeks grid
     calendar.innerHTML = weeks.slice(0,7).map(w=>{
       const items = FILTERED.filter(r=>r.week_ending===w);
-      return `<div class="d"><b>${w}</b>${items.map(r=>`<div class="e">${r.contractor_email||'—'} • ${r.status}</div>`).join('')}</div>`;
+      const weekNo = items[0]?.week_no;
+      const heading = weekNo ? `${w} · Week ${weekNo}` : w;
+      return `<div class="d"><b>${heading}</b>${items.map(r=>`<div class="e">${r.contractor_email||'—'} • ${r.status}</div>`).join('')}</div>`;
     }).join('');
   }
 
@@ -660,7 +674,8 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
         entries: res.entries || Object.fromEntries(DAYS.map(d=>[d,{std:0,ot:0,note:''}])),
       };
       sheetTitle.textContent = `Timesheet #${CUR.id}`;
-      sheetSub.textContent = `Week ending ${CUR.week_ending}`;
+      const weekLabel = CUR.week_no ? `Week ${CUR.week_no}` : '';
+      sheetSub.textContent = `Week ending ${CUR.week_ending}${weekLabel ? ' · '+weekLabel : ''}`;
       sheetMeta.textContent = `${[CUR.assignment.client_name,CUR.assignment.project_name,CUR.assignment.site_name].filter(Boolean).join(' • ')}`;
       rateStd.textContent = `Rate: ${money(CUR.rates.std)}/h`; rateOT.textContent  = `Rate: ${money(CUR.rates.ot)}/h`;
       badgeForStatus(CUR.status); renderRows();
@@ -775,7 +790,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   btnRefresh.onclick = loadList; btnCsv.onclick=exportCsv; btnToggleFilters.onclick=loadList;
 
   // Restore filters from cache
-  try{ const f=JSON.parse(localStorage.getItem('hmj_ts_filters')||'{}'); if(f){ q.value=f.q||''; status.value=f.status||''; clientId.value=f.client_id||''; week.value=f.week||''; } }catch{}
+  try{ const f=JSON.parse(localStorage.getItem('hmj_ts_filters')||'{}'); if(f){ q.value=f.q||''; status.value=f.status||''; clientId.value=f.client_id||''; week.value=f.week||''; weekNo.value=f.week_number||''; } }catch{}
 
   window.API = api;
   try {

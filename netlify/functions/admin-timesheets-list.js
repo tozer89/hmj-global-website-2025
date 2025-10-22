@@ -1,8 +1,9 @@
 const { getContext } = require('./_auth.js');
 const { supabase, hasSupabase, jsonOk, jsonError, supabaseStatus } = require('./_supabase.js');
 const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
+const { fetchSettings, DEFAULT_SETTINGS, fiscalWeekNumber } = require('./_settings-helpers.js');
 
-function normaliseSupabaseRows(data = []) {
+function normaliseSupabaseRows(data = [], baseWeekEnding = DEFAULT_SETTINGS.fiscal_week1_ending) {
   return data.map((row) => {
     const dayKeys = ['h_mon', 'h_tue', 'h_wed', 'h_thu', 'h_fri', 'h_sat', 'h_sun'];
     const stdHours = dayKeys.reduce((sum, key) => sum + Number(row[key] || 0), 0);
@@ -13,6 +14,8 @@ function normaliseSupabaseRows(data = []) {
     const assignment = row.assignments || {};
     const project = assignment.projects || assignment.project || {};
     const client = project.clients || project.client || {};
+
+    const weekEnding = row.week_ending || null;
 
     return {
       id: row.id,
@@ -28,7 +31,7 @@ function normaliseSupabaseRows(data = []) {
       project_name: row.project_name || project.name || null,
       status: row.status,
       week_start: row.week_start,
-      week_ending: row.week_ending,
+      week_ending: weekEnding,
       submitted_at: row.submitted_at,
       approved_at: row.approved_at,
       approved_by: row.approved_by,
@@ -43,11 +46,12 @@ function normaliseSupabaseRows(data = []) {
       pay_amount: row.pay_amount,
       charge_amount: row.charge_amount,
       gp_amount: row.gp_amount,
+      week_no: fiscalWeekNumber(weekEnding, baseWeekEnding),
     };
   });
 }
 
-function normaliseStaticRows(rows = []) {
+function normaliseStaticRows(rows = [], baseWeekEnding = DEFAULT_SETTINGS.fiscal_week1_ending) {
   return rows.map((row) => ({
     id: row.id,
     assignment_id: row.assignment_id,
@@ -77,16 +81,18 @@ function normaliseStaticRows(rows = []) {
     pay_amount: row.pay_amount,
     charge_amount: row.charge_amount,
     gp_amount: row.gp_amount,
+    week_no: fiscalWeekNumber(row.week_ending, baseWeekEnding),
   }));
 }
 
-function filterRows(rows, { q, status, clientId, week }) {
+function filterRows(rows, { q, status, clientId, week, weekNumber }) {
   const needle = (q || '').toLowerCase();
   const weekNeedle = week ? String(week) : '';
   return rows.filter((row) => {
     if (status && row.status !== status) return false;
     if (clientId && Number(row.client_id) !== Number(clientId)) return false;
     if (weekNeedle && String(row.week_ending) !== weekNeedle) return false;
+    if (Number.isFinite(weekNumber) && weekNumber && Number(row.week_no || 0) !== Number(weekNumber)) return false;
     if (needle) {
       const haystack = [
         row.candidate_name,
@@ -128,12 +134,26 @@ module.exports.handler = async (event, context) => {
   const status = (body.status || '').trim();
   const clientId = body.client_id ? Number(body.client_id) : null;
   const week = body.week || null;
+  const weekNumber = body.week_number ? Number(body.week_number) : body.weekNo ? Number(body.weekNo) : null;
 
-  const serveStatic = (reason, auth = null) => {
-    const staticRows = normaliseStaticRows(loadStaticTimesheets());
-    const filtered = filterRows(staticRows, { q, status, clientId, week });
+  const settingsPromise = fetchSettings(event, ['fiscal_week1_ending']);
+
+  const serveStatic = async (reason, auth = null) => {
+    const { settings, source: settingsSource } = await settingsPromise;
+    const baseWeekEnding = settings.fiscal_week1_ending || DEFAULT_SETTINGS.fiscal_week1_ending;
+    const staticRows = normaliseStaticRows(loadStaticTimesheets(baseWeekEnding), baseWeekEnding);
+    const filtered = filterRows(staticRows, { q, status, clientId, week, weekNumber });
     console.warn('[timesheets] using static fallback dataset (%d rows)', filtered.length);
-    return jsonOk({ ok: true, items: filtered, readOnly: true, source: 'static', supabase: supabaseStatus(), trace, auth });
+    return jsonOk({
+      ok: true,
+      items: filtered,
+      readOnly: true,
+      source: 'static',
+      supabase: supabaseStatus(),
+      trace,
+      auth,
+      config: { week1Ending: baseWeekEnding, source: settingsSource },
+    });
   };
 
   try {
@@ -144,6 +164,9 @@ module.exports.handler = async (event, context) => {
   }
 
   try {
+    const { settings, source: settingsSource } = await settingsPromise;
+    const baseWeekEnding = settings.fiscal_week1_ending || DEFAULT_SETTINGS.fiscal_week1_ending;
+
     if (!hasSupabase()) {
       return serveStatic(supabaseStatus().error || 'supabase_unavailable');
     }
@@ -197,6 +220,16 @@ module.exports.handler = async (event, context) => {
 
     if (status) query = query.eq('status', status);
     if (week) query = query.eq('week_ending', week);
+    if (Number.isFinite(weekNumber) && weekNumber) {
+      // derive start/end window based on base week ending
+      const offset = Number(weekNumber) - 1;
+      const baseDate = new Date(`${baseWeekEnding}T00:00:00Z`);
+      if (!Number.isNaN(baseDate.getTime())) {
+        const target = new Date(baseDate.getTime() + offset * 7 * 86400000);
+        const iso = target.toISOString().slice(0, 10);
+        query = query.eq('week_ending', iso);
+      }
+    }
     if (q) {
       query = query.or(
         [
@@ -217,9 +250,15 @@ module.exports.handler = async (event, context) => {
       return jsonError(500, 'query_failed', error.message, { trace });
     }
 
-    const normalised = normaliseSupabaseRows(data || []);
-    const filtered = filterRows(normalised, { q, status, clientId, week });
-    return jsonOk({ ok: true, items: filtered, trace, supabase: supabaseStatus() });
+    const normalised = normaliseSupabaseRows(data || [], baseWeekEnding);
+    const filtered = filterRows(normalised, { q, status, clientId, week, weekNumber });
+    return jsonOk({
+      ok: true,
+      items: filtered,
+      trace,
+      supabase: supabaseStatus(),
+      config: { week1Ending: baseWeekEnding, source: settingsSource },
+    });
   } catch (err) {
     return jsonError(500, 'unhandled', err.message || 'Unexpected error', { trace });
   }

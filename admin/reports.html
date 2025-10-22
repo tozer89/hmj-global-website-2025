@@ -1,140 +1,540 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-
-<title>Reports — Admin | HMJ-Global</title>
-<link rel="stylesheet" href="/css/style.css" />
-<style>
-  :root{ --bg:#0b0f18; --panel:#111827; --border:#252f3f; --text:#e8eef7; --muted:#9fb0c9; --purple:#7c5cff; }
-  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
-  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800}.spacer{flex:1}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79}
-  .btn.primary{background:var(--purple);border-color:transparent}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .muted{color:var(--muted)}
-  input,select{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
-</style>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reports — Admin | HMJ Global</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/admin/common.js"></script>
+  <style>
+    :root {
+      --bg:#0b0f18; --panel:#111b2e; --border:#25324a; --ink:#e6eefc; --muted:#96a8c4;
+      --accent:#4f7fff; --accent-soft:rgba(79,127,255,.12); --good:#1f9d63; --warn:#f0ad3d; --bad:#d9534f;
+    }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .top{position:sticky;top:0;background:#0c1526;border-bottom:1px solid rgba(255,255,255,.08);z-index:40}
+    .row{max-width:1280px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
+    .brand{font-weight:800;font-size:1.15rem}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--accent-soft);border:1px solid rgba(79,127,255,.3);font-weight:700}
+    .sp{flex:1}
+    .btn{background:var(--accent);border:0;color:#fff;font-weight:700;padding:9px 14px;border-radius:12px;cursor:pointer;transition:background .18s}
+    .btn:hover{background:#3c6fff}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.2);color:#e6eefc}
+    .btn.small{padding:7px 12px;border-radius:10px;font-size:0.9rem}
+    .wrap{max-width:1280px;margin:24px auto;padding:0 18px;display:grid;gap:18px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 20px 40px rgba(5,10,25,.35)}
+    .panel.light{background:#13213b}
+    .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+    .metric{background:#162640;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px}
+    .metric strong{font-size:1.4rem}
+    .metric span{color:var(--muted);font-size:.85rem}
+    .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .filters input,.filters select{background:#0f1d33;color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:10px;font-weight:600}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
+    th{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    tbody tr:hover{background:rgba(79,127,255,.08)}
+    .grid{display:grid;grid-template-columns:1.7fr 1fr;gap:18px}
+    @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+    .list{display:grid;gap:10px}
+    .list-item{background:#162640;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:4px}
+    .tag{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(79,127,255,.14);border:1px solid rgba(79,127,255,.3);font-size:.75rem;font-weight:700}
+    .muted{color:var(--muted)}
+    .notice{margin-top:12px;padding:12px;border-radius:14px;background:rgba(79,127,255,.12);border:1px solid rgba(79,127,255,.25);font-weight:600}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .card{background:#162640;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .notes{width:100%;min-height:140px;background:#0f1d33;color:var(--ink);border:1px solid var(--border);border-radius:14px;padding:12px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{background:#0f1d33;border:1px solid rgba(255,255,255,.16);color:var(--ink);padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:700}
+    .lead{text-transform:uppercase;letter-spacing:.12em;font-size:.75rem;color:var(--muted)}
+    .table-scroll{overflow:auto;max-height:420px}
+    .small-btns{display:flex;gap:8px;flex-wrap:wrap}
+  </style>
 </head>
 <body>
-<div class="top">
-  <div class="row">
-    <div class="brand">Reports — Admin</div>
-    <div class="spacer"></div>
-    <a class="btn" href="/admin/">⟵ Admin home</a>
-    <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-  </div>
-</div>
-
-<!-- Optional toast area -->
-<div id="toast" aria-live="polite" aria-atomic="true"></div>
-
-<!-- Shown if not logged-in or missing 'admin' role -->
-<div id="gate" class="card" style="display:none">
-  <p><strong>Admin only.</strong> Please log in with an admin account.</p>
-  <p class="why" style="opacity:.75"></p>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
-</div>
-
-<!-- Your page UI (hidden until Admin.bootAdmin runs) -->
-<div id="app" style="display:none">
-  <!-- your filters / table / form etc -->
-  <div id="tableWrap">Loading…</div>
-</div>
-
-
-
-
-<div class="wrap" id="gate" style="display:none"><div class="card"><strong>Admin only.</strong></div></div>
-
-<div class="wrap" id="app" style="display:none">
-  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <select id="status"><option value="">Any status</option><option>submitted</option><option>approved</option><option>rejected</option></select>
-    <button class="btn" id="btnCSV">Export CSV</button>
-    <span class="muted">Exports use admin-timesheets-export.js</span>
+  <div class="top">
+    <div class="row">
+      <div class="brand">Reports Console</div>
+      <span class="pill">Analytics</span>
+      <div class="sp"></div>
+      <div id="diagChips" class="chips"></div>
+      <a class="btn ghost small" href="/">Website</a>
+      <a class="btn ghost small" href="/admin/">⟵ Dashboard</a>
+      <button class="btn small" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+    </div>
   </div>
 
-  <div class="card">
-    <h3 style="margin:0 0 8px">Audit log</h3>
-    <div id="logWrap" class="muted">Loading…</div>
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <h2>Admin only</h2>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+    </div>
   </div>
-</div>
 
-<script>
-  const sel=s=>document.querySelector(s);
-  const isAdmin = u => (u?.app_metadata?.roles || u?.roles || []).includes('admin');
-  async function api(path, method='GET', body=null){
-    const u=netlifyIdentity.currentUser(); if(!u) throw new Error('No session');
-    const t=await u.jwt();
-    const r=await fetch(`/.netlify/functions${path}`,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body: body?JSON.stringify(body):null});
-    if(!r.ok) throw new Error(await r.text()); return r.json();
-  }
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel">
+      <div class="filters" id="filterBar">
+        <input id="filterFrom" type="date" aria-label="From week ending" />
+        <input id="filterTo" type="date" aria-label="To week ending" />
+        <select id="filterStatus">
+          <option value="">All statuses</option>
+          <option value="approved">Approved</option>
+          <option value="submitted">Submitted</option>
+          <option value="draft">Draft</option>
+        </select>
+        <select id="filterCurrency">
+          <option value="">All currencies</option>
+          <option value="GBP">GBP</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+        </select>
+        <button class="btn small" id="btnRun">Run report</button>
+        <button class="btn ghost small" id="btnCsv">Download CSV</button>
+        <div class="sp"></div>
+        <span class="muted" id="sourceMeta"></span>
+      </div>
+      <div class="metrics" id="metricCards"></div>
+      <div class="notice" id="weekNotice">Week 1 ends 2 Nov 2025 · adjust below if your fiscal year changes.</div>
+    </section>
 
-  async function loadLog(){
-    try{
-      const list = await api('/admin-audit-list','POST',{ limit: 200 });
-      sel('#logWrap').innerHTML = `
-        <table><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>Entity ID</th><th>Details</th></tr></thead>
-        <tbody>
-          ${list.map(x=>`<tr><td>${x.created_at}</td><td>${x.actor_email||'—'}</td><td>${x.action}</td><td>${x.entity}</td><td>${x.entity_id||''}</td><td><code style="font-size:.85em">${(x.details?JSON.stringify(x.details):'')}</code></td></tr>`).join('')}
-        </tbody></table>`;
-    }catch(e){ sel('#logWrap').textContent='Audit unavailable: '+e.message; }
-  }
+    <section class="panel light" id="configPanel">
+      <h3 style="margin:0 0 12px">Week numbering</h3>
+      <p class="muted" style="margin:0 0 14px">Week numbers drive payroll and reporting views. Update the fiscal Week&nbsp;1 end date to roll the calendar forward.</p>
+      <div class="small-btns">
+        <label class="lead">Week&nbsp;1 ending
+          <input id="weekBaseInput" type="date" style="margin-top:6px" />
+        </label>
+        <button class="btn small" id="btnSaveWeek">Save configuration</button>
+        <button class="btn ghost small" id="btnReloadWeek">Reload default</button>
+        <span class="muted" id="weekSaveMeta"></span>
+      </div>
+    </section>
 
-  function boot(){
-    const u=netlifyIdentity?.currentUser(); if(!u || !isAdmin(u)){ gate.style.display='block'; return; }
-    app.style.display='block'; loadLog();
-  }
+    <div class="grid">
+      <section class="panel" id="tablePanel">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <h3 style="margin:0">Gross margin by timesheet</h3>
+          <span class="pill" id="rowCount">0 rows</span>
+          <div class="sp"></div>
+          <button class="btn ghost small" id="btnToggleEmpty">Hide £0 rows</button>
+        </div>
+        <div class="table-scroll">
+          <table id="reportTable">
+            <thead>
+              <tr>
+                <th>Week</th>
+                <th>#</th>
+                <th>Candidate</th>
+                <th>Client</th>
+                <th>Assignment</th>
+                <th>Hours</th>
+                <th>Pay</th>
+                <th>Charge</th>
+                <th>Margin</th>
+                <th>Currency</th>
+              </tr>
+            </thead>
+            <tbody id="reportBody"><tr><td colspan="10" class="muted">Run the report to populate data.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
 
-  document.addEventListener('DOMContentLoaded', ()=>{
-    sel('#btnCSV').onclick = async ()=>{
-      const u=netlifyIdentity.currentUser(); const t=await u.jwt();
-      const q = { status: sel('#status').value || '' };
-      const r = await fetch('/.netlify/functions/admin-timesheets-export',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(q)});
-      const j = await r.json();
-      const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(j.csv); a.download='timesheets-export.csv'; a.click();
-    };
+      <aside class="panel" id="leaderboardPanel">
+        <h3 style="margin:0 0 12px">Top contractors by margin</h3>
+        <div class="list" id="contractorList"></div>
+        <h3 style="margin:18px 0 12px">Currency mix</h3>
+        <div class="list" id="currencyList"></div>
+      </aside>
+    </div>
 
-    netlifyIdentity?.on('init', boot);
-    netlifyIdentity?.on('login', ()=>location.reload());
-    netlifyIdentity?.on('logout', ()=>location.href='/admin/');
-    setTimeout(()=>{ if(netlifyIdentity?.currentUser()) boot(); else gate.style.display='block'; }, 600);
-  });
-</script>
+    <section class="panel" id="trendPanel">
+      <h3 style="margin:0 0 12px">Weekly gross margin trend</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Week #</th><th>Week ending</th><th>Timesheets</th><th>Pay</th><th>Charge</th><th>Margin</th></tr>
+          </thead>
+          <tbody id="trendBody"><tr><td colspan="6" class="muted">No data yet.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="actionsPanel">
+      <h3 style="margin:0 0 12px">Operations & quick actions</h3>
+      <div class="cards">
+        <div class="card">
+          <span class="lead">Assignments health</span>
+          <p class="muted" id="assignmentsSummary">—</p>
+          <a class="btn ghost small" href="/admin/assignments.html">Open assignments</a>
+        </div>
+        <div class="card">
+          <span class="lead">Payroll queue</span>
+          <p class="muted" id="payrollSummary">—</p>
+          <a class="btn ghost small" href="/admin/payroll.html">Manage payroll</a>
+        </div>
+        <div class="card">
+          <span class="lead">Timesheet approvals</span>
+          <p class="muted" id="timesheetSummary">—</p>
+          <a class="btn ghost small" href="/admin/timesheets.html">Review timesheets</a>
+        </div>
+        <div class="card">
+          <span class="lead">Jobs performance</span>
+          <p class="muted">Keep live roles refreshed for accurate reporting.</p>
+          <a class="btn ghost small" href="/admin/jobs.html">Open jobs board</a>
+        </div>
+        <div class="card">
+          <span class="lead">Client coverage</span>
+          <p class="muted" id="clientSummary">—</p>
+          <a class="btn ghost small" href="/admin/clients.html">Client directory</a>
+        </div>
+        <div class="card">
+          <span class="lead">Candidate pipeline</span>
+          <p class="muted">Use the candidates console to parse CVs and send emails directly.</p>
+          <a class="btn ghost small" href="/admin/candidates.html">Candidates</a>
+        </div>
+        <div class="card">
+          <span class="lead">Audit trail</span>
+          <p class="muted">Recent payroll actions logged below. Export full history as needed.</p>
+          <button class="btn ghost small" id="btnRefreshAudit">Refresh audit</button>
+        </div>
+        <div class="card">
+          <span class="lead">Report CSV</span>
+          <p class="muted">Download the current table including week numbers & currency totals.</p>
+          <button class="btn ghost small" id="btnDownloadCsv">Download CSV</button>
+        </div>
+        <div class="card">
+          <span class="lead">Notes board</span>
+          <textarea id="notesBoard" class="notes" placeholder="Leave handover notes for the team…"></textarea>
+          <button class="btn ghost small" id="btnSaveNotes">Save notes</button>
+        </div>
+        <div class="card">
+          <span class="lead">Back office</span>
+          <p class="muted">Track miscellaneous admin actions such as invoicing cycles or FX updates.</p>
+          <div class="chips" id="miscChips"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="auditPanel">
+      <h3 style="margin:0 0 12px">Latest audit events</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+          <tbody id="auditBody"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const start = () => {
+        window.Admin.bootAdmin(async ({ api, sel, toast, getTrace }) => {
+          const chips = sel('#diagChips');
+          const chip = (text, tone='ok') => {
+            if (!chips) return;
+            const span = document.createElement('span');
+            span.className = 'chip';
+            if (tone === 'warn') span.style.borderColor = 'rgba(240,173,61,.7)';
+            if (tone === 'bad') span.style.borderColor = 'rgba(217,83,79,.7)';
+            span.textContent = text;
+            chips.appendChild(span);
+          };
+
+          const state = {
+            rows: [],
+            summary: { currencies: {}, contractors: [], weeks: {} },
+            filters: { hideZero: false },
+            config: { week1Ending: '2025-11-02' },
+            source: 'api',
+          };
+
+          const filterFrom = sel('#filterFrom');
+          const filterTo = sel('#filterTo');
+          const filterStatus = sel('#filterStatus');
+          const filterCurrency = sel('#filterCurrency');
+          const btnRun = sel('#btnRun');
+          const btnCsv = sel('#btnCsv');
+          const btnDownloadCsv = sel('#btnDownloadCsv');
+          const btnToggleEmpty = sel('#btnToggleEmpty');
+          const tableBody = sel('#reportBody');
+          const rowCount = sel('#rowCount');
+          const metricCards = sel('#metricCards');
+          const currencyList = sel('#currencyList');
+          const contractorList = sel('#contractorList');
+          const trendBody = sel('#trendBody');
+          const sourceMeta = sel('#sourceMeta');
+          const weekNotice = sel('#weekNotice');
+          const weekBaseInput = sel('#weekBaseInput');
+          const weekBaseMeta = sel('#weekSaveMeta');
+          const btnSaveWeek = sel('#btnSaveWeek');
+          const btnReloadWeek = sel('#btnReloadWeek');
+          const notesBoard = sel('#notesBoard');
+          const btnSaveNotes = sel('#btnSaveNotes');
+          const miscChips = sel('#miscChips');
+          const auditBody = sel('#auditBody');
+          const btnRefreshAudit = sel('#btnRefreshAudit');
+          const assignmentsSummary = sel('#assignmentsSummary');
+          const payrollSummary = sel('#payrollSummary');
+          const timesheetSummary = sel('#timesheetSummary');
+          const clientSummary = sel('#clientSummary');
+
+          const loadNotes = () => {
+            try {
+              const note = localStorage.getItem('hmj_report_notes');
+              if (note && notesBoard) notesBoard.value = note;
+            } catch {}
+          };
+          loadNotes();
+
+          if (miscChips) {
+            ['Invoice run', 'FX update', 'Compliance', 'AR follow-up', 'Payroll exported'].forEach((label) => {
+              const tag = document.createElement('span');
+              tag.className = 'chip';
+              tag.textContent = label;
+              miscChips.appendChild(tag);
+            });
+          }
+
+          btnSaveNotes?.addEventListener('click', () => {
+            if (!notesBoard) return;
+            localStorage.setItem('hmj_report_notes', notesBoard.value || '');
+            toast('Notes saved', 'info', 2000);
+          });
+
+          const formatCurrency = (value, currency) => `${currency || 'GBP'} ${(value || 0).toFixed(2)}`;
+
+          function renderMetrics() {
+            if (!metricCards) return;
+            const cur = state.summary.currencies || {};
+            const totals = Object.values(cur).reduce((acc, row) => {
+              acc.pay += row.pay || 0;
+              acc.charge += row.charge || 0;
+              acc.gp += row.gp || 0;
+              return acc;
+            }, { pay: 0, charge: 0, gp: 0 });
+            metricCards.innerHTML = `
+              <div class="metric"><span>Total charge</span><strong>${formatCurrency(totals.charge, 'GBP')}</strong></div>
+              <div class="metric"><span>Total pay</span><strong>${formatCurrency(totals.pay, 'GBP')}</strong></div>
+              <div class="metric"><span>Gross margin</span><strong>${formatCurrency(totals.gp, 'GBP')}</strong></div>
+              <div class="metric"><span>Timesheets</span><strong>${state.rows.length}</strong></div>`;
+          }
+
+          function renderCurrencyMix() {
+            if (!currencyList) return;
+            const entries = Object.entries(state.summary.currencies || {});
+            if (!entries.length) {
+              currencyList.innerHTML = '<div class="muted">No currency data.</div>';
+              return;
+            }
+            currencyList.innerHTML = entries.map(([cur, val]) => {
+              return `<div class="list-item"><strong>${cur}</strong><span class="muted">Pay ${val.pay.toFixed(2)} · Charge ${val.charge.toFixed(2)} · GP ${val.gp.toFixed(2)}</span></div>`;
+            }).join('');
+          }
+
+          function renderContractors() {
+            if (!contractorList) return;
+            const rows = (state.summary.contractors || []).slice(0, 10);
+            if (!rows.length) {
+              contractorList.innerHTML = '<div class="muted">No contractor data yet.</div>';
+              return;
+            }
+            contractorList.innerHTML = rows.map((row) => {
+              return `<div class="list-item">
+                <strong>${row.candidateName || 'Unnamed'} (${row.currency})</strong>
+                <span class="muted">Margin ${row.gp.toFixed(2)} · Pay ${row.pay.toFixed(2)} · Charge ${row.charge.toFixed(2)} · ${row.rows} sheet(s)</span>
+              </div>`;
+            }).join('');
+          }
+
+          function renderTrend() {
+            if (!trendBody) return;
+            const entries = Object.entries(state.summary.weeks || {});
+            if (!entries.length) {
+              trendBody.innerHTML = '<tr><td colspan="6" class="muted">No weeks yet.</td></tr>';
+              return;
+            }
+            trendBody.innerHTML = entries.map(([weekNo, data]) => {
+              const date = state.rows.find((row) => String(row.weekNo) === String(weekNo))?.weekEnding || '—';
+              return `<tr>
+                <td>${weekNo}</td>
+                <td>${date}</td>
+                <td>${data.rows}</td>
+                <td>${formatCurrency(data.pay, 'GBP')}</td>
+                <td>${formatCurrency(data.charge, 'GBP')}</td>
+                <td>${formatCurrency(data.gp, 'GBP')}</td>
+              </tr>`;
+            }).join('');
+          }
+
+          function renderTable() {
+            if (!tableBody) return;
+            const rows = state.rows.filter((row) => {
+              if (state.filters.hideZero) return Number(row.totals?.gp || 0) !== 0;
+              return true;
+            });
+            if (!rows.length) {
+              tableBody.innerHTML = '<tr><td colspan="10" class="muted">No rows match your filters.</td></tr>';
+            } else {
+              tableBody.innerHTML = rows.map((row) => {
+                return `<tr>
+                  <td>${row.weekEnding || '—'}</td>
+                  <td>${row.weekNo || '—'}</td>
+                  <td>${row.candidateName || '—'}</td>
+                  <td>${row.clientName || '—'}</td>
+                  <td>${row.jobTitle || '—'}</td>
+                  <td>${(row.hours?.total || 0).toFixed(2)}</td>
+                  <td>${formatCurrency(row.totals?.pay || 0, row.currency)}</td>
+                  <td>${formatCurrency(row.totals?.charge || 0, row.currency)}</td>
+                  <td>${formatCurrency(row.totals?.gp || 0, row.currency)}</td>
+                  <td>${row.currency || 'GBP'}</td>
+                </tr>`;
+              }).join('');
+            }
+            rowCount.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
+          }
+
+          function exportCsv(rows) {
+            const header = ['week_ending','week_no','candidate','client','assignment','hours_std','hours_ot','pay','charge','margin','currency'];
+            const lines = rows.map((row) => [
+              row.weekEnding || '',
+              row.weekNo || '',
+              row.candidateName || '',
+              row.clientName || '',
+              row.jobTitle || '',
+              (row.hours?.std || 0).toFixed(2),
+              (row.hours?.ot || 0).toFixed(2),
+              (row.totals?.pay || 0).toFixed(2),
+              (row.totals?.charge || 0).toFixed(2),
+              (row.totals?.gp || 0).toFixed(2),
+              row.currency || 'GBP'
+            ].map((cell) => {
+              const text = String(cell ?? '');
+              return /[",\n]/.test(text) ? `"${text.replace(/"/g,'""')}"` : text;
+            }).join(','));
+            const blob = new Blob([[header.join(',')].concat(lines).join('\n')], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hmj-gross-margin.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+
+          function updateSummaries() {
+            const contractorCount = state.summary.contractors?.length || 0;
+            const clientSet = new Set(state.rows.map((r) => r.clientName).filter(Boolean));
+            if (assignmentsSummary) assignmentsSummary.textContent = `${clientSet.size} clients across ${state.rows.length} sheets.`;
+            const ready = state.rows.filter((r) => (r.status || '').toLowerCase() === 'approved').length;
+            if (payrollSummary) payrollSummary.textContent = `${ready} approved · ${state.rows.length - ready} pending.`;
+            if (timesheetSummary) timesheetSummary.textContent = `${state.rows.length} records analysed.`;
+            if (clientSummary) clientSummary.textContent = `${clientSet.size} active clients · ${contractorCount} contractors with margin data.`;
+          }
+
+          async function loadAudit() {
+            if (!auditBody) return;
+            try {
+              const res = await api('admin-audit-list', 'POST', { limit: 10 });
+              const rows = Array.isArray(res) ? res : (res?.items || res || []);
+              auditBody.innerHTML = rows.map((item) => {
+                return `<tr>
+                  <td>${item.at || item.created_at || '—'}</td>
+                  <td>${item.actor_email || '—'}</td>
+                  <td>${item.action || item.event || '—'}</td>
+                  <td>${item.entity || item.target_type || '—'}</td>
+                  <td><code style="font-size:.75rem">${item.details ? JSON.stringify(item.details) : item.payload ? JSON.stringify(item.payload) : ''}</code></td>
+                </tr>`;
+              }).join('');
+            } catch (err) {
+              auditBody.innerHTML = `<tr><td colspan="5" class="muted">Audit unavailable: ${err.message || err}</td></tr>`;
+            }
+          }
+
+          async function runReport() {
+            try {
+              const body = {
+                fromWeek: filterFrom?.value || undefined,
+                toWeek: filterTo?.value || undefined,
+                status: filterStatus?.value || undefined,
+                currencies: filterCurrency?.value ? [filterCurrency.value] : undefined,
+              };
+              const res = await api('admin-report-gross-margin', 'POST', body);
+              state.rows = Array.isArray(res?.rows) ? res.rows : [];
+              state.summary = res?.summary || { currencies: {}, contractors: [], weeks: {} };
+              state.source = res?.source || 'api';
+              state.config = res?.config || state.config;
+              if (weekNotice && state.config?.week1Ending) {
+                weekNotice.textContent = `Week 1 ends ${state.config.week1Ending} · adjust below if your fiscal year changes.`;
+              }
+              if (weekBaseInput && state.config?.week1Ending) weekBaseInput.value = state.config.week1Ending;
+              if (sourceMeta) sourceMeta.textContent = `Source: ${state.source}` + (res?.warning ? ` · ${res.warning}` : '');
+              renderMetrics();
+              renderCurrencyMix();
+              renderContractors();
+              renderTrend();
+              renderTable();
+              updateSummaries();
+            } catch (err) {
+              toast('Report failed: ' + (err.message || err), 'error', 4000);
+            }
+          }
+
+          btnRun?.addEventListener('click', (e) => { e.preventDefault(); runReport(); });
+          btnCsv?.addEventListener('click', (e) => { e.preventDefault(); exportCsv(state.rows); });
+          btnDownloadCsv?.addEventListener('click', (e) => { e.preventDefault(); exportCsv(state.rows); });
+          btnToggleEmpty?.addEventListener('click', () => {
+            state.filters.hideZero = !state.filters.hideZero;
+            btnToggleEmpty.textContent = state.filters.hideZero ? 'Show £0 rows' : 'Hide £0 rows';
+            renderTable();
+          });
+
+          btnSaveWeek?.addEventListener('click', async () => {
+            if (!weekBaseInput?.value) {
+              toast('Select a week ending date first', 'warn', 2400);
+              return;
+            }
+            try {
+              const res = await api('admin-settings-save', 'POST', { fiscal_week1_ending: weekBaseInput.value });
+              weekBaseMeta.textContent = `Saved at ${new Date().toLocaleTimeString()}`;
+              state.config.week1Ending = weekBaseInput.value;
+              toast('Week base saved', 'info', 2200);
+              runReport();
+            } catch (err) {
+              toast('Save failed: ' + (err.message || err), 'error', 3200);
+            }
+          });
+
+          btnReloadWeek?.addEventListener('click', async () => {
+            try {
+              const res = await api('admin-settings-get', 'POST', { keys: ['fiscal_week1_ending'] });
+              const val = res?.settings?.fiscal_week1_ending || '2025-11-02';
+              if (weekBaseInput) weekBaseInput.value = val;
+              state.config.week1Ending = val;
+              toast('Reloaded stored configuration', 'info', 2000);
+            } catch (err) {
+              toast('Reload failed: ' + (err.message || err), 'error', 3000);
+            }
+          });
+
+          btnRefreshAudit?.addEventListener('click', (e) => { e.preventDefault(); loadAudit(); });
+
+          chip('reports ready');
+          runReport();
+          loadAudit();
+        });
+      };
+
+      netlifyIdentity?.on('init', start);
+      netlifyIdentity?.on('login', () => location.reload());
+      netlifyIdentity?.on('logout', () => location.href = '/admin/');
+
+      setTimeout(() => {
+        if (netlifyIdentity?.currentUser()) start();
+        else (document.querySelector('#gate') || {}).style.display = 'block';
+      }, 600);
+    });
+  </script>
 </body>
-<script>
-  // Your page’s main logic. Runs only after Identity is ready AND the user is an admin.
-  async function main({ api, sel, toast, user }) {
-    // Example: load clients list (adjust the endpoint per page)
-    const rows = await api('/admin-clients-list', 'POST', { q: null });
-    sel('#tableWrap').textContent = rows.length ? `${rows.length} client(s)` : 'No results';
-    // ...render your table, wire up buttons, etc...
-  }
-
-  // Boot the page. You can drop this block as-is into every admin page.
-  document.addEventListener('DOMContentLoaded', () => {
-    const start = () => window.Admin.bootAdmin(main);
-
-    netlifyIdentity?.on('init', start);
-    netlifyIdentity?.on('login', () => location.reload());
-    netlifyIdentity?.on('logout', () => location.href = '/admin/');
-
-    // Fallback if Identity init is slow
-    setTimeout(() => {
-      if (netlifyIdentity?.currentUser()) start();
-      else (document.querySelector('#gate') || {}).style.display = 'block';
-    }, 600);
-  });
-</script>
-
 </html>

@@ -1,3 +1,5 @@
+const { DEFAULT_SETTINGS, fiscalWeekNumber } = require('./_settings-helpers.js');
+
 let staticTimesheets = [];
 try {
   const seed = require('../../data/timesheets.json');
@@ -7,9 +9,10 @@ try {
   console.warn('[timesheets] unable to pre-load static dataset', err?.message || err);
 }
 
-function toTimesheet(row = {}) {
+function toTimesheet(row = {}, baseWeekEnding = DEFAULT_SETTINGS.fiscal_week1_ending) {
   const hours = ['h_mon', 'h_tue', 'h_wed', 'h_thu', 'h_fri', 'h_sat', 'h_sun'];
   const totals = hours.reduce((sum, key) => sum + Number(row[key] || 0), 0);
+  const weekEnding = row.week_ending || row.weekEnding || null;
   return {
     id: Number(row.id) || row.id || null,
     assignment_id: row.assignment_id || null,
@@ -46,12 +49,14 @@ function toTimesheet(row = {}) {
     assignment: row.assignment || null,
     candidate: row.candidate || null,
     payroll_status: row.payroll_status || null,
+    week_ending: weekEnding,
+    week_no: fiscalWeekNumber(weekEnding, baseWeekEnding),
   };
 }
 
-function loadStaticTimesheets() {
+function loadStaticTimesheets(baseWeekEnding = DEFAULT_SETTINGS.fiscal_week1_ending) {
   if (!staticTimesheets.length) return [];
-  return staticTimesheets.map(toTimesheet);
+  return staticTimesheets.map((row) => toTimesheet(row, baseWeekEnding));
 }
 
 module.exports = {

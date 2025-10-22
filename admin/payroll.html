@@ -115,6 +115,7 @@
       </form>
       <div class="actions">
         <div class="muted" id="resultMeta">0 payroll items</div>
+        <div class="muted" id="weekBaseMeta" style="font-size:12px">Week 1 ends 2 Nov 2025</div>
         <div class="sp"></div>
         <button class="btn ghost small" id="btnClear">Clear filters</button>
         <button class="btn ghost small" id="btnRefresh">Refresh</button>
@@ -300,6 +301,7 @@
             <td><input type="checkbox" data-id="${key}" ${checked}></td>
             <td><div style="font-weight:700">${row.candidateName || '—'}</div><div class="muted" style="font-size:12px">${row.candidate?.payrollRef || ''}</div></td>
             <td>${row.weekEnding || '—'}<div class="muted" style="font-size:12px">${row.assignment?.payFreq || ''}</div></td>
+            <td>${row.weekNo ? `#${row.weekNo}` : '—'}</td>
             <td><div>${row.assignment?.jobTitle || '—'}</div><div class="muted" style="font-size:12px">${row.assignment?.clientName || ''}</div></td>
             <td><strong>${row.currency || 'GBP'} ${(row.totals?.pay || 0).toFixed(2)}</strong><div class="muted" style="font-size:12px">${(row.totals?.hours || 0).toFixed(1)} hrs</div></td>
             <td>${badge(row.payrollStatus)}</td>
@@ -312,6 +314,7 @@
             <th style="width:32px"><input type="checkbox" id="ckAll"></th>
             <th>Candidate</th>
             <th>Week ending</th>
+            <th>Week #</th>
             <th>Assignment</th>
             <th>Pay</th>
             <th>Status</th>
@@ -375,6 +378,7 @@
         const bank = c.bank || {};
         qvRows.innerHTML = `
           <div class="kv"><b>Week ending</b><div>${row.weekEnding || '—'}</div></div>
+          <div class="kv"><b>Week #</b><div>${row.weekNo || '—'}</div></div>
           <div class="kv"><b>Status</b><div>${badge(row.payrollStatus)}</div></div>
           <div class="kv"><b>Assignment</b><div>${row.assignment?.jobTitle || '—'} · ${row.assignment?.clientName || ''}</div></div>
           <div class="kv"><b>Ref</b><div>${row.assignment?.ref || '—'}</div></div>
@@ -402,6 +406,11 @@
             limit: state.pageSize * 4,
           });
           state.rows = Array.isArray(res?.rows) ? res.rows : [];
+          state.config = res?.config || {};
+          if (res?.config?.week1Ending) {
+            const meta = document.getElementById('weekBaseMeta');
+            if (meta) meta.textContent = `Week 1 ends ${res.config.week1Ending}`;
+          }
           state.stats = res?.stats || {};
           state.page = 1;
           state.selected.clear();

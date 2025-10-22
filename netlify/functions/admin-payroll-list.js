@@ -3,6 +3,7 @@ const { getContext } = require('./_auth.js');
 const { supabaseStatus } = require('./_supabase.js');
 const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
 const { loadStaticAssignments } = require('./_assignments-helpers.js');
+const { fetchSettings, DEFAULT_SETTINGS, fiscalWeekNumber } = require('./_settings-helpers.js');
 
 function toNumber(value) {
   const num = Number(value);
@@ -97,6 +98,7 @@ function toCsv(rows = []) {
   const header = [
     'Timesheet ID',
     'Week ending',
+    'Week #',
     'Payroll status',
     'Candidate',
     'Payroll ref',
@@ -128,6 +130,7 @@ function toCsv(rows = []) {
     const cells = [
       row.id,
       row.weekEnding || '',
+      row.weekNo || '',
       row.payrollStatus || '',
       c.name || row.candidateName || '',
       c.payrollRef || '',
@@ -170,11 +173,13 @@ exports.handler = async (event, context) => {
     const { supabase, supabaseError } = await getContext(event, context, { requireAdmin: true });
     const body = JSON.parse(event.body || '{}');
     const { status = 'all', q = '', weekFrom, weekTo, ids, limit, format } = body;
+    const settingsResult = await fetchSettings(event, ['fiscal_week1_ending']);
+    const baseWeekEnding = settingsResult.settings?.fiscal_week1_ending || DEFAULT_SETTINGS.fiscal_week1_ending;
     const wantsCsv = String(format || '').toLowerCase() === 'csv';
     const searchNeedle = String(q || '').trim().toLowerCase();
 
     if (!supabase || typeof supabase.from !== 'function') {
-      const staticTimesheets = loadStaticTimesheets();
+      const staticTimesheets = loadStaticTimesheets(baseWeekEnding);
       if (!staticTimesheets.length) {
         const reason = supabaseError?.message || 'Supabase not configured';
         return { statusCode: 503, body: JSON.stringify({ error: reason, code: 'supabase_unavailable' }) };
@@ -221,6 +226,7 @@ exports.handler = async (event, context) => {
             swift: candidate?.bank?.swift || candidate?.bank_swift || null,
           };
 
+          const weekNo = ts.week_no ?? fiscalWeekNumber(ts.week_ending, baseWeekEnding);
           return {
             id: ts.id,
             weekEnding: ts.week_ending,
@@ -269,11 +275,19 @@ exports.handler = async (event, context) => {
             updatedAt: ts.approved_at || ts.submitted_at || ts.week_ending || null,
             audit: null,
             notes: ts.notes || '',
+            weekNo,
           };
         });
 
       const stats = summarise(filteredRows);
-      const payload = { rows: filteredRows, stats, readOnly: true, source: 'static', supabase: supabaseStatus() };
+      const payload = {
+        rows: filteredRows,
+        stats,
+        readOnly: true,
+        source: 'static',
+        supabase: supabaseStatus(),
+        config: { week1Ending: baseWeekEnding, source: settingsResult.source },
+      };
 
       if (wantsCsv) {
         return {
@@ -426,6 +440,7 @@ exports.handler = async (event, context) => {
           weekStart: ts.week_start,
           status: ts.status,
           payrollStatus,
+          weekNo: fiscalWeekNumber(ts.week_ending, baseWeekEnding),
           candidateId: ts.candidate_id,
           candidateName: ts.candidate_name || candidate?.name || null,
           candidate,
@@ -494,7 +509,7 @@ exports.handler = async (event, context) => {
       });
 
     const stats = summarise(filteredRows);
-    const payload = { rows: filteredRows, stats };
+    const payload = { rows: filteredRows, stats, config: { week1Ending: baseWeekEnding, source: settingsResult.source } };
 
     if (wantsCsv) {
       return {
