@@ -1,5 +1,5 @@
 // netlify/functions/timesheets-history.js
-const { supabase, getContext } = require('./_timesheet-helpers');
+const { supabase, getContext } = require('./_timesheet-helpers.js');
 
 const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });

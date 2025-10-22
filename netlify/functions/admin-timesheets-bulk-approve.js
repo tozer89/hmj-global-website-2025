@@ -1,5 +1,5 @@
 // netlify/functions/admin-timesheets-bulk-approve.js
-const { getContext } = require('./_timesheet-helpers');
+const { getContext } = require('./_timesheet-helpers.js');
 
 exports.handler = async (event, context) => {
   try {

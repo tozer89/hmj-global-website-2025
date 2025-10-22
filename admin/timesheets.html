@@ -757,32 +757,12 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // Restore filters from cache
   try{ const f=JSON.parse(localStorage.getItem('hmj_ts_filters')||'{}'); if(f){ q.value=f.q||''; status.value=f.status||''; clientId.value=f.client_id||''; week.value=f.week||''; } }catch{}
 
-  // New: consistently gate via the shared bootstrap
-  (async function initTimesheets(){
-    const helpers = await (window.adminReady ? window.adminReady({ role:'admin' }) : window.bootAdmin({ role:'admin' }));
-    if (!helpers || helpers.ok === false) {
-      // gate already rendered a message; just stop here.
-      return;
-    }
-    // pull helpers you already use
-    const { api, sel, toast } = helpers;
-
-    // If you previously had globals like API = api; keep them
-    window.API = api;
-
-    // Trigger your existing loaders the same way as before
-    try {
-      document.dispatchEvent(new CustomEvent('admin:refresh')); // keeps your R shortcut useful
-      // or directly call your page loaders here:
-      // await loadClients();
-      // await loadAudit();
-      // await loadList();
-    } catch (e) {
-      console.error(e);
-      toast('Init error: '+(e.message||e), 'error');
-    }
-  })();
-
+  window.API = api;
+  try {
+    document.dispatchEvent(new CustomEvent('admin:refresh'));
+  } catch (e) {
+    console.warn('[timesheets] admin:refresh dispatch failed', e);
+  }
 
   // Load clients, audit, list
   await loadClients(); await loadAudit(); await loadList(); renderViews();
@@ -792,6 +772,15 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 }
 
 /* Bootstrap via /admin/common.js */
+</script>
+
+<script>
+(function startTimesheets(){
+  if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+    return setTimeout(startTimesheets, 30);
+  }
+  window.Admin.bootAdmin(main);
+})();
 </script>
 
 

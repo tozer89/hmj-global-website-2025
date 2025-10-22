@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Payroll — Admin | HMJ Global</title>
+
+  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/admin/common.js?v=21"></script>
+
+  <style>
+    :root{
+      --bg:#f4f7ff; --panel:#ffffff; --border:#d6def5; --ink:#0f1b3f; --muted:#5d6f9e;
+      --accent:#3052a3; --accent-soft:rgba(48,82,163,.12); --danger:#b42318; --ok:#138754;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit;text-decoration:none}
+
+    .top{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,var(--accent),#274188);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 12px 28px rgba(15,27,63,.18)}
+    .row{max-width:1420px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em;font-size:16px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+    .sp{flex:1}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+
+    .btn{background:linear-gradient(180deg,rgba(48,82,163,.12),rgba(48,82,163,.05));color:var(--ink);border:1px solid rgba(48,82,163,.25);padding:9px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(15,27,63,.18);border-color:rgba(48,82,163,.45)}
+    .btn.ghost{background:#fff;border-color:rgba(48,82,163,.18);color:var(--accent)}
+    .btn.primary{background:linear-gradient(180deg,rgba(48,82,163,.22),rgba(48,82,163,.1));border-color:rgba(48,82,163,.55);color:#fff;box-shadow:0 16px 32px rgba(48,82,163,.22)}
+    .btn.danger{background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08));border-color:rgba(180,35,24,.4);color:#fff}
+    .btn.small{padding:7px 11px;font-size:13px;border-radius:10px}
+    .btn:disabled{cursor:not-allowed;opacity:.55;box-shadow:none;transform:none}
+
+    .wrap{max-width:1420px;margin:24px auto;padding:0 22px;display:grid;gap:18px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 42px rgba(15,27,63,.12)}
+    .muted{color:var(--muted)}
+
+    .metrics{display:flex;flex-wrap:wrap;gap:12px}
+    .metric{flex:1 1 160px;background:var(--accent-soft);border:1px solid rgba(48,82,163,.25);border-radius:14px;padding:12px;min-width:160px}
+    .metric h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .metric strong{display:block;font-size:22px;margin-top:6px;color:var(--accent)}
+    .metric small{display:block;margin-top:4px;color:var(--muted)}
+
+    .filters{display:grid;gap:12px}
+    .filters form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:center}
+    .filters input[type="search"], .filters input[type="date"], .filters select{padding:11px 12px;border-radius:12px;border:1px solid rgba(48,82,163,.2);background:#fff;color:var(--ink);font-weight:600}
+    .filters .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+    table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+    thead th{position:sticky;top:0;background:#eef1ff;border-bottom:1px solid var(--border);text-align:left;padding:10px 12px;font-weight:800;font-size:13px;letter-spacing:.02em}
+    tbody td{padding:10px 12px;border-top:1px solid var(--border);vertical-align:middle}
+    tbody tr:hover{background:#f6f8ff}
+    tbody tr.active{background:#edf2ff}
+    tbody td .pill{background:var(--accent-soft);border-color:rgba(48,82,163,.25);color:var(--accent);font-size:11px;padding:3px 8px}
+    .pill.ready{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.25);color:#0f5c32}
+    .pill.paid{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.25);color:#0f5c32}
+    .pill.processing{background:rgba(250,204,21,.14);border-color:rgba(250,204,21,.35);color:#854d0e}
+    .pill.hold{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.35);color:#842029}
+
+    .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:10px}
+    .pager select{padding:8px 10px;border-radius:10px;border:1px solid rgba(48,82,163,.2);background:#fff;color:var(--ink);font-weight:600}
+
+    .layout{display:grid;grid-template-columns:2fr 320px;gap:18px;align-items:start}
+    @media(max-width:1100px){.layout{grid-template-columns:1fr}}
+
+    .quick{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;position:sticky;top:118px;display:grid;gap:12px}
+    .quick h3{margin:0;font-size:16px}
+    .quick .rows{display:grid;gap:10px;font-size:14px}
+    .kv{display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px}
+    .quick .actions{display:flex;flex-wrap:wrap;gap:10px}
+
+    #listWrap{min-height:220px}
+    .empty{padding:32px;text-align:center;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="top"><div class="row">
+    <div class="brand">Payroll Console</div>
+    <span class="pill">Admin</span>
+    <div class="sp"></div>
+    <div id="diagChips" class="chips" style="display:flex;gap:8px"></div>
+    <a class="btn ghost" href="/">Website</a>
+    <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
+    <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel">
+      <div class="metrics" id="metrics"></div>
+    </section>
+
+    <section class="panel filters">
+      <form id="filterForm" autocomplete="off">
+        <input id="filterSearch" type="search" placeholder="Search candidate, client, reference"/>
+        <select id="filterStatus">
+          <option value="ready">Ready</option>
+          <option value="processing">Processing</option>
+          <option value="paid">Paid</option>
+          <option value="hold">On hold</option>
+          <option value="all">All statuses</option>
+        </select>
+        <input id="filterFrom" type="date" aria-label="Week ending from"/>
+        <input id="filterTo" type="date" aria-label="Week ending to"/>
+      </form>
+      <div class="actions">
+        <div class="muted" id="resultMeta">0 payroll items</div>
+        <div class="sp"></div>
+        <button class="btn ghost small" id="btnClear">Clear filters</button>
+        <button class="btn ghost small" id="btnRefresh">Refresh</button>
+        <button class="btn ghost small" id="btnExportSel" disabled>Export selected</button>
+        <button class="btn primary small" id="btnExportAll">Export all</button>
+      </div>
+      <div class="actions" style="gap:8px">
+        <button class="btn small" id="btnMarkPaid" disabled>Mark paid</button>
+        <button class="btn small" id="btnMarkProcessing" disabled>Mark processing</button>
+        <button class="btn small" id="btnMarkHold" disabled>Put on hold</button>
+        <button class="btn small" id="btnMarkReady" disabled>Reset to ready</button>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel" id="listWrap">Loading…</section>
+      <aside class="quick" id="quickView" aria-live="polite">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h3 id="qvTitle">Select a timesheet</h3>
+          <span class="sp"></span>
+          <button class="btn ghost small" id="qvClose" style="display:none">Close</button>
+        </div>
+        <div class="rows" id="qvRows">
+          <div class="empty">Pick a timesheet to inspect payroll details.</div>
+        </div>
+        <div class="actions" id="qvActions" style="display:none">
+          <button class="btn small" id="qvPaid">Mark paid</button>
+          <button class="btn small" id="qvProcessing">Processing</button>
+          <button class="btn small" id="qvHold">Hold</button>
+          <button class="btn ghost small" id="qvReady">Reset</button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="pager" id="pager" style="display:none">
+      <div class="muted" id="pgInfo"></div>
+      <div class="sp"></div>
+      <select id="pgSize">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+      <button class="btn small ghost" id="pgPrev">◀</button>
+      <button class="btn small ghost" id="pgNext">▶</button>
+    </div>
+  </div>
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+  (function startPayroll(){
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.netlifyIdentity) {
+      return setTimeout(startPayroll, 30);
+    }
+
+    Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
+      const chips = sel('#diagChips');
+      const chip = (label, tone = 'ok') => {
+        if (!chips) return;
+        const span = document.createElement('span');
+        span.className = 'pill ' + (tone === 'warn' ? 'processing' : tone === 'bad' ? 'hold' : '');
+        span.textContent = label;
+        chips.appendChild(span);
+      };
+
+      const who = await identity('admin');
+      if (!who || !who.ok) {
+        const gate = sel('#gate'); const app = sel('#app');
+        if (app) app.style.display = 'none';
+        if (gate) { gate.style.display = ''; const why = gate.querySelector('.why'); if (why) why.textContent = 'Restricted. Sign in with an admin account.'; }
+        chip('role: blocked', 'bad');
+        return;
+      }
+
+      chip('role: admin');
+      chip('trace ' + getTrace().slice(0, 8));
+
+      const state = {
+        rows: [],
+        page: 1,
+        pageSize: 25,
+        sort: { key: 'weekEnding', dir: 'desc' },
+        filters: { status: 'ready', q: '', from: '', to: '' },
+        stats: { total: 0 },
+        selected: new Set(),
+        quick: null,
+      };
+
+      const metrics = sel('#metrics');
+      const listWrap = sel('#listWrap');
+      const resultMeta = sel('#resultMeta');
+      const statusSel = sel('#filterStatus');
+      const searchInput = sel('#filterSearch');
+      const fromInput = sel('#filterFrom');
+      const toInput = sel('#filterTo');
+      const pager = sel('#pager');
+      const pgInfo = sel('#pgInfo');
+      const pgPrev = sel('#pgPrev');
+      const pgNext = sel('#pgNext');
+      const pgSize = sel('#pgSize');
+      const btnExportSel = sel('#btnExportSel');
+      const btnMarkPaid = sel('#btnMarkPaid');
+      const btnMarkProcessing = sel('#btnMarkProcessing');
+      const btnMarkHold = sel('#btnMarkHold');
+      const btnMarkReady = sel('#btnMarkReady');
+      const qvRows = sel('#qvRows');
+      const qvTitle = sel('#qvTitle');
+      const qvActions = sel('#qvActions');
+      const qvClose = sel('#qvClose');
+
+      function badge(status) {
+        const v = String(status || '').toLowerCase();
+        if (!v) return '<span class="pill">Unknown</span>';
+        return `<span class="pill ${v}">${v.charAt(0).toUpperCase() + v.slice(1)}</span>`;
+      }
+
+      function enableBulkButtons() {
+        const has = state.selected.size > 0;
+        [btnExportSel, btnMarkPaid, btnMarkProcessing, btnMarkHold, btnMarkReady].forEach((btn) => {
+          if (!btn) return;
+          btn.disabled = !has;
+        });
+      }
+
+      function renderMetrics() {
+        if (!metrics) return;
+        const stats = state.stats || {};
+        const currencyEntries = Object.entries(stats.byCurrency || {});
+        const statusEntries = Object.entries(stats.byStatus || {});
+        metrics.innerHTML = `
+          <div class="metric">
+            <h4>Items</h4>
+            <strong>${stats.total || 0}</strong>
+            <small>${statusEntries.map(([k, v]) => `${k}: ${v}`).join(' • ') || '—'}</small>
+          </div>
+          <div class="metric">
+            <h4>Total hours</h4>
+            <strong>${(stats.totalHours || 0).toFixed(1)}</strong>
+            <small>Includes overtime</small>
+          </div>
+          <div class="metric">
+            <h4>Pay total</h4>
+            <strong>${currencyEntries.map(([cur, val]) => `${cur} ${(val || 0).toFixed(2)}`).join(' • ') || '—'}</strong>
+            <small>Filtered rows only</small>
+          </div>`;
+      }
+
+      function sortRows(rows) {
+        const dir = state.sort.dir === 'asc' ? 1 : -1;
+        const key = state.sort.key;
+        return rows.slice().sort((a, b) => {
+          const av = a[key] || '';
+          const bv = b[key] || '';
+          if (av === bv) return 0;
+          return av > bv ? dir : -dir;
+        });
+      }
+
+      function rowsForPage() {
+        const sorted = sortRows(state.rows);
+        const start = (state.page - 1) * state.pageSize;
+        return sorted.slice(start, start + state.pageSize);
+      }
+
+      function renderTable() {
+        if (!listWrap) return;
+        const rows = state.rows;
+        if (!rows.length) {
+          listWrap.innerHTML = '<div class="empty">No payroll items match your filters.</div>';
+          pager.style.display = 'none';
+          resultMeta.textContent = '0 payroll items';
+          return;
+        }
+
+        const pageRows = rowsForPage();
+        const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
+        if (state.page > totalPages) { state.page = totalPages; return renderTable(); }
+
+        const body = pageRows.map((row) => {
+          const key = String(row.id);
+          const checked = state.selected.has(key) ? 'checked' : '';
+          return `<tr data-id="${key}" class="${state.quick && state.quick.id === row.id ? 'active' : ''}">
+            <td><input type="checkbox" data-id="${key}" ${checked}></td>
+            <td><div style="font-weight:700">${row.candidateName || '—'}</div><div class="muted" style="font-size:12px">${row.candidate?.payrollRef || ''}</div></td>
+            <td>${row.weekEnding || '—'}<div class="muted" style="font-size:12px">${row.assignment?.payFreq || ''}</div></td>
+            <td><div>${row.assignment?.jobTitle || '—'}</div><div class="muted" style="font-size:12px">${row.assignment?.clientName || ''}</div></td>
+            <td><strong>${row.currency || 'GBP'} ${(row.totals?.pay || 0).toFixed(2)}</strong><div class="muted" style="font-size:12px">${(row.totals?.hours || 0).toFixed(1)} hrs</div></td>
+            <td>${badge(row.payrollStatus)}</td>
+            <td><div class="muted" style="font-size:12px">${row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '—'}</div></td>
+          </tr>`;
+        }).join('');
+
+        listWrap.innerHTML = `<table>
+          <thead><tr>
+            <th style="width:32px"><input type="checkbox" id="ckAll"></th>
+            <th>Candidate</th>
+            <th>Week ending</th>
+            <th>Assignment</th>
+            <th>Pay</th>
+            <th>Status</th>
+            <th>Updated</th>
+          </tr></thead>
+          <tbody>${body}</tbody>
+        </table>`;
+
+        resultMeta.textContent = `${rows.length} payroll item${rows.length === 1 ? '' : 's'}`;
+        pager.style.display = '';
+        pgInfo.textContent = `Page ${state.page} of ${totalPages}`;
+        pgPrev.disabled = state.page <= 1;
+        pgNext.disabled = state.page >= totalPages;
+
+        const ckAll = sel('#ckAll');
+        if (ckAll) {
+          ckAll.checked = state.selected.size && state.selected.size >= pageRows.length;
+          ckAll.onchange = () => {
+            pageRows.forEach((row) => {
+              const key = String(row.id);
+              if (ckAll.checked) state.selected.add(key);
+              else state.selected.delete(key);
+            });
+            enableBulkButtons();
+            renderTable();
+          };
+        }
+
+        listWrap.querySelectorAll('input[type="checkbox"][data-id]').forEach((ck) => {
+          ck.onchange = () => {
+            const id = ck.getAttribute('data-id');
+            if (ck.checked) state.selected.add(id); else state.selected.delete(id);
+            enableBulkButtons();
+          };
+        });
+
+        listWrap.querySelectorAll('tbody tr').forEach((tr) => {
+          tr.onclick = (e) => {
+            if (e.target.closest('input')) return;
+            const idAttr = tr.getAttribute('data-id');
+            const row = state.rows.find((r) => String(r.id) === idAttr);
+            renderQuick(row || null);
+          };
+        });
+
+        enableBulkButtons();
+      }
+
+      function renderQuick(row) {
+        state.quick = row || null;
+        if (!qvRows || !qvTitle) return;
+        if (!row) {
+          qvTitle.textContent = 'Select a timesheet';
+          qvRows.innerHTML = '<div class="empty">Pick a timesheet to inspect payroll details.</div>';
+          if (qvActions) qvActions.style.display = 'none';
+          if (qvClose) qvClose.style.display = 'none';
+          return;
+        }
+        qvTitle.textContent = row.candidateName || `Timesheet #${row.id}`;
+        const c = row.candidate || {};
+        const bank = c.bank || {};
+        qvRows.innerHTML = `
+          <div class="kv"><b>Week ending</b><div>${row.weekEnding || '—'}</div></div>
+          <div class="kv"><b>Status</b><div>${badge(row.payrollStatus)}</div></div>
+          <div class="kv"><b>Assignment</b><div>${row.assignment?.jobTitle || '—'} · ${row.assignment?.clientName || ''}</div></div>
+          <div class="kv"><b>Ref</b><div>${row.assignment?.ref || '—'}</div></div>
+          <div class="kv"><b>Payroll ref</b><div>${c.payrollRef || '—'}</div></div>
+          <div class="kv"><b>Pay</b><div>${row.currency || 'GBP'} ${(row.totals?.pay || 0).toFixed(2)}</div></div>
+          <div class="kv"><b>Hours</b><div>${(row.totals?.hours || 0).toFixed(2)} (${(row.totals?.ot || 0).toFixed(2)} OT)</div></div>
+          <div class="kv"><b>Bank</b><div>${bank.name || '—'} · ${bank.sortCode || ''} · ${bank.account || ''}</div></div>
+          <div class="kv"><b>IBAN</b><div>${bank.iban || '—'}</div></div>
+          <div class="kv"><b>SWIFT</b><div>${bank.swift || '—'}</div></div>
+          <div class="kv"><b>Email</b><div>${c.email || '—'}</div></div>
+          <div class="kv"><b>Notes</b><div>${row.notes || '—'}</div></div>
+        `;
+        if (qvActions) qvActions.style.display = '';
+        if (qvClose) qvClose.style.display = '';
+      }
+
+      async function load() {
+        if (listWrap) listWrap.textContent = 'Loading…';
+        try {
+          const res = await api('admin-payroll-list', 'POST', {
+            status: state.filters.status,
+            q: state.filters.q,
+            weekFrom: state.filters.from || null,
+            weekTo: state.filters.to || null,
+            limit: state.pageSize * 4,
+          });
+          state.rows = Array.isArray(res?.rows) ? res.rows : [];
+          state.stats = res?.stats || {};
+          state.page = 1;
+          state.selected.clear();
+          renderMetrics();
+          renderTable();
+        } catch (e) {
+          if (/supabase/i.test(String(e.message || e))) {
+            chip('supabase offline', 'warn');
+          }
+          if (listWrap) listWrap.textContent = 'Load failed. ' + (e.message || e);
+          state.rows = [];
+          renderTable();
+        }
+      }
+
+      async function exportCsv(selectedOnly) {
+        try {
+          const ids = selectedOnly ? Array.from(state.selected) : undefined;
+          const who = await identity();
+          const token = who?.token || '';
+          const headers = {
+            'Content-Type': 'application/json',
+            'x-trace': getTrace(),
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch('/.netlify/functions/admin-payroll-list', {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({
+              status: state.filters.status,
+              q: state.filters.q,
+              weekFrom: state.filters.from || null,
+              weekTo: state.filters.to || null,
+              ids,
+              format: 'csv',
+            }),
+          });
+          const text = await res.text();
+          if (!res.ok) throw new Error(text || res.statusText);
+          const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'payroll.csv';
+          link.click();
+          URL.revokeObjectURL(url);
+          toast('Export ready', 'ok', 1800);
+        } catch (e) {
+          toast('Export failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      async function changeStatus(ids, status) {
+        const payloadIds = ids
+          .map((id) => (Number.isFinite(Number(id)) ? Number(id) : id))
+          .filter((id) => id !== null && id !== undefined && id !== '');
+        if (!payloadIds.length) return;
+        try {
+          await Promise.all(payloadIds.map((id) => api('admin-payroll-process', 'POST', { id, status })));
+          toast('Updated payroll status', 'ok', 1600);
+          await load();
+          if (state.quick && !state.rows.find((r) => r.id === state.quick.id)) {
+            renderQuick(null);
+          } else if (state.quick) {
+            const fresh = state.rows.find((r) => r.id === state.quick.id);
+            renderQuick(fresh || null);
+          }
+        } catch (e) {
+          toast('Update failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      // Event wires
+      sel('#btnRefresh').onclick = () => load();
+      sel('#btnClear').onclick = () => {
+        state.filters = { status: 'ready', q: '', from: '', to: '' };
+        if (statusSel) statusSel.value = 'ready';
+        if (searchInput) searchInput.value = '';
+        if (fromInput) fromInput.value = '';
+        if (toInput) toInput.value = '';
+        load();
+      };
+      statusSel.onchange = () => { state.filters.status = statusSel.value; load(); };
+      fromInput.onchange = () => { state.filters.from = fromInput.value; load(); };
+      toInput.onchange = () => { state.filters.to = toInput.value; load(); };
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          state.filters.q = searchInput.value.trim();
+          load();
+        }
+      });
+
+      btnExportSel.onclick = () => exportCsv(true);
+      sel('#btnExportAll').onclick = () => exportCsv(false);
+      btnMarkPaid.onclick = () => changeStatus(Array.from(state.selected), 'paid');
+      btnMarkProcessing.onclick = () => changeStatus(Array.from(state.selected), 'processing');
+      btnMarkHold.onclick = () => changeStatus(Array.from(state.selected), 'hold');
+      btnMarkReady.onclick = () => changeStatus(Array.from(state.selected), 'ready');
+
+      if (qvClose) qvClose.onclick = () => renderQuick(null);
+      sel('#qvPaid').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'paid'); };
+      sel('#qvProcessing').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'processing'); };
+      sel('#qvHold').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'hold'); };
+      sel('#qvReady').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'ready'); };
+
+      pgPrev.onclick = () => { if (state.page > 1) { state.page -= 1; renderTable(); } };
+      pgNext.onclick = () => { const totalPages = Math.max(1, Math.ceil(state.rows.length / state.pageSize)); if (state.page < totalPages) { state.page += 1; renderTable(); } };
+      pgSize.onchange = () => { state.pageSize = Number(pgSize.value) || 25; state.page = 1; load(); };
+
+      await load();
+    });
+  })();
+  </script>
+</body>
+</html>
