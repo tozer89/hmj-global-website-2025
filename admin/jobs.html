@@ -331,6 +331,63 @@
           .slice(0, 80);
       }
 
+      function toList(value) {
+        if (Array.isArray(value)) {
+          return value.map((item) => String(item || '').trim()).filter(Boolean);
+        }
+        if (!value) return [];
+        return String(value)
+          .split(/\r?\n|\u2022|,/)
+          .map((part) => part.replace(/^[-*•\s]+/, '').trim())
+          .filter(Boolean);
+      }
+
+      function normalizeJob(row = {}) {
+        const sectionLabel = (row.sectionLabel || row.section || 'General').toString().trim() || 'General';
+        const publishedRaw = row.published ?? row.isPublished;
+        let published;
+        if (publishedRaw === undefined || publishedRaw === null) {
+          published = true;
+        } else if (typeof publishedRaw === 'string') {
+          published = !/^(false|0|no|off)$/i.test(publishedRaw.trim());
+        } else {
+          published = !!publishedRaw;
+        }
+
+        const normalized = {
+          id: (row.id || row.slug || '').toString().trim(),
+          title: (row.title || row.name || '').toString().trim(),
+          status: (row.status || 'live').toString().trim().toLowerCase() || 'live',
+          section: sectionLabel,
+          sectionLabel,
+          sectionKey: slugify(sectionLabel) || 'general',
+          discipline: (row.discipline || '').toString().trim(),
+          type: (row.type || 'permanent').toString().trim().toLowerCase() || 'permanent',
+          locationText: (row.locationText || row.location_text || '').toString().trim(),
+          locationCode: (row.locationCode || row.location_code || '').toString().trim(),
+          overview: (row.overview || '').toString().trim(),
+          responsibilities: toList(row.responsibilities || row.responsibilitiesText),
+          requirements: toList(row.requirements || row.requirementsText),
+          applyUrl: (row.applyUrl || row.apply_url || '').toString().trim(),
+          published,
+          sortOrder: Number.isFinite(row.sortOrder)
+            ? Number(row.sortOrder)
+            : Number.isFinite(row.sort_order)
+              ? Number(row.sort_order)
+              : null,
+          tags: Array.isArray(row.tags) && row.tags.length
+            ? row.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
+            : toList(row.tags || row.keywords),
+          keywords: (row.keywords || '').toString().trim(),
+          createdAt: row.createdAt || row.created_at || null,
+          updatedAt: row.updatedAt || row.updated_at || null,
+        };
+        if (!normalized.id) {
+          normalized.id = `job-${Math.random().toString(36).slice(2, 10)}`;
+        }
+        return normalized;
+      }
+
       function buildSections() {
         const seen = new Map();
         state.jobs.forEach((job) => {
@@ -693,17 +750,18 @@
           const res = await api('admin-jobs-save', 'POST', { job: payload });
           const job = res?.job;
           if (job) {
-            const existing = state.jobs.find((j) => j.id === job.id);
+            const hydrated = { ...job, ...normalizeJob(job) };
+            const existing = state.jobs.find((j) => j.id === hydrated.id);
             if (existing) {
-              Object.assign(existing, job);
+              Object.assign(existing, hydrated);
               delete existing.__seed;
             } else {
-              state.jobs.push(job);
+              state.jobs.push(hydrated);
             }
             buildSections();
             buildTags();
             renderAll();
-            openEditor(job);
+            openEditor(hydrated);
             toast('Job saved', 'ok', 1800);
             state.seeded = state.jobs.some((j) => j.__seed);
             applySeedNotice();
@@ -763,10 +821,39 @@
         }
       }
 
+      async function loadJobsFromStatic(reason) {
+        try {
+          const res = await fetch('/data/jobs.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const json = await res.json();
+          const rows = Array.isArray(json?.jobs) ? json.jobs : [];
+          if (!rows.length) return false;
+          state.jobs = rows.map((row) => ({ ...normalizeJob(row), __seed: true }));
+          state.readOnly = true;
+          state.fallbackSource = reason || 'static';
+          state.seeded = true;
+          applySeedNotice();
+          applyReadOnly();
+          buildSections();
+          buildTags();
+          renderAll();
+          return true;
+        } catch (err) {
+          console.error('[jobs] static fallback failed', err);
+          return false;
+        }
+      }
+
       async function loadJobs() {
         try {
           const res = await api('admin-jobs-list', 'POST', { includeDrafts: true });
-          state.jobs = Array.isArray(res?.jobs) ? res.jobs : [];
+          const rawJobs = Array.isArray(res?.jobs) ? res.jobs : [];
+          state.jobs = rawJobs.map((job) => {
+            const normalized = normalizeJob(job);
+            const merged = { ...job, ...normalized };
+            if (job && job.__seed) merged.__seed = job.__seed;
+            return merged;
+          });
           state.readOnly = !!res?.readOnly;
           state.fallbackSource = res?.source || '';
           state.seeded = !!res?.seeded && state.jobs.length > 0;
@@ -783,7 +870,12 @@
           renderAll();
         } catch (e) {
           console.error('[jobs] load failed', e);
-          toast('Load failed: ' + (e.message || e), 'error', 4200);
+          const fallbackOk = await loadJobsFromStatic('static-client');
+          if (fallbackOk) {
+            toast('Supabase unavailable — showing static jobs (read-only).', 'warn', 3800);
+          } else {
+            toast('Load failed: ' + (e.message || e), 'error', 4200);
+          }
         }
       }
 

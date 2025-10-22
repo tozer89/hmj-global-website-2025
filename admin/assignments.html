@@ -30,7 +30,8 @@
     .sp{flex:1}
     .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none}
     .btn:hover{background:var(--blue-2)}
-    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35);color:var(--blue)}
+    .top .btn.ghost{color:#fff}
     .btn.light{background:#fff;color:var(--blue);border-color:#fff}
     .btn.small{padding:6px 10px;border-radius:10px}
     .btn.danger{background:#7a1f28;border-color:#7a1f28}
@@ -76,6 +77,11 @@
     .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
     .tab{padding:8px 10px;border-radius:10px;border:1px solid var(--stroke);background:#fff;cursor:pointer;font-weight:700}
     .tab.active{background:var(--chip)}
+    .tabpane{display:none;gap:12px;grid-template-columns:repeat(2,minmax(240px,1fr))}
+    .tabpane.active{display:grid}
+    @media (max-width:820px){
+      .tabpane{grid-template-columns:1fr}
+    }
     .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px}
     @media (max-width:820px){.grid{grid-template-columns:1fr}}
     .field{display:grid;gap:6px}
@@ -205,6 +211,7 @@
     <div class="d-foot">
       <div class="muted">Ref: <span id="dRef">—</span></div>
       <div class="right">
+        <button class="btn ghost" id="btnCancel" type="button">Close without saving</button>
         <button class="btn ghost" id="btnSaveDraft" type="button">Save</button>
         <button class="btn" id="btnSaveClose" type="button">Save & Close</button>
       </div>
@@ -640,7 +647,7 @@
           const defaultHint = hints[key] || '';
           const hintAttr = defaultHint.replace(/"/g,'&quot;');
           return `<div class="field"><label for="${id}">${label}</label>
-                  <input id="${id}" name="${key}" type="number" inputmode="numeric" min="0" step="1" list="${listId}" data-source="${source}" placeholder="Start typing to search…" />
+                  <input id="${id}" name="${key}" type="text" inputmode="numeric" list="${listId}" data-source="${source}" placeholder="Start typing to search…" />
                   <datalist id="${listId}"></datalist>
                   <div class="muted" data-hint-for="${key}" data-default="${hintAttr}" style="font-size:12px;min-height:18px">${defaultHint}</div>
                 </div>`;
@@ -834,68 +841,85 @@
       }
 
       function buildEditorShell(){
-        const tabsHost=$('#tabs'); tabsHost.innerHTML='';
-        schema.forEach(t=>{
-          const b=document.createElement('button');
-          b.type='button'; b.className='tab'+(t.name===currentTab?' active':''); b.textContent=t.name;
-          b.onclick=()=>{ currentTab=t.name; buildEditorForm(editing||{}); Array.from(tabsHost.children).forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
-          tabsHost.appendChild(b);
-        });
-        buildEditorForm(editing||{});
-      }
-      function buildEditorForm(values={}){
-        const tab=schema.find(t=>t.name===currentTab)||schema[0];
-        const frm=$('#frm'); frm.innerHTML=tab.fields.map(fieldHtml).join('');
-        tab.fields.forEach(([key,,type])=>{
-          const el=frm.querySelector(`[name="${key}"]`); if(!el) return;
-          if(type==='checkbox') el.checked = !!values[key];
-          else if(values[key]!=null) el.value = values[key];
-        });
-        applySelectOptions(frm, values);
-      }
-      function readForm(){
-        const out={};
-        schema.forEach(t=>{
-          t.fields.forEach(([key,,type])=>{
-            const el=document.querySelector(`#frm [name="${key}"]`); if(!el) return;
-            if(type==='checkbox') out[key]=!!el.checked;
-            else out[key]=el.value || null;
+      const tabsHost=$('#tabs'); tabsHost.innerHTML='';
+      const frm=$('#frm');
+      frm.innerHTML = schema.map(tab=>{
+        const fields = tab.fields.map(fieldHtml).join('');
+        const active = tab.name===currentTab ? ' active' : '';
+        return `<div class="tabpane${active}" data-tab="${tab.name}">${fields}</div>`;
+      }).join('');
+
+      schema.forEach(t=>{
+        const b=document.createElement('button');
+        b.type='button';
+        b.className='tab'+(t.name===currentTab?' active':'');
+        b.textContent=t.name;
+        b.onclick=()=>{
+          currentTab=t.name;
+          Array.from(tabsHost.children).forEach(x=>x.classList.toggle('active', x===b));
+          frm.querySelectorAll('.tabpane').forEach(p=>{
+            p.classList.toggle('active', p.dataset.tab===currentTab);
           });
+        };
+        tabsHost.appendChild(b);
+      });
+
+      schema.forEach(t=>{
+        t.fields.forEach(([key,,type])=>{
+          const el=frm.querySelector(`[name="${key}"]`); if(!el) return;
+          if(type==='checkbox') el.checked = !!(editing && editing[key]);
         });
-        return out;
-      }
-      function resetForm(){
+      });
+      applySelectOptions(frm, editing || {});
+    }
+    function readForm(){
+      const out={};
+      const frm=$('#frm');
+      if (!frm) return out;
+      frm.querySelectorAll('[name]').forEach(el=>{
+        const key=el.getAttribute('name');
+        if(!key) return;
+        if(el.type==='checkbox') out[key]=!!el.checked;
+        else out[key]=el.value || null;
+      });
+      return out;
+    }
+    function resetForm(){
         editing=null; currentTab='Basics';
         $('#dTitle').textContent = 'New assignment';
         $('#dRef').textContent = '—';
         buildEditorShell();
       }
       function openEditor(values={}){
-        editing = values||null;
-        buildEditorShell();
-        schema.forEach(t=>{
-          t.fields.forEach(([key,,type])=>{
-            const el=document.querySelector(`#frm [name="${key}"]`); if(!el) return;
-            if(type==='checkbox') el.checked = !!values[key];
-            else if(values[key]!=null) el.value = values[key];
-          });
+      editing = values||null;
+      buildEditorShell();
+      const frm=$('#frm');
+      if (frm){
+        frm.querySelectorAll('[name]').forEach(el=>{
+          const key=el.getAttribute('name');
+          if (!key) return;
+          const type=el.getAttribute('type');
+          const val = values && Object.prototype.hasOwnProperty.call(values, key) ? values[key] : null;
+          if (type==='checkbox') el.checked = !!val;
+          else if (val != null) el.value = val;
         });
-        applySelectOptions($('#frm'), values);
-        $('#dTitle').textContent = values?.job_title || (values?.id?'Edit assignment':'New assignment');
-        $('#dRef').textContent = values?.as_ref || values?.po_ref || values?.id || '—';
-        openDrawer();
       }
+      applySelectOptions($('#frm'), values);
+      $('#dTitle').textContent = values?.job_title || (values?.id?'Edit assignment':'New assignment');
+      $('#dRef').textContent = values?.as_ref || values?.po_ref || values?.id || '—';
+      openDrawer();
+    }
 
-      function normalizeAssignmentPayload(form){
-        const payload = { ...form };
-        const num = (v) => {
-          if (v === null || v === undefined || v === '') return null;
-          const n = Number(v);
-          return Number.isFinite(n) ? n : null;
-        };
-        payload.contractor_id = num(form.contractor_id);
-        payload.project_id = num(form.project_id);
-        payload.site_id = num(form.site_id);
+    function normalizeAssignmentPayload(form){
+      const payload = { ...form };
+      const num = (v) => {
+        if (v === null || v === undefined || v === '') return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+      payload.contractor_id = num(form.contractor_id);
+      payload.project_id = num(form.project_id);
+      payload.site_id = num(form.site_id);
         payload.rate_std = form.rate_pay != null ? Number(form.rate_pay) : (form.rate_std != null ? Number(form.rate_std) : null);
         payload.rate_charge = form.rate_charge != null ? Number(form.rate_charge) : null;
         if (payload.rate_std != null && Number.isNaN(payload.rate_std)) payload.rate_std = null;
@@ -934,12 +958,42 @@
           const form = readForm();
           const body = normalizeAssignmentPayload(form);
           if (editing?.id) body.id = editing.id;
-          const res = await api('admin-assignments-save','POST', body);
-          toast('Saved', 'ok', 1500);
-          if (closeAfter) closeDrawer();
-          page = 1;
-          await load();
-          editing = res;
+        const matchName = (list, target) => {
+          if (!target) return null;
+          const lower = String(target).toLowerCase().trim();
+          return list.find((item) => {
+            if (String(item.id) === lower) return true;
+            const values = [item.name, item.email, item.client_name, item.title, item.label]
+              .filter(Boolean)
+              .map((v) => String(v).toLowerCase().trim());
+            return values.includes(lower);
+          }) || null;
+        };
+        if (!body.contractor_id && Array.isArray(dropdowns.contractors)) {
+          const match = matchName(dropdowns.contractors, form.contractor_id || form.candidate_name || editing?.candidate_name);
+          const resolved = match ? num(match.id ?? match.contractor_id) : null;
+          if (resolved != null) body.contractor_id = resolved;
+        }
+        if (!body.project_id && Array.isArray(dropdowns.projects)) {
+          const match = matchName(dropdowns.projects, form.project_id || form.client_name || editing?.project_name || editing?.client_name);
+          const resolved = match ? num(match.id ?? match.project_id) : null;
+          if (resolved != null) body.project_id = resolved;
+        }
+        if (!body.site_id && Array.isArray(dropdowns.sites)) {
+          const match = matchName(dropdowns.sites, form.site_id || form.client_site || editing?.client_site || editing?.site_id);
+          const resolved = match ? num(match.id ?? match.site_id) : null;
+          if (resolved != null) body.site_id = resolved;
+        }
+        if (!body.contractor_id && editing?.contractor_id) body.contractor_id = Number(editing.contractor_id);
+        if (!body.project_id && editing?.project_id) body.project_id = Number(editing.project_id);
+        if (!body.site_id && editing?.site_id) body.site_id = Number(editing.site_id);
+        if (!body.start_date && editing?.start_date) body.start_date = editing.start_date;
+        const res = await api('admin-assignments-save','POST', body);
+        toast('Saved', 'ok', 1500);
+        if (closeAfter) closeDrawer();
+        page = 1;
+        await load();
+        editing = res;
         }catch(e){
           toast('Save failed: ' + (e.message||e), 'error', 4200);
         }
@@ -957,6 +1011,7 @@
       $('#pgPrev').onclick     = ()=>{ if(page>1){ page--; load(); } };
       $('#pgNext').onclick     = ()=>{ page++; load(); };
       $('#pgSize').onchange    = e=>{ pageSize=Number(e.target.value)||10; page=1; load(); };
+      $('#btnCancel').onclick = ()=>closeDrawer();
       $('#btnSaveDraft').onclick=()=>save(false);
       $('#btnSaveClose').onclick=()=>save(true);
 
