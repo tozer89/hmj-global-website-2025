@@ -24,7 +24,14 @@ const COLUMNS = `
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 
 exports.handler = async (event) => {
-  const fallback = loadStaticJobs();
+  let fallback = [];
+  let fallbackError = null;
+  try {
+    fallback = loadStaticJobs();
+  } catch (err) {
+    fallbackError = err;
+    console.warn('[jobs] static load failed', err?.message || err);
+  }
   const fallbackCount = fallback.length;
 
   if (!hasSupabase()) {
@@ -34,7 +41,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         jobs: fallback,
         source: fallback.length ? 'static' : 'empty',
-        warning: fallback.length ? undefined : 'Supabase client unavailable',
+        warning: fallback.length ? undefined : (fallbackError?.message || 'Supabase client unavailable'),
         supabase: supabaseStatus(),
         fallbackCount,
       }),
@@ -77,7 +84,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         jobs: fallback,
         source: fallback.length ? 'static' : 'empty',
-        warning: e.message || 'Unable to load jobs',
+        warning: e.message || fallbackError?.message || 'Unable to load jobs',
         supabase: supabaseStatus(),
         fallbackCount,
       }),

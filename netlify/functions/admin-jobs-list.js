@@ -26,7 +26,14 @@ const COLUMNS = `
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 
 exports.handler = async (event, context) => {
-  const fallback = loadStaticJobs();
+  let fallback = [];
+  let fallbackError = null;
+  try {
+    fallback = loadStaticJobs();
+  } catch (err) {
+    fallbackError = err;
+    console.warn('[admin-jobs] static load failed', err?.message || err);
+  }
   const fallbackCount = fallback.length;
 
   try {
@@ -40,7 +47,7 @@ exports.handler = async (event, context) => {
           jobs: fallback,
           source: fallback.length ? 'static' : 'empty',
           readOnly: true,
-          warning: fallback.length ? undefined : 'Supabase client unavailable',
+          warning: fallback.length ? undefined : (fallbackError?.message || 'Supabase client unavailable'),
           supabase: supabaseStatus(),
           fallbackCount,
         }),
@@ -92,7 +99,7 @@ exports.handler = async (event, context) => {
         jobs: fallback,
         readOnly: true,
         source,
-        error: e.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
+        error: e.message || fallbackError?.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
         supabase: supabaseStatus(),
         fallbackCount,
       }),

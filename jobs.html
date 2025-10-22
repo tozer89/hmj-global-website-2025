@@ -708,6 +708,7 @@
     const jobsContainer = document.getElementById('jobsDynamic');
     let jobsEls = [];
     let chips = [];
+    let seededJobsApplied = false;
 
     function refreshJobsElements(){
       jobsEls = Array.from(jobsContainer?.querySelectorAll('.job') || []);
@@ -1001,6 +1002,24 @@
       populateChipGroup('discChipWrap', 'disc', jobsState.disciplines);
     }
 
+    function showSeededJobs(rows, source = 'embedded') {
+      if (!Array.isArray(rows) || !rows.length) return;
+      jobsState.source = source;
+      jobsState.all = rows.map(normaliseJob);
+      buildDerivedCollections(jobsState.all);
+      paintJobs(jobsState.all);
+      updateFilterSources();
+      refreshChips();
+      bindChipEvents();
+      bindJobCardEvents();
+      seededJobsApplied = true;
+      const notice = document.getElementById('jobsFallbackNotice');
+      if (notice) {
+        notice.hidden = false;
+        notice.textContent = `Showing ${jobsState.all.length} preview roles while the live jobs service loads (${source}).`;
+      }
+    }
+
     async function renderJobs(){
       const notice = document.getElementById('jobsFallbackNotice');
       if (notice) notice.hidden = true;
@@ -1032,7 +1051,20 @@
         }
       }
     }
-    renderJobs();
+    const embeddedSeed = loadEmbeddedJobs();
+    if (Array.isArray(embeddedSeed) && embeddedSeed.length) {
+      showSeededJobs(embeddedSeed, 'embedded');
+    }
+    renderJobs().catch((err) => {
+      console.error('jobs initial load failed', err);
+      if (!seededJobsApplied) {
+        const fallbackNotice = document.getElementById('jobsFallbackNotice');
+        if (fallbackNotice) {
+          fallbackNotice.hidden = false;
+          fallbackNotice.textContent = 'Job data is temporarily unavailable. Please try again shortly.';
+        }
+      }
+    });
     /* ---------- Nav ---------- */
     const burger=document.querySelector('.hmj-burger');
     const menu=document.getElementById('hmj-menu');
