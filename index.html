@@ -48,6 +48,8 @@
     .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff; transform:translateY(-1px)}
     .hmj-menu a:focus-visible{outline:2px solid #fff;outline-offset:2px}
     .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
+    .hmj-menu a[aria-disabled="true"]{opacity:.65;cursor:not-allowed}
+    .hmj-menu a.requires-admin::after{content:' \1F512';font-size:.85em}
 
     /* burger */
     .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
@@ -204,23 +206,91 @@
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
-        <!-- In your nav menu -->
-<!--  <li><a href="/timesheets.html" id="nav-timesheets">Timesheets</a></li> -->
-<li><a href="#" id="nav-login" onclick="if(window.netlifyIdentity){ netlifyIdentity.open('login'); } return false;">Timesheets</a></li>
-<li><a href="#" id="nav-logout" style="display:none" onclick="if(window.netlifyIdentity){ netlifyIdentity.logout(); } return false;">Timesheets</a></li>
+        <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
 
 <script>
-  // Swap Login/Logout depending on session
+    // Gate timesheets/admin access depending on session and roles
   document.addEventListener('DOMContentLoaded', () => {
-    const login = document.getElementById('nav-login');
-    const logout = document.getElementById('nav-logout');
-    const user = window.netlifyIdentity?.currentUser();
-    if (user) { login.style.display='none'; logout.style.display='inline-block'; }
-    window.netlifyIdentity?.on('init', u => {
-      if (u) { login.style.display='none'; logout.style.display='inline-block'; }
+    const admin = document.getElementById('nav-admin');
+    const timesheets = document.getElementById('nav-timesheets');
+    const identity = window.netlifyIdentity;
+
+    const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
+      ? user.app_metadata.roles
+      : Array.isArray(user?.roles)
+        ? user.roles
+        : [];
+
+    function requireLogin(event, destination) {
+      if (event) event.preventDefault();
+      if (!identity) {
+        if (destination) window.location.href = destination;
+        return;
+      }
+      if (destination) sessionStorage.setItem('afterLogin', destination);
+      identity.open('login');
+    }
+
+    function setTimesheets(user) {
+      if (!timesheets) return;
+      if (user) {
+        timesheets.href = '/timesheets.html';
+        timesheets.removeAttribute('aria-disabled');
+        timesheets.title = 'Open timesheets';
+      } else {
+        timesheets.href = '#';
+        timesheets.setAttribute('aria-disabled', 'true');
+        timesheets.title = 'Sign in to access timesheets';
+      }
+    }
+
+    function setAdmin(user) {
+      if (!admin) return;
+      const roles = rolesOf(user);
+      const isAdmin = roles.includes('admin');
+      if (isAdmin) {
+        admin.style.display = 'inline-block';
+        admin.href = '/admin/';
+        admin.removeAttribute('aria-disabled');
+        admin.classList.remove('requires-admin');
+        admin.textContent = 'Admin Dashboard';
+        admin.title = 'Open the admin dashboard';
+      } else {
+        admin.style.display = 'none';
+        admin.href = '/admin/';
+        admin.setAttribute('aria-disabled', 'true');
+        admin.classList.add('requires-admin');
+        admin.textContent = 'Admin Dashboard';
+        admin.title = 'Admin access only';
+      }
+    }
+
+    function renderFor(user) {
+      setTimesheets(user);
+      setAdmin(user);
+    }
+
+    timesheets?.addEventListener('click', (event) => {
+      const user = identity?.currentUser?.();
+      if (user) return;
+      requireLogin(event, '/timesheets.html');
     });
-    window.netlifyIdentity?.on('login', () => { login.style.display='none'; logout.style.display='inline-block'; });
-    window.netlifyIdentity?.on('logout', () => { login.style.display='inline-block'; logout.style.display='none'; });
+    admin?.addEventListener('click', (event) => {
+      const user = identity?.currentUser?.();
+      if (user) return;
+      requireLogin(event, '/admin/');
+    });
+
+    identity?.on('init', (user) => renderFor(user));
+    identity?.on('login', (user) => renderFor(user));
+    identity?.on('logout', () => renderFor(null));
+
+    try {
+      renderFor(identity?.currentUser?.() || null);
+    } catch {
+      renderFor(null);
+    }
   });
 </script>
 
@@ -456,10 +526,13 @@
       const scrim  = document.querySelector('.hmj-scrim');
 
       // highlight current page
-      const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
-      menu.querySelectorAll('a').forEach(a=>{
-        const file = a.getAttribute('href').toLowerCase();
-        if(file === path){ a.setAttribute('aria-current','page'); }
+      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'index.html').toLowerCase();
+      const currentNormalized = currentSegment.replace(/^\//, '');
+      menu.querySelectorAll('a[href]').forEach(a=>{
+        const href = (a.getAttribute('href') || '').trim();
+        if (!href || href.includes('://')) return;
+        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
+        if(target === currentNormalized){ a.setAttribute('aria-current','page'); }
       });
 
       function openMenu(open){

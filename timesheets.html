@@ -27,6 +27,27 @@
       font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
     }
 
+    .hmj-header{position:sticky;top:0;z-index:1000;background:#0f1322;color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
+    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+    .hmj-logo img{height:40px;display:block}
+    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
+    .hmj-menu a{display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s}
+    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
+    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
+    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
+    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
+    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
+    @media (max-width:900px){
+      .hmj-burger{display:inline-block}
+      .hmj-menu{position:fixed;right:12px;left:12px;top:64px;background:#0f1322;border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.35);display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;transition:max-height .28s ease,padding .2s ease}
+      .hmj-menu.open{max-height:70vh;padding:10px}
+      .hmj-menu a{padding:14px 12px;width:100%}
+      .hmj-scrim[hidden]{display:none}
+    }
+    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
+    .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+
     .topbar{ padding:18px 16px; background:transparent; }
     .toprow{ max-width:1080px; margin:0 auto; display:flex; gap:12px; align-items:center; }
     .brand{ color:#d9e2ff; font-weight:700; letter-spacing:.2px }
@@ -133,6 +154,148 @@
   </style>
 </head>
 <body>
+  <header class="hmj-header">
+    <nav class="hmj-nav" aria-label="Main">
+      <a class="hmj-logo" href="index.html">
+        <img src="images/logo.png" alt="HMJ-Global Logo" />
+      </a>
+
+      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <ul id="hmj-menu" class="hmj-menu">
+        <li><a href="index.html" data-page="index">Home</a></li>
+        <li><a href="about.html" data-page="about">About</a></li>
+        <li><a href="clients.html" data-page="clients">Clients</a></li>
+        <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
+        <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
+        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
+        <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const admin = document.getElementById('nav-admin');
+      const timesheets = document.getElementById('nav-timesheets');
+      const identity = window.netlifyIdentity;
+
+      const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
+        ? user.app_metadata.roles
+        : Array.isArray(user?.roles)
+          ? user.roles
+          : [];
+
+      function requireLogin(event, destination) {
+        if (event) event.preventDefault();
+        if (!identity) {
+          if (destination) window.location.href = destination;
+          return;
+        }
+        if (destination) sessionStorage.setItem('afterLogin', destination);
+        identity.open('login');
+      }
+
+      function setTimesheets(user) {
+        if (!timesheets) return;
+        if (user) {
+          timesheets.href = '/timesheets.html';
+          timesheets.removeAttribute('aria-disabled');
+          timesheets.title = 'Open timesheets';
+        } else {
+          timesheets.href = '#';
+          timesheets.setAttribute('aria-disabled', 'true');
+          timesheets.title = 'Sign in to access timesheets';
+        }
+      }
+
+      function setAdmin(user) {
+        if (!admin) return;
+        const roles = rolesOf(user);
+        const isAdmin = roles.includes('admin');
+        if (isAdmin) {
+          admin.style.display = 'inline-block';
+          admin.href = '/admin/';
+          admin.removeAttribute('aria-disabled');
+          admin.classList.remove('requires-admin');
+          admin.textContent = 'Admin Dashboard';
+          admin.title = 'Open the admin dashboard';
+        } else {
+          admin.style.display = 'none';
+          admin.href = '/admin/';
+          admin.setAttribute('aria-disabled', 'true');
+          admin.classList.add('requires-admin');
+          admin.textContent = 'Admin Dashboard';
+          admin.title = 'Admin access only';
+        }
+      }
+
+      function renderFor(user) {
+        setTimesheets(user);
+        setAdmin(user);
+      }
+
+      timesheets?.addEventListener('click', (event) => {
+        const user = identity?.currentUser?.();
+        if (user) return;
+        requireLogin(event, '/timesheets.html');
+      });
+      admin?.addEventListener('click', (event) => {
+        const user = identity?.currentUser?.();
+        if (user) return;
+        requireLogin(event, '/admin/');
+      });
+
+      identity?.on('init', (user) => renderFor(user));
+      identity?.on('login', (user) => renderFor(user));
+      identity?.on('logout', () => renderFor(null));
+
+      try {
+        renderFor(identity?.currentUser?.() || null);
+      } catch {
+        renderFor(null);
+      }
+    });
+</script>
+
+      </ul>
+      <div class="hmj-scrim" hidden></div>
+    </nav>
+  </header>
+
+  <script>
+    (function(){
+      const burger = document.querySelector('.hmj-burger');
+      const menu = document.getElementById('hmj-menu');
+      const scrim = document.querySelector('.hmj-scrim');
+      if(!burger || !menu || !scrim) return;
+
+      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'timesheets.html').toLowerCase();
+      const currentNormalized = currentSegment.replace(/^\//, '');
+      menu.querySelectorAll('a[href]').forEach(a => {
+        const href = (a.getAttribute('href') || '').trim();
+        if (!href || href.includes('://')) return;
+        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
+        if (target === currentNormalized) a.setAttribute('aria-current', 'page');
+      });
+
+      function openMenu(open){
+        burger.setAttribute('aria-expanded', String(open));
+        menu.classList.toggle('open', open);
+        scrim.hidden = !open;
+        document.documentElement.style.overflow = open ? 'hidden' : '';
+      }
+
+      burger.addEventListener('click', () => openMenu(burger.getAttribute('aria-expanded') !== 'true'));
+      scrim.addEventListener('click', () => openMenu(false));
+      menu.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        requestAnimationFrame(() => openMenu(false));
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openMenu(false); });
+    })();
+  </script>
 
   <div class="topbar">
     <div class="toprow">

@@ -1,48 +1,80 @@
 // netlify/functions/admin-candidates-get.js
 const { getContext } = require('./_auth.js');
+const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 
 exports.handler = async (event, context) => {
+  let body = {};
+  try { body = JSON.parse(event.body || '{}'); } catch { body = {}; }
+  const id = body.id || event.queryStringParameters?.id || null;
+
+  if (!id) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Missing id' }) };
+  }
+
+  const serveStatic = (reason, auth = null) => {
+    const fallback = loadStaticCandidates().map(toCandidate);
+    const match = fallback.find((row) => String(row.id) === String(id));
+    if (!match) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Candidate not found', readOnly: true, source: 'static', auth }),
+      };
+    }
+    const fullName = match.full_name || `${match.first_name || ''} ${match.last_name || ''}`.trim();
+    const record = { ...match, full_name: fullName };
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ ...record, readOnly: true, source: 'static', warning: reason || null, auth }),
+    };
+  };
+
+  let ctx;
   try {
-    const { supabase } = await getContext(event, context, { requireAdmin: true });
+    ctx = await getContext(event, context, { requireAdmin: true });
+  } catch (err) {
+    console.warn('[candidates] get auth failed — serving static dataset', err?.message || err);
+    return serveStatic(err?.message || 'auth_failed', { ok: false, status: err?.code || 403, error: err?.message || 'Unauthorized' });
+  }
 
-    const { id } = JSON.parse(event.body || '{}');
-    if (!id) throw new Error('Missing id');
+  const { supabase, supabaseError } = ctx;
 
-    // Select explicit columns you expect. Unknown columns in select() cause errors,
-    // so if you’re unsure, either add the columns to your table or remove them here.
-    const SELECT = [
-      'id',
-      'first_name',
-      'last_name',
-      'email',
-      'phone',
-      'job_title',
-      'pay_type',
-      'status',
-      'payroll_ref',
-      'address',
-      // bank fields (comment out any that don’t exist yet)
-      'bank_sort_code',
-      'bank_account',
-      'bank_iban',
-      'bank_swift',
-      'notes',
-      'created_at',
-      'updated_at',
-    ].join(',');
+  const shouldFallback = (err) => {
+    if (!err) return false;
+    const msg = String(err.message || err);
+    if (/column .+ does not exist/i.test(msg)) return true;
+    if (/relation .+ does not exist/i.test(msg)) return true;
+    if (/permission denied/i.test(msg)) return true;
+    if (/violates row-level security/i.test(msg)) return true;
+    return false;
+  };
+
+  try {
+    if (!supabase || typeof supabase.from !== 'function') {
+      return serveStatic(supabaseError?.message || 'supabase_unavailable', { ok: false, error: supabaseError?.message || 'supabase_unavailable' });
+    }
 
     const { data, error } = await supabase
       .from('candidates')
-      .select(SELECT)
+      .select('*')
       .eq('id', id)
-      .maybeSingle(); // returns null if none, not an error
+      .maybeSingle();
 
-    if (error) throw error;
-    if (!data) throw new Error('Candidate not found');
+    if (error) {
+      if (!shouldFallback(error)) {
+        console.warn('[candidates] get unexpected error — forcing static fallback', error.message || error);
+      }
+      return serveStatic(error.message, { ok: false, error: error.message, status: 503 });
+    }
 
-    return { statusCode: 200, body: JSON.stringify(data) };
+    if (!data) {
+      return serveStatic('not_found', { ok: false, status: 404, error: 'Candidate not found' });
+    }
+
+    const full = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim();
+    const record = { ...toCandidate(data), full_name: full || data.full_name || null, source: 'supabase', readOnly: false };
+
+    return { statusCode: 200, body: JSON.stringify(record) };
   } catch (e) {
-    const status = e.code === 401 ? 401 : (e.code === 403 ? 403 : 500);
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
+    return serveStatic(e?.message || 'unhandled', { ok: false, status: e?.code || 500, error: e?.message || String(e) });
   }
 };

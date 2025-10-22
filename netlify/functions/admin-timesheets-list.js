@@ -1,55 +1,226 @@
-// /.netlify/functions/admin-timesheets-list
-const { withSupabase, jsonOk, jsonError } = require('./_supabase.js');
+const { getContext } = require('./_auth.js');
+const { supabase, hasSupabase, jsonOk, jsonError, supabaseStatus } = require('./_supabase.js');
+const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
 
-module.exports.handler = withSupabase(async ({ event, supabase, trace, debug }) => {
-  // Parse filters from POST body or GET query
+function normaliseSupabaseRows(data = []) {
+  return data.map((row) => {
+    const dayKeys = ['h_mon', 'h_tue', 'h_wed', 'h_thu', 'h_fri', 'h_sat', 'h_sun'];
+    const stdHours = dayKeys.reduce((sum, key) => sum + Number(row[key] || 0), 0);
+    const otHours = Number(row.ot_hours || 0);
+    const rateStd = Number(row.rate_pay || 0);
+    const rateOt = Number(row.rate_charge || 0);
+
+    const assignment = row.assignments || {};
+    const project = assignment.projects || assignment.project || {};
+    const client = project.clients || project.client || {};
+
+    return {
+      id: row.id,
+      assignment_id: row.assignment_id,
+      candidate_id: row.candidate_id || assignment.candidate_id || null,
+      candidate_name: row.candidate_name || assignment.candidate_name || null,
+      contractor_id: assignment.contractor_id || null,
+      contractor_name: assignment.contractor_name || null,
+      contractor_email: assignment.contractor_email || null,
+      client_id: client.id || project.client_id || assignment.client_id || null,
+      client_name: row.client_name || assignment.client_name || client.name || null,
+      project_id: assignment.project_id || project.id || null,
+      project_name: row.project_name || project.name || null,
+      status: row.status,
+      week_start: row.week_start,
+      week_ending: row.week_ending,
+      submitted_at: row.submitted_at,
+      approved_at: row.approved_at,
+      approved_by: row.approved_by,
+      approver_email: row.approver_email,
+      ts_ref: row.ts_ref,
+      assignment_ref: row.assignment_ref,
+      std: stdHours,
+      ot: otHours,
+      rate_std: rateStd,
+      rate_ot: rateOt,
+      currency: row.currency || 'GBP',
+      pay_amount: row.pay_amount,
+      charge_amount: row.charge_amount,
+      gp_amount: row.gp_amount,
+    };
+  });
+}
+
+function normaliseStaticRows(rows = []) {
+  return rows.map((row) => ({
+    id: row.id,
+    assignment_id: row.assignment_id,
+    candidate_id: row.candidate_id,
+    candidate_name: row.candidate_name,
+    contractor_id: row.assignment?.contractorId || null,
+    contractor_name: row.contractor_name || row.assignment?.contractorName || row.candidate_name,
+    contractor_email: row.contractor_email || row.candidate?.email || null,
+    client_id: row.client_id || row.assignment?.clientId || null,
+    client_name: row.client_name || row.assignment?.clientName || null,
+    project_id: row.project_id || row.assignment?.projectId || null,
+    project_name: row.project_name || row.assignment?.projectName || null,
+    status: row.status,
+    week_start: row.week_start,
+    week_ending: row.week_ending,
+    submitted_at: row.submitted_at,
+    approved_at: row.approved_at,
+    approved_by: row.approved_by,
+    approver_email: row.approver_email,
+    ts_ref: row.ts_ref,
+    assignment_ref: row.assignment_ref || row.assignment?.ref || null,
+    std: Math.max(0, Number(row.total_hours || 0) - Number(row.ot_hours || 0)),
+    ot: Number(row.ot_hours || 0),
+    rate_std: Number(row.rate_pay || 0),
+    rate_ot: Number(row.rate_charge || 0),
+    currency: row.currency || 'GBP',
+    pay_amount: row.pay_amount,
+    charge_amount: row.charge_amount,
+    gp_amount: row.gp_amount,
+  }));
+}
+
+function filterRows(rows, { q, status, clientId, week }) {
+  const needle = (q || '').toLowerCase();
+  const weekNeedle = week ? String(week) : '';
+  return rows.filter((row) => {
+    if (status && row.status !== status) return false;
+    if (clientId && Number(row.client_id) !== Number(clientId)) return false;
+    if (weekNeedle && String(row.week_ending) !== weekNeedle) return false;
+    if (needle) {
+      const haystack = [
+        row.candidate_name,
+        row.client_name,
+        row.project_name,
+        row.assignment_ref,
+        row.ts_ref,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
+    return true;
+  });
+}
+
+function shouldFallback(err) {
+  if (!err) return false;
+  const msg = String(err.message || err);
+  if (/column .+ does not exist/i.test(msg)) return true;
+  if (/relation .+ does not exist/i.test(msg)) return true;
+  if (/permission denied/i.test(msg)) return true;
+  if (/violates row-level security/i.test(msg)) return true;
+  return false;
+}
+
+module.exports.handler = async (event, context) => {
+  const trace = `ts-${Date.now()}`;
+
   let body = {};
   if (event.httpMethod === 'POST' && event.body) {
-    try { body = JSON.parse(event.body || '{}'); } catch {}
+    try { body = JSON.parse(event.body || '{}'); } catch { body = {}; }
   } else if (event.httpMethod === 'GET' && event.queryStringParameters) {
     body = event.queryStringParameters;
   }
 
-  const q         = (body.q || '').trim();
-  const status    = (body.status || '').trim();
-  const client_id = body.client_id ? Number(body.client_id) : null;
-  const week      = body.week || null;
+  const q = (body.q || '').trim();
+  const status = (body.status || '').trim();
+  const clientId = body.client_id ? Number(body.client_id) : null;
+  const week = body.week || null;
 
-  // v_timesheets_admin columns per your screenshots:
-  // id, week_ending, status, assignment_id, contractor_id, contractor_name, contractor_email,
-  // project_id, project_name, client_id, client_name, total_hours
-  let query = supabase
-    .from('v_timesheets_admin')
-    .select('*')
-    .order('week_ending', { ascending: false })
-    .order('id', { ascending: false });
+  const serveStatic = (reason, auth = null) => {
+    const staticRows = normaliseStaticRows(loadStaticTimesheets());
+    const filtered = filterRows(staticRows, { q, status, clientId, week });
+    console.warn('[timesheets] using static fallback dataset (%d rows)', filtered.length);
+    return jsonOk({ ok: true, items: filtered, readOnly: true, source: 'static', supabase: supabaseStatus(), trace, auth });
+  };
 
-  if (status)   query = query.eq('status', status);
-  if (client_id)query = query.eq('client_id', client_id);
-  if (week)     query = query.eq('week_ending', week);
-
-  if (q) {
-    // basic ilike across common columns
-    query = query.or(
-      [
-        `contractor_email.ilike.%${q}%`,
-        `client_name.ilike.%${q}%`,
-        `project_name.ilike.%${q}%`
-      ].join(',')
-    );
+  try {
+    await getContext(event, context, { requireAdmin: true });
+  } catch (err) {
+    console.warn('[timesheets] auth failed — serving static dataset', err?.message || err);
+    return serveStatic(err?.message || 'auth_failed', { ok: false, status: err?.code || 403, error: err?.message || 'Unauthorized' });
   }
 
-  const { data, error } = await query;
-  if (error) return jsonError(500, 'query_failed', error.message, { trace });
+  try {
+    if (!hasSupabase()) {
+      return serveStatic(supabaseStatus().error || 'supabase_unavailable');
+    }
 
-  // Normalize fields expected by the UI (std/ot/rates may be absent in view)
-  const items = (data || []).map(r => ({
-    ...r,
-    std: Number(r.std ?? 0),
-    ot:  Number(r.ot ?? 0),
-    rate_std: Number(r.rate_std ?? 0),
-    rate_ot:  Number(r.rate_ot ?? 0),
-  }));
+    let query = supabase
+      .from('timesheets')
+      .select(`
+        id,
+        assignment_id,
+        candidate_id,
+        candidate_name,
+        client_name,
+        week_start,
+        week_ending,
+        status,
+        submitted_at,
+        approved_at,
+        approved_by,
+        approver_email,
+        ts_ref,
+        assignment_ref,
+        total_hours,
+        ot_hours,
+        rate_pay,
+        rate_charge,
+        currency,
+        pay_amount,
+        charge_amount,
+        gp_amount,
+        h_mon,
+        h_tue,
+        h_wed,
+        h_thu,
+        h_fri,
+        h_sat,
+        h_sun,
+        assignments:assignment_id!inner (
+          contractor_id,
+          project_id,
+          site_id,
+          client_name,
+          projects:project_id (
+            id,
+            name,
+            client_id
+          )
+        )
+      `)
+      .order('week_ending', { ascending: false })
+      .order('id', { ascending: false });
 
-  return jsonOk({ ok: true, items, trace });
-});
+    if (status) query = query.eq('status', status);
+    if (week) query = query.eq('week_ending', week);
+    if (q) {
+      query = query.or(
+        [
+          `candidate_name.ilike.%${q}%`,
+          `client_name.ilike.%${q}%`,
+          `assignment_ref.ilike.%${q}%`,
+          `ts_ref.ilike.%${q}%`,
+        ].join(',')
+      );
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      if (shouldFallback(error)) {
+        console.warn('[timesheets] supabase query failed (%s) — using static fallback', error.message);
+        return serveStatic(error.message, { ok: false, error: error.message, status: 503 });
+      }
+      return jsonError(500, 'query_failed', error.message, { trace });
+    }
+
+    const normalised = normaliseSupabaseRows(data || []);
+    const filtered = filterRows(normalised, { q, status, clientId, week });
+    return jsonOk({ ok: true, items: filtered, trace, supabase: supabaseStatus() });
+  } catch (err) {
+    return jsonError(500, 'unhandled', err.message || 'Unexpected error', { trace });
+  }
+};

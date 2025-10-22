@@ -1,5 +1,5 @@
 // netlify/functions/admin-timesheets-edit.js
-const { getContext } = require('./_timesheet-helpers');
+const { getContext } = require('./_timesheet-helpers.js');
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 exports.handler = async (event, context) => {

@@ -4,7 +4,7 @@ const { getContext, coded } = require('./_auth.js');
 
 exports.handler = async (event, context) => {
   try {
-    const { user, roles } = await getContext(context, { requireAdmin: true });
+    const { user, roles } = await getContext(event, context, { requireAdmin: true });
     const payload = JSON.parse(event.body || '{}');
 
     if (!payload.name || !payload.email) throw coded(400, 'name and email required');

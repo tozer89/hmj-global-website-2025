@@ -69,26 +69,124 @@
     return getCookie('nf_jwt') || '';
   }
 
+  function brandIdentityWidget(id) {
+    try {
+      const styleText = `
+        .netlify-identity-logo {
+          background: transparent !important;
+        }
+        .netlify-identity-logo svg,
+        .netlify-identity-logo img {
+          display: none !important;
+        }
+        .netlify-identity-logo::after {
+          content: '';
+          display: block;
+          width: 72px;
+          height: 72px;
+          margin: 0 auto;
+          background: url(/images/logo.png) center/contain no-repeat;
+        }
+      `;
+
+      const hostDoc = document;
+      if (hostDoc && !hostDoc.getElementById('hmj-identity-brand-host')) {
+        const hostStyle = hostDoc.createElement('style');
+        hostStyle.id = 'hmj-identity-brand-host';
+        hostStyle.textContent = styleText;
+        hostDoc.head.appendChild(hostStyle);
+      }
+
+      const doc = id?.iframe?.contentWindow?.document;
+      if (doc && !doc.getElementById('hmj-identity-brand')) {
+        const style = doc.createElement('style');
+        style.id = 'hmj-identity-brand';
+        style.textContent = styleText;
+        doc.head.appendChild(style);
+      }
+    } catch (err) {
+      Debug.warn('identity brand failed', err);
+    }
+  }
+
+  function ensureIdentityInit() {
+    const id = window.netlifyIdentity;
+    if (!id || typeof id.init !== 'function') return id;
+    if (id.__hmjInit) return id;
+
+    id.__hmjInit = true;
+    const opts = {};
+    const base = (window.ADMIN_IDENTITY_URL || '').replace(/\/$/, '');
+    if (base) opts.APIUrl = base;
+    try { id.init(opts); } catch (err) { Debug.warn('identity init failed', err); }
+
+    try {
+      id.on('init', () => brandIdentityWidget(id));
+      id.on('open', () => brandIdentityWidget(id));
+    } catch (err) {
+      Debug.warn('identity brand hook failed', err);
+    }
+
+    if (!id.__hmjInitWaiter && typeof id.on === 'function') {
+      id.__hmjInitWaiter = new Promise((resolve) => {
+        const done = (user) => {
+          if (id) id.__hmjInitUser = user || null;
+          resolve(user || null);
+        };
+        try {
+          id.on('init', (user) => done(user));
+        } catch (err) {
+          Debug.warn('identity init listener failed', err);
+          done(null);
+        }
+        setTimeout(() => {
+          try {
+            done(id?.currentUser?.() || null);
+          } catch {
+            done(null);
+          }
+        }, 1200);
+      });
+    }
+
+    return id;
+  }
+
   async function waitIdentityReady(maxMs = 6000) {
     let waited = 0;
     while (waited < maxMs) {
-      if (window.netlifyIdentity && typeof window.netlifyIdentity.on === 'function') {
+      const id = ensureIdentityInit();
+      if (id && typeof id.on === 'function') {
         // Widget is live
-        return window.netlifyIdentity;
+        return id;
       }
       await sleep(100);
       waited += 100;
     }
-    return null; // allow fallback
+    return ensureIdentityInit(); // allow fallback
   }
 
   // Resolve active user (works with widget or cookie-only)
   async function getIdentityUser() {
     try {
-      const id = window.netlifyIdentity;
+      const id = ensureIdentityInit();
       if (id && typeof id.currentUser === 'function') {
-        const u = id.currentUser();
+        let u = id.currentUser();
         if (u) return u;
+        try {
+          if (id.__hmjInitWaiter) {
+            const resolved = await Promise.race([
+              id.__hmjInitWaiter,
+              sleep(1500).then(() => null)
+            ]);
+            if (resolved) return resolved;
+          }
+        } catch (err) {
+          Debug.warn('identity init wait failed', err);
+        }
+        u = id.currentUser?.();
+        if (u) return u;
+        if (id.__hmjInitUser) return id.__hmjInitUser;
       }
     } catch {}
     // Cookie-only session: we can’t read profile, but a token may exist
@@ -97,18 +195,45 @@
     return null;
   }
 
+  async function getUserToken(user) {
+    if (!user) return '';
+    const attempts = [];
+    if (typeof user.token === 'function') attempts.push(() => user.token());
+    if (typeof user.jwt === 'function') {
+      attempts.push(() => user.jwt());
+      attempts.push(() => user.jwt(true));
+    }
+    for (const attempt of attempts) {
+      try {
+        const v = await attempt();
+        if (v) return v;
+      } catch (err) {
+        Debug.warn('token attempt failed', err);
+      }
+    }
+    return '';
+  }
+
   // Public, promise-based identity snapshot used by pages & console
   async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' | undefined */) {
     // try widget first, then cookie
     await waitIdentityReady(1200); // don’t block long
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
-    try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
-    const roles = (user?.app_metadata?.roles || user?.roles || []);
+    try { token = await getUserToken(user); } catch {}
+    const rolesRaw = user?.app_metadata?.roles || user?.roles || [];
+    const roles = Array.isArray(rolesRaw) ? rolesRaw.map(r => String(r).toLowerCase()) : [];
     const role = roles.includes('admin') ? 'admin' :
                  roles.includes('recruiter') ? 'recruiter' :
                  roles.includes('client') ? 'client' : (roles[0] || '');
-    const ok = !!token && (!requiredRole || roles.includes(requiredRole) || role === requiredRole);
+    const required = requiredRole ? String(requiredRole).toLowerCase() : '';
+    if (!token) {
+      try {
+        token = getNFJwtFromCookie();
+      } catch {}
+    }
+
+    const ok = !!token && (!required || roles.includes(required) || role === required);
     return { ok, user, token, role, email: user?.email || '' };
   }
 
@@ -123,7 +248,16 @@
   const getTrace = () => TRACE || setTrace();
 
   async function api(path, method = 'POST', body) {
-    const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
+    const rawPath = String(path || '');
+    const isAbsolute = /^https?:\/\//i.test(rawPath);
+    let url = rawPath;
+    if (!isAbsolute) {
+      const hasLeadingSlash = rawPath.startsWith('/');
+      const trimmed = rawPath.replace(/^\/+/, '');
+      url = hasLeadingSlash
+        ? `/.netlify/functions/${trimmed}`.replace('/.netlify/functions//', '/.netlify/functions/')
+        : `/.netlify/functions/${trimmed}`;
+    }
 
     // Get a token — widget user or cookie
     let token = '';
@@ -143,7 +277,7 @@
       method,
       headers,
       credentials: 'include',
-      body: body ? JSON.stringify(body) : undefined
+      body: body && method !== 'GET' && method !== 'HEAD' ? JSON.stringify(body) : undefined
     });
     const txt = await res.text();
     let json; try { json = txt ? JSON.parse(txt) : null; } catch { json = { raw: txt }; }
@@ -221,18 +355,34 @@
   window.Admin.bootAdmin = async function bootAdmin(mainFn) {
     try {
       const helpers = await window.adminReady();
+
+      // Hook Identity events once so that a successful login triggers a reload
+      // even if the initial gate check blocks the user. Without this the page
+      // would stay on the gate screen after logging in via the widget.
+      const id = window.netlifyIdentity;
+      if (id && typeof id.on === 'function' && !id.__hmjHooks) {
+        id.__hmjHooks = true;
+        id.on('login', () => {
+          try {
+            location.reload();
+          } catch (err) {
+            Debug.warn('reload after login failed', err);
+          }
+        });
+        id.on('logout', () => {
+          try {
+            location.href = '/admin/';
+          } catch (err) {
+            Debug.warn('redirect after logout failed', err);
+          }
+        });
+      }
+
       const who = await helpers.gate({ adminOnly: true });
       if (!who) {
         toast('Restricted. Sign in with an admin account.', 'warn', 4500);
         Debug.warn('Gate blocked: no session / no admin role');
         return;
-      }
-
-      // Hook Identity events so navigation stays consistent
-      const id = window.netlifyIdentity;
-      if (id && typeof id.on === 'function') {
-        id.on('login', () => location.reload());
-        id.on('logout', () => (location.href = '/admin/'));
       }
 
       // Debug chip line (optional)
@@ -253,7 +403,12 @@
       Debug.err('bootAdmin error:', e);
       toast('Init failed: ' + (e.message || e), 'error', 6000);
       // keep the gate visible
-      try { const g = $('#gate'); const app = $('#app'); if (g) g.style.display = ''; if (app) app.style.display = 'none'; } catch {}
+      try {
+        const g = $('#gate');
+        const app = $('#app');
+        if (g) g.style.display = '';
+        if (app) app.style.display = 'none';
+      } catch {}
     }
   };
 

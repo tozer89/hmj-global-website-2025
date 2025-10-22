@@ -1,153 +1,1032 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Assignments — Admin | HMJ-Global</title>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-<link rel="stylesheet" href="/css/style.css"/>
-<style>
-  :root{--bg:#0b0f18;--panel:#111827;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9}
-  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
-  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800}.sp{flex:1}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .muted{color:var(--muted)}
-  input,select{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px}
-  table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
-  .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px} @media(max-width:980px){.grid{grid-template-columns:1fr}}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Assignments — Admin | HMJ Global</title>
+
+  <!-- Identity (pin to live URL so Deploy Previews still auth correctly) -->
+  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+  <!-- Shared Admin bootstrap + helpers -->
+  <script defer src="/admin/common.js?v=21"></script>
+
+  <style>
+    :root{
+      --ink:#0f172a; --muted:#64748b; --bg:#ffffff;
+      --blue:#2f4ea2; --blue-2:#27408f;
+      --card:#f8fafc; --stroke:#e5e7eb; --ring:#c7d2fe;
+      --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626; --chip:#eef2ff;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .top{position:sticky;top:0;z-index:50;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+    .row{max-width:1400px;margin:0 auto;padding:12px 16px;display:flex;gap:10px;align-items:center}
+    .brand{font-weight:800;letter-spacing:.2px;display:flex;gap:10px;align-items:center}
+    .brand a{display:inline-flex;gap:8px;align-items:center;color:#fff;text-decoration:none}
+    .logo{width:28px;height:28px;border-radius:6px;background:#fff;display:grid;place-items:center;color:var(--blue);font-weight:900}
+    .sp{flex:1}
+    .btn{background:var(--blue);color:#fff;border:1px solid rgba(255,255,255,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;user-select:none}
+    .btn:hover{background:var(--blue-2)}
+    .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35);color:var(--blue)}
+    .top .btn.ghost{color:#fff}
+    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
+    .btn.small{padding:6px 10px;border-radius:10px}
+    .btn.danger{background:#7a1f28;border-color:#7a1f28}
+    .btn.icon{display:inline-grid;grid-auto-flow:column;gap:8px;align-items:center}
+    .wrap{max-width:1400px;margin:20px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px}
+    .bar{position:sticky;top:64px;z-index:45;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    input[type=text],input[type=search],input[type=date],select,textarea{
+      border:1px solid var(--stroke);background:#fff;border-radius:12px;padding:9px 12px;min-width:160px;font:inherit
+    }
+    input[type=search]{min-width:280px}
+    table{border-collapse:separate;border-spacing:0;width:100%;background:#fff;border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
+    thead th{position:sticky;top:0;background:#fbfdff;border-bottom:1px solid var(--stroke);text-align:left;padding:8px 10px;font-weight:800}
+    tbody td{border-top:1px solid var(--stroke);padding:8px 10px;vertical-align:middle}
+    tbody tr:hover{background:#f8fafc}
+    .muted{color:var(--muted)}
+    .pill{display:inline-grid;align-items:center;padding:4px 10px;border-radius:9999px;border:1px solid #dbeafe;background:#eef2ff;color:#1e3a8a;font-weight:700;font-size:12px}
+    .b-ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .b-warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .b-bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:6px 10px;border-radius:9999px;border:1px solid var(--stroke);cursor:pointer;background:#fff;font-weight:700}
+    .chip.active{background:var(--chip)}
+    .metrics{display:flex;gap:12px;flex-wrap:wrap}
+    .metric{background:#fff;border:1px solid var(--stroke);border-radius:12px;padding:10px 12px;font-weight:800}
+    .menu{position:relative}
+    .menu>.sheet{display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--stroke);border-radius:12px;box-shadow:0 20px 60px rgba(2,6,23,.18);min-width:220px;padding:8px}
+    .menu.open>.sheet{display:block}
+    .sheet label{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;cursor:pointer}
+    .sheet label:hover{background:#f8fafc}
+    .grid-main{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start}
+    @media (max-width:1100px){.grid-main{grid-template-columns:1fr}}
+    .qv{position:sticky;top:116px;background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:14px;min-height:120px}
+    .qv h4{margin:0 0 8px}
+    .qv .rows{display:grid;grid-template-columns:1fr;gap:8px}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px}
+    .kv b{color:#334155}
+    .drawer{position:fixed;inset:0 0 0 auto;max-width:760px;width:95vw;background:#fff;box-shadow:-4px 0 24px rgba(2,6,23,.24);transform:translateX(100%);transition:transform .24s ease;z-index:60;display:grid;grid-template-rows:auto 1fr auto}
+    .drawer.open{transform:translateX(0)}
+    .d-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--stroke);background:var(--card)}
+    .d-body{padding:16px;overflow:auto}
+    .d-foot{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--stroke);background:#fff}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+    .tab{padding:8px 10px;border-radius:10px;border:1px solid var(--stroke);background:#fff;cursor:pointer;font-weight:700}
+    .tab.active{background:var(--chip)}
+    .tabpane{display:none;gap:12px;grid-template-columns:repeat(2,minmax(240px,1fr))}
+    .tabpane.active{display:grid}
+    @media (max-width:820px){
+      .tabpane{grid-template-columns:1fr}
+    }
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px}
+    @media (max-width:820px){.grid{grid-template-columns:1fr}}
+    .field{display:grid;gap:6px}
+    .field label{font-weight:700;font-size:13px}
+    .hr{height:1px;background:var(--stroke);margin:8px 0 4px}
+    .right{display:flex;gap:8px;align-items:center}
+    .link{color:var(--blue);text-decoration:underline;cursor:pointer}
+    :focus{outline:3px solid var(--ring);outline-offset:2px;border-radius:8px}
+    .empty{padding:28px;text-align:center;color:var(--muted)}
+    .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
+    @media (max-width:640px){
+      .table-card{border:1px solid var(--stroke);border-radius:14px;overflow:hidden}
+      .rowcard{display:grid;grid-template-columns:1fr;gap:8px;padding:12px;border-top:1px solid var(--stroke)}
+      .rowcard:first-child{border-top:none}
+      .rowcard b{font-weight:800}
+    }
+  </style>
 </head>
+
 <body>
-<div class="top"><div class="row">
-  <div class="brand">Assignments — Admin</div><div class="sp"></div>
-  <a class="btn" href="/admin/">⟵ Admin home</a>
-  <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-</div></div>
-
-<div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <p class="why muted"></p>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
-</div>
-
-<div class="wrap" id="app" style="display:none">
-  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <input id="q" placeholder="Search by contractor email / client / project / site"/>
-    <select id="active"><option value="">Any</option><option value="true">Active</option><option value="false">Closed</option></select>
-    <button class="btn" id="btnRefresh">Refresh</button>
-    <button class="btn" id="btnNew">New assignment</button>
-  </div>
-
-  <div class="card" id="listWrap">Loading…</div>
-
-  <div class="card" id="editor" style="display:none">
-    <h3 style="margin:0 0 8px" id="edTitle">Assignment</h3>
-    <div class="grid">
-      <label>Contractor ID <input id="edContractorId" type="number" min="1"></label>
-      <label>Project ID <input id="edProjectId" type="number" min="1"></label>
-      <label>Site ID <input id="edSiteId" type="number" min="1"></label>
-
-      <label>Rate (std) <input id="edRateStd" type="number" step="0.01" min="0"></label>
-      <label>Rate (OT)  <input id="edRateOt"  type="number" step="0.01" min="0"></label>
-      <label>Charge (std) <input id="edChargeStd" type="number" step="0.01" min="0"></label>
-
-      <label>Charge (OT)  <input id="edChargeOt" type="number" step="0.01" min="0"></label>
-      <label>PO number <input id="edPO"></label>
-      <label>Active
-        <select id="edActive"><option value="true">true</option><option value="false">false</option></select>
-      </label>
-
-      <label>Start date <input id="edStart" type="date"></label>
-      <label>End date <input id="edEnd" type="date"></label>
-      <div></div>
+  <!-- Header -->
+  <div class="top"><div class="row">
+    <div class="brand">
+      <a href="../"><span class="logo">H</span> HMJ Global</a>
+      <span class="pill">Admin</span>
+      <span class="pill">Assignments</span>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-      <button class="btn" id="btnSave">Save</button>
-      <button class="btn" id="btnClose">Close</button>
+    <div class="sp"></div>
+    <a class='btn ghost small' href='/'>← Website</a>
+    <div id="diagChips" class="chips"></div>
+    <a class="btn ghost" href="./">⟵ Dashboard</a>
+    <button class="btn light" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+  </div></div>
+
+  <!-- Gate -->
+  <div class="wrap" id="gate" style="display:none">
+    <div class="card">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
     </div>
   </div>
-</div>
 
-<div id="toast"></div>
+  <!-- App -->
+  <div class="wrap" id="app" style="display:none">
+    <p class="muted" style="margin:0 0 10px">
+      <strong>Assignments overview.</strong> This page lists all current and past assignments with client, candidate,
+      and contract dates. Use the search bar to filter by job title, client, or candidate name. Status tags such as
+      <em>Live</em> or <em>Complete</em> update automatically from the Timesheets system.
+      <br><small>Tip: press <b>Enter</b> in the search box to run a quick filter. Click a row to open the <em>Quick view</em>.</small>
+    </p>
 
-<script>
-async function main({ api, sel, toast }){
-  const listWrap=sel('#listWrap'); const ed=sel('#editor');
-  let cur=null;
+    <!-- toolbar -->
+    <div class="card bar">
+      <input id="q" type="search" placeholder="Search (title, ref, client, candidate)… — press Enter"/>
+      <select id="statusSel" aria-label="Status filter">
+        <option value="">All statuses</option>
+        <option>live</option>
+        <option>draft</option>
+        <option>pending</option>
+        <option>complete</option>
+        <option>closed</option>
+      </select>
+      <button class="btn small ghost" id="btnRefresh">⟲ Refresh</button>
 
-  async function loadList(){
-    listWrap.textContent='Loading…';
-    const rows = await api('/admin-assignments-list','POST',{ q: sel('#q').value||'', active: sel('#active').value||'' });
-    listWrap.innerHTML=`
-      <table><thead><tr><th>ID</th><th>Contractor</th><th>Client</th><th>Project</th><th>Site</th><th>Active</th><th></th></tr></thead>
-      <tbody>
-        ${rows.map(r=>`
-          <tr>
-           <td>${r.id}</td>
-           <td>${r.contractor_email||'—'}</td>
-           <td>${r.client_name||'—'}</td>
-           <td>${r.project_name||'—'}</td>
-           <td>${r.site_name||'—'}</td>
-           <td>${r.active?'✓':'—'}</td>
-           <td><button class="btn" data-open="${r.id}">Open</button></td>
-          </tr>`).join('')}
-      </tbody></table>`;
-    listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick=()=>openEd(Number(b.dataset.open)));
-  }
+      <div class="sp"></div>
 
-  function setEd(a){
-    sel('#edTitle').textContent = a?.id ? `Assignment #${a.id}` : 'New assignment';
-    sel('#edContractorId').value = a.contractor_id||'';
-    sel('#edProjectId').value    = a.project_id||'';
-    sel('#edSiteId').value       = a.site_id||'';
-    sel('#edRateStd').value      = a.rate_std||'';
-    sel('#edRateOt').value       = a.rate_ot||'';
-    sel('#edChargeStd').value    = a.charge_std||'';
-    sel('#edChargeOt').value     = a.charge_ot||'';
-    sel('#edPO').value           = a.po_number||'';
-    sel('#edActive').value       = String(!!a.active);
-    sel('#edStart').value        = a.start_date||'';
-    sel('#edEnd').value          = a.end_date||'';
-  }
-  function getEd(){
-    return {
-      id: cur?.id,
-      contractor_id: Number(sel('#edContractorId').value||0) || null,
-      project_id:    Number(sel('#edProjectId').value||0)    || null,
-      site_id:       Number(sel('#edSiteId').value||0)       || null,
-      rate_std:      Number(sel('#edRateStd').value||0),
-      rate_ot:       Number(sel('#edRateOt').value||0),
-      charge_std:    Number(sel('#edChargeStd').value||0) || null,
-      charge_ot:     Number(sel('#edChargeOt').value||0)  || null,
-      po_number:     sel('#edPO').value||null,
-      active:        sel('#edActive').value==='true',
-      start_date:    sel('#edStart').value||null,
-      end_date:      sel('#edEnd').value||null
-    };
-  }
+      <div class="menu" id="colMenu">
+        <button class="btn ghost small icon" id="btnCols">Columns ▾</button>
+        <div class="sheet" id="colSheet"></div>
+      </div>
 
-  async function openEd(id){
-    cur = await api('/admin-assignments-open','POST',{ id });
-    setEd(cur); ed.style.display='block';
-  }
+      <button class="btn ghost small" id="btnExportAll">Export CSV</button>
+      <button class="btn ghost small" id="btnExportSel" disabled>Export selected</button>
+      <button class="btn small" id="btnNew">+ New</button>
+      <button class="btn danger small" id="btnDelete" disabled>Delete</button>
+    </div>
 
-  sel('#btnNew').onclick = ()=>{ cur=null; setEd({active:true}); ed.style.display='block'; };
-  sel('#btnClose').onclick= ()=>{ ed.style.display='none'; };
-  sel('#btnSave').onclick = async ()=>{
-    try{
-      const saved = await api('/admin-assignments-save','POST', getEd());
-      toast('Saved'); if(saved?.id) { cur = saved; setEd(saved); } loadList();
-    }catch(e){ toast('Save failed: '+e.message); }
-  };
-  sel('#btnRefresh').onclick = loadList;
+    <!-- quick metrics -->
+    <div class="metrics" id="metrics"></div>
 
-  loadList();
-}
-</script>
+    <!-- grid -->
+    <div class="grid-main">
+      <div>
+        <div class="card" id="listWrap">Loading assignments…</div>
+        <div class="pager" id="pager" style="display:none">
+          <div class="muted" id="pgInfo"></div>
+          <div class="sp"></div>
+          <select id="pgSize">
+            <option>10</option><option>25</option><option>50</option><option>100</option>
+          </select>
+          <button class="btn small ghost" id="pgPrev">◀</button>
+          <button class="btn small ghost" id="pgNext">▶</button>
+        </div>
+        <p class="muted" style="margin:8px 0 0">
+          <small>Use ←/→ or the buttons to page. Defaults to newest first.</small>
+        </p>
+      </div>
+
+      <aside class="qv" id="qv" aria-live="polite">
+        <h4 class="muted">Quick view — Assignment</h4>
+        <div class="rows" id="qvRows">
+          <div class="empty">Select an assignment to preview details here.</div>
+        </div>
+        <div class="hr"></div>
+        <div class="right">
+          <a id="qvOpenCandidate" class="btn light small" href="#" style="display:none">Open candidate</a>
+          <button id="qvLive" class="btn light small" style="display:none">Make live</button>
+          <button id="qvEdit" class="btn light small" style="display:none">Edit</button>
+          <button id="qvClose" class="btn light small" style="display:none">Close</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Drawer editor -->
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="d-head">
+      <strong id="dTitle">New assignment</strong>
+      <span class="sp"></span>
+      <button class="btn ghost small" id="btnClose">✕ Close</button>
+    </div>
+    <div class="d-body">
+      <div class="tabs" id="tabs"></div>
+      <form id="frm" class="grid" autocomplete="off"></form>
+    </div>
+    <div class="d-foot">
+      <div class="muted">Ref: <span id="dRef">—</span></div>
+      <div class="right">
+        <button class="btn ghost" id="btnCancel" type="button">Close without saving</button>
+        <button class="btn ghost" id="btnSaveDraft" type="button">Save</button>
+        <button class="btn" id="btnSaveClose" type="button">Save & Close</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Toast host (from common.js) -->
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+  (function startAssignments(){
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.netlifyIdentity) {
+      return setTimeout(startAssignments, 30);
+    }
+
+    window.Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
+      const $ = sel;
+
+      const chips = $('#diagChips');
+      const chip = (t, tone='ok')=>{
+        if (!chips) return;
+        const s=document.createElement('span');
+        s.className='pill '+(tone==='ok'?'b-ok':tone==='warn'?'b-warn':'b-bad');
+        s.textContent=t; chips.appendChild(s);
+      };
+      chip('init: ok');
+
+      const who = await identity('admin');
+      if (!who || !who.ok) {
+        chip('identity: blocked','bad');
+        const g = $('#gate'), app = $('#app');
+        if (app) app.style.display='none';
+        if (g) { g.style.display=''; const why=g.querySelector('.why'); if (why) why.textContent='Restricted. Sign in with an admin account.'; }
+        return;
+      }
+      chip('identity: ok'); chip('role: admin','ok'); chip('token: ok','ok'); chip('trace: '+getTrace().slice(0,10),'ok');
+
+      let rows = [];
+      let total = 0;
+      let selected = new Set();
+      let sort = { key:'created_at', dir:'desc' };
+      let page = 1, pageSize = 10;
+      let activeStatus = '';
+      let editing = null;
+      let currentTab = 'Basics';
+      let dropdowns = { contractors: [], clients: [], projects: [], sites: [] };
+      let quickRecord = null;
+
+      const columns = [
+        { key:'as_ref',       label:'REF',     show:true,  width:'100px' },
+        { key:'job_title',    label:'TITLE',   show:true },
+        { key:'client_name',  label:'CLIENT',  show:true },
+        { key:'candidate_name',label:'CANDIDATE',show:true },
+        { key:'dates',        label:'DATES',   show:true, width:'220px' },
+        { key:'status',       label:'STATUS',  show:true, width:'120px' },
+      ];
+
+      function pillStatus(s){
+        const v=(s||'').toLowerCase();
+        const tone = v==='live' ? 'b-ok' : v==='complete' ? 'b-ok' : v==='pending' || v==='draft' ? 'b-warn' : 'b-bad';
+        return `<span class="pill ${tone}">${s||'—'}</span>`;
+      }
+      function fmtDate(d){ try{ return new Date(d).toISOString().slice(0,10); }catch{ return d||'—'; } }
+
+      function buildColMenu(){
+        const host = $('#colSheet'); host.innerHTML='';
+        columns.forEach((c,i)=>{
+          const id='col_'+c.key;
+          const row=document.createElement('label');
+          row.innerHTML = `<input type="checkbox" id="${id}" ${c.show?'checked':''}/> ${c.label}`;
+          row.querySelector('input').onchange = (e)=>{ columns[i].show=e.target.checked; render(); };
+          host.appendChild(row);
+        });
+        const menu=$('#colMenu');
+        $('#btnCols').onclick=()=>menu.classList.toggle('open');
+        document.addEventListener('click',(e)=>{ if(!menu.contains(e.target)) menu.classList.remove('open'); });
+      }
+
+      function headerHtml(){
+        const h=[];
+        h.push(`<th style="width:28px"><input id="ckAll" type="checkbox" ${rows.length && selected.size>=rows.length?'checked':''}></th>`);
+        columns.forEach(c=>{
+          if(!c.show) return;
+          const arrow = sort.key===c.key ? (sort.dir==='asc'?'▲':'▼') : '';
+          h.push(`<th style="${c.width?`width:${c.width}`:''};cursor:pointer" data-sort="${c.key}">${c.label} ${arrow}</th>`);
+        });
+        h.push(`<th style="width:140px"></th>`);
+        return `<thead><tr>${h.join('')}</tr></thead>`;
+      }
+
+      function computeMetrics(){
+        const by = k => rows.filter(r => (r.status||'').toLowerCase()===k).length;
+        $('#metrics').innerHTML = `
+          <div class="metric">Page items: ${rows.length}</div>
+          <div class="metric">Total (all): ${total}</div>
+          <div class="metric">Live: ${by('live')}</div>
+          <div class="metric">Draft/Pending: ${by('draft') + by('pending')}</div>
+          <div class="metric">Complete: ${by('complete')}</div>
+        `;
+      }
+
+      function render(){
+        const wrap = $('#listWrap');
+        computeMetrics();
+
+        if (!rows.length) {
+          wrap.innerHTML = `<div class="empty">No assignments found. Try clearing filters or pressing Refresh.</div>`;
+          renderPager();
+          return;
+        }
+
+        rows.sort((a,b)=>{
+          const va = a[sort.key] ?? '';
+          const vb = b[sort.key] ?? '';
+          if (va==vb) return 0;
+          return (va>vb?1:-1) * (sort.dir==='asc'?1:-1);
+        });
+
+        const body = rows.map(r=>{
+          const cells=[];
+          const id = r.id;
+
+          const dates = (r.start_date?fmtDate(r.start_date):'—') + ' — ' + (r.end_date?fmtDate(r.end_date):'open');
+          const clientLink = r.client_name
+            ? `<span>${r.client_name}</span>`
+            : '—';
+
+          let candCell = r.candidate_name || '—';
+          if (r.contractor_id) {
+            const label = r.candidate_name || r.contractor_name || `Candidate #${r.contractor_id}`;
+            const query = encodeURIComponent(label);
+            candCell = `<a class="link" href="/admin/candidates.html?q=${query}" target="_blank" rel="noopener">${label}</a>`;
+          } else if (r.candidate_name) {
+            candCell = `<span>${r.candidate_name}</span>`;
+          }
+
+          cells.push(`<td><input type="checkbox" data-id="${id}" ${selected.has(id)?'checked':''}></td>`);
+          columns.forEach(c=>{
+            if(!c.show) return;
+            let v='—';
+            if (c.key==='as_ref') v=r.as_ref||r.po_ref||('AS-'+id);
+            else if (c.key==='job_title') v=r.job_title||'—';
+            else if (c.key==='client_name') v=clientLink;
+            else if (c.key==='candidate_name') v=candCell;
+            else if (c.key==='dates') v=dates;
+            else if (c.key==='status') v=pillStatus(r.status||'');
+            else v=r[c.key] ?? '—';
+            cells.push(`<td>${v}</td>`);
+          });
+          cells.push(`<td>
+            <button class="btn light small" data-open="${id}">Open</button>
+            <button class="btn light small" data-quick="${id}">Quick view</button>
+          </td>`);
+          return `<tr data-row="${id}">${cells.join('')}</tr>`;
+        }).join('');
+
+        wrap.innerHTML = `<table>${headerHtml()}<tbody>${body}</tbody></table>`;
+
+        wrap.querySelectorAll('th[data-sort]').forEach(th=>{
+          th.onclick = ()=>{
+            const k=th.getAttribute('data-sort');
+            if (sort.key===k) sort.dir=(sort.dir==='asc'?'desc':'asc'); else { sort.key=k; sort.dir='asc'; }
+            render();
+          };
+        });
+        const ckAll = $('#ckAll');
+        if (ckAll) ckAll.onclick = (e)=>{
+          const ids = rows.map(r=>r.id);
+          if (e.target.checked) ids.forEach(id=>selected.add(id)); else ids.forEach(id=>selected.delete(id));
+          updateBulkButtons(); render();
+        };
+
+        wrap.querySelectorAll('input[type=checkbox][data-id]').forEach(c=>{
+          c.onchange=()=>{
+            const id=Number(c.getAttribute('data-id'));
+            if (c.checked) selected.add(id); else selected.delete(id);
+            updateBulkButtons();
+          };
+        });
+        wrap.querySelectorAll('[data-open]').forEach(b=>{
+          b.onclick=()=>openOne(Number(b.getAttribute('data-open')));
+        });
+        wrap.querySelectorAll('[data-quick]').forEach(b=>{
+          b.onclick=(e)=>{ e.stopPropagation(); quick(Number(b.getAttribute('data-quick'))); };
+        });
+        wrap.querySelectorAll('tr[data-row]').forEach(tr=>{
+          tr.addEventListener('click',(e)=>{
+            if (e.target.closest('button') || e.target.closest('input')) return;
+            const id = Number(tr.getAttribute('data-row'));
+            if (id) quick(id);
+          });
+        });
+
+        renderPager();
+      }
+
+      function renderPager(){
+        const host = $('#pager');
+        if (!total){ host.style.display='none'; return; }
+        host.style.display='';
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        $('#pgInfo').textContent = `Page ${page} of ${totalPages} — ${total} total`;
+        $('#pgPrev').disabled = page<=1;
+        $('#pgNext').disabled = page>=totalPages;
+      }
+
+      function updateBulkButtons(){
+        const disabled = selected.size === 0;
+        const delBtn = $('#btnDelete');
+        if (delBtn) delBtn.disabled = disabled;
+        const exportSelBtn = $('#btnExportSel');
+        if (exportSelBtn) exportSelBtn.disabled = disabled;
+      }
+
+      async function load(){
+        const wrap = $('#listWrap'); wrap.textContent='Loading assignments…';
+        try{
+          const res = await api('admin-assignments-list','POST',{
+            q: ($('#q')?.value||'').trim(),
+            status: activeStatus || '',
+            page, pageSize
+          });
+          rows = Array.isArray(res) ? res : (res.rows || []);
+          total = res?.total ?? rows.length;
+          selected.clear(); updateBulkButtons();
+          render();
+          if (quickRecord?.id) {
+            try {
+              const refreshed = await api('admin-assignments-get','POST',{ id: quickRecord.id });
+              renderQuick(refreshed);
+            } catch {
+              renderQuick(null);
+            }
+          }
+        }catch(e){
+          console.error('[assignments] list error', e);
+          toast(e.message || 'Failed to load', 'error', 5000);
+          wrap.textContent = 'Failed to load. Check console for details.';
+        }
+      }
+
+      async function openOne(id){
+        try{
+          const r = await api('admin-assignments-get','POST',{ id });
+          editing = r;
+          openEditor(r);
+          toast('Opened ' + (r.job_title || ('Assignment #'+id)), 'info', 1800);
+        }catch(e){
+          toast('Open failed: ' + (e.message||e), 'error', 4200);
+        }
+      }
+
+      async function quick(id){
+        try{
+          const r = await api('admin-assignments-get','POST',{ id });
+          renderQuick(r);
+        }catch(e){
+          renderQuick(null);
+        }
+      }
+
+      async function doDelete(){
+        if (!selected.size) return;
+        if (!confirm(`Delete ${selected.size} assignment(s)?`)) return;
+        try{
+          await api('admin-assignments-delete','POST',{ ids:[...selected] });
+          toast('Deleted', 'ok', 1500);
+          selected.clear(); updateBulkButtons();
+          load();
+        }catch(e){
+          toast('Delete failed: ' + (e.message||e), 'error', 4000);
+        }
+      }
+
+      async function exportCsv(selectedOnly){
+        if (selectedOnly && !selected.size) {
+          toast('No assignments selected', 'warn', 2200);
+          return;
+        }
+        try{
+          const who = await identity();
+          const token = who?.token || '';
+          const headers = {
+            'Content-Type':'application/json',
+            'x-trace': getTrace()
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch('/.netlify/functions/admin-assignments-list', {
+            method:'POST',
+            headers,
+            credentials:'include',
+            body: JSON.stringify({
+              q: ($('#q')?.value||'').trim(),
+              status: activeStatus || '',
+              ids: selectedOnly ? Array.from(selected) : undefined,
+              format: 'csv'
+            })
+          });
+          const text = await res.text();
+          if (!res.ok) throw new Error(text || res.statusText);
+          const blob = new Blob([text], { type:'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a=document.createElement('a');
+          a.href=url; a.download='assignments.csv'; a.click();
+          URL.revokeObjectURL(url);
+          toast('Export ready', 'ok', 1800);
+        }catch(e){
+          toast('Export failed: ' + (e.message||e), 'error', 4200);
+        }
+      }
+
+      function renderQuick(r){
+        const host = $('#qvRows');
+        const openBtn = $('#qvOpenCandidate');
+        const editBtn = $('#qvEdit');
+        const closeBtn = $('#qvClose');
+        const liveBtn = $('#qvLive');
+
+        if (!r) {
+          quickRecord = null;
+          if (host) host.innerHTML = `<div class="empty">Select an assignment to preview details here.</div>`;
+          if (openBtn) openBtn.style.display = 'none';
+          if (editBtn) editBtn.style.display = 'none';
+          if (closeBtn) closeBtn.style.display = 'none';
+          if (liveBtn) liveBtn.style.display = 'none';
+          return;
+        }
+
+        quickRecord = r;
+        const dates = (r.start_date?fmtDate(r.start_date):'—') + ' — ' + (r.end_date?fmtDate(r.end_date):'open');
+        if (host) {
+          host.innerHTML = `
+            <div class="kv"><b>Reference</b><div>${r.as_ref || '—'}</div></div>
+            <div class="kv"><b>Title</b><div>${r.job_title||'—'}</div></div>
+            <div class="kv"><b>Status</b><div>${pillStatus(r.status||'')}</div></div>
+            <div class="kv"><b>Client</b><div>${r.client_name||'—'} ${r.client_site?('· '+r.client_site):''}</div></div>
+            <div class="kv"><b>Candidate</b><div>${r.candidate_name||'—'}</div></div>
+            <div class="kv"><b>Dates</b><div>${dates}</div></div>
+            <div class="kv"><b>Pay</b><div>${r.currency||'GBP'} ${r.rate_pay||r.rate_std||'—'}</div></div>
+            <div class="kv"><b>PO</b><div>${r.po_number||r.po_ref||'—'}</div></div>
+            <div class="kv"><b>Consultant</b><div>${r.consultant_name||'—'}</div></div>
+          `;
+        }
+
+        const link = r.contractor_id
+          ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name || '')}`
+          : r.candidate_name
+            ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name)}`
+            : null;
+
+        if (openBtn) {
+          if (link) {
+            openBtn.href = link;
+            openBtn.style.display = '';
+          } else {
+            openBtn.style.display = 'none';
+          }
+        }
+
+        if (editBtn) {
+          editBtn.style.display = '';
+          editBtn.onclick = () => { openEditor(r); };
+        }
+
+        if (closeBtn) {
+          closeBtn.style.display = '';
+        }
+
+        if (liveBtn) {
+          const live = String(r.status || '').toLowerCase() === 'live';
+          liveBtn.style.display = live ? 'none' : '';
+          liveBtn.onclick = () => { if (quickRecord) makeLive(quickRecord.id); };
+        }
+      }
+
+      async function makeLive(id){
+        if (!id) return;
+        if (!confirm('Mark this assignment as live?')) return;
+        try{
+          const res = await api('admin-assignments-publish','POST',{ id });
+          toast(`Assignment live${res?.as_ref ? ' — ' + res.as_ref : ''}`, 'ok', 2000);
+          await load();
+          if (res && res.id){
+            renderQuick(res);
+          }
+        }catch(e){
+          toast('Publish failed: ' + (e.message||e), 'error', 4200);
+        }
+      }
+
+      const schema = [
+        { name:'Basics', fields:[
+          ['job_title','Job title'],
+          ['status','Status','select','live,draft,pending,complete,closed'],
+          ['as_ref','Assignment ref'], ['po_number','PO number'],
+          ['candidate_name','Candidate name'], ['contractor_id','Candidate ID'],
+          ['client_name','Client'], ['client_site','Client site'],
+          ['project_id','Project ID'], ['site_id','Site ID'],
+          ['consultant_name','Consultant']
+        ]},
+        { name:'Dates & Rates', fields:[
+          ['start_date','Start date','date'], ['end_date','End date','date'],
+          ['days_per_week','Days/wk','number'], ['hours_per_day','Hours/day','number'],
+          ['currency','Currency'], ['rate_pay','Pay rate','number'], ['rate_charge','Charge rate','number'],
+          ['shift_type','Shift','select','Day,Night,Weekend']
+        ]},
+        { name:'Options', fields:[
+          ['pay_freq','Pay frequency','select','Weekly,Monthly'],
+          ['ts_type','Timesheet type','select','e-Timesheet,Paper,Portal'],
+          ['auto_ts','Auto-create timesheets','checkbox'],
+          ['approver','Approver email']
+        ]},
+        { name:'Notes', fields:[
+          ['notes','Notes','textarea']
+        ]}
+      ];
+
+      const drawer = $('#drawer');
+      const openDrawer = ()=>drawer.classList.add('open');
+      const closeDrawer = ()=>{ drawer.classList.remove('open'); setTimeout(()=>resetForm(),150); };
+      $('#btnClose').onclick = closeDrawer;
+
+      function fieldHtml([key,label,type='text',extra]){
+        const id='f_'+key;
+        if(['contractor_id','project_id','site_id'].includes(key)){
+          const source = key==='contractor_id' ? 'contractors' : key==='project_id' ? 'projects' : 'sites';
+          const listId = `dl_${key}`;
+          const hints = {
+            contractor_id: 'Search by contractor name or ID. Selecting will fill candidate name when possible.',
+            project_id: 'Choose the project this assignment belongs to. Client field updates automatically.',
+            site_id: 'Filter by project, then pick a site/location. Optional if not tracked.'
+          };
+          const defaultHint = hints[key] || '';
+          const hintAttr = defaultHint.replace(/"/g,'&quot;');
+          return `<div class="field"><label for="${id}">${label}</label>
+                  <input id="${id}" name="${key}" type="text" inputmode="numeric" list="${listId}" data-source="${source}" placeholder="Start typing to search…" />
+                  <datalist id="${listId}"></datalist>
+                  <div class="muted" data-hint-for="${key}" data-default="${hintAttr}" style="font-size:12px;min-height:18px">${defaultHint}</div>
+                </div>`;
+        }
+        if(type==='checkbox'){
+          return `<div class="field"><label for="${id}">${label}</label>
+                  <input id="${id}" name="${key}" type="checkbox"></div>`;
+        }
+        if(type==='textarea'){
+          return `<div class="field" style="grid-column:1/-1"><label for="${id}">${label}</label>
+                  <textarea id="${id}" name="${key}" rows="3"></textarea></div>`;
+        }
+        if(type==='select'){
+          const opts=(extra||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<option>${s}</option>`).join('');
+          return `<div class="field"><label for="${id}">${label}</label>
+                  <select id="${id}" name="${key}"><option value=""></option>${opts}</select></div>`;
+        }
+        return `<div class="field"><label for="${id}">${label}</label>
+                <input id="${id}" name="${key}" type="${type}"></div>`;
+      }
+
+      function applySelectOptions(root, values = {}){
+        if (!root) return;
+
+        const norm = (v) => (v === null || v === undefined ? '' : String(v));
+        const esc = (str = '') => String(str).replace(/"/g, '&quot;');
+
+        const candidateNameInput = root.querySelector('[name="candidate_name"]');
+        const clientNameInput = root.querySelector('[name="client_name"]');
+        const clientSiteInput = root.querySelector('[name="client_site"]');
+
+        const contractorInput = root.querySelector('input[name="contractor_id"][data-source]');
+        const projectInput = root.querySelector('input[name="project_id"][data-source]');
+        const siteInput = root.querySelector('input[name="site_id"][data-source]');
+
+        const contractorHint = root.querySelector('[data-hint-for="contractor_id"]');
+        const projectHint = root.querySelector('[data-hint-for="project_id"]');
+        const siteHint = root.querySelector('[data-hint-for="site_id"]');
+
+        const labelContractor = (c) => {
+          const name = c.name || `Contractor #${c.id}`;
+          return c.email ? `${name} · ${c.email}` : name;
+        };
+        const labelProject = (p) => {
+          const name = p.name || `Project #${p.id}`;
+          return p.client_name ? `${name} · ${p.client_name}` : name;
+        };
+        const labelSite = (s) => {
+          const base = s.name || `Site #${s.id}`;
+          const project = dropdowns.projects.find((p) => String(p.id) === String(s.project_id));
+          return project ? `${base} · ${project.name || `Project #${project.id}`}` : base;
+        };
+
+        const contractorMap = new Map(dropdowns.contractors.map((c) => [String(c.id), c]));
+        const projectMap = new Map(dropdowns.projects.map((p) => [String(p.id), p]));
+        const siteMap = new Map(dropdowns.sites.map((s) => [String(s.id), s]));
+
+        const setHint = (el, text) => {
+          if (!el) return;
+          if (text) el.textContent = text;
+          else el.textContent = el.dataset.default || '';
+        };
+
+        const getHost = (input) => {
+          if (!input) return null;
+          const listId = input.getAttribute('list');
+          if (!listId) return null;
+          return root.querySelector(`#${listId}`);
+        };
+
+        function handleContractorChange(){
+          if (!contractorInput) return;
+          const raw = contractorInput.value.trim();
+          const match = contractorMap.get(raw);
+          if (match) {
+            setHint(contractorHint, `Contractor: ${labelContractor(match)}`);
+            if (candidateNameInput && !candidateNameInput.value) {
+              candidateNameInput.value = match.name || candidateNameInput.value;
+            }
+          } else if (raw) {
+            setHint(contractorHint, `ID ${raw} not in list`);
+          } else {
+            setHint(contractorHint);
+          }
+        }
+
+        function populateSiteList(selected, projectId){
+          if (!siteInput) return;
+          const host = getHost(siteInput);
+          if (!host) return;
+          const filterId = projectId ? String(projectId) : '';
+          let list = dropdowns.sites;
+          if (filterId) {
+            const filtered = dropdowns.sites.filter((s) => String(s.project_id) === filterId);
+            if (filtered.length) list = filtered;
+          }
+          host.innerHTML = list.map((s) => `<option value="${s.id}" label="${esc(labelSite(s))}"></option>`).join('');
+          if (selected) siteInput.value = norm(selected);
+          else siteInput.value = '';
+        }
+
+        function handleProjectChange(){
+          if (!projectInput) return;
+          const raw = projectInput.value.trim();
+          const match = projectMap.get(raw);
+          if (match) {
+            setHint(projectHint, `Project: ${labelProject(match)}`);
+            if (clientNameInput && !clientNameInput.value) {
+              clientNameInput.value = match.client_name || clientNameInput.value;
+            }
+          } else if (raw) {
+            setHint(projectHint, `ID ${raw} not in list`);
+          } else {
+            setHint(projectHint);
+          }
+          populateSiteList(siteInput ? siteInput.value : '', raw);
+          handleSiteChange();
+        }
+
+        function handleSiteChange(){
+          if (!siteInput) return;
+          const raw = siteInput.value.trim();
+          const match = siteMap.get(raw);
+          if (match) {
+            setHint(siteHint, `Site: ${labelSite(match)}`);
+            if (projectInput && match.project_id != null && projectInput.value !== String(match.project_id)) {
+              projectInput.value = String(match.project_id);
+              handleProjectChange();
+            }
+            if (clientSiteInput && !clientSiteInput.value && match.name) {
+              clientSiteInput.value = match.name;
+            }
+            if (clientNameInput && !clientNameInput.value && match.client_name) {
+              clientNameInput.value = match.client_name;
+            }
+          } else if (raw) {
+            setHint(siteHint, `ID ${raw} not in list`);
+          } else {
+            setHint(siteHint);
+          }
+        }
+
+        function fillContractors(selected){
+          if (!contractorInput) return;
+          const host = getHost(contractorInput);
+          if (host) {
+            host.innerHTML = dropdowns.contractors.map((c) => `<option value="${c.id}" label="${esc(labelContractor(c))}"></option>`).join('');
+          }
+          if (selected) contractorInput.value = norm(selected);
+          handleContractorChange();
+        }
+
+        function fillProjects(selected, siteSelected){
+          if (!projectInput) return;
+          const host = getHost(projectInput);
+          if (host) {
+            host.innerHTML = dropdowns.projects.map((p) => `<option value="${p.id}" label="${esc(labelProject(p))}"></option>`).join('');
+          }
+          if (selected) projectInput.value = norm(selected);
+          if (siteInput && siteSelected) siteInput.value = norm(siteSelected);
+          handleProjectChange();
+        }
+
+        if (contractorInput) {
+          contractorInput.addEventListener('change', handleContractorChange);
+          contractorInput.addEventListener('input', handleContractorChange);
+          contractorInput.addEventListener('blur', handleContractorChange);
+        }
+        if (projectInput) {
+          projectInput.addEventListener('change', handleProjectChange);
+          projectInput.addEventListener('input', handleProjectChange);
+          projectInput.addEventListener('blur', handleProjectChange);
+        }
+        if (siteInput) {
+          siteInput.addEventListener('change', handleSiteChange);
+          siteInput.addEventListener('input', handleSiteChange);
+          siteInput.addEventListener('blur', handleSiteChange);
+        }
+
+        fillContractors(norm(values.contractor_id));
+        fillProjects(norm(values.project_id), norm(values.site_id));
+        if (!values.project_id && siteInput && siteInput.value) {
+          const match = siteMap.get(siteInput.value.trim());
+          if (match && projectInput) {
+            projectInput.value = String(match.project_id);
+          }
+        }
+        handleContractorChange();
+        handleProjectChange();
+        handleSiteChange();
+      }
+
+      function buildEditorShell(){
+      const tabsHost=$('#tabs'); tabsHost.innerHTML='';
+      const frm=$('#frm');
+      frm.innerHTML = schema.map(tab=>{
+        const fields = tab.fields.map(fieldHtml).join('');
+        const active = tab.name===currentTab ? ' active' : '';
+        return `<div class="tabpane${active}" data-tab="${tab.name}">${fields}</div>`;
+      }).join('');
+
+      schema.forEach(t=>{
+        const b=document.createElement('button');
+        b.type='button';
+        b.className='tab'+(t.name===currentTab?' active':'');
+        b.textContent=t.name;
+        b.onclick=()=>{
+          currentTab=t.name;
+          Array.from(tabsHost.children).forEach(x=>x.classList.toggle('active', x===b));
+          frm.querySelectorAll('.tabpane').forEach(p=>{
+            p.classList.toggle('active', p.dataset.tab===currentTab);
+          });
+        };
+        tabsHost.appendChild(b);
+      });
+
+      schema.forEach(t=>{
+        t.fields.forEach(([key,,type])=>{
+          const el=frm.querySelector(`[name="${key}"]`); if(!el) return;
+          if(type==='checkbox') el.checked = !!(editing && editing[key]);
+        });
+      });
+      applySelectOptions(frm, editing || {});
+    }
+    function readForm(){
+      const out={};
+      const frm=$('#frm');
+      if (!frm) return out;
+      frm.querySelectorAll('[name]').forEach(el=>{
+        const key=el.getAttribute('name');
+        if(!key) return;
+        if(el.type==='checkbox') out[key]=!!el.checked;
+        else out[key]=el.value || null;
+      });
+      return out;
+    }
+    function resetForm(){
+        editing=null; currentTab='Basics';
+        $('#dTitle').textContent = 'New assignment';
+        $('#dRef').textContent = '—';
+        buildEditorShell();
+      }
+      function openEditor(values={}){
+      editing = values||null;
+      buildEditorShell();
+      const frm=$('#frm');
+      if (frm){
+        frm.querySelectorAll('[name]').forEach(el=>{
+          const key=el.getAttribute('name');
+          if (!key) return;
+          const type=el.getAttribute('type');
+          const val = values && Object.prototype.hasOwnProperty.call(values, key) ? values[key] : null;
+          if (type==='checkbox') el.checked = !!val;
+          else if (val != null) el.value = val;
+        });
+      }
+      applySelectOptions($('#frm'), values);
+      $('#dTitle').textContent = values?.job_title || (values?.id?'Edit assignment':'New assignment');
+      $('#dRef').textContent = values?.as_ref || values?.po_ref || values?.id || '—';
+      openDrawer();
+    }
+
+    function normalizeAssignmentPayload(form){
+      const payload = { ...form };
+      const num = (v) => {
+        if (v === null || v === undefined || v === '') return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
+      payload.contractor_id = num(form.contractor_id);
+      payload.project_id = num(form.project_id);
+      payload.site_id = num(form.site_id);
+        payload.rate_std = form.rate_pay != null ? Number(form.rate_pay) : (form.rate_std != null ? Number(form.rate_std) : null);
+        payload.rate_charge = form.rate_charge != null ? Number(form.rate_charge) : null;
+        if (payload.rate_std != null && Number.isNaN(payload.rate_std)) payload.rate_std = null;
+        if (payload.rate_charge != null && Number.isNaN(payload.rate_charge)) payload.rate_charge = null;
+        payload.auto_ts = !!form.auto_ts;
+        return payload;
+      }
+
+      async function refreshDropdowns(){
+        try{
+          const res = await api('admin-assignments-dropdowns','POST',{});
+          dropdowns.contractors = Array.isArray(res?.contractors) ? res.contractors : [];
+          dropdowns.clients = Array.isArray(res?.clients) ? res.clients : [];
+          dropdowns.projects = Array.isArray(res?.projects) ? res.projects : [];
+          dropdowns.sites = Array.isArray(res?.sites) ? res.sites : [];
+          chip('dropdowns: ok','ok');
+          const formEl = $('#frm');
+          const current = formEl ? {
+            contractor_id: formEl.querySelector('[name="contractor_id"]')?.value,
+            project_id: formEl.querySelector('[name="project_id"]')?.value,
+            site_id: formEl.querySelector('[name="site_id"]')?.value,
+            candidate_name: formEl.querySelector('[name="candidate_name"]')?.value,
+            client_name: formEl.querySelector('[name="client_name"]')?.value,
+            client_site: formEl.querySelector('[name="client_site"]')?.value,
+          } : {};
+          applySelectOptions(formEl, { ...(editing || {}), ...current });
+        }catch(e){
+          console.error('[assignments] dropdown load error', e);
+          chip('dropdowns: fail','bad');
+          toast('Dropdown lookup failed: ' + (e.message || e), 'warn', 3600);
+        }
+      }
+
+      async function save(closeAfter){
+        try{
+          const form = readForm();
+          const body = normalizeAssignmentPayload(form);
+          if (editing?.id) body.id = editing.id;
+        const matchName = (list, target) => {
+          if (!target) return null;
+          const lower = String(target).toLowerCase().trim();
+          return list.find((item) => {
+            if (String(item.id) === lower) return true;
+            const values = [item.name, item.email, item.client_name, item.title, item.label]
+              .filter(Boolean)
+              .map((v) => String(v).toLowerCase().trim());
+            return values.includes(lower);
+          }) || null;
+        };
+        if (!body.contractor_id && Array.isArray(dropdowns.contractors)) {
+          const match = matchName(dropdowns.contractors, form.contractor_id || form.candidate_name || editing?.candidate_name);
+          const resolved = match ? num(match.id ?? match.contractor_id) : null;
+          if (resolved != null) body.contractor_id = resolved;
+        }
+        if (!body.project_id && Array.isArray(dropdowns.projects)) {
+          const match = matchName(dropdowns.projects, form.project_id || form.client_name || editing?.project_name || editing?.client_name);
+          const resolved = match ? num(match.id ?? match.project_id) : null;
+          if (resolved != null) body.project_id = resolved;
+        }
+        if (!body.site_id && Array.isArray(dropdowns.sites)) {
+          const match = matchName(dropdowns.sites, form.site_id || form.client_site || editing?.client_site || editing?.site_id);
+          const resolved = match ? num(match.id ?? match.site_id) : null;
+          if (resolved != null) body.site_id = resolved;
+        }
+        if (!body.contractor_id && editing?.contractor_id) body.contractor_id = Number(editing.contractor_id);
+        if (!body.project_id && editing?.project_id) body.project_id = Number(editing.project_id);
+        if (!body.site_id && editing?.site_id) body.site_id = Number(editing.site_id);
+        if (!body.start_date && editing?.start_date) body.start_date = editing.start_date;
+        const res = await api('admin-assignments-save','POST', body);
+        toast('Saved', 'ok', 1500);
+        if (closeAfter) closeDrawer();
+        page = 1;
+        await load();
+        editing = res;
+        }catch(e){
+          toast('Save failed: ' + (e.message||e), 'error', 4200);
+        }
+      }
+
+      $('#btnRefresh').onclick = ()=>{ refreshDropdowns(); load(); };
+      $('#btnExportAll').onclick = ()=>exportCsv(false);
+      $('#btnExportSel').onclick = ()=>exportCsv(true);
+      $('#btnNew').onclick     = ()=>{ resetForm(); openDrawer(); };
+      $('#btnDelete').onclick  = doDelete;
+      const qvCloseBtn = $('#qvClose');
+      if (qvCloseBtn) qvCloseBtn.onclick = ()=>{ renderQuick(null); };
+      $('#q').addEventListener('keydown', e=>{ if (e.key==='Enter') { e.preventDefault(); page=1; load(); } });
+      $('#statusSel').onchange = e=>{ activeStatus=e.target.value; page=1; load(); };
+      $('#pgPrev').onclick     = ()=>{ if(page>1){ page--; load(); } };
+      $('#pgNext').onclick     = ()=>{ page++; load(); };
+      $('#pgSize').onchange    = e=>{ pageSize=Number(e.target.value)||10; page=1; load(); };
+      $('#btnCancel').onclick = ()=>closeDrawer();
+      $('#btnSaveDraft').onclick=()=>save(false);
+      $('#btnSaveClose').onclick=()=>save(true);
+
+      document.addEventListener('keydown',(e)=>{
+        if ((e.ctrlKey||e.metaKey) && e.key==='r'){ e.preventDefault(); load(); }
+        if ((e.ctrlKey||e.metaKey) && e.key==='s'){ e.preventDefault(); save(false); }
+        if (e.key==='Escape' && drawer?.classList.contains('open')){ e.preventDefault(); closeDrawer(); }
+      });
+
+      buildColMenu();
+      await refreshDropdowns();
+      await load();
+      updateBulkButtons();
+    });
+  })();
+  </script>
 </body>
 </html>

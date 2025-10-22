@@ -1,0 +1,40 @@
+{
+  "clients": [
+    {
+      "id": 201,
+      "name": "DataCore Holdings",
+      "billing_email": "ap@datacore.example.com",
+      "phone": "+44 20 1234 5678",
+      "contact_name": "Samantha Brown",
+      "contact_email": "samantha.brown@datacore.example.com",
+      "contact_phone": "+44 7800 111222",
+      "terms_days": 30,
+      "status": "active",
+      "notes": "Primary data centre customer across the UK and Ireland."
+    },
+    {
+      "id": 202,
+      "name": "BluePeak Pharma",
+      "billing_email": "finance@bluepeak.example.com",
+      "phone": "+44 131 555 9898",
+      "contact_name": "Fraser McIntyre",
+      "contact_email": "fraser.mcintyre@bluepeak.example.com",
+      "contact_phone": "+44 7700 987654",
+      "terms_days": 45,
+      "status": "active",
+      "notes": "Specialises in sterile production facilities."
+    },
+    {
+      "id": 203,
+      "name": "NorthGrid Energy",
+      "billing_email": "accounts@northgrid.example.com",
+      "phone": "+44 191 222 3344",
+      "contact_name": "Liam Patel",
+      "contact_email": "liam.patel@northgrid.example.com",
+      "contact_phone": "+44 7788 445566",
+      "terms_days": 30,
+      "status": "prospect",
+      "notes": "In tender stage for a substation upgrade."
+    }
+  ]
+}
