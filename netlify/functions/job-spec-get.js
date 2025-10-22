@@ -1,26 +1,6 @@
 // netlify/functions/job-spec-get.js
 const { getSupabase } = require('./_supabase.js');
-const { toJob, findStaticJob } = require('./_jobs-helpers.js');
-
-const JOB_COLUMNS = `
-  id,
-  title,
-  status,
-  section,
-  discipline,
-  type,
-  location_text,
-  location_code,
-  overview,
-  responsibilities,
-  requirements,
-  keywords,
-  apply_url,
-  published,
-  sort_order,
-  created_at,
-  updated_at
-`;
+const { toJob, findStaticJob, isSchemaError } = require('./_jobs-helpers.js');
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
@@ -35,7 +15,7 @@ exports.handler = async (event) => {
     supabase = null;
   }
 
-  function respondFallback(job) {
+  function respondFallback(job, meta = {}) {
     if (!job) {
       return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) };
     }
@@ -49,6 +29,7 @@ exports.handler = async (event) => {
         expires_at: null,
         created_at: job.updatedAt || job.createdAt || null,
         fallback: true,
+        ...meta,
       }),
     };
   }
@@ -58,8 +39,13 @@ exports.handler = async (event) => {
     if (!supabase) {
       return findStaticJob(id);
     }
-    const { data, error } = await supabase.from('jobs').select(JOB_COLUMNS).eq('id', id).maybeSingle();
-    if (error) throw error;
+    const { data, error } = await supabase.from('jobs').select('*').eq('id', id).maybeSingle();
+    if (error) {
+      if (isSchemaError(error)) {
+        return findStaticJob(id);
+      }
+      throw error;
+    }
     if (!data) return null;
     return toJob(data);
   }
@@ -102,7 +88,15 @@ exports.handler = async (event) => {
         .eq('slug', slug)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (isSchemaError(error)) {
+          const fallback = await fetchJobById(jobIdParam || slug);
+          if (fallback) {
+            return respondFallback(fallback, { schema: true });
+          }
+        }
+        throw error;
+      }
       if (!data) {
         if (jobIdParam) {
           const fallback = await fetchJobById(jobIdParam);
@@ -143,23 +137,25 @@ exports.handler = async (event) => {
       };
     } catch (err) {
       const missingTable = err?.code === '42P01' || /relation\s+"?job_specs"?/i.test(err?.message || '');
+      const schemaMismatch = isSchemaError(err);
       if (!missingTable) throw err;
-      const fallback = await fetchJobById(slug || jobIdParam);
-      if (!fallback) {
-        return respondFallback(findStaticJob(slug || jobIdParam));
-      }
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          slug: slug || fallback.id,
-          jobId: fallback.id,
-          title: fallback.title,
-          job: fallback,
-          expires_at: null,
-          created_at: fallback.updatedAt || fallback.createdAt || null,
-          fallback: true,
-        }),
-      };
+        const fallback = await fetchJobById(slug || jobIdParam);
+        if (!fallback) {
+          return respondFallback(findStaticJob(slug || jobIdParam), { schema: schemaMismatch || undefined });
+        }
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            slug: slug || fallback.id,
+            jobId: fallback.id,
+            title: fallback.title,
+            job: fallback,
+            expires_at: null,
+            created_at: fallback.updatedAt || fallback.createdAt || null,
+            fallback: true,
+            schema: schemaMismatch,
+          }),
+        };
     }
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };

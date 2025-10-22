@@ -2,7 +2,7 @@
 const { randomUUID } = require('node:crypto');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, findStaticJob, slugify } = require('./_jobs-helpers.js');
+const { toJob, findStaticJob, slugify, isSchemaError } = require('./_jobs-helpers.js');
 
 function buildSlug(id) {
   const safeId = (id || 'job').toString().replace(/[^a-z0-9-]/gi, '-').toLowerCase();
@@ -27,8 +27,8 @@ exports.handler = async (event, context) => {
       supabase = null;
     }
 
-    const { jobId, expiresInDays = 30, notes } = JSON.parse(event.body || '{}');
-    if (!jobId) {
+    const { jobId, jobPayload, expiresInDays = 30, notes } = JSON.parse(event.body || '{}');
+    if (!jobId && !jobPayload) {
       return { statusCode: 400, body: JSON.stringify({ error: 'jobId required' }) };
     }
 
@@ -36,28 +36,48 @@ exports.handler = async (event, context) => {
 
     let job = null;
 
-    if (supabase) {
-      const { data: jobRow, error: jobError } = await supabase
-        .from('jobs')
-        .select(
-          `id,title,status,section,discipline,type,location_text,location_code,overview,responsibilities,requirements,keywords,apply_url,published,sort_order,created_at,updated_at`
-        )
-        .eq('id', jobId)
-        .single();
+    if (supabase && jobId) {
+      try {
+        const { data: jobRow, error: jobError } = await supabase
+          .from('jobs')
+          .select('*')
+          .eq('id', jobId)
+          .single();
 
-      if (jobError) {
-        const missingRelation = jobError?.code === '42P01' || /relation\s+"?jobs"?/i.test(jobError?.message || '');
-        if (!missingRelation) throw jobError;
-      } else if (jobRow) {
-        job = toJob(jobRow);
+        if (jobError) {
+          if (isSchemaError(jobError)) {
+            supabaseErr = jobError;
+            supabase = null;
+          } else if (jobError?.code === '42P01' || /relation\s+"?jobs"?/i.test(jobError?.message || '')) {
+            supabaseErr = jobError;
+            supabase = null;
+          } else {
+            throw jobError;
+          }
+        } else if (jobRow) {
+          job = toJob(jobRow);
+        }
+      } catch (err) {
+        if (isSchemaError(err)) {
+          supabaseErr = err;
+          supabase = null;
+        } else {
+          throw err;
+        }
       }
     }
 
-    if (!job) {
+    if (!job && jobPayload) {
+      job = toJob(jobPayload);
+    }
+
+    if (!job && jobId) {
       job = findStaticJob(jobId);
-      if (!job) {
-        return { statusCode: 404, body: JSON.stringify({ error: 'Job not found' }) };
-      }
+    }
+
+    if (!job) {
+      const fallbackId = jobPayload?.id || jobId;
+      return { statusCode: 404, body: JSON.stringify({ error: 'Job not found', id: fallbackId }) };
     }
 
     const slug = supabase ? buildSlug(job.id) : (job.id || slugify(job.title || 'job'));
@@ -100,6 +120,7 @@ exports.handler = async (event, context) => {
         expires_at: null,
         fallback: true,
         reason: supabaseErr?.code || 'supabase_unavailable',
+        schema: isSchemaError(supabaseErr) || undefined,
       }),
     };
   } catch (e) {

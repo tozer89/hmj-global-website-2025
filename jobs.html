@@ -704,6 +704,7 @@
       disciplines: [],
       tags: [],
       source: 'api',
+      schema: false,
     };
     const jobsContainer = document.getElementById('jobsDynamic');
     let jobsEls = [];
@@ -818,9 +819,7 @@
         const res = await fetch('/.netlify/functions/jobs-list', { cache:'no-store' });
         if(!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json();
-        if (Array.isArray(data.jobs)) return data.jobs;
-        if (Array.isArray(data.rows)) return data.rows;
-        return null;
+        return data;
       }catch(e){
         console.warn('jobs-list API failed', e);
         return null;
@@ -854,24 +853,41 @@
     async function resolveJobs(){
       const embedded = loadEmbeddedJobs();
 
-      const fromApi = await loadJobsFromApi();
-      if(Array.isArray(fromApi) && fromApi.length){
-        return { rows: fromApi, source: 'api' };
+      const apiData = await loadJobsFromApi();
+      const apiRows = Array.isArray(apiData?.jobs)
+        ? apiData.jobs
+        : Array.isArray(apiData?.rows)
+          ? apiData.rows
+          : null;
+      const apiSource = apiData?.source || (Array.isArray(apiRows) ? 'api' : 'api-empty');
+      const apiSchema = !!apiData?.schema;
+      const apiWarning = apiData?.warning;
+
+      if(Array.isArray(apiRows) && apiRows.length){
+        return { rows: apiRows, source: apiSource, schema: apiSchema, warning: apiWarning };
       }
 
       const fromJson = await loadJobsJSON();
       if(Array.isArray(fromJson) && fromJson.length){
-        // API returned empty/failed but static JSON exists.
-        return { rows: fromJson, source: fromApi ? 'static-from-json' : 'static-json' };
+        return {
+          rows: fromJson,
+          source: Array.isArray(apiRows) ? 'static-from-json' : 'static-json',
+          schema: apiSchema,
+          warning: apiWarning,
+        };
       }
 
       if(Array.isArray(embedded) && embedded.length){
-        const source = fromApi && Array.isArray(fromApi) ? 'embedded-after-api' : 'embedded';
-        return { rows: embedded, source };
+        const source = Array.isArray(apiRows) ? 'embedded-after-api' : 'embedded';
+        return { rows: embedded, source, schema: apiSchema, warning: apiWarning };
       }
 
-      // Nothing available – return whatever the API gave us (likely empty) for diagnostics.
-      return { rows: Array.isArray(fromApi) ? fromApi : [], source: 'empty' };
+      return {
+        rows: Array.isArray(apiRows) ? apiRows : [],
+        source: apiSource || 'empty',
+        schema: apiSchema,
+        warning: apiWarning,
+      };
     }
 
     function deriveSections(jobs){
@@ -1017,6 +1033,7 @@
     function showSeededJobs(rows, source = 'embedded') {
       if (!Array.isArray(rows) || !rows.length) return;
       jobsState.source = source;
+      jobsState.schema = false;
       jobsState.all = rows.map(normaliseJob);
       buildDerivedCollections(jobsState.all);
       paintJobs(jobsState.all);
@@ -1038,20 +1055,22 @@
       const hadJobs = Array.isArray(jobsState.all) && jobsState.all.length > 0;
       const previousSource = jobsState.source;
       try {
-        const { rows, source } = await resolveJobs();
+        const { rows, source, schema, warning } = await resolveJobs();
         const published = Array.isArray(rows) ? rows.filter(job => job && job.published !== false) : [];
 
         if (!published.length) {
           if (hadJobs) {
             if (notice) {
               notice.hidden = false;
-              notice.textContent = `Showing ${jobsState.all.length} preview roles while the live jobs feed is unavailable (${source}).`;
+              const schemaLabel = schema ? ' · schema fallback' : '';
+              notice.textContent = `Showing ${jobsState.all.length} preview roles while the live jobs feed is unavailable (${source}).${schemaLabel}`;
             }
             console.warn(`jobs feed returned 0 rows from ${source}; keeping existing ${previousSource || 'fallback'} dataset`);
             return;
           }
 
           jobsState.source = source || 'empty';
+          jobsState.schema = !!schema;
           jobsState.all = [];
           buildDerivedCollections(jobsState.all);
           paintJobs(jobsState.all);
@@ -1061,12 +1080,15 @@
           bindJobCardEvents();
           if (notice) {
             notice.hidden = false;
-            notice.textContent = 'Job data is temporarily unavailable. Please try again shortly.';
+            notice.textContent = schema
+              ? 'Job data is temporarily unavailable because of a schema mismatch. Please contact support or update the jobs table.'
+              : 'Job data is temporarily unavailable. Please try again shortly.';
           }
           return;
         }
 
         jobsState.source = source;
+        jobsState.schema = !!schema;
         jobsState.all = published.map(normaliseJob);
         buildDerivedCollections(jobsState.all);
         paintJobs(jobsState.all);
@@ -1074,14 +1096,19 @@
         refreshChips();
         bindChipEvents();
         bindJobCardEvents();
-        if(source !== 'api') {
-          console.warn(`jobs rendered using ${source} fallback (${jobsState.all.length} records)`);
+        if(source !== 'api' || schema) {
+          console.warn(`jobs rendered using ${source} fallback (${jobsState.all.length} records${schema ? ', schema mismatch' : ''})`);
           if (notice) {
             notice.hidden = false;
             notice.textContent = jobsState.all.length
-              ? `Showing ${jobsState.all.length} preview roles because the live jobs database was unavailable (${source}).`
-              : 'Job data is temporarily unavailable. Please try again shortly.';
+              ? `Showing ${jobsState.all.length} preview roles because the live jobs database was unavailable (${source}).${schema ? ' Schema mismatch detected.' : ''}`
+              : schema
+                ? 'Job data is temporarily unavailable because of a schema mismatch. Please check the jobs table.'
+                : 'Job data is temporarily unavailable. Please try again shortly.';
           }
+        } else if (warning && notice) {
+          notice.hidden = false;
+          notice.textContent = warning;
         }
       } catch (err) {
         console.error('jobs render failed', err);

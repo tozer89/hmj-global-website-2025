@@ -252,6 +252,7 @@
         readOnly: false,
         fallbackSource: '',
         seeded: false,
+        schemaMismatch: false,
       };
 
       const board = sel('#boardColumns');
@@ -385,6 +386,30 @@
           normalized.id = `job-${Math.random().toString(36).slice(2, 10)}`;
         }
         return normalized;
+      }
+
+      function buildSharePayload(job) {
+        if (!job) return null;
+        const normalized = normalizeJob(job);
+        return {
+          id: normalized.id,
+          title: normalized.title,
+          status: normalized.status,
+          section: normalized.sectionLabel || normalized.section,
+          sectionLabel: normalized.sectionLabel,
+          discipline: normalized.discipline,
+          type: normalized.type,
+          location_text: normalized.locationText,
+          location_code: normalized.locationCode,
+          overview: normalized.overview,
+          responsibilities: Array.isArray(normalized.responsibilities) ? normalized.responsibilities : [],
+          requirements: Array.isArray(normalized.requirements) ? normalized.requirements : [],
+          keywords: normalized.keywords || (Array.isArray(normalized.tags) ? normalized.tags.join(', ') : ''),
+          tags: Array.isArray(normalized.tags) ? normalized.tags : [],
+          apply_url: normalized.applyUrl,
+          published: normalized.published,
+          sort_order: normalized.sortOrder ?? null,
+        };
       }
 
       function buildSections() {
@@ -818,16 +843,28 @@
           return;
         }
         try {
-          const res = await api('admin-job-share-create', 'POST', { jobId: target.id });
+          const res = await api('admin-job-share-create', 'POST', {
+            jobId: target.id,
+            jobPayload: buildSharePayload(target),
+          });
           const fallback = !!res?.fallback;
+          const schemaMismatch = !!res?.schema;
           if (fallback) {
-            shareMeta.textContent = 'Direct job link · No expiry (static fallback)';
+            shareMeta.textContent = schemaMismatch
+              ? 'Schema mismatch detected — serving static share link'
+              : 'Direct job link · No expiry (static fallback)';
           } else {
             shareMeta.textContent = `Slug ${res.slug} · Expires ${res.expires_at || 'never'}`;
           }
           shareUrl.value = res.url || '';
           shareBox.style.display = '';
-          toast(fallback ? 'Share link created (static fallback)' : 'Share link created', 'ok', 2000);
+          toast(
+            fallback
+              ? (schemaMismatch ? 'Share link ready (schema fallback)' : 'Share link created (static fallback)')
+              : 'Share link created',
+            'ok',
+            2000
+          );
         } catch (e) {
           toast('Share failed: ' + (e.message || e), 'error', 4200);
         }
@@ -869,13 +906,20 @@
           state.readOnly = !!res?.readOnly;
           state.fallbackSource = res?.source || '';
           state.seeded = !!res?.seeded && state.jobs.length > 0;
+          state.schemaMismatch = !!res?.schema;
           applySeedNotice();
           if (state.seeded) {
             toast('Static jobs loaded — save them to sync with Supabase.', 'info', 2800);
           }
           applyReadOnly();
-          if (state.readOnly && res?.error) {
-            toast('Supabase unavailable: ' + res.error, 'warn', 3600);
+          if (state.readOnly) {
+            const schemaWarning = res?.schema
+              ? 'Jobs table schema mismatch detected — displaying read-only preview data.'
+              : null;
+            const message = schemaWarning || res?.error || res?.warning;
+            if (message) {
+              toast(message, 'warn', 3600);
+            }
           }
           buildSections();
           buildTags();

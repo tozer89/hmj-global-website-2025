@@ -1,27 +1,7 @@
 // netlify/functions/admin-jobs-save.js
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, toDbPayload } = require('./_jobs-helpers.js');
-
-const COLUMNS = `
-  id,
-  title,
-  status,
-  section,
-  discipline,
-  type,
-  location_text,
-  location_code,
-  overview,
-  responsibilities,
-  requirements,
-  keywords,
-  apply_url,
-  published,
-  sort_order,
-  created_at,
-  updated_at
-`;
+const { toJob, toDbPayload, isSchemaError } = require('./_jobs-helpers.js');
 
 function slugify(text = '') {
   return text
@@ -70,14 +50,25 @@ exports.handler = async (event, context) => {
     const { data, error } = await supabase
       .from('jobs')
       .upsert(payload, { onConflict: 'id', ignoreDuplicates: false })
-      .select(COLUMNS)
+      .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (isSchemaError(error)) {
+        return {
+          statusCode: 409,
+          body: JSON.stringify({
+            error: 'Jobs table schema mismatch — update columns or refresh seeds.',
+            code: 'schema_mismatch',
+          }),
+        };
+      }
+      throw error;
+    }
 
     return { statusCode: 200, body: JSON.stringify({ job: toJob(data) }) };
   } catch (e) {
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };
+    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : (e.code === 'schema_mismatch' ? 409 : 500);
+    return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error', code: e.code || undefined }) };
   }
 };

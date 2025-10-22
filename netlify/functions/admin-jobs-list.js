@@ -1,27 +1,9 @@
 // netlify/functions/admin-jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, loadStaticJobs, ensureStaticJobs } = require('./_jobs-helpers.js');
+const { toJob, loadStaticJobs, ensureStaticJobs, isSchemaError } = require('./_jobs-helpers.js');
 
-const COLUMNS = `
-  id,
-  title,
-  status,
-  section,
-  discipline,
-  type,
-  location_text,
-  location_code,
-  overview,
-  responsibilities,
-  requirements,
-  keywords,
-  apply_url,
-  published,
-  sort_order,
-  created_at,
-  updated_at
-`;
+const JOB_SELECT = '*';
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 
@@ -47,7 +29,9 @@ exports.handler = async (event, context) => {
           jobs: fallback,
           source: fallback.length ? 'static' : 'empty',
           readOnly: true,
-          warning: fallback.length ? undefined : (fallbackError?.message || 'Supabase client unavailable'),
+          warning: fallback.length
+            ? 'Supabase unavailable — showing static jobs.'
+            : (fallbackError?.message || 'Supabase client unavailable'),
           supabase: supabaseStatus(),
           fallbackCount,
         }),
@@ -61,7 +45,7 @@ exports.handler = async (event, context) => {
 
     let query = supabase
       .from('jobs')
-      .select(COLUMNS)
+      .select(JOB_SELECT)
       .order('section', { ascending: true })
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('updated_at', { ascending: false })
@@ -89,6 +73,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus(), fallbackCount }),
     };
   } catch (e) {
+    const schemaIssue = isSchemaError(e);
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     const source = fallback.length ? 'static' : 'empty';
     ensureStaticJobs();
@@ -100,6 +85,10 @@ exports.handler = async (event, context) => {
         readOnly: true,
         source,
         error: e.message || fallbackError?.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
+        schema: schemaIssue,
+        warning: schemaIssue
+          ? 'Jobs table schema mismatch detected — serving static jobs.'
+          : (fallbackError?.message || e.message || undefined),
         supabase: supabaseStatus(),
         fallbackCount,
       }),

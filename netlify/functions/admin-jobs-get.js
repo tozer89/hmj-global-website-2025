@@ -1,27 +1,7 @@
 // netlify/functions/admin-jobs-get.js
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, loadStaticJobs } = require('./_jobs-helpers.js');
-
-const COLUMNS = `
-  id,
-  title,
-  status,
-  section,
-  discipline,
-  type,
-  location_text,
-  location_code,
-  overview,
-  responsibilities,
-  requirements,
-  keywords,
-  apply_url,
-  published,
-  sort_order,
-  created_at,
-  updated_at
-`;
+const { toJob, loadStaticJobs, isSchemaError } = require('./_jobs-helpers.js');
 
 exports.handler = async (event, context) => {
   try {
@@ -35,7 +15,7 @@ exports.handler = async (event, context) => {
       const supabase = getSupabase(event);
       const { data, error } = await supabase
         .from('jobs')
-        .select(COLUMNS)
+        .select('*')
         .eq('id', id)
         .single();
 
@@ -49,7 +29,16 @@ exports.handler = async (event, context) => {
       const fallback = loadStaticJobs();
       const match = fallback.find((j) => j.id === String(id));
       if (match) {
-        return { statusCode: 200, body: JSON.stringify({ job: match, readOnly: true, source: 'static', error: err.message }) };
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            job: match,
+            readOnly: true,
+            source: 'static',
+            error: err.message,
+            schema: isSchemaError(err),
+          }),
+        };
       }
       const status = err.code === 401 ? 401 : err.code === 403 ? 403 : 500;
       return { statusCode: status, body: JSON.stringify({ error: err.message || 'Unexpected error' }) };

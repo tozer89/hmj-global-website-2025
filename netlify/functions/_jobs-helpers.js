@@ -92,6 +92,18 @@ function ensureStaticJobs() {
   return STATIC_JOBS;
 }
 
+function isSchemaError(err) {
+  if (!err) return false;
+  const code = err.code || err.status || err.statusCode;
+  if (code === '42P01' || code === '42703') return true;
+  const msg = String(err.message || err).toLowerCase();
+  return (
+    (msg.includes('relation') && msg.includes('does not exist')) ||
+    (msg.includes('column') && msg.includes('does not exist')) ||
+    msg.includes('undefined column')
+  );
+}
+
 function slugify(value = '') {
   return String(value || '')
     .toLowerCase()
@@ -256,4 +268,5 @@ module.exports = {
   loadStaticJobs,
   ensureStaticJobs,
   findStaticJob,
+  isSchemaError,
 };

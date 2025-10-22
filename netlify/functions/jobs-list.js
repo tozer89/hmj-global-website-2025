@@ -1,25 +1,8 @@
 // netlify/functions/jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
-const { toJob, loadStaticJobs, ensureStaticJobs } = require('./_jobs-helpers.js');
+const { toJob, loadStaticJobs, ensureStaticJobs, isSchemaError } = require('./_jobs-helpers.js');
 
-const COLUMNS = `
-  id,
-  title,
-  status,
-  section,
-  discipline,
-  type,
-  location_text,
-  location_code,
-  overview,
-  responsibilities,
-  requirements,
-  keywords,
-  apply_url,
-  published,
-  sort_order,
-  updated_at
-`;
+const JOB_SELECT = '*';
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 
@@ -41,9 +24,12 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         jobs: fallback,
         source: fallback.length ? 'static' : 'empty',
-        warning: fallback.length ? undefined : (fallbackError?.message || 'Supabase client unavailable'),
+        warning: fallback.length
+          ? 'Supabase unavailable — showing static jobs.'
+          : (fallbackError?.message || 'Supabase client unavailable'),
         supabase: supabaseStatus(),
         fallbackCount,
+        schema: false,
       }),
     };
   }
@@ -53,7 +39,7 @@ exports.handler = async (event) => {
 
     let query = supabase
       .from('jobs')
-      .select(COLUMNS)
+      .select(JOB_SELECT)
       .eq('published', true)
       .order('section', { ascending: true })
       .order('sort_order', { ascending: true, nullsFirst: false })
@@ -68,15 +54,28 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
-        body: JSON.stringify({ jobs: fallback, source: 'static', supabase: supabaseStatus(), fallbackCount }),
+        body: JSON.stringify({
+          jobs: fallback,
+          source: 'static',
+          supabase: supabaseStatus(),
+          fallbackCount,
+          schema: false,
+        }),
       };
     }
     return {
       statusCode: 200,
       headers: JSON_HEADERS,
-      body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus(), fallbackCount }),
+      body: JSON.stringify({
+        jobs,
+        source: jobs.length ? 'supabase' : 'empty',
+        supabase: supabaseStatus(),
+        fallbackCount,
+        schema: false,
+      }),
     };
   } catch (e) {
+    const schemaIssue = isSchemaError(e);
     ensureStaticJobs();
     return {
       statusCode: 200,
@@ -87,6 +86,7 @@ exports.handler = async (event) => {
         warning: e.message || fallbackError?.message || 'Unable to load jobs',
         supabase: supabaseStatus(),
         fallbackCount,
+        schema: schemaIssue,
       }),
     };
   }
