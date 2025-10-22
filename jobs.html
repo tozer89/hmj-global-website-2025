@@ -1025,10 +1025,38 @@
     async function renderJobs(){
       const notice = document.getElementById('jobsFallbackNotice');
       if (notice) notice.hidden = true;
+      const hadJobs = Array.isArray(jobsState.all) && jobsState.all.length > 0;
+      const previousSource = jobsState.source;
       try {
         const { rows, source } = await resolveJobs();
-        jobsState.source = source;
         const published = Array.isArray(rows) ? rows.filter(job => job && job.published !== false) : [];
+
+        if (!published.length) {
+          if (hadJobs) {
+            if (notice) {
+              notice.hidden = false;
+              notice.textContent = `Showing ${jobsState.all.length} preview roles while the live jobs feed is unavailable (${source}).`;
+            }
+            console.warn(`jobs feed returned 0 rows from ${source}; keeping existing ${previousSource || 'fallback'} dataset`);
+            return;
+          }
+
+          jobsState.source = source || 'empty';
+          jobsState.all = [];
+          buildDerivedCollections(jobsState.all);
+          paintJobs(jobsState.all);
+          updateFilterSources();
+          refreshChips();
+          bindChipEvents();
+          bindJobCardEvents();
+          if (notice) {
+            notice.hidden = false;
+            notice.textContent = 'Job data is temporarily unavailable. Please try again shortly.';
+          }
+          return;
+        }
+
+        jobsState.source = source;
         jobsState.all = published.map(normaliseJob);
         buildDerivedCollections(jobsState.all);
         paintJobs(jobsState.all);

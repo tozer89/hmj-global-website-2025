@@ -118,6 +118,9 @@
   /* Charts placeholder area */
   .chart{height:220px;background:#fff;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
   [data-theme="dark"] .chart{background:#0f172a;border-color:#2c3853}
+  .audit-panel{border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff;color:var(--ink);box-shadow:var(--shadow);}
+  [data-theme="dark"] .audit-panel{background:#0f172a;color:var(--panel-ink);border-color:#2c3853;box-shadow:none}
+  .audit-panel[hidden]{display:none}
 
   /* Mobile simplifications */
   @media(max-width:720px){
@@ -247,8 +250,13 @@
 
     <hr style="border:0;border-top:1px solid var(--border);margin:16px 0"/>
 
-    <div style="font-weight:800;margin-bottom:8px">Audit (latest)</div>
-    <div id="auditBody" class="muted">Loading…</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
+      <div style="font-weight:800">Audit trail</div>
+      <button class="btn ghost" id="btnAuditToggle" type="button" aria-expanded="false" aria-controls="auditPanel">Show</button>
+    </div>
+    <div id="auditPanel" class="audit-panel" hidden>
+      <div id="auditBody" class="muted">Loading…</div>
+    </div>
 
     <hr style="border:0;border-top:1px solid var(--border);margin:16px 0"/>
 
@@ -376,7 +384,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   const createAssignmentId = $('#createAssignmentId'); const createWeekEnding = $('#createWeekEnding');
   const btnCreate = $('#btnCreate'); const btnOpenContractor = $('#btnOpenContractor');
 
-  const auditBody = $('#auditBody'); const remindResult = $('#remindResult');
+  const auditPanel = $('#auditPanel'); const auditBody = $('#auditBody'); const btnAuditToggle = $('#btnAuditToggle'); const remindResult = $('#remindResult');
   const chkRemindDry = $('#chkRemindDry'); const btnRunRemind = $('#btnRunRemind'); const btnOverdue = $('#btnOverdue');
 
   // Modal
@@ -393,6 +401,18 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   function setTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY,t); btnTheme.innerHTML = t==='dark'?'🌞 Light':'🌙 Dark'; }
   setTheme(localStorage.getItem(THEME_KEY)||'light');
   btnTheme.onclick=()=>setTheme((localStorage.getItem(THEME_KEY)||'light')==='light'?'dark':'light');
+
+  function setAuditVisible(show){
+    if (!auditPanel || !btnAuditToggle) return;
+    auditPanel.hidden = !show;
+    btnAuditToggle.textContent = show ? 'Hide' : 'Show';
+    btnAuditToggle.setAttribute('aria-expanded', String(show));
+  }
+  setAuditVisible(false);
+  btnAuditToggle?.addEventListener('click', ()=>{
+    const next = auditPanel ? auditPanel.hidden : true;
+    setAuditVisible(next);
+  });
 
   // ---- State ----
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
