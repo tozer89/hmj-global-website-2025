@@ -19,8 +19,14 @@ function decodeJWT(token) {
   } catch { return {}; }
 }
 
+function normalizeRoles(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((role) => String(role || '').toLowerCase()).filter(Boolean);
+}
+
 function rolesFromClaims(claims) {
-  return claims?.app_metadata?.roles || claims?.roles || [];
+  const roles = claims?.app_metadata?.roles || claims?.roles || [];
+  return normalizeRoles(Array.isArray(roles) ? roles : [roles].filter(Boolean));
 }
 
 function getSupabaseAdmin() {
@@ -67,7 +73,7 @@ exports.getContext = async (event, context, opts = {}) => {
   if (!user) throw coded(401, 'Unauthorized');
 
   // roles from either clientContext or jwt
-  roles = roles.length ? roles : rolesFromClaims(user);
+  roles = roles.length ? normalizeRoles(roles) : rolesFromClaims(user);
   if (opts.requireAdmin && !roles.includes('admin')) throw coded(403, 'Forbidden');
 
   let supabase = null;
