@@ -398,6 +398,76 @@
       disciplines: [],
       tags: [],
     };
+    const jobsContainer = document.getElementById('jobsDynamic');
+    let jobsEls = [];
+    let chips = [];
+
+    function refreshJobsElements(){
+      jobsEls = Array.from(jobsContainer?.querySelectorAll('.job') || []);
+    }
+
+    function refreshChips(){
+      chips = Array.from(document.querySelectorAll('.chip'));
+    }
+
+    function bindChipEvents(){
+      chips.forEach((chip) => {
+        if (chip.dataset.bound === '1') return;
+        chip.dataset.bound = '1';
+        chip.addEventListener('click', () => {
+          const group = chip.dataset.chip;
+          if (!group) return;
+          chips
+            .filter((c) => c.dataset.chip === group)
+            .forEach((c) => {
+              c.classList.remove('active');
+              c.setAttribute('aria-pressed', 'false');
+            });
+          chip.classList.add('active');
+          chip.setAttribute('aria-pressed', 'true');
+          state[group] = chip.dataset.value;
+          applyFilters();
+        });
+      });
+    }
+
+    function bindJobCardEvents(){
+      refreshJobsElements();
+      jobsEls.forEach((job) => {
+        const pinBtn = job.querySelector('.pin-btn');
+        if (pinBtn && pinBtn.dataset.bound !== '1') {
+          pinBtn.dataset.bound = '1';
+          pinBtn.addEventListener('click', () => {
+            const pins = getPins();
+            const id = job.id || job.dataset.id || job.querySelector('h3')?.textContent?.trim();
+            if (!id) return;
+            if (pins.has(id)) pins.delete(id); else pins.add(id);
+            setPins(pins);
+            refreshPinsUI();
+            applyFilters();
+          });
+        }
+
+        const shareBtn = job.querySelector('[data-share]');
+        if (shareBtn && shareBtn.dataset.bound !== '1') {
+          shareBtn.dataset.bound = '1';
+          shareBtn.addEventListener('click', () => handleShare(job));
+        }
+
+        job.querySelectorAll('a[href^="contact.html"]').forEach((link) => {
+          if (link.dataset.bound === '1') return;
+          link.dataset.bound = '1';
+          link.addEventListener('click', () => {
+            toast.textContent = 'Application started!';
+            toast.classList.add('show');
+            clearTimeout(toast._t);
+            toast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+          });
+        });
+      });
+      refreshPinsUI();
+      applyFilters();
+    }
 
     function slugify(value = '') {
       return String(value || '')
@@ -520,9 +590,8 @@
     }
 
     function paintJobs(jobs){
-      const host = document.getElementById('jobsDynamic');
-      if (!host) return;
-      host.innerHTML = '';
+      if (!jobsContainer) return;
+      jobsContainer.innerHTML = '';
       jobsState.sections.forEach((section) => {
         const items = jobs.filter((job) => job.sectionKey === section.key);
         if (!items.length) return;
@@ -533,8 +602,8 @@
         board.className = 'jobs-board';
         items.sort((a, b) => ((a.sortOrder ?? 0) - (b.sortOrder ?? 0)) || a.title.localeCompare(b.title));
         board.innerHTML = items.map(renderJobCard).join('');
-        host.appendChild(title);
-        host.appendChild(board);
+        jobsContainer.appendChild(title);
+        jobsContainer.appendChild(board);
       });
     }
 
@@ -587,7 +656,11 @@
       buildDerivedCollections(jobsState.all);
       paintJobs(jobsState.all);
       updateFilterSources();
+      refreshChips();
+      bindChipEvents();
+      bindJobCardEvents();
     }
+    renderJobs();
     /* ---------- Nav ---------- */
     const burger=document.querySelector('.hmj-burger');
     const menu=document.getElementById('hmj-menu');
@@ -621,8 +694,6 @@
 
     /* ---------- Filters, Search & Shortlist ---------- */
     const state={status:'all',location:'all',type:'all',disc:'all',tag:'all',search:'',shortlistOnly:false};
-    const jobsEls=Array.from(document.querySelectorAll('.job'));
-    const chips=Array.from(document.querySelectorAll('.chip'));
     const resultCount=document.getElementById('resultCount');
     const noResultsEl=document.getElementById('noResults');
     const locationSel=document.getElementById('locationFilter');
@@ -636,6 +707,8 @@
 
     if(window.matchMedia('(max-width:680px)').matches){ filtersEl.classList.remove('open'); } else { filtersEl.classList.add('open'); }
     toggleFiltersBtn?.addEventListener('click',()=>filtersEl.classList.toggle('open'));
+    refreshChips();
+    bindChipEvents();
 
     function syncSearch(value){
       if(searchBox && document.activeElement!==searchBox){ searchBox.value=value; }
@@ -659,15 +732,6 @@
       });
       shortlistBtn.textContent=`Shortlist (${pins.size})`;
     }
-    jobsEls.forEach(job=>{
-      const btn=job.querySelector('.pin-btn'); if(!btn) return;
-      btn.addEventListener('click',()=>{
-        const pins=getPins();
-        const id=job.id||job.dataset.id||job.querySelector('h3')?.textContent?.trim();
-        if(pins.has(id)) pins.delete(id); else pins.add(id);
-        setPins(pins); refreshPinsUI(); applyFilters();
-      });
-    });
     shortlistBtn.addEventListener('click',()=>{
       state.shortlistOnly=!state.shortlistOnly;
       shortlistBtn.classList.toggle('btn-primary',state.shortlistOnly);
@@ -676,17 +740,9 @@
     });
     refreshPinsUI();
 
-    chips.forEach(chip=>{
-      chip.addEventListener('click',()=>{
-        const group=chip.dataset.chip;
-        chips.filter(c=>c.dataset.chip===group).forEach(c=>{ c.classList.remove('active'); c.setAttribute('aria-pressed','false'); });
-        chip.classList.add('active'); chip.setAttribute('aria-pressed','true');
-        state[group]=chip.dataset.value; applyFilters();
-      });
-    });
-
     locationSel.addEventListener('change',()=>{ state.location=locationSel.value; applyFilters(); });
     clearBtn.addEventListener('click',()=>{
+      refreshChips();
       state.status='all'; state.location='all'; state.type='all'; state.disc='all'; state.tag='all'; state.search=''; state.shortlistOnly=false;
       locationSel.value='all'; searchBox&&(searchBox.value=''); searchBoxMobile&&(searchBoxMobile.value=''); shortlistBtn.classList.remove('btn-primary');
       ['status','type','disc','tag'].forEach(group=>{
@@ -740,13 +796,6 @@
         else{ const ta=document.createElement('textarea'); ta.value=full; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); showToast(); }catch(e){ showToast('Copy failed'); } document.body.removeChild(ta); }
       }
     }
-    document.querySelectorAll('[data-share]').forEach(btn=>btn.addEventListener('click',()=>handleShare(btn.closest('.job'))));
-
-    // Toast when Apply clicked
-    document.querySelectorAll('a[href^="contact.html"]').forEach(a=>{
-      a.addEventListener('click',function(){ toast.textContent='Application started!'; toast.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>toast.classList.remove('show'),1800); });
-    });
-
     /* ---------- Expandable Details ---------- */
     window.toggleDetails=function(btn){
       const details=btn.parentElement.nextElementSibling;
