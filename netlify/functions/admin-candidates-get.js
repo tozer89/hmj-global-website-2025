@@ -3,9 +3,9 @@ const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 
 exports.handler = async (event, context) => {
-  let payload = {};
-  try { payload = JSON.parse(event.body || '{}'); } catch { payload = {}; }
-  const id = payload.id || event.queryStringParameters?.id || null;
+  let body = {};
+  try { body = JSON.parse(event.body || '{}'); } catch { body = {}; }
+  const id = body.id || event.queryStringParameters?.id || null;
 
   if (!id) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing id' }) };
@@ -15,12 +15,16 @@ exports.handler = async (event, context) => {
     const fallback = loadStaticCandidates().map(toCandidate);
     const match = fallback.find((row) => String(row.id) === String(id));
     if (!match) {
-      return { statusCode: 404, body: JSON.stringify({ error: 'Candidate not found', readOnly: true, source: 'static', auth }) };
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Candidate not found', readOnly: true, source: 'static', auth }),
+      };
     }
-    const payload = { ...match, full_name: match.full_name || `${match.first_name || ''} ${match.last_name || ''}`.trim() };
+    const fullName = match.full_name || `${match.first_name || ''} ${match.last_name || ''}`.trim();
+    const record = { ...match, full_name: fullName };
     return {
       statusCode: 200,
-      body: JSON.stringify({ ...payload, readOnly: true, source: 'static', warning: reason || null, auth })
+      body: JSON.stringify({ ...record, readOnly: true, source: 'static', warning: reason || null, auth }),
     };
   };
 
@@ -34,16 +38,17 @@ exports.handler = async (event, context) => {
 
   const { supabase, supabaseError } = ctx;
 
-    const shouldFallback = (err) => {
-      if (!err) return false;
-      const msg = String(err.message || err);
-      if (/column .+ does not exist/i.test(msg)) return true;
-      if (/relation .+ does not exist/i.test(msg)) return true;
-      if (/permission denied/i.test(msg)) return true;
-      if (/violates row-level security/i.test(msg)) return true;
-      return false;
-    };
+  const shouldFallback = (err) => {
+    if (!err) return false;
+    const msg = String(err.message || err);
+    if (/column .+ does not exist/i.test(msg)) return true;
+    if (/relation .+ does not exist/i.test(msg)) return true;
+    if (/permission denied/i.test(msg)) return true;
+    if (/violates row-level security/i.test(msg)) return true;
+    return false;
+  };
 
+  try {
     if (!supabase || typeof supabase.from !== 'function') {
       return serveStatic(supabaseError?.message || 'supabase_unavailable', { ok: false, error: supabaseError?.message || 'supabase_unavailable' });
     }
@@ -60,14 +65,16 @@ exports.handler = async (event, context) => {
       }
       return serveStatic(error.message, { ok: false, error: error.message, status: 503 });
     }
-    if (!data) throw new Error('Candidate not found');
+
+    if (!data) {
+      return serveStatic('not_found', { ok: false, status: 404, error: 'Candidate not found' });
+    }
 
     const full = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim();
-    const payload = { ...toCandidate(data), full_name: full || data.full_name || null, source: 'supabase' };
+    const record = { ...toCandidate(data), full_name: full || data.full_name || null, source: 'supabase', readOnly: false };
 
-    return { statusCode: 200, body: JSON.stringify(payload) };
+    return { statusCode: 200, body: JSON.stringify(record) };
   } catch (e) {
-    const status = e.code === 401 ? 401 : (e.code === 403 ? 403 : 500);
-    return { statusCode: status, body: JSON.stringify({ error: e.message }) };
+    return serveStatic(e?.message || 'unhandled', { ok: false, status: e?.code || 500, error: e?.message || String(e) });
   }
 };
