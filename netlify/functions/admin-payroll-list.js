@@ -164,16 +164,21 @@ function toCsv(rows = []) {
 
 exports.handler = async (event, context) => {
   try {
-    const { supabase } = await getContext(event, context, { requireAdmin: true });
+    const { supabase, supabaseError } = await getContext(event, context, { requireAdmin: true });
     const body = JSON.parse(event.body || '{}');
     const { status = 'all', q = '', weekFrom, weekTo, ids, limit, format } = body;
     const wantsCsv = String(format || '').toLowerCase() === 'csv';
     const searchNeedle = String(q || '').trim().toLowerCase();
 
+    if (!supabase || typeof supabase.from !== 'function') {
+      const reason = supabaseError?.message || 'Supabase not configured';
+      return { statusCode: 503, body: JSON.stringify({ error: reason, code: 'supabase_unavailable' }) };
+    }
+
     let query = supabase
       .from('timesheets')
       .select(
-        `id,week_start,week_ending,status,submitted_at,approved_at,created_at,updated_at,assignment_id,assignment_ref,candidate_id,candidate_name,client_name,total_hours,ot_hours,pay_amount,charge_amount,rate_pay,rate_charge,currency,approver_email,notes`
+        `id,week_start,week_ending,status,submitted_at,approved_at,assignment_id,assignment_ref,candidate_id,candidate_name,client_name,total_hours,ot_hours,pay_amount,charge_amount,rate_pay,rate_charge,currency,approver_email,notes`
       )
       .order('week_ending', { ascending: false })
       .limit(Math.min(Math.max(Number(limit) || 250, 50), 500));
@@ -331,7 +336,7 @@ exports.handler = async (event, context) => {
           currency: ts.currency || assignment?.currency || 'GBP',
           approvedAt: ts.approved_at || null,
           submittedAt: ts.submitted_at || null,
-          updatedAt: ts.updated_at || ts.created_at || null,
+          updatedAt: ts.approved_at || ts.submitted_at || ts.week_ending || null,
           audit: audit
             ? {
                 id: audit.id,

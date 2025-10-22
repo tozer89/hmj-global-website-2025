@@ -1,12 +1,26 @@
 // netlify/functions/admin-candidates-get.js
 const { getContext } = require('./_auth.js');
+const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 
 exports.handler = async (event, context) => {
   try {
-    const { supabase } = await getContext(event, context, { requireAdmin: true });
+    const { supabase, supabaseError } = await getContext(event, context, { requireAdmin: true });
 
     const { id } = JSON.parse(event.body || '{}');
     if (!id) throw new Error('Missing id');
+
+    if (!supabase || typeof supabase.from !== 'function') {
+      const fallback = loadStaticCandidates().map(toCandidate);
+      const match = fallback.find((row) => String(row.id) === String(id));
+      if (!match) {
+        return { statusCode: 404, body: JSON.stringify({ error: 'Candidate not found', readOnly: true }) };
+      }
+      const payload = { ...match, full_name: match.full_name || `${match.first_name || ''} ${match.last_name || ''}`.trim() };
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ ...payload, readOnly: true, source: 'static', warning: supabaseError?.message || null }),
+      };
+    }
 
     // Select explicit columns you expect. Unknown columns in select() cause errors,
     // so if you’re unsure, either add the columns to your table or remove them here.

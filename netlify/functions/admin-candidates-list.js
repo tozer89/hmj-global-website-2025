@@ -1,7 +1,8 @@
-// netlify/functions/admin-candidates-lists.js
+// netlify/functions/admin-candidates-list.js
 // Lists candidates with strong debugging so we can see why it's empty.
 
-const { getContext, coded } = require('./_auth.js');
+const { getContext } = require('./_auth.js');
+const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 
 // Small helper to coalesce falsy/empty strings to null
 const nz = (s) => (s === undefined || s === null || String(s).trim() === '' ? null : s);
@@ -57,8 +58,10 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const { supabase, roles, user } = ctx;
+  const { supabase, supabaseError, roles, user } = ctx;
   const usingServiceKey = true; // getContext() uses SERVICE KEY under the hood
+
+  const supabaseUnavailable = !supabase || typeof supabase.from !== 'function';
 
   // Quick diag endpoint (still requires admin)
   if (isGET && (event.queryStringParameters?.diag === '1')) {
@@ -86,6 +89,73 @@ exports.handler = async (event, context) => {
   const to = from + pageSize - 1;
 
   // Build base query
+  if (supabaseUnavailable) {
+    const staticRows = loadStaticCandidates();
+    const normalised = staticRows.map(toCandidate);
+    const filterText = (val) => String(val || '').toLowerCase();
+    const qNeedle = filterText(nz(q));
+    const statusNeedle = filterText(nz(status));
+    const typeNeedle = filterText(nz(type));
+
+    let filteredRows = normalised.filter((row) => {
+      const haystack = [
+        row.ref,
+        row.first_name,
+        row.last_name,
+        row.email,
+        row.phone,
+        row.job_title,
+        row.client_name,
+        row.payroll_ref,
+      ]
+        .filter(Boolean)
+        .map(filterText)
+        .join(' ');
+
+      const matchesQ = !qNeedle || haystack.includes(qNeedle);
+      const matchesStatus = !statusNeedle || filterText(row.status) === statusNeedle;
+      const matchesType = !typeNeedle || filterText(row.pay_type) === typeNeedle;
+      return matchesQ && matchesStatus && matchesType;
+    });
+
+    filteredRows.sort((a, b) => {
+      const key = sort?.key || 'id';
+      const dir = String(sort?.dir || '').toLowerCase() === 'asc' ? 1 : -1;
+      const valueOf = (row) => {
+        if (key === 'name') return `${row.first_name || ''} ${row.last_name || ''}`.trim().toLowerCase();
+        return (row[key] || '').toString().toLowerCase();
+      };
+      const av = valueOf(a);
+      const bv = valueOf(b);
+      if (av === bv) return 0;
+      return av > bv ? dir : -dir;
+    });
+
+    const total = filteredRows.length;
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const pageRows = filteredRows.slice(from, from + pageSize);
+
+    const response = {
+      rows: pageRows,
+      total,
+      filtered: total,
+      pages,
+      readOnly: true,
+      source: 'static',
+    };
+
+    if (debug) {
+      response.debug = {
+        took_ms: Date.now() - started,
+        mode: 'static',
+        usingServiceKey: false,
+        supabaseError: supabaseError?.message || null,
+      };
+    }
+
+    return { statusCode: 200, body: JSON.stringify(response) };
+  }
+
   let query = supabase
     .from('candidates')
     .select(

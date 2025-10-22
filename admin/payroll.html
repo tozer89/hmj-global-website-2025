@@ -408,7 +408,12 @@
           renderMetrics();
           renderTable();
         } catch (e) {
+          if (/supabase/i.test(String(e.message || e))) {
+            chip('supabase offline', 'warn');
+          }
           if (listWrap) listWrap.textContent = 'Load failed. ' + (e.message || e);
+          state.rows = [];
+          renderTable();
         }
       }
 

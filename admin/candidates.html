@@ -255,6 +255,7 @@
       let currentTab = 'Basics';
       let page = 1, pageSize = 25;
       let activeStatus = '';
+      let readOnlyMode = false;
 
       const columns = [
         { key:'ref',        label:'Ref',    show:true, width:'100px' },
@@ -279,11 +280,50 @@
       }
 
       const $ = sel;
-      const enableDelete = () => { $('#btnDelete').disabled = selected.size===0; $('#btnExportSel').disabled = selected.size===0; };
+      const enableDelete = () => {
+        const deleteDisabled = readOnlyMode || selected.size === 0;
+        const delBtn = $('#btnDelete');
+        if (delBtn) delBtn.disabled = deleteDisabled;
+        const exportSel = $('#btnExportSel');
+        if (exportSel) exportSel.disabled = selected.size === 0;
+      };
       const drawer = $('#drawer');
       const openDrawer = () => drawer.classList.add('open');
       const closeDrawer = () => { drawer.classList.remove('open'); setTimeout(()=>resetForm(),150); };
       $('#btnClose').onclick = closeDrawer;
+
+      const readOnlyBanner = document.createElement('div');
+      readOnlyBanner.className = 'card';
+      readOnlyBanner.style.display = 'none';
+      readOnlyBanner.style.marginBottom = '16px';
+      readOnlyBanner.innerHTML = '<strong>Preview mode.</strong> Supabase is not configured so changes are read-only in this deploy.';
+      const appWrap = $('#app .wrap') || $('#app');
+      if (appWrap && appWrap.firstChild) {
+        appWrap.insertBefore(readOnlyBanner, appWrap.firstChild);
+      } else if (appWrap) {
+        appWrap.appendChild(readOnlyBanner);
+      }
+
+      let readOnlyChipSet = false;
+      function applyReadOnly() {
+        const disabledSelectors = ['#btnNew', '#btnDelete', '#btnImport', '#btnSaveDraft', '#btnSaveClose'];
+        disabledSelectors.forEach((selector) => {
+          const el = $(selector);
+          if (!el) return;
+          const shouldDisable = readOnlyMode;
+          el.disabled = shouldDisable || (selector === '#btnDelete' && selected.size === 0);
+        });
+        if (readOnlyMode) {
+          readOnlyBanner.style.display = '';
+          if (!readOnlyChipSet) {
+            chip('supabase: offline', 'warn');
+            readOnlyChipSet = true;
+          }
+        } else {
+          readOnlyBanner.style.display = 'none';
+        }
+        enableDelete();
+      }
 
       function pillForStatus(s){
         const tone = s==='Complete' ? 'b-ok' : s==='Archived' ? 'b-bad' : 'b-warn';
@@ -461,12 +501,18 @@
             q: ($('#q')?.value || '').trim(),
             status: activeStatus || ''
           });
+          readOnlyMode = !!res?.readOnly;
+          applyReadOnly();
           allRows = Array.isArray(res) ? res : (res.rows || []);
           allRows.forEach(r=>{ r.name = `${r.first_name||''} ${r.last_name||''}`.trim(); });
           page = 1; selected.clear(); enableDelete();
           render(); renderQuick(null);
         }catch(e){
           console.error('[candidates] list error', e);
+          if (/supabase/i.test(String(e.message || e))) {
+            readOnlyMode = true;
+            applyReadOnly();
+          }
           wrap.textContent = 'Error: ' + (e.message || e);
         }
       }
@@ -493,6 +539,7 @@
       }
 
       async function delSelected(){
+        if (readOnlyMode) { toast('Preview deploy is read-only until Supabase is configured.', 'warn', 3200); return; }
         if (!selected.size) return;
         if (!confirm(`Delete ${selected.size} candidate(s)?`)) return;
         try{
@@ -525,8 +572,12 @@
           toast('Export failed: ' + (e.message || e), 'error', 4200);
         }
       }
-      function importCSVClick(){ $('#csv')?.click(); }
+      function importCSVClick(){
+        if (readOnlyMode) { toast('Import disabled — preview deploy is read-only.', 'warn', 3200); return; }
+        $('#csv')?.click();
+      }
       async function importCSVDo(file){
+        if (readOnlyMode) { toast('Import disabled — preview deploy is read-only.', 'warn', 3200); return; }
         try{
           const text = await file.text();
           const res  = await api('admin-candidates-import','POST',{ csv:text });
@@ -836,6 +887,7 @@
         }
       }
       async function save(closeAfter=false){
+        if (readOnlyMode) { toast('Preview deploy is read-only until Supabase is configured.', 'warn', 3200); return; }
         try{
           const body = readForm();
           const existingId = editing?.id || null;

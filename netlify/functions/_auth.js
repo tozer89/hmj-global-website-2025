@@ -39,7 +39,6 @@ function getSupabaseAdmin() {
  *   - nf_jwt cookie
  */
 exports.getContext = async (event, context, opts = {}) => {
-  const supabase = getSupabaseAdmin();
   const debug = !!opts.debug;
 
   let user = context?.clientContext?.user || null;
@@ -71,10 +70,25 @@ exports.getContext = async (event, context, opts = {}) => {
   roles = roles.length ? roles : rolesFromClaims(user);
   if (opts.requireAdmin && !roles.includes('admin')) throw coded(403, 'Forbidden');
 
-  if (debug) {
-    console.log('[auth] email:', user.email, 'roles:', roles);
+  let supabase = null;
+  let supabaseError = null;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch (err) {
+    const message = err?.message || '';
+    const missingEnv = err?.code === 500 && /SUPABASE_/i.test(message);
+    if (missingEnv) {
+      supabaseError = err;
+      supabase = null;
+    } else {
+      throw err;
+    }
   }
-  return { user, roles, supabase };
+
+  if (debug) {
+    console.log('[auth] email:', user.email, 'roles:', roles, 'supabase?', !!supabase);
+  }
+  return { user, roles, supabase, supabaseError };
 };
 
 exports.coded = coded;

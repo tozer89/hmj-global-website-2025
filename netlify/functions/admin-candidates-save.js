@@ -4,9 +4,14 @@ const { getContext, coded } = require('./_auth.js');
 exports.handler = async (event, context) => {
   try {
     // ✅ IMPORTANT: pass (event, context, { requireAdmin:true })
-    const { user, roles, supabase } = await getContext(event, context, { requireAdmin: true });
+    const { user, roles, supabase, supabaseError } = await getContext(event, context, { requireAdmin: true });
 
     if (event.httpMethod !== 'POST') throw coded(405, 'Method Not Allowed');
+
+    if (!supabase || typeof supabase.from !== 'function') {
+      const reason = supabaseError?.message || 'Supabase not configured for this deploy';
+      throw coded(503, reason);
+    }
 
     const body = JSON.parse(event.body || '{}');
 
@@ -66,6 +71,6 @@ exports.handler = async (event, context) => {
     return { statusCode: 200, body: JSON.stringify({ id: result.id, ok: true, took_ms }) };
   } catch (e) {
     const status = e.code || 500;
-    return { statusCode: status, body: JSON.stringify({ error: e.message || 'Error' }) };
+    return { statusCode: status, body: JSON.stringify({ error: e.message || 'Error', readOnly: status === 503 }) };
   }
 };
