@@ -282,18 +282,34 @@
   window.Admin.bootAdmin = async function bootAdmin(mainFn) {
     try {
       const helpers = await window.adminReady();
+
+      // Hook Identity events once so that a successful login triggers a reload
+      // even if the initial gate check blocks the user. Without this the page
+      // would stay on the gate screen after logging in via the widget.
+      const id = window.netlifyIdentity;
+      if (id && typeof id.on === 'function' && !id.__hmjHooks) {
+        id.__hmjHooks = true;
+        id.on('login', () => {
+          try {
+            location.reload();
+          } catch (err) {
+            Debug.warn('reload after login failed', err);
+          }
+        });
+        id.on('logout', () => {
+          try {
+            location.href = '/admin/';
+          } catch (err) {
+            Debug.warn('redirect after logout failed', err);
+          }
+        });
+      }
+
       const who = await helpers.gate({ adminOnly: true });
       if (!who) {
         toast('Restricted. Sign in with an admin account.', 'warn', 4500);
         Debug.warn('Gate blocked: no session / no admin role');
         return;
-      }
-
-      // Hook Identity events so navigation stays consistent
-      const id = window.netlifyIdentity;
-      if (id && typeof id.on === 'function') {
-        id.on('login', () => location.reload());
-        id.on('logout', () => (location.href = '/admin/'));
       }
 
       // Debug chip line (optional)
