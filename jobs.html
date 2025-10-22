@@ -1091,20 +1091,47 @@
         }
       }
     }
-    const embeddedSeed = loadEmbeddedJobs();
-    if (Array.isArray(embeddedSeed) && embeddedSeed.length) {
-      showSeededJobs(embeddedSeed, 'embedded');
-    }
-    renderJobs().catch((err) => {
-      console.error('jobs initial load failed', err);
-      if (!seededJobsApplied) {
-        const fallbackNotice = document.getElementById('jobsFallbackNotice');
-        if (fallbackNotice) {
-          fallbackNotice.hidden = false;
-          fallbackNotice.textContent = 'Job data is temporarily unavailable. Please try again shortly.';
+    async function bootstrapJobs(){
+      let seeded = false;
+      const embeddedSeed = loadEmbeddedJobs();
+      if (Array.isArray(embeddedSeed) && embeddedSeed.length) {
+        console.info('jobs: rendering embedded fallback dataset (%d rows)', embeddedSeed.length);
+        showSeededJobs(embeddedSeed, 'embedded');
+        seeded = true;
+      }
+
+      if (!seeded) {
+        try {
+          const jsonSeed = await loadJobsJSON();
+          if (Array.isArray(jsonSeed) && jsonSeed.length) {
+            console.info('jobs: rendering static JSON fallback dataset (%d rows)', jsonSeed.length);
+            showSeededJobs(jsonSeed, 'static-json');
+            seeded = true;
+          }
+        } catch (err) {
+          console.warn('jobs: static JSON preload failed', err);
         }
       }
-    });
+
+      if (!seeded) {
+        console.warn('jobs: no immediate fallback dataset available — waiting for API response');
+      }
+
+      try {
+        await renderJobs();
+      } catch (err) {
+        console.error('jobs initial load failed', err);
+        if (!seededJobsApplied) {
+          const fallbackNotice = document.getElementById('jobsFallbackNotice');
+          if (fallbackNotice) {
+            fallbackNotice.hidden = false;
+            fallbackNotice.textContent = 'Job data is temporarily unavailable. Please try again shortly.';
+          }
+        }
+      }
+    }
+
+    bootstrapJobs();
     /* ---------- Nav ---------- */
     const burger=document.querySelector('.hmj-burger');
     const menu=document.getElementById('hmj-menu');
