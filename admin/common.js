@@ -111,7 +111,8 @@
 
   function ensureIdentityInit() {
     const id = window.netlifyIdentity;
-    if (!id || typeof id.init !== 'function' || id.__hmjInit) return id;
+    if (!id || typeof id.init !== 'function') return id;
+    if (id.__hmjInit) return id;
 
     id.__hmjInit = true;
     const opts = {};
@@ -124,6 +125,28 @@
       id.on('open', () => brandIdentityWidget(id));
     } catch (err) {
       Debug.warn('identity brand hook failed', err);
+    }
+
+    if (!id.__hmjInitWaiter && typeof id.on === 'function') {
+      id.__hmjInitWaiter = new Promise((resolve) => {
+        const done = (user) => {
+          if (id) id.__hmjInitUser = user || null;
+          resolve(user || null);
+        };
+        try {
+          id.on('init', (user) => done(user));
+        } catch (err) {
+          Debug.warn('identity init listener failed', err);
+          done(null);
+        }
+        setTimeout(() => {
+          try {
+            done(id?.currentUser?.() || null);
+          } catch {
+            done(null);
+          }
+        }, 1200);
+      });
     }
 
     return id;
@@ -148,8 +171,22 @@
     try {
       const id = ensureIdentityInit();
       if (id && typeof id.currentUser === 'function') {
-        const u = id.currentUser();
+        let u = id.currentUser();
         if (u) return u;
+        try {
+          if (id.__hmjInitWaiter) {
+            const resolved = await Promise.race([
+              id.__hmjInitWaiter,
+              sleep(1500).then(() => null)
+            ]);
+            if (resolved) return resolved;
+          }
+        } catch (err) {
+          Debug.warn('identity init wait failed', err);
+        }
+        u = id.currentUser?.();
+        if (u) return u;
+        if (id.__hmjInitUser) return id.__hmjInitUser;
       }
     } catch {}
     // Cookie-only session: we can’t read profile, but a token may exist
@@ -165,11 +202,13 @@
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
     try { token = user ? (await (user.token?.() || user.jwt?.())) : '' } catch {}
-    const roles = (user?.app_metadata?.roles || user?.roles || []);
+    const rolesRaw = user?.app_metadata?.roles || user?.roles || [];
+    const roles = Array.isArray(rolesRaw) ? rolesRaw.map(r => String(r).toLowerCase()) : [];
     const role = roles.includes('admin') ? 'admin' :
                  roles.includes('recruiter') ? 'recruiter' :
                  roles.includes('client') ? 'client' : (roles[0] || '');
-    const ok = !!token && (!requiredRole || roles.includes(requiredRole) || role === requiredRole);
+    const required = requiredRole ? String(requiredRole).toLowerCase() : '';
+    const ok = !!token && (!required || roles.includes(required) || role === required);
     return { ok, user, token, role, email: user?.email || '' };
   }
 
