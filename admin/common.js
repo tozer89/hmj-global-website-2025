@@ -248,7 +248,16 @@
   const getTrace = () => TRACE || setTrace();
 
   async function api(path, method = 'POST', body) {
-    const url = path.startsWith('/') ? `/.netlify/functions${path}`.replace('//.','/.') : path;
+    const rawPath = String(path || '');
+    const isAbsolute = /^https?:\/\//i.test(rawPath);
+    let url = rawPath;
+    if (!isAbsolute) {
+      const hasLeadingSlash = rawPath.startsWith('/');
+      const trimmed = rawPath.replace(/^\/+/, '');
+      url = hasLeadingSlash
+        ? `/.netlify/functions/${trimmed}`.replace('/.netlify/functions//', '/.netlify/functions/')
+        : `/.netlify/functions/${trimmed}`;
+    }
 
     // Get a token — widget user or cookie
     let token = '';
@@ -268,7 +277,7 @@
       method,
       headers,
       credentials: 'include',
-      body: body ? JSON.stringify(body) : undefined
+      body: body && method !== 'GET' && method !== 'HEAD' ? JSON.stringify(body) : undefined
     });
     const txt = await res.text();
     let json; try { json = txt ? JSON.parse(txt) : null; } catch { json = { raw: txt }; }
