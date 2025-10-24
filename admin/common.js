@@ -285,8 +285,13 @@
 
     if (!res.ok) {
       const msg = json?.error || json?.message || `HTTP ${res.status}`;
-      toast(msg, 'error', 5000);
-      throw new Error(msg);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.details = json;
+      if (res.status !== 401 && res.status !== 403) {
+        toast(msg, 'error', 5000);
+      }
+      throw err;
     }
     return json;
   }
