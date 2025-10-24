@@ -20,7 +20,7 @@
 }
 
 .about-section {
-  padding: clamp(20px, 3.8vw, 32px) 0;
+  padding: clamp(18px, 3vw, 28px) 0;
   position: relative;
 }
 
@@ -54,10 +54,10 @@
 
 .about-hero {
   position: relative;
-  min-height: clamp(340px, 54vh, 500px);
+  min-height: clamp(320px, 52vh, 460px);
   display: grid;
   place-items: center;
-  padding: clamp(48px, 8vw, 80px) 0 clamp(32px, 6vw, 60px);
+  padding: clamp(40px, 7vw, 70px) 0 clamp(26px, 5vw, 48px);
   overflow: hidden;
   background: radial-gradient(circle at 20% 20%, rgba(63,102,199,0.18), transparent 45%),
               radial-gradient(circle at 80% 25%, rgba(47,78,162,0.22), transparent 55%),
@@ -100,10 +100,10 @@
   z-index: 2;
   text-align: center;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   color: var(--ink);
   backdrop-filter: blur(10px);
-  padding: clamp(16px, 2.6vw, 24px);
+  padding: clamp(14px, 2.2vw, 20px);
   border-radius: 28px;
   background: rgba(255,255,255,0.78);
   box-shadow: var(--shadow);
@@ -126,7 +126,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .about-chip {
@@ -150,8 +150,8 @@
 .about-timeline__track {
   position: relative;
   display: flex;
-  gap: clamp(10px, 1.8vw, 16px);
-  padding: clamp(14px, 2vw, 20px);
+  gap: clamp(10px, 1.6vw, 14px);
+  padding: clamp(12px, 1.8vw, 18px);
   border-radius: 28px;
   background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(238,242,255,0.9));
   box-shadow: var(--shadow);
@@ -399,19 +399,19 @@
 .about-values__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: clamp(10px, 2vw, 18px);
+  gap: clamp(10px, 1.6vw, 16px);
   content-visibility: auto;
 }
 
 .about-values__item {
   position: relative;
   border-radius: 24px;
-  padding: 18px;
+  padding: 16px;
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(47,78,162,0.16);
   box-shadow: 0 12px 26px rgba(15,27,63,0.12);
   display: grid;
-  gap: 12px;
+  gap: 10px;
   transition: transform 180ms ease, box-shadow 220ms ease, border-color 220ms ease;
   overflow: hidden;
 }
@@ -479,18 +479,18 @@
 .about-stats__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: clamp(10px, 2vw, 18px);
-  margin-bottom: clamp(14px, 2.8vw, 24px);
+  gap: clamp(10px, 1.8vw, 16px);
+  margin-bottom: clamp(12px, 2.4vw, 22px);
 }
 
 .about-stat {
   border-radius: 24px;
-  padding: clamp(16px, 2.6vw, 24px);
+  padding: clamp(14px, 2.2vw, 20px);
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(47,78,162,0.16);
   box-shadow: 0 12px 26px rgba(15,27,63,0.12);
   display: grid;
-  gap: 10px;
+  gap: 8px;
   justify-items: center;
   text-align: center;
 }
@@ -508,7 +508,7 @@
 
 .about-esg {
   border-radius: 28px;
-  padding: clamp(18px, 2.6vw, 26px);
+  padding: clamp(16px, 2.4vw, 24px);
   background: linear-gradient(135deg, rgba(47,78,162,0.14), rgba(63,102,199,0.08));
   border: 1px solid rgba(47,78,162,0.25);
   box-shadow: 0 16px 36px rgba(15,27,63,0.16);
@@ -531,9 +531,9 @@
   background: rgba(255,255,255,0.95);
   border: 1px solid rgba(47,78,162,0.16);
   box-shadow: 0 18px 38px rgba(15,27,63,0.16);
-  padding: clamp(22px, 3.6vw, 32px);
+  padding: clamp(18px, 3vw, 26px);
   display: grid;
-  gap: 20px;
+  gap: 16px;
   position: relative;
   overflow: hidden;
   touch-action: pan-y;
@@ -541,14 +541,14 @@
 
 .about-testimonials__viewport {
   display: flex;
-  gap: 18px;
+  gap: 16px;
   transition: transform 400ms ease;
 }
 
 .about-testimonial {
   min-width: 100%;
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .about-testimonial blockquote {
@@ -645,7 +645,7 @@
 }
 
 .about-cta {
-  padding-bottom: clamp(26px, 3.8vw, 40px);
+  padding-bottom: clamp(24px, 3.2vw, 36px);
 }
 
 .about-cta__inner {
@@ -653,7 +653,7 @@
   background: linear-gradient(135deg, rgba(63,102,199,0.18), rgba(47,78,162,0.28));
   color: #fff;
   text-align: center;
-  padding: clamp(28px, 4.8vw, 46px);
+  padding: clamp(24px, 4.2vw, 38px);
   box-shadow: 0 20px 48px rgba(15,27,63,0.28);
   display: grid;
   gap: 16px;
@@ -718,7 +718,7 @@ body:not(.about-has-js) .about-testimonials[hidden] {
   right: clamp(16px, 4vw, 40px);
   bottom: clamp(16px, 6vw, 48px);
   display: grid;
-  gap: 10px;
+  gap: 8px;
   z-index: 3000;
   pointer-events: none;
 }
@@ -809,13 +809,13 @@ body:not(.about-has-js) .about-testimonials[hidden] {
 
   .about-hero {
     min-height: auto;
-    padding: clamp(48px, 18vw, 68px) 0 clamp(28px, 12vw, 44px);
+    padding: clamp(40px, 16vw, 60px) 0 clamp(24px, 10vw, 38px);
   }
 
   .about-hero__inner {
     text-align: left;
-    gap: 10px;
-    padding: clamp(16px, 4.5vw, 22px);
+    gap: 8px;
+    padding: clamp(14px, 4.2vw, 20px);
   }
 
   .about-hero__inner h1 {
@@ -830,7 +830,7 @@ body:not(.about-has-js) .about-testimonials[hidden] {
   .about-team__grid,
   .about-values__grid,
   .about-stats__grid {
-    gap: 14px;
+    gap: 12px;
   }
 
   .about-testimonial blockquote::before {
