@@ -37,12 +37,36 @@
     </div>
   </div>
   <script>
-    // If a user logs in and has access, send them to the admin console
-    document.addEventListener('DOMContentLoaded',()=>{
-      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-      if (typeof identity?.on !== 'function') return;
-      identity.on('login', ()=> { window.location.href = '/admin/timesheets.html'; });
-    });
+    (function () {
+      'use strict';
+
+      const resolveIdentity = () => {
+        try {
+          return window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+        } catch (err) {
+          if (console?.warn) {
+            console.warn('[HMJ] identity resolve failed', err);
+          }
+          return window.netlifyIdentity || null;
+        }
+      };
+
+      const bindRedirects = (identity) => {
+        if (!identity || typeof identity.on !== 'function' || identity.__hmjUnauthorizedBound) {
+          return;
+        }
+        identity.__hmjUnauthorizedBound = true;
+        identity.on('login', () => { window.location.href = '/admin/timesheets.html'; });
+      };
+
+      document.addEventListener('hmj:identity-change', (event) => {
+        bindRedirects(event?.detail?.identity || null);
+      });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        bindRedirects(resolveIdentity());
+      });
+    })();
   </script>
 </body>
 </html>

@@ -8,20 +8,44 @@
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="js/hmj-nav.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-      if (!identity || typeof identity.on !== 'function') return;
+    (function () {
+      'use strict';
 
-      identity.on('login', () => {
-        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-        sessionStorage.removeItem('afterLogin');
-        window.location.href = dest;
+      const resolveIdentity = () => {
+        try {
+          return window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+        } catch (err) {
+          if (console?.warn) {
+            console.warn('[HMJ] identity resolve failed', err);
+          }
+          return window.netlifyIdentity || null;
+        }
+      };
+
+      const bindRedirects = (identity) => {
+        if (!identity || typeof identity.on !== 'function' || identity.__hmjRedirectBound) {
+          return;
+        }
+        identity.__hmjRedirectBound = true;
+        identity.on('login', () => {
+          const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
+          sessionStorage.removeItem('afterLogin');
+          window.location.href = dest;
+        });
+        identity.on('logout', () => {
+          sessionStorage.removeItem('afterLogin');
+          window.location.href = '/';
+        });
+      };
+
+      document.addEventListener('hmj:identity-change', (event) => {
+        bindRedirects(event?.detail?.identity || null);
       });
 
-      identity.on('logout', () => {
-        window.location.href = '/';
+      document.addEventListener('DOMContentLoaded', () => {
+        bindRedirects(resolveIdentity());
       });
-    });
+    })();
   </script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
   <link rel="stylesheet" href="css/style.css" />
