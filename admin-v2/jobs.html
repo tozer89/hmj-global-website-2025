@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Jobs | HMJ-Global</title>
-  <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preload" href="/images/hero.jpg" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="/css/style.css" />
   <style>
     :root{
       --ink:#1A1A2E; --accent:#3A66B3; --muted:#6b7280; --bg:#1a243b; --chip:#eef3ff;
@@ -39,7 +39,7 @@
     .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 
     /* ===== Page header ===== */
-    .page-header{min-height:40vh;display:grid;place-items:center;padding:120px 20px 80px;text-align:center;color:#fff;position:relative;background:url('images/hero.jpg') center/cover no-repeat;}
+    .page-header{min-height:40vh;display:grid;place-items:center;padding:120px 20px 80px;text-align:center;color:#fff;position:relative;background:url('/images/hero.jpg') center/cover no-repeat;}
     .page-header::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55))}
     .page-header::after{
       content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
@@ -153,17 +153,17 @@
   <!-- ===== Header / Navbar ===== -->
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">
-      <a class="hmj-logo" href="index.html">
-        <img src="images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
+      <a class="hmj-logo" href="/index.html">
+        <img src="/images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
       </a>
       <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
         <span></span><span></span><span></span>
       </button>
       <ul id="hmj-menu" class="hmj-menu">
-        <li><a href="index.html" data-page="index">Home</a></li>
-        <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
-        <li><a href="clients.html" data-page="clients">Clients</a></li>
-        <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
+        <li><a href="/index.html" data-page="index">Home</a></li>
+        <li><a href="/candidates.html" data-page="candidates">Candidates</a></li>
+        <li><a href="/clients.html" data-page="clients">Clients</a></li>
+        <li><a href="/jobs.html" data-page="jobs">Jobs</a></li>
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <!-- <li><a href="admin/" data-page="portal">.</a></li> -->
 
@@ -250,392 +250,42 @@
   </div>
 
   <!-- ===== Sections & Cards (fallback content) ===== -->
-  <div class="section-title reveal"><h2>DATA CENTRE – COMMERCIAL</h2></div>
-  <section id="jobsBoard-commercial" class="jobs-board">
-    <!-- Fallback cards … (kept as-is) -->
-    <div id="qs-london-dc" class="job reveal" data-id="qs-london-dc" data-status="live" data-location="london" data-type="permanent" data-disc="data centre" data-keywords="quantity surveyor qs london dc commercial nec fidic">
-      <h3>Quantity Surveyor — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> London, UK <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Quantity Surveyor — Data Centre (London)">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Join a leading DC contractor in London, managing commercial delivery across fast-paced build/fit-out packages: change, cost control and subcontract management.</p>
-        <h4>Requirements</h4>
-        <ul><li>QS background on data centre or mission-critical projects.</li><li>NEC/FIDIC experience and robust reporting.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Quantity Surveyor — Data Centre (London)">Apply</a></div>
-      </div>
+  <div id="jobs-sections">
+    <div class="board-block" data-board="jobsBoard-commercial">
+      <div class="section-title reveal"><h2>DATA CENTRE – COMMERCIAL</h2></div>
+      <section id="jobsBoard-commercial" class="jobs-board">
+        <div class="no-results" style="display:block">Jobs loading…</div>
+      </section>
     </div>
 
-    <div id="mep-sqs-eem" class="job reveal" data-id="mep-sqs-eem" data-status="live" data-location="eemshaven" data-type="permanent" data-disc="data centre" data-keywords="mep senior quantity surveyor dc nec fidic commercial">
-      <h3>MEP Senior Quantity Surveyor — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Eemshaven, Netherlands <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=MEP Senior Quantity Surveyor — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Lead MEP commercial delivery on a hyperscale DC build: cost control, procurement, change, forecasting, and subcontract administration.</p>
-        <h4>Requirements</h4>
-        <ul>
-          <li>Senior QS with strong MEP package exposure on DC/mission-critical projects.</li>
-          <li>NEC/FIDIC familiarity; stakeholder & supply chain leadership.</li>
-          <li>Accurate monthly reporting and value engineering capability.</li>
-        </ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=MEP Senior Quantity Surveyor — Data Centre">Apply</a></div>
-      </div>
+    <div class="board-block" data-board="jobsBoard-dc">
+      <div class="section-title reveal"><h2>DATA CENTRE – ENGINEERING &amp; MANAGEMENT</h2></div>
+      <section id="jobsBoard-dc" class="jobs-board">
+        <div class="no-results" style="display:block">Jobs loading…</div>
+      </section>
     </div>
 
-    <div id="csa-sqs-eem" class="job reveal" data-id="csa-sqs-eem" data-status="interviewing" data-location="eemshaven" data-type="permanent" data-disc="data centre" data-keywords="csa senior quantity surveyor envelope civils structure fit-out change claims">
-      <h3>CSA Senior Quantity Surveyor — Data Centre</h3>
-      <span class="status interviewing">Interviewing</span>
-      <p><strong>Location:</strong> Eemshaven, Netherlands <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=CSA Senior Quantity Surveyor — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Commercial lead across CSA packages (civils, structure, architecture) on a large data centre campus.</p>
-        <h4>Requirements</h4>
-        <ul><li>Senior QS with CSA fit-out/envelope experience on complex builds.</li><li>Change management, claims preparation, subcontract negotiation.</li><li>EV, cash-flow and robust commercial reporting.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=CSA Senior Quantity Surveyor — Data Centre">Apply</a></div>
-      </div>
+    <div class="board-block" data-board="jobsBoard-substations">
+      <div class="section-title reveal"><h2>SUBSTATION &amp; POWER</h2></div>
+      <section id="jobsBoard-substations" class="jobs-board">
+        <div class="no-results" style="display:block">Jobs loading…</div>
+      </section>
     </div>
 
-    <div id="sqs-dublin" class="job reveal" data-id="sqs-dublin" data-status="interviewing" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="senior quantity surveyor data centre commercial">
-      <h3>Senior Quantity Surveyor — Data Centre</h3>
-      <span class="status interviewing">Interviewing</span>
-      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Senior Quantity Surveyor — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Commercial lead on a major DC build—cost control, procurement, change management & subcontract oversight.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Senior Quantity Surveyor — Data Centre">Apply</a></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="section-title reveal"><h2>DATA CENTRE – ENGINEERING & MANAGEMENT</h2></div>
-  <section id="jobsBoard-dc" class="jobs-board">
-    <div id="planner-dublin" class="job reveal" data-id="planner-dublin" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="project planner scheduler p6 primavera data centre dublin">
-      <h3>Project Planner — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Project Planner — Data Centre (Dublin)">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Develop & maintain integrated Primavera P6 schedules for a hyperscale data centre programme. Interface with package managers, commissioning & commercial teams.</p>
-        <h4>Requirements</h4>
-        <ul><li>P6 expertise with large-scale build environments (DC/mission-critical preferred).</li><li>Progress measurement, risk/change controls, stakeholder reporting.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Project Planner — Data Centre (Dublin)">Apply</a></div>
-      </div>
+    <div class="board-block" data-board="jobsBoard-pharma">
+      <div class="section-title reveal"><h2>LIFE SCIENCES &amp; PHARMA</h2></div>
+      <section id="jobsBoard-pharma" class="jobs-board">
+        <div class="no-results" style="display:block">Jobs loading…</div>
+      </section>
     </div>
 
-    <div id="electrician-amsterdam" class="job reveal" data-id="electrician-amsterdam" data-status="live" data-location="amsterdam" data-type="contract" data-disc="data centre" data-keywords="electrician installer lv mv testing commissioning amsterdam data centre">
-      <h3>Electrician — Data Centre Construction</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Amsterdam, Netherlands <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Contract</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrician — Data Centre (Amsterdam)">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Hands-on installation, test & commissioning of LV/MV systems on a DC build in Amsterdam. Work safely to programme with QA documentation.</p>
-        <h4>Requirements</h4>
-        <ul><li>NVQ3 (or EU equivalent); ECS/JIB or VCA; 18th Edition/equivalent.</li><li>Containment, wiring, terminations and testing experience.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrician — Data Centre (Amsterdam)">Apply</a></div>
-      </div>
+    <div class="board-block" data-board="jobsBoard-ict">
+      <div class="section-title reveal"><h2>ICT &amp; COMMISSIONING</h2></div>
+      <section id="jobsBoard-ict" class="jobs-board">
+        <div class="no-results" style="display:block">Jobs loading…</div>
+      </section>
     </div>
-
-    <div id="epm-frankfurt" class="job reveal" data-id="epm-frankfurt" data-status="live" data-location="frankfurt" data-type="permanent" data-disc="data centre" data-keywords="electrical project manager frankfurt installation power lighting contractor dc">
-      <h3>Electrical Project Manager — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Frankfurt, Germany <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrical Project Manager — Data Centre (Frankfurt)">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Lead an electrical installation contractor delivering <strong>power and lighting</strong> across a Frankfurt data centre project—programme, subcontractors, QA and client interface.</p>
-        <h4>Requirements</h4>
-        <ul><li>PM experience on electrical install (power/lighting) within DC or mission-critical projects.</li><li>Strong safety, quality and commercial awareness.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrical Project Manager — Data Centre (Frankfurt)">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="proj-dir-eu" class="job reveal" data-id="proj-dir-eu" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="project director europe hyperscale programme leadership p&l">
-      <h3>Project Director — Data Centre (Europe)</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Project Director — Data Centre (Europe)">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Executive ownership for multi-site DC delivery across Europe: strategy, client leadership, P&amp;L, program, and team performance.</p>
-        <h4>Requirements</h4>
-        <ul><li>Director-level track record delivering hyperscale/mission-critical builds.</li><li>Commercial acumen and supply chain leadership.</li><li>Safety, quality and commissioning governance.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Project Director — Data Centre (Europe)">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="bms-eng-dub" class="job reveal" data-id="bms-eng-dub" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="bms engineer epms niagara trend jci siemens commissioning">
-      <h3>BMS Engineer (Building Management Systems) — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=BMS Engineer — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Deliver BMS/EPMS integration & commissioning, interfacing with mechanical/electrical systems and controls contractors.</p>
-        <h4>Requirements</h4>
-        <ul><li>Niagara/Trend/JCI/Siemens or similar.</li><li>Cause-and-effect testing; documentation & handover.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=BMS Engineer — Data Centre">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="csa-fit-dub" class="job reveal" data-id="csa-fit-dub" data-status="live" data-location="dublin" data-type="permanent" data-disc="data centre" data-keywords="csa package manager fit out subcontractor qa programme handover">
-      <h3>CSA Package Manager (Fit-Out) — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Dublin, Ireland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=CSA Package Manager (Fit-Out) — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Lead CSA fit-out delivery: subcontractor management, QA, programme and handover.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=CSA Package Manager (Fit-Out) — Data Centre">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="ofci-espoo" class="job reveal" data-id="ofci-espoo" data-status="interviewing" data-location="espoo" data-type="permanent" data-disc="data centre" data-keywords="ofci package manager procurement logistics commissioning interface">
-      <h3>OFCI Package Manager — Data Centre</h3>
-      <span class="status interviewing">Interviewing</span>
-      <p><strong>Location:</strong> Espoo, Finland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=OFCI Package Manager — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Own owner-furnished, contractor-installed scope: procurement, logistics, integration & commissioning interface.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=OFCI Package Manager — Data Centre">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="ecm-hel" class="job reveal" data-id="ecm-hel" data-status="closed" data-location="helsinki" data-type="permanent" data-disc="data centre" data-keywords="electrical construction manager finland">
-      <h3>Electrical Construction Manager — Data Centre</h3>
-      <span class="status closed">Closed</span>
-      <p><strong>Location:</strong> Helsinki, Finland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrical Construction Manager — Data Centre">Register</a>
-      </div>
-      <div class="job-details">
-        <p>Recently closed—register to be notified of the next Electrical CM opening in Finland.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrical Construction Manager — Data Centre">Register Interest</a></div>
-      </div>
-    </div>
-
-    <div id="mcm-hel" class="job reveal" data-id="mcm-hel" data-status="live" data-location="helsinki" data-type="permanent" data-disc="data centre" data-keywords="mechanical construction manager chilled water crah crac bms interfaces">
-      <h3>Mechanical Construction Manager — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Helsinki, Finland <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Mechanical Construction Manager — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Manage mechanical install/commissioning (chilled water, CRAH/CRAC, pumps, BMS interfaces) to handover.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Mechanical Construction Manager — Data Centre">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="elec-gron" class="job reveal" data-id="elec-gron" data-status="live" data-location="groningen" data-type="contract" data-disc="data centre" data-keywords="electrician lv mv install test commission">
-      <h3>Electrical Engineer / Electrician — Data Centre Construction</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Groningen, Netherlands <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Contract</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrical Engineer / Electrician — Data Centre Construction">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Hands-on install, test & commission LV/MV systems on a hyperscale DC build. Coordinate with supervisors to maintain programme & QA.</p>
-        <h4>Key Responsibilities</h4>
-        <ul><li>Install, test & commission LV/MV; interpret SLDs & drawings.</li><li>Support QA/QC, red-lines, snagging & technical reporting.</li><li>Maintain safety standards and permit-to-work compliance.</li></ul>
-        <h4>Requirements</h4>
-        <ul><li>NVQ3 (or EU equivalent) with DC/mission-critical experience.</li><li>18th Edition / EU equivalent; ECS/JIB or VCA; IPAF a plus.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrical Engineer / Electrician — Data Centre Construction">Apply</a></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="section-title reveal"><h2>SUBSTATIONS, POWER & ENERGY</h2></div>
-  <section id="jobsBoard-substations" class="jobs-board">
-    <div id="permit-eng-eu" class="job reveal" data-id="permit-eng-eu" data-status="live" data-location="europe" data-type="permanent" data-disc="substation" data-keywords="permit engineer permitting specialist grid dco planning">
-      <h3>Permit Engineer / Permitting Specialist — Substations</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> Europe (Travel) <span class="tag">Substation</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Permit Engineer / Permitting Specialist — Substations">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Support grid-connection projects with permitting, stakeholder engagement, and local authority liaison for substation builds.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Permit Engineer / Permitting Specialist — Substations">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="estimator-uk" class="job reveal" data-id="estimator-uk" data-status="live" data-location="uk" data-type="permanent" data-disc="substation" data-keywords="mep cost estimator qs substation bess tender">
-      <h3>MEP Cost Estimator / QS — Substation & BESS</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> UK (Hybrid) <span class="tag">Substation</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=MEP Cost Estimator / QS — Substation & BESS">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Own estimating/QS for substation & battery storage packages: take-offs, tendering, value engineering, and supplier engagement.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=MEP Cost Estimator / QS — Substation & BESS">Apply</a></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="section-title reveal"><h2>LIFE SCIENCES & PHARMA</h2></div>
-  <section id="jobsBoard-pharma" class="jobs-board">
-    <div id="planner-macc" class="job reveal" data-id="planner-macc" data-status="interviewing" data-location="macclesfield" data-type="permanent" data-disc="life sciences" data-keywords="senior planner p6 pharma clean rooms risk change">
-      <h3>Senior Planner — Life Sciences</h3>
-      <span class="status interviewing">Interviewing</span>
-      <p><strong>Location:</strong> Macclesfield, UK <span class="tag">Life Sciences</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Senior Planner — Life Sciences">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Lead planning for a major pharma clean-room programme: P6 schedules, progress measurement and interface management.</p>
-        <h4>Requirements</h4>
-        <ul><li>Primavera P6 expert; clean-room/pharma project background.</li><li>Risk & change controls; strong reporting and stakeholder comms.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Senior Planner — Life Sciences">Apply</a></div>
-      </div>
-    </div>
-
-    <div id="elec-pharma" class="job reveal" data-id="elec-pharma" data-status="interviewing" data-location="macclesfield" data-type="contract" data-disc="pharma" data-keywords="electrician pharmaceutical clean room ecs jib containment">
-      <h3>Electrician — Pharmaceutical Construction</h3>
-      <span class="status interviewing">Interviewing</span>
-      <p><strong>Location:</strong> Hull (commutable), UK <span class="tag">Pharma</span></p>
-      <p><strong>Employment:</strong> Contract</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=Electrician — Pharmaceutical Construction">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Electricians to support a regulated pharma/clean-room build with high compliance standards and QA/QC documentation.</p>
-        <h4>Key Responsibilities</h4>
-        <ul><li>Install, terminate, test & commission to clean-room standards.</li><li>Containment (tray, trunking, conduit), cable pulling, drawings.</li></ul>
-        <h4>Requirements</h4>
-        <ul><li>NVQ3; 18th Edition; valid ECS/JIB (gold preferred).</li><li>Industrial/pharma/clean-room experience desirable; IPAF/PASMA beneficial.</li></ul>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=Electrician — Pharmaceutical Construction">Apply</a></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="section-title reveal"><h2>ICT & COMMISSIONING</h2></div>
-  <section id="jobsBoard-ict" class="jobs-board">
-    <div id="bms-cm-uk" class="job reveal" data-id="bms-cm-uk" data-status="live" data-location="uk" data-type="permanent" data-disc="data centre" data-keywords="bms commissioning manager epms niagara trend jci">
-      <h3>BMS Commissioning Manager — Data Centre</h3>
-      <span class="status live">Taking Candidates</span>
-      <p><strong>Location:</strong> UK (Various / Travel) <span class="tag">Data Centre</span></p>
-      <p><strong>Employment:</strong> Permanent</p>
-      <div class="actions">
-        <button class="btn-tertiary" onclick="toggleDetails(this)">Details</button>
-        <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-        <button class="share-btn" type="button" data-share>Share</button>
-        <a class="btn-tertiary btn-ghost" href="contact.html?role=BMS Commissioning Manager — Data Centre">Apply</a>
-      </div>
-      <div class="job-details">
-        <h4>Overview</h4>
-        <p>Lead integrated BMS/EPMS commissioning, cause-and-effect, FAT/SAT, and performance verification across hyperscale DCs.</p>
-        <div class="apply-row"><a class="btn btn-primary" href="contact.html?role=BMS Commissioning Manager — Data Centre">Apply</a></div>
-      </div>
-    </div>
-  </section>
+  </div>
 
   <!-- ===== No results ===== -->
   <section class="jobs-board">
@@ -648,8 +298,8 @@
       <h3>Didn’t see a role that fits?</h3>
       <p>We hire for new data centre, pharma and power projects weekly. Register your profile and we’ll notify you first.</p>
       <div class="cta-actions">
-        <a class="btn-light" href="candidates.html#candForm">Send CV / Register</a>
-        <a class="btn-outline" href="contact.html">Contact Us</a>
+        <a class="btn-light" href="/candidates.html#candForm">Send CV / Register</a>
+        <a class="btn-outline" href="/contact.html">Contact Us</a>
       </div>
     </div>
   </section>
@@ -674,7 +324,7 @@
     /* ------ NEW: Load /data/jobs.json and render cards ------ */
     async function loadJobsJSON(){
       try{
-        const res = await fetch('data/jobs.json', {cache:'no-store'});
+        const res = await fetch('/data/jobs.json', {cache:'no-store'});
         if(!res.ok) return null;
         const data = await res.json();
         return Array.isArray(data.jobs) ? data.jobs : null;
@@ -720,6 +370,40 @@
         </div>
       </div>`;
     }
+    async function maybeRenderFromAdminHTML(){
+      try{
+        const res = await fetch('/admin/jobs.html', {cache:'no-store'});
+        if(!res.ok) return false;
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html,'text/html');
+        const source = doc.getElementById('jobs-data');
+        if(!source) return false;
+        const boards = source.querySelectorAll('[data-board]');
+        boards.forEach(src=>{
+          const id = src.dataset.board;
+          if(!id) return;
+          const dest = document.querySelector(`[data-board="${id}"]`);
+          if(!dest) return;
+          const srcTitle = src.querySelector('.section-title');
+          const destTitle = dest.querySelector('.section-title');
+          if(srcTitle && destTitle){
+            destTitle.className = srcTitle.className;
+            destTitle.innerHTML = srcTitle.innerHTML;
+          }
+          const srcBoard = src.querySelector('.jobs-board');
+          const destBoard = dest.querySelector('.jobs-board');
+          if(srcBoard && destBoard){
+            destBoard.className = srcBoard.className;
+            destBoard.innerHTML = srcBoard.innerHTML;
+          }
+        });
+        return true;
+      }catch(err){
+        console.error('Failed to load jobs from admin/jobs.html', err);
+        return false;
+      }
+    }
+
     async function maybeRenderFromJSON(){
       const jobs = await loadJobsJSON();
       if(!jobs) return;
@@ -732,8 +416,15 @@
         if(board) board.insertAdjacentHTML('beforeend', renderOne(job));
       });
     }
-    /* Ensure JSON render completes before we query .job cards for filters etc. */
-    await maybeRenderFromJSON();
+    /* Ensure data render completes before we query .job cards for filters etc. */
+    const isAdminSource=document.body.dataset.jobsSource==='admin';
+    let renderedFromAdmin=false;
+    if(!isAdminSource){
+      renderedFromAdmin=await maybeRenderFromAdminHTML();
+      if(!renderedFromAdmin){
+        await maybeRenderFromJSON();
+      }
+    }
 
     /* ---------- Nav ---------- */
     const burger=document.querySelector('.hmj-burger');
@@ -877,7 +568,7 @@
     document.querySelectorAll('[data-share]').forEach(btn=>btn.addEventListener('click',()=>handleShare(btn.closest('.job'))));
 
     // Toast when Apply clicked
-    document.querySelectorAll('a[href^="contact.html"]').forEach(a=>{
+    document.querySelectorAll('a[href*="contact.html"]').forEach(a=>{
       a.addEventListener('click',function(){ toast.textContent='Application started!'; toast.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>toast.classList.remove('show'),1800); });
     });
 
