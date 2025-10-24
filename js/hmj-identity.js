@@ -2,7 +2,14 @@
   'use strict';
 
   const FALLBACK = 'https://hmjg.netlify.app/.netlify/identity';
-  const targetUrl = (window.HMJ_IDENTITY_URL || window.ADMIN_IDENTITY_URL || FALLBACK || '').replace(/\/$/, '');
+  const targetUrl = (
+    window.__hmjResolvedIdentityUrl ||
+    window.HMJ_IDENTITY_URL ||
+    window.NETLIFY_IDENTITY_URL ||
+    window.ADMIN_IDENTITY_URL ||
+    FALLBACK ||
+    ''
+  ).replace(/\/$/, '');
 
   function configureIdentity(id) {
     if (!id || !targetUrl) return id;
