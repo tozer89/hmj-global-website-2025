@@ -125,28 +125,6 @@
     .rtw-item{ display:flex; align-items:center; gap:8px; border:1px solid #cfd5f7; border-radius:10px; padding:10px; background:#fff; }
     .rtw-item input{ width:18px; height:18px; }
 
-    /* ========= Sticky Preview Dock (desktop) ========= */
-    .preview-dock{
-      position:fixed; top:88px; right:18px; width:340px; max-height:68vh; overflow:auto;
-      background:#0f1322; color:#eaf0ff; border:1px solid rgba(255,255,255,.12); border-radius:14px;
-      box-shadow:0 14px 38px rgba(0,0,0,.35); padding:12px; z-index:900;
-      display:none; /* hidden by default on small screens */
-    }
-    .preview-dock h3{ margin:0 0 6px; font-size:16px; }
-    .preview-dock .preview-inner{ background:#111731; border:1px dashed rgba(255,255,255,.18); border-radius:12px; padding:12px; }
-    .preview-dock .hint{ font-size:.82rem; opacity:.8; margin-top:8px; }
-
-    /* show dock on wide screens only */
-    @media (min-width:1200px){
-      .preview-dock{ display:block; }
-      /* add a little breathing room to page so dock doesn't overlap content */
-      body{ padding-right:370px; }
-    }
-
-    /* Inline preview (shown on small screens, above form) */
-    .inline-preview{ display:block; }
-    @media (min-width:1200px){ .inline-preview{ display:none; } }
-
     /* ========= CTA / Footer ========= */
     .cta{ text-align:center; padding:48px 20px; background:
       radial-gradient(1200px 300px at 50% -50px, rgba(58,102,179,.22), transparent 60%),
@@ -239,24 +217,34 @@
     </div>
   </section>
 
-  <!-- ===== Sticky Preview Dock (desktop) ===== -->
-  <aside class="preview-dock" aria-live="polite" aria-label="Profile preview">
-    <h3>Live Profile Preview</h3>
-    <div id="previewDock" class="preview-inner">
-      <em>Start completing the form to see your one-page profile preview…</em>
+  <!-- ===== Trust banner ===== -->
+  <section class="section" style="padding-top:18px;">
+    <div class="wrap">
+      <div class="card soft" style="display:flex; gap:18px; flex-wrap:wrap; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="24" height="24" role="img" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M4 12l4 4 12-12"/></svg>
+          <span>Typical first roles in 48 hrs</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="24" height="24" role="img" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M4 12l4 4 12-12"/></svg>
+          <span>Weekly payroll</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="24" height="24" role="img" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M4 12l4 4 12-12"/></svg>
+          <span>EU mobility support</span>
+        </div>
+      </div>
     </div>
-    <p class="hint">This preview is local to your browser and not sent anywhere.</p>
-  </aside>
+  </section>
 
-  <!-- ===== Inline preview (mobile/tablet) ===== -->
-  <section class="section inline-preview" style="background:#f7f8ff;">
+  <!-- ===== Live preview ===== -->
+  <section class="section" id="previewSection" style="background:#f7f8ff;">
     <div class="wrap">
       <div class="card soft">
-        <h2 style="margin-top:0;">Your Profile Preview</h2>
-        <div id="previewInline" class="card" style="padding:14px; border-style:dashed;">
-          <em>Start completing the form to see your one-page profile preview…</em>
-        </div>
-        <p class="small" style="margin-top:10px;">This preview is for your reference only and is not sent anywhere.</p>
+        <h2 style="margin:0 0 12px;">Live Profile Preview</h2>
+        <aside id="livePreview" class="c-preview" aria-live="polite">
+          <p class="small">Complete the form to see a live summary of your profile. <span aria-hidden="true">📌</span> <strong>Local preview only.</strong></p>
+        </aside>
       </div>
     </div>
   </section>
@@ -357,7 +345,7 @@
           <input id="cv" name="attachment" type="file" accept=".pdf,.doc,.docx" required>
 
           <div class="small" style="margin:8px 0;">Profile strength</div>
-          <div class="meter-wrap"><div class="meter" id="meter"></div></div>
+          <div id="profileStrength" class="c-strength" role="status" aria-live="polite"></div>
 
           <div style="margin-top:14px;">
             <label style="display:flex; align-items:center; gap:8px;">
@@ -370,20 +358,23 @@
 
         <p class="small" style="margin-top:10px;">
           We respect your privacy. We never disclose client names in public listings and only share your details with your permission.
+          <span id="clearDraftWrap" style="display:none;"> · <a href="#" id="clearDraftLink">Clear draft</a></span>
         </p>
       </div>
     </div>
   </section>
+
+  <section id="jobsWidget" class="c-jobs" hidden></section>
 
   <!-- ===== What to Expect (timeline) ===== -->
   <section class="section">
     <div class="wrap">
       <h2>What to Expect</h2>
       <div class="card timeline reveal">
-        <div class="step"><h3 style="margin:0 0 4px;">1. Share Your Profile</h3><p>Send your CV and preferences. We match you to roles that fit your skills and goals.</p></div>
-        <div class="step"><h3 style="margin:0 0 4px;">2. Roles in 48 Hours</h3><p>We’ll line up opportunities and brief you on scope, site culture and pay.</p></div>
-        <div class="step"><h3 style="margin:0 0 4px;">3. Interviews & Feedback</h3><p>We manage the process, keep communication clear and prep you for success.</p></div>
-        <div class="step"><h3 style="margin:0 0 4px;">4. Mobilise & Payroll</h3><p>Documentation, inductions and weekly pay—so your start is clean and stress-free.</p></div>
+        <div class="step"><h3 style="margin:0 0 4px;">1. Share Your Profile</h3><p>Send your CV and preferences. We match you to roles that fit your skills and goals.</p><svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M3 10l4 4 10-10"/></svg></div>
+        <div class="step"><h3 style="margin:0 0 4px;">2. Roles in 48 Hours</h3><p>We’ll line up opportunities and brief you on scope, site culture and pay.</p><svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M3 10l4 4 10-10"/></svg></div>
+        <div class="step"><h3 style="margin:0 0 4px;">3. Interviews & Feedback</h3><p>We manage the process, keep communication clear and prep you for success.</p><svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M3 10l4 4 10-10"/></svg></div>
+        <div class="step"><h3 style="margin:0 0 4px;">4. Mobilise & Payroll</h3><p>Documentation, inductions and weekly pay—so your start is clean and stress-free.</p><svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M3 10l4 4 10-10"/></svg></div>
       </div>
     </div>
   </section>
@@ -422,9 +413,6 @@
     <p>HMJ-Global is a trading name of HMJ-Global Ltd, registered in England & Wales, company number 16029938.</p>
     <p>Registered office: 905 Lightbox Blue, Media City, UK.</p>
   </footer>
-
-  <!-- ===== Autosave toast ===== -->
-  <div id="autosaveToast" class="toast" role="status" aria-live="polite">Draft restored ✔</div>
 
   <!-- ===== Scripts ===== -->
   <script>
@@ -478,171 +466,18 @@
         toReveal.forEach(el=>el.classList.add('revealed'));
       }
 
-      /* ---------- Form utilities (kept from your version; enhanced) ---------- */
-      // Auto-fill "role of interest" if ?role= is present
+      /* ---------- URL helpers ---------- */
       const urlParams = new URLSearchParams(window.location.search);
       const roleParam = urlParams.get('role');
-      if(roleParam){ document.getElementById('role').value = decodeURIComponent(roleParam.replace(/\+/g,' ')); }
-
-      // Skills tags
-      const tagInput = document.getElementById('tagInput');
-      const tagBox   = document.getElementById('tagBox');
-      const skillsHidden = document.getElementById('skillsHidden');
-      const skillHints = document.getElementById('skillHints');
-      const SUGGESTIONS = ['IST','SAT','BMS','EPMS','Black Start','LV','MV','HV','33kV','66kV','FAT','IQ/OQ/PQ','GMP','Cleanrooms','Commissioning','CSA','MEP','QA/QC','SAP','Cable Jointing','Substations'];
-      let tags = [];
-      const renderTags = () => {
-        [...tagBox.querySelectorAll('.tag-chip')].forEach(n=>n.remove());
-        tags.forEach((t,i)=>{
-          const chip=document.createElement('span');
-          chip.className='tag-chip';
-          chip.innerHTML = t + ' <button type="button" aria-label="remove">×</button>';
-          chip.querySelector('button').onclick=()=>{ tags.splice(i,1); renderTags(); syncHidden(); refresh(); };
-          tagBox.insertBefore(chip, tagInput);
-        });
-        const q = tagInput.value.trim().toLowerCase();
-        const disc = document.getElementById('discipline').value;
-        const discBias = {
-          'Commissioning':['IST','SAT','FAT','BMS','EPMS','Black Start','QA/QC'],
-          'Electrical (MEP)':['LV','MV','HV','33kV','66kV','Cable Jointing','SAP'],
-          'Mechanical (MEP)':['MEP','Commissioning','IQ/OQ/PQ','GMP','Cleanrooms'],
-          'HV / Substations':['SAP','Substations','HV','66kV','33kV','Cable Jointing'],
-          'Pharma / CQV':['CQV','GMP','IQ/OQ/PQ','Cleanrooms']
-        }[disc] || [];
-        let pool = [...new Set([...discBias, ...SUGGESTIONS])].filter(s=>!tags.includes(s));
-        if(q) pool = pool.filter(s=>s.toLowerCase().includes(q));
-        skillHints.innerHTML = pool.slice(0,6).map(s=>`<button type="button" data-skill="${s}" style="margin:4px 6px 0 0;border:1px solid #cfd5f7;border-radius:999px;padding:4px 8px;background:#fff;cursor:pointer;">+ ${s}</button>`).join('');
-        skillHints.querySelectorAll('button').forEach(b=>b.onclick=()=>{ const v=b.dataset.skill; if(!tags.includes(v)){ tags.push(v); renderTags(); syncHidden(); refresh(); }});
-      };
-      const syncHidden = ()=> { skillsHidden.value = tags.join(', '); };
-      tagInput.addEventListener('input', renderTags);
-      tagInput.addEventListener('keydown', (e)=>{
-        if(e.key==='Enter' || e.key===','){
-          e.preventDefault();
-          const v = tagInput.value.trim().replace(/,$/,'');
-          if(v && !tags.includes(v)){ tags.push(v); renderTags(); syncHidden(); refresh(); }
-          tagInput.value='';
-        } else if(e.key==='Backspace' && !tagInput.value && tags.length){
-          tags.pop(); renderTags(); syncHidden(); refresh();
+      if(roleParam){
+        const roleInput = document.getElementById('role');
+        if(roleInput){
+          roleInput.value = decodeURIComponent(roleParam.replace(/\+/g,' '));
         }
-      });
-
-      // RTW
-      const rtwGroup = document.getElementById('rtwGroup');
-      const rtwHidden = document.getElementById('rtwHidden');
-      const getRTW = () => [...rtwGroup.querySelectorAll('input[type="checkbox"]:checked')].map(i=>i.value);
-      rtwGroup.addEventListener('change', ()=>{ rtwHidden.value = getRTW().join(', '); refresh(); });
-
-      // Role tips
-      const roleTip = document.getElementById('roleTip');
-      const tipMap = {
-        'Commissioning':'Try titles like “MEP Commissioning Manager”, “Lead IST Engineer”, “BMS Commissioning Engineer”.',
-        'Electrical (MEP)':'Popular: “Electrical Supervisor”, “MEP Package Manager”, “AP/AE Electrical Engineer”.',
-        'Mechanical (MEP)':'Popular: “Mechanical Supervisor”, “MEP Coordinator”, “Piping/Utilities Engineer”.',
-        'HV / Substations':'Popular: “SAP (HV)”, “Protection Engineer”, “Cable Jointer”, “Substation Supervisor”.',
-        'Security & Cabling':'Popular: “CCTV/Access Control Engineer”, “Structured Cabling Engineer”.',
-        'Pharma / CQV':'Popular: “CQV Engineer”, “Validation Engineer”, “Process Utilities Engineer”.',
-        'CSA':'Popular: “CSA Package Manager”, “Site Engineer (CSA)”, “Planner (CSA)”.'
-      };
-      const disciplineEl = document.getElementById('discipline');
-      disciplineEl.addEventListener('change', ()=>{ roleTip.textContent = tipMap[disciplineEl.value] || ''; renderTags(); });
-
-      // Strength meter + preview
-      const meter = document.getElementById('meter');
-      const previewDock = document.getElementById('previewDock');
-      const previewInline = document.getElementById('previewInline');
-
-      const fields = ['fname','lname','email','phone','location','discipline','role','notice','reloc','cv'];
-      const P = (id) => (document.getElementById(id)?.value || '').trim();
-
-      const refresh = () => {
-        let score = 0;
-        fields.forEach(id=>{
-          const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
-          if(!el) return;
-          if(el.type==='file'){ if(el.files && el.files.length) score++; }
-          else if(el.value.trim()) score++;
-        });
-        if(getRTW().length) score++;
-        if(tags.length) score++;
-        const max = fields.length + 2;
-        meter.style.width = Math.round((score/max)*100) + '%';
-
-        const rtwTxt = getRTW().join(', ') || '—';
-        const lines = [
-          `<strong>${P('fname')} ${P('lname')}</strong> – ${P('discipline') || 'Discipline'} candidate`,
-          `<strong>Location:</strong> ${P('location') || '—'} | <strong>Right to work:</strong> ${rtwTxt}`,
-          `<strong>Role interest:</strong> ${P('role') || '—'} | <strong>Salary/day rate:</strong> ${P('salary') || '—'}`,
-          `<strong>Notice:</strong> ${P('notice') || '—'} | <strong>Relocation:</strong> ${document.getElementById('reloc').value || '—'}`,
-          `<strong>LinkedIn:</strong> ${P('linkedin') || '—'}`,
-          tags.length ? `<strong>Key skills:</strong> ${tags.join(', ')}` : '',
-          P('message') ? `<strong>Notes:</strong> ${P('message')}` : ''
-        ].filter(Boolean).map(l=>`<p style="margin:6px 0;">${l}</p>`).join('') || '<em>Start completing the form to see your one-page profile preview…</em>';
-
-        previewDock.innerHTML = lines;
-        previewInline.innerHTML = lines;
-      };
-
-      document.getElementById('candForm').addEventListener('input', refresh);
-      document.getElementById('cv').addEventListener('change', refresh);
-      renderTags(); // initial hints
-
-      // Autosave / restore
-      const STORE_KEY='hmj_candidate_draft_v1';
-      const toast=document.getElementById('autosaveToast');
-      const form = document.getElementById('candForm');
-      const saveDraft = () => {
-        const data = new FormData(form);
-        localStorage.setItem(STORE_KEY, JSON.stringify(Object.fromEntries(data)));
-      };
-      const loadDraft = () => {
-        const raw = localStorage.getItem(STORE_KEY);
-        if(!raw) return;
-        try{
-          const obj = JSON.parse(raw);
-          for(const [k,v] of Object.entries(obj)){
-            const el = form.querySelector(`[name="${k}"]`);
-            if(!el) continue;
-            if(el.type==='file') continue;
-            el.value = v;
-          }
-          // restore tags
-          if(obj.skills){
-            tags = obj.skills.split(',').map(s=>s.trim()).filter(Boolean);
-            renderTags(); syncHidden();
-          }
-          // restore RTW
-          if(obj.right_to_work){
-            const set = new Set(obj.right_to_work.split(',').map(s=>s.trim()));
-            document.querySelectorAll('#rtwGroup input[type="checkbox"]').forEach(cb=>{
-              cb.checked = set.has(cb.value);
-            });
-          }
-          document.getElementById('rtwHidden').value = getRTW().join(', ');
-          refresh();
-          toast.textContent='Draft restored ✔'; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1600);
-        }catch{}
-      };
-      loadDraft();
-      form.addEventListener('input', saveDraft);
-      form.addEventListener('change', saveDraft);
-
-      // Capture page URL + guards
-      const pageUrlHidden = document.getElementById('pageUrlHidden');
-      const submitBtn = document.getElementById('submitBtn');
-      form.addEventListener('submit', (e) => {
-        pageUrlHidden.value = window.location.href;
-        if(!getRTW().length){
-          e.preventDefault(); alert('Please select at least one region for Right to Work.'); return;
-        }
-        const file = document.getElementById('cv').files?.[0];
-        if(file && file.size > 6 * 1024 * 1024){
-          e.preventDefault(); alert('Please upload a CV smaller than 6 MB.'); return;
-        }
-        submitBtn.disabled = true; submitBtn.textContent = 'Sending…';
-        setTimeout(()=>localStorage.removeItem(STORE_KEY), 500);
-      });
+      }
     })();
   </script>
+  <link rel="stylesheet" href="assets/css/candidates.enhanced.css">
+  <script defer src="assets/js/candidates.enhanced.js"></script>
 </body>
 </html>
