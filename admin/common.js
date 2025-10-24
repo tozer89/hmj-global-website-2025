@@ -414,7 +414,7 @@
       else if (jwtRoles) rolesSource = [jwtRoles];
     }
 
-    const roles = Array.isArray(rolesSource)
+    let roles = Array.isArray(rolesSource)
       ? rolesSource.map(r => String(r).toLowerCase()).filter(Boolean)
       : rolesSource ? [String(rolesSource).toLowerCase()] : [];
 
@@ -436,9 +436,9 @@
       email = jwtPayload?.email || jwtPayload?.sub || '';
     }
 
-    const role = roles.includes('admin') ? 'admin' :
-                 roles.includes('recruiter') ? 'recruiter' :
-                 roles.includes('client') ? 'client' : (roles[0] || '');
+    let role = roles.includes('admin') ? 'admin' :
+               roles.includes('recruiter') ? 'recruiter' :
+               roles.includes('client') ? 'client' : (roles[0] || '');
     const required = requiredRole ? String(requiredRole).toLowerCase() : '';
     if (!token) {
       try {
@@ -446,7 +446,42 @@
       } catch {}
     }
 
-    const ok = !!token && (!required || roles.includes(required) || role === required);
+    let ok = !!token && (!required || roles.includes(required) || role === required);
+
+    if (!ok && required === 'admin' && token && typeof fetch === 'function') {
+      try {
+        const res = await fetch('/.netlify/functions/admin-role-check', {
+          method: 'POST',
+          headers: { authorization: 'Bearer ' + token },
+          credentials: 'include',
+        });
+        let payload = null;
+        try { payload = await res.json(); } catch {}
+        if (res.ok && payload && payload.ok !== false) {
+          ok = true;
+          role = 'admin';
+          if (!roles.includes('admin')) {
+            roles = roles.concat('admin');
+          }
+          if (user) {
+            user.app_metadata = user.app_metadata || {};
+            const metaRoles = Array.isArray(user.app_metadata.roles) ? user.app_metadata.roles.slice() : [];
+            if (!metaRoles.map((r) => String(r).toLowerCase()).includes('admin')) {
+              metaRoles.push('admin');
+            }
+            if (metaRoles.length) user.app_metadata.roles = metaRoles;
+            if (Array.isArray(user.roles)) {
+              if (!user.roles.map((r) => String(r).toLowerCase()).includes('admin')) user.roles.push('admin');
+            } else {
+              user.roles = ['admin'];
+            }
+          }
+        }
+      } catch (err) {
+        Debug.warn('admin fallback check failed', err);
+      }
+    }
+
     return { ok, user, token, role, email };
   }
 

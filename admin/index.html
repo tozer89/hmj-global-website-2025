@@ -6,9 +6,11 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Admin Dashboard | HMJ Global</title>
 
-  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+  <script>window.ADMIN_IDENTITY_URL = '/.netlify/identity';</script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=21"></script>
+  <link rel="stylesheet" href="/assets/css/admin.dashboard.enhanced.css?v=1"/>
+  <script defer src="/assets/js/admin.dashboard.enhanced.js?v=1"></script>
 
   <style>
     :root{ --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --muted:#5d6f9e; --ink:#0f1b3f; }
@@ -57,12 +59,41 @@
   </div>
 
   <div class="wrap" id="app" style="display:none">
-    <section class="panel">
-      <h2 style="margin:0 0 12px;font-size:24px">Welcome back</h2>
-      <p class="muted" id="welcomeMeta">Loading user…</p>
+    <section class="panel hero" aria-labelledby="welcomeHeading">
+      <div class="hero-main">
+        <div>
+          <p class="eyebrow">Welcome back</p>
+          <h2 id="welcomeHeading">Admin</h2>
+          <p class="muted" id="welcomeMeta">Loading user…</p>
+        </div>
+        <div class="hero-meta" aria-live="polite" id="envMeta">Environment • Detecting…</div>
+      </div>
+      <div class="hero-actions">
+        <button id="themeToggle" class="btn ghost small" aria-pressed="false" title="Toggle theme">🌓</button>
+        <details class="view-settings">
+          <summary class="btn ghost small" aria-haspopup="true">View options</summary>
+          <div class="view-panel" role="group" aria-label="Dashboard view preferences">
+            <label class="switch">
+              <input type="checkbox" id="toggleKpis" checked>
+              <span>Show KPI row</span>
+            </label>
+            <label class="switch">
+              <span>Tile order</span>
+              <select id="tileOrderSelect">
+                <option value="default">Default</option>
+                <option value="alpha">A → Z</option>
+                <option value="recent">Most recent</option>
+              </select>
+            </label>
+            <button type="button" class="btn ghost small" id="resetView">Reset view</button>
+          </div>
+        </details>
+      </div>
     </section>
 
-    <section class="grid" aria-label="Admin areas">
+    <section id="kpis" class="panel kpi-row" hidden></section>
+
+    <section class="grid" aria-label="Admin areas" data-tile-order>
       <a class="card" href="/admin/clients.html">
         <h3>Clients</h3>
         <p>Manage client records, contacts, billing terms, and linked assignments.</p>
@@ -93,6 +124,8 @@
       </a>
     </section>
 
+    <section id="activityFeed" class="panel activity" hidden></section>
+
     <section class="panel" id="netlifyTools">
       <h3 style="margin:0 0 8px">Netlify tools</h3>
       <p class="muted" style="margin:0 0 12px">Run a health check on the deployed functions or jump to the Netlify deploy dashboard.</p>
@@ -101,7 +134,19 @@
         <a class="btn" href="https://app.netlify.com/sites/hmjg/deploys" target="_blank" rel="noopener">Open Netlify deploys</a>
       </div>
       <pre id="healthResult" style="display:none;margin-top:14px"></pre>
+      <div class="health-chips" aria-live="polite" hidden>
+        <span class="chip" data-target="api">API: <span class="value">—</span></span>
+        <span class="chip" data-target="db">DB: <span class="value">—</span></span>
+        <span class="chip" data-target="storage">Storage: <span class="value">—</span></span>
+      </div>
+      <div class="logs-row" hidden>
+        <a class="btn ghost small" data-log="api" target="_blank" rel="noopener">Open API logs</a>
+        <a class="btn ghost small" data-log="db" target="_blank" rel="noopener">Open DB logs</a>
+        <a class="btn ghost small" data-log="storage" target="_blank" rel="noopener">Open Storage logs</a>
+      </div>
     </section>
+
+    <section id="notesBoard" class="panel notes-board" hidden></section>
   </div>
 
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
@@ -112,11 +157,15 @@
       return setTimeout(startDashboard, 40);
     }
 
-    window.Admin.bootAdmin(async ({ identity, sel, toast }) => {
+    window.Admin.bootAdmin(async (helpers) => {
+      const { identity, sel, toast } = helpers;
       try {
         const who = await identity('admin');
         if (who?.ok) {
           sel('#welcomeMeta').textContent = `Signed in as ${who.email || 'admin user'}`;
+          if (window.HMJDashboardEnhancer && typeof window.HMJDashboardEnhancer.init === 'function') {
+            window.HMJDashboardEnhancer.init({ helpers, who });
+          }
         }
       } catch (e) {
         toast('Unable to load user details', 'warn', 2600);
@@ -136,10 +185,12 @@
             let display = txt;
             try { display = JSON.stringify(JSON.parse(txt), null, 2); } catch {}
             if (healthResult) healthResult.textContent = display || 'OK';
-            toast('Health check complete', 'info', 2000);
+            (window.hmjToast || toast)('Health check complete', 'info', 2000);
+            window.dispatchEvent(new CustomEvent('hmj:admin:health', { detail: { ok: true, raw: txt, at: Date.now() } }));
           } catch (err) {
             if (healthResult) healthResult.textContent = 'Error: ' + (err.message || err);
-            toast('Health check failed', 'error', 3200);
+            (window.hmjToast || toast)('Health check failed', 'error', 3200);
+            window.dispatchEvent(new CustomEvent('hmj:admin:health', { detail: { ok: false, error: err, at: Date.now() } }));
           }
         };
       }

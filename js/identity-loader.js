@@ -14,16 +14,16 @@
     candidates.push(normalised);
   }
 
-  addCandidate(window.ADMIN_IDENTITY_URL);
-  addCandidate(window.NETLIFY_IDENTITY_URL);
-
   try {
-    const local = `${location.origin.replace(/\/$/, '')}/.netlify/identity`;
-    addCandidate(local);
+    const localOrigin = location.origin.replace(/\/$/, '');
+    addCandidate(`${localOrigin}/.netlify/identity`);
+    addCandidate('/.netlify/identity');
   } catch (err) {
     // ignore
   }
 
+  addCandidate(window.ADMIN_IDENTITY_URL);
+  addCandidate(window.NETLIFY_IDENTITY_URL);
   addCandidate(PRODUCTION_IDENTITY);
 
   const readyQueue = [];
@@ -79,15 +79,18 @@
     return null;
   }
 
-  chooseEndpoint().then((apiUrl) => {
-    if (!apiUrl) {
+  chooseEndpoint().catch(() => null).then((apiUrl) => {
+    const fallback = candidates.find((item) => !!item) || PRODUCTION_IDENTITY;
+    const resolved = (apiUrl || fallback || '').replace(/\/$/, '');
+
+    if (!resolved) {
       flushReady(null);
       document.dispatchEvent(new CustomEvent('hmjIdentityUnavailable'));
       return;
     }
 
     const settings = window.netlifyIdentitySettings = window.netlifyIdentitySettings || {};
-    settings.APIUrl = apiUrl.replace(/\/$/, '');
+    settings.APIUrl = resolved;
 
     if (document.getElementById('netlify-identity-widget')) return;
     const script = document.createElement('script');

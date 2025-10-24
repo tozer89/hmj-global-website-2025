@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Assignments — Admin | HMJ Global</title>
 
-  <!-- Identity (pin to live URL so Deploy Previews still auth correctly) -->
-  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+  <!-- Identity (relative path keeps Deploy Previews on the same origin) -->
+  <script>window.ADMIN_IDENTITY_URL = '/.netlify/identity';</script>
   <script defer src="../js/identity-loader.js"></script>
 
   <!-- Shared Admin bootstrap + helpers -->

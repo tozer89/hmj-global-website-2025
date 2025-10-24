@@ -7,7 +7,7 @@ main {
 }
 
 .props {
-  padding: clamp(48px, 8vw, 96px) clamp(20px, 7vw, 48px) clamp(72px, 10vw, 128px);
+  padding: clamp(40px, 7vw, 80px) clamp(20px, 7vw, 48px) clamp(20px, 6vw, 60px);
 }
 
 .props-wrap {
@@ -38,11 +38,7 @@ main {
 }
 
 .form-shell {
-  padding: clamp(64px, 11vw, 128px) clamp(16px, 6vw, 48px) clamp(72px, 12vw, 128px);
-}
-
-.form-card-critical {
-  margin-top: clamp(32px, 8vw, 64px);
+  padding: 0 clamp(16px, 6vw, 48px) clamp(60px, 12vw, 120px);
 }
 
 .form-container {
