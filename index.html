@@ -7,7 +7,14 @@
 
 
   <!-- In your <head> (once per page) -->
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    // Ensure the Netlify Identity widget always talks to the current origin so
+    // deploy previews don’t make cross-origin calls to the production domain.
+    window.netlifyIdentitySettings = {
+      APIUrl: `${location.origin}/.netlify/identity`
+    };
+  </script>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
   // Global login→redirect helper
   document.addEventListener('DOMContentLoaded', () => {
@@ -640,9 +647,6 @@
       }
     })();
   </script>
-
-<!-- Netlify Identity widget -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
 <!-- Redirect ONLY for invite/confirmation, never on normal visits -->
 <script>
