@@ -47,9 +47,6 @@
   html,body{margin:0;background:var(--bg);color:var(--ink);
     font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
 
-  .top{position:sticky;top:0;background:linear-gradient(180deg,#ffffff,rgba(255,255,255,.92));
-       border-bottom:1px solid var(--border);z-index:6}
-  [data-theme="dark"] .top{background:#0c1222;}
   .row{max-width:1280px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
   .brand{font-weight:800}
   .sp{flex:1}
@@ -58,6 +55,10 @@
   [data-theme="dark"] .console-header{background:#0c1222;border-bottom-color:#1c2740;box-shadow:0 10px 24px rgba(0,0,0,.35)}
   .console-bar{display:flex;align-items:center;gap:12px}
   .console-bar .brand{font-size:18px;display:flex;align-items:center;gap:8px}
+  .console-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.06em}
+  [data-theme="dark"] .console-pill{background:#16203a;border-color:#293759;color:var(--panel-ink)}
+  .console-pill.good{background:rgba(25,135,84,.16);border-color:rgba(25,135,84,.45);color:#0b5032}
+  [data-theme="dark"] .console-pill.good{background:rgba(25,135,84,.22);border-color:rgba(25,135,84,.45);color:#6df0b2}
   .pillbar{display:flex;flex-wrap:wrap;gap:6px}
   .console-main{display:block;background:var(--bg);padding:0 0 40px}
 
@@ -150,13 +151,14 @@
 <body>
 <header class="console-header">
   <div class="row console-bar">
-    <div class="brand titlePulse" id="pageTitle">Timesheets — Admin <span class="hint" title="All actions are audited.">?</span></div>
-    <div class="pillbar" id="diagChips"></div>
+    <div class="brand titlePulse" id="pageTitle">Timesheets Console <span class="hint" title="All actions are audited.">?</span></div>
+    <div class="console-pill" id="debugIdentity" aria-live="polite">offline</div>
+    <div class="pillbar" id="diagChips" aria-live="polite"></div>
     <div class="sp"></div>
 
     <button class="btn chip" id="btnTheme" title="Toggle light/dark">🌙 Theme</button>
     <a class="btn chip" href="/admin/">⟵ Admin home</a>
-    <button class="btn chip" onclick="netlifyIdentity?.logout()">Sign out</button>
+    <button class="btn chip" id="btnSignOut" type="button">Sign out</button>
   </div>
 </header>
 
@@ -485,6 +487,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   const btnCalendar = $('#btnCalendar'); const calendarWrap = $('#calendarWrap'); const calendar = $('#calendar');
   const btnChart = $('#btnChart'); const chartWrap = $('#chartWrap'); const chart = $('#chart');
   const btnDebug = $('#btnDebug'); const btnTheme = $('#btnTheme'); const pageTitle = $('#pageTitle');
+  const debugIdentity = $('#debugIdentity'); const btnSignOut = $('#btnSignOut');
   const btnWeekConfig = $('#btnWeekConfig'); const weekBaseLabel = $('#weekBaseLabel');
   const toggleHints = $('#toggleHints');
 
@@ -520,6 +523,50 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   function setTheme(t){ document.documentElement.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY,t); btnTheme.innerHTML = t==='dark'?'🌞 Light':'🌙 Dark'; }
   setTheme(localStorage.getItem(THEME_KEY)||'light');
   btnTheme.onclick=()=>setTheme((localStorage.getItem(THEME_KEY)||'light')==='light'?'dark':'light');
+
+  btnSignOut?.addEventListener('click', ()=>{
+    try{ window.netlifyIdentity?.logout?.(); }
+    catch(err){ console.warn('[timesheets] sign out failed', err); }
+  });
+
+  if(debugIdentity && identity){
+    const resolveUser = ()=>{
+      try{
+        if(typeof identity.currentUser === 'function'){
+          const u = identity.currentUser();
+          if(u) return u;
+        }
+      }catch(err){ console.warn('[timesheets] identity.currentUser()', err); }
+      const direct = identity.currentUser && typeof identity.currentUser !== 'function' ? identity.currentUser : null;
+      if(direct) return direct;
+      if(identity.user && typeof identity.user === 'function'){
+        try{ return identity.user(); }catch{}
+      }
+      if(identity.user) return identity.user;
+      if(typeof identity.getUser === 'function'){
+        try{ return identity.getUser(); }catch{}
+      }
+      return null;
+    };
+    const updateIdentity = ()=>{
+      const user = resolveUser();
+      if(user){
+        const email = user.email || user.user_metadata?.email || user.user_metadata?.full_name || 'online';
+        debugIdentity.textContent = email;
+        debugIdentity.classList.add('good');
+      }else{
+        debugIdentity.textContent = 'offline';
+        debugIdentity.classList.remove('good');
+      }
+    };
+    updateIdentity();
+    identity.on?.('login', updateIdentity);
+    identity.on?.('logout', updateIdentity);
+    identity.on?.('init', updateIdentity);
+  } else if(debugIdentity){
+    debugIdentity.textContent = 'offline';
+    debugIdentity.classList.remove('good');
+  }
 
   function setAuditVisible(show){
     if (!auditPanel || !btnAuditToggle) return;
