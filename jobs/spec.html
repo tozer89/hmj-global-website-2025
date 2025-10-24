@@ -8,6 +8,7 @@
   <style>
     :root {
       color-scheme: light;
+
       /* Brand palette */
       --hmj-blue: #2f4ea2;
       --hmj-blue-dark: #1f3b82;
@@ -17,15 +18,15 @@
       --hmj-border: rgba(47, 78, 162, 0.18);
       --hmj-focus: rgba(63, 102, 199, 0.35);
 
-      /* Surface + accents */
-      --bg: linear-gradient(140deg, #f6f8ff 0%, #eef3ff 48%, #f8faff 100%);
+      /* Surfaces + accents */
+      --bg: linear-gradient(135deg, #f6f8ff 0%, #eef3ff 45%, #f8faff 100%);
       --surface: #ffffff;
+      --surface-soft: rgba(255, 255, 255, 0.86);
       --border: var(--hmj-border);
-      --shadow: 0 32px 70px rgba(47, 78, 162, 0.16);
+      --shadow: 0 30px 70px rgba(47, 78, 162, 0.16);
       --ink: var(--hmj-text);
-      --ink-strong: var(--hmj-blue-dark);
+      --ink-strong: #243b7c;
       --ink-soft: #5d6f9e;
-      --muted: var(--hmj-muted);
       --accent: var(--hmj-blue);
       --accent-strong: var(--hmj-blue-dark);
       --accent-soft: rgba(63, 102, 199, 0.12);
@@ -56,12 +57,11 @@
       min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: clamp(24px, 4vw, 48px);
+      padding: clamp(24px, 5vw, 56px);
     }
 
     .card {
-      max-width: 860px;
-      width: 100%;
+      width: min(880px, 100%);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 26px;
@@ -80,6 +80,7 @@
       margin: 0;
       font-size: clamp(28px, 4vw, 40px);
       color: var(--ink-strong);
+      letter-spacing: -0.01em;
     }
 
     .meta {
@@ -147,7 +148,7 @@
       padding: 6px 12px;
       border-radius: 999px;
       background: var(--accent-soft);
-      border: 1px solid rgba(63, 102, 199, 0.28);
+      border: 1px solid rgba(63, 102, 199, 0.26);
       font-weight: 700;
       color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(63, 102, 199, 0.08);
@@ -171,7 +172,7 @@
     p {
       margin: 0;
       color: var(--hmj-text);
-      line-height: 1.7;
+      line-height: 1.65;
       font-size: 16px;
       font-weight: 500;
     }
@@ -185,6 +186,7 @@
 
     .btn {
       font-weight: 800;
+      font-size: 15px;
       padding: 13px 22px;
       border-radius: 14px;
       text-decoration: none;
@@ -259,7 +261,7 @@
       font-size: 18px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      background: rgba(255, 255, 255, 0.86);
+      background: var(--surface-soft);
       padding: 12px 18px;
       border-radius: 14px;
       box-shadow: 0 18px 38px rgba(47, 78, 162, 0.18);
@@ -273,6 +275,11 @@
       .card {
         padding: 24px;
         border-radius: 24px;
+        gap: 18px;
+      }
+
+      h1 {
+        font-size: clamp(26px, 6vw, 34px);
       }
 
       .meta span {
@@ -287,16 +294,6 @@
       .btn {
         width: 100%;
         justify-content: center;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .card {
-        gap: 18px;
-      }
-
-      h1 {
-        font-size: clamp(26px, 6vw, 34px);
       }
     }
 
