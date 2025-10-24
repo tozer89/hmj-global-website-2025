@@ -288,6 +288,22 @@
     return null;
   }
 
+  function normalizeToken(raw) {
+    if (!raw) return '';
+    if (typeof raw === 'string') return raw;
+    if (typeof raw === 'object') {
+      const direct = raw.token || raw.access_token || raw.accessToken;
+      if (typeof direct === 'string') return direct;
+      if (Array.isArray(raw)) {
+        for (const entry of raw) {
+          const t = normalizeToken(entry);
+          if (t) return t;
+        }
+      }
+    }
+    return '';
+  }
+
   async function getUserToken(user) {
     if (!user) return '';
     const attempts = [];
@@ -299,7 +315,8 @@
     for (const attempt of attempts) {
       try {
         const v = await attempt();
-        if (v) return v;
+        const token = normalizeToken(v);
+        if (token) return token;
       } catch (err) {
         Debug.warn('token attempt failed', err);
       }
