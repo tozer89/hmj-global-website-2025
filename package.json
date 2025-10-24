@@ -2,6 +2,9 @@
   "name": "hmj-global",
   "private": true,
   "type": "commonjs",
+  "scripts": {
+    "test": "node scripts/verify-functions.js && node scripts/validate-site.js"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.75.1",
     "jsonwebtoken": "^9.0.2"
