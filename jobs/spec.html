@@ -6,43 +6,257 @@
   <title>Job Spec | HMJ Global</title>
   <link rel="stylesheet" href="../css/style.css"/>
   <style>
-    :root{
-      color-scheme:light;
-      --bg:linear-gradient(180deg,#f6f8ff 0%,#e3ebff 48%,#f6f8ff 100%);
-      --card:#ffffff;
-      --border:rgba(47,78,162,.18);
-      --shadow:0 30px 70px rgba(47,78,162,.18);
-      --ink:#0f1b3f;
-      --muted:#5d6f9e;
-      --accent:#3f66c7;
-      --accent-soft:rgba(63,102,199,.12);
+    :root {
+      color-scheme: light;
+      --bg: linear-gradient(140deg, #f6f8ff 0%, #eef3ff 48%, #f8faff 100%);
+      --surface: #ffffff;
+      --border: rgba(47, 78, 162, 0.18);
+      --shadow: 0 30px 70px rgba(47, 78, 162, 0.16);
+      --ink: #0f1b3f;
+      --ink-soft: #5d6f9e;
+      --accent: #3f66c7;
+      --accent-strong: #2f4ea2;
+      --accent-soft: rgba(63, 102, 199, 0.12);
+      --badge-live-bg: rgba(19, 135, 84, 0.12);
+      --badge-live-border: rgba(19, 135, 84, 0.32);
+      --badge-live-text: #0f5132;
+      --badge-int-bg: rgba(250, 204, 21, 0.16);
+      --badge-int-border: rgba(250, 204, 21, 0.36);
+      --badge-int-text: #854d0e;
+      --badge-closed-bg: rgba(180, 35, 24, 0.14);
+      --badge-closed-border: rgba(180, 35, 24, 0.34);
+      --badge-closed-text: #842029;
+      --danger-bg: rgba(180, 35, 24, 0.12);
+      --danger-border: rgba(180, 35, 24, 0.32);
     }
-    *{box-sizing:border-box}
-    body{background:var(--bg);color:var(--ink);font-family:'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
-    .card{max-width:880px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:28px;box-shadow:var(--shadow);padding:34px;display:grid;gap:22px}
-    header{display:grid;gap:16px}
-    h1{margin:0;font-size:clamp(28px,4vw,40px);color:var(--ink)}
-    .meta{display:flex;flex-wrap:wrap;gap:12px;color:var(--accent);font-weight:700}
-    .meta span{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:var(--accent-soft);border:1px solid rgba(63,102,199,.28);color:var(--accent);letter-spacing:.02em;text-transform:uppercase;font-size:12px}
-    .badge{display:inline-block;padding:6px 14px;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink);background:rgba(47,78,162,.12);border:1px solid rgba(47,78,162,.35);justify-self:start}
-    .badge.live{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.32);color:#0f5132}
-    .badge.interviewing{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.36);color:#854d0e}
-    .badge.closed{background:rgba(180,35,24,.14);border-color:rgba(180,35,24,.34);color:#842029}
-    .tags{display:flex;flex-wrap:wrap;gap:8px}
-    .tags span{padding:6px 12px;border-radius:999px;background:rgba(63,102,199,.12);border:1px solid rgba(63,102,199,.28);font-weight:700;color:var(--accent)}
-    h2{margin:12px 0 6px;font-size:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em}
-    ul{margin:0 0 12px 22px;color:var(--ink);line-height:1.6;font-weight:500}
-    p{margin:0;color:var(--ink);line-height:1.7;font-size:16px;font-weight:500}
-    .cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
-    .btn{background:linear-gradient(180deg,rgba(63,102,199,.18),rgba(63,102,199,.08));border:1px solid rgba(63,102,199,.42);color:#fff;font-weight:800;padding:13px 22px;border-radius:14px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 12px 28px rgba(47,78,162,.18);transition:transform .16s ease,box-shadow .2s ease}
-    .btn:hover{transform:translateY(-1px);box-shadow:0 18px 38px rgba(47,78,162,.22)}
-    .btn.secondary{background:#fff;color:var(--accent);border-color:rgba(63,102,199,.24);box-shadow:none}
-    .muted{color:var(--muted);font-weight:600;font-size:14px;letter-spacing:.04em;text-transform:uppercase}
-    #error{color:#842029;background:rgba(180,35,24,.12);border:1px solid rgba(180,35,24,.32);padding:22px;border-radius:20px;max-width:520px;text-align:center;font-weight:700;box-shadow:0 16px 40px rgba(180,35,24,.18)}
-    #loading{color:var(--accent);font-weight:800;font-size:18px;letter-spacing:.08em;text-transform:uppercase}
-    @media(max-width:720px){
-      body{padding:24px}
-      .card{padding:26px;border-radius:24px}
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(24px, 4vw, 48px);
+    }
+
+    .card {
+      max-width: 880px;
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: clamp(26px, 3vw, 36px);
+      display: grid;
+      gap: 22px;
+    }
+
+    header {
+      display: grid;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 40px);
+      color: var(--accent-strong);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(63, 102, 199, 0.28);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--ink);
+      background: rgba(47, 78, 162, 0.12);
+      border: 1px solid rgba(47, 78, 162, 0.35);
+      justify-self: start;
+    }
+
+    .badge.live {
+      background: var(--badge-live-bg);
+      border-color: var(--badge-live-border);
+      color: var(--badge-live-text);
+    }
+
+    .badge.interviewing {
+      background: var(--badge-int-bg);
+      border-color: var(--badge-int-border);
+      color: var(--badge-int-text);
+    }
+
+    .badge.closed {
+      background: var(--badge-closed-bg);
+      border-color: var(--badge-closed-border);
+      color: var(--badge-closed-text);
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tags span {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(63, 102, 199, 0.28);
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    h2 {
+      margin: 12px 0 6px;
+      font-size: 16px;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    ul {
+      margin: 0 0 12px 22px;
+      color: var(--ink);
+      line-height: 1.6;
+      font-weight: 500;
+    }
+
+    p {
+      margin: 0;
+      color: var(--ink);
+      line-height: 1.7;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      background: linear-gradient(180deg, rgba(63, 102, 199, 0.18), rgba(63, 102, 199, 0.08));
+      border: 1px solid rgba(63, 102, 199, 0.42);
+      color: #fff;
+      font-weight: 800;
+      padding: 13px 22px;
+      border-radius: 14px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 12px 28px rgba(47, 78, 162, 0.18);
+      transition: transform 0.16s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 38px rgba(47, 78, 162, 0.22);
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--accent);
+      border-color: rgba(63, 102, 199, 0.24);
+      box-shadow: none;
+    }
+
+    .muted {
+      color: var(--ink-soft);
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    #error {
+      color: var(--badge-closed-text);
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      padding: 22px;
+      border-radius: 20px;
+      max-width: 520px;
+      text-align: center;
+      font-weight: 700;
+      box-shadow: 0 16px 40px rgba(180, 35, 24, 0.18);
+    }
+
+    #loading {
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.86);
+      padding: 12px 18px;
+      border-radius: 14px;
+      box-shadow: 0 18px 38px rgba(47, 78, 162, 0.18);
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 24px;
+      }
+
+      .card {
+        padding: 24px;
+        border-radius: 24px;
+      }
+
+      .meta span {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .cta {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn,
+      body {
+        transition: none !important;
+      }
     }
   </style>
 </head>
@@ -88,6 +302,9 @@
       const loading = document.getElementById('loading');
       const errorBox = document.getElementById('error');
       const card = document.getElementById('spec');
+      const copyBtn = document.getElementById('copyBtn');
+      const defaultCopyLabel = copyBtn?.textContent || 'Copy link';
+      let shareContext = null;
 
       function decodeSharePayload(value){
         if (!value) return null;
@@ -177,6 +394,46 @@
         return entry;
       }
 
+      copyBtn?.addEventListener('click', () => {
+        if (!shareContext) return;
+        const { jobTitle, locationText, applyUrl, shareLink } = shareContext;
+        const lines = [jobTitle, locationText, applyUrl, shareLink].filter(Boolean);
+        if (!lines.length) return;
+        const text = lines.join('\n');
+        const notify = (label) => {
+          copyBtn.textContent = label;
+          setTimeout(() => {
+            copyBtn.textContent = defaultCopyLabel;
+          }, 1800);
+        };
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text).then(
+            () => notify('Link copied'),
+            () => fallbackCopy(text, notify)
+          );
+        } else {
+          fallbackCopy(text, notify);
+        }
+      });
+
+      function fallbackCopy(text, notify) {
+        try {
+          const helper = document.createElement('textarea');
+          helper.value = text;
+          helper.setAttribute('readonly', '');
+          helper.style.position = 'absolute';
+          helper.style.left = '-9999px';
+          document.body.appendChild(helper);
+          helper.select();
+          document.execCommand('copy');
+          document.body.removeChild(helper);
+          notify('Link copied');
+        } catch (err) {
+          console.warn('[spec] clipboard copy failed', err);
+          notify('Copy failed');
+        }
+      }
+
       if (payloadParam) {
         const payload = decodeSharePayload(payloadParam);
         if (payload && payload.job) {
@@ -259,12 +516,18 @@
         if (job.title) {
           document.title = `${job.title} | HMJ Global`;
         }
-        document.getElementById('location').textContent = job.locationText || 'Flexible';
+        const locationText = job.locationText || 'Flexible';
+        document.getElementById('location').textContent = locationText;
         document.getElementById('employment').textContent = job.type ? job.type.toUpperCase() : '';
         const tags = Array.isArray(job.tags) ? job.tags : [];
         const tagHost = document.getElementById('tags');
-        tagHost.innerHTML = tags.map(tag => `<span>${tag}</span>`).join('');
-        if (!tagHost.innerHTML) tagHost.style.display = 'none';
+        if (tags.length) {
+          tagHost.innerHTML = tags.map(tag => `<span>${tag}</span>`).join('');
+          tagHost.style.display = '';
+        } else {
+          tagHost.innerHTML = '';
+          tagHost.style.display = 'none';
+        }
         document.getElementById('overview').textContent = job.overview || '';
         const respSection = document.getElementById('responsibilities');
         const respList = document.getElementById('respList');
@@ -286,15 +549,15 @@
         if (meta.last_accessed && meta.local) metaParts.push(`Opened ${new Date(meta.last_accessed).toLocaleString()}`);
         if (meta.expires_at) metaParts.push(`Expires ${new Date(meta.expires_at).toLocaleDateString()}`);
         if (meta.fallback) metaParts.push('Static preview');
-        document.getElementById('meta').textContent = metaParts.join(' • ');
-        document.getElementById('copyBtn').addEventListener('click', () => {
-          const shareLink = location.href;
-          const full = `${job.title}\n${job.locationText || ''}\n${apply}\n${shareLink}`;
-          navigator.clipboard?.writeText(full).then(()=>{
-            document.getElementById('copyBtn').textContent = 'Link copied';
-            setTimeout(()=>document.getElementById('copyBtn').textContent='Copy link',1800);
-          });
-        });
+        const metaEl = document.getElementById('meta');
+        metaEl.textContent = metaParts.join(' • ');
+        metaEl.style.display = metaParts.length ? '' : 'none';
+        shareContext = {
+          jobTitle: job.title || 'Role',
+          locationText,
+          applyUrl: apply,
+          shareLink: location.href,
+        };
       }
     })();
   </script>
