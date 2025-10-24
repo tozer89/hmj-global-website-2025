@@ -527,43 +527,30 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     catch(err){ console.warn('[timesheets] sign out failed', err); }
   });
 
-  if(debugIdentity && identity){
-    const resolveUser = ()=>{
+  if(debugIdentity){
+    const netlifyId = window.netlifyIdentity;
+    const updateIdentity = async () => {
       try{
-        if(typeof identity.currentUser === 'function'){
-          const u = identity.currentUser();
-          if(u) return u;
+        const info = await identity('admin');
+        if(info?.ok){
+          const email = info.email || info.user?.email || info.user?.user_metadata?.email || info.user?.user_metadata?.full_name;
+          debugIdentity.textContent = email || 'online';
+          debugIdentity.classList.add('good');
+        }else{
+          debugIdentity.textContent = 'offline';
+          debugIdentity.classList.remove('good');
         }
-      }catch(err){ console.warn('[timesheets] identity.currentUser()', err); }
-      const direct = identity.currentUser && typeof identity.currentUser !== 'function' ? identity.currentUser : null;
-      if(direct) return direct;
-      if(identity.user && typeof identity.user === 'function'){
-        try{ return identity.user(); }catch{}
-      }
-      if(identity.user) return identity.user;
-      if(typeof identity.getUser === 'function'){
-        try{ return identity.getUser(); }catch{}
-      }
-      return null;
-    };
-    const updateIdentity = ()=>{
-      const user = resolveUser();
-      if(user){
-        const email = user.email || user.user_metadata?.email || user.user_metadata?.full_name || 'online';
-        debugIdentity.textContent = email;
-        debugIdentity.classList.add('good');
-      }else{
+      }catch(err){
+        console.warn('[timesheets] identity update failed', err);
         debugIdentity.textContent = 'offline';
         debugIdentity.classList.remove('good');
       }
     };
+
     updateIdentity();
-    identity.on?.('login', updateIdentity);
-    identity.on?.('logout', updateIdentity);
-    identity.on?.('init', updateIdentity);
-  } else if(debugIdentity){
-    debugIdentity.textContent = 'offline';
-    debugIdentity.classList.remove('good');
+    netlifyId?.on?.('login', () => { updateIdentity(); });
+    netlifyId?.on?.('logout', () => { updateIdentity(); });
+    netlifyId?.on?.('init', () => { updateIdentity(); });
   }
 
   function setAuditVisible(show){
