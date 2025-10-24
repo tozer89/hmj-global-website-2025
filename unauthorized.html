@@ -20,7 +20,9 @@
     .btn:hover{border-color:#3b5172}
     .link{color:var(--blue);text-decoration:none}
   </style>
-  <script defer src="/js/identity-loader.js"></script>
+  <script src="js/hmj-identity.js"></script>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/admin/timesheets.html" data-hmj-logout-redirect=""></script>
 </head>
 <body>
   <div class="wrap">
@@ -28,22 +30,12 @@
       <h1>Unauthorized</h1>
       <p>You don’t have permission to view this page. If you’re an HMJ admin, please log in with an admin account.</p>
       <div class="row">
-        <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+        <button class="btn" onclick="(function(){var id=(window.hmjConfigureIdentity&&window.hmjConfigureIdentity())||window.netlifyIdentity;if(id&&id.open){id.open('login');}})()">Log in</button>
         <a class="btn" href="/">Go to homepage</a>
         <a class="link" href="/admin/">Open CMS</a>
       </div>
       <p style="margin-top:14px">Need access? Ask an administrator to add the <code>admin</code> role to your user in Netlify Identity.</p>
     </div>
   </div>
-  <script>
-    // If a user logs in and has access, send them to the admin console
-    document.addEventListener('DOMContentLoaded',()=>{
-      const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
-      onIdentity((identity) => {
-        if (!identity) return;
-        identity.on('login', ()=> { window.location.href = '/admin/timesheets.html'; });
-      });
-    });
-  </script>
 </body>
 </html>

@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Candidates | HMJ-Global</title>
-  <script defer src="js/identity-loader.js"></script>
-  <script defer src="js/nav-session.js"></script>
+  <script src="js/hmj-identity.js"></script>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="stylesheet" href="css/style.css" />
   <style>
     /* ========= Vars / Theme ========= */
@@ -186,13 +188,14 @@
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
         <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
-
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
   </header>
 
-  <!-- ===== Hero ===== -->
+  
+
+<!-- ===== Hero ===== -->
   <section class="hero-cand">
     <div>
       <h1>Candidate Registration</h1>

@@ -7,25 +7,10 @@
 
 
   <!-- In your <head> (once per page) -->
-  <script defer src="js/identity-loader.js"></script>
-  <script defer src="js/nav-session.js"></script>
-<script>
-  // Global login→redirect helper
-  document.addEventListener('DOMContentLoaded', () => {
-    const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
-    onIdentity((identity) => {
-      if (!identity) return;
-      identity.on('login', () => {
-        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-        sessionStorage.removeItem('afterLogin');
-        window.location.href = dest;
-      });
-      identity.on('logout', () => {
-        window.location.href = '/';
-      });
-    });
-  });
-</script>
+<script src="js/hmj-identity.js"></script>
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script defer src="js/hmj-nav.js"></script>
+<script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
 
 
 
@@ -226,7 +211,9 @@
     </nav>
   </header>
 
-  <!-- ===== HERO ===== -->
+  
+
+<!-- ===== HERO ===== -->
   <section class="hero">
     <div>
       <h1>Specialist Data Centre & Pharmaceutical Recruitment</h1>
@@ -561,26 +548,42 @@
 <!-- Redirect ONLY for invite/confirmation, never on normal visits -->
 <script>
 (function () {
-  function attach(identity) {
-    if (!identity) return;
+  function init() {
+    const ni = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+    if (!ni) return;
 
-    var cameViaInvite = (location.hash || "").includes("invite_token") ||
-                        (location.hash || "").includes("confirmation_token");
-    if (cameViaInvite) sessionStorage.setItem("hmj_invite_flow", "1");
+    const cameViaInvite = (location.hash || '').includes('invite_token') ||
+                          (location.hash || '').includes('confirmation_token');
+    if (cameViaInvite) sessionStorage.setItem('hmj_invite_flow', '1');
 
-    identity.on("init", function(user){
-      if (sessionStorage.getItem("hmj_invite_flow")) {
-        if (user) { sessionStorage.removeItem("hmj_invite_flow"); return location.replace("/admin/"); }
-        identity.on("login", function(){ sessionStorage.removeItem("hmj_invite_flow"); location.replace("/admin/"); });
+    const handleInvite = (user) => {
+      if (!sessionStorage.getItem('hmj_invite_flow')) return;
+      if (user) {
+        sessionStorage.removeItem('hmj_invite_flow');
+        location.replace('/admin/');
+        return;
       }
-    });
+      if (typeof ni.on === 'function') {
+        try {
+          ni.on('login', () => {
+            sessionStorage.removeItem('hmj_invite_flow');
+            location.replace('/admin/');
+          });
+        } catch (_) {}
+      }
+    };
 
-    try { identity.init(); } catch {}
+    if (typeof ni.on === 'function') {
+      ni.on('init', handleInvite);
+    }
+
+    try {
+      handleInvite(typeof ni.currentUser === 'function' ? ni.currentUser() : null);
+    } catch (_) {}
   }
 
-  const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
-  onIdentity((identity) => attach(identity));
-  document.addEventListener('hmjIdentityUnavailable', () => attach(null), { once: true });
+  if (window.netlifyIdentity) init();
+  else document.addEventListener('netlifyIdentityLoad', init);
 })();
 </script>
 

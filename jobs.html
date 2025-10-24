@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Jobs | HMJ-Global</title>
-  <script defer src="js/identity-loader.js"></script>
-  <script defer src="js/nav-session.js"></script>
+  <script src="js/hmj-identity.js"></script>
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
   <link rel="stylesheet" href="css/style.css" />
   <style>
@@ -179,13 +181,14 @@
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
         <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
-
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
   </header>
 
-  <!-- ===== Page header ===== -->
+  
+
+<!-- ===== Page header ===== -->
   <section class="page-header">
     <h1>Current Vacancies</h1>
     <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
@@ -1319,47 +1322,29 @@
   })();
   </script>
 <script>
-  const portalLink = document.querySelector('a[href="/admin/"]');
-  if (portalLink) {
+  (function(){
+    const portalLink = document.querySelector('a[href="/admin/"]');
+    if (!portalLink) return;
+
     portalLink.style.display = 'none';
-    let portalIdentity = null;
-    let portalBound = false;
 
-    const toggle = () => {
-      if (!portalIdentity) {
-        portalLink.style.display = 'none';
-        return;
-      }
-      try {
-        portalLink.style.display = portalIdentity.currentUser?.() ? '' : 'none';
-      } catch {
-        portalLink.style.display = 'none';
-      }
-    };
+    function toggle(user) {
+      const id = user || window.netlifyIdentity || null;
+      const current = typeof id?.currentUser === 'function' ? id.currentUser() : id;
+      portalLink.style.display = current ? '' : 'none';
+    }
 
-    const bind = (identity) => {
-      portalIdentity = identity && typeof identity.on === 'function' ? identity : null;
-      if (!portalIdentity) {
-        portalLink.style.display = 'none';
-        return;
-      }
-      if (!portalBound) {
-        portalBound = true;
-        portalIdentity.on('init', toggle);
-        portalIdentity.on('login', toggle);
-        portalIdentity.on('logout', () => {
-          toggle();
-          portalLink.blur();
-        });
-      }
-      try { portalIdentity.init?.(); } catch {}
-      toggle();
-    };
+    const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+    if (!identity) return;
 
-    const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
-    onIdentity((id) => bind(id));
-    document.addEventListener('hmjIdentityUnavailable', () => { bind(null); }, { once: true });
-  }
+    if (typeof identity.on === 'function') {
+      identity.on('init', toggle);
+      identity.on('login', toggle);
+      identity.on('logout', () => toggle(null));
+    }
+
+    try { toggle(identity); } catch (_) {}
+  })();
 </script>
 
 
