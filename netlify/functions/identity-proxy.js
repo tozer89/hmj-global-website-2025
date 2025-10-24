@@ -98,6 +98,29 @@ function corsHeaders(event) {
   return headers;
 }
 
+function extractProxyPath(event, singleParams = {}) {
+  if (singleParams?.path) {
+    return singleParams.path;
+  }
+
+  const prefix = '/.netlify/functions/identity-proxy';
+  const eventPath = event.path || '';
+  if (eventPath.startsWith(prefix)) {
+    return eventPath.slice(prefix.length).replace(/^\/+/, '');
+  }
+
+  const rawUrl = event.rawUrl || '';
+  const index = rawUrl.indexOf(prefix);
+  if (index !== -1) {
+    return rawUrl
+      .slice(index + prefix.length)
+      .split('?')[0]
+      .replace(/^\/+/, '');
+  }
+
+  return '';
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -115,7 +138,11 @@ exports.handler = async (event) => {
     }
   }
 
-  const target = buildUrl(singleParams?.path || '', merged);
+  delete merged.path;
+
+  const proxyPath = extractProxyPath(event, singleParams);
+
+  const target = buildUrl(proxyPath, merged);
 
   try {
     const response = await fetchImpl(target, {
