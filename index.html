@@ -691,9 +691,9 @@
     try { identity.init(); } catch {}
   }
 
-  if (window.hmjIdentityReady) window.hmjIdentityReady(attach);
-  else if (window.netlifyIdentity) attach(window.netlifyIdentity);
-  else document.addEventListener("netlifyIdentityLoad", () => attach(window.netlifyIdentity), { once: true });
+  const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
+  onIdentity((identity) => attach(identity));
+  document.addEventListener('hmjIdentityUnavailable', () => attach(null), { once: true });
 })();
 </script>
 

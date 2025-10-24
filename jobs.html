@@ -1367,27 +1367,43 @@
   const portalLink = document.querySelector('a[href="/admin/"]');
   if (portalLink) {
     portalLink.style.display = 'none';
+    let portalIdentity = null;
+    let portalBound = false;
+
+    const toggle = () => {
+      if (!portalIdentity) {
+        portalLink.style.display = 'none';
+        return;
+      }
+      try {
+        portalLink.style.display = portalIdentity.currentUser?.() ? '' : 'none';
+      } catch {
+        portalLink.style.display = 'none';
+      }
+    };
+
     const bind = (identity) => {
-      if (!identity) return;
-      const toggle = () => {
-        try {
-          portalLink.style.display = identity.currentUser?.() ? '' : 'none';
-        } catch {
-          portalLink.style.display = 'none';
-        }
-      };
-      identity.on('init', toggle);
-      identity.on('login', toggle);
-      identity.on('logout', () => {
-        toggle();
-        portalLink.blur();
-      });
-      try { identity.init(); } catch {}
+      portalIdentity = identity && typeof identity.on === 'function' ? identity : null;
+      if (!portalIdentity) {
+        portalLink.style.display = 'none';
+        return;
+      }
+      if (!portalBound) {
+        portalBound = true;
+        portalIdentity.on('init', toggle);
+        portalIdentity.on('login', toggle);
+        portalIdentity.on('logout', () => {
+          toggle();
+          portalLink.blur();
+        });
+      }
+      try { portalIdentity.init?.(); } catch {}
       toggle();
     };
-    if (window.netlifyIdentity) bind(window.netlifyIdentity);
-    else document.addEventListener('netlifyIdentityLoad', () => bind(window.netlifyIdentity), { once: true });
-    document.addEventListener('hmjIdentityUnavailable', () => { portalLink.style.display = 'none'; }, { once: true });
+
+    const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
+    onIdentity((id) => bind(id));
+    document.addEventListener('hmjIdentityUnavailable', () => { bind(null); }, { once: true });
   }
 </script>
 
