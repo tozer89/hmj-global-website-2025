@@ -11,7 +11,7 @@
 
       /* Brand palette */
       --hmj-blue: #2f4ea2;
-      --hmj-blue-dark: #1f3b82;
+      --hmj-blue-dark: #243b7c;
       --hmj-blue-light: #e8eeff;
       --hmj-text: #0f1b3f;
       --hmj-muted: #5b6474;
@@ -21,9 +21,9 @@
       /* Surfaces + accents */
       --bg: linear-gradient(135deg, #f6f8ff 0%, #eef3ff 45%, #f8faff 100%);
       --surface: #ffffff;
-      --surface-soft: rgba(255, 255, 255, 0.86);
+      --surface-soft: rgba(255, 255, 255, 0.88);
       --border: var(--hmj-border);
-      --shadow: 0 32px 70px rgba(47, 78, 162, 0.16);
+      --shadow: 0 28px 64px rgba(47, 78, 162, 0.16);
       --ink: var(--hmj-text);
       --ink-strong: var(--hmj-blue-dark);
       --ink-soft: #5d6f9e;
@@ -61,7 +61,7 @@
     }
 
     .card {
-      width: min(880px, 100%);
+      width: min(860px, 100%);
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 26px;
@@ -97,7 +97,7 @@
       gap: 8px;
       padding: 6px 14px;
       border-radius: 999px;
-      background: var(--accent-soft);
+      background: var(--hmj-blue-light);
       border: 1px solid rgba(63, 102, 199, 0.28);
       letter-spacing: 0.02em;
       text-transform: uppercase;
@@ -147,8 +147,8 @@
     .tags span {
       padding: 6px 12px;
       border-radius: 999px;
-      background: var(--accent-soft);
-      border: 1px solid rgba(63, 102, 199, 0.26);
+      background: #ffffff;
+      border: 1px solid rgba(63, 102, 199, 0.22);
       font-weight: 700;
       color: var(--accent);
       box-shadow: inset 0 0 0 1px rgba(63, 102, 199, 0.08);
