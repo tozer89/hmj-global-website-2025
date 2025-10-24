@@ -20,7 +20,13 @@
   status = 401
 
 [[redirects]]
+  from = "/.netlify/identity"
+  to = "/.netlify/functions/identity-proxy"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/.netlify/identity/*"
-  to = "/.netlify/functions/identity-proxy?path=:splat"
+  to = "/.netlify/functions/identity-proxy/:splat"
   status = 200
   force = true
