@@ -836,7 +836,7 @@
     }
     async function loadJobsJSON(){
       try{
-        const res = await fetch('data/jobs.json', {cache:'no-store'});
+        const res = await fetch('/data/jobs.json', {cache:'no-store'});
         if(!res.ok) return null;
         const data = await res.json();
         return Array.isArray(data.jobs) ? data.jobs : null;
@@ -1131,7 +1131,8 @@
         refreshChips();
         bindChipEvents();
         bindJobCardEvents();
-        if(source !== 'api' || schema) {
+        const isLiveSource = source === 'api' || source === 'supabase';
+        if(!isLiveSource || schema) {
           console.warn(`jobs rendered using ${source} fallback (${jobsState.all.length} records${schema ? ', schema mismatch' : ''})`);
           if (notice) {
             notice.hidden = false;
@@ -1303,7 +1304,8 @@
       });
       noResultsEl.style.display=shown?'none':'block';
       const baseMsg = shown===total?'Showing all jobs':`Showing ${shown} of ${total} jobs`;
-      resultCount.textContent = jobsState.source && jobsState.source !== 'api'
+      const isLiveSource = jobsState.source === 'api' || jobsState.source === 'supabase';
+      resultCount.textContent = jobsState.source && !isLiveSource
         ? `${baseMsg} — preview data (${jobsState.source})`
         : baseMsg;
       if(activeCountEl) activeCountEl.textContent=activeFiltersCount();
