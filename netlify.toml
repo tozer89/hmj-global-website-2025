@@ -6,18 +6,18 @@
 [functions]
   directory = "netlify/functions"   # <-- prod/default functions
 
-# Use the v2 functions for PR deploy previews
+# Use the shared functions bundle for PR deploy previews
 [context.deploy-preview.functions]
-  directory = "admin-v2/functions"  # <-- NOT admin-v2/admin/functions
-
-# Also use v2 for branch deploys (non-PR branches)
-[context.branch-deploy.functions]
-  directory = "admin-v2/functions"
+  directory = "netlify/functions"
 
 # Be explicit for production (mirrors [functions] above)
 [context.production.functions]
   directory = "netlify/functions"
 
-# If you run `netlify dev` locally and want to test v2
+# Also use the shared bundle for branch deploys (non-PR branches)
+[context.branch-deploy.functions]
+  directory = "netlify/functions"
+
+# If you run `netlify dev` locally this keeps everything consistent
 [dev]
-  functions = "admin-v2/functions"
+  functions = "netlify/functions"
