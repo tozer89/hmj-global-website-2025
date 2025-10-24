@@ -257,6 +257,7 @@
         shareLink: null,
         diagnostics: false,
         readOnly: false,
+        supabaseOk: false,
         fallbackSource: '',
         seeded: false,
         schemaMismatch: false,
@@ -982,7 +983,7 @@
       }
 
       async function saveJob() {
-        if (state.readOnly) {
+        if (state.readOnly || !state.supabaseOk) {
           toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
           return;
         }
@@ -1014,7 +1015,7 @@
       }
 
       async function deleteJob() {
-        if (state.readOnly) {
+        if (state.readOnly || !state.supabaseOk) {
           toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
           return;
         }
@@ -1149,6 +1150,7 @@
           if (!rows.length) return false;
           state.jobs = rows.map((row) => ({ ...normalizeJob(row), __seed: true }));
           state.readOnly = true;
+          state.supabaseOk = false;
           state.fallbackSource = reason || 'static';
           state.seeded = true;
           applySeedNotice();
@@ -1173,7 +1175,8 @@
             if (job && job.__seed) merged.__seed = job.__seed;
             return merged;
           });
-          state.readOnly = !!res?.readOnly;
+          state.supabaseOk = !!res?.supabase?.ok;
+          state.readOnly = !!res?.readOnly || !state.supabaseOk;
           state.fallbackSource = res?.source || '';
           state.seeded = !!res?.seeded && state.jobs.length > 0;
           state.schemaMismatch = !!res?.schema;
@@ -1196,6 +1199,7 @@
           renderAll();
         } catch (e) {
           console.error('[jobs] load failed', e);
+          state.supabaseOk = false;
           const fallbackOk = await loadJobsFromStatic('static-client');
           if (fallbackOk) {
             toast('Supabase unavailable — showing static jobs (read-only).', 'warn', 3800);
