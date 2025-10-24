@@ -2,19 +2,13 @@
 // CommonJS module (Netlify Functions). Robust diagnostics & helpers.
 
 const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseUrl, getSupabaseServiceKey } = require('./_supabase-env.js');
 
 // ---- ENV ----
 // Prefer the service role key server-side (RLS bypassed in functions).
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_URL = getSupabaseUrl();
 
-const SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_KEY ||       // your current name
-  process.env.SUPABASE_SERVICE_ROLE ||      // common alias
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||  // another alias
-  process.env.SUPABASE_ANON_KEY;            // fallback (not recommended server-side)
+const SERVICE_KEY = getSupabaseServiceKey();
 
 const DEBUG = /^1|true|yes|on|debug$/i.test(process.env.DEBUG_SUPA || '');
 
@@ -24,10 +18,10 @@ let supabaseError = null;
 try {
   if (!SUPABASE_URL || !SERVICE_KEY) {
     const missing = !SUPABASE_URL && !SERVICE_KEY
-      ? 'SUPABASE_URL & SUPABASE_SERVICE_KEY'
+      ? 'Supabase URL & service key environment variables missing'
       : !SUPABASE_URL
-        ? 'SUPABASE_URL'
-        : 'SUPABASE_SERVICE_KEY';
+        ? 'Supabase URL missing (set SUPABASE_URL or VITE_SUPABASE_URL)'
+        : 'Supabase service key missing (set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY)';
     supabaseError = new Error(`${missing} missing`);
     console.error('[supa] Missing env: %s', missing);
   } else {
