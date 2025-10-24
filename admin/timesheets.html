@@ -1,12 +1,14 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Timesheets — Admin | HMJ-Global</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Timesheets — Admin | HMJ-Global</title>
 
-
-<link rel="stylesheet" href="/css/style.css"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js"></script>
 <style>
   /* ---------------- THEME ---------------- */
   :root{
@@ -1188,13 +1190,6 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   window.Admin.bootAdmin(main);
 })();
 </script>
-
-
-<!-- Identity MUST load before common.js -->
-<script defer src="../js/identity-loader.js"></script>
-<!-- Shared admin bootstrap (pure JS file, no <script> tags inside) -->
-<script defer src="/admin/common.js"></script>
-
 
 </body>
 </html>
