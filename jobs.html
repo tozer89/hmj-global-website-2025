@@ -4,21 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Jobs | HMJ-Global</title>
+  <script src="js/hmj-identity.js"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.netlifyIdentity) {
-        netlifyIdentity.on('login', () => {
-          const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-          sessionStorage.removeItem('afterLogin');
-          window.location.href = dest;
-        });
-        netlifyIdentity.on('logout', () => {
-          window.location.href = '/';
-        });
-      }
-    });
-  </script>
+  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
   <link rel="stylesheet" href="css/style.css" />
   <style>
@@ -192,97 +181,14 @@
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
         <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const admin = document.getElementById('nav-admin');
-      const timesheets = document.getElementById('nav-timesheets');
-      const identity = window.netlifyIdentity;
-
-      const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
-        ? user.app_metadata.roles
-        : Array.isArray(user?.roles)
-          ? user.roles
-          : [];
-
-      function requireLogin(event, destination) {
-        if (event) event.preventDefault();
-        if (!identity) {
-          if (destination) window.location.href = destination;
-          return;
-        }
-        if (destination) sessionStorage.setItem('afterLogin', destination);
-        identity.open('login');
-      }
-
-      function setTimesheets(user) {
-        if (!timesheets) return;
-        if (user) {
-          timesheets.href = '/timesheets.html';
-          timesheets.removeAttribute('aria-disabled');
-          timesheets.title = 'Open timesheets';
-        } else {
-          timesheets.href = '#';
-          timesheets.setAttribute('aria-disabled', 'true');
-          timesheets.title = 'Sign in to access timesheets';
-        }
-      }
-
-      function setAdmin(user) {
-        if (!admin) return;
-        const roles = rolesOf(user);
-        const isAdmin = roles.includes('admin');
-        if (isAdmin) {
-          admin.style.display = 'inline-block';
-          admin.href = '/admin/';
-          admin.removeAttribute('aria-disabled');
-          admin.classList.remove('requires-admin');
-          admin.textContent = 'Admin Dashboard';
-          admin.title = 'Open the admin dashboard';
-        } else {
-          admin.style.display = 'none';
-          admin.href = '/admin/';
-          admin.setAttribute('aria-disabled', 'true');
-          admin.classList.add('requires-admin');
-          admin.textContent = 'Admin Dashboard';
-          admin.title = 'Admin access only';
-        }
-      }
-
-      function renderFor(user) {
-        setTimesheets(user);
-        setAdmin(user);
-      }
-
-      timesheets?.addEventListener('click', (event) => {
-        const user = identity?.currentUser?.();
-        if (user) return;
-        requireLogin(event, '/timesheets.html');
-      });
-      admin?.addEventListener('click', (event) => {
-        const user = identity?.currentUser?.();
-        if (user) return;
-        requireLogin(event, '/admin/');
-      });
-
-      identity?.on('init', (user) => renderFor(user));
-      identity?.on('login', (user) => renderFor(user));
-      identity?.on('logout', () => renderFor(null));
-
-      try {
-        renderFor(identity?.currentUser?.() || null);
-      } catch {
-        renderFor(null);
-      }
-    });
-</script>
-
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
   </header>
 
-  <!-- ===== Page header ===== -->
+  
+
+<!-- ===== Page header ===== -->
   <section class="page-header">
     <h1>Current Vacancies</h1>
     <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
@@ -719,6 +625,7 @@
     let jobsEls = [];
     let chips = [];
     let seededJobsApplied = false;
+    const fallbackAnchorIds = new Set();
 
     function refreshJobsElements(){
       jobsEls = Array.from(jobsContainer?.querySelectorAll('.job') || []);
@@ -757,7 +664,7 @@
           pinBtn.dataset.bound = '1';
           pinBtn.addEventListener('click', () => {
             const pins = getPins();
-            const id = job.id || job.dataset.id || job.querySelector('h3')?.textContent?.trim();
+            const id = job.dataset.id || job.dataset.anchor || job.id || job.querySelector('h3')?.textContent?.trim();
             if (!id) return;
             if (pins.has(id)) pins.delete(id); else pins.add(id);
             setPins(pins);
@@ -852,15 +759,30 @@
     }
 
     async function loadJobsFromApi(){
-      try{
-        const res = await fetch('/.netlify/functions/jobs-list', { cache:'no-store' });
-        if(!res.ok) throw new Error('HTTP '+res.status);
-        const data = await res.json();
-        return data;
-      }catch(e){
-        console.warn('jobs-list API failed', e);
-        return null;
+      const endpoints = [
+        { url: '/.netlify/functions/jobs-list', options: { cache: 'no-store' }, label: 'jobs-list' },
+        {
+          url: '/.netlify/functions/admin-jobs-list?public=1',
+          options: { cache: 'no-store', headers: { 'x-hmj-public': '1' } },
+          label: 'admin-jobs-list (public)',
+        },
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint.url, endpoint.options);
+          if (!res.ok) {
+            console.warn(`jobs API ${endpoint.label} failed`, res.status);
+            continue;
+          }
+          const data = await res.json();
+          return data;
+        } catch (err) {
+          console.warn(`jobs API ${endpoint.label} error`, err);
+        }
       }
+
+      return null;
     }
     async function loadJobsJSON(){
       try{
@@ -984,6 +906,49 @@
       jobsState.tags = Array.from(tags, ([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
     }
 
+    function createAnchorId(job, index, used){
+      const candidates = [
+        job.anchorId,
+        job.id,
+        job.slug,
+        job.slug_id,
+        job.slugId,
+        job.shareSlug,
+        job.title,
+        job.sectionKey && `${job.sectionKey}-${job.title}`,
+        `role-${index + 1}`,
+      ];
+      let base = '';
+      for (const source of candidates) {
+        if (!source) continue;
+        base = slugify(String(source));
+        if (base) break;
+      }
+      if (!base) base = `role-${index + 1}`;
+      const prefix = base.startsWith('job-') ? base : `job-${base}`;
+      let attempt = prefix;
+      let suffix = 2;
+      while (used.has(attempt)) {
+        attempt = `${prefix}-${suffix++}`;
+      }
+      used.add(attempt);
+      return attempt;
+    }
+
+    function ensureAnchorIds(jobs){
+      fallbackAnchorIds.clear();
+      const used = new Set();
+      jobs.forEach((job, index) => {
+        if (job.anchorId && !used.has(job.anchorId)) {
+          used.add(job.anchorId);
+          fallbackAnchorIds.add(job.anchorId);
+          return;
+        }
+        job.anchorId = createAnchorId(job, index, used);
+        fallbackAnchorIds.add(job.anchorId);
+      });
+    }
+
     function renderJobCard(job){
       const statusClass = job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live';
       const applyUrl = resolveApplyUrl(job);
@@ -991,9 +956,15 @@
       const tags = tagsList.length ? tagsList.map((tag) => `<span class="tag">${tag}</span>`).join('') : '';
       const respList = (job.responsibilities || []).map((item) => `<li>${item}</li>`).join('');
       const reqList = (job.requirements || []).map((item) => `<li>${item}</li>`).join('');
+      if (!job.anchorId) {
+        job.anchorId = createAnchorId(job, 0, fallbackAnchorIds);
+      }
+      const anchorId = job.anchorId;
+      const dataId = job.id || job.slug || job.slug_id || job.slugId || anchorId;
       return `
-      <div id="${job.id}" class="job reveal"
-           data-id="${job.id}"
+      <div id="${anchorId}" class="job reveal"
+           data-id="${dataId}"
+           data-anchor="${anchorId}"
            data-status="${job.status}"
            data-location="${job.locationCode}"
            data-type="${job.type}"
@@ -1033,6 +1004,7 @@
         return;
       }
 
+      ensureAnchorIds(jobs);
       sections.forEach((section) => {
         const items = jobs.filter((job) => job.sectionKey === section.key);
         if (!items.length) return;
@@ -1286,7 +1258,7 @@
     function refreshPinsUI(){
       const pins=getPins();
       jobsEls.forEach(job=>{
-        const id=job.id||job.dataset.id||job.querySelector('h3')?.textContent?.trim();
+        const id=job.dataset.id||job.dataset.anchor||job.id||job.querySelector('h3')?.textContent?.trim();
         const btn=job.querySelector('.pin-btn'); if(!btn) return;
         const isPinned=pins.has(id);
         btn.setAttribute('aria-pressed',String(isPinned));
@@ -1317,7 +1289,7 @@
 
     function getAttr(el,name){ return (el.getAttribute(name)||'').toLowerCase(); }
     function matchSearch(job){ if(!state.search) return true; const hay=(job.dataset.keywords||job.textContent||'').toLowerCase(); return hay.includes(state.search); }
-    function matchPins(job){ if(!state.shortlistOnly) return true; const pins=getPins(); const id=job.id||job.dataset.id||job.querySelector('h3')?.textContent?.trim(); return pins.has(id); }
+    function matchPins(job){ if(!state.shortlistOnly) return true; const pins=getPins(); const id=job.dataset.id||job.dataset.anchor||job.id||job.querySelector('h3')?.textContent?.trim(); return pins.has(id); }
     function activeFiltersCount(){ let n=0; if(state.status!=='all') n++; if(state.location!=='all') n++; if(state.type!=='all') n++; if(state.disc!=='all') n++; if(state.search) n++; if(state.shortlistOnly) n++; return n; }
 
     function applyFilters(){
@@ -1346,7 +1318,8 @@
     function handleShare(job){
       const title=job.querySelector('h3')?.textContent?.trim()||'HMJ-Global role';
       const loc=job.querySelector('p strong')?.nextSibling?.textContent?.trim()||'';
-      const url=`${location.origin}${location.pathname}${location.search}#${job.id||job.dataset.id||''}`;
+      const anchor=job.dataset.anchor||job.id||job.dataset.id||'';
+      const url=`${location.origin}${location.pathname}${location.search}${anchor ? `#${anchor}` : ''}`;
       const text=`${title} at HMJ-Global\n${loc ? 'Location: '+loc+'\n' : ''}Apply or learn more: ${url}`;
       if(navigator.share){ navigator.share({title,text,url}).catch(()=>{}); }
       else{
@@ -1363,17 +1336,30 @@
     };
   })();
   </script>
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
-  const portalLink = document.querySelector('a[href="/admin/"]');
-  if (portalLink) {
+  (function(){
+    const portalLink = document.querySelector('a[href="/admin/"]');
+    if (!portalLink) return;
+
     portalLink.style.display = 'none';
-    function toggle() { portalLink.style.display = netlifyIdentity.currentUser() ? '' : 'none'; }
-    netlifyIdentity.on('init', toggle);
-    netlifyIdentity.on('login', toggle);
-    netlifyIdentity.on('logout', toggle);
-    netlifyIdentity.init();
-  }
+
+    function toggle(user) {
+      const id = user || window.netlifyIdentity || null;
+      const current = typeof id?.currentUser === 'function' ? id.currentUser() : id;
+      portalLink.style.display = current ? '' : 'none';
+    }
+
+    const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+    if (!identity) return;
+
+    if (typeof identity.on === 'function') {
+      identity.on('init', toggle);
+      identity.on('login', toggle);
+      identity.on('logout', () => toggle(null));
+    }
+
+    try { toggle(identity); } catch (_) {}
+  })();
 </script>
 
 

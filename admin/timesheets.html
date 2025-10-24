@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -255,6 +255,15 @@
       <canvas id="chartTrend" width="760" height="280" role="img" aria-label="Submitted vs approved"></canvas>
       <canvas id="chartStatus" width="760" height="280" role="img" aria-label="Status distribution"></canvas>
     </div>
+
+window.__timesheetsController = null;
+
+async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile }) {
+  const DEFAULTS = {
+    week1Ending: '2025-11-02',
+    deadlineNote: 'Submit approved timesheets by Monday 10:00 (UK time)',
+    deadlineTimezone: 'Europe/London',
+  };
   </dialog>
 
   <div class="toast-zone" id="toastZone" aria-live="assertive"></div>

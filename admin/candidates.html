@@ -49,7 +49,13 @@
     header.card.intro .crumbs{margin:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
     header.card.intro h1{margin:6px 0 8px;font-size:28px;line-height:1.15;color:var(--ink)}
     header.card.intro .lead{margin:0;color:var(--muted);max-width:720px}
-    header.card.intro .debug{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    header.card.intro .debug{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    #debug-panel{position:relative}
+    #debug-panel #debug-toggle{font-size:13px}
+    #debug-panel .dbg-body{display:none;position:absolute;top:calc(100% + 10px);right:0;background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:16px;box-shadow:0 18px 40px rgba(15,23,42,.16);min-width:260px;z-index:20}
+    #debug-panel.open .dbg-body{display:grid;gap:10px}
+    #debug-panel .dbg-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)}
+    #debug-panel .dbg-logs{margin:0;padding-left:18px;display:grid;gap:6px;max-height:180px;overflow:auto;font-size:12px;color:var(--muted)}
 
     .wrap{max-width:1400px;margin:24px auto;padding:0 16px 40px}
     .wrap.layout{display:grid;grid-template-columns:minmax(260px,320px) 1fr;gap:18px;align-items:start}
@@ -103,12 +109,6 @@
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#fff;border:1px solid var(--stroke);padding:12px 16px;border-radius:12px;box-shadow:0 18px 40px rgba(15,23,42,.18);display:none;font-weight:700}
     .toast.show{display:block}
 
-    #debug-panel{position:fixed;right:20px;bottom:20px;display:grid;gap:10px;z-index:140}
-    #debug-panel .dbg-body{display:none;background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:16px;box-shadow:0 18px 40px rgba(15,23,42,.16);min-width:260px}
-    #debug-panel.open .dbg-body{display:grid;gap:10px}
-    #debug-panel .dbg-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)}
-    #debug-panel .dbg-logs{margin:0;padding-left:18px;display:grid;gap:6px;max-height:180px;overflow:auto;font-size:12px;color:var(--muted)}
-
     .muted{color:var(--muted)}
 
     @media (max-width:1100px){
@@ -151,6 +151,18 @@
       <span class="pill ok" id="dbg-role">role: admin</span>
       <span class="pill" id="dbg-sb">supabase: live</span>
       <span class="pill" id="dbg-version">build: -</span>
+      <div id="debug-panel">
+        <button id="debug-toggle" class="btn ghost small" type="button">Show debug</button>
+        <div class="dbg-body">
+          <div class="dbg-row"><strong>Identity</strong><span id="dbg-ident-value">-</span></div>
+          <div class="dbg-row"><strong>Token</strong><span id="dbg-token-value">-</span></div>
+          <div class="dbg-row"><strong>Supabase</strong><span id="dbg-sb-value">-</span></div>
+          <div class="dbg-row"><strong>Last query</strong><span id="dbg-query">-</span></div>
+          <div class="dbg-row"><strong>Logs</strong></div>
+          <ul id="dbg-logs" class="dbg-logs"></ul>
+          <button id="dbg-export" class="btn" type="button" style="margin-top:12px">Export logs</button>
+        </div>
+      </div>
     </div>
   </header>
 

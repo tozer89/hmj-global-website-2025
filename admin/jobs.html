@@ -7,7 +7,7 @@
   <title>Jobs — Admin | HMJ Global</title>
 
   <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=21"></script>
 
   <style>
@@ -257,6 +257,7 @@
         shareLink: null,
         diagnostics: false,
         readOnly: false,
+        supabaseOk: false,
         fallbackSource: '',
         seeded: false,
         schemaMismatch: false,
@@ -564,10 +565,45 @@
         return { entry: nextEntry, reused: !!entry, store };
       }
 
-      function buildLocalShareUrl(slug) {
-        if (!slug) return '';
+      function encodeSharePayload(entry) {
+        if (!entry || !entry.job) return '';
+        try {
+          const payload = {
+            job: entry.job,
+            meta: {
+              slug: entry.slug || null,
+              created_at: entry.createdAt || null,
+              refreshed_at: entry.updatedAt || null,
+              expires_at: entry.expiresAt || null,
+              last_accessed: entry.lastAccessed || null,
+              snapshot: true,
+            },
+          };
+          const json = JSON.stringify(payload);
+          if (typeof TextEncoder !== 'undefined') {
+            const encoded = new TextEncoder().encode(json);
+            let binary = '';
+            encoded.forEach((byte) => {
+              binary += String.fromCharCode(byte);
+            });
+            return btoa(binary);
+          }
+          // Fallback for environments without TextEncoder.
+          return btoa(unescape(encodeURIComponent(json)));
+        } catch (err) {
+          console.warn('[jobs] unable to encode share payload', err);
+          return '';
+        }
+      }
+
+      function buildLocalShareUrl(entry) {
+        if (!entry || !entry.slug) return '';
         const origin = location.origin || `${location.protocol}//${location.host}`;
-        return `${origin.replace(/\/$/, '')}/jobs/spec.html?local=${encodeURIComponent(slug)}`;
+        const params = new URLSearchParams();
+        params.set('local', entry.slug);
+        const payload = encodeSharePayload(entry);
+        if (payload) params.set('payload', payload);
+        return `${origin.replace(/\/$/, '')}/jobs/spec.html?${params.toString()}`;
       }
 
       function formatShareDate(ts, includeTime = false) {
@@ -947,7 +983,7 @@
       }
 
       async function saveJob() {
-        if (state.readOnly) {
+        if (state.readOnly || !state.supabaseOk) {
           toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
           return;
         }
@@ -979,7 +1015,7 @@
       }
 
       async function deleteJob() {
-        if (state.readOnly) {
+        if (state.readOnly || !state.supabaseOk) {
           toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
           return;
         }
@@ -1013,7 +1049,7 @@
             return;
           }
           const { entry, reused } = result;
-          shareUrl.value = buildLocalShareUrl(entry.slug);
+          shareUrl.value = buildLocalShareUrl(entry);
           const expiresText = formatShareDate(entry.expiresAt) || '';
           const createdText = entry.createdAt ? formatShareDate(entry.createdAt, true) : '';
           const lastUsedText = entry.lastAccessed ? formatShareDate(entry.lastAccessed, true) : '';
@@ -1090,7 +1126,7 @@
           return;
         }
         const { entry } = result;
-        shareUrl.value = buildLocalShareUrl(entry.slug);
+        shareUrl.value = buildLocalShareUrl(entry);
         const expiresText = formatShareDate(entry.expiresAt) || '';
         const refreshedText = entry.updatedAt ? formatShareDate(entry.updatedAt, true) : '';
         const parts = ['Local preview'];
@@ -1114,6 +1150,7 @@
           if (!rows.length) return false;
           state.jobs = rows.map((row) => ({ ...normalizeJob(row), __seed: true }));
           state.readOnly = true;
+          state.supabaseOk = false;
           state.fallbackSource = reason || 'static';
           state.seeded = true;
           applySeedNotice();
@@ -1138,7 +1175,8 @@
             if (job && job.__seed) merged.__seed = job.__seed;
             return merged;
           });
-          state.readOnly = !!res?.readOnly;
+          state.supabaseOk = !!res?.supabase?.ok;
+          state.readOnly = !!res?.readOnly || !state.supabaseOk;
           state.fallbackSource = res?.source || '';
           state.seeded = !!res?.seeded && state.jobs.length > 0;
           state.schemaMismatch = !!res?.schema;
@@ -1161,6 +1199,7 @@
           renderAll();
         } catch (e) {
           console.error('[jobs] load failed', e);
+          state.supabaseOk = false;
           const fallbackOk = await loadJobsFromStatic('static-client');
           if (fallbackOk) {
             toast('Supabase unavailable — showing static jobs (read-only).', 'warn', 3800);
