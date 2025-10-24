@@ -2,851 +2,366 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clients | HMJ-Global</title>
   <script src="js/hmj-identity.js"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="js/hmj-nav.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
-  <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="assets/css/clients.enhanced.css" />
   <style>
-    :root{
-      --ink:#1A1A2E;
-      --accent:#3A66B3;
-      --muted:#6b7280;
-      --bg:#0f1322;
-      --chip:#eef3ff;
-      --chipBorder:rgba(58,102,179,.35);
-      --cardBorder:rgba(26,26,46,.14);
-      --steel:#e8ecff;
-
-      /* darker, higher-contrast section pill */
-      --sep-bg1:#1a243b;           /* top */
-      --sep-bg2:#11182d;           /* bottom */
-      --sep-text:#f6f8ff;          /* text */
-      --sep-border:rgba(255,255,255,.24);
+    :root {
+      --bg:#f4f6ff; --panel:#fff; --border:#d7def3;
+      --ink:#0f1b3f; --muted:#5d6f9e;
+      --accent:#3f66c7; --ok:#138754; --warn:#b78103; --bad:#b42318;
+      --chip:#eef2ff; --shadow:0 18px 40px rgba(15,27,63,.12);
     }
-
-    /* ===== Unified Header / Nav ===== */
-    .hmj-header{position:sticky;top:0;z-index:1000;background:var(--bg);color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
-    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
-    .hmj-logo img{height:40px;display:block}
-    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
-    .hmj-menu a{
-      display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;
-      color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s;
-    }
-    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
-    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
-    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
-    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
-    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
-    @media (max-width:900px){
-      .hmj-burger{display:inline-block}
-      .hmj-menu{
-        position:fixed;right:12px;left:12px;top:64px;
-        background:var(--bg);border:1px solid rgba(255,255,255,.12);border-radius:14px;
-        box-shadow:0 16px 40px rgba(0,0,0,.35);
-        display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;
-        transition:max-height .28s ease, padding .2s ease;
+    @media (prefers-color-scheme:dark) {
+      :root {
+        --bg:#0f1428;--panel:#151c36;--border:#2a3563;
+        --ink:#e8edff;--muted:#b9c3ea;--shadow:0 18px 40px rgba(0,0,0,.35);
       }
-      .hmj-menu.open{max-height:70vh;padding:10px}
-      .hmj-menu a{padding:14px 12px;width:100%}
-      .hmj-scrim[hidden]{display:none}
     }
-    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
-    .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
-    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
-
-    /* ===== Hero (scanlines + electric underline) ===== */
-    .hero-clients{
-      min-height:42vh; display:grid; place-items:center;
-      padding:120px 20px 90px; text-align:center; color:#fff; position:relative;
-      background:url('images/hero.jpg') center/cover no-repeat;
+    body {
+      font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      margin: 0;
+      min-height: 100vh;
+      text-rendering: optimizeLegibility;
     }
-    .hero-clients::before{content:""; position:absolute; inset:0;
-      background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55));}
-    .hero-clients::after{
-      content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
-      background:
-        repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 8px),
-        repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 10px);
-      transform:translateX(0);
-      animation:scanMove 18s linear infinite;
+    .page-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
-    @keyframes scanMove { to { transform:translateX(16px); } }
-    .hero-clients>*{position:relative; z-index:1; }
-    .hero-clients h1{ margin:0 0 8px; font-size:clamp(28px,4vw,42px); line-height:1.15;}
-    .hero-clients p{ margin:0; opacity:.95; }
-    .power-underline{width:min(88vw,740px); height:14px; margin:12px auto 0; opacity:.9}
-    .power-underline path{stroke:#5f86ff; stroke-width:2; fill:none; stroke-linecap:round; stroke-dasharray:6 8; animation:flow 2.8s linear infinite;}
-    @keyframes flow { to { stroke-dashoffset:-280; } }
-
-    /* ===== Generic Layout ===== */
-    .section{ padding:36px 20px; }
-    .wrap{ max-width:1100px; margin:0 auto; }
-    .card{ background:#fff; border:1px solid rgba(26,26,46,.14); border-radius:16px; padding:18px 20px; box-shadow:0 6px 18px rgba(0,0,0,.08); }
-    .soft{ background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%), #fff; }
-    .grid{ display:grid; gap:18px; }
-    .grid-2{ grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .grid-3{ grid-template-columns:repeat(3,minmax(0,1fr)); }
-    .grid-4{ grid-template-columns:repeat(4,minmax(0,1fr)); }
-    @media (max-width:980px){ .grid-4{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (max-width:740px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
-
-    /* ===== Section separators (darker pill) ===== */
-    .separator{ max-width:1100px; margin:24px auto 0; padding:0 20px; }
-    .separator h2{
-      margin:0;
-      font-size:14px;                 /* more legible */
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      font-weight:800;
-      color:var(--sep-text);
-      background:linear-gradient(180deg,var(--sep-bg1),var(--sep-bg2));
-      border:1px solid var(--sep-border);
-      display:inline-block;
-      padding:10px 14px;              /* taller/wider */
-      border-radius:12px;
-      box-shadow:
-        0 10px 28px rgba(0,0,0,.22),
-        inset 0 1px 0 rgba(255,255,255,.06);
-      transition:box-shadow .2s ease, transform .12s ease;
+    header.hmj-header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(21, 28, 54, 0.92);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .separator h2:hover{
-      transform:translateY(-1px);
-      box-shadow:
-        0 0 0 2px rgba(95,134,255,.16),
-        0 12px 32px rgba(0,0,0,.26),
-        inset 0 1px 0 rgba(255,255,255,.06);
+    header .hmj-nav {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px clamp(16px, 4vw, 28px);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: #fff;
     }
-
-    /* ===== Timeline ===== */
-    .timeline{ position:relative; }
-    .timeline::before{ content:""; position:absolute; left:18px; top:0; bottom:0; width:2px; background:#e5e9ff; }
-    .step{ position:relative; padding-left:48px; margin-bottom:16px; }
-    .step::before{ content:""; position:absolute; left:9px; top:2px; width:18px; height:18px; border-radius:50%;
-      background:#3A66B3; box-shadow:0 0 0 4px rgba(58,102,179,.18); }
-
-    /* ===== KPI ===== */
-    .kpi{ text-align:center; padding:20px 14px; }
-    .kpi h3{ margin:0; font-size:26px; }
-    .kpi p{ margin:6px 0 0; color:#555; }
-
-    /* ===== Vacancy Generator (with floating tooltips) ===== */
-    .gen{ display:grid; grid-template-columns:1.1fr .9fr; gap:18px; }
-    @media (max-width:880px){ .gen{ grid-template-columns:1fr; } }
-    .gen label{ font-weight:600; display:block; margin:8px 0 6px; }
-    .gen input,.gen select,.gen textarea{
-      width:100%; padding:10px; border:1px solid rgba(26,26,46,.3); border-radius:10px; font:inherit;
+    .hmj-logo img { height: 42px; display: block; }
+    .hmj-menu {
+      list-style: none;
+      display: flex;
+      gap: 10px;
+      padding: 0;
+      margin-left: auto;
+      margin-bottom: 0;
     }
-    .gen .section-title {
-      margin:-18px -20px 14px;
-      padding:10px 16px;
-      background:linear-gradient(90deg, rgba(58,102,179,.14), rgba(58,102,179,.06));
-      border-bottom:1px solid rgba(26,26,46,.1);
-      border-top-left-radius:16px; border-top-right-radius:16px;
-      font-weight:800; color:#1A1A2E;
+    .hmj-menu a {
+      color: rgba(232,237,255,0.92);
+      font-weight: 600;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 999px;
+      transition: background 0.2s ease, color 0.2s ease;
     }
-    .preview{ min-height:220px; white-space:pre-wrap; line-height:1.6; }
-    .btn-row{ display:flex; gap:10px; flex-wrap:wrap; }
-    .note{ color:#666; font-size:.9rem; }
-
-    /* Floating tooltips */
-    .tip-wrap{position:relative; display:inline-flex; align-items:center; gap:6px}
-    .tip{
-      position:absolute; top:50%; right:-8px; transform:translate(100%, -50%);
-      background:#0f1322; color:#eaf0ff; border:1px solid rgba(95,134,255,.45);
-      border-radius:10px; padding:8px 10px; font-size:.85rem; line-height:1.4;
-      box-shadow:0 10px 30px rgba(0,0,0,.35);
-      opacity:0; pointer-events:none; transition:opacity .18s ease, transform .18s ease;
-      width:240px; z-index:5;
+    .hmj-menu a:hover,
+    .hmj-menu a:focus-visible {
+      background: rgba(63, 102, 199, 0.25);
+      color: #fff;
+      outline: none;
     }
-    .tip::after{content:""; position:absolute; left:-6px; top:50%; transform:translateY(-50%); width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:6px solid rgba(95,134,255,.45)}
-    .tip-wrap:focus-within .tip, .tip-wrap:hover .tip{opacity:1; transform:translate(100%, -50%) translateY(-2px)}
-    .tip-btn{
-      width:20px;height:20px;border-radius:50%;background:#5f86ff;color:#fff;font-weight:900;border:none;display:inline-grid;place-items:center;cursor:pointer
+    .hmj-menu a[aria-current="page"] {
+      background: rgba(63,102,199,0.35);
+      color: #fff;
+      border: 1px solid rgba(63,102,199,0.65);
     }
-
-    /* tiny toast */
-    .toast{
-      position:fixed; bottom:18px; right:18px; background:#1A1A2E; color:#fff;
-      padding:10px 14px; border-radius:10px; box-shadow:0 8px 18px rgba(0,0,0,.22);
-      opacity:0; transform:translateY(8px); transition:opacity .2s ease, transform .2s ease; z-index:9999;
+    .hmj-burger {
+      margin-left: auto;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: none;
+      background: rgba(236, 239, 255, 0.08);
+      border: 1px solid rgba(236,239,255,0.18);
+      color: #fff;
+      align-items: center;
+      justify-content: center;
     }
-    .toast.show{ opacity:1; transform:translateY(0); }
-
-    /* subtle invalid highlight */
-    .invalid{ outline:2px solid #e11d48; outline-offset:1px; }
-
-    /* ===== Bottom CTA (dark premium) ===== */
-    .clients-cta{
-      margin:26px auto 60px; max-width:1100px; padding:24px 20px;
-      background:
-        radial-gradient(600px 200px at 10% -30%, rgba(58,102,179,.18), transparent 60%),
-        radial-gradient(600px 200px at 90% 130%, rgba(58,102,179,.18), transparent 60%),
-        #0f1322;
-      color:#eaf0ff; border:1px solid rgba(255,255,255,.12); border-radius:16px;
-      box-shadow:0 18px 40px rgba(0,0,0,.35);
+    .hmj-burger span {
+      width: 22px;
+      height: 2px;
+      background: currentColor;
+      display: block;
+      position: relative;
     }
-    .clients-cta h3{margin:0 0 8px}
-    .clients-cta p{margin:0 0 12px;color:#cfd7ff}
-    .clients-cta .cta-actions{display:flex;gap:10px;flex-wrap:wrap}
-    .clients-cta a{display:inline-block;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.22);text-decoration:none;color:#fff;font-weight:800}
-    .clients-cta a.btn-light{background:#1d2747}
-    .clients-cta a.btn-outline:hover{background:rgba(255,255,255,.08)}
-
-    /* ===== Scroll to top (neon glow) ===== */
-    .scroll-top{
-      position:fixed; right:18px; bottom:18px; width:44px; height:44px; border-radius:12px;
-      background:#0f1322; color:#eaf0ff; border:1px solid rgba(95,134,255,.5);
-      display:grid; place-items:center; cursor:pointer; opacity:0; pointer-events:none;
-      transition:opacity .2s ease, transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-      z-index:999;
-      box-shadow:0 0 0 rgba(95,134,255,0);
+    .hmj-burger span::before,
+    .hmj-burger span::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      width: 22px;
+      height: 2px;
+      background: currentColor;
+      transition: transform 0.2s ease, opacity 0.2s ease;
     }
-    .scroll-top.show{opacity:1; pointer-events:auto}
-    .scroll-top:hover{
-      transform:translateY(-2px);
-      border-color:#5f86ff;
-      box-shadow:0 0 12px rgba(95,134,255,.6), 0 0 28px rgba(95,134,255,.35);
+    .hmj-burger span::before { top: -6px; }
+    .hmj-burger span::after { top: 6px; }
+    .hmj-burger[aria-expanded="true"] span { background: transparent; }
+    .hmj-burger[aria-expanded="true"] span::before { transform: translateY(6px) rotate(45deg); }
+    .hmj-burger[aria-expanded="true"] span::after { transform: translateY(-6px) rotate(-45deg); }
+    .hmj-scrim {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,15,30,0.55);
+      backdrop-filter: blur(6px);
+      display: none;
     }
-
-    /* ===== Reveal on scroll ===== */
-    .reveal{opacity:0; transform:translateY(12px); transition:opacity .5s ease, transform .5s ease}
-    .reveal.revealed{opacity:1; transform:none}
-
-    /* ===== Footer ===== */
-    footer{ text-align:center; padding:28px 16px; background:#0f1322; color:#cfd7ff; border-top:1px solid rgba(255,255,255,.06) }
+    .theme-toggle {
+      border: 1px solid rgba(255,255,255,0.24);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(236,239,255,0.1);
+      color: #fff;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .hero {
+      position: relative;
+      padding: clamp(64px, 16vw, 140px) clamp(20px, 6vw, 40px) clamp(60px, 12vw, 120px);
+      background: radial-gradient(120% 120% at 10% 10%, rgba(63,102,199,0.36), transparent 55%),
+                  radial-gradient(120% 120% at 80% 20%, rgba(21,28,54,0.7), rgba(15,20,40,0.9));
+      color: #fff;
+      text-align: center;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(244,246,255,0.08), transparent 45%),
+                  repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 10px);
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    .hero > * { position: relative; z-index: 1; }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 4vw, 3.4rem);
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+    .hero p {
+      margin: 18px auto 0;
+      max-width: 640px;
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.86);
+    }
+    .form-card-critical {
+      background: var(--panel);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: clamp(28px, 5vw, 48px);
+      margin-top: clamp(24px, 6vw, 48px);
+      position: relative;
+      z-index: 2;
+    }
+    @media (max-width: 980px) {
+      .hmj-menu { display: none; }
+      .hmj-menu.is-open {
+        display: flex;
+        flex-direction: column;
+        background: rgba(21,28,54,0.96);
+        position: absolute;
+        right: 16px;
+        left: 16px;
+        top: 72px;
+        padding: 18px;
+        border-radius: 18px;
+        gap: 8px;
+        box-shadow: var(--shadow);
+      }
+      .hmj-burger { display: inline-flex; }
+      .hmj-scrim[aria-hidden="false"] { display: block; }
+    }
   </style>
 </head>
 <body>
+  <div class="page-shell">
+    <header class="hmj-header">
+      <nav class="hmj-nav" aria-label="Main navigation">
+        <a class="hmj-logo" href="index.html"><img src="images/logo.png" alt="HMJ-Global Logo" /></a>
+        <button class="hmj-burger" type="button" aria-expanded="false" aria-controls="hmj-menu">
+          <span></span>
+        </button>
+        <ul id="hmj-menu" class="hmj-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="clients.html" aria-current="page">Clients</a></li>
+          <li><a href="candidates.html">Candidates</a></li>
+          <li><a href="jobs.html">Jobs</a></li>
+          <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
+          <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
+          <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+        </ul>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Toggle theme">🌓</button>
+      </nav>
+      <div class="hmj-scrim" aria-hidden="true"></div>
+    </header>
 
-  <!-- ===== Header / Navbar ===== -->
-  <header class="hmj-header">
-    <nav class="hmj-nav" aria-label="Main">
-      <a class="hmj-logo" href="index.html">
-        <img src="images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
-      </a>
-      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
-        <span></span><span></span><span></span>
-      </button>
-      <ul id="hmj-menu" class="hmj-menu">
-        <li><a href="index.html" data-page="index">Home</a></li>
-        <li><a href="about.html" data-page="about">About</a></li>
-        <li><a href="clients.html" data-page="clients">Clients</a></li>
-        <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
-        <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
-        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
-        <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
-        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+    <main id="mainContent">
+      <section id="clientHero" class="hero">
+        <h1>Mobilise trusted specialists with confidence</h1>
+        <p>Brief HMJ-Global on your mission-critical roles and access a curated shortlist backed by rigorous compliance, payroll and mobilisation support.</p>
+      </section>
+
+      <section id="clientValueProps" class="props" aria-label="HMJ value propositions">
+        <div class="props-wrap">
+          <article class="prop">
+            <h2>48hr Shortlists</h2>
+            <p>Curated CSA, MEP and commissioning specialists across the UK & EU with documents ready to go.</p>
+          </article>
+          <article class="prop">
+            <h2>Compliance handled</h2>
+            <p>Right-to-work, insurance, A1 portability and safety onboarding built into every engagement.</p>
+          </article>
+          <article class="prop">
+            <h2>Payroll certainty</h2>
+            <p>Weekly payroll, consolidated invoicing and transparent rate management keep programmes on track.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="form-shell" aria-labelledby="clientFormTitle">
+        <div class="form-container">
+          <div class="form-card-critical">
+            <header class="form-card-head">
+              <div>
+                <p class="eyebrow">Vacancy brief</p>
+                <h2 id="clientFormTitle">Tell us about the role</h2>
+                <p class="intro">Share the essentials below. Your submission routes directly to our client services desk for immediate follow-up.</p>
+              </div>
+              <div class="progress-meter" data-progress-wrapper>
+                <div class="progress-top">
+                  <span class="progress-label">Completion: <strong data-progress-value>0%</strong></span>
+                  <button type="button" class="link-button" data-clear-draft>Clear draft</button>
+                </div>
+                <div class="progress-bar" role="presentation">
+                  <span class="progress-bar-fill" data-progress-bar></span>
+                </div>
+              </div>
+            </header>
+
+            <form name="vacancy" method="POST" data-netlify="true" enctype="multipart/form-data" class="client-form" data-client-form>
+              <input type="hidden" name="form-name" value="vacancy" />
+
+              <div class="form-section" aria-labelledby="contactSectionHeading">
+                <h3 id="contactSectionHeading">Contact</h3>
+                <div class="field" data-field>
+                  <label for="name" data-help="We’ll personalise responses to you and confirm authenticity.">Your Name *</label>
+                  <div class="field-control">
+                    <input type="text" id="name" name="name" required autocomplete="name" />
+                  </div>
+                </div>
+                <div class="field" data-field>
+                  <label for="company" data-help="Company or end-client on behalf of whom you are briefing.">Company Name *</label>
+                  <div class="field-control">
+                    <input type="text" id="company" name="company" required autocomplete="organization" />
+                  </div>
+                </div>
+                <div class="field-grid">
+                  <div class="field" data-field>
+                    <label for="email" data-help="We’ll send confirmation and shortlist updates here.">Email *</label>
+                    <div class="field-control">
+                      <input type="email" id="email" name="email" required autocomplete="email" />
+                    </div>
+                  </div>
+                  <div class="field" data-field>
+                    <label for="phone" data-help="Add country code so we can align across regions.">Telephone *</label>
+                    <div class="field-control">
+                      <input type="tel" id="phone" name="phone" required autocomplete="tel" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section" aria-labelledby="roleSectionHeading">
+                <h3 id="roleSectionHeading">Role details</h3>
+                <div class="field" data-field>
+                  <label for="role_title" data-help="Example: CSA Package Manager, Electrical PM, Commissioning Lead.">Role Title *</label>
+                  <div class="field-control">
+                    <input type="text" id="role_title" name="role_title" required />
+                  </div>
+                </div>
+                <div class="field" data-field>
+                  <label for="role_details" data-help="Key deliverables, project context, must-have experience.">Role Details</label>
+                  <div class="field-control">
+                    <textarea id="role_details" name="role_details" rows="5" placeholder="Outline scope, programme, must-have experience…"></textarea>
+                  </div>
+                </div>
+                <div class="field" data-field>
+                  <label for="job_spec" data-help="Optional. Upload a PDF or Word doc for additional context.">Attach Job Spec</label>
+                  <div class="field-control">
+                    <input type="file" id="job_spec" name="attachment" accept=".pdf,.doc,.docx" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Submit vacancy</button>
+                <p class="form-footnote">We respond within one business day. Prefer to talk now? Call <a href="tel:+448088080000">0808 808 0000</a>.</p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="clientTools" class="tools" aria-label="Client tools">
+        <div class="tools-wrap">
+          <p class="tools-fallback">Loading client tools… <span aria-hidden="true">⏳</span></p>
+          <noscript><p class="noscript-msg">Enable JavaScript to access the tools &amp; resources library.</p></noscript>
+        </div>
+      </section>
+
+      <section id="clientNotes" class="notes-board" aria-label="Notes board">
+        <div class="notes-wrap">
+          <h2>Project notes</h2>
+          <p class="notes-fallback">Add quick reminders and decisions as you scope roles. Notes stay on this device.</p>
+          <div class="notes-area" data-notes-region></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
+        <p>HMJ-Global is a trading name of HMJ-Global Ltd, registered in England &amp; Wales, company number 16029938.</p>
+        <p>Registered office: 905 Lightbox Blue, Media City, UK.</p>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast-region" role="status" aria-live="polite"></div>
+  <div id="shortcutOverlay" class="shortcut-overlay" role="dialog" aria-modal="true" aria-labelledby="shortcutHeading" aria-hidden="true" hidden>
+    <div class="shortcut-card">
+      <div class="shortcut-head">
+        <h2 id="shortcutHeading">Keyboard shortcuts</h2>
+        <button type="button" class="close-shortcuts" data-close-shortcuts aria-label="Close shortcuts">×</button>
+      </div>
+      <ul class="shortcut-list">
+        <li><kbd>Alt</kbd> + <kbd>S</kbd> — Scroll to Submit button</li>
+        <li><kbd>?</kbd> — Toggle this help overlay</li>
+        <li><kbd>Esc</kbd> — Close open tooltips or overlays</li>
       </ul>
-      <div class="hmj-scrim" hidden></div>
-    </nav>
-  </header>
-
-  
-
-<!-- ===== Hero ===== -->
-  <section class="hero-clients">
-    <div>
-      <h1>For Clients</h1>
-      <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
-        <path d="M2 7 C 100 7, 140 7, 180 7
-                 C 220 7, 240 2, 260 7
-                 C 280 12, 300 7, 340 7
-                 C 380 7, 420 7, 460 7
-                 C 500 7, 520 2, 540 7
-                 C 560 12, 580 7, 620 7
-                 C 660 7, 720 7, 798 7" />
-      </svg>
-      <p>Fast, compliant talent for data centres, pharma and mission-critical facilities across the UK & EU.</p>
     </div>
-  </section>
+  </div>
 
-  <!-- ===== KPIs ===== -->
-  <div class="separator reveal"><h2>PERFORMANCE – METRICS</h2></div>
-  <section class="section">
-    <div class="wrap grid grid-4">
-      <div class="card kpi soft reveal"><h3 data-count="48">48 hrs</h3><p>Typical shortlist turnaround</p></div>
-      <div class="card kpi soft reveal"><h3 data-count="12">12</h3><p>EU markets covered with payroll & compliance</p></div>
-      <div class="card kpi soft reveal"><h3 data-count="500">500+</h3><p>Specialists placed across DC & Life Sciences</p></div>
-      <div class="card kpi soft reveal"><h3 data-count="97">97%</h3><p>Assignment completion rate</p></div>
-    </div>
-  </section>
-
-  <!-- ===== Value proposition ===== -->
-  <div class="separator reveal"><h2>WHY HMJ</h2></div>
-  <section class="section">
-    <div class="wrap">
-      <div class="card reveal">
-        <h2 style="margin:0 0 8px;">Data Centre & Infrastructure Recruitment You Can Rely On</h2>
-        <p style="margin:0; line-height:1.8;">
-          HMJ-Global delivers specialist permanent, contract and project-team hires for <strong>data centres</strong>,
-          <strong>pharmaceutical cleanrooms</strong> and other <strong>live environments</strong>. Our focus is pace with precision:
-          tightly-curated shortlists, robust verification and smooth cross-border mobilisation. We help clients control risk and maintain programme velocity,
-          while ensuring contractors are paid fairly and supported well.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Services ===== -->
-  <div class="separator reveal"><h2>HOW WE DELIVER – SERVICES</h2></div>
-  <section class="section" style="background:#f7f8ff;">
-    <div class="wrap">
-      <div class="grid grid-3" style="margin-top:12px;">
-        <div class="card soft reveal">
-          <h3>Permanent Search</h3>
-          <p>Exec to site-level with market mapping, competency screening and structured interviews. Offer management and onboarding end-to-end.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Contract & Interim</h3>
-          <p>Rapid deployment of vetted specialists to critical path. Weekly payroll, simple timesheets, and in-country setups where required.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Project Teams</h3>
-          <p>Mobilise multi-disciplinary squads (CSA, MEP, Commissioning, CQV) under one supplier with clear KPIs and single invoicing.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Compliance & Payroll</h3>
-          <p>Right-to-work, insurances, IR35 guidance, A1/PD portability, and safety onboarding. Transparent, auditable processes.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Market Intelligence</h3>
-          <p>Availability heatmaps and indicative pay benchmarking to support bids and executive decision-making.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Contractor Care</h3>
-          <p>Fair pay, predictable rotations where applicable, and proactive site support to maintain morale and retention.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Specialisms ===== -->
-  <div class="separator reveal"><h2>WHERE WE OPERATE – SPECIALISMS</h2></div>
-  <section class="section">
-    <div class="wrap">
-      <div class="grid grid-3">
-        <div class="card soft reveal">
-          <h3>Construction & Fit-Out <span class="pill brand">CSA/MEP</span></h3>
-          <p>Project directors, package managers, planners, site engineers, supervisors, commercial teams.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Commissioning & IST</h3>
-          <p>Electrical/mechanical commissioning, QA/QC, BMS/EPMS, black-start readiness and integrated testing.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Security & Cabling</h3>
-          <p>Access control, CCTV and structured cabling engineers for campus deployments.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>HV/Substations & Power</h3>
-          <p>SAPs, protection engineers, cable jointers and civils supervisors for grid tie-ins and on-site substations.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Pharma & Cleanrooms</h3>
-          <p>E&I, CQV, process/utilities specialists supporting GMP documentation and validated handover.</p>
-        </div>
-        <div class="card soft reveal">
-          <h3>Critical Facilities Ops</h3>
-          <p>Shift technicians, facilities managers, reliability engineers and AP/AE personnel.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Vacancy Brief Generator (unchanged fields) ===== -->
-  <div class="separator reveal"><h2>ROLE BRIEF – GENERATOR</h2></div>
-  <section class="section" style="background:#f7f8ff;">
-    <div class="wrap">
-      <p class="note reveal">Draft a clean role brief in under a minute. Copy it, download it, or send straight to HMJ—no attachments needed.</p>
-      <div class="gen">
-        <!-- Form -->
-        <div class="card reveal">
-          <div class="section-title">Contact Details (required)</div>
-          <label for="contactName" class="tip-wrap">
-            Your name *
-            <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-            <span class="tip" role="tooltip">Your full name so we can address and verify the submission.</span>
-          </label>
-          <input id="contactName" placeholder="e.g., Alex Murphy" required>
-
-          <div class="grid grid-2">
-            <div>
-              <label for="contactRole" class="tip-wrap">
-                Position *
-                <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-                <span class="tip" role="tooltip">Your job title (e.g., Project Director, Head of Commissioning).</span>
-              </label>
-              <input id="contactRole" placeholder="e.g., Project Director" required>
-            </div>
-            <div>
-              <label for="contactCompany" class="tip-wrap">
-                Company *
-                <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-                <span class="tip" role="tooltip">Employer or end-client name. If confidential, add ‘confidential’.</span>
-              </label>
-              <input id="contactCompany" placeholder="e.g., ABC Construction" required>
-            </div>
-          </div>
-
-          <div class="grid grid-2">
-            <div>
-              <label for="contactEmail" class="tip-wrap">
-                Email *
-                <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-                <span class="tip" role="tooltip">We’ll send a confirmation copy of the brief here.</span>
-              </label>
-              <input id="contactEmail" type="email" placeholder="name@company.com" required>
-            </div>
-            <div>
-              <label for="contactPhone" class="tip-wrap">
-                Telephone *
-                <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-                <span class="tip" role="tooltip">Include country code, e.g. +353 85 123 4567.</span>
-              </label>
-              <input id="contactPhone" type="tel" placeholder="+353 85 123 4567"
-                     pattern="^\+?[0-9\s\-()]{7,}$" title="Include country code, e.g. +353 85 123 4567" required>
-            </div>
-          </div>
-
-          <div class="section-title" style="margin-top:16px;">Role Details</div>
-
-          <label for="role" class="tip-wrap">
-            Role title *
-            <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-            <span class="tip" role="tooltip">Example: “MEP Commissioning Manager”, “CSA Package Manager”.</span>
-          </label>
-          <input id="role" placeholder="e.g., MEP Commissioning Manager" required>
-
-          <label for="project" class="tip-wrap">
-            Project / environment
-            <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-            <span class="tip" role="tooltip">Example: Data Centre – Fit-Out / IST, Pharma – Cleanroom expansion.</span>
-          </label>
-          <input id="project" placeholder="e.g., Data Centre – Fit-Out / IST">
-
-          <label for="location" class="tip-wrap">
-            Location *
-            <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-            <span class="tip" role="tooltip">City, Country. Add “Travel” if multi-site or “Hybrid”.</span>
-          </label>
-          <input id="location" placeholder="City, Country" required>
-
-          <label for="start" class="tip-wrap">
-            Target start
-            <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-            <span class="tip" role="tooltip">Desired start date. Leave blank if ASAP.</span>
-          </label>
-          <input id="start" type="date">
-
-          <div class="grid grid-2">
-            <div>
-              <label for="employment" class="tip-wrap">
-                Employment type
-                <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-                <span class="tip" role="tooltip">Contract / Interim, Permanent, or Project Team.</span>
-              </label>
-              <select id="employment">
-                <option value="">Select…</option>
-                <option>Contract / Interim</option>
-                <option>Permanent</option>
-                <option>Project Team</option>
-              </select>
-            </div>
-            <div>
-              <label for="clearance" class="tip-wrap">
-                Site / clearance
-                <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-                <span class="tip" role="tooltip">E.g., DC campus, AP/LV, site induction required.</span>
-              </label>
-              <input id="clearance" placeholder="e.g., DC campus, AP/LV, site induction">
-            </div>
-          </div>
-
-          <label for="notes" class="tip-wrap">
-            Key scope / must-haves
-            <button type="button" class="tip-btn" aria-label="Help" tabindex="0">?</button>
-            <span class="tip" role="tooltip">Add 4–6 bullets covering experience, tickets, and programme expectations.</span>
-          </label>
-          <textarea id="notes" rows="5" placeholder="Top 4–6 bullet points work best…"></textarea>
-
-          <div class="btn-row" style="margin-top:12px;">
-            <button id="copyBrief" type="button" class="btn-secondary">Copy Brief</button>
-            <button id="downloadBrief" type="button" class="btn-secondary">Download .txt</button>
-            <button id="sendHMJ" type="button" class="btn-primary">Send to HMJ</button>
-          </div>
-
-          <p class="note" id="copyNote" style="display:none;margin-top:8px;">Copied ✔</p>
-          <p class="note" id="autosaveNote" style="display:none;margin-top:8px;">Draft restored from your last visit ✔</p>
-        </div>
-
-        <!-- Preview -->
-        <div class="card soft reveal">
-          <h3 style="margin:0 0 8px;">Preview</h3>
-          <div id="preview" class="preview">
-Contact:
-— Name: —
-— Position: —
-— Company: —
-— Email: —
-— Telephone: —
-
-Role: —
-Project: —
-Location: —
-Start: —
-Employment: —
-Site/Clearance: —
-
-Key Scope:
-—
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Process (timeline) ===== -->
-  <div class="separator reveal"><h2>DELIVERY – PROCESS</h2></div>
-  <section class="section">
-    <div class="wrap">
-      <div class="card timeline reveal">
-        <div class="step"><h3 style="margin:0 0 4px;">1. Brief & Success Profile</h3><p>We capture outcomes, compliance and culture—then define the success profile.</p></div>
-        <div class="step"><h3 style="margin:0 0 4px;">2. Targeted Search</h3><p>Curated networks, referrals and alumni. Shortlists are lean, relevant and available.</p></div>
-        <div class="step"><h3 style="margin:0 0 4px;">3. Verification</h3><p>Competencies, references, right-to-work, insurances and safety onboarding.</p></div>
-        <div class="step"><h3 style="margin:0 0 4px;">4. Mobilise & Support</h3><p>Offers, contracts, start-date alignment, weekly payroll and ongoing check-ins.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== FAQs ===== -->
-  <div class="separator reveal"><h2>FAQ – DETAILS</h2></div>
-  <section class="section" style="background:#f7f8ff;">
-    <div class="wrap">
-      <details class="reveal">
-        <summary>Can you support cross-border mobilisation?</summary>
-        <p>Yes. We handle A1/PD portability, in-country payroll, right-to-work and insurances across multiple EU markets.</p>
-      </details>
-      <details class="reveal">
-        <summary>How quickly can you present candidates?</summary>
-        <p>For most roles we provide verified shortlists within 48 hours, aligned to your programme milestones.</p>
-      </details>
-      <details class="reveal">
-        <summary>What’s your approach to contractor pay?</summary>
-        <p>We champion fair, transparent pay with weekly payroll and clear documentation—supporting morale, retention and site productivity.</p>
-      </details>
-    </div>
-  </section>
-
-  <!-- ===== Bottom CTA ===== -->
-  <section class="clients-cta reveal">
-    <div class="wrap">
-      <h3>Ready to Brief a Role?</h3>
-      <p>Use the generator above or send us the scope—our team will come back with a shortlist quickly.</p>
-      <div class="cta-actions">
-        <a class="btn-light" href="clients.html">Submit a Vacancy</a>
-        <a class="btn-outline" href="mailto:info@HMJ-Global.com?subject=Book%20a%20Call%20with%20HMJ-Global">Book a Call</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Footer ===== -->
-  <footer>
-    <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
-    <br><br><br>
-    <p>HMJ-Global is a trading name of HMJ-Global Ltd, registered in England & Wales, company number 16029938.</p>
-    <p>Registered office: 905 Lightbox Blue, Media City, UK.</p>
-  </footer>
-
-  <!-- ===== Hidden Netlify form (unchanged names/fields) ===== -->
-  <form name="client-brief" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
-    <input type="hidden" name="form-name" value="client-brief">
-    <p aria-hidden="true" style="position:absolute;left:-9999px;height:0;overflow:hidden;">
-      Don’t fill this out if you’re human: <input name="bot-field" tabindex="-1" autocomplete="off">
-    </p>
-
-    <!-- contact fields -->
-    <input type="hidden" name="contact_name">
-    <input type="hidden" name="contact_role">
-    <input type="hidden" name="contact_company">
-    <input type="hidden" name="contact_email">
-    <input type="hidden" name="contact_phone">
-
-    <!-- role fields -->
-    <input type="hidden" name="role">
-    <input type="hidden" name="project">
-    <input type="hidden" name="location">
-    <input type="hidden" name="start">
-    <input type="hidden" name="employment">
-    <input type="hidden" name="clearance">
-    <input type="hidden" name="notes">
-    <input type="hidden" name="page_url">
-  </form>
-
-  <!-- Toast -->
-  <div id="toast" class="toast" role="status" aria-live="polite">Brief sent to HMJ ✔</div>
-
-  <!-- Scroll to Top -->
-  <button class="scroll-top" id="scrollTopBtn" aria-label="Scroll to top" title="Back to top">↑</button>
-
-  <!-- ===== Scripts ===== -->
-  <script>
-    (function(){
-      /* ---------- Nav ---------- */
-      const burger = document.querySelector('.hmj-burger');
-      const menu   = document.getElementById('hmj-menu');
-      const scrim  = document.querySelector('.hmj-scrim');
-      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'clients.html').toLowerCase();
-      const currentNormalized = currentSegment.replace(/^\//, '');
-      menu.querySelectorAll('a[href]').forEach(a=>{
-        const href = (a.getAttribute('href') || '').trim();
-        if (!href || href.includes('://')) return;
-        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
-        if(target === currentNormalized){ a.setAttribute('aria-current','page'); }
-      });
-      function openMenu(open){
-        burger.setAttribute('aria-expanded', String(open));
-        menu.classList.toggle('open', open);
-        scrim.hidden = !open;
-        document.documentElement.style.overflow = open ? 'hidden' : '';
-      }
-      burger.addEventListener('click', ()=>openMenu(burger.getAttribute('aria-expanded') !== 'true'));
-      scrim.addEventListener('click', ()=>openMenu(false));
-      // Close the panel *after* the browser handles link navigation.
-      // Using rAF prevents rare iOS/Safari cases where DOM changes interrupt the click.
-      menu.addEventListener('click', (e) => {
-        const link = e.target.closest('a[href]');
-        if(!link) return;
-        requestAnimationFrame(() => openMenu(false));
-      });
-
-      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') openMenu(false); });
-
-      /* ---------- Reveal-on-scroll ---------- */
-      const toReveal = document.querySelectorAll('.reveal');
-      if('IntersectionObserver' in window){
-        const io = new IntersectionObserver((entries)=>{
-          entries.forEach(ent=>{
-            if(ent.isIntersecting){
-              ent.target.classList.add('revealed');
-              io.unobserve(ent.target);
-            }
-          });
-        },{threshold:0.12});
-        toReveal.forEach(el=>io.observe(el));
-      } else {
-        toReveal.forEach(el=>el.classList.add('revealed'));
-      }
-
-      /* ---------- KPI Count-up ---------- */
-      const counters = document.querySelectorAll('.kpi h3[data-count]');
-      if ('IntersectionObserver' in window) {
-        const obs = new IntersectionObserver((entries, observer) => {
-          entries.forEach(entry => {
-            if (!entry.isIntersecting) return;
-            const el = entry.target;
-            const target = parseInt(el.getAttribute('data-count'), 10);
-            if (isNaN(target)) { observer.unobserve(el); return; }
-            const hasPlus = el.textContent.trim().includes('+');
-            const hasPct = el.textContent.trim().includes('%');
-            const suffix = hasPct ? '%' : (hasPlus ? '+' : '');
-            const baseText = el.textContent.trim();
-            const duration = 900; // ms
-            const startTime = performance.now();
-            function tick(now) {
-              const t = Math.min(1, (now - startTime) / duration);
-              const val = Math.floor(target * t);
-              el.textContent = (hasPct ? val : val.toString()) + suffix + (baseText.includes('hrs') ? ' hrs' : '');
-              if (t < 1) requestAnimationFrame(tick);
-            }
-            requestAnimationFrame(tick);
-            observer.unobserve(el);
-          });
-        }, { threshold: 0.4 });
-        counters.forEach(c => obs.observe(c));
-      }
-
-      /* ---------- Vacancy Generator wiring (unchanged data; dynamic UX) ---------- */
-      const $ = (s)=>document.querySelector(s);
-      const els = {
-        cName: $('#contactName'),
-        cRole: $('#contactRole'),
-        cCompany: $('#contactCompany'),
-        cEmail: $('#contactEmail'),
-        cPhone: $('#contactPhone'),
-        role: $('#role'),
-        project: $('#project'),
-        location: $('#location'),
-        start: $('#start'),
-        employment: $('#employment'),
-        clearance: $('#clearance'),
-        notes: $('#notes'),
-        preview: $('#preview'),
-        copyBtn: $('#copyBrief'),
-        downloadBtn: $('#downloadBrief'),
-        copyNote: $('#copyNote'),
-        send: $('#sendHMJ'),
-        toast: $('#toast'),
-        autosaveNote: $('#autosaveNote'),
-        netlifyForm: document.forms['client-brief']
-      };
-
-      if (!els.preview || !els.copyBtn || !els.send || !els.netlifyForm) return;
-
-      const STORE_KEY='hmj_client_brief_v1';
-      const fields = ['cName','cRole','cCompany','cEmail','cPhone','role','project','location','start','employment','clearance','notes'];
-
-      function saveDraft(){
-        const data={};
-        fields.forEach(k=>{ const el=els[k]; if(el) data[k]=el.value; });
-        localStorage.setItem(STORE_KEY, JSON.stringify(data));
-      }
-      function loadDraft(){
-        try{
-          const raw = localStorage.getItem(STORE_KEY); if(!raw) return false;
-          const data = JSON.parse(raw); let restored=false;
-          fields.forEach(k=>{ if(data[k]!==undefined && els[k]){ els[k].value=data[k]; restored=true; } });
-          if(restored && els.autosaveNote){ els.autosaveNote.style.display='block'; setTimeout(()=>els.autosaveNote.style.display='none', 1800); }
-          return restored;
-        }catch{return false;}
-      }
-      function clearDraft(){ localStorage.removeItem(STORE_KEY); }
-
-      function updatePreview(){
-        const cn=(els.cName?.value||'').trim()||'—';
-        const cr=(els.cRole?.value||'').trim()||'—';
-        const cc=(els.cCompany?.value||'').trim()||'—';
-        const ce=(els.cEmail?.value||'').trim()||'—';
-        const cp=(els.cPhone?.value||'').trim()||'—';
-        const role=(els.role?.value||'').trim()||'—';
-        const project=(els.project?.value||'').trim()||'—';
-        const location=(els.location?.value||'').trim()||'—';
-        const start=els.start?.value? new Date(els.start.value).toLocaleDateString('en-GB') : '—';
-        const employment=els.employment?.value||'—';
-        const clearance=(els.clearance?.value||'').trim()||'—';
-        const notes=(els.notes?.value||'').trim()||'—';
-        els.preview.textContent =
-`Contact:
-— Name: ${cn}
-— Position: ${cr}
-— Company: ${cc}
-— Email: ${ce}
-— Telephone: ${cp}
-
-Role: ${role}
-Project: ${project}
-Location: ${location}
-Start: ${start}
-Employment: ${employment}
-Site/Clearance: ${clearance}
-
-Key Scope:
-${notes}`;
-      }
-
-      const inputEls=[els.cName,els.cRole,els.cCompany,els.cEmail,els.cPhone,els.role,els.project,els.location,els.start,els.employment,els.clearance,els.notes].filter(Boolean);
-      ['input','change'].forEach(evt => inputEls.forEach(el => el.addEventListener(evt, ()=>{ updatePreview(); saveDraft(); })));
-
-      loadDraft();
-      updatePreview();
-
-      els.copyBtn.addEventListener('click', async ()=>{
-        try{
-          await navigator.clipboard.writeText(els.preview.textContent);
-          if(els.copyNote){ els.copyNote.style.display='block'; setTimeout(()=>els.copyNote.style.display='none',1500); }
-        }catch{ alert('Copy failed — please select the text and copy manually.'); }
-      });
-
-      els.downloadBtn.addEventListener('click', ()=>{
-        const blob = new Blob([els.preview.textContent], {type:'text/plain'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const safeRole = (els.role?.value || 'vacancy-brief').trim().replace(/[^\w\-]+/g,'_');
-        a.href = url; a.download = `${safeRole || 'vacancy-brief'}.txt`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
-
-      function markInvalid(el,bad){ if(!el) return; if(bad) el.classList.add('invalid'); else el.classList.remove('invalid'); }
-
-      async function submitBriefAjax(){
-        const missing=[];
-        const need=[['cName','Your name'],['cRole','Position'],['cCompany','Company'],['cEmail','Email'],['cPhone','Telephone'],['role','Role title'],['location','Location']];
-        inputEls.forEach(el=>markInvalid(el,false));
-        need.forEach(([k,label])=>{ if(!els[k]?.value.trim()){ missing.push(label); markInvalid(els[k],true); } });
-        if(missing.length){ alert('Please fill: ' + missing.join(', ')); return; }
-        if(els.cEmail && !els.cEmail.checkValidity()) return els.cEmail.reportValidity();
-        if(els.cPhone && !els.cPhone.checkValidity()) return els.cPhone.reportValidity();
-
-        const nf = els.netlifyForm;
-        nf.querySelector('input[name="contact_name"]').value    = els.cName.value.trim();
-        nf.querySelector('input[name="contact_role"]').value    = els.cRole.value.trim();
-        nf.querySelector('input[name="contact_company"]').value = els.cCompany.value.trim();
-        nf.querySelector('input[name="contact_email"]').value   = els.cEmail.value.trim();
-        nf.querySelector('input[name="contact_phone"]').value   = els.cPhone.value.trim();
-        nf.querySelector('input[name="role"]').value        = els.role.value.trim();
-        nf.querySelector('input[name="project"]').value     = els.project.value.trim();
-        nf.querySelector('input[name="location"]').value    = els.location.value.trim();
-        nf.querySelector('input[name="start"]').value       = els.start.value;
-        nf.querySelector('input[name="employment"]').value  = els.employment.value;
-        nf.querySelector('input[name="clearance"]').value   = els.clearance.value.trim();
-        nf.querySelector('input[name="notes"]').value       = els.notes.value.trim();
-        nf.querySelector('input[name="page_url"]').value    = window.location.href;
-
-        const fd = new FormData(nf);
-        if(!fd.get('form-name')) fd.append('form-name','client-brief');
-
-        const originalText = els.send.textContent;
-        els.send.textContent='Sending…';
-        els.send.style.pointerEvents='none';
-        els.send.setAttribute('aria-disabled','true');
-
-        try{
-          const res = await fetch('/', { method:'POST', body:fd, headers:{'Accept':'application/json'} });
-          if(res.ok){
-            const toast=document.getElementById('toast');
-            toast.textContent='Brief sent to HMJ ✔';
-            toast.classList.add('show');
-            setTimeout(()=>toast.classList.remove('show'),2200);
-            els.send.textContent='Sent ✔';
-            clearDraft();
-            inputEls.forEach(el=>markInvalid(el,false));
-          }else{ nf.submit(); }
-        }catch{ nf.submit(); }
-        finally{
-          setTimeout(()=>{
-            els.send.textContent=originalText;
-            els.send.style.pointerEvents='';
-            els.send.removeAttribute('aria-disabled');
-          },2400);
-        }
-      }
-      els.send.addEventListener('click', submitBriefAjax);
-
-      /* ---------- Optional QS prefill ---------- */
-      try{
-        const params=new URLSearchParams(location.search);
-        const roleFromQS=params.get('role');
-        if(roleFromQS && els.role && !els.role.value){
-          els.role.value=decodeURIComponent(roleFromQS.replace(/\+/g,' '));
-          updatePreview();
-        }
-      }catch{}
-
-      /* ---------- Scroll to top (neon) ---------- */
-      const topBtn=document.getElementById('scrollTopBtn');
-      const showTop=()=>{ if(window.scrollY>420){ topBtn.classList.add('show'); } else { topBtn.classList.remove('show'); } };
-      showTop();
-      window.addEventListener('scroll', showTop, {passive:true});
-      topBtn.addEventListener('click', ()=>{
-        const prefersReduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        window.scrollTo({top:0, behavior: prefersReduced ? 'auto' : 'smooth'});
-      });
-    })();
-  </script>
+  <script defer src="assets/js/clients.enhanced.js"></script>
 </body>
 </html>
