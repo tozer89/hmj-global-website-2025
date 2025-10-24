@@ -292,8 +292,21 @@
     if (!raw) return '';
     if (typeof raw === 'string') return raw;
     if (typeof raw === 'object') {
-      const direct = raw.token || raw.access_token || raw.accessToken;
-      if (typeof direct === 'string') return direct;
+      const keys = [
+        'token',
+        'access_token',
+        'accessToken',
+        'nf_jwt',
+        'jwt',
+        'bearer'
+      ];
+      for (const key of keys) {
+        if (key in raw) {
+          const value = raw[key];
+          const normalised = normalizeToken(value);
+          if (normalised) return normalised;
+        }
+      }
       if (Array.isArray(raw)) {
         for (const entry of raw) {
           const t = normalizeToken(entry);
@@ -320,6 +333,17 @@
       } catch (err) {
         Debug.warn('token attempt failed', err);
       }
+    }
+    const fallbacks = [
+      user?.token,
+      user?.access_token,
+      user?.accessToken,
+      user?.session,
+      user
+    ];
+    for (const fb of fallbacks) {
+      const token = normalizeToken(fb);
+      if (token) return token;
     }
     return '';
   }
