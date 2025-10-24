@@ -17,14 +17,13 @@
   try {
     const localOrigin = location.origin.replace(/\/$/, '');
     addCandidate(`${localOrigin}/.netlify/identity`);
+    addCandidate('/.netlify/identity');
   } catch (err) {
     // ignore
   }
 
-  addCandidate(window.HMJ_IDENTITY_URL);
   addCandidate(window.ADMIN_IDENTITY_URL);
   addCandidate(window.NETLIFY_IDENTITY_URL);
-  addCandidate('/.netlify/identity');
   addCandidate(PRODUCTION_IDENTITY);
 
   const readyQueue = [];
@@ -94,6 +93,11 @@
       flushReady(null);
       document.dispatchEvent(new CustomEvent('hmjIdentityUnavailable'));
       return;
+    }
+
+    window.__hmjResolvedIdentityUrl = resolved;
+    if (!window.HMJ_IDENTITY_URL) {
+      window.HMJ_IDENTITY_URL = resolved;
     }
 
     const settings = window.netlifyIdentitySettings = window.netlifyIdentitySettings || {};

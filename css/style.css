@@ -6,6 +6,38 @@ body {
   padding: 0;
 }
 
+/* Announcement banner */
+.announce {
+  background: #3A66B3;
+  color: #ffffff;
+}
+
+.announce a {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.announce .inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.announce .badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  font-size: 0.78rem;
+}
+
 /* Navbar */
 nav {
   background: #2f4ea2;

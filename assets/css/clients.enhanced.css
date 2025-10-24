@@ -573,6 +573,10 @@ main {
   z-index: 5000;
 }
 
+.shortcut-overlay[hidden] {
+  display: none !important;
+}
+
 .shortcut-card {
   background: var(--panel);
   border-radius: 18px;
@@ -593,9 +597,15 @@ main {
 .close-shortcuts {
   border: none;
   background: transparent;
-  color: var(--muted);
+  color: var(--ink);
   font-size: 1.5rem;
   cursor: pointer;
+  line-height: 1;
+}
+
+.close-shortcuts:hover,
+.close-shortcuts:focus-visible {
+  color: var(--accent);
 }
 
 .shortcut-list {
