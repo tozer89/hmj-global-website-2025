@@ -529,9 +529,23 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 
   if(debugIdentity){
     const netlifyId = window.netlifyIdentity;
+    const lookupIdentity = async () => {
+      try{
+        if(typeof identity === 'function') return await identity('admin');
+      }catch(err){
+        console.warn('[timesheets] identity("admin") failed', err);
+      }
+      try{
+        if(typeof window.getIdentity === 'function') return await window.getIdentity('admin');
+      }catch(err){
+        console.warn('[timesheets] window.getIdentity fallback failed', err);
+      }
+      return { ok:false };
+    };
+
     const updateIdentity = async () => {
       try{
-        const info = await identity('admin');
+        const info = await lookupIdentity();
         if(info?.ok){
           const email = info.email || info.user?.email || info.user?.user_metadata?.email || info.user?.user_metadata?.full_name;
           debugIdentity.textContent = email || 'online';
