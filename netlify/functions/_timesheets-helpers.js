@@ -23,7 +23,6 @@ function toTimesheet(row = {}, baseWeekEnding = DEFAULT_SETTINGS.fiscal_week1_en
     client_name: row.client_name || row.assignment?.clientName || null,
     project_name: row.project_name || row.assignment?.projectName || null,
     week_start: row.week_start || null,
-    week_ending: row.week_ending || null,
     status: row.status || 'draft',
     submitted_at: row.submitted_at || null,
     approved_at: row.approved_at || null,
