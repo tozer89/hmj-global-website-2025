@@ -1,17 +1,39 @@
 (function () {
   'use strict';
 
-  const FALLBACKS = [
-    '/.netlify/functions/identity-proxy',
-    '/.netlify/identity',
-    'https://hmjg.netlify.app/.netlify/identity'
-  ];
-  const targetUrl = (
-    window.HMJ_IDENTITY_URL ||
-    window.ADMIN_IDENTITY_URL ||
-    FALLBACKS.find((item) => !!item) ||
-    ''
-  ).replace(/\/$/, '');
+  const FALLBACK_CANDIDATES = [];
+
+  const addCandidate = (value) => {
+    if (!value || typeof value !== 'string') return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    FALLBACK_CANDIDATES.push(trimmed.replace(/\/$/, ''));
+  };
+
+  const preconfigured = window.netlifyIdentitySettings && window.netlifyIdentitySettings.APIUrl;
+  addCandidate(preconfigured);
+  addCandidate(window.HMJ_IDENTITY_URL);
+  addCandidate(window.ADMIN_IDENTITY_URL);
+  addCandidate(window.NETLIFY_IDENTITY_URL);
+
+  try {
+    const origin = window.location && window.location.origin;
+    if (origin) addCandidate(`${origin.replace(/\/$/, '')}/.netlify/identity`);
+  } catch (err) {
+    // ignore
+  }
+
+  addCandidate('https://hmjg.netlify.app/.netlify/identity');
+  addCandidate('/.netlify/identity');
+
+  const seen = new Set();
+  const FALLBACKS = FALLBACK_CANDIDATES.filter((candidate) => {
+    if (seen.has(candidate)) return false;
+    seen.add(candidate);
+    return true;
+  });
+
+  const targetUrl = (FALLBACKS.find(Boolean) || '').replace(/\/$/, '');
 
   function configureIdentity(id) {
     if (!id || !targetUrl) return id;

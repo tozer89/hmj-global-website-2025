@@ -1,5 +1,5 @@
 [build]
-  publish = "/"
+  publish = "."
   functions = "netlify/functions"
 
 [functions]
@@ -19,8 +19,3 @@
   to = "/unauthorized.html"
   status = 401
 
-[[redirects]]
-  from = "/.netlify/identity/*"
-  to = "/.netlify/functions/identity-proxy?path=:splat"
-  status = 200
-  force = true

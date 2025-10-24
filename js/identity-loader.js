@@ -16,16 +16,15 @@
 
   try {
     const localOrigin = location.origin.replace(/\/$/, '');
-    addCandidate(`${localOrigin}/.netlify/functions/identity-proxy`);
     addCandidate(`${localOrigin}/.netlify/identity`);
-    addCandidate('/.netlify/functions/identity-proxy');
-    addCandidate('/.netlify/identity');
   } catch (err) {
     // ignore
   }
 
+  addCandidate(window.HMJ_IDENTITY_URL);
   addCandidate(window.ADMIN_IDENTITY_URL);
   addCandidate(window.NETLIFY_IDENTITY_URL);
+  addCandidate('/.netlify/identity');
   addCandidate(PRODUCTION_IDENTITY);
 
   const readyQueue = [];
@@ -72,7 +71,13 @@
       if (!candidate) continue;
       const url = candidate.replace(/\/$/, '');
       try {
-        const res = await fetch(`${url}/config`, { mode: 'cors', cache: 'no-store' });
+        const res = await fetch(`${url}/config`, {
+          mode: 'cors',
+          cache: 'no-store',
+          credentials: 'include',
+          redirect: 'follow',
+          headers: { 'Accept': 'application/json, text/plain, */*' }
+        });
         if (res.ok) return url;
       } catch (err) {
         // Continue to next candidate
