@@ -2,13 +2,29 @@
   const WIDGET_SRC = 'https://identity.netlify.com/v1/netlify-identity-widget.js';
   const PRODUCTION_IDENTITY = 'https://hmjg.netlify.app/.netlify/identity';
   const candidates = [];
+  const seen = new Set();
+
+  function addCandidate(url) {
+    if (!url || typeof url !== 'string') return;
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    const normalised = trimmed.replace(/\/$/, '');
+    if (seen.has(normalised)) return;
+    seen.add(normalised);
+    candidates.push(normalised);
+  }
+
+  addCandidate(window.ADMIN_IDENTITY_URL);
+  addCandidate(window.NETLIFY_IDENTITY_URL);
+
   try {
     const local = `${location.origin.replace(/\/$/, '')}/.netlify/identity`;
-    if (!candidates.includes(local)) candidates.push(local);
+    addCandidate(local);
   } catch (err) {
     // ignore
   }
-  if (!candidates.includes(PRODUCTION_IDENTITY)) candidates.push(PRODUCTION_IDENTITY);
+
+  addCandidate(PRODUCTION_IDENTITY);
 
   const readyQueue = [];
   function flushReady(instance) {
