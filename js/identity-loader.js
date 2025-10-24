@@ -18,8 +18,9 @@
   addCandidate(window.ADMIN_IDENTITY_URL);
 
   try {
-    const local = `${location.origin.replace(/\/$/, '')}/.netlify/identity`;
-    addCandidate(local);
+    const localOrigin = location.origin.replace(/\/$/, '');
+    addCandidate(`${localOrigin}/.netlify/identity`);
+    addCandidate('/.netlify/identity');
   } catch (err) {
     // ignore
   }
