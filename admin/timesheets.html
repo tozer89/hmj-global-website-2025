@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
 <title>Timesheets — Admin | HMJ-Global</title>
 
 
+<script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
 <link rel="stylesheet" href="/css/style.css"/>
 <style>
   /* ---------------- THEME ---------------- */
@@ -157,8 +159,8 @@
   <div class="card">
     <div class="chipline" id="diagChips"></div>
     <h2 style="margin:.3em 0">Restricted.</h2>
-    <p class="muted">Sign in required.</p>
-    <div style="display:flex;gap:8px"><button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+    <p class="muted why">Sign in required.</p>
+    <div style="display:flex;gap:8px"><button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
       <button class="btn ghost" onclick="location.reload()">Reload</button></div>
   </div>
 </div>
@@ -1191,9 +1193,9 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 
 
 <!-- Identity MUST load before common.js -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <!-- Shared admin bootstrap (pure JS file, no <script> tags inside) -->
-<script defer src="/admin/common.js"></script>
+<script defer src="/admin/common.js?v=21"></script>
 
 
 </body>
