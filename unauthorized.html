@@ -22,6 +22,7 @@
   </style>
   <script src="js/hmj-identity.js"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/admin/timesheets.html" data-hmj-logout-redirect=""></script>
 </head>
 <body>
   <div class="wrap">
@@ -36,37 +37,5 @@
       <p style="margin-top:14px">Need access? Ask an administrator to add the <code>admin</code> role to your user in Netlify Identity.</p>
     </div>
   </div>
-  <script>
-    (function () {
-      'use strict';
-
-      const resolveIdentity = () => {
-        try {
-          return window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-        } catch (err) {
-          if (console?.warn) {
-            console.warn('[HMJ] identity resolve failed', err);
-          }
-          return window.netlifyIdentity || null;
-        }
-      };
-
-      const bindRedirects = (identity) => {
-        if (!identity || typeof identity.on !== 'function' || identity.__hmjUnauthorizedBound) {
-          return;
-        }
-        identity.__hmjUnauthorizedBound = true;
-        identity.on('login', () => { window.location.href = '/admin/timesheets.html'; });
-      };
-
-      document.addEventListener('hmj:identity-change', (event) => {
-        bindRedirects(event?.detail?.identity || null);
-      });
-
-      document.addEventListener('DOMContentLoaded', () => {
-        bindRedirects(resolveIdentity());
-      });
-    })();
-  </script>
 </body>
 </html>

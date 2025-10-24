@@ -10,46 +10,7 @@
 <script src="js/hmj-identity.js"></script>
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script defer src="js/hmj-nav.js"></script>
-<script>
-  (function () {
-    'use strict';
-
-    const resolveIdentity = () => {
-      try {
-        return window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-      } catch (err) {
-        if (console?.warn) {
-          console.warn('[HMJ] identity resolve failed', err);
-        }
-        return window.netlifyIdentity || null;
-      }
-    };
-
-    const bindRedirects = (identity) => {
-      if (!identity || typeof identity.on !== 'function' || identity.__hmjRedirectBound) {
-        return;
-      }
-      identity.__hmjRedirectBound = true;
-      identity.on('login', () => {
-        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-        sessionStorage.removeItem('afterLogin');
-        window.location.href = dest;
-      });
-      identity.on('logout', () => {
-        sessionStorage.removeItem('afterLogin');
-        window.location.href = '/';
-      });
-    };
-
-    document.addEventListener('hmj:identity-change', (event) => {
-      bindRedirects(event?.detail?.identity || null);
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-      bindRedirects(resolveIdentity());
-    });
-  })();
-</script>
+<script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
 
 
 
