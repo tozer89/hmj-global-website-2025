@@ -434,6 +434,22 @@ exports.handler = async (event, context) => {
           charge: toNumber(ts.charge_amount || ts.rate_charge * ts.total_hours),
         };
         const meta = ensureObject(audit?.meta);
+        const breakdown = {
+          mon: toNumber(ts.h_mon || meta?.hours?.mon),
+          tue: toNumber(ts.h_tue || meta?.hours?.tue),
+          wed: toNumber(ts.h_wed || meta?.hours?.wed),
+          thu: toNumber(ts.h_thu || meta?.hours?.thu),
+          fri: toNumber(ts.h_fri || meta?.hours?.fri),
+          sat: toNumber(ts.h_sat || meta?.hours?.sat),
+          sun: toNumber(ts.h_sun || meta?.hours?.sun),
+        };
+        const hasBreakdown = Object.values(breakdown).some((v) => Number.isFinite(v) && v > 0);
+        const attachments = Array.isArray(meta?.attachments)
+          ? meta.attachments
+          : Array.isArray(ts.attachments)
+          ? ts.attachments
+          : [];
+        const statusHistory = Array.isArray(meta?.history) ? meta.history : [];
         return {
           id: ts.id,
           weekEnding: ts.week_ending,
@@ -453,7 +469,7 @@ exports.handler = async (event, context) => {
                 ref: assignment.as_ref || ts.assignment_ref || null,
                 payFreq: assignment.pay_freq || null,
                 currency: assignment.currency || ts.currency || 'GBP',
-                poNumber: assignment.po_number || null,
+                poNumber: assignment.po_number || ts.po_number || meta?.po_number || null,
               }
             : null,
           projectName: project?.name || null,
@@ -467,6 +483,12 @@ exports.handler = async (event, context) => {
           approvedAt: ts.approved_at || null,
           submittedAt: ts.submitted_at || null,
           updatedAt: ts.approved_at || ts.submitted_at || ts.week_ending || null,
+          invoiceRef: ts.invoice_ref || meta?.invoice_ref || null,
+          costCentre: ts.cost_centre || meta?.cost_centre || assignment?.cost_centre || null,
+          poNumber: ts.po_number || assignment?.po_number || meta?.po_number || null,
+          breakdown: hasBreakdown ? breakdown : null,
+          attachments,
+          statusHistory,
           audit: audit
             ? {
                 id: audit.id,
