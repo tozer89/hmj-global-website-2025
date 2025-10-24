@@ -3,7 +3,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "test": "node scripts/run-tests.js"
+    "test": "node scripts/verify-published-snapshot.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.75.1",

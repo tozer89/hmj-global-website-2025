@@ -675,10 +675,8 @@
   </footer>
 
   <!-- ===== Scripts ===== -->
-  <script src="../js/jobs-apply.js"></script>
   <script>
   (async function(){
-    const { normalizeApplyUrl } = window.HmjJobsApply;
     /* ------ NEW: Load /data/jobs.json and render cards ------ */
     async function loadJobsJSON(){
       try{
@@ -695,11 +693,15 @@
       const map = {live:'live', interviewing:'interviewing', closed:'closed'};
       return `<span class="status ${map[status]||'live'}">${status==='closed'?'Closed':status==='interviewing'?'Interviewing':'Taking Candidates'}</span>`;
     }
+    function applyHref(title, locText){
+      const q = encodeURIComponent(`${title}${locText ? ' ('+locText+')' : ''}`);
+      return `contact.html?role=${q}`;
+    }
     function renderOne(job){
       const s=(job.status||'live').toLowerCase(), d=(job.discipline||'data centre').toLowerCase(),
             t=(job.type||'permanent').toLowerCase(), l=(job.locationCode||'uk').toLowerCase();
       const locText=job.locationText||'UK';
-      const applyUrl = normalizeApplyUrl(job, locText);
+      const applyUrl = job.applyUrl && job.applyUrl.trim() ? job.applyUrl.trim() : applyHref(job.title, locText);
       const reqList=(job.requirements||[]).map(i=>`<li>${i}</li>`).join('');
       const resps  =(job.responsibilities||[]).map(i=>`<li>${i}</li>`).join('');
       return `
@@ -720,32 +722,9 @@
           ${job.overview ? `<h4>Overview</h4><p>${job.overview}</p>` : ''}
           ${resps ? `<h4>Key Responsibilities</h4><ul>${resps}</ul>` : ''}
           ${reqList ? `<h4>Requirements</h4><ul>${reqList}</ul>` : ''}
-        <div class="apply-row"><a class="btn btn-primary" href="${applyUrl}">${s==='closed'?'Register Interest':'Apply'}</a></div>
-      </div>
-    </div>`;
-    }
-
-    function extractLocationText(jobEl){
-      const locationPara = jobEl.querySelector('p');
-      if(!locationPara) return '';
-      const clone = locationPara.cloneNode(true);
-      clone.querySelectorAll('span').forEach(span=>span.remove());
-      return (clone.textContent||'').replace(/Location:\s*/i,'').replace(/\s+/g,' ').trim();
-    }
-
-    function normalizeJobCards(scope=document){
-      scope.querySelectorAll('.job').forEach(jobEl=>{
-        const title = jobEl.querySelector('h3')?.textContent?.trim();
-        if(!title) return;
-        const locText = extractLocationText(jobEl);
-        const id = jobEl.id || jobEl.dataset.id || title;
-        jobEl.querySelectorAll('a[href]').forEach(anchor=>{
-          const href = anchor.getAttribute('href')||'';
-          if(!href || !/contact(?:\.html)?/i.test(href)) return;
-          const normalized = normalizeApplyUrl({ title, applyUrl: href, id }, locText);
-          anchor.setAttribute('href', normalized);
-        });
-      });
+          <div class="apply-row"><a class="btn btn-primary" href="${applyUrl}">${s==='closed'?'Register Interest':'Apply'}</a></div>
+        </div>
+      </div>`;
     }
     async function maybeRenderFromAdminHTML(){
       try{
@@ -772,7 +751,6 @@
           if(srcBoard && destBoard){
             destBoard.className = srcBoard.className;
             destBoard.innerHTML = srcBoard.innerHTML;
-            normalizeJobCards(destBoard);
           }
         });
         return true;
@@ -803,14 +781,6 @@
         await maybeRenderFromJSON();
       }
     }
-
-    if(isAdminSource || renderedFromAdmin){
-      document.body.dataset.jobsFeed='admin-html';
-    }else{
-      document.body.dataset.jobsFeed='json';
-    }
-
-    normalizeJobCards(document);
 
     /* ---------- Nav ---------- */
     const burger=document.querySelector('.hmj-burger');
