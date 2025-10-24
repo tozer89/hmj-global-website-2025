@@ -26,6 +26,34 @@
     err: (...a) => console.error('%c[ERR]', 'color:#b73b3b;font-weight:600', ...a),
   };
 
+  const base64Decode = (input) => {
+    if (typeof input !== 'string') return '';
+    if (typeof atob === 'function') return atob(input);
+    try {
+      return Buffer.from(input, 'base64').toString('binary');
+    } catch (err) {
+      Debug.warn('base64 decode failed', err);
+      return '';
+    }
+  };
+
+  function decodeJwt(token) {
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    try {
+      const segment = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = segment + '='.repeat((4 - segment.length % 4) % 4);
+      const bin = base64Decode(padded);
+      const uriEncoded = bin.split('').map((c) => '%'.concat(('00' + c.charCodeAt(0).toString(16)).slice(-2))).join('');
+      const json = decodeURIComponent(uriEncoded);
+      return JSON.parse(json);
+    } catch (err) {
+      Debug.warn('decodeJwt failed', err);
+      return null;
+    }
+  }
+
   // Netlify Live (beta) attempts to open a WebSocket to `/.netlify/extension/hmr`.
   // For our admin deploys this endpoint is suspended, which previously produced
   // noisy console errors on every load. We soft-disable those connections by
@@ -284,16 +312,47 @@
     } catch {}
     // Cookie-only session: we can’t read profile, but a token may exist
     const token = getNFJwtFromCookie();
-    if (token) return { token: async () => token, jwt: async () => token, email: undefined, app_metadata: {} };
+    if (token) {
+      const payload = decodeJwt(token);
+      const rawRoles = payload?.app_metadata?.roles || payload?.roles || payload?.role;
+      const roles = Array.isArray(rawRoles) ? rawRoles : (rawRoles ? [rawRoles] : []);
+      const email = payload?.email || payload?.sub || undefined;
+      return {
+        token: async () => token,
+        jwt: async () => token,
+        email,
+        app_metadata: { roles },
+        roles,
+        __hmjJwt: payload
+      };
+    }
     return null;
   }
 
   function normalizeToken(raw) {
     if (!raw) return '';
-    if (typeof raw === 'string') return raw;
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed) return '';
+      if (/^bearer\s+/i.test(trimmed)) return trimmed.replace(/^bearer\s+/i, '').trim();
+      return trimmed;
+    }
     if (typeof raw === 'object') {
-      const direct = raw.token || raw.access_token || raw.accessToken;
-      if (typeof direct === 'string') return direct;
+      const keys = [
+        'token',
+        'access_token',
+        'accessToken',
+        'nf_jwt',
+        'jwt',
+        'bearer'
+      ];
+      for (const key of keys) {
+        if (key in raw) {
+          const value = raw[key];
+          const normalised = normalizeToken(value);
+          if (normalised) return normalised;
+        }
+      }
       if (Array.isArray(raw)) {
         for (const entry of raw) {
           const t = normalizeToken(entry);
@@ -321,6 +380,17 @@
         Debug.warn('token attempt failed', err);
       }
     }
+    const fallbacks = [
+      user?.token,
+      user?.access_token,
+      user?.accessToken,
+      user?.session,
+      user
+    ];
+    for (const fb of fallbacks) {
+      const token = normalizeToken(fb);
+      if (token) return token;
+    }
     return '';
   }
 
@@ -331,8 +401,41 @@
     let user = null; let token = '';
     try { user = await getIdentityUser(); } catch {}
     try { token = await getUserToken(user); } catch {}
-    const rolesRaw = user?.app_metadata?.roles || user?.roles || [];
-    const roles = Array.isArray(rolesRaw) ? rolesRaw.map(r => String(r).toLowerCase()) : [];
+
+    const jwtPayload = token ? decodeJwt(token) : (user && user.__hmjJwt) ? user.__hmjJwt : null;
+
+    let rolesSource = user?.app_metadata?.roles;
+    if (!rolesSource || (Array.isArray(rolesSource) && !rolesSource.length)) {
+      rolesSource = user?.roles;
+    }
+    if ((!rolesSource || (Array.isArray(rolesSource) && !rolesSource.length)) && jwtPayload) {
+      const jwtRoles = jwtPayload?.app_metadata?.roles || jwtPayload?.roles || jwtPayload?.role;
+      if (Array.isArray(jwtRoles)) rolesSource = jwtRoles;
+      else if (jwtRoles) rolesSource = [jwtRoles];
+    }
+
+    const roles = Array.isArray(rolesSource)
+      ? rolesSource.map(r => String(r).toLowerCase()).filter(Boolean)
+      : rolesSource ? [String(rolesSource).toLowerCase()] : [];
+
+    if (user) {
+      if (!user.app_metadata) user.app_metadata = {};
+      if (!Array.isArray(user.app_metadata.roles) || !user.app_metadata.roles.length) {
+        if (roles.length) {
+          user.app_metadata.roles = roles;
+        }
+      }
+      if (jwtPayload && !user.__hmjJwt) user.__hmjJwt = jwtPayload;
+      if (!user.roles || (Array.isArray(user.roles) && !user.roles.length)) {
+        if (roles.length) user.roles = roles;
+      }
+    }
+
+    let email = user?.email || '';
+    if (!email && jwtPayload) {
+      email = jwtPayload?.email || jwtPayload?.sub || '';
+    }
+
     const role = roles.includes('admin') ? 'admin' :
                  roles.includes('recruiter') ? 'recruiter' :
                  roles.includes('client') ? 'client' : (roles[0] || '');
@@ -344,7 +447,7 @@
     }
 
     const ok = !!token && (!required || roles.includes(required) || role === required);
-    return { ok, user, token, role, email: user?.email || '' };
+    return { ok, user, token, role, email };
   }
 
   // Console helpers (intentionally global)
