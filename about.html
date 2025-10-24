@@ -4,19 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>About Us | HMJ-Global</title>
+  <script src="js/hmj-identity.js"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.netlifyIdentity) {
-        netlifyIdentity.on('login', () => {
-          const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-          sessionStorage.removeItem('afterLogin');
-          window.location.href = dest;
-        });
-        netlifyIdentity.on('logout', () => {
-          window.location.href = '/';
-        });
-      }
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+      if (!identity) return;
+
+      identity.on('login', () => {
+        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
+        sessionStorage.removeItem('afterLogin');
+        window.location.href = dest;
+      });
+      identity.on('logout', () => {
+        window.location.href = '/';
+      });
     });
   </script>
   <link rel="stylesheet" href="css/style.css" />
@@ -168,7 +170,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const admin = document.getElementById('nav-admin');
       const timesheets = document.getElementById('nav-timesheets');
-      const identity = window.netlifyIdentity;
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
 
       const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
         ? user.app_metadata.roles
@@ -183,7 +185,7 @@
           return;
         }
         if (destination) sessionStorage.setItem('afterLogin', destination);
-        identity.open('login');
+        identity?.open?.('login');
       }
 
       function setTimesheets(user) {

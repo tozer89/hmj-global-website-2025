@@ -6,6 +6,7 @@
   <title>Timesheets | HMJ-Global</title>
 
   <!-- Identity MUST load before our script -->
+  <script src="js/hmj-identity.js"></script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
   <style>
@@ -178,7 +179,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const admin = document.getElementById('nav-admin');
       const timesheets = document.getElementById('nav-timesheets');
-      const identity = window.netlifyIdentity;
+    const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
 
       const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
         ? user.app_metadata.roles
@@ -188,12 +189,12 @@
 
       function requireLogin(event, destination) {
         if (event) event.preventDefault();
-        if (!identity) {
-          if (destination) window.location.href = destination;
-          return;
-        }
-        if (destination) sessionStorage.setItem('afterLogin', destination);
-        identity.open('login');
+      if (!identity) {
+        if (destination) window.location.href = destination;
+        return;
+      }
+      if (destination) sessionStorage.setItem('afterLogin', destination);
+      identity?.open?.('login');
       }
 
       function setTimesheets(user) {
@@ -311,7 +312,7 @@
     <!-- Login gate -->
     <div id="gate" class="card hidden">
       <p>Please log in to access your timesheets.</p>
-      <button class="btn primary" onclick="window.netlifyIdentity && window.netlifyIdentity.open('login')">Log in</button>
+      <button class="btn primary" onclick="(function(){var id=(window.hmjConfigureIdentity&&window.hmjConfigureIdentity())||window.netlifyIdentity;if(id&&id.open){id.open('login');}})()">Log in</button>
     </div>
 
     <!-- App -->
@@ -466,17 +467,26 @@
 
     // ---------- Netlify Identity load guard ----------
     function whenIdentityReady(cb){
-      if (window.netlifyIdentity){ cb(window.netlifyIdentity); return; }
+      const tryIdentity = () => {
+        const id = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+        if (!id) return false;
+        cb(id);
+        return true;
+      };
+
+      if (tryIdentity()) return;
+
       let tries = 0;
       const t = setInterval(()=>{
-        if (window.netlifyIdentity){ clearInterval(t); cb(window.netlifyIdentity); }
+        if (tryIdentity()){ clearInterval(t); }
         else if (++tries > 200){ clearInterval(t); console.error('Netlify Identity failed to load'); }
       }, 25);
     }
 
     // ---------- robust API fetch ----------
     async function api(path, method='GET', body=null){
-      const id = window.netlifyIdentity?.currentUser();
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+      const id = identity?.currentUser?.();
       if(!id) throw new Error('identity_required');
       const token = await id.jwt();
       const res = await fetch(`/.netlify/functions${path}`,{
@@ -704,7 +714,8 @@
         $('#modalSlip').classList.add('show');
 
         try{
-            const id = window.netlifyIdentity?.currentUser();
+            const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+            const id = identity?.currentUser?.();
             if(!id) throw new Error('identity_required');
             const token = await id.jwt();
 
@@ -767,7 +778,8 @@
             </table>
             `;
 
-            $('#slipFootnote').textContent = `Generated for ${window.netlifyIdentity?.currentUser()?.email || ''}`;
+            const active = identity?.currentUser?.();
+            $('#slipFootnote').textContent = `Generated for ${active?.email || ''}`;
         }catch(err){
             console.error('slip detail error:', err);
             $('#slipBody').innerHTML = `<div class="muted">Could not load this timesheet’s details.</div>`;
@@ -783,7 +795,10 @@
 
     async function boot(){
       try{
-        await window.netlifyIdentity?.currentUser()?.jwt();
+        const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+        const current = identity?.currentUser?.();
+        if (!current) throw new Error('identity_required');
+        await current.jwt();
         await loadWeek();
         await loadHistory();
         bindInputs();
@@ -800,11 +815,17 @@
     function bootOnce(){ if(BOOTED) return; BOOTED=true; boot().catch(e=>{ BOOTED=false; console.error(e); toast(`Could not load timesheet: ${e.message||e}`); }); }
 
     whenIdentityReady((ni)=>{
-      $('#btnSignOut').onclick = () => ni.logout();
-      ni.on('init', (user) => { if (user){ showApp(); bootOnce(); } else { showGate(); } });
-      ni.on('login', () => { showApp(); bootOnce(); });
-      ni.on('logout', () => { BOOTED=false; showGate(); });
-      ni.init();
+      $('#btnSignOut').onclick = () => ni?.logout?.();
+      if (typeof ni.on === 'function') {
+        ni.on('init', (user) => { if (user){ showApp(); bootOnce(); } else { showGate(); } });
+        ni.on('login', () => { showApp(); bootOnce(); });
+        ni.on('logout', () => { BOOTED=false; showGate(); });
+      }
+      try {
+        const existing = ni?.currentUser?.();
+        if (existing) { showApp(); bootOnce(); }
+        else { showGate(); }
+      } catch (_) { showGate(); }
     });
   </script>
 </body>

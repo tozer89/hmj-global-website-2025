@@ -20,6 +20,7 @@
     .btn:hover{border-color:#3b5172}
     .link{color:var(--blue);text-decoration:none}
   </style>
+  <script src="js/hmj-identity.js"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
@@ -28,7 +29,7 @@
       <h1>Unauthorized</h1>
       <p>You don’t have permission to view this page. If you’re an HMJ admin, please log in with an admin account.</p>
       <div class="row">
-        <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button>
+        <button class="btn" onclick="(function(){var id=(window.hmjConfigureIdentity&&window.hmjConfigureIdentity())||window.netlifyIdentity;if(id&&id.open){id.open('login');}})()">Log in</button>
         <a class="btn" href="/">Go to homepage</a>
         <a class="link" href="/admin/">Open CMS</a>
       </div>
@@ -38,7 +39,9 @@
   <script>
     // If a user logs in and has access, send them to the admin console
     document.addEventListener('DOMContentLoaded',()=>{
-      netlifyIdentity?.on('login', ()=> { window.location.href = '/admin/timesheets.html'; });
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+      if (typeof identity?.on !== 'function') return;
+      identity.on('login', ()=> { window.location.href = '/admin/timesheets.html'; });
     });
   </script>
 </body>

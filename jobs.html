@@ -4,19 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Jobs | HMJ-Global</title>
+  <script src="js/hmj-identity.js"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.netlifyIdentity) {
-        netlifyIdentity.on('login', () => {
-          const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-          sessionStorage.removeItem('afterLogin');
-          window.location.href = dest;
-        });
-        netlifyIdentity.on('logout', () => {
-          window.location.href = '/';
-        });
-      }
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+      if (!identity) return;
+
+      identity.on('login', () => {
+        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
+        sessionStorage.removeItem('afterLogin');
+        window.location.href = dest;
+      });
+      identity.on('logout', () => {
+        window.location.href = '/';
+      });
     });
   </script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
@@ -197,7 +199,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const admin = document.getElementById('nav-admin');
       const timesheets = document.getElementById('nav-timesheets');
-      const identity = window.netlifyIdentity;
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
 
       const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
         ? user.app_metadata.roles
@@ -212,7 +214,7 @@
           return;
         }
         if (destination) sessionStorage.setItem('afterLogin', destination);
-        identity.open('login');
+        identity?.open?.('login');
       }
 
       function setTimesheets(user) {
@@ -1333,17 +1335,30 @@
     };
   })();
   </script>
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
-  const portalLink = document.querySelector('a[href="/admin/"]');
-  if (portalLink) {
+  (function(){
+    const portalLink = document.querySelector('a[href="/admin/"]');
+    if (!portalLink) return;
+
     portalLink.style.display = 'none';
-    function toggle() { portalLink.style.display = netlifyIdentity.currentUser() ? '' : 'none'; }
-    netlifyIdentity.on('init', toggle);
-    netlifyIdentity.on('login', toggle);
-    netlifyIdentity.on('logout', toggle);
-    netlifyIdentity.init();
-  }
+
+    function toggle(user) {
+      const id = user || window.netlifyIdentity || null;
+      const current = typeof id?.currentUser === 'function' ? id.currentUser() : id;
+      portalLink.style.display = current ? '' : 'none';
+    }
+
+    const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+    if (!identity) return;
+
+    if (typeof identity.on === 'function') {
+      identity.on('init', toggle);
+      identity.on('login', toggle);
+      identity.on('logout', () => toggle(null));
+    }
+
+    try { toggle(identity); } catch (_) {}
+  })();
 </script>
 
 
