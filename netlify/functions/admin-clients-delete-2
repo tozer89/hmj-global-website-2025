@@ -1,4 +1,4 @@
-// netlify/functions/admin-clients-delete.js
+// netlify/functions/admin-clients-delete-2.js
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 
