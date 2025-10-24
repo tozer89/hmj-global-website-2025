@@ -7,6 +7,18 @@ const JOB_SELECT = '*';
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 
+function truthy(value) {
+  if (typeof value === 'string') {
+    return /^(1|true|yes|on)$/i.test(value.trim());
+  }
+  return !!value;
+}
+
+function filterPublishedJobs(list = []) {
+  if (!Array.isArray(list)) return [];
+  return list.filter((job) => job && job.published !== false);
+}
+
 exports.handler = async (event, context) => {
   let fallback = [];
   let fallbackError = null;
@@ -18,17 +30,38 @@ exports.handler = async (event, context) => {
   }
   const fallbackCount = fallback.length;
 
+  const queryParams = event?.queryStringParameters || {};
+  const headers = event?.headers || {};
+  let body = {};
   try {
-    await getContext(event, context, { requireAdmin: true });
+    body = event.body ? JSON.parse(event.body) : {};
+  } catch (err) {
+    console.warn('[admin-jobs] unable to parse body JSON', err?.message || err);
+  }
+
+  const modeValue = typeof queryParams.mode === 'string' ? queryParams.mode : '';
+  const publicFlag =
+    truthy(queryParams.public) ||
+    modeValue.toLowerCase() === 'public' ||
+    truthy(headers['x-hmj-public']) ||
+    truthy(body.public);
+
+  const isPublicRequest = !!publicFlag;
+  const fallbackJobs = isPublicRequest ? filterPublishedJobs(fallback) : fallback;
+
+  try {
+    if (!isPublicRequest) {
+      await getContext(event, context, { requireAdmin: true });
+    }
 
     if (!hasSupabase()) {
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
         body: JSON.stringify({
-          jobs: fallback,
-          source: fallback.length ? 'static' : 'empty',
-          readOnly: true,
+          jobs: fallbackJobs,
+          source: fallbackJobs.length ? 'static' : 'empty',
+          readOnly: isPublicRequest ? undefined : true,
           warning: fallback.length
             ? 'Supabase unavailable — showing static jobs.'
             : (fallbackError?.message || 'Supabase client unavailable'),
@@ -40,8 +73,7 @@ exports.handler = async (event, context) => {
 
     const supabase = getSupabase(event);
 
-    const body = JSON.parse(event.body || '{}');
-    const includeDrafts = body.includeDrafts !== false;
+    const includeDrafts = !isPublicRequest && body.includeDrafts !== false;
 
     let query = supabase
       .from('jobs')
@@ -58,9 +90,12 @@ exports.handler = async (event, context) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    const jobs = Array.isArray(data) ? data.map(toJob) : [];
-    if (!jobs.length && fallback.length) {
-      const seeded = fallback.map((job) => ({ ...job, __seed: true }));
+    const jobsRaw = Array.isArray(data) ? data.map(toJob) : [];
+    const jobs = isPublicRequest ? filterPublishedJobs(jobsRaw) : jobsRaw;
+    if (!jobs.length && fallbackJobs.length) {
+      const seeded = isPublicRequest
+        ? fallbackJobs
+        : fallbackJobs.map((job) => ({ ...job, __seed: true }));
       return {
         statusCode: 200,
         headers: JSON_HEADERS,
@@ -75,14 +110,14 @@ exports.handler = async (event, context) => {
   } catch (e) {
     const schemaIssue = isSchemaError(e);
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    const source = fallback.length ? 'static' : 'empty';
+    const source = fallbackJobs.length ? 'static' : 'empty';
     ensureStaticJobs();
     return {
-      statusCode: fallback.length ? 200 : status,
+      statusCode: fallbackJobs.length ? 200 : status,
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        jobs: fallback,
-        readOnly: true,
+        jobs: fallbackJobs,
+        readOnly: isPublicRequest ? undefined : true,
         source,
         error: e.message || fallbackError?.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
         schema: schemaIssue,
