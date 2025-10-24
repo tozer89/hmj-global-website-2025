@@ -564,10 +564,45 @@
         return { entry: nextEntry, reused: !!entry, store };
       }
 
-      function buildLocalShareUrl(slug) {
-        if (!slug) return '';
+      function encodeSharePayload(entry) {
+        if (!entry || !entry.job) return '';
+        try {
+          const payload = {
+            job: entry.job,
+            meta: {
+              slug: entry.slug || null,
+              created_at: entry.createdAt || null,
+              refreshed_at: entry.updatedAt || null,
+              expires_at: entry.expiresAt || null,
+              last_accessed: entry.lastAccessed || null,
+              snapshot: true,
+            },
+          };
+          const json = JSON.stringify(payload);
+          if (typeof TextEncoder !== 'undefined') {
+            const encoded = new TextEncoder().encode(json);
+            let binary = '';
+            encoded.forEach((byte) => {
+              binary += String.fromCharCode(byte);
+            });
+            return btoa(binary);
+          }
+          // Fallback for environments without TextEncoder.
+          return btoa(unescape(encodeURIComponent(json)));
+        } catch (err) {
+          console.warn('[jobs] unable to encode share payload', err);
+          return '';
+        }
+      }
+
+      function buildLocalShareUrl(entry) {
+        if (!entry || !entry.slug) return '';
         const origin = location.origin || `${location.protocol}//${location.host}`;
-        return `${origin.replace(/\/$/, '')}/jobs/spec.html?local=${encodeURIComponent(slug)}`;
+        const params = new URLSearchParams();
+        params.set('local', entry.slug);
+        const payload = encodeSharePayload(entry);
+        if (payload) params.set('payload', payload);
+        return `${origin.replace(/\/$/, '')}/jobs/spec.html?${params.toString()}`;
       }
 
       function formatShareDate(ts, includeTime = false) {
@@ -1013,7 +1048,7 @@
             return;
           }
           const { entry, reused } = result;
-          shareUrl.value = buildLocalShareUrl(entry.slug);
+          shareUrl.value = buildLocalShareUrl(entry);
           const expiresText = formatShareDate(entry.expiresAt) || '';
           const createdText = entry.createdAt ? formatShareDate(entry.createdAt, true) : '';
           const lastUsedText = entry.lastAccessed ? formatShareDate(entry.lastAccessed, true) : '';
@@ -1090,7 +1125,7 @@
           return;
         }
         const { entry } = result;
-        shareUrl.value = buildLocalShareUrl(entry.slug);
+        shareUrl.value = buildLocalShareUrl(entry);
         const expiresText = formatShareDate(entry.expiresAt) || '';
         const refreshedText = entry.updatedAt ? formatShareDate(entry.updatedAt, true) : '';
         const parts = ['Local preview'];
