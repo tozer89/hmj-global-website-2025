@@ -437,6 +437,8 @@
    - setTrace / getTrace for server-side trace correlation
 ================================================================ */
 
+window.__timesheetsController = null;
+
 async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile }) {
   const DEFAULTS = {
     week1Ending: '2025-11-02',
@@ -1175,6 +1177,24 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
   // Load clients, audit, list
   await loadClients(); await loadAudit(); await loadList(); renderViews();
 
+  window.__timesheetsController = {
+    refresh: () => loadList(),
+    openTimesheet: (id) => openSheet(Number(id)),
+    getCounts: () => ({
+      total: LIST.length,
+      filtered: FILTERED.length,
+      selected: SELECTED.size,
+    }),
+    setFilters: (filters = {}) => {
+      if (filters.q !== undefined) q.value = filters.q;
+      if (filters.status !== undefined) status.value = filters.status;
+      if (filters.client_id !== undefined) clientId.value = filters.client_id;
+      if (filters.week !== undefined) week.value = filters.week;
+      if (filters.week_number !== undefined) weekNo.value = filters.week_number;
+      filterAndRender();
+    },
+  };
+
   // small mobile tweaks
   if(isMobile){ calendarWrap.style.display='none'; chartWrap.style.display='none'; }
 }
@@ -1183,11 +1203,41 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 </script>
 
 <script>
-(function startTimesheets(){
-  if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
-    return setTimeout(startTimesheets, 30);
+(function () {
+  let started = false;
+
+  function startTimesheets() {
+    if (started) return;
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+      return setTimeout(startTimesheets, 30);
+    }
+    started = true;
+    window.Admin.bootAdmin(main);
   }
-  window.Admin.bootAdmin(main);
+
+  window.createTimesheetsApp = function () {
+    startTimesheets();
+    return {
+      refresh() {
+        return window.__timesheetsController?.refresh?.();
+      },
+      openTimesheet(id) {
+        return window.__timesheetsController?.openTimesheet?.(id);
+      },
+      getCounts() {
+        return window.__timesheetsController?.getCounts?.() ?? { total: 0, filtered: 0, selected: 0 };
+      },
+      setFilters(filters) {
+        return window.__timesheetsController?.setFilters?.(filters);
+      },
+    };
+  };
+
+  if (document.readyState !== 'loading') {
+    startTimesheets();
+  } else {
+    document.addEventListener('DOMContentLoaded', startTimesheets, { once: true });
+  }
 })();
 </script>
 
