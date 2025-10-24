@@ -237,7 +237,13 @@
 
     id.__hmjInit = true;
     const opts = {};
-    const base = (window.ADMIN_IDENTITY_URL || '').replace(/\/$/, '');
+    const base = (
+      window.__hmjResolvedIdentityUrl ||
+      window.HMJ_IDENTITY_URL ||
+      window.NETLIFY_IDENTITY_URL ||
+      window.ADMIN_IDENTITY_URL ||
+      ''
+    ).replace(/\/$/, '');
     if (base) opts.APIUrl = base;
     try { id.init(opts); } catch (err) { Debug.warn('identity init failed', err); }
 

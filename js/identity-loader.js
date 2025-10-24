@@ -89,6 +89,11 @@
       return;
     }
 
+    window.__hmjResolvedIdentityUrl = resolved;
+    if (!window.HMJ_IDENTITY_URL) {
+      window.HMJ_IDENTITY_URL = resolved;
+    }
+
     const settings = window.netlifyIdentitySettings = window.netlifyIdentitySettings || {};
     settings.APIUrl = resolved;
 
