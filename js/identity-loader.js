@@ -70,7 +70,13 @@
       if (!candidate) continue;
       const url = candidate.replace(/\/$/, '');
       try {
-        const res = await fetch(`${url}/config`, { mode: 'cors', cache: 'no-store' });
+        const res = await fetch(`${url}/config`, {
+          mode: 'cors',
+          cache: 'no-store',
+          credentials: 'include',
+          redirect: 'follow',
+          headers: { 'Accept': 'application/json, text/plain, */*' }
+        });
         if (res.ok) return url;
       } catch (err) {
         // Continue to next candidate
