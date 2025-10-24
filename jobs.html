@@ -759,15 +759,30 @@
     }
 
     async function loadJobsFromApi(){
-      try{
-        const res = await fetch('/.netlify/functions/jobs-list', { cache:'no-store' });
-        if(!res.ok) throw new Error('HTTP '+res.status);
-        const data = await res.json();
-        return data;
-      }catch(e){
-        console.warn('jobs-list API failed', e);
-        return null;
+      const endpoints = [
+        { url: '/.netlify/functions/jobs-list', options: { cache: 'no-store' }, label: 'jobs-list' },
+        {
+          url: '/.netlify/functions/admin-jobs-list?public=1',
+          options: { cache: 'no-store', headers: { 'x-hmj-public': '1' } },
+          label: 'admin-jobs-list (public)',
+        },
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint.url, endpoint.options);
+          if (!res.ok) {
+            console.warn(`jobs API ${endpoint.label} failed`, res.status);
+            continue;
+          }
+          const data = await res.json();
+          return data;
+        } catch (err) {
+          console.warn(`jobs API ${endpoint.label} error`, err);
+        }
       }
+
+      return null;
     }
     async function loadJobsJSON(){
       try{
