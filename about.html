@@ -129,6 +129,8 @@
 
     .director-card .social-icons{ display:flex; gap:12px; }
     .director-card .social-icons img{ width:28px; height:28px; }
+    .director-card .director-contact{ margin:6px 0 0; text-align:center; }
+    .director-card .director-contact a{ color:inherit; }
 
     /* ========= CTA / Footer (same look as index) ========= */
     .cta{ text-align:center; padding:48px 20px; background:
@@ -164,91 +166,91 @@
         <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
         <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const admin = document.getElementById('nav-admin');
-      const timesheets = document.getElementById('nav-timesheets');
-      const identity = window.netlifyIdentity;
-
-      const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
-        ? user.app_metadata.roles
-        : Array.isArray(user?.roles)
-          ? user.roles
-          : [];
-
-      function requireLogin(event, destination) {
-        if (event) event.preventDefault();
-        if (!identity) {
-          if (destination) window.location.href = destination;
-          return;
-        }
-        if (destination) sessionStorage.setItem('afterLogin', destination);
-        identity.open('login');
-      }
-
-      function setTimesheets(user) {
-        if (!timesheets) return;
-        if (user) {
-          timesheets.href = '/timesheets.html';
-          timesheets.removeAttribute('aria-disabled');
-          timesheets.title = 'Open timesheets';
-        } else {
-          timesheets.href = '#';
-          timesheets.setAttribute('aria-disabled', 'true');
-          timesheets.title = 'Sign in to access timesheets';
-        }
-      }
-
-      function setAdmin(user) {
-        if (!admin) return;
-        const roles = rolesOf(user);
-        const isAdmin = roles.includes('admin');
-        if (isAdmin) {
-          admin.style.display = 'inline-block';
-          admin.href = '/admin/';
-          admin.removeAttribute('aria-disabled');
-          admin.classList.remove('requires-admin');
-          admin.textContent = 'Admin Dashboard';
-          admin.title = 'Open the admin dashboard';
-        } else {
-          admin.style.display = 'none';
-          admin.href = '/admin/';
-          admin.setAttribute('aria-disabled', 'true');
-          admin.classList.add('requires-admin');
-          admin.textContent = 'Admin Dashboard';
-          admin.title = 'Admin access only';
-        }
-      }
-
-      function renderFor(user) {
-        setTimesheets(user);
-        setAdmin(user);
-      }
-
-      timesheets?.addEventListener('click', (event) => {
-        const user = identity?.currentUser?.();
-        if (user) return;
-        requireLogin(event, '/timesheets.html');
-      });
-      admin?.addEventListener('click', (event) => {
-        const user = identity?.currentUser?.();
-        if (user) return;
-        requireLogin(event, '/admin/');
-      });
-
-      identity?.on('init', (user) => renderFor(user));
-      identity?.on('login', (user) => renderFor(user));
-      identity?.on('logout', () => renderFor(null));
-
-      try {
-        renderFor(identity?.currentUser?.() || null);
-      } catch {
-        renderFor(null);
-      }
-    });
-</script>
-
       </ul>
+
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const admin = document.getElementById('nav-admin');
+          const timesheets = document.getElementById('nav-timesheets');
+          const identity = window.netlifyIdentity;
+
+          const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
+            ? user.app_metadata.roles
+            : Array.isArray(user?.roles)
+              ? user.roles
+              : [];
+
+          function requireLogin(event, destination) {
+            if (event) event.preventDefault();
+            if (!identity) {
+              if (destination) window.location.href = destination;
+              return;
+            }
+            if (destination) sessionStorage.setItem('afterLogin', destination);
+            identity.open('login');
+          }
+
+          function setTimesheets(user) {
+            if (!timesheets) return;
+            if (user) {
+              timesheets.href = '/timesheets.html';
+              timesheets.removeAttribute('aria-disabled');
+              timesheets.title = 'Open timesheets';
+            } else {
+              timesheets.href = '#';
+              timesheets.setAttribute('aria-disabled', 'true');
+              timesheets.title = 'Sign in to access timesheets';
+            }
+          }
+
+          function setAdmin(user) {
+            if (!admin) return;
+            const roles = rolesOf(user);
+            const isAdmin = roles.includes('admin');
+            if (isAdmin) {
+              admin.style.display = 'inline-block';
+              admin.href = '/admin/';
+              admin.removeAttribute('aria-disabled');
+              admin.classList.remove('requires-admin');
+              admin.textContent = 'Admin Dashboard';
+              admin.title = 'Open the admin dashboard';
+            } else {
+              admin.style.display = 'none';
+              admin.href = '/admin/';
+              admin.setAttribute('aria-disabled', 'true');
+              admin.classList.add('requires-admin');
+              admin.textContent = 'Admin Dashboard';
+              admin.title = 'Admin access only';
+            }
+          }
+
+          function renderFor(user) {
+            setTimesheets(user);
+            setAdmin(user);
+          }
+
+          timesheets?.addEventListener('click', (event) => {
+            const user = identity?.currentUser?.();
+            if (user) return;
+            requireLogin(event, '/timesheets.html');
+          });
+          admin?.addEventListener('click', (event) => {
+            const user = identity?.currentUser?.();
+            if (user) return;
+            requireLogin(event, '/admin/');
+          });
+
+          identity?.on('init', (user) => renderFor(user));
+          identity?.on('login', (user) => renderFor(user));
+          identity?.on('logout', () => renderFor(null));
+
+          try {
+            renderFor(identity?.currentUser?.() || null);
+          } catch {
+            renderFor(null);
+          }
+        });
+      </script>
       <div class="hmj-scrim" hidden></div>
     </nav>
   </header>
@@ -419,10 +421,10 @@
           <h3>Nick Chamberlain</h3>
           <p>Co-founder with deep data centre recruitment experience across the UK & EU. Nick’s focus is speed with precision—right skills, right site, right time—underpinned by transparent communication.</p>
           <div class="social-icons" style="margin:10px 0 6px;">
-            <a href="https://www.linkedin.com/in/nchamberlain88/" target="_blank"><img src="images/linkedin-icon.png" alt="LinkedIn"></a>
-            <a href="https://www.instagram.com/hmj_global" target="_blank"><img src="images/instagram-icon.png" alt="Instagram"></a>
+            <a href="https://www.linkedin.com/in/nchamberlain88/" target="_blank" rel="noopener"><img src="images/linkedin-icon.png" alt="LinkedIn"></a>
+            <a href="https://www.instagram.com/hmj_global" target="_blank" rel="noopener"><img src="images/instagram-icon.png" alt="Instagram"></a>
           </div>
-          |&nbsp; <strong>Email:</strong> <a href="mailto:Nick@HMJ-Global.com">Nick@HMJ-Global.com</a></p>
+          <p class="director-contact"><span aria-hidden="true">|&nbsp;</span><strong>Email:</strong> <a href="mailto:Nick@HMJ-Global.com">Nick@HMJ-Global.com</a></p>
         </div>
 
         <div class="card director-card reveal">
@@ -430,10 +432,10 @@
           <h3>Joe Tozer-O'Sullivan</h3>
           <p>Co-founder blending finance leadership with hands-on recruitment. Joe ensures HMJ-Global stays commercially sound while delivering a people-first service for both clients and contractors.</p>
           <div class="social-icons" style="margin:10px 0 6px;">
-            <a href="https://www.linkedin.com/in/joe-t-4091542ba" target="_blank"><img src="images/linkedin-icon.png" alt="LinkedIn"></a>
-            <a href="https://www.instagram.com/hmj_global" target="_blank"><img src="images/instagram-icon.png" alt="Instagram"></a>
+            <a href="https://www.linkedin.com/in/joe-t-4091542ba" target="_blank" rel="noopener"><img src="images/linkedin-icon.png" alt="LinkedIn"></a>
+            <a href="https://www.instagram.com/hmj_global" target="_blank" rel="noopener"><img src="images/instagram-icon.png" alt="Instagram"></a>
           </div>
-          |&nbsp; <strong>Email:</strong> <a href="mailto:Joe@HMJ-Global.com">Joe@HMJ-Global.com</a></p>
+          <p class="director-contact"><span aria-hidden="true">|&nbsp;</span><strong>Email:</strong> <a href="mailto:Joe@HMJ-Global.com">Joe@HMJ-Global.com</a></p>
         </div>
       </div>
     </div>
