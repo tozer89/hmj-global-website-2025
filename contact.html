@@ -36,6 +36,35 @@
       .hmj-scrim[hidden]{display:none}
     }
 
+    /* ===== Announcement bar ===== */
+    .announce{
+      background:var(--accent);
+      color:#ffffff;
+    }
+    .announce a{
+      color:#ffffff;
+      text-decoration:underline;
+    }
+    .announce .inner{
+      max-width:1200px;
+      margin:0 auto;
+      padding:8px 16px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+    }
+    .announce .badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.35);
+      color:#ffffff;
+      font-size:.78rem;
+    }
+
     /* ===== Page header (with “electric” scan) ===== */
     .page-header{
       min-height:38vh;display:grid;place-items:center;padding:110px 20px 70px;
@@ -131,6 +160,12 @@
   </style>
 </head>
 <body>
+  <!-- Announcement -->
+  <div class="announce" role="region" aria-label="Announcement">
+    <div class="inner">
+      <span class="badge">⚡ New</span> Hyperscale &amp; Pharma hiring across UK, Benelux, Nordics &amp; DACH — <a href="jobs.html">See open roles</a>
+    </div>
+  </div>
   <!-- ===== Header / Navbar ===== -->
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">

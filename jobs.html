@@ -42,6 +42,35 @@
     .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
     .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 
+    /* ===== Announcement bar ===== */
+    .announce{
+      background:var(--accent);
+      color:#ffffff;
+    }
+    .announce a{
+      color:#ffffff;
+      text-decoration:underline;
+    }
+    .announce .inner{
+      max-width:1200px;
+      margin:0 auto;
+      padding:8px 16px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+    }
+    .announce .badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.35);
+      color:#ffffff;
+      font-size:.78rem;
+    }
+
     /* ===== Page header ===== */
     .page-header{min-height:40vh;display:grid;place-items:center;padding:120px 20px 80px;text-align:center;color:#fff;position:relative;background:url('images/hero.jpg') center/cover no-repeat;}
     .page-header::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55))}
@@ -163,6 +192,12 @@
   </style>
 </head>
 <body>
+  <!-- Announcement -->
+  <div class="announce" role="region" aria-label="Announcement">
+    <div class="inner">
+      <span class="badge">⚡ New</span> Hyperscale &amp; Pharma hiring across UK, Benelux, Nordics &amp; DACH — <a href="jobs.html">See open roles</a>
+    </div>
+  </div>
   <!-- ===== Header / Navbar ===== -->
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">
@@ -639,6 +674,7 @@
     let chips = [];
     let seededJobsApplied = false;
     const fallbackAnchorIds = new Set();
+    let revealObserver = null;
 
     const getPins = () => new Set(JSON.parse(localStorage.getItem(PIN_KEY) || '[]'));
     const setPins = (set) => localStorage.setItem(PIN_KEY, JSON.stringify([...set]));
@@ -708,6 +744,34 @@
       });
       refreshPinsUI();
       applyFilters();
+    }
+
+    function ensureRevealObserver(){
+      if (revealObserver || !('IntersectionObserver' in window)) return;
+      revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('revealed');
+          try { revealObserver.unobserve(entry.target); } catch (_) {}
+        });
+      }, { threshold: 0.12 });
+    }
+
+    function bindRevealElements(root = document){
+      const elements = Array.from(root.querySelectorAll('.reveal, .job'));
+      if (!elements.length) return;
+      if (!('IntersectionObserver' in window)) {
+        elements.forEach((el) => el.classList.add('revealed'));
+        return;
+      }
+      ensureRevealObserver();
+      elements.forEach((el) => {
+        if (el.dataset.revealBound === '1') return;
+        el.dataset.revealBound = '1';
+        try { revealObserver.observe(el); } catch (_) {
+          el.classList.add('revealed');
+        }
+      });
     }
 
     function slugify(value = '') {
@@ -1016,6 +1080,7 @@
 
       if (!sections.length || !jobs.length) {
         jobsContainer.innerHTML = '<div class="no-results">No jobs are available right now. Please check back soon.</div>';
+        bindRevealElements(jobsContainer);
         refreshJobsElements();
         return;
       }
@@ -1035,6 +1100,8 @@
         jobsContainer.appendChild(board);
       });
 
+      bindRevealElements(jobsContainer);
+      jobsContainer.querySelectorAll('.job').forEach((job) => job.classList.add('revealed'));
       refreshJobsElements();
     }
 
@@ -1230,11 +1297,7 @@
     document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') openMenu(false); });
 
     /* ---------- Reveal-on-scroll ---------- */
-    const toReveal=document.querySelectorAll('.reveal, .job');
-    if('IntersectionObserver' in window){
-      const io=new IntersectionObserver((entries)=>{ entries.forEach(ent=>{ if(ent.isIntersecting){ ent.target.classList.add('revealed'); io.unobserve(ent.target);} }); },{threshold:0.12});
-      toReveal.forEach(el=>io.observe(el));
-    } else { toReveal.forEach(el=>el.classList.add('revealed')); }
+    bindRevealElements(document);
 
     /* ---------- Scroll to top ---------- */
     const topBtn=document.getElementById('scrollTopBtn');
