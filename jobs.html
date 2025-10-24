@@ -818,9 +818,37 @@
         out.tags = raw.map((t) => t.trim()).filter(Boolean);
       }
       out.tags = Array.isArray(out.tags) ? out.tags.map((t) => t.trim()).filter(Boolean) : [];
-      out.applyUrl = out.applyUrl || out.apply_url || '';
+      out.applyUrl = (out.applyUrl || out.apply_url || '').toString().trim();
       out.keywords = out.keywords || out.tags.join(', ');
       return out;
+    }
+
+    function resolveApplyUrl(job = {}) {
+      const fallbackRole = encodeURIComponent(job.title || 'HMJ Application');
+      const fallback = `contact.html?role=${fallbackRole}`;
+      const raw = (job.applyUrl || '').trim();
+      if (!raw) return fallback;
+
+      try {
+        const url = new URL(raw, window.location.origin);
+        const sameOrigin = url.origin === window.location.origin;
+        const hmjDomain = /(?:^|\.)hmj-global\.com$/i.test(url.hostname);
+        const path = url.pathname.replace(/^\/+/, '');
+
+        if ((sameOrigin || hmjDomain) && path === 'contact.html') {
+          if (job.title && !url.searchParams.has('role')) {
+            url.searchParams.set('role', job.title);
+          }
+          const search = url.searchParams.toString();
+          const hash = url.hash || '';
+          return `${path}${search ? `?${search}` : ''}${hash}`;
+        }
+
+        return url.href;
+      } catch (err) {
+        console.warn('Invalid apply URL, falling back', err);
+        return fallback;
+      }
     }
 
     async function loadJobsFromApi(){
@@ -958,7 +986,7 @@
 
     function renderJobCard(job){
       const statusClass = job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live';
-      const applyUrl = job.applyUrl ? job.applyUrl.trim() : `contact.html?role=${encodeURIComponent(job.title)}`;
+      const applyUrl = resolveApplyUrl(job);
       const tagsList = Array.isArray(job.tags) ? job.tags : [];
       const tags = tagsList.length ? tagsList.map((tag) => `<span class="tag">${tag}</span>`).join('') : '';
       const respList = (job.responsibilities || []).map((item) => `<li>${item}</li>`).join('');
