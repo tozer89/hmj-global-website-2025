@@ -1,13 +1,11 @@
 (function () {
   'use strict';
 
-  const FALLBACK = 'https://hmjg.netlify.app/.netlify/identity';
+  const FALLBACKS = ['/.netlify/identity', 'https://hmjg.netlify.app/.netlify/identity'];
   const targetUrl = (
-    window.__hmjResolvedIdentityUrl ||
     window.HMJ_IDENTITY_URL ||
-    window.NETLIFY_IDENTITY_URL ||
     window.ADMIN_IDENTITY_URL ||
-    FALLBACK ||
+    FALLBACKS.find((item) => !!item) ||
     ''
   ).replace(/\/$/, '');
 

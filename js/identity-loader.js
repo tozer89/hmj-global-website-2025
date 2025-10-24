@@ -14,9 +14,6 @@
     candidates.push(normalised);
   }
 
-  addCandidate(window.NETLIFY_IDENTITY_URL);
-  addCandidate(window.ADMIN_IDENTITY_URL);
-
   try {
     const localOrigin = location.origin.replace(/\/$/, '');
     addCandidate(`${localOrigin}/.netlify/identity`);
@@ -25,6 +22,8 @@
     // ignore
   }
 
+  addCandidate(window.ADMIN_IDENTITY_URL);
+  addCandidate(window.NETLIFY_IDENTITY_URL);
   addCandidate(PRODUCTION_IDENTITY);
 
   const readyQueue = [];
@@ -81,9 +80,7 @@
   }
 
   chooseEndpoint().catch(() => null).then((apiUrl) => {
-    const fallback =
-      candidates.find((item) => !!item) ||
-      PRODUCTION_IDENTITY;
+    const fallback = candidates.find((item) => !!item) || PRODUCTION_IDENTITY;
     const resolved = (apiUrl || fallback || '').replace(/\/$/, '');
 
     if (!resolved) {
@@ -99,14 +96,6 @@
 
     const settings = window.netlifyIdentitySettings = window.netlifyIdentitySettings || {};
     settings.APIUrl = resolved;
-
-    try {
-      document.dispatchEvent(new CustomEvent('hmjIdentityResolved', {
-        detail: { apiUrl: resolved, candidates: candidates.slice() }
-      }));
-    } catch (err) {
-      // ignore custom event failures
-    }
 
     if (document.getElementById('netlify-identity-widget')) return;
     const script = document.createElement('script');
