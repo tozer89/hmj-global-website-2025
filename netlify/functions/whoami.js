@@ -1,9 +1,14 @@
 // netlify/functions/whoami.js
 const { createClient } = require('@supabase/supabase-js');
+const {
+  getSupabaseUrl,
+  getSupabaseServiceKey,
+  getSupabaseAnonKey,
+} = require('./_supabase-env.js');
 
 exports.handler = async (event, context) => {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseKey = getSupabaseServiceKey() || getSupabaseAnonKey();
   const sb = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
 
   const idUser = context?.clientContext?.user || null;

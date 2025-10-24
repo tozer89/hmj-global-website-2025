@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Reports — Admin | HMJ Global</title>
   <link rel="stylesheet" href="/css/style.css" />
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
+  <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js"></script>
   <style>
     :root {
@@ -285,6 +286,224 @@
             deadlineTimezone: 'Europe/London',
           };
 
+          const MS_DAY = 86400000;
+          const staticCache = {};
+
+          const toNumber = (value) => {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : 0;
+          };
+
+          function parseIsoDate(value) {
+            if (!value) return null;
+            if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+            if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+              const d = new Date(`${value.trim()}T00:00:00Z`);
+              return Number.isNaN(d.getTime()) ? null : d;
+            }
+            const d = new Date(value);
+            return Number.isNaN(d.getTime()) ? null : d;
+          }
+
+          function fiscalWeekNumber(weekEnding, baseEnding) {
+            const target = parseIsoDate(weekEnding);
+            const base = parseIsoDate(baseEnding);
+            if (!target || !base) return null;
+            const diffDays = Math.round((target.getTime() - base.getTime()) / MS_DAY);
+            const offset = Math.floor(diffDays / 7);
+            return offset + 1;
+          }
+
+          function summariseRows(rows = []) {
+            const byCurrency = new Map();
+            const byContractor = new Map();
+            const byWeek = new Map();
+
+            rows.forEach((row) => {
+              const currency = row.currency || 'GBP';
+              const totals = row.totals || {};
+              const cur = byCurrency.get(currency) || { pay: 0, charge: 0, gp: 0 };
+              cur.pay += toNumber(totals.pay);
+              cur.charge += toNumber(totals.charge);
+              cur.gp += toNumber(totals.gp);
+              byCurrency.set(currency, cur);
+
+              const contractorKey = `${row.candidateId || row.candidateName || 'unknown'}|${currency}`;
+              const contractor = byContractor.get(contractorKey) || {
+                candidateId: row.candidateId,
+                candidateName: row.candidateName,
+                currency,
+                pay: 0,
+                charge: 0,
+                gp: 0,
+                rows: 0,
+              };
+              contractor.pay += toNumber(totals.pay);
+              contractor.charge += toNumber(totals.charge);
+              contractor.gp += toNumber(totals.gp);
+              contractor.rows += 1;
+              byContractor.set(contractorKey, contractor);
+
+              if (Number.isFinite(row.weekNo)) {
+                const weekBucket = byWeek.get(row.weekNo) || { pay: 0, charge: 0, gp: 0, rows: 0, currency };
+                weekBucket.pay += toNumber(totals.pay);
+                weekBucket.charge += toNumber(totals.charge);
+                weekBucket.gp += toNumber(totals.gp);
+                weekBucket.rows += 1;
+                byWeek.set(row.weekNo, weekBucket);
+              }
+            });
+
+            return {
+              currencies: Object.fromEntries(byCurrency.entries()),
+              contractors: Array.from(byContractor.values()).sort((a, b) => b.gp - a.gp),
+              weeks: Object.fromEntries(Array.from(byWeek.entries()).sort((a, b) => a[0] - b[0])),
+            };
+          }
+
+          function makeStaticRow(ts = {}, assignment = null, baseWeekEnding = DEFAULTS.week1Ending) {
+            const stdHours = toNumber(ts.total_hours) - toNumber(ts.ot_hours);
+            const otHours = toNumber(ts.ot_hours);
+            const totalHours = stdHours + otHours;
+            const pay = toNumber(ts.pay_amount) || (toNumber(ts.rate_pay || assignment?.rate_pay || assignment?.rate_std) * totalHours);
+            const charge = toNumber(ts.charge_amount) || (toNumber(ts.rate_charge || assignment?.rate_charge || assignment?.charge_std) * totalHours);
+            const gp = charge - pay;
+            const currency = ts.currency || assignment?.currency || 'GBP';
+            const weekEnding = ts.week_ending || ts.weekEnding || null;
+            const weekNo = fiscalWeekNumber(weekEnding, baseWeekEnding);
+
+            return {
+              id: ts.id ?? null,
+              assignmentId: ts.assignment_id || assignment?.id || null,
+              assignmentRef: ts.assignment_ref || assignment?.as_ref || assignment?.ref || null,
+              jobTitle: assignment?.job_title || assignment?.jobTitle || null,
+              clientName: ts.client_name || assignment?.client_name || null,
+              candidateId: ts.candidate_id || assignment?.contractor_id || null,
+              candidateName: ts.candidate_name || assignment?.candidate_name || assignment?.contractor_name || null,
+              consultant: assignment?.consultant_name || null,
+              weekEnding,
+              weekNo,
+              status: ts.status || 'draft',
+              hours: {
+                std: stdHours,
+                ot: otHours,
+                total: totalHours,
+              },
+              rates: {
+                pay: toNumber(ts.rate_pay || assignment?.rate_pay || assignment?.rate_std),
+                charge: toNumber(ts.rate_charge || assignment?.rate_charge || assignment?.charge_std),
+              },
+              totals: { pay, charge, gp },
+              currency,
+              submittedAt: ts.submitted_at || null,
+              approvedAt: ts.approved_at || null,
+            };
+          }
+
+          async function loadStaticArray(path, key) {
+            const cacheKey = `${path}|${key || ''}`;
+            if (staticCache[cacheKey]) return staticCache[cacheKey];
+            const res = await fetch(path);
+            if (!res.ok) throw new Error(`Failed to load ${path} (${res.status})`);
+            const json = await res.json();
+            let data = key ? json?.[key] : json;
+            if (!Array.isArray(data)) {
+              data = Array.isArray(json) ? json : [];
+            }
+            staticCache[cacheKey] = data;
+            return data;
+          }
+
+          async function loadStaticReport(filters = {}, config = {}) {
+            const baseWeekEnding = config.week1Ending || config.fiscal_week1_ending || DEFAULTS.week1Ending;
+            const [timesheets, assignments] = await Promise.all([
+              loadStaticArray('/data/timesheets.json', 'timesheets'),
+              loadStaticArray('/data/assignments.json', 'assignments'),
+            ]);
+            const assignmentMap = new Map(assignments
+              .filter((a) => a && (a.id !== undefined || a.assignment_id !== undefined))
+              .map((a) => [String(a.id ?? a.assignment_id), a]));
+
+            const rows = timesheets.map((ts) => {
+              const key = ts?.assignment_id ?? ts?.assignmentId ?? null;
+              const match = key ? assignmentMap.get(String(key)) || null : null;
+              return makeStaticRow(ts, match, baseWeekEnding);
+            });
+
+            const statusFilter = filters.status ? String(filters.status).toLowerCase() : '';
+            const currencyFilter = Array.isArray(filters.currencies)
+              ? filters.currencies.map((c) => String(c).toUpperCase())
+              : [];
+            const fromWeek = filters.fromWeek ? String(filters.fromWeek) : '';
+            const toWeek = filters.toWeek ? String(filters.toWeek) : '';
+
+            const filtered = rows.filter((row) => {
+              const week = String(row.weekEnding || '');
+              if (fromWeek && week < fromWeek) return false;
+              if (toWeek && week > toWeek) return false;
+              if (statusFilter && String(row.status || '').toLowerCase() !== statusFilter) return false;
+              if (currencyFilter.length && !currencyFilter.includes(String(row.currency || 'GBP').toUpperCase())) return false;
+              return true;
+            });
+
+            const deadlineNote = config.deadlineNote || config.timesheet_deadline_note || DEFAULTS.deadlineNote;
+            const deadlineTimezone = config.deadlineTimezone || config.timesheet_deadline_timezone || DEFAULTS.deadlineTimezone;
+
+            return {
+              rows: filtered,
+              summary: summariseRows(filtered),
+              source: 'static-preview',
+              warning: 'Live Supabase data unavailable; showing bundled preview dataset.',
+              config: {
+                week1Ending: baseWeekEnding,
+                deadlineNote,
+                deadlineTimezone,
+              },
+            };
+          }
+
+          async function buildStaticReconciliation(baseWeekEnding = DEFAULTS.week1Ending, errorMessage = '') {
+            const [jobs, candidates, clients, assignments, timesheets] = await Promise.all([
+              loadStaticArray('/data/jobs.json', 'jobs'),
+              loadStaticArray('/data/candidates.json', 'candidates'),
+              loadStaticArray('/data/clients.json', 'clients'),
+              loadStaticArray('/data/assignments.json', 'assignments'),
+              loadStaticArray('/data/timesheets.json', 'timesheets'),
+            ]);
+
+            const unpaidTimesheets = timesheets.filter((ts) => String(ts.payroll_status || '').toLowerCase() !== 'paid').length;
+
+            const staticCounts = {
+              jobs: jobs.length,
+              candidates: candidates.length,
+              clients: clients.length,
+              assignments: assignments.length,
+              timesheets: timesheets.length,
+              unpaidTimesheets,
+            };
+
+            const datasets = [
+              { key: 'jobs', label: 'Jobs', static: staticCounts.jobs, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
+              { key: 'candidates', label: 'Candidates', static: staticCounts.candidates, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
+              { key: 'clients', label: 'Clients', static: staticCounts.clients, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
+              { key: 'assignments', label: 'Assignments', static: staticCounts.assignments, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
+              { key: 'timesheets', label: 'Timesheets', static: staticCounts.timesheets, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
+              { key: 'timesheets_unpaid', label: 'Unpaid timesheets', static: staticCounts.unpaidTimesheets, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
+            ];
+
+            return {
+              ok: true,
+              generatedAt: new Date().toISOString(),
+              supabase: { ok: false, error: 'static' },
+              fallback: true,
+              error: errorMessage || 'Supabase data unavailable',
+              schemaIssues: [],
+              datasets,
+              staticCounts,
+              baseWeekEnding,
+            };
+          }
+
           const state = {
             rows: [],
             summary: { currencies: {}, contractors: [], weeks: {} },
@@ -292,6 +511,7 @@
             config: { ...DEFAULTS },
             source: 'api',
             reconciliation: { datasets: [], fallback: false, error: null, generatedAt: null },
+            useFallback: false,
           };
 
           const filterFrom = sel('#filterFrom');
@@ -502,9 +722,39 @@
               renderReconciliation();
               if (notify) toast('Reconciliation updated', 'info', 2000);
             } catch (err) {
-              state.reconciliation = { datasets: [], fallback: true, error: err?.message || String(err) };
+              const status = err?.status || 0;
+              const message = String(err?.message || err || '');
+              const unauthorized = status === 401 || status === 403 || /unauthor/i.test(message) || /forbidden/i.test(message);
+              if (unauthorized) {
+                try {
+                  const fallback = await buildStaticReconciliation(state.config?.week1Ending, message);
+                  state.reconciliation = { ...fallback, error: message };
+                  renderReconciliation();
+                  console.warn('Reconciliation API unavailable — using static dataset:', message);
+                  if (notify) toast('Reconciliation using preview dataset.', 'warn', 2600);
+                  return;
+                } catch (fallbackErr) {
+                  const failMsg = fallbackErr?.message || fallbackErr || message;
+                  state.reconciliation = { datasets: [], fallback: true, error: failMsg };
+                  if (reconBody) {
+                    reconBody.innerHTML = `<tr><td colspan="5" class="muted">Failed: ${failMsg}</td></tr>`;
+                  }
+                  if (reconBadge) {
+                    reconBadge.textContent = 'Error';
+                    reconBadge.style.background = 'rgba(183,59,59,.18)';
+                    reconBadge.style.borderColor = 'rgba(183,59,59,.45)';
+                  }
+                  if (reconNotice) {
+                    reconNotice.style.display = '';
+                    reconNotice.textContent = `Unable to reconcile datasets: ${failMsg}`;
+                  }
+                  if (notify) toast('Reconciliation failed', 'error', 2600);
+                  return;
+                }
+              }
+              state.reconciliation = { datasets: [], fallback: true, error: message };
               if (reconBody) {
-                reconBody.innerHTML = `<tr><td colspan="5" class="muted">Failed: ${err?.message || err}</td></tr>`;
+                reconBody.innerHTML = `<tr><td colspan="5" class="muted">Failed: ${message}</td></tr>`;
               }
               if (reconBadge) {
                 reconBadge.textContent = 'Error';
@@ -513,7 +763,7 @@
               }
               if (reconNotice) {
                 reconNotice.style.display = '';
-                reconNotice.textContent = `Unable to reconcile datasets: ${err?.message || err}`;
+                reconNotice.textContent = `Unable to reconcile datasets: ${message}`;
               }
               if (notify) toast('Reconciliation failed', 'error', 2600);
             }
@@ -575,36 +825,73 @@
             }
           }
 
+          function applyReportPayload(res) {
+            state.rows = Array.isArray(res?.rows) ? res.rows : [];
+            state.summary = res?.summary || { currencies: {}, contractors: [], weeks: {} };
+            state.source = res?.source || 'api';
+            state.config = { ...state.config, ...(res?.config || {}) };
+            if (!state.config.deadlineNote) state.config.deadlineNote = DEFAULTS.deadlineNote;
+            if (!state.config.deadlineTimezone) state.config.deadlineTimezone = DEFAULTS.deadlineTimezone;
+            if (weekNotice && state.config?.week1Ending) {
+              const deadline = state.config.deadlineNote || DEFAULTS.deadlineNote;
+              const tzLabel = state.config.deadlineTimezone || DEFAULTS.deadlineTimezone;
+              weekNotice.textContent = `Week 1 ends ${state.config.week1Ending} · Submission deadline: ${deadline} (${tzLabel})`;
+            }
+            if (weekBaseInput && state.config?.week1Ending) weekBaseInput.value = state.config.week1Ending;
+            if (deadlineInput) deadlineInput.value = state.config.deadlineNote || '';
+            if (deadlineTz) deadlineTz.value = state.config.deadlineTimezone || DEFAULTS.deadlineTimezone;
+            if (sourceMeta) sourceMeta.textContent = `Source: ${state.source}` + (res?.warning ? ` · ${res.warning}` : '');
+            renderMetrics();
+            renderCurrencyMix();
+            renderContractors();
+            renderTrend();
+            renderTable();
+            updateSummaries();
+          }
+
           async function runReport() {
-            try {
-              const body = {
-                fromWeek: filterFrom?.value || undefined,
-                toWeek: filterTo?.value || undefined,
-                status: filterStatus?.value || undefined,
-                currencies: filterCurrency?.value ? [filterCurrency.value] : undefined,
-              };
-              const res = await api('admin-report-gross-margin', 'POST', body);
-              state.rows = Array.isArray(res?.rows) ? res.rows : [];
-              state.summary = res?.summary || { currencies: {}, contractors: [], weeks: {} };
-              state.source = res?.source || 'api';
-              state.config = { ...state.config, ...(res?.config || {}) };
-              if (!state.config.deadlineNote) state.config.deadlineNote = DEFAULTS.deadlineNote;
-              if (!state.config.deadlineTimezone) state.config.deadlineTimezone = DEFAULTS.deadlineTimezone;
-              if (weekNotice && state.config?.week1Ending) {
-                const deadline = state.config.deadlineNote || DEFAULTS.deadlineNote;
-                const tzLabel = state.config.deadlineTimezone || DEFAULTS.deadlineTimezone;
-                weekNotice.textContent = `Week 1 ends ${state.config.week1Ending} · Submission deadline: ${deadline} (${tzLabel})`;
+            const body = {
+              fromWeek: filterFrom?.value || undefined,
+              toWeek: filterTo?.value || undefined,
+              status: filterStatus?.value || undefined,
+              currencies: filterCurrency?.value ? [filterCurrency.value] : undefined,
+            };
+
+            const attemptFallback = async (reason) => {
+              try {
+                const fallback = await loadStaticReport(body, state.config);
+                state.useFallback = true;
+                applyReportPayload(fallback);
+                if (reason) console.warn('Report API unavailable — using static dataset:', reason);
+                toast('Preview dataset loaded — live data unavailable.', 'warn', 3600);
+              } catch (fallbackErr) {
+                toast('Report failed: ' + (fallbackErr.message || fallbackErr), 'error', 4200);
               }
-              if (weekBaseInput && state.config?.week1Ending) weekBaseInput.value = state.config.week1Ending;
-              if (deadlineInput) deadlineInput.value = state.config.deadlineNote || '';
-              if (deadlineTz) deadlineTz.value = state.config.deadlineTimezone || DEFAULTS.deadlineTimezone;
-              if (sourceMeta) sourceMeta.textContent = `Source: ${state.source}` + (res?.warning ? ` · ${res.warning}` : '');
-              renderMetrics();
-              renderCurrencyMix();
-              renderContractors();
-              renderTrend();
-              renderTable();
-              updateSummaries();
+            };
+
+            if (!state.useFallback) {
+              try {
+                const res = await api('admin-report-gross-margin', 'POST', body);
+                state.useFallback = false;
+                applyReportPayload(res);
+                return;
+              } catch (err) {
+                const status = err?.status || 0;
+                const message = String(err?.message || err || '');
+                const unauthorized = status === 401 || status === 403 || /unauthor/i.test(message) || /forbidden/i.test(message);
+                if (unauthorized) {
+                  await attemptFallback(message);
+                  return;
+                }
+                toast('Report failed: ' + message, 'error', 4000);
+                return;
+              }
+            }
+
+            try {
+              const fallback = await loadStaticReport(body, state.config);
+              state.useFallback = true;
+              applyReportPayload(fallback);
             } catch (err) {
               toast('Report failed: ' + (err.message || err), 'error', 4000);
             }

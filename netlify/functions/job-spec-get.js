@@ -84,7 +84,7 @@ exports.handler = async (event) => {
     try {
       const { data, error } = await supabase
         .from('job_specs')
-        .select('slug,job_id,title,payload,expires_at,created_at')
+        .select('*')
         .eq('slug', slug)
         .single();
 
@@ -119,43 +119,48 @@ exports.handler = async (event) => {
         return respondFallback(staticJob);
       }
 
-      if (data.expires_at && data.expires_at < nowIso) {
+      const expiresColumn = data.expires_at ?? data.expiresAt ?? null;
+      if (expiresColumn && expiresColumn < nowIso) {
         return { statusCode: 410, body: JSON.stringify({ error: 'Link expired' }) };
       }
 
-      const job = data.payload ? toJob(data.payload) : null;
+      const storedPayload = data.payload ?? data.job_payload ?? data.job ?? null;
+      const job = storedPayload ? toJob(storedPayload) : null;
+      const expiresAt = expiresColumn;
+      const jobId = data.job_id ?? data.job ?? data.jobId ?? (job ? job.id : null);
+      const title = data.title ?? job?.title ?? jobId ?? slug;
       return {
         statusCode: 200,
         body: JSON.stringify({
           slug: data.slug,
-          jobId: data.job_id,
-          title: data.title,
+          jobId,
+          title,
           job,
-          expires_at: data.expires_at,
+          expires_at: expiresAt,
           created_at: data.created_at,
         }),
       };
     } catch (err) {
       const missingTable = err?.code === '42P01' || /relation\s+"?job_specs"?/i.test(err?.message || '');
       const schemaMismatch = isSchemaError(err);
-      if (!missingTable) throw err;
-        const fallback = await fetchJobById(slug || jobIdParam);
-        if (!fallback) {
-          return respondFallback(findStaticJob(slug || jobIdParam), { schema: schemaMismatch || undefined });
-        }
-        return {
-          statusCode: 200,
-          body: JSON.stringify({
-            slug: slug || fallback.id,
-            jobId: fallback.id,
-            title: fallback.title,
-            job: fallback,
-            expires_at: null,
-            created_at: fallback.updatedAt || fallback.createdAt || null,
-            fallback: true,
-            schema: schemaMismatch,
-          }),
-        };
+      if (!missingTable && !schemaMismatch) throw err;
+      const fallback = await fetchJobById(slug || jobIdParam);
+      if (!fallback) {
+        return respondFallback(findStaticJob(slug || jobIdParam), { schema: schemaMismatch || missingTable || undefined });
+      }
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          slug: slug || fallback.id,
+          jobId: fallback.id,
+          title: fallback.title,
+          job: fallback,
+          expires_at: null,
+          created_at: fallback.updatedAt || fallback.createdAt || null,
+          fallback: true,
+          schema: schemaMismatch || missingTable || undefined,
+        }),
+      };
     }
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };
