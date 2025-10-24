@@ -1,0 +1,186 @@
+:root {
+  --bg:#0b1020;
+  --card:#121a33;
+  --muted:#8fa3c7;
+  --text:#e9eefc;
+  --accent:#3a66b3;
+  --warn:#e8a600;
+  --ok:#24b36b;
+  --err:#de3d5a;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 system-ui, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.rows-inner {
+  position: relative;
+  width: 100%;
+  min-height: 120px;
+}
+
+.trow.skeleton {
+  opacity: 0.35;
+}
+
+.trow .skeleton-bar {
+  height: 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.row-name {
+  font-weight: 600;
+}
+
+.drawer-section {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.drawer-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.drawer-input {
+  background: #0e1530;
+  border: 1px solid #2a3766;
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px;
+}
+
+.doc-list {
+  display: grid;
+  gap: 8px;
+}
+
+.doc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.note {
+  border: 1px solid #223064;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.note header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.audit-list {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.audit-row {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.empty-state {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.skeleton-card {
+  height: 160px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dbg-body {
+  display: none;
+  background: rgba(12,18,40,0.94);
+  border: 1px solid #1f2a52;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+#debug-panel {
+  position: fixed;
+  top: 68px;
+  right: 16px;
+  z-index: 1200;
+  display: grid;
+  gap: 8px;
+}
+
+#debug-panel.open .dbg-body {
+  display: grid;
+  gap: 6px;
+}
+
+.dbg-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.dbg-logs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 200px;
+  overflow: auto;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.notes .note-form {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.notes .note-list {
+  display: grid;
+  gap: 8px;
+}
+
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
