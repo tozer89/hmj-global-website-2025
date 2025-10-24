@@ -20,7 +20,7 @@
     .btn:hover{border-color:#3b5172}
     .link{color:var(--blue);text-decoration:none}
   </style>
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/js/identity-loader.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -38,7 +38,11 @@
   <script>
     // If a user logs in and has access, send them to the admin console
     document.addEventListener('DOMContentLoaded',()=>{
-      netlifyIdentity?.on('login', ()=> { window.location.href = '/admin/timesheets.html'; });
+      const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
+      onIdentity((identity) => {
+        if (!identity) return;
+        identity.on('login', ()=> { window.location.href = '/admin/timesheets.html'; });
+      });
     });
   </script>
 </body>

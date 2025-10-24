@@ -4,19 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>About Us | HMJ-Global</title>
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/identity-loader.js"></script>
+  <script defer src="js/nav-session.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.netlifyIdentity) {
-        netlifyIdentity.on('login', () => {
+      const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
+      onIdentity((identity) => {
+        if (!identity) return;
+        identity.on('login', () => {
           const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
           sessionStorage.removeItem('afterLogin');
           window.location.href = dest;
         });
-        netlifyIdentity.on('logout', () => {
+        identity.on('logout', () => {
           window.location.href = '/';
         });
-      }
+      });
     });
   </script>
   <link rel="stylesheet" href="css/style.css" />
