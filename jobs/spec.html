@@ -61,18 +61,113 @@
 
   <script>
     (async function(){
+      const LOCAL_SHARE_KEY = 'hmj.jobs.share-cache';
       const params = new URLSearchParams(location.search);
+      const localSlug = params.get('local') || params.get('localSlug');
       const slug = params.get('slug');
       const jobId = params.get('id') || params.get('job');
       const loading = document.getElementById('loading');
       const errorBox = document.getElementById('error');
       const card = document.getElementById('spec');
+
+      function writeLocalShareStore(store){
+        if (!window.localStorage) return;
+        try {
+          localStorage.setItem(LOCAL_SHARE_KEY, JSON.stringify(store));
+        } catch (err) {
+          console.warn('[spec] failed to persist local share store', err);
+        }
+      }
+
+      function readLocalShareStore(){
+        if (!window.localStorage) return null;
+        try {
+          const raw = localStorage.getItem(LOCAL_SHARE_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          return {
+            version: parsed?.version || 1,
+            bySlug: parsed && typeof parsed.bySlug === 'object' ? { ...parsed.bySlug } : {},
+            byJob: parsed && typeof parsed.byJob === 'object' ? { ...parsed.byJob } : {},
+          };
+        } catch (err) {
+          console.warn('[spec] failed to read local share store', err);
+          return { version: 1, bySlug: {}, byJob: {} };
+        }
+      }
+
+      function pruneLocalShareStore(store){
+        if (!store) return null;
+        const now = Date.now();
+        let dirty = false;
+        const bySlug = { ...store.bySlug };
+        const byJob = { ...store.byJob };
+        Object.entries(bySlug).forEach(([slugKey, entry]) => {
+          if (!entry || !entry.expiresAt || entry.expiresAt < now) {
+            dirty = true;
+            delete bySlug[slugKey];
+            const jobKey = entry && entry.jobKey;
+            if (jobKey && byJob[jobKey] === slugKey) delete byJob[jobKey];
+          }
+        });
+        Object.entries(byJob).forEach(([jobKey, slugKey]) => {
+          if (!slugKey || !bySlug[slugKey]) {
+            dirty = true;
+            delete byJob[jobKey];
+          }
+        });
+        const next = { version: store.version || 1, bySlug, byJob };
+        if (dirty) writeLocalShareStore(next);
+        return next;
+      }
+
+      function getLocalShare(slugKey){
+        if (!slugKey) return null;
+        const store = pruneLocalShareStore(readLocalShareStore());
+        if (!store) return null;
+        const entry = store.bySlug?.[slugKey];
+        if (!entry) return null;
+        if (entry.expiresAt && entry.expiresAt < Date.now()) {
+          delete store.bySlug[slugKey];
+          if (entry.jobKey && store.byJob?.[entry.jobKey] === slugKey) {
+            delete store.byJob[entry.jobKey];
+          }
+          writeLocalShareStore(store);
+          return null;
+        }
+        entry.lastAccessed = Date.now();
+        store.bySlug[slugKey] = entry;
+        writeLocalShareStore(store);
+        return entry;
+      }
+
+      if (localSlug) {
+        const localEntry = getLocalShare(localSlug);
+        if (localEntry && localEntry.job) {
+          renderSpec(localEntry.job, {
+            slug: localEntry.slug,
+            local: true,
+            created_at: localEntry.createdAt || null,
+            expires_at: localEntry.expiresAt || null,
+            refreshed_at: localEntry.updatedAt || null,
+            last_accessed: localEntry.lastAccessed || null,
+          });
+          loading.style.display = 'none';
+          card.style.display = 'grid';
+          return;
+        }
+        loading.style.display = 'none';
+        errorBox.textContent = 'This preview link has expired or is unavailable on this device. Please generate a fresh link from the HMJ Global admin dashboard.';
+        errorBox.style.display = 'block';
+        return;
+      }
+
       if (!slug && !jobId) {
         loading.style.display = 'none';
         errorBox.textContent = 'Missing share link. Please contact HMJ Global for a fresh link.';
         errorBox.style.display = 'block';
         return;
       }
+
       try {
         const qs = new URLSearchParams();
         if (slug) qs.set('slug', slug);
@@ -98,6 +193,9 @@
         statusEl.textContent = job.status ? job.status.toUpperCase() : 'OPEN';
         statusEl.className = `badge ${job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live'}`;
         document.getElementById('title').textContent = job.title || 'Role';
+        if (job.title) {
+          document.title = `${job.title} | HMJ Global`;
+        }
         document.getElementById('location').textContent = job.locationText || 'Flexible';
         document.getElementById('employment').textContent = job.type ? job.type.toUpperCase() : '';
         const tags = Array.isArray(job.tags) ? job.tags : [];
@@ -117,8 +215,11 @@
         const applyBtn = document.getElementById('applyBtn');
         applyBtn.href = apply;
         const metaParts = [];
-        if (meta.slug) metaParts.push(`Share code ${meta.slug}`);
+        if (meta.local) metaParts.push('Local preview');
+        if (meta.slug && !meta.local) metaParts.push(`Share code ${meta.slug}`);
         if (meta.created_at) metaParts.push(new Date(meta.created_at).toLocaleString());
+        if (meta.refreshed_at) metaParts.push(`Updated ${new Date(meta.refreshed_at).toLocaleString()}`);
+        if (meta.last_accessed && meta.local) metaParts.push(`Opened ${new Date(meta.last_accessed).toLocaleString()}`);
         if (meta.expires_at) metaParts.push(`Expires ${new Date(meta.expires_at).toLocaleDateString()}`);
         if (meta.fallback) metaParts.push('Static preview');
         document.getElementById('meta').textContent = metaParts.join(' • ');

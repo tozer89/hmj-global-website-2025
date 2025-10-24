@@ -97,6 +97,7 @@
     .share-box{display:grid;gap:10px;background:#f4f6ff;border:1px solid rgba(47,78,162,.2);border-radius:14px;padding:14px}
     .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
     .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
+    .share-box .share-actions{display:flex;gap:8px;flex-wrap:wrap}
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid rgba(47,78,162,.25);box-shadow:0 18px 34px rgba(15,27,63,.2);font-weight:700}
@@ -214,12 +215,18 @@
       </form>
 
       <div class="share-box">
-        <div><strong>Shareable spec</strong><p class="muted">Generate a standalone advert page for this job. Links expire automatically.</p></div>
+        <div>
+          <strong>Shareable spec</strong>
+          <p class="muted">Generate a standalone advert page for this job. Links expire automatically. When Supabase is offline the page is stored locally for 30 days.</p>
+        </div>
         <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
         <div id="shareResult" style="display:none">
           <code id="shareMeta"></code>
           <input id="shareUrl" readonly/>
-          <button class="btn ghost small" id="btnCopyShare" data-readonly="true">Copy link</button>
+          <div class="share-actions">
+            <button class="btn ghost small" id="btnCopyShare" data-readonly="soft">Copy link</button>
+            <button class="btn ghost small" id="btnRefreshShare" data-readonly="soft" style="display:none">Refresh link</button>
+          </div>
         </div>
       </div>
     </div>
@@ -272,6 +279,7 @@
       const shareBox = sel('#shareResult');
       const shareMeta = sel('#shareMeta');
       const shareUrl = sel('#shareUrl');
+      const btnRefreshShare = sel('#btnRefreshShare');
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
       const readOnlyNotice = sel('#readOnlyNotice');
@@ -410,6 +418,170 @@
           published: normalized.published,
           sort_order: normalized.sortOrder ?? null,
         };
+      }
+
+      const LOCAL_SHARE_KEY = 'hmj.jobs.share-cache';
+      const LOCAL_SHARE_VERSION = 1;
+      const LOCAL_SHARE_TTL = 1000 * 60 * 60 * 24 * 30; // 30 days
+
+      function saveLocalShareStore(store) {
+        if (!window.localStorage) return;
+        try {
+          localStorage.setItem(LOCAL_SHARE_KEY, JSON.stringify(store));
+        } catch (err) {
+          console.warn('[jobs] local share store write failed', err);
+        }
+      }
+
+      function pruneLocalShareStore(store) {
+        if (!store) return null;
+        const now = Date.now();
+        let dirty = false;
+        const bySlug = { ...store.bySlug };
+        const byJob = { ...store.byJob };
+        Object.entries(bySlug).forEach(([slug, entry]) => {
+          if (!entry || !entry.expiresAt || entry.expiresAt < now) {
+            dirty = true;
+            delete bySlug[slug];
+            const jobKey = entry && entry.jobKey;
+            if (jobKey && byJob[jobKey] === slug) delete byJob[jobKey];
+          }
+        });
+        Object.entries(byJob).forEach(([jobKey, slug]) => {
+          if (!slug || !bySlug[slug]) {
+            dirty = true;
+            delete byJob[jobKey];
+          }
+        });
+        const next = { version: LOCAL_SHARE_VERSION, bySlug, byJob };
+        if (dirty) saveLocalShareStore(next);
+        return next;
+      }
+
+      function loadLocalShareStore() {
+        if (!window.localStorage) return null;
+        try {
+          const raw = localStorage.getItem(LOCAL_SHARE_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          const store = {
+            version: LOCAL_SHARE_VERSION,
+            bySlug: parsed && typeof parsed.bySlug === 'object' ? { ...parsed.bySlug } : {},
+            byJob: parsed && typeof parsed.byJob === 'object' ? { ...parsed.byJob } : {},
+          };
+          return pruneLocalShareStore(store);
+        } catch (err) {
+          console.warn('[jobs] local share store load failed', err);
+          const store = { version: LOCAL_SHARE_VERSION, bySlug: {}, byJob: {} };
+          saveLocalShareStore(store);
+          return store;
+        }
+      }
+
+      function localShareJobKey(normalized) {
+        const id = (normalized.id || '').toString().trim();
+        if (id) return `id:${id}`;
+        const titleSlug = slugify(normalized.title || '') || 'draft';
+        return `slug:${titleSlug}`;
+      }
+
+      function sanitizeNormalizedJob(normalized) {
+        return {
+          id: normalized.id,
+          title: normalized.title,
+          status: normalized.status,
+          section: normalized.sectionLabel || normalized.section,
+          sectionLabel: normalized.sectionLabel,
+          discipline: normalized.discipline,
+          type: normalized.type,
+          locationText: normalized.locationText,
+          locationCode: normalized.locationCode,
+          overview: normalized.overview,
+          responsibilities: Array.isArray(normalized.responsibilities)
+            ? normalized.responsibilities.map((item) => String(item || '').trim()).filter(Boolean)
+            : [],
+          requirements: Array.isArray(normalized.requirements)
+            ? normalized.requirements.map((item) => String(item || '').trim()).filter(Boolean)
+            : [],
+          tags: Array.isArray(normalized.tags)
+            ? normalized.tags.map((item) => String(item || '').trim()).filter(Boolean)
+            : [],
+          applyUrl: normalized.applyUrl,
+          keywords: normalized.keywords || '',
+          published: normalized.published !== false,
+          sortOrder: Number.isFinite(normalized.sortOrder) ? normalized.sortOrder : null,
+        };
+      }
+
+      function ensureLocalShare(job, options = {}) {
+        if (!window.localStorage) return null;
+        const normalized = normalizeJob(job);
+        const store = loadLocalShareStore();
+        if (!store) return null;
+        const now = Date.now();
+        const jobKey = localShareJobKey(normalized);
+        const preferredSlug = options.preferredSlug || null;
+        let slug = preferredSlug || store.byJob[jobKey] || null;
+        let entry = slug ? store.bySlug[slug] : null;
+
+        if (entry && entry.expiresAt && entry.expiresAt < now) {
+          delete store.bySlug[entry.slug];
+          if (store.byJob[jobKey] === entry.slug) delete store.byJob[jobKey];
+          slug = null;
+          entry = null;
+        }
+
+        if (entry && !options.forceRefresh) {
+          entry.expiresAt = now + LOCAL_SHARE_TTL;
+          entry.lastAccessed = now;
+          entry.jobKey = jobKey;
+          store.bySlug[entry.slug] = entry;
+          store.byJob[jobKey] = entry.slug;
+          saveLocalShareStore(store);
+          return { entry, reused: true, store };
+        }
+
+        if (!slug) {
+          const base = slugify(normalized.title || '') || 'role';
+          slug = `${base}-${Math.random().toString(36).slice(2, 8)}`;
+        }
+
+        const sanitized = sanitizeNormalizedJob(normalized);
+        if (entry && entry.jobKey && entry.jobKey !== jobKey && store.byJob[entry.jobKey] === entry.slug) {
+          delete store.byJob[entry.jobKey];
+        }
+        const nextEntry = {
+          slug,
+          jobKey,
+          job: sanitized,
+          createdAt: entry?.createdAt || now,
+          updatedAt: now,
+          lastAccessed: now,
+          expiresAt: now + LOCAL_SHARE_TTL,
+        };
+        store.bySlug[slug] = nextEntry;
+        store.byJob[jobKey] = slug;
+        saveLocalShareStore(store);
+        return { entry: nextEntry, reused: !!entry, store };
+      }
+
+      function buildLocalShareUrl(slug) {
+        if (!slug) return '';
+        const origin = location.origin || `${location.protocol}//${location.host}`;
+        return `${origin.replace(/\/$/, '')}/jobs/spec.html?local=${encodeURIComponent(slug)}`;
+      }
+
+      function formatShareDate(ts, includeTime = false) {
+        if (!ts) return '';
+        try {
+          const date = new Date(ts);
+          if (Number.isNaN(date.getTime())) return '';
+          if (includeTime) {
+            return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+          }
+          return date.toLocaleDateString(undefined, { dateStyle: 'medium' });
+        } catch (err) {
+          return '';
+        }
       }
 
       function buildSections() {
@@ -707,6 +879,11 @@
           shareBox.style.display = 'none';
           shareUrl.value = '';
           shareMeta.textContent = '';
+          if (shareBox?.dataset) {
+            shareBox.dataset.local = '';
+            shareBox.dataset.slug = '';
+          }
+          if (btnRefreshShare) btnRefreshShare.style.display = 'none';
         }, 150);
       }
 
@@ -741,6 +918,11 @@
         shareBox.style.display = 'none';
         shareUrl.value = '';
         shareMeta.textContent = '';
+        if (shareBox?.dataset) {
+          shareBox.dataset.local = '';
+          shareBox.dataset.slug = '';
+        }
+        if (btnRefreshShare) btnRefreshShare.style.display = 'none';
         openDrawer();
       }
 
@@ -824,12 +1006,32 @@
         }
 
         if (state.readOnly) {
-          const slug = target.id || slugify(target.title || 'job');
-          const base = location.origin || `${location.protocol}//${location.host}`;
-          shareUrl.value = `${base}/jobs/spec.html?id=${encodeURIComponent(slug)}`;
-          shareMeta.textContent = 'Static preview link · Supabase offline';
+          const existingSlug = shareBox?.dataset?.slug || null;
+          const result = ensureLocalShare(target, { preferredSlug: existingSlug });
+          if (!result || !result.entry) {
+            toast('Local storage unavailable — unable to create a share link.', 'error', 3600);
+            return;
+          }
+          const { entry, reused } = result;
+          shareUrl.value = buildLocalShareUrl(entry.slug);
+          const expiresText = formatShareDate(entry.expiresAt) || '';
+          const createdText = entry.createdAt ? formatShareDate(entry.createdAt, true) : '';
+          const lastUsedText = entry.lastAccessed ? formatShareDate(entry.lastAccessed, true) : '';
+          const parts = ['Local preview'];
+          if (reused && lastUsedText) {
+            parts.push(`Last opened ${lastUsedText}`);
+          } else if (!reused && createdText) {
+            parts.push(`Created ${createdText}`);
+          }
+          if (expiresText) parts.push(`Expires ${expiresText}`);
+          shareMeta.textContent = parts.join(' · ');
           shareBox.style.display = '';
-          toast('Share link ready (static mode)', 'info', 2400);
+          if (shareBox?.dataset) {
+            shareBox.dataset.local = '1';
+            shareBox.dataset.slug = entry.slug;
+          }
+          if (btnRefreshShare) btnRefreshShare.style.display = '';
+          toast(reused ? 'Share link ready (local cache)' : 'Share link created (local cache)', 'info', 2400);
           return;
         }
 
@@ -858,6 +1060,11 @@
           }
           shareUrl.value = res.url || '';
           shareBox.style.display = '';
+          if (shareBox?.dataset) {
+            shareBox.dataset.local = '';
+            shareBox.dataset.slug = '';
+          }
+          if (btnRefreshShare) btnRefreshShare.style.display = 'none';
           toast(
             fallback
               ? (schemaMismatch ? 'Share link ready (schema fallback)' : 'Share link created (static fallback)')
@@ -868,6 +1075,34 @@
         } catch (e) {
           toast('Share failed: ' + (e.message || e), 'error', 4200);
         }
+      }
+
+      function refreshLocalShare() {
+        const target = state.editing || readForm();
+        if (!target || !(target.id || target.title)) {
+          toast('Select or save a job first', 'warn', 2400);
+          return;
+        }
+        const existingSlug = shareBox?.dataset?.slug || null;
+        const result = ensureLocalShare(target, { forceRefresh: true, preferredSlug: existingSlug });
+        if (!result || !result.entry) {
+          toast('Local storage unavailable — unable to refresh the share link.', 'error', 3600);
+          return;
+        }
+        const { entry } = result;
+        shareUrl.value = buildLocalShareUrl(entry.slug);
+        const expiresText = formatShareDate(entry.expiresAt) || '';
+        const refreshedText = entry.updatedAt ? formatShareDate(entry.updatedAt, true) : '';
+        const parts = ['Local preview'];
+        if (refreshedText) parts.push(`Refreshed ${refreshedText}`);
+        if (expiresText) parts.push(`Expires ${expiresText}`);
+        shareMeta.textContent = parts.join(' · ');
+        if (shareBox?.dataset) {
+          shareBox.dataset.local = '1';
+          shareBox.dataset.slug = entry.slug;
+        }
+        if (btnRefreshShare) btnRefreshShare.style.display = '';
+        toast('Local share refreshed', 'ok', 2000);
       }
 
       async function loadJobsFromStatic(reason) {
@@ -968,10 +1203,30 @@
       sel('#btnShare').onclick = (e) => { e.preventDefault(); shareJob(state.editing || readForm()); };
       sel('#btnCopyShare').onclick = (e) => {
         e.preventDefault();
-        if (state.readOnly) { toast('Jobs are read-only until Supabase is configured.', 'warn', 3200); return; }
         if (!shareUrl.value) return;
-        navigator.clipboard?.writeText(shareUrl.value).then(() => toast('Copied', 'ok', 1200));
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard
+            .writeText(shareUrl.value)
+            .then(() => toast('Copied', 'ok', 1200))
+            .catch(() => toast('Copy failed', 'error', 2200));
+          return;
+        }
+        try {
+          shareUrl.select();
+          const ok = document.execCommand('copy');
+          toast(ok ? 'Copied' : 'Copy failed', ok ? 'ok' : 'error', ok ? 1200 : 2200);
+        } catch (err) {
+          toast('Copy failed', 'error', 2200);
+        } finally {
+          shareUrl.blur();
+        }
       };
+      if (btnRefreshShare) {
+        btnRefreshShare.onclick = (e) => {
+          e.preventDefault();
+          refreshLocalShare();
+        };
+      }
       sel('#clearFilters').onclick = () => {
         state.filters = { q:'', status:'all', type:'all', published:'all', section:'all', tags:new Set() };
         filterSearch.value = '';
