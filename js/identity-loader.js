@@ -14,16 +14,18 @@
     candidates.push(normalised);
   }
 
-  addCandidate(window.ADMIN_IDENTITY_URL);
-  addCandidate(window.NETLIFY_IDENTITY_URL);
-
   try {
-    const local = `${location.origin.replace(/\/$/, '')}/.netlify/identity`;
-    addCandidate(local);
+    const localOrigin = location.origin.replace(/\/$/, '');
+    addCandidate(`${localOrigin}/.netlify/functions/identity-proxy`);
+    addCandidate(`${localOrigin}/.netlify/identity`);
+    addCandidate('/.netlify/functions/identity-proxy');
+    addCandidate('/.netlify/identity');
   } catch (err) {
     // ignore
   }
 
+  addCandidate(window.ADMIN_IDENTITY_URL);
+  addCandidate(window.NETLIFY_IDENTITY_URL);
   addCandidate(PRODUCTION_IDENTITY);
 
   const readyQueue = [];
