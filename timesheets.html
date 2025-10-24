@@ -8,6 +8,7 @@
   <!-- Identity MUST load before our script -->
   <script src="js/hmj-identity.js"></script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/hmj-nav.js"></script>
 
   <style>
     :root{
@@ -179,127 +180,7 @@
     </nav>
   </header>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const admin = document.getElementById('nav-admin');
-      const timesheets = document.getElementById('nav-timesheets');
-
-      if (!admin && !timesheets) {
-        return;
-      }
-
-      const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
-        ? user.app_metadata.roles
-        : Array.isArray(user?.roles)
-          ? user.roles
-          : [];
-
-      function updateTimesheets(user) {
-        if (!timesheets) return;
-        if (user) {
-          timesheets.href = '/timesheets.html';
-          timesheets.removeAttribute('aria-disabled');
-          timesheets.title = 'Open timesheets';
-        } else {
-          timesheets.href = '#';
-          timesheets.setAttribute('aria-disabled', 'true');
-          timesheets.title = 'Sign in to access timesheets';
-        }
-      }
-
-      function updateAdmin(user) {
-        if (!admin) return;
-        const isAdmin = rolesOf(user).includes('admin');
-        if (isAdmin) {
-          admin.style.display = 'inline-block';
-          admin.href = '/admin/';
-          admin.removeAttribute('aria-disabled');
-          admin.classList.remove('requires-admin');
-          admin.textContent = 'Admin Dashboard';
-          admin.title = 'Open the admin dashboard';
-        } else {
-          admin.style.display = 'none';
-          admin.href = '/admin/';
-          admin.setAttribute('aria-disabled', 'true');
-          admin.classList.add('requires-admin');
-          admin.textContent = 'Admin Dashboard';
-          admin.title = 'Admin access only';
-        }
-      }
-
-      const renderFor = (user) => {
-        updateTimesheets(user);
-        updateAdmin(user);
-      };
-
-      function requireLogin(event, destination) {
-        if (event) event.preventDefault();
-        const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-        if (!identity || typeof identity.open !== 'function') {
-          if (destination) {
-            window.location.href = destination;
-          }
-          return;
-        }
-        if (destination) {
-          sessionStorage.setItem('afterLogin', destination);
-        }
-        identity?.open?.('login');
-      }
-
-      function attachIdentity(identity) {
-        const id = identity || window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-        if (!id || typeof id.on !== 'function') {
-          return null;
-        }
-        if (!id.__hmjNavListeners) {
-          id.__hmjNavListeners = true;
-          id.on('init', (user) => renderFor(user));
-          id.on('login', (user) => renderFor(user));
-          id.on('logout', () => renderFor(null));
-        }
-        return id;
-      }
-
-      timesheets?.addEventListener('click', (event) => {
-        const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-        const user = identity?.currentUser?.();
-        if (user) return;
-        requireLogin(event, '/timesheets.html');
-      });
-
-      admin?.addEventListener('click', (event) => {
-        const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
-        const user = identity?.currentUser?.();
-        if (user) return;
-        requireLogin(event, '/admin/');
-      });
-
-      document.addEventListener('hmj:identity-change', (event) => {
-        const identity = attachIdentity(event?.detail?.identity || null);
-        if (!identity) {
-          renderFor(null);
-          return;
-        }
-        try {
-          renderFor(identity.currentUser?.() || null);
-        } catch {
-          renderFor(null);
-        }
-      });
-
-      const initial = attachIdentity(window.hmjConfigureIdentity?.() || window.netlifyIdentity || null);
-      if (initial) {
-        try {
-          renderFor(initial.currentUser?.() || null);
-        } catch {
-          renderFor(null);
-        }
-      } else {
-        renderFor(null);
-      }
-    });
-  </script>
+  
 
 
 <script>
