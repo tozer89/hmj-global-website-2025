@@ -6,11 +6,15 @@ const JOB_SELECT = '*';
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 
+function filterPublishedJobs(list = []) {
+  return Array.isArray(list) ? list.filter((job) => job && job.published !== false) : [];
+}
+
 exports.handler = async (event) => {
   let fallback = [];
   let fallbackError = null;
   try {
-    fallback = loadStaticJobs();
+    fallback = filterPublishedJobs(loadStaticJobs());
   } catch (err) {
     fallbackError = err;
     console.warn('[jobs] static load failed', err?.message || err);
@@ -40,7 +44,6 @@ exports.handler = async (event) => {
     let query = supabase
       .from('jobs')
       .select(JOB_SELECT)
-      .eq('published', true)
       .order('section', { ascending: true })
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('updated_at', { ascending: false })
@@ -49,7 +52,9 @@ exports.handler = async (event) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    const jobs = Array.isArray(data) ? data.map(toJob) : [];
+    const jobs = Array.isArray(data)
+      ? data.map(toJob).filter((job) => job && job.published !== false)
+      : [];
     if (!jobs.length && fallback.length) {
       return {
         statusCode: 200,
