@@ -4,6 +4,51 @@ const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { toJob, findStaticJob, slugify, isSchemaError } = require('./_jobs-helpers.js');
 
+function adjustRecordForSchema(record, err) {
+  const message = (err?.message || '').toLowerCase();
+  let changed = false;
+  const next = { ...record };
+
+  const drop = (field) => {
+    if (field in next) {
+      delete next[field];
+      changed = true;
+    }
+  };
+
+  const rename = (from, to) => {
+    if (from in next) {
+      if (!(to in next)) {
+        next[to] = next[from];
+      }
+      delete next[from];
+      changed = true;
+    }
+  };
+
+  if (/column\s+"?payload"?/.test(message) && 'payload' in next) {
+    rename('payload', 'job_payload');
+  }
+  if (/column\s+"?job_payload"?/.test(message) && 'job_payload' in next) {
+    rename('job_payload', 'payload');
+  }
+  if (/column\s+"?title"?/.test(message)) {
+    drop('title');
+  }
+  if (/column\s+"?notes"?/.test(message)) {
+    drop('notes');
+  }
+  if (/column\s+"?expires?_at"?/.test(message)) {
+    drop('expires_at');
+  }
+  if (/column\s+"?job_id"?/.test(message) && 'job_id' in next) {
+    // Some legacy tables may use `job` instead of `job_id`.
+    rename('job_id', 'job');
+  }
+
+  return changed ? next : null;
+}
+
 function buildSlug(id) {
   const safeId = (id || 'job').toString().replace(/[^a-z0-9-]/gi, '-').toLowerCase();
   return `${safeId}-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`;
@@ -86,7 +131,7 @@ exports.handler = async (event, context) => {
       : null;
 
     if (supabase) {
-      const record = {
+      const baseRecord = {
         slug,
         job_id: job.id,
         title: job.title,
@@ -95,20 +140,60 @@ exports.handler = async (event, context) => {
         expires_at: expires ? expires.toISOString() : null,
       };
 
-      try {
-        const { error: insertError } = await supabase.from('job_specs').insert(record);
-        if (insertError) throw insertError;
-        const url = `${origin}/jobs/spec.html?slug=${encodeURIComponent(slug)}`;
-        return { statusCode: 200, body: JSON.stringify({ slug, url, expires_at: record.expires_at }) };
-      } catch (err) {
-        const missingTable = err?.code === '42P01' || /relation\s+"?job_specs"?/i.test(err?.message || '');
-        if (!missingTable) throw err;
-        const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(job.id)}`;
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ slug: job.id, url: fallbackUrl, expires_at: null, fallback: true }),
-        };
+      let record = { ...baseRecord };
+      let schemaAdjusted = false;
+      const maxAttempts = 4;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const { data, error } = await supabase
+          .from('job_specs')
+          .insert(record)
+          .select('slug, expires_at')
+          .single();
+        if (!error) {
+          const inserted = data || {};
+          const url = `${origin}/jobs/spec.html?slug=${encodeURIComponent(inserted.slug || slug)}`;
+          return {
+            statusCode: 200,
+            body: JSON.stringify({
+              slug: inserted.slug || slug,
+              url,
+              expires_at: inserted.expires_at ?? record.expires_at ?? null,
+              schema: schemaAdjusted || undefined,
+            }),
+          };
+        }
+
+        const missingTable = error?.code === '42P01' || /relation\s+"?job_specs"?/i.test(error?.message || '');
+        const schemaIssue = isSchemaError(error);
+        if (!schemaIssue || missingTable) {
+          if (missingTable) {
+            schemaAdjusted = schemaAdjusted || schemaIssue || missingTable;
+            break;
+          }
+          throw error;
+        }
+
+        const adjusted = adjustRecordForSchema(record, error);
+        if (!adjusted) {
+          schemaAdjusted = schemaAdjusted || schemaIssue;
+          break;
+        }
+        record = adjusted;
+        schemaAdjusted = true;
       }
+
+      const fallbackKey = job.id || slug;
+      const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(fallbackKey)}`;
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          slug: fallbackKey,
+          url: fallbackUrl,
+          expires_at: null,
+          fallback: true,
+          schema: true,
+        }),
+      };
     }
 
     const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(job.id || slugify(job.title || 'role'))}`;
