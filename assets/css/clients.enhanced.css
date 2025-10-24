@@ -38,7 +38,11 @@ main {
 }
 
 .form-shell {
-  padding: clamp(32px, 8vw, 72px) clamp(16px, 6vw, 48px) clamp(60px, 12vw, 120px);
+  padding: clamp(48px, 10vw, 96px) clamp(16px, 6vw, 48px) clamp(60px, 12vw, 120px);
+}
+
+.form-card-critical {
+  margin-top: clamp(24px, 6vw, 48px);
 }
 
 .form-container {
