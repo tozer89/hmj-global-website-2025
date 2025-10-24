@@ -7,22 +7,10 @@
 
 
   <!-- In your <head> (once per page) -->
+<script src="js/hmj-identity.js"></script>
 <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script>
-  // Global login→redirect helper
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.netlifyIdentity) {
-      netlifyIdentity.on('login', () => {
-        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-        sessionStorage.removeItem('afterLogin');
-        window.location.href = dest;
-      });
-      netlifyIdentity.on('logout', () => {
-        window.location.href = '/';
-      });
-    }
-  });
-</script>
+<script defer src="js/hmj-nav.js"></script>
+<script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
 
 
 
@@ -218,98 +206,14 @@
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
         <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
-
-<script>
-    // Gate timesheets/admin access depending on session and roles
-  document.addEventListener('DOMContentLoaded', () => {
-    const admin = document.getElementById('nav-admin');
-    const timesheets = document.getElementById('nav-timesheets');
-    const identity = window.netlifyIdentity;
-
-    const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
-      ? user.app_metadata.roles
-      : Array.isArray(user?.roles)
-        ? user.roles
-        : [];
-
-    function requireLogin(event, destination) {
-      if (event) event.preventDefault();
-      if (!identity) {
-        if (destination) window.location.href = destination;
-        return;
-      }
-      if (destination) sessionStorage.setItem('afterLogin', destination);
-      identity.open('login');
-    }
-
-    function setTimesheets(user) {
-      if (!timesheets) return;
-      if (user) {
-        timesheets.href = '/timesheets.html';
-        timesheets.removeAttribute('aria-disabled');
-        timesheets.title = 'Open timesheets';
-      } else {
-        timesheets.href = '#';
-        timesheets.setAttribute('aria-disabled', 'true');
-        timesheets.title = 'Sign in to access timesheets';
-      }
-    }
-
-    function setAdmin(user) {
-      if (!admin) return;
-      const roles = rolesOf(user);
-      const isAdmin = roles.includes('admin');
-      if (isAdmin) {
-        admin.style.display = 'inline-block';
-        admin.href = '/admin/';
-        admin.removeAttribute('aria-disabled');
-        admin.classList.remove('requires-admin');
-        admin.textContent = 'Admin Dashboard';
-        admin.title = 'Open the admin dashboard';
-      } else {
-        admin.style.display = 'none';
-        admin.href = '/admin/';
-        admin.setAttribute('aria-disabled', 'true');
-        admin.classList.add('requires-admin');
-        admin.textContent = 'Admin Dashboard';
-        admin.title = 'Admin access only';
-      }
-    }
-
-    function renderFor(user) {
-      setTimesheets(user);
-      setAdmin(user);
-    }
-
-    timesheets?.addEventListener('click', (event) => {
-      const user = identity?.currentUser?.();
-      if (user) return;
-      requireLogin(event, '/timesheets.html');
-    });
-    admin?.addEventListener('click', (event) => {
-      const user = identity?.currentUser?.();
-      if (user) return;
-      requireLogin(event, '/admin/');
-    });
-
-    identity?.on('init', (user) => renderFor(user));
-    identity?.on('login', (user) => renderFor(user));
-    identity?.on('logout', () => renderFor(null));
-
-    try {
-      renderFor(identity?.currentUser?.() || null);
-    } catch {
-      renderFor(null);
-    }
-  });
-</script>
-
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
   </header>
 
-  <!-- ===== HERO ===== -->
+  
+
+<!-- ===== HERO ===== -->
   <section class="hero">
     <div>
       <h1>Specialist Data Centre & Pharmaceutical Recruitment</h1>
@@ -641,34 +545,45 @@
     })();
   </script>
 
-<!-- Netlify Identity widget -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
 <!-- Redirect ONLY for invite/confirmation, never on normal visits -->
 <script>
 (function () {
   function init() {
-    var ni = window.netlifyIdentity;
+    const ni = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
     if (!ni) return;
 
-    // Only set this flag when the URL includes an invite/confirm token
-    var cameViaInvite = (location.hash || "").includes("invite_token") ||
-                        (location.hash || "").includes("confirmation_token");
-    if (cameViaInvite) sessionStorage.setItem("hmj_invite_flow", "1");
+    const cameViaInvite = (location.hash || '').includes('invite_token') ||
+                          (location.hash || '').includes('confirmation_token');
+    if (cameViaInvite) sessionStorage.setItem('hmj_invite_flow', '1');
 
-    ni.on("init", function(user){
-      // If we're in the invite flow, finish it then go to /admin once
-      if (sessionStorage.getItem("hmj_invite_flow")) {
-        if (user) { sessionStorage.removeItem("hmj_invite_flow"); return location.replace("/admin/"); }
-        ni.on("login", function(){ sessionStorage.removeItem("hmj_invite_flow"); location.replace("/admin/"); });
+    const handleInvite = (user) => {
+      if (!sessionStorage.getItem('hmj_invite_flow')) return;
+      if (user) {
+        sessionStorage.removeItem('hmj_invite_flow');
+        location.replace('/admin/');
+        return;
       }
-      // Otherwise: no redirect. Users can go to /admin via your login button.
-    });
+      if (typeof ni.on === 'function') {
+        try {
+          ni.on('login', () => {
+            sessionStorage.removeItem('hmj_invite_flow');
+            location.replace('/admin/');
+          });
+        } catch (_) {}
+      }
+    };
 
-    ni.init();
+    if (typeof ni.on === 'function') {
+      ni.on('init', handleInvite);
+    }
+
+    try {
+      handleInvite(typeof ni.currentUser === 'function' ? ni.currentUser() : null);
+    } catch (_) {}
   }
+
   if (window.netlifyIdentity) init();
-  else document.addEventListener("netlifyIdentityLoad", init);
+  else document.addEventListener('netlifyIdentityLoad', init);
 })();
 </script>
 

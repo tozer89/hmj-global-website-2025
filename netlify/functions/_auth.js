@@ -1,5 +1,6 @@
 // netlify/functions/_auth.js
 const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseUrl, getSupabaseServiceKey } = require('./_supabase-env.js');
 
 function coded(status, message) { const e = new Error(message); e.code = status; return e; }
 
@@ -30,10 +31,10 @@ function rolesFromClaims(claims) {
 }
 
 function getSupabaseAdmin() {
-  const url = (process.env.SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_KEY || '').trim();
-  if (!url) throw coded(500, 'SUPABASE_URL missing');
-  if (!key) throw coded(500, 'SUPABASE_SERVICE_KEY missing');
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceKey();
+  if (!url) throw coded(500, 'Supabase URL missing (set SUPABASE_URL or VITE_SUPABASE_URL)');
+  if (!key) throw coded(500, 'Supabase service key missing (set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY)');
   return createClient(url, key, { auth: { persistSession: false } });
 }
 

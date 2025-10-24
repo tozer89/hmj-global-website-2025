@@ -26,6 +26,99 @@
     err: (...a) => console.error('%c[ERR]', 'color:#b73b3b;font-weight:600', ...a),
   };
 
+  // Netlify Live (beta) attempts to open a WebSocket to `/.netlify/extension/hmr`.
+  // For our admin deploys this endpoint is suspended, which previously produced
+  // noisy console errors on every load. We soft-disable those connections by
+  // intercepting WebSocket construction and short-circuiting when the URL
+  // matches the Live endpoint. A lightweight stub is returned so that any
+  // listeners still receive deterministic open/close events without triggering
+  // failures elsewhere in the identity widget.
+  (function disableNetlifyLive() {
+    if (typeof window === 'undefined') return;
+    const NativeWS = window.WebSocket;
+    if (!NativeWS || NativeWS.__hmjPatched) return;
+
+    const blocked = /\.netlify\/extension\/hmr/i;
+
+    function createEmitter() {
+      const map = new Map();
+      return {
+        add(type, fn) {
+          if (!fn) return;
+          const list = map.get(type) || [];
+          if (!list.includes(fn)) map.set(type, list.concat(fn));
+        },
+        remove(type, fn) {
+          if (!fn) return;
+          const list = map.get(type) || [];
+          const next = list.filter((cb) => cb !== fn);
+          if (next.length) map.set(type, next); else map.delete(type);
+        },
+        fire(ctx, type, event) {
+          const list = map.get(type) || [];
+          list.forEach((cb) => {
+            try { cb.call(ctx, event); } catch (err) { Debug.warn('ws listener failed', err); }
+          });
+        }
+      };
+    }
+
+    function makeStub(url) {
+      const listeners = createEmitter();
+      const stub = {
+        url,
+        readyState: NativeWS.CLOSED,
+        bufferedAmount: 0,
+        extensions: '',
+        protocol: '',
+        binaryType: 'blob',
+        onopen: null,
+        onmessage: null,
+        onerror: null,
+        onclose: null,
+        close() {},
+        send() {},
+        addEventListener(type, fn) { listeners.add(type, fn); },
+        removeEventListener(type, fn) { listeners.remove(type, fn); },
+        dispatchEvent(evt) {
+          if (!evt || !evt.type) return true;
+          listeners.fire(stub, evt.type, evt);
+          return true;
+        }
+      };
+
+      const fire = (type, detail) => {
+        const evt = Object.assign({ type }, detail || {});
+        if (typeof stub['on' + type] === 'function') {
+          try { stub['on' + type](evt); } catch (err) { Debug.warn('ws handler failed', err); }
+        }
+        listeners.fire(stub, type, evt);
+      };
+
+      setTimeout(() => fire('open'), 0);
+      setTimeout(() => fire('close', { code: 1000, reason: 'hmj-live-disabled' }), 0);
+      return stub;
+    }
+
+    function HMJWebSocket(url, protocols) {
+      if (typeof url === 'string' && blocked.test(url)) {
+        Debug.warn('Blocked Netlify Live websocket', url);
+        return makeStub(url);
+      }
+      return new NativeWS(url, protocols);
+    }
+
+    HMJWebSocket.prototype = NativeWS.prototype;
+    HMJWebSocket.CONNECTING = NativeWS.CONNECTING;
+    HMJWebSocket.OPEN = NativeWS.OPEN;
+    HMJWebSocket.CLOSING = NativeWS.CLOSING;
+    HMJWebSocket.CLOSED = NativeWS.CLOSED;
+    HMJWebSocket.__hmjPatched = true;
+
+    window.WebSocket = HMJWebSocket;
+    window.WebSocket.__hmjPatched = true;
+  })();
+
   // Small on-page toast (non-blocking)
   function toast(msg, type = 'info', ms = 3600) {
     let host = $('#toast');
@@ -285,8 +378,13 @@
 
     if (!res.ok) {
       const msg = json?.error || json?.message || `HTTP ${res.status}`;
-      toast(msg, 'error', 5000);
-      throw new Error(msg);
+      const err = new Error(msg);
+      err.status = res.status;
+      err.details = json;
+      if (res.status !== 401 && res.status !== 403) {
+        toast(msg, 'error', 5000);
+      }
+      throw err;
     }
     return json;
   }

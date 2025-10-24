@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
@@ -8,72 +8,130 @@
 
   <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="/admin/common.js?v=21"></script>
+  <script defer src="/admin/common.js?v=22"></script>
 
   <style>
-    :root{
-      --bg:#f4f7ff; --panel:#ffffff; --border:#d6def5; --ink:#0f1b3f; --muted:#5d6f9e;
+    :root {
+      --bg:#f5f7fb; --panel:#ffffff; --border:#d6def5; --ink:#0f1b3f; --muted:#5d6f9e;
       --accent:#3052a3; --accent-soft:rgba(48,82,163,.12); --danger:#b42318; --ok:#138754;
+      --hold:#f0ad00; --processing:#2563eb; --ready:#64748b;
     }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    a{color:inherit;text-decoration:none}
+    * { box-sizing:border-box; }
+    html,body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    a { color:inherit; text-decoration:none; }
 
-    .top{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,var(--accent),#274188);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 12px 28px rgba(15,27,63,.18)}
-    .row{max-width:1420px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
-    .brand{font-weight:800;letter-spacing:.02em;font-size:16px}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.32);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
-    .sp{flex:1}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .top { position:sticky; top:0; z-index:100; background:linear-gradient(180deg,var(--accent),#274188); color:#fff; border-bottom:1px solid rgba(255,255,255,.18); box-shadow:0 14px 32px rgba(15,27,63,.18); }
+    .row { max-width:1480px; margin:0 auto; padding:14px 22px; display:flex; align-items:center; gap:12px; }
+    .brand { font-weight:800; letter-spacing:.02em; font-size:16px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.32); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+    .sp { flex:1; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; }
 
-    .btn{background:linear-gradient(180deg,rgba(48,82,163,.12),rgba(48,82,163,.05));color:var(--ink);border:1px solid rgba(48,82,163,.25);padding:9px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
-    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(15,27,63,.18);border-color:rgba(48,82,163,.45)}
-    .btn.ghost{background:#fff;border-color:rgba(48,82,163,.18);color:var(--accent)}
-    .btn.primary{background:linear-gradient(180deg,rgba(48,82,163,.22),rgba(48,82,163,.1));border-color:rgba(48,82,163,.55);color:#fff;box-shadow:0 16px 32px rgba(48,82,163,.22)}
-    .btn.danger{background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08));border-color:rgba(180,35,24,.4);color:#fff}
-    .btn.small{padding:7px 11px;font-size:13px;border-radius:10px}
-    .btn:disabled{cursor:not-allowed;opacity:.55;box-shadow:none;transform:none}
+    .btn { background:linear-gradient(180deg,rgba(48,82,163,.12),rgba(48,82,163,.05)); color:var(--ink); border:1px solid rgba(48,82,163,.25); padding:9px 14px; border-radius:12px; font-weight:700; cursor:pointer; transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease,background .2s ease; }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 12px 26px rgba(15,27,63,.18); border-color:rgba(48,82,163,.45); }
+    .btn.ghost { background:#fff; border-color:rgba(48,82,163,.18); color:var(--accent); }
+    .btn.primary { background:linear-gradient(180deg,rgba(48,82,163,.22),rgba(48,82,163,.1)); border-color:rgba(48,82,163,.55); color:#fff; box-shadow:0 16px 32px rgba(48,82,163,.22); }
+    .btn.danger { background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08)); border-color:rgba(180,35,24,.4); color:#fff; }
+    .btn.small { padding:7px 11px; font-size:13px; border-radius:10px; }
+    .btn.tiny { padding:4px 8px; font-size:12px; border-radius:8px; }
+    .btn:disabled { cursor:not-allowed; opacity:.55; box-shadow:none; transform:none; }
 
-    .wrap{max-width:1420px;margin:24px auto;padding:0 22px;display:grid;gap:18px}
-    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 42px rgba(15,27,63,.12)}
-    .muted{color:var(--muted)}
+    .wrap { max-width:1480px; margin:24px auto; padding:0 22px; display:grid; gap:18px; }
+    .panel { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px; box-shadow:0 20px 44px rgba(15,27,63,.12); }
+    .muted { color:var(--muted); }
 
-    .metrics{display:flex;flex-wrap:wrap;gap:12px}
-    .metric{flex:1 1 160px;background:var(--accent-soft);border:1px solid rgba(48,82,163,.25);border-radius:14px;padding:12px;min-width:160px}
-    .metric h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-    .metric strong{display:block;font-size:22px;margin-top:6px;color:var(--accent)}
-    .metric small{display:block;margin-top:4px;color:var(--muted)}
+    .summary-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+    .summary-card { border:1px solid rgba(48,82,163,.18); border-radius:16px; padding:14px 16px; background:var(--accent-soft); position:relative; overflow:hidden; }
+    .summary-card strong { display:block; font-size:24px; margin-top:6px; color:var(--accent); }
+    .summary-card small { display:block; color:var(--muted); font-weight:500; margin-top:4px; }
+    .summary-card .trend { position:absolute; top:12px; right:14px; font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px; }
+    .summary-splits { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); margin-top:18px; }
+    .split { border:1px solid rgba(48,82,163,.18); border-radius:16px; padding:16px; background:#f8faff; }
+    .split h4 { margin:0 0 10px; font-size:14px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+    .split ul { margin:0; padding:0; list-style:none; display:grid; gap:8px; font-size:13px; }
+    .split li { display:flex; justify-content:space-between; gap:8px; border-bottom:1px dashed rgba(48,82,163,.12); padding-bottom:6px; }
+    .split li:last-child { border-bottom:none; padding-bottom:0; }
 
-    .filters{display:grid;gap:12px}
-    .filters form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:center}
-    .filters input[type="search"], .filters input[type="date"], .filters select{padding:11px 12px;border-radius:12px;border:1px solid rgba(48,82,163,.2);background:#fff;color:var(--ink);font-weight:600}
-    .filters .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .filters form { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; align-items:end; }
+    .field { display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:var(--muted); }
+    .field input[type="search"],
+    .field input[type="text"],
+    .field input[type="date"],
+    .field select { padding:11px 12px; border-radius:12px; border:1px solid rgba(48,82,163,.22); background:#fff; color:var(--ink); font-weight:600; transition:border .2s ease, box-shadow .2s ease; }
+    .field input:focus,
+    .field select:focus { outline:none; border-color:rgba(48,82,163,.5); box-shadow:0 0 0 3px rgba(48,82,163,.18); }
 
-    table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden}
-    thead th{position:sticky;top:0;background:#eef1ff;border-bottom:1px solid var(--border);text-align:left;padding:10px 12px;font-weight:800;font-size:13px;letter-spacing:.02em}
-    tbody td{padding:10px 12px;border-top:1px solid var(--border);vertical-align:middle}
-    tbody tr:hover{background:#f6f8ff}
-    tbody tr.active{background:#edf2ff}
-    tbody td .pill{background:var(--accent-soft);border-color:rgba(48,82,163,.25);color:var(--accent);font-size:11px;padding:3px 8px}
-    .pill.ready{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.25);color:#0f5c32}
-    .pill.paid{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.25);color:#0f5c32}
-    .pill.processing{background:rgba(250,204,21,.14);border-color:rgba(250,204,21,.35);color:#854d0e}
-    .pill.hold{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.35);color:#842029}
+    .quick-filters { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px; background:#eef2ff; border:1px solid rgba(48,82,163,.2); font-weight:600; font-size:13px; cursor:pointer; transition:background .18s ease, color .18s ease, border .18s ease; }
+    .chip.active { background:var(--accent); color:#fff; border-color:rgba(48,82,163,.7); }
 
-    .pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:10px}
-    .pager select{padding:8px 10px;border-radius:10px;border:1px solid rgba(48,82,163,.2);background:#fff;color:var(--ink);font-weight:600}
+    .toggle-line { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:12px; font-size:13px; }
+    .toggle-line label { display:flex; align-items:center; gap:6px; cursor:pointer; }
 
-    .layout{display:grid;grid-template-columns:2fr 320px;gap:18px;align-items:start}
-    @media(max-width:1100px){.layout{grid-template-columns:1fr}}
+    .range-controls { display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap; }
+    .range-controls .btn { min-width:38px; }
 
-    .quick{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;position:sticky;top:118px;display:grid;gap:12px}
-    .quick h3{margin:0;font-size:16px}
-    .quick .rows{display:grid;gap:10px;font-size:14px}
-    .kv{display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px}
-    .quick .actions{display:flex;flex-wrap:wrap;gap:10px}
+    .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; }
 
-    #listWrap{min-height:220px}
-    .empty{padding:32px;text-align:center;color:var(--muted)}
+    table { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+    thead th { position:sticky; top:0; background:#eef1ff; border-bottom:1px solid var(--border); text-align:left; padding:10px 12px; font-weight:800; font-size:13px; letter-spacing:.02em; color:var(--muted); z-index:1; }
+    tbody td { padding:11px 12px; border-top:1px solid var(--border); vertical-align:middle; }
+    tbody tr { transition:background .18s ease, box-shadow .2s ease; }
+    tbody tr:hover { background:#f6f8ff; }
+    tbody tr.active { background:#edf2ff; }
+    tbody tr.issue { background:rgba(250,204,21,.08); box-shadow:inset 0 0 0 2px rgba(250,204,21,.25); }
+    tbody td .status-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-weight:700; font-size:12px; text-transform:capitalize; }
+    .status-ready { background:rgba(100,116,139,.18); color:#1f2937; }
+    .status-processing { background:rgba(37,99,235,.16); color:#1d4ed8; }
+    .status-paid { background:rgba(19,135,84,.15); color:#0f5c32; }
+    .status-hold { background:rgba(240,173,0,.18); color:#8b5b00; }
+    .status-blocked { background:rgba(180,35,24,.14); color:#842029; }
+    .status-pending { background:rgba(48,82,163,.14); color:var(--accent); }
+
+    .validation-flag { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:#b45309; background:rgba(234,179,8,.18); border-radius:8px; padding:3px 6px; margin-top:4px; }
+
+    .layout { display:grid; gap:18px; }
+    #tableWrap { min-height:260px; position:relative; }
+    .empty { padding:36px; text-align:center; color:var(--muted); }
+
+    .pager { display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:12px; }
+    .pager select { padding:8px 10px; border-radius:10px; border:1px solid rgba(48,82,163,.2); background:#fff; color:var(--ink); font-weight:600; }
+
+    .drawer { position:fixed; inset:0; pointer-events:none; display:flex; justify-content:flex-end; z-index:200; }
+    .drawer.active { pointer-events:auto; }
+    .drawer .overlay { flex:1; background:rgba(15,27,63,.28); opacity:0; transition:opacity .24s ease; }
+    .drawer.active .overlay { opacity:1; }
+    .drawer .panel { width:420px; max-width:calc(100vw - 60px); height:100%; border-radius:0; border-left:1px solid rgba(48,82,163,.24); transform:translateX(100%); transition:transform .28s ease; display:flex; flex-direction:column; padding:22px; }
+    .drawer.active .panel { transform:translateX(0); }
+    .drawer header { display:flex; align-items:flex-start; gap:10px; margin-bottom:18px; }
+    .drawer header h2 { margin:0; font-size:20px; }
+    .drawer header .meta { font-size:13px; color:var(--muted); }
+    .drawer section { margin-bottom:18px; }
+    .drawer section h3 { margin:0 0 8px; font-size:14px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+    .kv { display:grid; grid-template-columns:120px 1fr; gap:6px; font-size:13px; }
+    .audit-log { max-height:180px; overflow:auto; border:1px solid rgba(48,82,163,.15); border-radius:12px; padding:10px; background:#f9fbff; display:grid; gap:8px; font-size:12px; }
+    .notes { display:grid; gap:10px; font-size:13px; }
+    .note-card { background:#f9f5ff; border-radius:12px; padding:10px; border:1px solid rgba(125,76,219,.24); }
+
+    .attachments { display:grid; gap:10px; }
+    .attachment { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid rgba(48,82,163,.18); background:#f8faff; font-size:13px; }
+
+    .bulk-bar { position:fixed; left:0; right:0; bottom:0; background:#0f1b3f; color:#fff; display:flex; align-items:center; gap:16px; padding:12px 22px; box-shadow:0 -12px 28px rgba(15,27,63,.26); transform:translateY(100%); transition:transform .24s ease; z-index:150; }
+    .bulk-bar.active { transform:translateY(0); }
+    .bulk-bar strong { font-size:18px; }
+    .bulk-bar .btn { background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.32); }
+    .bulk-bar .btn:hover { border-color:#fff; }
+
+    #toast { position:fixed; bottom:18px; right:18px; display:grid; gap:10px; z-index:999; }
+
+    @media(max-width:960px) {
+      .summary-splits { grid-template-columns:1fr; }
+      .drawer .panel { width:100%; max-width:100%; }
+      .drawer .panel { border-radius:18px 18px 0 0; }
+      .drawer { align-items:flex-end; }
+      .drawer .panel { transform:translateY(100%); }
+      .drawer.active .panel { transform:translateY(0); }
+    }
   </style>
 </head>
 <body>
@@ -96,435 +154,179 @@
   </div>
 
   <div class="wrap" id="app" style="display:none">
-    <section class="panel">
-      <div class="metrics" id="metrics"></div>
+    <section class="panel" id="summaryPanel">
+      <div class="summary-grid" id="totalsBar"></div>
+      <div class="summary-splits">
+        <div class="split" id="trendWidget">
+          <h4>Week-on-week trend</h4>
+          <p class="muted" id="trendCopy" style="margin:0">Awaiting data…</p>
+        </div>
+        <div class="split" id="clientSummary">
+          <h4>By client</h4>
+          <ul></ul>
+        </div>
+        <div class="split" id="statusSummary">
+          <h4>By status</h4>
+          <ul></ul>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:18px">
+        <button class="btn ghost small" id="btnRecalculate">Recalculate</button>
+        <button class="btn ghost small" id="btnAutoCalc">Auto-calc employer cost &amp; margin</button>
+        <button class="btn primary small" id="btnGeneratePdf">Generate payroll summary PDF</button>
+      </div>
     </section>
 
     <section class="panel filters">
       <form id="filterForm" autocomplete="off">
-        <input id="filterSearch" type="search" placeholder="Search candidate, client, reference"/>
-        <select id="filterStatus">
-          <option value="ready">Ready</option>
-          <option value="processing">Processing</option>
-          <option value="paid">Paid</option>
-          <option value="hold">On hold</option>
-          <option value="all">All statuses</option>
-        </select>
-        <input id="filterFrom" type="date" aria-label="Week ending from"/>
-        <input id="filterTo" type="date" aria-label="Week ending to"/>
+        <div class="field">
+          <label for="filterSearch">Global search</label>
+          <input id="filterSearch" type="search" placeholder="Search candidate, client, reference"/>
+        </div>
+        <div class="field">
+          <label for="filterStatus">Status</label>
+          <select id="filterStatus">
+            <option value="all">All statuses</option>
+            <option value="ready">Ready</option>
+            <option value="processing">Processing</option>
+            <option value="paid">Paid</option>
+            <option value="hold">On hold</option>
+            <option value="pending">Pending</option>
+            <option value="blocked">Blocked</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filterClient">Client</label>
+          <input id="filterClient" type="text" placeholder="Client name"/>
+        </div>
+        <div class="field">
+          <label for="filterCandidate">Candidate</label>
+          <input id="filterCandidate" type="text" placeholder="Candidate name"/>
+        </div>
+        <div class="field">
+          <label for="filterInvoice">Invoice ref</label>
+          <input id="filterInvoice" type="text" placeholder="Invoice reference"/>
+        </div>
+        <div class="field">
+          <label for="filterCost">Cost centre</label>
+          <input id="filterCost" type="text" placeholder="Cost centre"/>
+        </div>
+        <div class="field">
+          <label for="filterPO">PO number</label>
+          <input id="filterPO" type="text" placeholder="PO number"/>
+        </div>
+        <div class="field">
+          <label for="filterFrom">Week ending from</label>
+          <input id="filterFrom" type="date" aria-label="Week ending from"/>
+        </div>
+        <div class="field">
+          <label for="filterTo">Week ending to</label>
+          <input id="filterTo" type="date" aria-label="Week ending to"/>
+        </div>
       </form>
-      <div class="actions">
-        <div class="muted" id="resultMeta">0 payroll items</div>
-        <div class="muted" id="weekBaseMeta" style="font-size:12px">Week 1 ends 2 Nov 2025</div>
-        <div class="sp"></div>
-        <button class="btn ghost small" id="btnClear">Clear filters</button>
-        <button class="btn ghost small" id="btnRefresh">Refresh</button>
-        <button class="btn ghost small" id="btnExportSel" disabled>Export selected</button>
-        <button class="btn primary small" id="btnExportAll">Export all</button>
+      <div class="quick-filters" id="quickFilters">
+        <button class="chip" data-quick="overdue">Show overdue</button>
+        <button class="chip" data-quick="unapproved">Show unapproved</button>
+        <button class="chip" data-quick="missing-timesheets">Show missing timesheets</button>
       </div>
-      <div class="actions" style="gap:8px">
-        <button class="btn small" id="btnMarkPaid" disabled>Mark paid</button>
-        <button class="btn small" id="btnMarkProcessing" disabled>Mark processing</button>
-        <button class="btn small" id="btnMarkHold" disabled>Put on hold</button>
-        <button class="btn small" id="btnMarkReady" disabled>Reset to ready</button>
+      <div class="toggle-line">
+        <label><input type="checkbox" id="toggleIssues"/> Only show items with notes or issues</label>
+        <label><input type="checkbox" id="toggleNotes"/> Only items with internal notes</label>
+        <span class="muted" id="resultMeta">0 payroll items</span>
+        <span class="muted" id="weekBaseMeta" style="font-size:12px">Week 1 ends —</span>
+      </div>
+      <div class="range-controls">
+        <button class="btn tiny" id="btnPrevWeek" aria-label="Previous week">◀</button>
+        <button class="btn tiny" id="btnNextWeek" aria-label="Next week">▶</button>
+        <button class="btn ghost tiny" id="btnClear">Clear filters</button>
+        <button class="btn ghost tiny" id="btnRefresh">Refresh</button>
+        <button class="btn ghost tiny" id="btnRetry" style="display:none">Retry</button>
+      </div>
+      <div class="actions">
+        <button class="btn ghost small" id="btnExportCsv">Export CSV</button>
+        <button class="btn ghost small" id="btnExportXlsx">Export XLSX</button>
+        <button class="btn ghost small" id="btnGenerateQuba">Generate Quba batch</button>
+        <button class="btn ghost small" id="btnSendRemittance">Send remittance emails</button>
       </div>
     </section>
 
-    <div class="layout">
-      <section class="panel" id="listWrap">Loading…</section>
-      <aside class="quick" id="quickView" aria-live="polite">
-        <div style="display:flex;align-items:center;gap:10px">
-          <h3 id="qvTitle">Select a timesheet</h3>
-          <span class="sp"></span>
-          <button class="btn ghost small" id="qvClose" style="display:none">Close</button>
-        </div>
-        <div class="rows" id="qvRows">
-          <div class="empty">Pick a timesheet to inspect payroll details.</div>
-        </div>
-        <div class="actions" id="qvActions" style="display:none">
-          <button class="btn small" id="qvPaid">Mark paid</button>
-          <button class="btn small" id="qvProcessing">Processing</button>
-          <button class="btn small" id="qvHold">Hold</button>
-          <button class="btn ghost small" id="qvReady">Reset</button>
-        </div>
-      </aside>
-    </div>
+    <section class="panel layout">
+      <div id="tableWrap">Loading…</div>
+      <div class="pager" id="pager" style="display:none">
+        <div class="muted" id="pgInfo"></div>
+        <div class="sp"></div>
+        <select id="pgSize">
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <button class="btn small ghost" id="pgPrev">◀</button>
+        <button class="btn small ghost" id="pgNext">▶</button>
+      </div>
+    </section>
+  </div>
 
-    <div class="pager" id="pager" style="display:none">
-      <div class="muted" id="pgInfo"></div>
-      <div class="sp"></div>
-      <select id="pgSize">
-        <option value="25">25</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-      </select>
-      <button class="btn small ghost" id="pgPrev">◀</button>
-      <button class="btn small ghost" id="pgNext">▶</button>
+  <div id="detailDrawer" class="drawer" aria-hidden="true">
+    <div class="overlay" id="drawerOverlay"></div>
+    <div class="panel">
+      <header>
+        <div>
+          <h2 id="drawerTitle">Payroll detail</h2>
+          <div class="meta" id="drawerMeta"></div>
+        </div>
+        <div class="sp"></div>
+        <button class="btn ghost tiny" id="drawerClose">Close</button>
+      </header>
+      <section id="drawerTimesheet">
+        <h3>Assignment</h3>
+        <div class="kv" id="drawerAssignment"></div>
+      </section>
+      <section id="drawerBreakdown">
+        <h3>Timesheet breakdown</h3>
+        <div id="drawerHours" class="muted">No breakdown available.</div>
+      </section>
+      <section id="drawerStatus">
+        <h3>Status history</h3>
+        <div id="drawerTimeline" class="audit-log"></div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn tiny" data-status="ready">Mark ready</button>
+          <button class="btn tiny" data-status="processing">Mark processing</button>
+          <button class="btn tiny" data-status="paid">Mark paid</button>
+          <button class="btn tiny" data-status="hold">Put on hold</button>
+        </div>
+      </section>
+      <section id="drawerNotes">
+        <h3>Internal notes</h3>
+        <div class="notes" id="notesList"></div>
+        <form id="noteForm" style="margin-top:12px; display:grid; gap:8px">
+          <textarea id="noteInput" rows="3" placeholder="Add note for payroll trail" style="border-radius:10px; border:1px solid rgba(48,82,163,.22); padding:10px; resize:vertical; font-family:inherit;"></textarea>
+          <div style="display:flex; gap:8px; justify-content:flex-end">
+            <button class="btn ghost tiny" type="button" id="noteCancel">Cancel</button>
+            <button class="btn primary tiny" type="submit">Add note</button>
+          </div>
+        </form>
+      </section>
+      <section id="drawerAttachments">
+        <h3>Attachments</h3>
+        <div class="attachments" id="attachmentList"></div>
+      </section>
     </div>
+  </div>
+
+  <div id="bulkBar" class="bulk-bar" aria-live="polite">
+    <div><strong id="bulkCount">0</strong> selected</div>
+    <div id="bulkValue" class="muted" style="font-weight:600"></div>
+    <div class="sp"></div>
+    <button class="btn tiny" id="bulkReady">Mark ready (R)</button>
+    <button class="btn tiny" id="bulkProcessing">Processing</button>
+    <button class="btn tiny" id="bulkPaid">Mark paid (P)</button>
+    <button class="btn tiny" id="bulkHold">Put on hold (O)</button>
+    <button class="btn tiny" id="bulkCsv">Export CSV</button>
   </div>
 
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <script>
-  (function startPayroll(){
-    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.netlifyIdentity) {
-      return setTimeout(startPayroll, 30);
-    }
-
-    Admin.bootAdmin(async ({ api, sel, toast, identity, getTrace }) => {
-      const chips = sel('#diagChips');
-      const chip = (label, tone = 'ok') => {
-        if (!chips) return;
-        const span = document.createElement('span');
-        span.className = 'pill ' + (tone === 'warn' ? 'processing' : tone === 'bad' ? 'hold' : '');
-        span.textContent = label;
-        chips.appendChild(span);
-      };
-
-      const who = await identity('admin');
-      if (!who || !who.ok) {
-        const gate = sel('#gate'); const app = sel('#app');
-        if (app) app.style.display = 'none';
-        if (gate) { gate.style.display = ''; const why = gate.querySelector('.why'); if (why) why.textContent = 'Restricted. Sign in with an admin account.'; }
-        chip('role: blocked', 'bad');
-        return;
-      }
-
-      chip('role: admin');
-      chip('trace ' + getTrace().slice(0, 8));
-
-      const state = {
-        rows: [],
-        page: 1,
-        pageSize: 25,
-        sort: { key: 'weekEnding', dir: 'desc' },
-        filters: { status: 'ready', q: '', from: '', to: '' },
-        stats: { total: 0 },
-        selected: new Set(),
-        quick: null,
-      };
-
-      const metrics = sel('#metrics');
-      const listWrap = sel('#listWrap');
-      const resultMeta = sel('#resultMeta');
-      const statusSel = sel('#filterStatus');
-      const searchInput = sel('#filterSearch');
-      const fromInput = sel('#filterFrom');
-      const toInput = sel('#filterTo');
-      const pager = sel('#pager');
-      const pgInfo = sel('#pgInfo');
-      const pgPrev = sel('#pgPrev');
-      const pgNext = sel('#pgNext');
-      const pgSize = sel('#pgSize');
-      const btnExportSel = sel('#btnExportSel');
-      const btnMarkPaid = sel('#btnMarkPaid');
-      const btnMarkProcessing = sel('#btnMarkProcessing');
-      const btnMarkHold = sel('#btnMarkHold');
-      const btnMarkReady = sel('#btnMarkReady');
-      const qvRows = sel('#qvRows');
-      const qvTitle = sel('#qvTitle');
-      const qvActions = sel('#qvActions');
-      const qvClose = sel('#qvClose');
-
-      function badge(status) {
-        const v = String(status || '').toLowerCase();
-        if (!v) return '<span class="pill">Unknown</span>';
-        return `<span class="pill ${v}">${v.charAt(0).toUpperCase() + v.slice(1)}</span>`;
-      }
-
-      function enableBulkButtons() {
-        const has = state.selected.size > 0;
-        [btnExportSel, btnMarkPaid, btnMarkProcessing, btnMarkHold, btnMarkReady].forEach((btn) => {
-          if (!btn) return;
-          btn.disabled = !has;
-        });
-      }
-
-      function renderMetrics() {
-        if (!metrics) return;
-        const stats = state.stats || {};
-        const currencyEntries = Object.entries(stats.byCurrency || {});
-        const statusEntries = Object.entries(stats.byStatus || {});
-        metrics.innerHTML = `
-          <div class="metric">
-            <h4>Items</h4>
-            <strong>${stats.total || 0}</strong>
-            <small>${statusEntries.map(([k, v]) => `${k}: ${v}`).join(' • ') || '—'}</small>
-          </div>
-          <div class="metric">
-            <h4>Total hours</h4>
-            <strong>${(stats.totalHours || 0).toFixed(1)}</strong>
-            <small>Includes overtime</small>
-          </div>
-          <div class="metric">
-            <h4>Pay total</h4>
-            <strong>${currencyEntries.map(([cur, val]) => `${cur} ${(val || 0).toFixed(2)}`).join(' • ') || '—'}</strong>
-            <small>Filtered rows only</small>
-          </div>`;
-      }
-
-      function sortRows(rows) {
-        const dir = state.sort.dir === 'asc' ? 1 : -1;
-        const key = state.sort.key;
-        return rows.slice().sort((a, b) => {
-          const av = a[key] || '';
-          const bv = b[key] || '';
-          if (av === bv) return 0;
-          return av > bv ? dir : -dir;
-        });
-      }
-
-      function rowsForPage() {
-        const sorted = sortRows(state.rows);
-        const start = (state.page - 1) * state.pageSize;
-        return sorted.slice(start, start + state.pageSize);
-      }
-
-      function renderTable() {
-        if (!listWrap) return;
-        const rows = state.rows;
-        if (!rows.length) {
-          listWrap.innerHTML = '<div class="empty">No payroll items match your filters.</div>';
-          pager.style.display = 'none';
-          resultMeta.textContent = '0 payroll items';
-          return;
-        }
-
-        const pageRows = rowsForPage();
-        const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
-        if (state.page > totalPages) { state.page = totalPages; return renderTable(); }
-
-        const body = pageRows.map((row) => {
-          const key = String(row.id);
-          const checked = state.selected.has(key) ? 'checked' : '';
-          return `<tr data-id="${key}" class="${state.quick && state.quick.id === row.id ? 'active' : ''}">
-            <td><input type="checkbox" data-id="${key}" ${checked}></td>
-            <td><div style="font-weight:700">${row.candidateName || '—'}</div><div class="muted" style="font-size:12px">${row.candidate?.payrollRef || ''}</div></td>
-            <td>${row.weekEnding || '—'}<div class="muted" style="font-size:12px">${row.assignment?.payFreq || ''}</div></td>
-            <td>${row.weekNo ? `#${row.weekNo}` : '—'}</td>
-            <td><div>${row.assignment?.jobTitle || '—'}</div><div class="muted" style="font-size:12px">${row.assignment?.clientName || ''}</div></td>
-            <td><strong>${row.currency || 'GBP'} ${(row.totals?.pay || 0).toFixed(2)}</strong><div class="muted" style="font-size:12px">${(row.totals?.hours || 0).toFixed(1)} hrs</div></td>
-            <td>${badge(row.payrollStatus)}</td>
-            <td><div class="muted" style="font-size:12px">${row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '—'}</div></td>
-          </tr>`;
-        }).join('');
-
-        listWrap.innerHTML = `<table>
-          <thead><tr>
-            <th style="width:32px"><input type="checkbox" id="ckAll"></th>
-            <th>Candidate</th>
-            <th>Week ending</th>
-            <th>Week #</th>
-            <th>Assignment</th>
-            <th>Pay</th>
-            <th>Status</th>
-            <th>Updated</th>
-          </tr></thead>
-          <tbody>${body}</tbody>
-        </table>`;
-
-        resultMeta.textContent = `${rows.length} payroll item${rows.length === 1 ? '' : 's'}`;
-        pager.style.display = '';
-        pgInfo.textContent = `Page ${state.page} of ${totalPages}`;
-        pgPrev.disabled = state.page <= 1;
-        pgNext.disabled = state.page >= totalPages;
-
-        const ckAll = sel('#ckAll');
-        if (ckAll) {
-          ckAll.checked = state.selected.size && state.selected.size >= pageRows.length;
-          ckAll.onchange = () => {
-            pageRows.forEach((row) => {
-              const key = String(row.id);
-              if (ckAll.checked) state.selected.add(key);
-              else state.selected.delete(key);
-            });
-            enableBulkButtons();
-            renderTable();
-          };
-        }
-
-        listWrap.querySelectorAll('input[type="checkbox"][data-id]').forEach((ck) => {
-          ck.onchange = () => {
-            const id = ck.getAttribute('data-id');
-            if (ck.checked) state.selected.add(id); else state.selected.delete(id);
-            enableBulkButtons();
-          };
-        });
-
-        listWrap.querySelectorAll('tbody tr').forEach((tr) => {
-          tr.onclick = (e) => {
-            if (e.target.closest('input')) return;
-            const idAttr = tr.getAttribute('data-id');
-            const row = state.rows.find((r) => String(r.id) === idAttr);
-            renderQuick(row || null);
-          };
-        });
-
-        enableBulkButtons();
-      }
-
-      function renderQuick(row) {
-        state.quick = row || null;
-        if (!qvRows || !qvTitle) return;
-        if (!row) {
-          qvTitle.textContent = 'Select a timesheet';
-          qvRows.innerHTML = '<div class="empty">Pick a timesheet to inspect payroll details.</div>';
-          if (qvActions) qvActions.style.display = 'none';
-          if (qvClose) qvClose.style.display = 'none';
-          return;
-        }
-        qvTitle.textContent = row.candidateName || `Timesheet #${row.id}`;
-        const c = row.candidate || {};
-        const bank = c.bank || {};
-        qvRows.innerHTML = `
-          <div class="kv"><b>Week ending</b><div>${row.weekEnding || '—'}</div></div>
-          <div class="kv"><b>Week #</b><div>${row.weekNo || '—'}</div></div>
-          <div class="kv"><b>Status</b><div>${badge(row.payrollStatus)}</div></div>
-          <div class="kv"><b>Assignment</b><div>${row.assignment?.jobTitle || '—'} · ${row.assignment?.clientName || ''}</div></div>
-          <div class="kv"><b>Ref</b><div>${row.assignment?.ref || '—'}</div></div>
-          <div class="kv"><b>Payroll ref</b><div>${c.payrollRef || '—'}</div></div>
-          <div class="kv"><b>Pay</b><div>${row.currency || 'GBP'} ${(row.totals?.pay || 0).toFixed(2)}</div></div>
-          <div class="kv"><b>Hours</b><div>${(row.totals?.hours || 0).toFixed(2)} (${(row.totals?.ot || 0).toFixed(2)} OT)</div></div>
-          <div class="kv"><b>Bank</b><div>${bank.name || '—'} · ${bank.sortCode || ''} · ${bank.account || ''}</div></div>
-          <div class="kv"><b>IBAN</b><div>${bank.iban || '—'}</div></div>
-          <div class="kv"><b>SWIFT</b><div>${bank.swift || '—'}</div></div>
-          <div class="kv"><b>Email</b><div>${c.email || '—'}</div></div>
-          <div class="kv"><b>Notes</b><div>${row.notes || '—'}</div></div>
-        `;
-        if (qvActions) qvActions.style.display = '';
-        if (qvClose) qvClose.style.display = '';
-      }
-
-      async function load() {
-        if (listWrap) listWrap.textContent = 'Loading…';
-        try {
-          const res = await api('admin-payroll-list', 'POST', {
-            status: state.filters.status,
-            q: state.filters.q,
-            weekFrom: state.filters.from || null,
-            weekTo: state.filters.to || null,
-            limit: state.pageSize * 4,
-          });
-          state.rows = Array.isArray(res?.rows) ? res.rows : [];
-          state.config = res?.config || {};
-          if (res?.config?.week1Ending) {
-            const meta = document.getElementById('weekBaseMeta');
-            if (meta) meta.textContent = `Week 1 ends ${res.config.week1Ending}`;
-          }
-          state.stats = res?.stats || {};
-          state.page = 1;
-          state.selected.clear();
-          renderMetrics();
-          renderTable();
-        } catch (e) {
-          if (/supabase/i.test(String(e.message || e))) {
-            chip('supabase offline', 'warn');
-          }
-          if (listWrap) listWrap.textContent = 'Load failed. ' + (e.message || e);
-          state.rows = [];
-          renderTable();
-        }
-      }
-
-      async function exportCsv(selectedOnly) {
-        try {
-          const ids = selectedOnly ? Array.from(state.selected) : undefined;
-          const who = await identity();
-          const token = who?.token || '';
-          const headers = {
-            'Content-Type': 'application/json',
-            'x-trace': getTrace(),
-          };
-          if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch('/.netlify/functions/admin-payroll-list', {
-            method: 'POST',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify({
-              status: state.filters.status,
-              q: state.filters.q,
-              weekFrom: state.filters.from || null,
-              weekTo: state.filters.to || null,
-              ids,
-              format: 'csv',
-            }),
-          });
-          const text = await res.text();
-          if (!res.ok) throw new Error(text || res.statusText);
-          const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'payroll.csv';
-          link.click();
-          URL.revokeObjectURL(url);
-          toast('Export ready', 'ok', 1800);
-        } catch (e) {
-          toast('Export failed: ' + (e.message || e), 'error', 4200);
-        }
-      }
-
-      async function changeStatus(ids, status) {
-        const payloadIds = ids
-          .map((id) => (Number.isFinite(Number(id)) ? Number(id) : id))
-          .filter((id) => id !== null && id !== undefined && id !== '');
-        if (!payloadIds.length) return;
-        try {
-          await Promise.all(payloadIds.map((id) => api('admin-payroll-process', 'POST', { id, status })));
-          toast('Updated payroll status', 'ok', 1600);
-          await load();
-          if (state.quick && !state.rows.find((r) => r.id === state.quick.id)) {
-            renderQuick(null);
-          } else if (state.quick) {
-            const fresh = state.rows.find((r) => r.id === state.quick.id);
-            renderQuick(fresh || null);
-          }
-        } catch (e) {
-          toast('Update failed: ' + (e.message || e), 'error', 4200);
-        }
-      }
-
-      // Event wires
-      sel('#btnRefresh').onclick = () => load();
-      sel('#btnClear').onclick = () => {
-        state.filters = { status: 'ready', q: '', from: '', to: '' };
-        if (statusSel) statusSel.value = 'ready';
-        if (searchInput) searchInput.value = '';
-        if (fromInput) fromInput.value = '';
-        if (toInput) toInput.value = '';
-        load();
-      };
-      statusSel.onchange = () => { state.filters.status = statusSel.value; load(); };
-      fromInput.onchange = () => { state.filters.from = fromInput.value; load(); };
-      toInput.onchange = () => { state.filters.to = toInput.value; load(); };
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          state.filters.q = searchInput.value.trim();
-          load();
-        }
-      });
-
-      btnExportSel.onclick = () => exportCsv(true);
-      sel('#btnExportAll').onclick = () => exportCsv(false);
-      btnMarkPaid.onclick = () => changeStatus(Array.from(state.selected), 'paid');
-      btnMarkProcessing.onclick = () => changeStatus(Array.from(state.selected), 'processing');
-      btnMarkHold.onclick = () => changeStatus(Array.from(state.selected), 'hold');
-      btnMarkReady.onclick = () => changeStatus(Array.from(state.selected), 'ready');
-
-      if (qvClose) qvClose.onclick = () => renderQuick(null);
-      sel('#qvPaid').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'paid'); };
-      sel('#qvProcessing').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'processing'); };
-      sel('#qvHold').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'hold'); };
-      sel('#qvReady').onclick = () => { if (state.quick) changeStatus([state.quick.id], 'ready'); };
-
-      pgPrev.onclick = () => { if (state.page > 1) { state.page -= 1; renderTable(); } };
-      pgNext.onclick = () => { const totalPages = Math.max(1, Math.ceil(state.rows.length / state.pageSize)); if (state.page < totalPages) { state.page += 1; renderTable(); } };
-      pgSize.onchange = () => { state.pageSize = Number(pgSize.value) || 25; state.page = 1; load(); };
-
-      await load();
-    });
-  })();
-  </script>
+  <script src="/admin/payroll-logic.js"></script>
+  <script src="/admin/payroll.js" defer></script>
 </body>
 </html>

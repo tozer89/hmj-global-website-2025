@@ -147,23 +147,43 @@
   }
 
   function ensureDebugPanel() {
-    if (qs('#debug-panel')) return;
-    const panel = document.createElement('div');
-    panel.id = 'debug-panel';
-    panel.innerHTML = `
-      <button id="debug-toggle" class="btn ghost" type="button">Show debug</button>
-      <div class="dbg-body">
-        <div class="dbg-row"><strong>Identity</strong><span id="dbg-ident-value">-</span></div>
-        <div class="dbg-row"><strong>Token</strong><span id="dbg-token-value">-</span></div>
-        <div class="dbg-row"><strong>Supabase</strong><span id="dbg-sb-value">-</span></div>
-        <div class="dbg-row"><strong>Last query</strong><span id="dbg-query">-</span></div>
-        <div class="dbg-row"><strong>Logs</strong></div>
-        <ul id="dbg-logs" class="dbg-logs"></ul>
-        <button id="dbg-export" class="btn" type="button" style="margin-top:12px">Export logs</button>
-      </div>`;
-    document.body.appendChild(panel);
-    qs('#debug-toggle', panel).addEventListener('click', () => toggleDebug());
-    qs('#dbg-export', panel).addEventListener('click', exportLogs);
+    let panel = qs('#debug-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'debug-panel';
+      panel.innerHTML = `
+        <button id="debug-toggle" class="btn ghost" type="button">Show debug</button>
+        <div class="dbg-body">
+          <div class="dbg-row"><strong>Identity</strong><span id="dbg-ident-value">-</span></div>
+          <div class="dbg-row"><strong>Token</strong><span id="dbg-token-value">-</span></div>
+          <div class="dbg-row"><strong>Supabase</strong><span id="dbg-sb-value">-</span></div>
+          <div class="dbg-row"><strong>Last query</strong><span id="dbg-query">-</span></div>
+          <div class="dbg-row"><strong>Logs</strong></div>
+          <ul id="dbg-logs" class="dbg-logs"></ul>
+          <button id="dbg-export" class="btn" type="button" style="margin-top:12px">Export logs</button>
+        </div>`;
+      document.body.appendChild(panel);
+    } else if (!qs('#dbg-logs', panel)) {
+      panel.innerHTML = `
+        <button id="debug-toggle" class="btn ghost" type="button">Show debug</button>
+        <div class="dbg-body">
+          <div class="dbg-row"><strong>Identity</strong><span id="dbg-ident-value">-</span></div>
+          <div class="dbg-row"><strong>Token</strong><span id="dbg-token-value">-</span></div>
+          <div class="dbg-row"><strong>Supabase</strong><span id="dbg-sb-value">-</span></div>
+          <div class="dbg-row"><strong>Last query</strong><span id="dbg-query">-</span></div>
+          <div class="dbg-row"><strong>Logs</strong></div>
+          <ul id="dbg-logs" class="dbg-logs"></ul>
+          <button id="dbg-export" class="btn" type="button" style="margin-top:12px">Export logs</button>
+        </div>`;
+    }
+
+    if (!panel.dataset.bound) {
+      const toggle = qs('#debug-toggle', panel);
+      if (toggle) toggle.addEventListener('click', () => toggleDebug());
+      const exportBtn = qs('#dbg-export', panel);
+      if (exportBtn) exportBtn.addEventListener('click', exportLogs);
+      panel.dataset.bound = 'true';
+    }
   }
 
   function toggleDebug(force) {
@@ -171,7 +191,7 @@
     const panel = qs('#debug-panel');
     if (!panel) return;
     panel.classList.toggle('open', state.debugOpen);
-    const btn = qs('#debug-toggle');
+    const btn = qs('#debug-toggle', panel);
     if (btn) btn.textContent = state.debugOpen ? 'Hide debug' : 'Show debug';
   }
 
