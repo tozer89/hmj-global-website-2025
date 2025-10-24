@@ -58,6 +58,8 @@
   .pillbar{display:flex;flex-wrap:wrap;gap:6px}
   .chip.good{background:rgba(25,135,84,.16);border-color:rgba(25,135,84,.45);color:#0b5032}
   [data-theme="dark"] .chip.good{background:rgba(25,135,84,.22);border-color:rgba(25,135,84,.45);color:#6df0b2}
+  .chip.bad{background:rgba(183,59,59,.16);border-color:rgba(183,59,59,.45);color:#611c1c}
+  [data-theme="dark"] .chip.bad{background:rgba(183,59,59,.26);border-color:rgba(183,59,59,.55);color:#ffbaba}
   .console-main{display:block;background:var(--bg);padding:0 0 40px}
 
   .wrap{max-width:1280px;margin:16px auto 40px;padding:0 18px;display:grid;gap:16px;grid-template-columns: 1fr 360px}
@@ -529,6 +531,12 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 
   if(debugIdentity){
     const netlifyId = window.netlifyIdentity;
+    const labelFromUser = (user) => {
+      if(!user) return '';
+      const source = user.email || user.user_metadata?.email || user.user_metadata?.full_name || user.full_name || '';
+      return String(source).trim();
+    };
+
     const lookupIdentity = async () => {
       try{
         if(typeof identity === 'function') return await identity('admin');
@@ -543,28 +551,55 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
       return { ok:false };
     };
 
+    const renderIdentityStatus = (state, fallbackUser) => {
+      const info = state || { ok:false };
+      const role = info.role || info.user?.app_metadata?.roles?.[0] || '';
+      let label = String(info.email || '').trim();
+      if(!label) label = labelFromUser(info.user);
+      if(!label) label = labelFromUser(fallbackUser);
+
+      const hasLabel = !!label;
+      const ok = !!info.ok;
+      const title = ok
+        ? (role ? `Signed in (${role})` : 'Signed in')
+        : hasLabel
+          ? (role ? `Signed in as ${label} — role ${role} lacks access` : `Signed in as ${label}`)
+          : 'Not signed in';
+
+      debugIdentity.textContent = hasLabel ? label : (ok ? 'online' : 'offline');
+      debugIdentity.title = title;
+      debugIdentity.setAttribute('aria-label', title);
+
+      if(ok){
+        debugIdentity.classList.add('good');
+        debugIdentity.classList.remove('bad');
+      }else if(hasLabel){
+        debugIdentity.classList.remove('good');
+        debugIdentity.classList.add('bad');
+      }else{
+        debugIdentity.classList.remove('good');
+        debugIdentity.classList.remove('bad');
+      }
+    };
+
     const updateIdentity = async () => {
       try{
         const info = await lookupIdentity();
-        if(info?.ok){
-          const email = info.email || info.user?.email || info.user?.user_metadata?.email || info.user?.user_metadata?.full_name;
-          debugIdentity.textContent = email || 'online';
-          debugIdentity.classList.add('good');
-        }else{
-          debugIdentity.textContent = 'offline';
-          debugIdentity.classList.remove('good');
-        }
+        const widgetUser = netlifyId?.currentUser?.();
+        renderIdentityStatus(info, widgetUser);
       }catch(err){
         console.warn('[timesheets] identity update failed', err);
-        debugIdentity.textContent = 'offline';
-        debugIdentity.classList.remove('good');
+        const widgetUser = netlifyId?.currentUser?.();
+        renderIdentityStatus({ ok:false }, widgetUser);
       }
     };
 
     updateIdentity();
-    netlifyId?.on?.('login', () => { updateIdentity(); });
-    netlifyId?.on?.('logout', () => { updateIdentity(); });
-    netlifyId?.on?.('init', () => { updateIdentity(); });
+    const reRender = () => { updateIdentity(); };
+    netlifyId?.on?.('login', reRender);
+    netlifyId?.on?.('logout', reRender);
+    netlifyId?.on?.('init', reRender);
+    netlifyId?.on?.('error', reRender);
   }
 
   function setAuditVisible(show){
