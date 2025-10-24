@@ -9,6 +9,7 @@
 
 <script>window.ADMIN_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';</script>
 <link rel="stylesheet" href="/css/style.css"/>
+<link rel="stylesheet" href="/css/admin.css"/>
 <style>
   /* ---------------- THEME ---------------- */
   :root{
@@ -1215,7 +1216,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     window.Admin.bootAdmin(main);
   }
 
-  window.createTimesheetsApp = function () {
+  window.createTimesheetsApp = function (_doc = document) {
     startTimesheets();
     return {
       refresh() {
@@ -1239,6 +1240,14 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
     document.addEventListener('DOMContentLoaded', startTimesheets, { once: true });
   }
 })();
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.createTimesheetsApp === 'function') {
+      window.__timesheetsApp = window.createTimesheetsApp();
+    }
+  });
 </script>
 
 
