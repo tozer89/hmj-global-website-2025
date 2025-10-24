@@ -1,8 +1,6 @@
 (function () {
   'use strict';
 
-  const DEFAULT_AFTER_LOGIN = '/timesheets.html';
-
   const rolesOf = (user) => {
     if (Array.isArray(user?.app_metadata?.roles)) return user.app_metadata.roles;
     if (Array.isArray(user?.roles)) return user.roles;
@@ -80,18 +78,10 @@
     if (!identity.__hmjNavBound) {
       identity.__hmjNavBound = true;
       identity.on('init', (user) => callbacks.render(user || null));
-      identity.on('login', (user) => {
-        callbacks.render(user || null);
-        const dest = sessionStorage.getItem('afterLogin') || DEFAULT_AFTER_LOGIN;
-        sessionStorage.removeItem('afterLogin');
-        if (dest) {
-          window.location.href = dest;
-        }
-      });
+      identity.on('login', (user) => callbacks.render(user || null));
       identity.on('logout', () => {
         callbacks.render(null);
         sessionStorage.removeItem('afterLogin');
-        window.location.href = '/';
       });
     }
     return identity;

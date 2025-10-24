@@ -9,6 +9,22 @@
   <script src="js/hmj-identity.js"></script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="js/hmj-nav.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+      if (!identity || typeof identity.on !== 'function') return;
+
+      identity.on('login', () => {
+        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
+        sessionStorage.removeItem('afterLogin');
+        window.location.href = dest;
+      });
+
+      identity.on('logout', () => {
+        window.location.href = '/';
+      });
+    });
+  </script>
 
   <style>
     :root{
