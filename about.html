@@ -47,6 +47,35 @@
     .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
     .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 
+    /* ========= Announcement bar ========= */
+    .announce{
+      background:var(--accent);
+      color:#ffffff;
+    }
+    .announce a{
+      color:#ffffff;
+      text-decoration:underline;
+    }
+    .announce .inner{
+      max-width:1200px;
+      margin:0 auto;
+      padding:8px 16px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+    }
+    .announce .badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.35);
+      color:#ffffff;
+      font-size:.78rem;
+    }
+
     /* ========= Hero (with subtle scan-lines + single electric line) ========= */
     .hero-about{
       min-height: 42vh; display:grid; place-items:center; padding:120px 20px 100px;
@@ -134,6 +163,12 @@
 </head>
 
 <body>
+  <!-- Announcement -->
+  <div class="announce" role="region" aria-label="Announcement">
+    <div class="inner">
+      <span class="badge">⚡ New</span> Hyperscale & Pharma hiring across UK, Benelux, Nordics & DACH — <a href="jobs.html">see open roles</a>
+    </div>
+  </div>
   <!-- ===== Header / Navbar (Home, Candidates, Clients, Jobs only) ===== -->
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">

@@ -122,6 +122,35 @@
       backdrop-filter: blur(6px);
       display: none;
     }
+
+    /* ========= Announcement bar ========= */
+    .announce {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .announce a {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+    .announce .inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 8px 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .announce .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #ffffff;
+      font-size: 0.78rem;
+    }
     .theme-toggle {
       border: 1px solid rgba(255,255,255,0.24);
       border-radius: 999px;
@@ -193,6 +222,12 @@
   </style>
 </head>
 <body>
+  <!-- Announcement -->
+  <div class="announce" role="region" aria-label="Announcement">
+    <div class="inner">
+      <span class="badge">⚡ New</span> Hyperscale & Pharma hiring across UK, Benelux, Nordics & DACH — <a href="jobs.html">see open roles</a>
+    </div>
+  </div>
   <div class="page-shell">
     <header class="hmj-header">
       <nav class="hmj-nav" aria-label="Main navigation">
