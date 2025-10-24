@@ -4,19 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Candidates | HMJ-Global</title>
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/identity-loader.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.netlifyIdentity) {
-        netlifyIdentity.on('login', () => {
+      const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
+      onIdentity((identity) => {
+        if (!identity) return;
+        identity.on('login', () => {
           const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
           sessionStorage.removeItem('afterLogin');
           window.location.href = dest;
         });
-        netlifyIdentity.on('logout', () => {
+        identity.on('logout', () => {
           window.location.href = '/';
         });
-      }
+      });
     });
   </script>
   <link rel="stylesheet" href="css/style.css" />
@@ -204,7 +206,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       const admin = document.getElementById('nav-admin');
       const timesheets = document.getElementById('nav-timesheets');
-      const identity = window.netlifyIdentity;
+      let identity = null;
+      let identityBound = false;
 
       const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
         ? user.app_metadata.roles
@@ -261,6 +264,8 @@
         setAdmin(user);
       }
 
+      renderFor(null);
+
       timesheets?.addEventListener('click', (event) => {
         const user = identity?.currentUser?.();
         if (user) return;
@@ -272,17 +277,26 @@
         requireLogin(event, '/admin/');
       });
 
-      identity?.on('init', (user) => renderFor(user));
-      identity?.on('login', (user) => renderFor(user));
-      identity?.on('logout', () => renderFor(null));
-
-      try {
-        renderFor(identity?.currentUser?.() || null);
-      } catch {
-        renderFor(null);
+      function bindIdentity(id) {
+        if (!id || identityBound) return;
+        identity = id;
+        identityBound = true;
+        try {
+          renderFor(identity.currentUser?.() || null);
+        } catch {
+          renderFor(null);
+        }
+        identity.on('init', (user) => renderFor(user || null));
+        identity.on('login', (user) => renderFor(user || null));
+        identity.on('logout', () => renderFor(null));
       }
+
+      if (window.netlifyIdentity) bindIdentity(window.netlifyIdentity);
+      else document.addEventListener('netlifyIdentityLoad', () => bindIdentity(window.netlifyIdentity));
+
+      document.addEventListener('hmjIdentityUnavailable', () => renderFor(null), { once: true });
     });
-</script>
+  </script>
 
       </ul>
       <div class="hmj-scrim" hidden></div>

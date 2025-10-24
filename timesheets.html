@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Timesheets | HMJ-Global</title>
 
-  <!-- Identity MUST load before our script -->
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <!-- Identity loader ensures the widget only loads when available -->
+  <script defer src="js/identity-loader.js"></script>
 
   <style>
     :root{
@@ -178,7 +178,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       const admin = document.getElementById('nav-admin');
       const timesheets = document.getElementById('nav-timesheets');
-      const identity = window.netlifyIdentity;
+      let identity = null;
+      let identityBound = false;
 
       const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
         ? user.app_metadata.roles
@@ -235,6 +236,8 @@
         setAdmin(user);
       }
 
+      renderFor(null);
+
       timesheets?.addEventListener('click', (event) => {
         const user = identity?.currentUser?.();
         if (user) return;
@@ -246,17 +249,26 @@
         requireLogin(event, '/admin/');
       });
 
-      identity?.on('init', (user) => renderFor(user));
-      identity?.on('login', (user) => renderFor(user));
-      identity?.on('logout', () => renderFor(null));
-
-      try {
-        renderFor(identity?.currentUser?.() || null);
-      } catch {
-        renderFor(null);
+      function bindIdentity(id) {
+        if (!id || identityBound) return;
+        identity = id;
+        identityBound = true;
+        try {
+          renderFor(identity.currentUser?.() || null);
+        } catch {
+          renderFor(null);
+        }
+        identity.on('init', (user) => renderFor(user || null));
+        identity.on('login', (user) => renderFor(user || null));
+        identity.on('logout', () => renderFor(null));
       }
+
+      if (window.netlifyIdentity) bindIdentity(window.netlifyIdentity);
+      else document.addEventListener('netlifyIdentityLoad', () => bindIdentity(window.netlifyIdentity));
+
+      document.addEventListener('hmjIdentityUnavailable', () => renderFor(null), { once: true });
     });
-</script>
+  </script>
 
       </ul>
       <div class="hmj-scrim" hidden></div>

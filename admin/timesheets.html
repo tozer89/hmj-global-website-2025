@@ -1191,7 +1191,7 @@ async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile })
 
 
 <!-- Identity MUST load before common.js -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script defer src="../js/identity-loader.js"></script>
 <!-- Shared admin bootstrap (pure JS file, no <script> tags inside) -->
 <script defer src="/admin/common.js"></script>
 
