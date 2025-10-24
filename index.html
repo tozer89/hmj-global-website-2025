@@ -8,6 +8,7 @@
 
   <!-- In your <head> (once per page) -->
   <script defer src="js/identity-loader.js"></script>
+  <script defer src="js/nav-session.js"></script>
 <script>
   // Global login→redirect helper
   document.addEventListener('DOMContentLoaded', () => {
@@ -220,120 +221,6 @@
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
         <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
-
-<script>
-    // Gate timesheets/admin access depending on session and roles
-  document.addEventListener('DOMContentLoaded', () => {
-    const admin = document.getElementById('nav-admin');
-    const timesheets = document.getElementById('nav-timesheets');
-    let identity = null;
-    let identityBound = false;
-
-    const rolesOf = (user) => Array.isArray(user?.app_metadata?.roles)
-      ? user.app_metadata.roles
-      : Array.isArray(user?.roles)
-        ? user.roles
-        : [];
-
-    function requireLogin(event, destination) {
-      if (event) event.preventDefault();
-      if (!identity) {
-        if (destination) window.location.href = destination;
-        return;
-      }
-      if (destination) sessionStorage.setItem('afterLogin', destination);
-      identity.open('login');
-    }
-
-    function setTimesheets(user) {
-      if (!timesheets) return;
-      if (user) {
-        timesheets.href = '/timesheets.html';
-        timesheets.removeAttribute('aria-disabled');
-        timesheets.title = 'Open timesheets';
-      } else {
-        timesheets.href = '#';
-        timesheets.setAttribute('aria-disabled', 'true');
-        timesheets.title = 'Sign in to access timesheets';
-      }
-    }
-
-    function setAdmin(user) {
-      if (!admin) return;
-      const roles = rolesOf(user);
-      const isAdmin = roles.includes('admin');
-      if (isAdmin) {
-        admin.style.display = 'inline-block';
-        admin.href = '/admin/';
-        admin.removeAttribute('aria-disabled');
-        admin.classList.remove('requires-admin');
-        admin.textContent = 'Admin Dashboard';
-        admin.title = 'Open the admin dashboard';
-      } else {
-        admin.style.display = 'none';
-        admin.href = '/admin/';
-        admin.setAttribute('aria-disabled', 'true');
-        admin.classList.add('requires-admin');
-        admin.textContent = 'Admin Dashboard';
-        admin.title = 'Admin access only';
-      }
-    }
-
-    function renderFor(user) {
-      setTimesheets(user);
-      setAdmin(user);
-    }
-
-    renderFor(null);
-
-    timesheets?.addEventListener('click', (event) => {
-      const user = identity?.currentUser?.();
-      if (user) return;
-      requireLogin(event, '/timesheets.html');
-    });
-    admin?.addEventListener('click', (event) => {
-      const user = identity?.currentUser?.();
-      if (user) return;
-      requireLogin(event, '/admin/');
-    });
-
-    function bindIdentity(id) {
-      if (!id) {
-        identity = null;
-        renderFor(null);
-        return;
-      }
-
-      identity = id;
-      if (!identityBound) {
-        identityBound = true;
-        try {
-          renderFor(identity.currentUser?.() || null);
-        } catch {
-          renderFor(null);
-        }
-        identity.on('init', (user) => renderFor(user || null));
-        identity.on('login', (user) => renderFor(user || null));
-        identity.on('logout', () => renderFor(null));
-      } else {
-        try {
-          renderFor(identity.currentUser?.() || null);
-        } catch {
-          renderFor(null);
-        }
-      }
-    }
-
-    const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
-    onIdentity((id) => bindIdentity(id));
-
-    document.addEventListener('hmjIdentityUnavailable', () => {
-      identity = null;
-      renderFor(null);
-    }, { once: true });
-  });
-</script>
-
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
