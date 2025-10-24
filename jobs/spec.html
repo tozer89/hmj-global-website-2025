@@ -37,6 +37,7 @@
       --hmj-border: var(--border);
       --hmj-text: var(--ink);
       --hmj-muted: var(--muted);
+      --hmj-focus: rgba(63, 102, 199, 0.35);
     }
 
     * {
@@ -45,7 +46,7 @@
 
     body {
       background: var(--bg);
-      color: var(--ink);
+      color: var(--hmj-text);
       font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
       margin: 0;
       min-height: 100vh;
@@ -165,7 +166,7 @@
 
     p {
       margin: 0;
-      color: var(--ink);
+      color: var(--hmj-text);
       line-height: 1.7;
       font-size: 16px;
       font-weight: 500;
@@ -179,9 +180,6 @@
     }
 
     .btn {
-      background: linear-gradient(180deg, rgba(63, 102, 199, 0.2), rgba(63, 102, 199, 0.08));
-      border: 1px solid rgba(63, 102, 199, 0.42);
-      color: #fff;
       font-weight: 800;
       padding: 13px 22px;
       border-radius: 14px;
@@ -189,18 +187,29 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 12px 28px rgba(47, 78, 162, 0.18);
-      transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
       cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      border: 1px solid transparent;
+      box-shadow: none;
+      background: transparent;
     }
 
-    .btn:hover {
+    .btn.primary,
+    .btn:not(.secondary) {
+      background: linear-gradient(180deg, rgba(63, 102, 199, 0.2), rgba(63, 102, 199, 0.08));
+      border-color: rgba(63, 102, 199, 0.42);
+      color: #fff;
+      box-shadow: 0 12px 28px rgba(47, 78, 162, 0.18);
+    }
+
+    .btn.primary:hover,
+    .btn:not(.secondary):hover {
       transform: translateY(-1px);
       box-shadow: 0 18px 38px rgba(47, 78, 162, 0.22);
     }
 
     .btn:focus-visible {
-      outline: 3px solid rgba(63, 102, 199, 0.35);
+      outline: 3px solid var(--hmj-focus);
       outline-offset: 2px;
     }
 
@@ -221,7 +230,7 @@
     }
 
     .muted {
-      color: var(--muted);
+      color: var(--hmj-muted);
       font-weight: 600;
       font-size: 14px;
       letter-spacing: 0.04em;
@@ -274,6 +283,16 @@
       .btn {
         width: 100%;
         justify-content: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .card {
+        gap: 18px;
+      }
+
+      h1 {
+        font-size: clamp(26px, 6vw, 34px);
       }
     }
 
