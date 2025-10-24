@@ -746,7 +746,6 @@ body.about-has-js .about-values__item.is-active .about-values__reveal {
   pointer-events: auto;
 }
 
-body:not(.about-has-js) .about-logos[hidden],
 body:not(.about-has-js) .about-testimonials[hidden] {
   display: block !important;
 }
