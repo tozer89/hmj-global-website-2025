@@ -21,6 +21,6 @@
 
 [[redirects]]
   from = "/.netlify/identity/*"
-  to = "https://hmjg.netlify.app/.netlify/identity/:splat"
+  to = "/.netlify/functions/identity-proxy?path=:splat"
   status = 200
   force = true

@@ -291,6 +291,13 @@
     const closeBtn = shortcutsOverlay.querySelector('[data-close-shortcuts]');
     const submitButton = form?.querySelector('button[type="submit"]');
 
+    // Ensure the overlay starts hidden even if previous sessions toggled it.
+    shortcutsOverlay.hidden = true;
+    if (!shortcutsOverlay.hasAttribute('hidden')) {
+      shortcutsOverlay.setAttribute('hidden', '');
+    }
+    shortcutsOverlay.setAttribute('aria-hidden', 'true');
+
     const trapFocus = (event) => {
       if (shortcutsOverlay.hasAttribute('hidden')) return;
       const focusable = Array.from(shortcutsOverlay.querySelectorAll('button, [href], input, textarea, [tabindex]:not([tabindex="-1"])'))
@@ -311,6 +318,7 @@
 
     const closeOverlay = () => {
       if (shortcutsOverlay.hasAttribute('hidden')) return;
+      shortcutsOverlay.hidden = true;
       shortcutsOverlay.setAttribute('hidden', '');
       shortcutsOverlay.setAttribute('aria-hidden', 'true');
       doc.removeEventListener('keydown', trapFocus, true);
@@ -321,20 +329,34 @@
 
     const openOverlay = () => {
       if (!shortcutsOverlay.hasAttribute('hidden')) return;
+      shortcutsOverlay.hidden = false;
       shortcutsOverlay.removeAttribute('hidden');
-      shortcutsOverlay.removeAttribute('aria-hidden');
+      shortcutsOverlay.setAttribute('aria-hidden', 'false');
       lastFocusedBeforeShortcuts = doc.activeElement;
       closeBtn?.focus();
       doc.addEventListener('keydown', trapFocus, true);
     };
 
     closeBtn?.addEventListener('click', closeOverlay);
+    shortcutsOverlay.addEventListener('click', (evt) => {
+      if (evt.target === shortcutsOverlay) {
+        closeOverlay();
+      }
+    });
+    const isEditableTarget = (target) => {
+      if (!target) return false;
+      if (target.isContentEditable) return true;
+      const name = target.nodeName;
+      return name === 'INPUT' || name === 'TEXTAREA' || name === 'SELECT';
+    };
+
     doc.addEventListener('keydown', (evt) => {
       if (evt.key === '?' && !evt.altKey && !evt.ctrlKey && !evt.metaKey) {
+        if (isEditableTarget(evt.target)) return;
         evt.preventDefault();
         if (shortcutsOverlay.hasAttribute('hidden')) openOverlay(); else closeOverlay();
       }
-      if (evt.key === 'Escape') {
+      if (evt.key === 'Escape' || evt.key === 'Esc') {
         closeOverlay();
       }
       if (evt.key.toLowerCase() === 's' && evt.altKey && submitButton) {
@@ -342,6 +364,11 @@
         const top = submitButton.getBoundingClientRect().top + win.scrollY - 80;
         win.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
         submitButton.focus({ preventScroll: true });
+      }
+    });
+    shortcutsOverlay.addEventListener('pointerdown', (evt) => {
+      if (evt.target === shortcutsOverlay) {
+        closeOverlay();
       }
     });
   }

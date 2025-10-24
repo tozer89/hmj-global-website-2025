@@ -58,10 +58,39 @@
     .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
     .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
     .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+
+    /* Announcement banner */
+    .announce{
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .announce a{
+      color:#ffffff;
+      text-decoration: underline;
+    }
+    .announce .inner{
+      max-width:1200px;
+      margin:0 auto;
+      padding:8px 16px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+    }
+    .announce .badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.35);
+      color:#ffffff;
+      font-size:.78rem;
+    }
   </style>
 </head>
 
-<body>
+<body class="about-body">
   <!-- Announcement -->
   <div class="announce" role="region" aria-label="Announcement">
     <div class="inner">
@@ -346,13 +375,13 @@
       </div>
     </section>
 
-    <section class="about-logos about-section" id="aboutLogos">
+    <section class="about-logos about-section" id="aboutLogos" hidden>
       <div class="about-shell">
         <div class="about-logos__marquee" aria-hidden="true">
           <div class="about-logos__track">
-            <div class="about-logos__item"><img src="images/Gleave.png" alt="Gleave" loading="lazy"></div>
-            <div class="about-logos__item"><img src="images/Sa3%20Power.png" alt="Sa3 Power" loading="lazy"></div>
-            <div class="about-logos__item"><img src="images/Sudlows.png" alt="Sudlows" loading="lazy"></div>
+            <div class="about-logos__item"><img src="images/Gleave.png" alt="Gleave" loading="lazy" /></div>
+            <div class="about-logos__item"><img src="images/Sa3%20Power.png" alt="Sa3 Power" loading="lazy" /></div>
+            <div class="about-logos__item"><img src="images/Sudlows.png" alt="Sudlows" loading="lazy" /></div>
           </div>
         </div>
       </div>
