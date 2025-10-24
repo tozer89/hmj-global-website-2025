@@ -243,23 +243,39 @@
           });
 
           function bindIdentity(id) {
-            if (!id || identityBound) return;
-            identity = id;
-            identityBound = true;
-            try {
-              renderFor(identity.currentUser?.() || null);
-            } catch {
+            if (!id) {
+              identity = null;
               renderFor(null);
+              return;
             }
-            identity.on('init', (user) => renderFor(user || null));
-            identity.on('login', (user) => renderFor(user || null));
-            identity.on('logout', () => renderFor(null));
+
+            identity = id;
+            if (!identityBound) {
+              identityBound = true;
+              try {
+                renderFor(identity.currentUser?.() || null);
+              } catch {
+                renderFor(null);
+              }
+              identity.on('init', (user) => renderFor(user || null));
+              identity.on('login', (user) => renderFor(user || null));
+              identity.on('logout', () => renderFor(null));
+            } else {
+              try {
+                renderFor(identity.currentUser?.() || null);
+              } catch {
+                renderFor(null);
+              }
+            }
           }
 
-          if (window.netlifyIdentity) bindIdentity(window.netlifyIdentity);
-          else document.addEventListener('netlifyIdentityLoad', () => bindIdentity(window.netlifyIdentity));
+          const onIdentity = (window.hmjIdentityReady || function(cb){ cb(window.netlifyIdentity || null); });
+          onIdentity((id) => bindIdentity(id));
 
-          document.addEventListener('hmjIdentityUnavailable', () => renderFor(null), { once: true });
+          document.addEventListener('hmjIdentityUnavailable', () => {
+            identity = null;
+            renderFor(null);
+          }, { once: true });
         });
       </script>
       <div class="hmj-scrim" hidden></div>
