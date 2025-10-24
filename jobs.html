@@ -622,10 +622,26 @@
     };
     const jobsContainer = document.getElementById('jobsDynamic');
     const dataSourceIndicator = document.getElementById('dataSourceIndicator');
+    const resultCount = document.getElementById('resultCount');
+    const noResultsEl = document.getElementById('noResults');
+    const locationSel = document.getElementById('locationFilter');
+    const searchBox = document.getElementById('searchBox');
+    const searchBoxMobile = document.getElementById('searchBoxMobile');
+    const clearBtn = document.getElementById('clearFilters');
+    const filtersEl = document.getElementById('filters');
+    const toggleFiltersBtn = document.getElementById('toggleFilters');
+    const activeCountEl = document.getElementById('activeCount');
+    const shortlistBtn = document.getElementById('shortlistBtn');
+    const toast = document.getElementById('toast');
+    const state = { status: 'all', location: 'all', type: 'all', disc: 'all', search: '', shortlistOnly: false };
+    const PIN_KEY = SHORTLIST_KEY;
     let jobsEls = [];
     let chips = [];
     let seededJobsApplied = false;
     const fallbackAnchorIds = new Set();
+
+    const getPins = () => new Set(JSON.parse(localStorage.getItem(PIN_KEY) || '[]'));
+    const setPins = (set) => localStorage.setItem(PIN_KEY, JSON.stringify([...set]));
 
     function refreshJobsElements(){
       jobsEls = Array.from(jobsContainer?.querySelectorAll('.job') || []);
@@ -1227,17 +1243,6 @@
     topBtn.addEventListener('click',()=>{ const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches; window.scrollTo({top:0,behavior:reduce?'auto':'smooth'}); });
 
     /* ---------- Filters, Search & Shortlist ---------- */
-    const state={status:'all',location:'all',type:'all',disc:'all',search:'',shortlistOnly:false};
-    const resultCount=document.getElementById('resultCount');
-    const noResultsEl=document.getElementById('noResults');
-    const locationSel=document.getElementById('locationFilter');
-    const searchBox=document.getElementById('searchBox');
-    const searchBoxMobile=document.getElementById('searchBoxMobile');
-    const clearBtn=document.getElementById('clearFilters');
-    const filtersEl=document.getElementById('filters');
-    const toggleFiltersBtn=document.getElementById('toggleFilters');
-    const activeCountEl=document.getElementById('activeCount');
-    const shortlistBtn=document.getElementById('shortlistBtn');
 
     if(window.matchMedia('(max-width:680px)').matches){ filtersEl.classList.remove('open'); } else { filtersEl.classList.add('open'); }
     toggleFiltersBtn?.addEventListener('click',()=>filtersEl.classList.toggle('open'));
@@ -1252,9 +1257,6 @@
     searchBox?.addEventListener('input',e=>syncSearch(e.target.value));
     searchBoxMobile?.addEventListener('input',e=>syncSearch(e.target.value));
 
-    const PIN_KEY=SHORTLIST_KEY;
-    const getPins=()=>new Set(JSON.parse(localStorage.getItem(PIN_KEY)||'[]'));
-    const setPins=(set)=>localStorage.setItem(PIN_KEY,JSON.stringify([...set]));
     function refreshPinsUI(){
       const pins=getPins();
       jobsEls.forEach(job=>{
@@ -1313,7 +1315,6 @@
     applyFilters();
 
     /* ---------- Share buttons ---------- */
-    const toast=document.getElementById('toast');
     function showToast(msg='Link copied!'){ toast.textContent=msg; toast.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.classList.remove('show'),1800); }
     function handleShare(job){
       const title=job.querySelector('h3')?.textContent?.trim()||'HMJ-Global role';
