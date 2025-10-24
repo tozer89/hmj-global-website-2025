@@ -6,26 +6,6 @@
   <title>HMJ-Global | Data Centre & Pharma Recruitment Partner</title>
 
 
-  <!-- In your <head> (once per page) -->
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script>
-  // Global login→redirect helper
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.netlifyIdentity) {
-      netlifyIdentity.on('login', () => {
-        const dest = sessionStorage.getItem('afterLogin') || '/timesheets.html';
-        sessionStorage.removeItem('afterLogin');
-        window.location.href = dest;
-      });
-      netlifyIdentity.on('logout', () => {
-        window.location.href = '/';
-      });
-    }
-  });
-</script>
-
-
-
   <!-- Your site stylesheet -->
   <link rel="stylesheet" href="css/style.css" />
 
@@ -204,25 +184,10 @@
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
         <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
-        <!-- In your nav menu -->
-<!--  <li><a href="/timesheets.html" id="nav-timesheets">Timesheets</a></li> -->
-<li><a href="#" id="nav-login" onclick="if(window.netlifyIdentity){ netlifyIdentity.open('login'); } return false;">Timesheets</a></li>
-<li><a href="#" id="nav-logout" style="display:none" onclick="if(window.netlifyIdentity){ netlifyIdentity.logout(); } return false;">Timesheets</a></li>
-
-<script>
-  // Swap Login/Logout depending on session
-  document.addEventListener('DOMContentLoaded', () => {
-    const login = document.getElementById('nav-login');
-    const logout = document.getElementById('nav-logout');
-    const user = window.netlifyIdentity?.currentUser();
-    if (user) { login.style.display='none'; logout.style.display='inline-block'; }
-    window.netlifyIdentity?.on('init', u => {
-      if (u) { login.style.display='none'; logout.style.display='inline-block'; }
-    });
-    window.netlifyIdentity?.on('login', () => { login.style.display='none'; logout.style.display='inline-block'; });
-    window.netlifyIdentity?.on('logout', () => { login.style.display='inline-block'; logout.style.display='none'; });
-  });
-</script>
+        <li><a href="timesheets.html" id="nav-timesheets">Timesheets</a></li>
+        <li hidden><a href="/admin/" id="nav-admin">Admin</a></li>
+        <li><a href="#" id="nav-login">Log in</a></li>
+        <li hidden><a href="#" id="nav-logout">Log out</a></li>
 
       </ul>
       <div class="hmj-scrim" hidden></div>
@@ -502,38 +467,7 @@
     })();
   </script>
 
-<!-- Netlify Identity widget -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-
-<!-- Redirect ONLY for invite/confirmation, never on normal visits -->
-<script>
-(function () {
-  function init() {
-    var ni = window.netlifyIdentity;
-    if (!ni) return;
-
-    // Only set this flag when the URL includes an invite/confirm token
-    var cameViaInvite = (location.hash || "").includes("invite_token") ||
-                        (location.hash || "").includes("confirmation_token");
-    if (cameViaInvite) sessionStorage.setItem("hmj_invite_flow", "1");
-
-    ni.on("init", function(user){
-      // If we're in the invite flow, finish it then go to /admin once
-      if (sessionStorage.getItem("hmj_invite_flow")) {
-        if (user) { sessionStorage.removeItem("hmj_invite_flow"); return location.replace("/admin/"); }
-        ni.on("login", function(){ sessionStorage.removeItem("hmj_invite_flow"); location.replace("/admin/"); });
-      }
-      // Otherwise: no redirect. Users can go to /admin via your login button.
-    });
-
-    ni.init();
-  }
-  if (window.netlifyIdentity) init();
-  else document.addEventListener("netlifyIdentityLoad", init);
-})();
-</script>
-
-
-
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script defer src="js/site-auth.js"></script>
 </body>
 </html>
