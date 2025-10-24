@@ -818,9 +818,37 @@
         out.tags = raw.map((t) => t.trim()).filter(Boolean);
       }
       out.tags = Array.isArray(out.tags) ? out.tags.map((t) => t.trim()).filter(Boolean) : [];
-      out.applyUrl = out.applyUrl || out.apply_url || '';
+      out.applyUrl = (out.applyUrl || out.apply_url || '').toString().trim();
       out.keywords = out.keywords || out.tags.join(', ');
       return out;
+    }
+
+    function resolveApplyUrl(job = {}) {
+      const fallbackRole = encodeURIComponent(job.title || 'HMJ Application');
+      const fallback = `contact.html?role=${fallbackRole}`;
+      const raw = (job.applyUrl || '').trim();
+      if (!raw) return fallback;
+
+      try {
+        const url = new URL(raw, window.location.origin);
+        const sameOrigin = url.origin === window.location.origin;
+        const hmjDomain = /(?:^|\.)hmj-global\.com$/i.test(url.hostname);
+        const path = url.pathname.replace(/^\/+/, '');
+
+        if ((sameOrigin || hmjDomain) && path === 'contact.html') {
+          if (job.title && !url.searchParams.has('role')) {
+            url.searchParams.set('role', job.title);
+          }
+          const search = url.searchParams.toString();
+          const hash = url.hash || '';
+          return `${path}${search ? `?${search}` : ''}${hash}`;
+        }
+
+        return url.href;
+      } catch (err) {
+        console.warn('Invalid apply URL, falling back', err);
+        return fallback;
+      }
     }
 
     async function loadJobsFromApi(){
@@ -836,7 +864,7 @@
     }
     async function loadJobsJSON(){
       try{
-        const res = await fetch('data/jobs.json', {cache:'no-store'});
+        const res = await fetch('/data/jobs.json', {cache:'no-store'});
         if(!res.ok) return null;
         const data = await res.json();
         return Array.isArray(data.jobs) ? data.jobs : null;
@@ -958,7 +986,7 @@
 
     function renderJobCard(job){
       const statusClass = job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live';
-      const applyUrl = job.applyUrl ? job.applyUrl.trim() : `contact.html?role=${encodeURIComponent(job.title)}`;
+      const applyUrl = resolveApplyUrl(job);
       const tagsList = Array.isArray(job.tags) ? job.tags : [];
       const tags = tagsList.length ? tagsList.map((tag) => `<span class="tag">${tag}</span>`).join('') : '';
       const respList = (job.responsibilities || []).map((item) => `<li>${item}</li>`).join('');
@@ -1131,7 +1159,8 @@
         refreshChips();
         bindChipEvents();
         bindJobCardEvents();
-        if(source !== 'api' || schema) {
+        const isLiveSource = source === 'api' || source === 'supabase';
+        if(!isLiveSource || schema) {
           console.warn(`jobs rendered using ${source} fallback (${jobsState.all.length} records${schema ? ', schema mismatch' : ''})`);
           if (notice) {
             notice.hidden = false;
@@ -1303,7 +1332,8 @@
       });
       noResultsEl.style.display=shown?'none':'block';
       const baseMsg = shown===total?'Showing all jobs':`Showing ${shown} of ${total} jobs`;
-      resultCount.textContent = jobsState.source && jobsState.source !== 'api'
+      const isLiveSource = jobsState.source === 'api' || jobsState.source === 'supabase';
+      resultCount.textContent = jobsState.source && !isLiveSource
         ? `${baseMsg} — preview data (${jobsState.source})`
         : baseMsg;
       if(activeCountEl) activeCountEl.textContent=activeFiltersCount();
