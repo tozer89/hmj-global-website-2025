@@ -15,6 +15,7 @@
   }
 
   addCandidate(window.NETLIFY_IDENTITY_URL);
+  addCandidate(window.ADMIN_IDENTITY_URL);
 
   try {
     const local = `${location.origin.replace(/\/$/, '')}/.netlify/identity`;
@@ -22,8 +23,6 @@
   } catch (err) {
     // ignore
   }
-
-  addCandidate(window.ADMIN_IDENTITY_URL);
   addCandidate(PRODUCTION_IDENTITY);
 
   const readyQueue = [];
@@ -79,19 +78,8 @@
     return null;
   }
 
-  function sameHost(url) {
-    if (!url) return false;
-    try {
-      const loc = new URL(String(url), location.href);
-      return loc.host === location.host;
-    } catch (err) {
-      return false;
-    }
-  }
-
   chooseEndpoint().catch(() => null).then((apiUrl) => {
     const fallback =
-      candidates.find((item) => sameHost(item)) ||
       candidates.find((item) => !!item) ||
       PRODUCTION_IDENTITY;
     const resolved = (apiUrl || fallback || '').replace(/\/$/, '');
