@@ -1,5 +1,7 @@
 // netlify/functions/identity-whoami.js
-exports.handler = async (event, context) => {
+const { withAdminCors } = require('./_http.js');
+
+async function baseHandler(event, context) {
   const user = context?.clientContext?.user || null;
   const roles = user?.app_metadata?.roles || user?.roles || [];
   return {
@@ -15,4 +17,6 @@ exports.handler = async (event, context) => {
       raw: user || null
     })
   };
-};
+}
+
+exports.handler = withAdminCors(baseHandler, { requireToken: false });

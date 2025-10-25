@@ -2,6 +2,11 @@ const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => import('nod
 
 const PRODUCTION_IDENTITY_BASE = (process.env.HMJ_IDENTITY_BASE || 'https://hmjg.netlify.app/.netlify/identity').replace(/\/$/, '');
 
+const FUNCTION_PREFIXES = [
+  '/.netlify/functions/identity-proxy',
+  '/.netlify/identity'
+];
+
 const HOP_HEADERS = new Set([
   'accept',
   'accept-encoding',
@@ -24,26 +29,6 @@ const HOP_HEADERS = new Set([
   'x-nf-session-id',
   'x-requested-with'
 ]);
-
-function normaliseHost(value = '') {
-  if (!value) return '';
-  const first = String(value).split(',')[0].trim();
-  return first.replace(/:\d+$/, '');
-}
-
-function rewriteCookieDomain(cookie, host) {
-  if (!cookie || !host) return cookie;
-  const domainPattern = /;\s*domain=[^;]*/i;
-  const name = String(cookie).split(';', 1)[0].split('=')[0].trim();
-  if (name && name.startsWith('__Host-')) {
-    // __Host- cookies must not specify Domain attributes
-    return cookie.replace(domainPattern, '');
-  }
-  if (domainPattern.test(cookie)) {
-    return cookie.replace(domainPattern, `; Domain=${host}`);
-  }
-  return `${cookie}; Domain=${host}`;
-}
 
 function normaliseHost(value = '') {
   if (!value) return '';
@@ -119,19 +104,22 @@ function extractProxyPath(event, singleParams = {}) {
     return singleParams.path;
   }
 
-  const prefix = '/.netlify/functions/identity-proxy';
   const eventPath = event.path || '';
-  if (eventPath.startsWith(prefix)) {
-    return eventPath.slice(prefix.length).replace(/^\/+/, '');
+  for (const prefix of FUNCTION_PREFIXES) {
+    if (eventPath.startsWith(prefix)) {
+      return eventPath.slice(prefix.length).replace(/^\/+/, '');
+    }
   }
 
   const rawUrl = event.rawUrl || '';
-  const index = rawUrl.indexOf(prefix);
-  if (index !== -1) {
-    return rawUrl
-      .slice(index + prefix.length)
-      .split('?')[0]
-      .replace(/^\/+/, '');
+  for (const prefix of FUNCTION_PREFIXES) {
+    const index = rawUrl.indexOf(prefix);
+    if (index !== -1) {
+      return rawUrl
+        .slice(index + prefix.length)
+        .split('?')[0]
+        .replace(/^\/+/, '');
+    }
   }
 
   return '';
@@ -225,4 +213,11 @@ exports.handler = async (event) => {
       body: JSON.stringify({ error: 'identity_proxy_failed' })
     };
   }
+};
+
+exports.config = {
+  path: [
+    '/.netlify/identity',
+    '/.netlify/identity/*'
+  ]
 };
