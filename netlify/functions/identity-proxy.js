@@ -183,7 +183,9 @@ exports.handler = async (event) => {
     const cors = corsHeaders(event);
     Object.assign(headers, cors);
 
-    const raw = response.headers.raw?.();
+    const raw = typeof response.headers.raw === 'function'
+      ? response.headers.raw()
+      : undefined;
     const multiValueHeaders = {};
     const host = normaliseHost(
       event.headers?.['x-forwarded-host'] ||
@@ -192,8 +194,16 @@ exports.handler = async (event) => {
       event.headers?.Host ||
       ''
     );
-    if (raw && raw['set-cookie']) {
-      multiValueHeaders['set-cookie'] = raw['set-cookie'].map((cookie) => rewriteCookieDomain(cookie, host));
+    const setCookieSource = raw?.['set-cookie'] || (typeof response.headers.getSetCookie === 'function'
+      ? response.headers.getSetCookie()
+      : undefined);
+    const setCookieValues = Array.isArray(setCookieSource)
+      ? setCookieSource
+      : setCookieSource
+        ? [setCookieSource]
+        : [];
+    if (setCookieValues.length) {
+      multiValueHeaders['set-cookie'] = setCookieValues.map((cookie) => rewriteCookieDomain(cookie, host));
     }
     if (raw) {
       for (const [key, values] of Object.entries(raw)) {
