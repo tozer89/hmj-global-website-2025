@@ -6,9 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="/css/admin.css" />
-  <script>window.ADMIN_IDENTITY_URL = '/.netlify/identity';</script>
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="/admin/common.js?v=21"></script>
+  <script defer src="/admin/common.js?v=31"></script>
   <style>
     :root {
       --ink:#0f172a; --muted:#64748b; --bg:#f4f7fb;

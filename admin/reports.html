@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Reports — Admin | HMJ Global</title>
   <link rel="stylesheet" href="/css/style.css" />
-  <script>window.ADMIN_IDENTITY_URL = '/.netlify/identity';</script>
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js"></script>
   <style>

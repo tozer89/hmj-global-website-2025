@@ -219,6 +219,37 @@
       }
       .hero-inner p { color: rgba(232,237,255,0.72); }
     }
+    .form-card-critical {
+      background: var(--panel);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: clamp(28px, 5vw, 48px);
+      margin-top: clamp(-80px, -12vw, -40px);
+      position: relative;
+      z-index: 2;
+    }
+    @media (prefers-color-scheme: dark) {
+      .hero {
+        background: radial-gradient(circle at 20% 20%, rgba(63,102,199,0.18), transparent 45%),
+                    radial-gradient(circle at 80% 25%, rgba(24,36,88,0.75), rgba(10,14,32,0.9));
+      }
+      .hero::before { opacity: 0.22; }
+      .hero::after {
+        background: linear-gradient(120deg, rgba(21,28,54,0.2) 30%, rgba(63,102,199,0.4) 60%, rgba(21,28,54,0.2) 80%);
+        mix-blend-mode: screen;
+      }
+      .hero-glow {
+        background: radial-gradient(circle at 50% 25%, rgba(63,102,199,0.55), transparent 60%),
+                    linear-gradient(180deg, rgba(21,28,54,0.9), rgba(21,28,54,0.6));
+        opacity: 0.9;
+      }
+      .hero-inner {
+        background: rgba(18,24,54,0.82);
+        color: #e8edff;
+      }
+      .hero-inner p { color: rgba(232,237,255,0.72); }
+    }
     .hero::after{
       content:"";position:absolute;inset:0;
       background:radial-gradient(120% 120% at 15% 10%,rgba(63,102,199,0.18),transparent 55%),

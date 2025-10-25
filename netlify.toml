@@ -21,7 +21,7 @@
 
 [[redirects]]
   from = "/.netlify/identity/*"
-  to = "/.netlify/functions/identity-proxy?path=:splat"
+  to = "/.netlify/functions/identity-proxy/:splat"
   status = 200
   force = true
 
@@ -30,3 +30,18 @@
   to = "/.netlify/functions/identity-proxy"
   status = 200
   force = true
+
+[[plugins]]
+  package = "./netlify/plugins/admin-build-info"
+
+[context.production]
+  functions = "netlify/functions"
+
+[context.deploy-preview]
+  functions = "admin-v2/functions"
+
+[context.branch-deploy]
+  functions = "admin-v2/functions"
+
+[context.dev]
+  functions = "admin-v2/functions"

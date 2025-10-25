@@ -6,7 +6,8 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Payroll — Admin | HMJ Global</title>
 
-  <script>window.ADMIN_IDENTITY_URL = '/.netlify/identity';</script>
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="/admin/common.js?v=22"></script>
 

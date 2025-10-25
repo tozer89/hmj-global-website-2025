@@ -7,11 +7,12 @@
   <title>Assignments — Admin | HMJ Global</title>
 
   <!-- Identity (relative path keeps Deploy Previews on the same origin) -->
-  <script>window.ADMIN_IDENTITY_URL = '/.netlify/identity';</script>
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script defer src="../js/identity-loader.js"></script>
 
   <!-- Shared Admin bootstrap + helpers -->
-  <script defer src="/admin/common.js?v=21"></script>
+  <script defer src="/admin/common.js?v=31"></script>
 
   <style>
     :root{

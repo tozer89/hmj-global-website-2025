@@ -1,7 +1,8 @@
 // netlify/functions/admin-role-check.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { user, roles } = await getContext(event, context, { requireAdmin: true });
     return {
@@ -18,3 +19,5 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);
