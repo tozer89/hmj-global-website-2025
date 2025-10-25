@@ -1,7 +1,8 @@
 // netlify/functions/admin-candidate-docs-list.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { supabase } = await getContext(event, context, { requireAdmin: true });
     const { candidateId } = JSON.parse(event.body || '{}');
@@ -23,3 +24,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Failed to load documents' }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

@@ -2,6 +2,7 @@
 // Generates a CSV export for candidates. Falls back to the static dataset
 // when Supabase is unavailable so previews still provide useful output.
 
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 
@@ -84,7 +85,7 @@ function toCsv(rows) {
   return [header, ...lines].join('\n');
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   let payload = {};
   try { payload = JSON.parse(event.body || '{}'); } catch { payload = {}; }
 
@@ -160,3 +161,4 @@ exports.handler = async (event, context) => {
   };
 };
 
+exports.handler = withAdminCors(baseHandler);

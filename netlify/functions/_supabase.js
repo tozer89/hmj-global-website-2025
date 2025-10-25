@@ -2,6 +2,7 @@
 // CommonJS module (Netlify Functions). Robust diagnostics & helpers.
 
 const { createClient } = require('@supabase/supabase-js');
+const { withAdminCors } = require('./_http.js');
 const { getSupabaseUrl, getSupabaseServiceKey } = require('./_supabase-env.js');
 
 // ---- ENV ----
@@ -112,7 +113,7 @@ function withSupabase(handler) {
   //   if (error) return jsonError(500, 'query_failed', error.message, { trace });
   //   return jsonOk({ ok: true, items: data, trace });
   // });
-  return async (event, context) => {
+  const runner = async (event, context) => {
     const trace = traceFrom(event);
     if (!hasSupabase()) {
       const reason = supabaseError ? supabaseError.message : 'Supabase client unavailable';
@@ -139,6 +140,8 @@ function withSupabase(handler) {
       return jsonError(500, code, message, { trace });
     }
   };
+
+  return withAdminCors(runner);
 }
 
 module.exports = {

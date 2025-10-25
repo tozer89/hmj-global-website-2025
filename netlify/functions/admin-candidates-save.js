@@ -1,7 +1,8 @@
 // netlify/functions/admin-candidates-save.js
+const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     // ✅ IMPORTANT: pass (event, context, { requireAdmin:true })
     const { user, roles, supabase, supabaseError } = await getContext(event, context, { requireAdmin: true });
@@ -171,3 +172,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Error', readOnly: status === 503 }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

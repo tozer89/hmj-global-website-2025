@@ -1,9 +1,10 @@
 // netlify/functions/admin-jobs-reorder.js
+const { withAdminCors } = require('./_http.js');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { toJob } = require('./_jobs-helpers.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
     let supabase;
@@ -50,3 +51,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

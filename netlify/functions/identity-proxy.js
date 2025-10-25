@@ -25,16 +25,25 @@ const HOP_HEADERS = new Set([
   'x-requested-with'
 ]);
 
-const ALLOW_HEADERS = [
-  'authorization',
-  'content-type',
-  'netlify-csrf',
-  'x-csrf-token',
-  'x-netlify-csrf',
-  'x-requested-with'
-].join(', ');
+function normaliseHost(value = '') {
+  if (!value) return '';
+  const first = String(value).split(',')[0].trim();
+  return first.replace(/:\d+$/, '');
+}
 
-const ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
+function rewriteCookieDomain(cookie, host) {
+  if (!cookie || !host) return cookie;
+  const domainPattern = /;\s*domain=[^;]*/i;
+  const name = String(cookie).split(';', 1)[0].split('=')[0].trim();
+  if (name && name.startsWith('__Host-')) {
+    // __Host- cookies must not specify Domain attributes
+    return cookie.replace(domainPattern, '');
+  }
+  if (domainPattern.test(cookie)) {
+    return cookie.replace(domainPattern, `; Domain=${host}`);
+  }
+  return `${cookie}; Domain=${host}`;
+}
 
 function buildUrl(pathname = '', params = {}) {
   const trimmed = String(pathname || '').replace(/^\/+/, '');
@@ -74,28 +83,15 @@ function normaliseBody(event) {
   return event.body;
 }
 
-function resolveSelfOrigin(event) {
-  const proto = event.headers?.['x-forwarded-proto'] || event.headers?.['X-Forwarded-Proto'] || 'https';
-  const host = event.headers?.['x-forwarded-host'] || event.headers?.['X-Forwarded-Host'] || event.headers?.host || event.headers?.Host;
-  if (!host) return '';
-  return `${proto}://${host}`;
-}
-
 function corsHeaders(event) {
-  const requestOrigin = event.headers?.origin || event.headers?.Origin || '';
-  const allowOrigin = requestOrigin || resolveSelfOrigin(event);
-  const headers = {
-    'access-control-allow-methods': ALLOW_METHODS.join(', '),
-    'access-control-allow-headers': ALLOW_HEADERS,
-    'vary': 'origin'
+  const origin = event.headers?.origin || event.headers?.Origin || '';
+  return {
+    'Access-Control-Allow-Origin': origin || '*',
+    'Vary': 'Origin',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-trace',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
   };
-  if (allowOrigin) {
-    headers['access-control-allow-origin'] = allowOrigin;
-    headers['access-control-allow-credentials'] = 'true';
-  } else {
-    headers['access-control-allow-origin'] = '*';
-  }
-  return headers;
 }
 
 function extractProxyPath(event, singleParams = {}) {
@@ -124,7 +120,7 @@ function extractProxyPath(event, singleParams = {}) {
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
-      statusCode: 204,
+      statusCode: 200,
       headers: corsHeaders(event),
     };
   }
@@ -160,12 +156,30 @@ exports.handler = async (event) => {
 
     delete headers['set-cookie'];
 
-    Object.assign(headers, corsHeaders(event));
+    const cors = corsHeaders(event);
+    Object.assign(headers, cors);
 
-    const raw = response.headers.raw?.();
+    const raw = typeof response.headers.raw === 'function'
+      ? response.headers.raw()
+      : undefined;
     const multiValueHeaders = {};
-    if (raw && raw['set-cookie']) {
-      multiValueHeaders['set-cookie'] = raw['set-cookie'];
+    const host = normaliseHost(
+      event.headers?.['x-forwarded-host'] ||
+      event.headers?.['X-Forwarded-Host'] ||
+      event.headers?.host ||
+      event.headers?.Host ||
+      ''
+    );
+    const setCookieSource = raw?.['set-cookie'] || (typeof response.headers.getSetCookie === 'function'
+      ? response.headers.getSetCookie()
+      : undefined);
+    const setCookieValues = Array.isArray(setCookieSource)
+      ? setCookieSource
+      : setCookieSource
+        ? [setCookieSource]
+        : [];
+    if (setCookieValues.length) {
+      multiValueHeaders['set-cookie'] = setCookieValues.map((cookie) => rewriteCookieDomain(cookie, host));
     }
     if (raw) {
       for (const [key, values] of Object.entries(raw)) {

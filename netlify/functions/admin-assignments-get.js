@@ -1,9 +1,10 @@
 // netlify/functions/admin-assignments-get.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { loadStaticAssignments } = require('./_assignments-helpers.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
     const { id } = JSON.parse(event.body || '{}');
@@ -35,3 +36,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

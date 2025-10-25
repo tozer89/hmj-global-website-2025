@@ -6,9 +6,10 @@
   <meta name="robots" content="noindex,nofollow"/>
   <title>Clients — Admin | HMJ Global</title>
 
-  <script>window.ADMIN_IDENTITY_URL = '/.netlify/identity';</script>
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script defer src="../js/identity-loader.js"></script>
-  <script defer src="/admin/common.js?v=21"></script>
+  <script defer src="/admin/common.js?v=31"></script>
 
   <style>
     :root{

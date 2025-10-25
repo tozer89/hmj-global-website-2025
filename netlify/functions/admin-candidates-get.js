@@ -1,8 +1,9 @@
 // netlify/functions/admin-candidates-get.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   let body = {};
   try { body = JSON.parse(event.body || '{}'); } catch { body = {}; }
   const id = body.id || event.queryStringParameters?.id || null;
@@ -78,3 +79,5 @@ exports.handler = async (event, context) => {
     return serveStatic(e?.message || 'unhandled', { ok: false, status: e?.code || 500, error: e?.message || String(e) });
   }
 };
+
+exports.handler = withAdminCors(baseHandler);
