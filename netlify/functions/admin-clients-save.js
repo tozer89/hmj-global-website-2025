@@ -1,9 +1,10 @@
 // netlify/functions/admin-clients-save.js
+const { withAdminCors } = require('./_http.js');
 const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { recordAudit } = require('./_audit.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { user } = await getContext(event, context, { requireAdmin: true });
     const { client } = JSON.parse(event.body || '{}');
@@ -44,3 +45,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

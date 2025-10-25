@@ -1,4 +1,5 @@
 // netlify/functions/admin-report-gross-margin.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { supabaseStatus, hasSupabase, getSupabase } = require('./_supabase.js');
 const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
@@ -105,7 +106,7 @@ async function loadStatic(baseWeekEnding) {
   return timesheets.map((ts) => makeTimesheetRow(ts, assignmentMap.get(Number(ts.assignment_id)) || null, baseWeekEnding));
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
     const body = event.httpMethod === 'POST' ? JSON.parse(event.body || '{}') : {};
@@ -184,3 +185,5 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

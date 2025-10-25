@@ -1,4 +1,5 @@
 // netlify/functions/admin-jobs-list.js
+const { withAdminCors } = require('./_http.js');
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { toJob, loadStaticJobs, ensureStaticJobs, isSchemaError } = require('./_jobs-helpers.js');
@@ -19,7 +20,7 @@ function filterPublishedJobs(list = []) {
   return list.filter((job) => job && job.published !== false);
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   let fallback = [];
   let fallbackError = null;
   try {
@@ -130,3 +131,5 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

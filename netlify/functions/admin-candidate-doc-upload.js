@@ -1,4 +1,5 @@
 // netlify/functions/admin-candidate-doc-upload.js
+const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getContext } = require('./_auth.js');
 const { slugify } = require('./_jobs-helpers.js');
@@ -11,7 +12,7 @@ function ensureBuffer(base64) {
   }
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { supabase, user } = await getContext(event, context, { requireAdmin: true });
     const { candidateId, name, contentType, data, label } = JSON.parse(event.body || '{}');
@@ -58,3 +59,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Upload failed' }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

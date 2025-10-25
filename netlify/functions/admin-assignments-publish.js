@@ -1,4 +1,5 @@
 // netlify/functions/admin-assignments-publish.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { recordAudit } = require('./_audit.js');
 
@@ -22,7 +23,7 @@ function normaliseCandidateName(candidate) {
   return combo || null;
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { supabase, user } = await getContext(event, context, { requireAdmin: true });
     const { id } = JSON.parse(event.body || '{}');
@@ -142,3 +143,4 @@ exports.handler = async (event, context) => {
   }
 };
 
+exports.handler = withAdminCors(baseHandler);
