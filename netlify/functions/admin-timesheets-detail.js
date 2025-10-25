@@ -1,10 +1,11 @@
 // netlify/functions/timesheets-detail.js
-const { supabase, getContext } = require('./_timesheet-helpers');
+const { withAdminCors } = require('./_http.js');
+const { supabase, getContext } = require('./_timesheet-helpers.js');
 
 const H = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const respond = (s, b) => ({ statusCode: s, headers: H, body: JSON.stringify(b) });
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { user } = context.clientContext || {};
     if (!user) return respond(401, { error: 'identity_required' });
@@ -67,3 +68,5 @@ exports.handler = async (event, context) => {
     return respond(400, { error: e.message || 'detail_failed' });
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

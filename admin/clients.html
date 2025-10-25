@@ -1,177 +1,344 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Clients — Admin | HMJ-Global</title>
-<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script defer src="/admin/common.js"></script>
-<link rel="stylesheet" href="/css/style.css"/>
-<style>
-  :root{--bg:#0b0f18;--panel:#111827;--panel2:#0e1524;--border:#252f3f;--text:#e8eef7;--muted:#9fb0c9;--purple:#7c5cff}
-  html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  .top{position:sticky;top:0;background:#0c1222;border-bottom:1px solid var(--border)}
-  .row{max-width:1200px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
-  .brand{font-weight:800}.sp{flex:1}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .muted{color:var(--muted)} .btn{background:#1a2238;border:1px solid #2c3853;color:#fff;padding:9px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-  .btn:hover{border-color:#3b4f79} .btn.primary{background:var(--purple);border-color:transparent}
-  input,select,textarea{background:#0f172a;color:#e6eef7;border:1px solid #2c3853;border-radius:10px;padding:10px;width:100%}
-  table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
-  .tabs{display:flex;gap:8px;flex-wrap:wrap}
-  .tab{padding:8px 10px;border:1px solid #2a395a;background:#121a2d;border-radius:9px;cursor:pointer}
-  .tab.active{border-color:#385394;background:#16243d}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  .danger{background:#3a1920;border-color:#602b36}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Clients — Admin | HMJ Global</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js?v=31"></script>
+
+  <style>
+    :root{
+      --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --accent:#3f66c7;
+      --ink:#0f1b3f; --muted:#5d6f9e; --danger:#b42318;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit;text-decoration:none}
+
+    .top{position:sticky;top:0;z-index:90;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.2);box-shadow:0 10px 28px rgba(15,27,63,.18)}
+    .row{max-width:1320px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em}
+    .sp{flex:1}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+
+    .btn{background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.04));color:var(--ink);border:1px solid rgba(47,78,162,.25);padding:9px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(47,78,162,.18);border-color:rgba(47,78,162,.45)}
+    .btn.ghost{background:#fff;border-color:rgba(47,78,162,.18);color:var(--highlight)}
+    .btn.danger{background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08));border-color:rgba(180,35,24,.4);color:#fff}
+    .btn.small{padding:7px 11px;font-size:13px;border-radius:10px}
+    .btn:disabled{cursor:not-allowed;opacity:.55;box-shadow:none;transform:none}
+
+    .wrap{max-width:1320px;margin:24px auto;padding:0 22px;display:grid;gap:18px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(15,27,63,.12)}
+    .muted{color:var(--muted)}
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .toolbar input{padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600;min-width:240px}
+
+    .layout{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:18px;align-items:start}
+    @media(max-width:980px){ .layout{grid-template-columns:1fr} }
+
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    thead th{background:#eef2ff;padding:10px 12px;text-align:left;font-size:13px;font-weight:800;color:var(--muted)}
+    tbody td{padding:10px 12px;border-top:1px solid var(--border);font-size:14px}
+    tbody tr:hover{background:#f7f8ff}
+
+    .profile{display:grid;gap:16px}
+    .profile header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+    .profile header h2{margin:0;font-size:20px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+    input,select,textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-size:14px;font-weight:600}
+    textarea{min-height:120px;resize:vertical}
+
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:7px 12px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#f4f6ff;font-weight:700;cursor:pointer}
+    .tab.active{background:#fff;border-color:rgba(47,78,162,.45);box-shadow:0 10px 20px rgba(47,78,162,.18)}
+    .tabpane{display:none}
+    .tabpane.active{display:block}
+
+    .assignments ul{margin:0;padding-left:18px;display:grid;gap:6px}
+
+    #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.25);box-shadow:0 16px 30px rgba(15,27,63,.18);font-weight:700}
+  </style>
 </head>
 <body>
-<div class="top"><div class="row">
-  <div class="brand">Clients — Admin</div><div class="sp"></div>
-  <a class="btn" href="/admin/">⟵ Admin home</a>
-  <button class="btn" onclick="netlifyIdentity?.logout()">Sign out</button>
-</div></div>
+  <div class="top"><div class="row">
+    <div class="brand">Clients Console</div>
+    <span class="pill">Admin</span>
+    <div class="sp"></div>
+    <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
+    <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+  </div></div>
 
-<div class="wrap" id="gate" style="display:none">
-  <div class="card"><strong>Admin only.</strong> <p class="why muted"></p>
-  <button class="btn" onclick="netlifyIdentity?.open('login')">Log in</button></div>
-</div>
-
-<div class="wrap" id="app" style="display:none">
-  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <input id="q" placeholder="Search client name or email…" style="min-width:260px"/>
-    <button class="btn" id="btnRefresh">Refresh</button>
-    <button class="btn primary" id="btnNew">New client</button>
-  </div>
-
-  <div class="card" id="listWrap">Loading…</div>
-
-  <div class="card" id="profile" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
-      <h3 style="margin:0" id="pTitle">Client</h3>
-      <div style="display:flex;gap:8px">
-        <button class="btn" id="btnSave">Save</button>
-        <button class="btn danger" id="btnDelete">Delete</button>
-      </div>
-    </div>
-    <div class="tabs">
-      <div class="tab active" data-tab="details">Details</div>
-      <div class="tab" data-tab="terms">Terms</div>
-      <div class="tab" data-tab="assignments">Assignments</div>
-    </div>
-
-    <div id="tab-details" class="tabpane" style="margin-top:10px">
-      <form id="frmDetails" class="grid">
-        <label>Name <input name="name" required></label>
-        <label>Main email <input name="email" type="email"></label>
-        <label>Billing email <input name="billing_email" type="email"></label>
-        <label>Phone <input name="phone"></label>
-        <label>Contact name <input name="contact_name"></label>
-        <label>Contact email <input name="contact_email" type="email"></label>
-        <label>Contact phone <input name="contact_phone"></label>
-        <label>Terms (days) <input name="terms_days" type="number" min="0" step="1"></label>
-        <label style="grid-column:1/-1">Address (JSON) <textarea name="address" rows="3" placeholder='{"line1":"…"}'></textarea></label>
-      </form>
-    </div>
-
-    <div id="tab-terms" class="tabpane" style="display:none;margin-top:10px">
-      <textarea id="termsText" rows="10" placeholder="Paste or write client-specific terms & special instructions…"></textarea>
-    </div>
-
-    <div id="tab-assignments" class="tabpane" style="display:none;margin-top:10px">
-      <div id="assnWrap" class="muted">Loading…</div>
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn primary" onclick="window.netlifyIdentity?.open('login')">Log in</button>
     </div>
   </div>
-</div>
 
-<div id="toast"></div>
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel toolbar">
+      <input id="search" type="search" placeholder="Search client name or email…" autocomplete="off"/>
+      <button class="btn small" id="btnSearch">Search</button>
+      <button class="btn ghost small" id="btnRefresh">Refresh</button>
+      <div class="sp"></div>
+      <button class="btn primary small" id="btnNew">＋ New client</button>
+    </section>
 
-<script>
-async function main({ api, sel, toast }){
-  const listWrap = sel('#listWrap'); const profile = sel('#profile');
-  let cur = null;
+    <div class="layout">
+      <section class="panel" id="listPanel">
+        <h3 style="margin:0 0 12px;font-size:16px">Clients</h3>
+        <div id="clientList" class="muted">Loading…</div>
+      </section>
 
-  // tabs
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.onclick = ()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      document.querySelectorAll('.tabpane').forEach(x=>x.style.display='none');
-      sel('#tab-'+t.dataset.tab).style.display='';
-    };
-  });
+      <section class="panel profile" id="profile" style="display:none">
+        <header>
+          <div>
+            <h2 id="clientName">Client</h2>
+            <div class="muted" id="clientMeta"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn small" id="btnSave">Save</button>
+            <button class="btn danger small" id="btnDelete">Delete</button>
+          </div>
+        </header>
 
-  async function loadList(){
-    listWrap.textContent='Loading…';
-    const rows = await api('/admin-clients-list','POST',{ q: sel('#q').value||'' });
-    listWrap.innerHTML = `
-      <table><thead><tr><th>Name</th><th>Billing email</th><th>Phone</th><th></th></tr></thead>
-      <tbody>
-        ${rows.map(r=>`
+        <div class="tabs">
+          <button class="tab active" data-tab="details">Details</button>
+          <button class="tab" data-tab="terms">Terms</button>
+          <button class="tab" data-tab="assignments">Assignments</button>
+        </div>
+
+        <div class="tabpane active" id="tab-details">
+          <div class="grid">
+            <label>Name<input id="f_name" required/></label>
+            <label>Billing email<input id="f_billing_email" type="email"/></label>
+            <label>Phone<input id="f_phone"/></label>
+            <label>Contact name<input id="f_contact_name"/></label>
+            <label>Contact email<input id="f_contact_email" type="email"/></label>
+            <label>Contact phone<input id="f_contact_phone"/></label>
+            <label>Terms (days)<input id="f_terms_days" type="number" min="0" step="1"/></label>
+            <label>Status<select id="f_status"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+            <label style="grid-column:1/-1">Address (JSON)<textarea id="f_address" placeholder='{"line1":"…"}'></textarea></label>
+          </div>
+        </div>
+
+        <div class="tabpane" id="tab-terms">
+          <textarea id="f_terms_text" placeholder="Client-specific terms, invoicing notes, etc." rows="10"></textarea>
+        </div>
+
+        <div class="tabpane" id="tab-assignments">
+          <div id="assignmentsWrap" class="muted">Select a client to view linked assignments.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+  (function startClients(){
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+      return setTimeout(startClients, 40);
+    }
+
+    window.Admin.bootAdmin(async ({ api, sel, toast }) => {
+      const listHost = sel('#clientList');
+      const profile = sel('#profile');
+      const nameEl = sel('#clientName');
+      const metaEl = sel('#clientMeta');
+      const assignmentsHost = sel('#assignmentsWrap');
+      const searchInput = sel('#search');
+      const tabs = Array.from(document.querySelectorAll('.tab'));
+      const panes = Array.from(document.querySelectorAll('.tabpane'));
+
+      const form = {
+        id: null,
+        name: sel('#f_name'),
+        billing_email: sel('#f_billing_email'),
+        phone: sel('#f_phone'),
+        contact_name: sel('#f_contact_name'),
+        contact_email: sel('#f_contact_email'),
+        contact_phone: sel('#f_contact_phone'),
+        terms_days: sel('#f_terms_days'),
+        status: sel('#f_status'),
+        address: sel('#f_address'),
+        terms_text: sel('#f_terms_text'),
+      };
+
+      const state = { rows: [], current: null };
+
+      function switchTab(key){
+        tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === key));
+        panes.forEach((pane) => pane.classList.toggle('active', pane.id === `tab-${key}`));
+      }
+      tabs.forEach((tab) => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
+
+      function renderList(){
+        if (!state.rows.length) {
+          listHost.innerHTML = '<p class="muted">No clients found. Try refreshing.</p>';
+          return;
+        }
+        const rows = state.rows.map((row) => `
           <tr>
-            <td>${r.name||'—'}</td>
-            <td>${r.billing_email||'—'}</td>
-            <td>${r.phone||'—'}</td>
-            <td><button class="btn" data-open="${r.id}">Open</button></td>
-          </tr>`).join('')}
-      </tbody></table>`;
-    listWrap.querySelectorAll('button[data-open]').forEach(b=> b.onclick=()=>openProfile(Number(b.dataset.open)));
-  }
+            <td>${row.name || '—'}</td>
+            <td>${row.billing_email || '—'}</td>
+            <td>${row.phone || '—'}</td>
+            <td><button class="btn ghost small" data-open="${row.id}">Open</button></td>
+          </tr>`).join('');
+        listHost.innerHTML = `<table><thead><tr><th>Name</th><th>Billing email</th><th>Phone</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+        listHost.querySelectorAll('[data-open]').forEach((btn) => {
+          btn.addEventListener('click', () => openClient(Number(btn.dataset.open)));
+        });
+      }
 
-  function setDetails(d){
-    const f = sel('#frmDetails'); const set=(n,v)=>{ if(f.elements[n]) f.elements[n].value = v ?? ''; };
-    set('name', d.name); set('email', d.email); set('billing_email', d.billing_email);
-    set('phone', d.phone); set('contact_name', d.contact_name); set('contact_email', d.contact_email);
-    set('contact_phone', d.contact_phone); set('terms_days', d.terms_days);
-    set('address', JSON.stringify(d.address||{}, null, 2));
-  }
-  function getDetails(){
-    const f = sel('#frmDetails'); const v=n=>f.elements[n]?.value||'';
-    let addr={}; try{ addr = JSON.parse(v('address')||'{}'); }catch{}
-    return { id: cur?.id, name:v('name'), email:v('email'), billing_email:v('billing_email'),
-      phone:v('phone'), contact_name:v('contact_name'), contact_email:v('contact_email'),
-      contact_phone:v('contact_phone'), terms_days: Number(v('terms_days')||0), address: addr };
-  }
+      function readForm(){
+        let address = null;
+        const addressText = form.address.value.trim();
+        if (addressText) {
+          try { address = JSON.parse(addressText); }
+          catch { toast('Address JSON is invalid', 'warn', 3200); throw new Error('invalid_address'); }
+        }
+        return {
+          id: state.current?.id,
+          name: form.name.value.trim(),
+          billing_email: form.billing_email.value.trim() || null,
+          phone: form.phone.value.trim() || null,
+          contact_name: form.contact_name.value.trim() || null,
+          contact_email: form.contact_email.value.trim() || null,
+          contact_phone: form.contact_phone.value.trim() || null,
+          terms_days: form.terms_days.value ? Number(form.terms_days.value) : null,
+          status: form.status.value || 'active',
+          address,
+          terms_text: form.terms_text.value.trim() || null,
+        };
+      }
 
-  async function openProfile(id){
-    profile.style.display='block'; sel('#assnWrap').textContent='Loading…';
-    const d = await api('/admin-clients-open','POST',{ id });
-    cur = d; sel('#pTitle').textContent = d.name || ('Client '+id);
-    setDetails(d);
-    // load assignments tied to this client (your function supports filtering)
-    try{
-      const assn = await api('/admin-assignments-list','POST',{ client_id:id });
-      sel('#assnWrap').innerHTML = `
-        <table><thead><tr><th>ID</th><th>Contractor</th><th>Project</th><th>Site</th><th>Active</th></tr></thead>
-        <tbody>
-          ${(assn||[]).map(a=>`<tr><td>${a.id}</td><td>${a.contractor_email||'—'}</td><td>${a.project_name||'—'}</td><td>${a.site_name||'—'}</td><td>${a.active ? '✓':'—'}</td></tr>`).join('')}
-        </tbody></table>`;
-    }catch{ sel('#assnWrap').textContent='No assignments'; }
-    // hydrate terms text (store in clients.address.terms_notes or separate column if you have one)
-    sel('#termsText').value = (d.billing?.notes || d.terms_notes || '') || '';
-  }
+      function fillForm(client){
+        form.name.value = client?.name || '';
+        form.billing_email.value = client?.billing_email || '';
+        form.phone.value = client?.phone || '';
+        form.contact_name.value = client?.contact_name || '';
+        form.contact_email.value = client?.contact_email || '';
+        form.contact_phone.value = client?.contact_phone || '';
+        form.terms_days.value = client?.terms_days ?? '';
+        form.status.value = client?.status || 'active';
+        const address = client?.address && typeof client.address === 'object' ? client.address : null;
+        form.address.value = address ? JSON.stringify(address, null, 2) : '';
+        const termsText = client?.terms_text || (client?.billing && client.billing.notes) || '';
+        form.terms_text.value = termsText;
+      }
 
-  sel('#btnRefresh').onclick = loadList;
-  sel('#btnNew').onclick = ()=>{ cur = {name:''}; profile.style.display='block'; setDetails(cur); sel('#termsText').value=''; sel('#pTitle').textContent='New client'; };
+      async function loadAssignments(clientId){
+        assignmentsHost.textContent = 'Loading assignments…';
+        try {
+          const rows = await api('/admin-assignments-list', 'POST', { client_id: clientId });
+          if (!rows || !rows.length) {
+            assignmentsHost.innerHTML = '<p class="muted">No assignments linked to this client.</p>';
+            return;
+          }
+          const items = rows.map((row) => `
+            <li><strong>#${row.id}</strong> — ${row.contractor_email || 'Contractor'} · ${row.project_name || 'Project'} (${row.active ? 'active' : 'closed'})</li>`).join('');
+          assignmentsHost.innerHTML = `<ul>${items}</ul>`;
+        } catch (e) {
+          assignmentsHost.innerHTML = `<p class="muted">Unable to load assignments: ${e.message || e}</p>`;
+        }
+      }
 
-  sel('#btnSave').onclick = async ()=>{
-    try{
-      const payload = getDetails();
-      payload.terms_notes = sel('#termsText').value || '';
-      const saved = await api('/admin-clients-save','POST', payload);
-      toast('Saved'); if(saved?.id) openProfile(saved.id); loadList();
-    }catch(e){ toast('Save failed: '+e.message); }
-  };
-  sel('#btnDelete').onclick = async ()=>{
-    if(!cur?.id) return;
-    if(!confirm('Delete this client?')) return;
-    try{ await api('/admin-clients-delete','POST',{ id: cur.id }); toast('Deleted'); profile.style.display='none'; loadList(); }
-    catch(e){ toast('Delete failed: '+e.message); }
-  };
+      async function openClient(id){
+        try {
+          const client = await api('/admin-clients-get', 'POST', { id });
+          state.current = client;
+          profile.style.display = '';
+          nameEl.textContent = client.name || 'Client';
+          metaEl.textContent = client.billing_email ? `${client.billing_email} · ${client.status || 'active'}` : (client.status || 'active');
+          fillForm(client);
+          switchTab('details');
+          loadAssignments(client.id);
+        } catch (e) {
+          toast('Failed to load client: ' + (e.message || e), 'error', 3800);
+        }
+      }
 
-  loadList();
-}
-</script>
+      function newClient(){
+        state.current = null;
+        profile.style.display = '';
+        nameEl.textContent = 'New client';
+        metaEl.textContent = 'Draft not yet saved';
+        fillForm(null);
+        assignmentsHost.innerHTML = '<p class="muted">Save the client to view assignments.</p>';
+        switchTab('details');
+      }
+
+      async function loadList(){
+        listHost.textContent = 'Loading…';
+        try {
+          const rows = await api('/admin-clients-list', 'POST', { q: searchInput.value.trim() || null });
+          state.rows = Array.isArray(rows) ? rows : [];
+          renderList();
+        } catch (e) {
+          console.error('[clients] list error', e);
+          listHost.innerHTML = `<p class="muted">Failed to load clients: ${e.message || e}</p>`;
+        }
+      }
+
+      async function saveClient(){
+        try {
+          const payload = readForm();
+          if (!payload.name) {
+            toast('Client name is required', 'warn', 2800);
+            return;
+          }
+          const saved = await api('/admin-clients-save', 'POST', { client: payload });
+          toast('Client saved', 'ok', 1800);
+          await loadList();
+          if (saved?.id) openClient(saved.id);
+        } catch (e) {
+          if (e.message === 'invalid_address') return;
+          console.error('[clients] save error', e);
+          toast('Save failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      async function deleteClient(){
+        if (!state.current?.id) return;
+        if (!confirm('Delete this client?')) return;
+        try {
+          await api('/admin-clients-delete', 'POST', { id: state.current.id });
+          toast('Client deleted', 'ok', 1800);
+          profile.style.display = 'none';
+          state.current = null;
+          await loadList();
+        } catch (e) {
+          toast('Delete failed: ' + (e.message || e), 'error', 4200);
+        }
+      }
+
+      // wires
+      sel('#btnSearch').onclick = () => loadList();
+      sel('#btnRefresh').onclick = () => { searchInput.value = ''; loadList(); };
+      sel('#btnNew').onclick = newClient;
+      sel('#btnSave').onclick = saveClient;
+      sel('#btnDelete').onclick = deleteClient;
+      searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadList(); } });
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveClient(); }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); searchInput.focus(); }
+      });
+
+      await loadList();
+    });
+  })();
+  </script>
 </body>
 </html>

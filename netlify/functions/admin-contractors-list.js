@@ -1,10 +1,11 @@
 // netlify/functions/admin-contractors-list.js
+const { withAdminCors } = require('./_http.js');
 const { supabase } = require('./_supabase.js');
 const { getContext, coded } = require('./_auth.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
-    await getContext(context, { requireAdmin: true });
+    await getContext(event, context, { requireAdmin: true });
     const q = event.body ? JSON.parse(event.body) : {};
     const term = (q.search||'').trim().toLowerCase();
     let query = supabase.from('contractors')
@@ -22,3 +23,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

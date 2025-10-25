@@ -6,81 +6,137 @@
   <title>Timesheets | HMJ-Global</title>
 
   <!-- Identity MUST load before our script -->
+  <script src="js/hmj-identity.js"></script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
 
   <style>
     :root{
-      --bg:#121725; --panel:#1b2236; --surface:#f3f6fb;
-      --card:#ffffff; --ink:#0e1526; --muted:#5b6b82;
-      --accent:#3A66B3; --accent-2:#7aa0e6;
-      --good:#22a06b; --warn:#e6a100; --bad:#d14b4b;
-      --cardBorder:rgba(26,26,46,.12);
-      --chip:#eef3ff; --chipBorder:rgba(58,102,179,.28);
+      --bg:#ffffff; --panel:#ffffff; --surface:#eef3ff;
+      --card:#ffffff; --ink:#0f172a; --muted:#5b6b82;
+      --accent:#3A66B3; --accent-2:#244a8a;
+      --good:#1f9a66; --warn:#d88f00; --bad:#c94242;
+      --cardBorder:rgba(15,23,42,.12);
+      --chip:#edf3ff; --chipBorder:rgba(58,102,179,.28);
       --radius:14px;
     }
     *{ box-sizing:border-box }
     html,body{ height:100% }
     body{
       margin:0;
-      background:linear-gradient(180deg,var(--bg),#0f1422 45%) fixed;
+      background:var(--bg);
       color:var(--ink);
       font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
     }
 
-    .topbar{ padding:18px 16px; background:transparent; }
+    .hmj-header{position:sticky;top:0;z-index:1000;background:#0f1322;color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
+    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+    .hmj-logo img{height:40px;display:block}
+    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
+    .hmj-menu a{display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s}
+    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
+    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
+    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
+    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
+    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
+    @media (max-width:900px){
+      .hmj-burger{display:inline-block}
+      .hmj-menu{position:fixed;right:12px;left:12px;top:64px;background:#0f1322;border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.35);display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;transition:max-height .28s ease,padding .2s ease}
+      .hmj-menu.open{max-height:70vh;padding:10px}
+      .hmj-menu a{padding:14px 12px;width:100%}
+      .hmj-scrim[hidden]{display:none}
+    }
+    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
+    .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
+    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+
+    /* ===== Announcement bar ===== */
+    .announce{
+      background:var(--accent);
+      color:#ffffff;
+    }
+    .announce a{
+      color:#ffffff;
+      text-decoration:underline;
+    }
+    .announce .inner{
+      max-width:1200px;
+      margin:0 auto;
+      padding:8px 16px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+    }
+    .announce .badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.35);
+      color:#ffffff;
+      font-size:.78rem;
+    }
+
+    .topbar{ padding:18px 16px; background:#fff; border-bottom:1px solid rgba(15,23,42,.08); box-shadow:0 2px 8px rgba(15,23,42,.05); }
     .toprow{ max-width:1080px; margin:0 auto; display:flex; gap:12px; align-items:center; }
-    .brand{ color:#d9e2ff; font-weight:700; letter-spacing:.2px }
+    .brand{ color:var(--accent-2); font-weight:700; letter-spacing:.2px }
     .spacer{ flex:1 }
 
-    .wrap{ max-width:1080px; margin:0 auto 84px; padding:0 16px; }
+    .wrap{ max-width:1080px; margin:32px auto 84px; padding:0 16px; }
     .grid{ display:grid; grid-template-columns: 1fr 320px; gap:18px; }
     @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
 
     .card{
       background:var(--card);
-      border:1px solid var(--cardBorder);
-      box-shadow:0 8px 26px rgba(4,10,20,.08);
+      border:1px solid rgba(15,23,42,.08);
+      box-shadow:0 10px 30px rgba(15,23,42,.06);
       border-radius:var(--radius);
       padding:16px;
     }
     .panel-dark{
-      background:var(--panel);
-      color:#d3dbf4;
-      border:1px solid rgba(255,255,255,.06);
+      background:var(--card);
+      color:var(--ink);
+      border:1px solid rgba(15,23,42,.08);
       border-radius:var(--radius);
-      padding:10px;
+      padding:16px;
+      box-shadow:0 10px 30px rgba(15,23,42,.06);
     }
-    .panel-dark .inner{ background:var(--card); color:var(--ink); border-radius:12px; padding:12px; }
+    .panel-dark .inner{ background:var(--surface); color:var(--ink); border-radius:12px; padding:12px; border:1px solid rgba(15,23,42,.06); }
 
     .btn{
       display:inline-flex; align-items:center; justify-content:center;
-      padding:9px 12px; border-radius:10px; border:1px solid var(--cardBorder);
-      background:#fff; color:var(--ink); cursor:pointer; text-decoration:none; font-weight:600
+      padding:9px 12px; border-radius:10px; border:1px solid rgba(15,23,42,.12);
+      background:#fff; color:var(--ink); cursor:pointer; text-decoration:none; font-weight:600;
+      box-shadow:0 4px 12px rgba(58,102,179,.08);
+      transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
     }
-    .btn:hover{ filter:brightness(.98) }
-    .btn.primary{ background:var(--accent); color:#fff; border-color:transparent }
-    .btn.ghost{ background:var(--surface) }
-    .btn.good{ background:var(--good); color:#fff; border:0 }
-    .btn.warn{ background:var(--warn); color:#1a1600; border:0 }
-    .btn.bad{ background:var(--bad); color:#fff; border:0 }
+    .btn:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(58,102,179,.14); }
+    .btn.primary{ background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 6px 16px rgba(58,102,179,.22); }
+    .btn.ghost{ background:var(--surface); color:var(--accent-2); border-color:rgba(58,102,179,.3); box-shadow:none; }
+    .btn.good{ background:var(--good); color:#fff; border:0; box-shadow:0 6px 16px rgba(31,154,102,.28); }
+    .btn.warn{ background:var(--warn); color:#1a1600; border:0; box-shadow:0 6px 16px rgba(216,143,0,.28); }
+    .btn.bad{ background:var(--bad); color:#fff; border:0; box-shadow:0 6px 16px rgba(201,66,66,.28); }
     .btn.sm{ padding:7px 10px; font-weight:600 }
 
     .muted{ color:var(--muted) }
     .kpis{ display:flex; gap:8px; flex-wrap:wrap }
-    .chip{ background:var(--chip); border:1px solid var(--chipBorder); color:#223259; padding:6px 10px; border-radius:999px; font-weight:700 }
+    .chip{ background:var(--chip); border:1px solid var(--chipBorder); color:var(--accent-2); padding:6px 10px; border-radius:999px; font-weight:700 }
     .section-gap{ margin-top:12px }
 
     .bubble{
       background:var(--card);
-      border:1px solid var(--cardBorder);
+      border:1px solid rgba(15,23,42,.10);
       border-radius:18px;
-      box-shadow:0 10px 34px rgba(4,10,20,.10);
-      padding:14px;
+      box-shadow:0 14px 34px rgba(15,23,42,.10);
+      padding:18px;
     }
 
-    table{ width:100%; border-collapse:separate; border-spacing:0 8px; }
+    table{ width:100%; border-collapse:separate; border-spacing:0 8px; margin-top:12px; }
     th{ text-align:left; font-size:12px; color:var(--muted); font-weight:700; padding:0 10px 6px }
-    td{ background:#fff; border:1px solid var(--cardBorder); padding:8px 10px; vertical-align:middle; }
+    td{ background:#fff; border:1px solid rgba(15,23,42,.08); padding:10px 12px; vertical-align:middle; }
     td:first-child{ border-top-left-radius:10px; border-bottom-left-radius:10px; }
     td:last-child{ border-top-right-radius:10px; border-bottom-right-radius:10px; }
     @media (max-width:600px){
@@ -90,11 +146,12 @@
     }
 
     input[type="number"], textarea{
-      width:100%; border:1px solid var(--cardBorder); border-radius:8px; padding:8px 10px; font:inherit; color:var(--ink);
+      width:100%; max-width:100%; box-sizing:border-box; border:1px solid rgba(15,23,42,.14); border-radius:8px; padding:9px 12px; font:inherit; color:var(--ink);
       background:#fff;
+      transition:border-color .15s ease, box-shadow .15s ease;
     }
     textarea{ resize:vertical; min-height:40px }
-    input:focus, textarea:focus{ outline:2px solid rgba(58,102,179,.25); border-color:var(--accent) }
+    input:focus, textarea:focus{ outline:0; border-color:var(--accent); box-shadow:0 0 0 3px rgba(58,102,179,.18); }
 
     .row-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center }
     .help{ font-size:12px; color:var(--muted) }
@@ -102,30 +159,30 @@
 
     /* Lock inputs when not draft */
     #sheet.locked input, #sheet.locked textarea{
-      pointer-events:none; filter:grayscale(1); opacity:.6;
+      pointer-events:none; filter:grayscale(.4); opacity:.5;
     }
 
     /* Toast */
     .toast{
       position:fixed; left:50%; transform:translateX(-50%); bottom:14px; max-width:90vw;
-      background:#0c1224; color:#fff; border:1px solid rgba(255,255,255,.12);
-      padding:10px 12px; border-radius:12px; z-index:9999; box-shadow:0 12px 28px rgba(0,0,0,.35);
+      background:#133062; color:#fff; border:1px solid rgba(19,48,98,.4);
+      padding:12px 14px; border-radius:12px; z-index:9999; box-shadow:0 16px 36px rgba(19,48,98,.35);
       font-weight:600
     }
 
     /* Payslip modal */
-    .modal-backdrop{ position:fixed; inset:0; background:rgba(8,12,22,.55); display:none; align-items:center; justify-content:center; z-index:10000; }
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(15,23,42,.45); display:none; align-items:center; justify-content:center; z-index:10000; }
     .modal-backdrop.show{ display:flex; }
-    .modal{ width:min(780px, 92vw); background:#fff; color:var(--ink); border-radius:14px; border:1px solid var(--cardBorder); box-shadow:0 24px 60px rgba(0,0,0,.35); overflow:hidden; }
-    .modal .hd{ padding:12px 16px; border-bottom:1px solid var(--cardBorder); display:flex; justify-content:space-between; align-items:center; }
-    .modal .bd{ padding:14px 16px; max-height:70vh; overflow:auto; }
-    .modal .ft{ padding:12px 16px; border-top:1px solid var(--cardBorder); display:flex; justify-content:flex-end; gap:8px; }
+    .modal{ width:min(780px, 92vw); background:#fff; color:var(--ink); border-radius:14px; border:1px solid rgba(15,23,42,.12); box-shadow:0 24px 60px rgba(15,23,42,.28); overflow:hidden; }
+    .modal .hd{ padding:14px 18px; border-bottom:1px solid rgba(15,23,42,.08); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(180deg,rgba(58,102,179,.08),transparent); }
+    .modal .bd{ padding:16px 18px; max-height:70vh; overflow:auto; }
+    .modal .ft{ padding:14px 18px; border-top:1px solid rgba(15,23,42,.08); display:flex; justify-content:flex-end; gap:8px; }
 
     /* Mobile sticky action bar */
     @media (max-width: 980px){
       .fab-bar{
-        position:fixed; left:0; right:0; bottom:0; background:rgba(8,12,22,.9);
-        border-top:1px solid rgba(255,255,255,.08); padding:10px 12px; display:flex; gap:8px;
+        position:fixed; left:0; right:0; bottom:0; background:rgba(243,246,251,.95);
+        border-top:1px solid rgba(15,23,42,.08); padding:12px 14px; display:flex; gap:8px;
         justify-content:flex-end; z-index:9998;
       }
       .wrap{ margin-bottom:120px; }
@@ -133,6 +190,72 @@
   </style>
 </head>
 <body>
+  <!-- Announcement -->
+  <div class="announce" role="region" aria-label="Announcement">
+    <div class="inner">
+      <span class="badge">⚡ New</span> Hyperscale &amp; Pharma hiring across UK, Benelux, Nordics &amp; DACH — <a href="jobs.html">See open roles</a>
+    </div>
+  </div>
+  <header class="hmj-header">
+    <nav class="hmj-nav" aria-label="Main">
+      <a class="hmj-logo" href="index.html">
+        <img src="images/logo.png" alt="HMJ-Global Logo" />
+      </a>
+
+      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <ul id="hmj-menu" class="hmj-menu">
+        <li><a href="index.html" data-page="index">Home</a></li>
+        <li><a href="about.html" data-page="about">About</a></li>
+        <li><a href="clients.html" data-page="clients">Clients</a></li>
+        <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
+        <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
+        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
+        <li><a href="/timesheets.html" id="nav-timesheets" aria-disabled="true">Timesheets</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+      </ul>
+      <div class="hmj-scrim" hidden></div>
+    </nav>
+  </header>
+
+  
+
+
+<script>
+    (function(){
+      const burger = document.querySelector('.hmj-burger');
+      const menu = document.getElementById('hmj-menu');
+      const scrim = document.querySelector('.hmj-scrim');
+      if(!burger || !menu || !scrim) return;
+
+      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'timesheets.html').toLowerCase();
+      const currentNormalized = currentSegment.replace(/^\//, '');
+      menu.querySelectorAll('a[href]').forEach(a => {
+        const href = (a.getAttribute('href') || '').trim();
+        if (!href || href.includes('://')) return;
+        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
+        if (target === currentNormalized) a.setAttribute('aria-current', 'page');
+      });
+
+      function openMenu(open){
+        burger.setAttribute('aria-expanded', String(open));
+        menu.classList.toggle('open', open);
+        scrim.hidden = !open;
+        document.documentElement.style.overflow = open ? 'hidden' : '';
+      }
+
+      burger.addEventListener('click', () => openMenu(burger.getAttribute('aria-expanded') !== 'true'));
+      scrim.addEventListener('click', () => openMenu(false));
+      menu.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        requestAnimationFrame(() => openMenu(false));
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openMenu(false); });
+    })();
+  </script>
 
   <div class="topbar">
     <div class="toprow">
@@ -148,7 +271,7 @@
     <!-- Login gate -->
     <div id="gate" class="card hidden">
       <p>Please log in to access your timesheets.</p>
-      <button class="btn primary" onclick="window.netlifyIdentity && window.netlifyIdentity.open('login')">Log in</button>
+      <button class="btn primary" onclick="(function(){var id=(window.hmjConfigureIdentity&&window.hmjConfigureIdentity())||window.netlifyIdentity;if(id&&id.open){id.open('login');}})()">Log in</button>
     </div>
 
     <!-- App -->
@@ -159,8 +282,8 @@
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
             <div>
               <h2 style="margin:0">My Timesheet</h2>
-              <div class="muted">
-                Submit your hours by <b>Tuesday 12:00</b> for Friday payment.
+              <div class="muted" id="deadlineBlurb">
+                Submit your hours by <b id="deadlineEmphasis">Tuesday 12:00 (UK)</b> for Friday payment.
                 <span id="deadlineTag" class="chip" style="margin-left:6px">Deadline: Tue 12:00</span>
               </div>
               <div id="assnLine" class="muted section-gap hidden"></div>
@@ -269,19 +392,60 @@
       dirty:false
     };
 
+    const DEADLINE_DEFAULT = {
+      note: 'Tuesday 12:00 (UK time)',
+      tz: 'Europe/London',
+    };
+
+    async function hydrateDeadline(){
+      const chip = document.getElementById('deadlineTag');
+      const emphasis = document.getElementById('deadlineEmphasis');
+      const blurb = document.getElementById('deadlineBlurb');
+      try{
+        const res = await fetch('/.netlify/functions/public-settings', { cache: 'no-store' });
+        const data = res.ok ? await res.json() : null;
+        const settings = data?.settings || {};
+        const note = (settings.deadlineNote || DEADLINE_DEFAULT.note).trim();
+        const tz = (settings.deadlineTimezone || DEADLINE_DEFAULT.tz).trim();
+        const label = tz && !note.toLowerCase().includes(tz.toLowerCase()) ? `${note} (${tz})` : note;
+        if (chip) chip.textContent = `Deadline: ${label}`;
+        if (emphasis) emphasis.textContent = label;
+        if (blurb) {
+          const prefix = 'Submit your hours by ';
+          const suffix = ' for Friday payment.';
+          blurb.innerHTML = `${prefix}<b id="deadlineEmphasis">${label}</b>${suffix}`;
+        }
+      }catch(err){
+        console.warn('timesheet deadline settings unavailable', err);
+        if (chip) chip.textContent = `Deadline: ${DEADLINE_DEFAULT.note}`;
+        if (emphasis) emphasis.textContent = DEADLINE_DEFAULT.note;
+      }
+    }
+
+    hydrateDeadline();
+
     // ---------- Netlify Identity load guard ----------
     function whenIdentityReady(cb){
-      if (window.netlifyIdentity){ cb(window.netlifyIdentity); return; }
+      const tryIdentity = () => {
+        const id = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+        if (!id) return false;
+        cb(id);
+        return true;
+      };
+
+      if (tryIdentity()) return;
+
       let tries = 0;
       const t = setInterval(()=>{
-        if (window.netlifyIdentity){ clearInterval(t); cb(window.netlifyIdentity); }
+        if (tryIdentity()){ clearInterval(t); }
         else if (++tries > 200){ clearInterval(t); console.error('Netlify Identity failed to load'); }
       }, 25);
     }
 
     // ---------- robust API fetch ----------
     async function api(path, method='GET', body=null){
-      const id = window.netlifyIdentity?.currentUser();
+      const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+      const id = identity?.currentUser?.();
       if(!id) throw new Error('identity_required');
       const token = await id.jwt();
       const res = await fetch(`/.netlify/functions${path}`,{
@@ -509,7 +673,8 @@
         $('#modalSlip').classList.add('show');
 
         try{
-            const id = window.netlifyIdentity?.currentUser();
+            const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+            const id = identity?.currentUser?.();
             if(!id) throw new Error('identity_required');
             const token = await id.jwt();
 
@@ -572,7 +737,8 @@
             </table>
             `;
 
-            $('#slipFootnote').textContent = `Generated for ${window.netlifyIdentity?.currentUser()?.email || ''}`;
+            const active = identity?.currentUser?.();
+            $('#slipFootnote').textContent = `Generated for ${active?.email || ''}`;
         }catch(err){
             console.error('slip detail error:', err);
             $('#slipBody').innerHTML = `<div class="muted">Could not load this timesheet’s details.</div>`;
@@ -588,7 +754,10 @@
 
     async function boot(){
       try{
-        await window.netlifyIdentity?.currentUser()?.jwt();
+        const identity = window.hmjConfigureIdentity?.() || window.netlifyIdentity || null;
+        const current = identity?.currentUser?.();
+        if (!current) throw new Error('identity_required');
+        await current.jwt();
         await loadWeek();
         await loadHistory();
         bindInputs();
@@ -605,11 +774,17 @@
     function bootOnce(){ if(BOOTED) return; BOOTED=true; boot().catch(e=>{ BOOTED=false; console.error(e); toast(`Could not load timesheet: ${e.message||e}`); }); }
 
     whenIdentityReady((ni)=>{
-      $('#btnSignOut').onclick = () => ni.logout();
-      ni.on('init', (user) => { if (user){ showApp(); bootOnce(); } else { showGate(); } });
-      ni.on('login', () => { showApp(); bootOnce(); });
-      ni.on('logout', () => { BOOTED=false; showGate(); });
-      ni.init();
+      $('#btnSignOut').onclick = () => ni?.logout?.();
+      if (typeof ni.on === 'function') {
+        ni.on('init', (user) => { if (user){ showApp(); bootOnce(); } else { showGate(); } });
+        ni.on('login', () => { showApp(); bootOnce(); });
+        ni.on('logout', () => { BOOTED=false; showGate(); });
+      }
+      try {
+        const existing = ni?.currentUser?.();
+        if (existing) { showApp(); bootOnce(); }
+        else { showGate(); }
+      } catch (_) { showGate(); }
     });
   </script>
 </body>

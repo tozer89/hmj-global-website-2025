@@ -1,10 +1,11 @@
 // netlify/functions/admin-contractors-save.js
+const { withAdminCors } = require('./_http.js');
 const { supabase } = require('./_supabase.js');
 const { getContext, coded } = require('./_auth.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
-    const { user, roles } = await getContext(context, { requireAdmin: true });
+    const { user, roles } = await getContext(event, context, { requireAdmin: true });
     const payload = JSON.parse(event.body || '{}');
 
     if (!payload.name || !payload.email) throw coded(400, 'name and email required');
@@ -41,3 +42,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

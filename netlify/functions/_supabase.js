@@ -2,27 +2,29 @@
 // CommonJS module (Netlify Functions). Robust diagnostics & helpers.
 
 const { createClient } = require('@supabase/supabase-js');
+const { withAdminCors } = require('./_http.js');
+const { getSupabaseUrl, getSupabaseServiceKey } = require('./_supabase-env.js');
 
 // ---- ENV ----
 // Prefer the service role key server-side (RLS bypassed in functions).
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_URL = getSupabaseUrl();
 
-const SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_KEY ||       // your current name
-  process.env.SUPABASE_SERVICE_ROLE ||      // common alias
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||  // another alias
-  process.env.SUPABASE_ANON_KEY;            // fallback (not recommended server-side)
+const SERVICE_KEY = getSupabaseServiceKey();
 
 const DEBUG = /^1|true|yes|on|debug$/i.test(process.env.DEBUG_SUPA || '');
 
 // ---- SINGLETON CLIENT ----
 let supabase = null;
+let supabaseError = null;
 try {
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    console.error('[supa] Missing env: SUPABASE_URL or SERVICE KEY (SUPABASE_SERVICE_KEY/SERVICE_ROLE)');
+    const missing = !SUPABASE_URL && !SERVICE_KEY
+      ? 'Supabase URL & service key environment variables missing'
+      : !SUPABASE_URL
+        ? 'Supabase URL missing (set SUPABASE_URL or VITE_SUPABASE_URL)'
+        : 'Supabase service key missing (set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY)';
+    supabaseError = new Error(`${missing} missing`);
+    console.error('[supa] Missing env: %s', missing);
   } else {
     supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
     if (DEBUG) console.log('[supa] Client created OK');
@@ -31,7 +33,12 @@ try {
     }
   }
 } catch (e) {
+  supabaseError = e;
   console.error('[supa] createClient failed:', e?.message || e);
+}
+
+function hasSupabase() {
+  return !!(supabase && typeof supabase.from === 'function');
 }
 
 // ---- TRACE & LOGGING ----
@@ -62,6 +69,13 @@ function assertSupabase(event) {
 }
 function getSupabase(event) {
   return assertSupabase(event);
+}
+
+function supabaseStatus() {
+  return {
+    ok: hasSupabase(),
+    error: supabaseError ? supabaseError.message : null,
+  };
 }
 
 // ---- JSON HELPERS (classic Netlify return shape) ----
@@ -99,8 +113,13 @@ function withSupabase(handler) {
   //   if (error) return jsonError(500, 'query_failed', error.message, { trace });
   //   return jsonOk({ ok: true, items: data, trace });
   // });
-  return async (event, context) => {
+  const runner = async (event, context) => {
     const trace = traceFrom(event);
+    if (!hasSupabase()) {
+      const reason = supabaseError ? supabaseError.message : 'Supabase client unavailable';
+      console.warn('[supa][%s] fallback: %s', trace, reason);
+      return jsonError(503, 'supabase_unavailable', reason, { trace });
+    }
     try {
       const s = getSupabase(event);
       debugLog(event, 'handler start');
@@ -121,11 +140,14 @@ function withSupabase(handler) {
       return jsonError(500, code, message, { trace });
     }
   };
+
+  return withAdminCors(runner);
 }
 
 module.exports = {
   // Back-compat
   supabase,
+  supabaseError,
   // Helpers
   getSupabase,
   assertSupabase,
@@ -134,4 +156,6 @@ module.exports = {
   jsonError,
   health,
   debugLog,
+  hasSupabase,
+  supabaseStatus,
 };

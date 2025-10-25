@@ -1,5 +1,6 @@
 // netlify/functions/_auth.js
 const { createClient } = require('@supabase/supabase-js');
+const { getSupabaseUrl, getSupabaseServiceKey } = require('./_supabase-env.js');
 
 function coded(status, message) { const e = new Error(message); e.code = status; return e; }
 
@@ -19,15 +20,21 @@ function decodeJWT(token) {
   } catch { return {}; }
 }
 
+function normalizeRoles(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((role) => String(role || '').toLowerCase()).filter(Boolean);
+}
+
 function rolesFromClaims(claims) {
-  return claims?.app_metadata?.roles || claims?.roles || [];
+  const roles = claims?.app_metadata?.roles || claims?.roles || [];
+  return normalizeRoles(Array.isArray(roles) ? roles : [roles].filter(Boolean));
 }
 
 function getSupabaseAdmin() {
-  const url = (process.env.SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_SERVICE_KEY || '').trim();
-  if (!url) throw coded(500, 'SUPABASE_URL missing');
-  if (!key) throw coded(500, 'SUPABASE_SERVICE_KEY missing');
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceKey();
+  if (!url) throw coded(500, 'Supabase URL missing (set SUPABASE_URL or VITE_SUPABASE_URL)');
+  if (!key) throw coded(500, 'Supabase service key missing (set SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY)');
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -39,7 +46,6 @@ function getSupabaseAdmin() {
  *   - nf_jwt cookie
  */
 exports.getContext = async (event, context, opts = {}) => {
-  const supabase = getSupabaseAdmin();
   const debug = !!opts.debug;
 
   let user = context?.clientContext?.user || null;
@@ -68,13 +74,86 @@ exports.getContext = async (event, context, opts = {}) => {
   if (!user) throw coded(401, 'Unauthorized');
 
   // roles from either clientContext or jwt
-  roles = roles.length ? roles : rolesFromClaims(user);
-  if (opts.requireAdmin && !roles.includes('admin')) throw coded(403, 'Forbidden');
+  roles = roles.length ? normalizeRoles(roles) : rolesFromClaims(user);
+
+  let supabase = null;
+  let supabaseError = null;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch (err) {
+    const message = err?.message || '';
+    const missingEnv = err?.code === 500 && /SUPABASE_/i.test(message);
+    if (missingEnv) {
+      supabaseError = err;
+      supabase = null;
+    } else {
+      throw err;
+    }
+  }
+
+  const requireAdmin = !!opts.requireAdmin;
+  const hasAdminRole = roles.includes('admin');
+  let adminVerifiedViaTable = false;
+
+  async function checkAdminTable() {
+    if (!supabase || typeof supabase.from !== 'function') return false;
+    const identifiers = [];
+    if (user?.id) identifiers.push({ column: 'user_id', value: String(user.id) });
+    if (user?.sub && user.sub !== user.id) identifiers.push({ column: 'user_id', value: String(user.sub) });
+    if (user?.email) identifiers.push({ column: 'email', value: String(user.email).toLowerCase() });
+
+    for (const { column, value } of identifiers) {
+      try {
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('user_id')
+          .eq(column, value)
+          .limit(1);
+
+        if (error) {
+          const msg = error.message || '';
+          if (/relation .+ does not exist/i.test(msg)) {
+            console.warn('[auth] admin_users table missing — allowing Identity role check only');
+            return true;
+          }
+          console.warn('[auth] admin_users lookup failed via %s (%s)', column, msg);
+          continue;
+        }
+
+        if (Array.isArray(data) && data.length) {
+          return true;
+        }
+      } catch (err) {
+        console.warn('[auth] admin_users lookup threw (%s)', err?.message || err);
+      }
+    }
+    return false;
+  }
+
+  if (requireAdmin && !hasAdminRole) {
+    adminVerifiedViaTable = await checkAdminTable();
+    if (adminVerifiedViaTable && !roles.includes('admin')) {
+      roles = [...roles, 'admin'];
+    }
+  }
+
+  if (requireAdmin && !roles.includes('admin')) {
+    if (supabaseError) {
+      console.warn('[auth] requireAdmin failed — supabase unavailable (%s)', supabaseError.message);
+    }
+    throw coded(403, 'Forbidden');
+  }
 
   if (debug) {
-    console.log('[auth] email:', user.email, 'roles:', roles);
+    console.log(
+      '[auth] email:%s roles:%o supabase?:%s verifiedViaTable:%s',
+      user.email,
+      roles,
+      !!supabase,
+      adminVerifiedViaTable
+    );
   }
-  return { user, roles, supabase };
+  return { user, roles, supabase, supabaseError };
 };
 
 exports.coded = coded;

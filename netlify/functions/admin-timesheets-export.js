@@ -1,7 +1,8 @@
 // netlify/functions/admin-timesheets-export.js
-const { getContext } = require('./_timesheet-helpers');
+const { withAdminCors } = require('./_http.js');
+const { getContext } = require('./_timesheet-helpers.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { supabase } = await getContext(context, { requireAdmin: true });
     const body = JSON.parse(event.body || '{}');
@@ -29,3 +30,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

@@ -1,7 +1,8 @@
 // netlify/functions/admin-timesheets-create.js
-const { getContext, weekEndingSaturdayISO, ensureTimesheet } = require('./_timesheet-helpers');
+const { withAdminCors } = require('./_http.js');
+const { getContext, weekEndingSaturdayISO, ensureTimesheet } = require('./_timesheet-helpers.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { user, supabase } = await getContext(context, { requireAdmin: true });
     const { assignment_id, week_ending = weekEndingSaturdayISO() } = JSON.parse(event.body || '{}');
@@ -21,3 +22,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);
