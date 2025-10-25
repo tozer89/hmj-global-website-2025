@@ -12,81 +12,18 @@
   <link rel="stylesheet" href="css/style.css" />
   <style>
     :root{
-      --ink:#1A1A2E; --accent:#2f4ea2; --muted:#6b7280; --bg:#1a243b; --chip:#eef3ff;
+      --ink:#0f1b3f; --accent:#3A66B3; --muted:#6b7280; --bg:#1a243b; --chip:#eef3ff;
       --chipBorder:rgba(47,78,162,.35); --cardBorder:rgba(26,26,46,.14);
       --ok:#1f7e39; --warn:#7a5b00; --stop:#8b1f28; --steel:#e8ecff;
     }
-    /* ===== Header / Nav (unified across site) ===== */
-    .hmj-header{position:sticky;top:0;z-index:1000;background:var(--bg);color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
-    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
-    .hmj-logo img{height:40px;display:block}
-    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
-    .hmj-menu a{display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s}
-    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
-    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
-    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
-    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
-    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
-    @media (max-width:900px){
-      .hmj-burger{display:inline-block}
-      .hmj-menu{
-        position:fixed;right:12px;left:12px;top:64px;background:var(--bg);
-        border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.35);
-        display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;transition:max-height .28s ease, padding .2s ease
-      }
-      .hmj-menu.open{max-height:70vh;padding:10px}
-      .hmj-menu a{padding:14px 12px;width:100%}
-      .hmj-scrim[hidden]{display:none}
-    }
-    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
-    .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
-    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
 
-    /* ===== Announcement bar ===== */
-    .announce{
-      background:var(--accent);
-      color:#ffffff;
+    /* ===== Entry hero overrides ===== */
+    .entry-hero--jobs{ min-height:46vh; padding:125px 20px 95px; }
+    .entry-hero--jobs .entry-hero__wrap{ width:min(92vw, 780px); }
+    .entry-hero--jobs .entry-hero__card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(245,247,255,0.92));
     }
-    .announce a{
-      color:#ffffff;
-      text-decoration:underline;
-    }
-    .announce .inner{
-      max-width:1200px;
-      margin:0 auto;
-      padding:8px 16px;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:center;
-      font-weight:700;
-    }
-    .announce .badge{
-      display:inline-block;
-      padding:4px 8px;
-      border-radius:999px;
-      background:rgba(255,255,255,0.18);
-      border:1px solid rgba(255,255,255,0.35);
-      color:#ffffff;
-      font-size:.78rem;
-    }
-
-    /* ===== Page header ===== */
-    .page-header{min-height:40vh;display:grid;place-items:center;padding:120px 20px 80px;text-align:center;color:#fff;position:relative;background:url('images/hero.jpg') center/cover no-repeat;}
-    .page-header::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55))}
-    .page-header::after{
-      content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
-      background:repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 8px),
-                 repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 10px);
-      transform:translateX(0); animation:scanMove 18s linear infinite;
-    }
-    @keyframes scanMove { to { transform:translateX(16px); } }
-    .page-header>*{position:relative;z-index:1}
-    .page-header h1{font-size:clamp(30px,4vw,46px);margin:0 0 .3rem;line-height:1.15}
-    .page-header p{opacity:.9;margin:0}
-    .power-underline{width:min(88vw,740px); height:14px; margin:12px auto 0; opacity:.9}
-    .power-underline path{stroke:#5f86ff; stroke-width:2; fill:none; stroke-linecap:round; stroke-dasharray:6 8; animation:flow 2.8s linear infinite;}
-    @keyframes flow { to { stroke-dashoffset:-280; } }
+    .entry-hero--jobs .entry-hero__lead{ color:rgba(55,65,81,0.85); }
 
     /* ===== FILTER BAR ===== */
     .filters{position:sticky; top:0; z-index:8; background:#fff; border-bottom:1px solid rgba(26,26,46,.08); box-shadow:0 6px 20px rgba(0,0,0,.06)}
@@ -224,18 +161,28 @@
   
 
 <!-- ===== Page header ===== -->
-  <section class="page-header">
-    <h1>Current Vacancies</h1>
-    <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
-      <path d="M2 7 C 100 7, 140 7, 180 7
-               C 220 7, 240 2, 260 7
-               C 280 12, 300 7, 340 7
-               C 380 7, 420 7, 460 7
-               C 500 7, 520 2, 540 7
-               C 560 12, 580 7, 620 7
-               C 660 7, 720 7, 798 7" />
-    </svg>
-    <p>Explore our latest roles across data centre & infrastructure projects in the UK & Europe.</p>
+  <section class="entry-hero entry-hero--compact entry-hero--jobs">
+    <div class="entry-hero__wrap">
+      <div class="entry-hero__card">
+        <p class="entry-hero__eyebrow">Live assignments across UK &amp; Europe</p>
+        <h1 class="entry-hero__title">Current vacancies</h1>
+        <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
+          <path d="M2 7 C 100 7, 140 7, 180 7
+                   C 220 7, 240 2, 260 7
+                   C 280 12, 300 7, 340 7
+                   C 380 7, 420 7, 460 7
+                   C 500 7, 520 2, 540 7
+                   C 560 12, 580 7, 620 7
+                   C 660 7, 720 7, 798 7" />
+        </svg>
+        <p class="entry-hero__lead">Explore our latest roles across data centre builds, commissioning, pharma cleanrooms and critical infrastructure projects.</p>
+        <div class="entry-hero__meta" role="list" aria-label="Key hiring focus areas">
+          <span class="entry-hero__chip" role="listitem">CSA &amp; MEP delivery</span>
+          <span class="entry-hero__chip" role="listitem">Commissioning &amp; IST</span>
+          <span class="entry-hero__chip" role="listitem">Operations &amp; FM</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ===== Smart Filter Bar ===== -->
