@@ -36,6 +36,26 @@ const ALLOW_HEADERS = [
 
 const ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
 
+function normaliseHost(value = '') {
+  if (!value) return '';
+  const first = String(value).split(',')[0].trim();
+  return first.replace(/:\d+$/, '');
+}
+
+function rewriteCookieDomain(cookie, host) {
+  if (!cookie || !host) return cookie;
+  const domainPattern = /;\s*domain=[^;]*/i;
+  const name = String(cookie).split(';', 1)[0].split('=')[0].trim();
+  if (name && name.startsWith('__Host-')) {
+    // __Host- cookies must not specify Domain attributes
+    return cookie.replace(domainPattern, '');
+  }
+  if (domainPattern.test(cookie)) {
+    return cookie.replace(domainPattern, `; Domain=${host}`);
+  }
+  return `${cookie}; Domain=${host}`;
+}
+
 function buildUrl(pathname = '', params = {}) {
   const trimmed = String(pathname || '').replace(/^\/+/, '');
   const base = PRODUCTION_IDENTITY_BASE;
@@ -160,12 +180,20 @@ exports.handler = async (event) => {
 
     delete headers['set-cookie'];
 
-    Object.assign(headers, corsHeaders(event));
+    const cors = corsHeaders(event);
+    Object.assign(headers, cors);
 
     const raw = response.headers.raw?.();
     const multiValueHeaders = {};
+    const host = normaliseHost(
+      event.headers?.['x-forwarded-host'] ||
+      event.headers?.['X-Forwarded-Host'] ||
+      event.headers?.host ||
+      event.headers?.Host ||
+      ''
+    );
     if (raw && raw['set-cookie']) {
-      multiValueHeaders['set-cookie'] = raw['set-cookie'];
+      multiValueHeaders['set-cookie'] = raw['set-cookie'].map((cookie) => rewriteCookieDomain(cookie, host));
     }
     if (raw) {
       for (const [key, values] of Object.entries(raw)) {
