@@ -113,8 +113,23 @@ function corsHeaders(event) {
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Headers': allowHeaders,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Expose-Headers': 'set-cookie, Set-Cookie'
+    'Access-Control-Expose-Headers': 'set-cookie, Set-Cookie, Location, location'
   };
+}
+
+function detectIncomingPrefix(event) {
+  const { path = '', rawUrl = '' } = event || {};
+  for (const prefix of FUNCTION_PREFIXES) {
+    if (path && path.startsWith(prefix)) {
+      return prefix;
+    }
+  }
+  for (const prefix of FUNCTION_PREFIXES) {
+    if (rawUrl && rawUrl.includes(prefix)) {
+      return prefix;
+    }
+  }
+  return FUNCTION_PREFIXES[0];
 }
 
 function extractProxyPath(event, singleParams = {}) {
@@ -162,6 +177,7 @@ exports.handler = async (event) => {
 
   delete merged.path;
 
+  const incomingPrefix = detectIncomingPrefix(event);
   const proxyPath = extractProxyPath(event, singleParams);
 
   const target = buildUrl(proxyPath, merged);
@@ -223,7 +239,15 @@ exports.handler = async (event) => {
         const canonicalHost = new URL(PRODUCTION_IDENTITY_BASE).host;
         if (host && locationUrl.host === canonicalHost) {
           const proto = event.headers?.['x-forwarded-proto'] || event.headers?.['X-Forwarded-Proto'] || 'https';
-          const rewritten = `${proto}://${host}${locationUrl.pathname}${locationUrl.search}${locationUrl.hash}`;
+          const incomingBase = String(incomingPrefix || FUNCTION_PREFIXES[0]).replace(/\/$/, '');
+          const identitySuffix = locationUrl.pathname
+            .replace(/^\/\.netlify\/identity\/?/i, '')
+            .replace(/^\/+/, '');
+          const nextPath = identitySuffix
+            ? `${incomingBase}/${identitySuffix}`
+            : incomingBase;
+          const normalisedPath = nextPath.startsWith('/') ? nextPath : `/${nextPath}`;
+          const rewritten = `${proto}://${host}${normalisedPath}${locationUrl.search}${locationUrl.hash}`;
           headers.Location = rewritten;
           headers.location = rewritten;
         }

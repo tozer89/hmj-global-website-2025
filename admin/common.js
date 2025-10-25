@@ -27,17 +27,18 @@
   };
 
   const CANONICAL_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';
-  const ORIGIN_IDENTITY_URL = (() => {
+  const ORIGIN_BASE = (() => {
     try {
       const loc = window.location;
       if (!loc || !loc.origin || !/^https?:/i.test(loc.protocol || '')) return '';
-      const origin = String(loc.origin).replace(/\/$/, '');
-      return `${origin}/.netlify/identity`;
+      return String(loc.origin).replace(/\/$/, '');
     } catch (err) {
-      Debug.warn('origin identity detection failed', err);
+      Debug.warn('origin detection failed', err);
       return '';
     }
   })();
+  const ORIGIN_IDENTITY_URL = ORIGIN_BASE ? `${ORIGIN_BASE}/.netlify/identity` : '';
+  const ORIGIN_PROXY_IDENTITY_URL = ORIGIN_BASE ? `${ORIGIN_BASE}/.netlify/functions/identity-proxy` : '';
   const ADMIN_ENV = window.__HMJ_ADMIN_ENV || {};
   const HOSTNAME = (() => { try { return window.location?.hostname || ''; } catch { return ''; } })();
   const IS_PREVIEW_HOST = /^deploy-preview-/i.test(HOSTNAME) || HOSTNAME.includes('--');
@@ -45,7 +46,8 @@
     const candidates = [
       ADMIN_ENV.ADMIN_IDENTITY_URL,
       window.ADMIN_IDENTITY_URL,
-      ORIGIN_IDENTITY_URL,
+      IS_PREVIEW_HOST ? ORIGIN_PROXY_IDENTITY_URL : '',
+      !IS_PREVIEW_HOST ? ORIGIN_IDENTITY_URL : '',
       CANONICAL_IDENTITY_URL
     ];
     for (const candidate of candidates) {
@@ -71,8 +73,10 @@
 
   if (IDENTITY_URL) {
     window.ADMIN_IDENTITY_URL = IDENTITY_URL;
+    window.__hmjResolvedIdentityUrl = IDENTITY_URL;
     if (!window.NETLIFY_IDENTITY_URL) window.NETLIFY_IDENTITY_URL = IDENTITY_URL;
     if (!window.HMJ_IDENTITY_URL) window.HMJ_IDENTITY_URL = IDENTITY_URL;
+    Debug.log('Resolved Identity API URL →', IDENTITY_URL, IS_PREVIEW_HOST ? '(preview host)' : '');
   }
 
   const base64Decode = (input) => {
