@@ -337,19 +337,6 @@
     stats.forEach((stat) => observer.observe(stat));
   };
 
-  const initMarquee = () => {
-    const section = document.getElementById('aboutLogos');
-    if (!section) return;
-    const track = section.querySelector('.about-logos__track');
-    if (!track) return;
-    const items = Array.from(track.children);
-    if (!items.length) return;
-
-    section.hidden = false;
-    const clones = items.map((item) => item.cloneNode(true));
-    clones.forEach((clone) => track.appendChild(clone));
-  };
-
   const initSlider = () => {
     const section = document.getElementById('aboutTestimonials');
     if (!section) return;
@@ -523,7 +510,6 @@
     initTeam();
     initValues();
     initCounters();
-    initMarquee();
     initSlider();
     initReveal();
     initTestimonialsPause();

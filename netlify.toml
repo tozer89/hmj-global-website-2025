@@ -1,5 +1,5 @@
 [build]
-  publish = "."
+  publish = "/"
   functions = "netlify/functions"
 
 [functions]
@@ -22,5 +22,11 @@
 [[redirects]]
   from = "/.netlify/identity/*"
   to = "/.netlify/functions/identity-proxy?path=:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.netlify/identity"
+  to = "/.netlify/functions/identity-proxy"
   status = 200
   force = true
