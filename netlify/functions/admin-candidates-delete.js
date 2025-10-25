@@ -1,8 +1,9 @@
 // netlify/functions/admin-candidates-delete.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { recordAudit } = require('./_audit.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { user, supabase, supabaseError } = await getContext(event, context, { requireAdmin: true });
     const { id, ids } = JSON.parse(event.body || '{}');
@@ -42,3 +43,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

@@ -1,6 +1,7 @@
 // netlify/functions/admin-candidates-lists-2.js
 // Lists candidates with strong debugging so we can see why it's empty.
 
+const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
 
 // Small helper to coalesce falsy/empty strings to null
@@ -24,7 +25,7 @@ function buildOrFilter({ q, emailHas, job }) {
   return parts.join(',');
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   const started = Date.now();
   // Accept POST (normal) and GET with ?diag=1 for a quick diagnostic
   const isGET = (event.httpMethod || '').toUpperCase() === 'GET';
@@ -166,3 +167,5 @@ exports.handler = async (event, context) => {
 
   return { statusCode: 200, body: JSON.stringify(response) };
 };
+
+exports.handler = withAdminCors(baseHandler);

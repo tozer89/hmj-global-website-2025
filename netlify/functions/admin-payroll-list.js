@@ -1,4 +1,5 @@
 // netlify/functions/admin-payroll-list.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { supabaseStatus } = require('./_supabase.js');
 const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
@@ -168,7 +169,7 @@ function toCsv(rows = []) {
   return [header.join(','), ...lines].join('\n');
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { supabase, supabaseError } = await getContext(event, context, { requireAdmin: true });
     const body = JSON.parse(event.body || '{}');
@@ -550,3 +551,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Failed to load payroll' }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);
