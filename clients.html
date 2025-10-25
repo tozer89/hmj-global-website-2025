@@ -271,6 +271,67 @@
       position:relative;
       z-index:2;
     }
+    @media (max-width: 900px) {
+      header .hmj-nav {
+        padding:12px clamp(16px, 5vw, 24px);
+      }
+
+      .form-card-critical {
+        margin-top:clamp(-48px,-10vw,-24px);
+        padding:clamp(24px,6vw,36px);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .hero {
+        padding:clamp(88px, 18vw, 110px) clamp(16px, 6vw, 24px) clamp(64px, 16vw, 90px);
+      }
+
+      .hero-inner {
+        text-align:left;
+        gap:16px;
+        padding:clamp(20px, 6vw, 26px);
+      }
+
+      .hero p {
+        margin:12px 0 0;
+        font-size:1rem;
+      }
+
+      .form-card-head {
+        gap:20px;
+      }
+
+      .progress-meter {
+        order:2;
+      }
+
+      .progress-top {
+        width:100%;
+        flex-direction:column;
+        align-items:flex-start;
+        gap:8px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .form-card-critical {
+        margin-top:-18px;
+        padding:24px 18px;
+      }
+
+      .client-form {
+        gap:24px;
+      }
+
+      .field-grid {
+        grid-template-columns:1fr;
+      }
+
+      .progress-bar {
+        height:10px;
+      }
+    }
   </style>
 </head>
 <body>

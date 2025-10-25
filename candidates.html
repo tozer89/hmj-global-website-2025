@@ -10,76 +10,10 @@
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="stylesheet" href="css/style.css" />
   <style>
-    /* ========= Vars / Theme ========= */
-    :root{ --ink:#1A1A2E; --accent:#3A66B3; --muted:#6b7280; }
-
-    /* ========= Header / Nav (matching other upgraded pages) ========= */
-    .hmj-header{position:sticky;top:0;z-index:1000;background:#0f1322;color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
-    .hmj-nav{max-width:1200px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
-    .hmj-logo img{height:40px;display:block}
-
-    .hmj-menu{list-style:none;display:flex;gap:8px;margin-left:auto;padding:0}
-    .hmj-menu a{
-      display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;
-      color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s;
-    }
-    .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
-    .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
-
-    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
-    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
-
-    .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
-    @media (max-width:900px){
-      .hmj-burger{display:inline-block}
-      .hmj-menu{
-        position:fixed;right:12px;left:12px;top:64px;
-        background:#0f1322;border:1px solid rgba(255,255,255,.12);border-radius:14px;
-        box-shadow:0 16px 40px rgba(0,0,0,.35);
-        display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;
-        transition:max-height .28s ease, padding .2s ease;
-      }
-      .hmj-menu.open{max-height:70vh;padding:10px}
-      .hmj-menu a{padding:14px 12px;width:100%}
-      .hmj-scrim[hidden]{display:none}
-    }
-    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
-    .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
-    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
-
-    /* ========= Announcement bar ========= */
-    .announce{
-      background:var(--accent);
-      color:#ffffff;
-    }
-    .announce a{
-      color:#ffffff;
-      text-decoration:underline;
-    }
-    .announce .inner{
-      max-width:1200px;
-      margin:0 auto;
-      padding:8px 16px;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:center;
-      font-weight:700;
-    }
-    .announce .badge{
-      display:inline-block;
-      padding:4px 8px;
-      border-radius:999px;
-      background:rgba(255,255,255,0.18);
-      border:1px solid rgba(255,255,255,0.35);
-      color:#ffffff;
-      font-size:.78rem;
-    }
+    :root{ --ink:#0f1b3f; --accent:#3A66B3; --muted:#6b7280; }
 
     .cv-form :required:invalid{ border-color:#e57373; }
     .cv-form :required:invalid:focus{ outline:2px solid #e57373; }
-
-
 
     /* ========= Entry hero overrides ========= */
     .entry-hero--candidates{ min-height:48vh; padding:130px 20px 105px; }
