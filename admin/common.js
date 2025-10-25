@@ -27,15 +27,35 @@
   };
 
   const CANONICAL_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';
+  const ORIGIN_IDENTITY_URL = (() => {
+    try {
+      const loc = window.location;
+      if (!loc || !loc.origin || !/^https?:/i.test(loc.protocol || '')) return '';
+      const origin = String(loc.origin).replace(/\/$/, '');
+      return `${origin}/.netlify/identity`;
+    } catch (err) {
+      Debug.warn('origin identity detection failed', err);
+      return '';
+    }
+  })();
   const ADMIN_ENV = window.__HMJ_ADMIN_ENV || {};
   const HOSTNAME = (() => { try { return window.location?.hostname || ''; } catch { return ''; } })();
   const IS_PREVIEW_HOST = /^deploy-preview-/i.test(HOSTNAME) || HOSTNAME.includes('--');
-  const IDENTITY_URL = (
-    ADMIN_ENV.ADMIN_IDENTITY_URL ||
-    window.ADMIN_IDENTITY_URL ||
-    CANONICAL_IDENTITY_URL ||
-    ''
-  ).replace(/\/$/, '');
+  const IDENTITY_URL = (() => {
+    const candidates = [
+      ADMIN_ENV.ADMIN_IDENTITY_URL,
+      window.ADMIN_IDENTITY_URL,
+      ORIGIN_IDENTITY_URL,
+      CANONICAL_IDENTITY_URL
+    ];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      const trimmed = String(candidate).trim();
+      if (!trimmed) continue;
+      return trimmed.replace(/\/$/, '');
+    }
+    return '';
+  })();
   const PRODUCTION_HOSTS = ['hmjg.netlify.app'];
   const ALWAYS_ADMIN_EMAILS = String(ADMIN_ENV.ALWAYS_ADMIN_EMAILS || window.ALWAYS_ADMIN_EMAILS || '')
     .split(/[,\s]+/)
