@@ -1,10 +1,11 @@
 // netlify/functions/admin-payroll-process.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { recordAudit } = require('./_audit.js');
 
 const ALLOWED = new Set(['paid', 'processing', 'hold', 'ready', 'clear']);
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { supabase, user } = await getContext(event, context, { requireAdmin: true });
     const { id, status, note } = JSON.parse(event.body || '{}');
@@ -38,3 +39,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Failed to update payroll status' }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

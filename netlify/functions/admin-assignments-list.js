@@ -1,4 +1,5 @@
 // netlify/functions/admin-assignments-list.js
+const { withAdminCors } = require('./_http.js');
 const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticAssignments } = require('./_assignments-helpers.js');
@@ -39,7 +40,7 @@ function toCsv(rows = []) {
   return [header.join(','), ...lines].join('\n');
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
 
@@ -225,3 +226,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Failed to load assignments' }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);
