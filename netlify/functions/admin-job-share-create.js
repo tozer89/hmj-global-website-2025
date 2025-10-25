@@ -1,4 +1,5 @@
 // netlify/functions/admin-job-share-create.js
+const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
@@ -60,7 +61,7 @@ function originFromEvent(event) {
   return `${proto}://${host}`.replace(/:\/\/\//, '://');
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
     let supabase;
@@ -213,3 +214,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error' }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

@@ -2,6 +2,11 @@ const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => import('nod
 
 const PRODUCTION_IDENTITY_BASE = (process.env.HMJ_IDENTITY_BASE || 'https://hmjg.netlify.app/.netlify/identity').replace(/\/$/, '');
 
+const FUNCTION_PREFIXES = [
+  '/.netlify/functions/identity-proxy',
+  '/.netlify/identity'
+];
+
 const HOP_HEADERS = new Set([
   'accept',
   'accept-encoding',
@@ -24,17 +29,6 @@ const HOP_HEADERS = new Set([
   'x-nf-session-id',
   'x-requested-with'
 ]);
-
-const ALLOW_HEADERS = [
-  'authorization',
-  'content-type',
-  'netlify-csrf',
-  'x-csrf-token',
-  'x-netlify-csrf',
-  'x-requested-with'
-].join(', ');
-
-const ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
 
 function normaliseHost(value = '') {
   if (!value) return '';
@@ -94,28 +88,33 @@ function normaliseBody(event) {
   return event.body;
 }
 
-function resolveSelfOrigin(event) {
-  const proto = event.headers?.['x-forwarded-proto'] || event.headers?.['X-Forwarded-Proto'] || 'https';
-  const host = event.headers?.['x-forwarded-host'] || event.headers?.['X-Forwarded-Host'] || event.headers?.host || event.headers?.Host;
+function requestOrigin(event) {
+  const origin = event.headers?.origin || event.headers?.Origin || '';
+  if (origin) return origin;
+  const host = normaliseHost(
+    event.headers?.['x-forwarded-host'] ||
+    event.headers?.['X-Forwarded-Host'] ||
+    event.headers?.host ||
+    event.headers?.Host ||
+    ''
+  );
   if (!host) return '';
+  const proto = event.headers?.['x-forwarded-proto'] || event.headers?.['X-Forwarded-Proto'] || 'https';
   return `${proto}://${host}`;
 }
 
 function corsHeaders(event) {
-  const requestOrigin = event.headers?.origin || event.headers?.Origin || '';
-  const allowOrigin = requestOrigin || resolveSelfOrigin(event);
-  const headers = {
-    'access-control-allow-methods': ALLOW_METHODS.join(', '),
-    'access-control-allow-headers': ALLOW_HEADERS,
-    'vary': 'origin'
+  const origin = requestOrigin(event) || '*';
+  const requestedHeaders = event.headers?.['access-control-request-headers'] || event.headers?.['Access-Control-Request-Headers'];
+  const allowHeaders = requestedHeaders || 'Content-Type, Authorization, x-trace, X-Nf-Client-Id, X-Nf-Session-Id, X-Nf-Client-Token';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': allowHeaders,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Expose-Headers': 'set-cookie, Set-Cookie'
   };
-  if (allowOrigin) {
-    headers['access-control-allow-origin'] = allowOrigin;
-    headers['access-control-allow-credentials'] = 'true';
-  } else {
-    headers['access-control-allow-origin'] = '*';
-  }
-  return headers;
 }
 
 function extractProxyPath(event, singleParams = {}) {
@@ -123,19 +122,22 @@ function extractProxyPath(event, singleParams = {}) {
     return singleParams.path;
   }
 
-  const prefix = '/.netlify/functions/identity-proxy';
   const eventPath = event.path || '';
-  if (eventPath.startsWith(prefix)) {
-    return eventPath.slice(prefix.length).replace(/^\/+/, '');
+  for (const prefix of FUNCTION_PREFIXES) {
+    if (eventPath.startsWith(prefix)) {
+      return eventPath.slice(prefix.length).replace(/^\/+/, '');
+    }
   }
 
   const rawUrl = event.rawUrl || '';
-  const index = rawUrl.indexOf(prefix);
-  if (index !== -1) {
-    return rawUrl
-      .slice(index + prefix.length)
-      .split('?')[0]
-      .replace(/^\/+/, '');
+  for (const prefix of FUNCTION_PREFIXES) {
+    const index = rawUrl.indexOf(prefix);
+    if (index !== -1) {
+      return rawUrl
+        .slice(index + prefix.length)
+        .split('?')[0]
+        .replace(/^\/+/, '');
+    }
   }
 
   return '';
@@ -144,7 +146,7 @@ function extractProxyPath(event, singleParams = {}) {
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
-      statusCode: 204,
+      statusCode: 200,
       headers: corsHeaders(event),
     };
   }
@@ -214,6 +216,22 @@ exports.handler = async (event) => {
       }
     }
 
+    const locationHeader = headers.Location || headers.location;
+    if (locationHeader) {
+      try {
+        const locationUrl = new URL(locationHeader, PRODUCTION_IDENTITY_BASE);
+        const canonicalHost = new URL(PRODUCTION_IDENTITY_BASE).host;
+        if (host && locationUrl.host === canonicalHost) {
+          const proto = event.headers?.['x-forwarded-proto'] || event.headers?.['X-Forwarded-Proto'] || 'https';
+          const rewritten = `${proto}://${host}${locationUrl.pathname}${locationUrl.search}${locationUrl.hash}`;
+          headers.Location = rewritten;
+          headers.location = rewritten;
+        }
+      } catch (err) {
+        console.warn('identity proxy location rewrite failed', err);
+      }
+    }
+
     return {
       statusCode: response.status,
       headers,
@@ -229,4 +247,11 @@ exports.handler = async (event) => {
       body: JSON.stringify({ error: 'identity_proxy_failed' })
     };
   }
+};
+
+exports.config = {
+  path: [
+    '/.netlify/identity',
+    '/.netlify/identity/*'
+  ]
 };

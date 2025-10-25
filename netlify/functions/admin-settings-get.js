@@ -1,8 +1,9 @@
 // netlify/functions/admin-settings-get.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { fetchSettings, DEFAULT_SETTINGS } = require('./_settings-helpers.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
     const keys = event.httpMethod === 'GET'
@@ -23,3 +24,5 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

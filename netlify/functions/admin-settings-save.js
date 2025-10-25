@@ -1,8 +1,9 @@
 // netlify/functions/admin-settings-save.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { saveSettings, fetchSettings } = require('./_settings-helpers.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
     const payload = JSON.parse(event.body || '{}');
@@ -35,3 +36,5 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

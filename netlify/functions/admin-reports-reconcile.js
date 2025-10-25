@@ -2,6 +2,7 @@
 // Compare Supabase data volumes with bundled static datasets so admins can
 // understand when previews are running from fallback data.
 
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { hasSupabase, getSupabase, supabaseStatus } = require('./_supabase.js');
 const { loadStaticJobs } = require('./_jobs-helpers.js');
@@ -26,7 +27,7 @@ async function countTable(supabase, table) {
   return count || 0;
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
   } catch (err) {
@@ -133,3 +134,5 @@ exports.handler = async (event, context) => {
     staticCounts,
   });
 };
+
+exports.handler = withAdminCors(baseHandler);

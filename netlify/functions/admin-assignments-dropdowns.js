@@ -1,4 +1,5 @@
 // netlify/functions/admin-assignments-dropdowns.js
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 
 async function safeSelect(run) {
@@ -12,7 +13,7 @@ async function safeSelect(run) {
   }
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     const { supabase } = await getContext(event, context, { requireAdmin: true });
 
@@ -90,3 +91,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

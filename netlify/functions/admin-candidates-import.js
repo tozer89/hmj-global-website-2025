@@ -3,9 +3,10 @@
 // previews attempt to import CSV data. Full Supabase upsert logic can be
 // added later once the production schema is finalised.
 
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   let ctx;
   try {
     ctx = await getContext(event, context, { requireAdmin: true });
@@ -32,3 +33,4 @@ exports.handler = async (event, context) => {
   };
 };
 
+exports.handler = withAdminCors(baseHandler);

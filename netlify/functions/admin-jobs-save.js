@@ -1,4 +1,5 @@
 // netlify/functions/admin-jobs-save.js
+const { withAdminCors } = require('./_http.js');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { toJob, toDbPayload, isSchemaError } = require('./_jobs-helpers.js');
@@ -11,7 +12,7 @@ function slugify(text = '') {
     .slice(0, 80) || `job-${Date.now()}`;
 }
 
-exports.handler = async (event, context) => {
+const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
     let supabase;
@@ -72,3 +73,5 @@ exports.handler = async (event, context) => {
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error', code: e.code || undefined }) };
   }
 };
+
+exports.handler = withAdminCors(baseHandler);

@@ -1,3 +1,4 @@
+const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { supabase, hasSupabase, jsonOk, jsonError, supabaseStatus } = require('./_supabase.js');
 const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
@@ -133,7 +134,7 @@ function shouldFallback(err) {
   return false;
 }
 
-module.exports.handler = async (event, context) => {
+module.const baseHandler = async (event, context) => {
   const trace = `ts-${Date.now()}`;
 
   let body = {};
@@ -276,3 +277,5 @@ module.exports.handler = async (event, context) => {
     return jsonError(500, 'unhandled', err.message || 'Unexpected error', { trace });
   }
 };
+
+exports.handler = withAdminCors(baseHandler);
