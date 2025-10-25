@@ -81,31 +81,13 @@
 
 
 
-    /* ========= Hero (scanlines + electric line) ========= */
-    .hero-cand{
-      min-height:42vh; display:grid; place-items:center; padding:120px 20px 100px;
-      text-align:center; color:#fff; position:relative;
-      background:url('images/hero.jpg') center/cover no-repeat;
+    /* ========= Entry hero overrides ========= */
+    .entry-hero--candidates{ min-height:48vh; padding:130px 20px 105px; }
+    .entry-hero--candidates .entry-hero__wrap{ width:min(92vw, 800px); }
+    .entry-hero--candidates .entry-hero__card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.97), rgba(241,246,255,0.9));
     }
-    .hero-cand::before{ content:""; position:absolute; inset:0;
-      background:linear-gradient(180deg,rgba(26,26,46,.78),rgba(26,26,46,.55)); }
-    .hero-cand::after{
-      content:""; position:absolute; inset:0; pointer-events:none; opacity:.18;
-      background:
-        repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 1px, transparent 1px 8px),
-        repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 10px);
-      transform:translateX(0);
-      animation:scanMove 18s linear infinite;
-    }
-    @keyframes scanMove { to { transform:translateX(16px); } }
-    .hero-cand>*{ position:relative; z-index:1; }
-    .hero-cand h1{ margin:0 0 8px; font-size:clamp(28px,4vw,42px); line-height:1.15; }
-    .hero-cand p{ margin:0; opacity:.95; }
-
-    .power-underline{width:min(88vw,740px); height:14px; margin:12px auto 0; opacity:.9}
-    .power-underline path{stroke:#5f86ff; stroke-width:2; fill:none; stroke-linecap:round;
-      stroke-dasharray:6 8; animation:flow 2.8s linear infinite;}
-    @keyframes flow { to { stroke-dashoffset:-280; } }
+    .entry-hero--candidates .entry-hero__lead{ color:rgba(55,65,81,0.88); }
 
     /* ========= Layout / Cards / Grids ========= */
     .section{ padding:36px 20px; }
@@ -209,22 +191,35 @@
   
 
 <!-- ===== Hero ===== -->
-  <section class="hero-cand">
-    <div>
-      <h1>Candidate Registration</h1>
+  <section class="entry-hero entry-hero--candidates">
+    <div class="entry-hero__wrap">
+      <div class="entry-hero__card">
+        <p class="entry-hero__eyebrow">Mission-critical careers</p>
+        <h1 class="entry-hero__title">Candidate registration</h1>
 
-      <!-- single electric line under heading -->
-      <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
-        <path d="M2 7 C 100 7, 140 7, 180 7
-                 C 220 7, 240 2, 260 7
-                 C 280 12, 300 7, 340 7
-                 C 380 7, 420 7, 460 7
-                 C 500 7, 520 2, 540 7
-                 C 560 12, 580 7, 620 7
-                 C 660 7, 720 7, 798 7" />
-      </svg>
+        <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
+          <path d="M2 7 C 100 7, 140 7, 180 7
+                   C 220 7, 240 2, 260 7
+                   C 280 12, 300 7, 340 7
+                   C 380 7, 420 7, 460 7
+                   C 500 7, 520 2, 540 7
+                   C 560 12, 580 7, 620 7
+                   C 660 7, 720 7, 798 7" />
+        </svg>
 
-      <p>Your next mission-critical role across the UK & Europe — with rotations, weekly pay and real support.</p>
+        <p class="entry-hero__lead">Your next mission-critical role across the UK &amp; Europe — with rotations, weekly pay and real support from the HMJ-Global team.</p>
+
+        <div class="entry-hero__actions">
+          <a href="contact.html" class="btn-primary">Upload your CV</a>
+          <a href="jobs.html" class="btn-secondary">Browse live jobs</a>
+        </div>
+
+        <div class="entry-hero__meta" role="list" aria-label="What candidates can expect">
+          <span class="entry-hero__chip" role="listitem">48 hrs to first opportunities</span>
+          <span class="entry-hero__chip" role="listitem">Weekly contractor payroll</span>
+          <span class="entry-hero__chip" role="listitem">Cross-border mobilisation</span>
+        </div>
+      </div>
     </div>
   </section>
 
