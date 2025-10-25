@@ -88,14 +88,32 @@ function normaliseBody(event) {
   return event.body;
 }
 
-function corsHeaders(event) {
+function requestOrigin(event) {
   const origin = event.headers?.origin || event.headers?.Origin || '';
+  if (origin) return origin;
+  const host = normaliseHost(
+    event.headers?.['x-forwarded-host'] ||
+    event.headers?.['X-Forwarded-Host'] ||
+    event.headers?.host ||
+    event.headers?.Host ||
+    ''
+  );
+  if (!host) return '';
+  const proto = event.headers?.['x-forwarded-proto'] || event.headers?.['X-Forwarded-Proto'] || 'https';
+  return `${proto}://${host}`;
+}
+
+function corsHeaders(event) {
+  const origin = requestOrigin(event) || '*';
+  const requestedHeaders = event.headers?.['access-control-request-headers'] || event.headers?.['Access-Control-Request-Headers'];
+  const allowHeaders = requestedHeaders || 'Content-Type, Authorization, x-trace, X-Nf-Client-Id, X-Nf-Session-Id, X-Nf-Client-Token';
   return {
-    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Origin': origin,
     'Vary': 'Origin',
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-trace',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    'Access-Control-Allow-Headers': allowHeaders,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Expose-Headers': 'set-cookie, Set-Cookie'
   };
 }
 
@@ -195,6 +213,22 @@ exports.handler = async (event) => {
         if (Array.isArray(values) && values.length > 1) {
           multiValueHeaders[key] = values;
         }
+      }
+    }
+
+    const locationHeader = headers.Location || headers.location;
+    if (locationHeader) {
+      try {
+        const locationUrl = new URL(locationHeader, PRODUCTION_IDENTITY_BASE);
+        const canonicalHost = new URL(PRODUCTION_IDENTITY_BASE).host;
+        if (host && locationUrl.host === canonicalHost) {
+          const proto = event.headers?.['x-forwarded-proto'] || event.headers?.['X-Forwarded-Proto'] || 'https';
+          const rewritten = `${proto}://${host}${locationUrl.pathname}${locationUrl.search}${locationUrl.hash}`;
+          headers.Location = rewritten;
+          headers.location = rewritten;
+        }
+      } catch (err) {
+        console.warn('identity proxy location rewrite failed', err);
       }
     }
 
