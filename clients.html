@@ -12,16 +12,11 @@
   <link rel="stylesheet" href="assets/css/clients.enhanced.css" />
   <style>
     :root {
+      color-scheme: light;
       --bg:#f4f6ff; --panel:#fff; --border:#d7def3;
       --ink:#0f1b3f; --muted:#5d6f9e;
       --accent:#3f66c7; --ok:#138754; --warn:#b78103; --bad:#b42318;
       --chip:#eef2ff; --shadow:0 18px 40px rgba(15,27,63,.12);
-    }
-    @media (prefers-color-scheme:dark) {
-      :root {
-        --bg:#0f1428;--panel:#151c36;--border:#2a3563;
-        --ink:#e8edff;--muted:#b9c3ea;--shadow:0 18px 40px rgba(0,0,0,.35);
-      }
     }
     body {
       font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -40,9 +35,10 @@
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: rgba(21, 28, 54, 0.92);
-      backdrop-filter: blur(18px);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(15,27,63,0.08);
+      box-shadow: 0 12px 24px rgba(15,27,63,0.06);
     }
     header .hmj-nav {
       max-width: 1200px;
@@ -51,7 +47,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      color: #fff;
+      color: var(--ink);
     }
     .hmj-logo img { height: 42px; display: block; }
     .hmj-menu {
@@ -63,23 +59,25 @@
       margin-bottom: 0;
     }
     .hmj-menu a {
-      color: rgba(232,237,255,0.92);
+      color: rgba(15,27,63,0.72);
       font-weight: 600;
       text-decoration: none;
       padding: 8px 12px;
       border-radius: 999px;
-      transition: background 0.2s ease, color 0.2s ease;
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
     }
     .hmj-menu a:hover,
     .hmj-menu a:focus-visible {
-      background: rgba(63, 102, 199, 0.25);
-      color: #fff;
+      background: rgba(63, 102, 199, 0.12);
+      color: var(--ink);
+      box-shadow: 0 6px 16px rgba(15,27,63,0.08);
       outline: none;
     }
     .hmj-menu a[aria-current="page"] {
-      background: rgba(63,102,199,0.35);
-      color: #fff;
-      border: 1px solid rgba(63,102,199,0.65);
+      background: rgba(63,102,199,0.18);
+      color: var(--ink);
+      border: 1px solid rgba(63,102,199,0.35);
+      box-shadow: 0 6px 18px rgba(63,102,199,0.18);
     }
     .hmj-burger {
       margin-left: auto;
@@ -87,9 +85,9 @@
       height: 44px;
       border-radius: 12px;
       display: none;
-      background: rgba(236, 239, 255, 0.08);
-      border: 1px solid rgba(236,239,255,0.18);
-      color: #fff;
+      background: rgba(15,27,63,0.08);
+      border: 1px solid rgba(15,27,63,0.18);
+      color: var(--ink);
       align-items: center;
       justify-content: center;
     }
@@ -118,16 +116,16 @@
     .hmj-scrim {
       position: fixed;
       inset: 0;
-      background: rgba(10,15,30,0.55);
+      background: rgba(15,27,63,0.25);
       backdrop-filter: blur(6px);
       display: none;
     }
     .theme-toggle {
-      border: 1px solid rgba(255,255,255,0.24);
+      border: 1px solid rgba(15,27,63,0.18);
       border-radius: 999px;
       padding: 6px 10px;
-      background: rgba(236,239,255,0.1);
-      color: #fff;
+      background: rgba(15,27,63,0.06);
+      color: var(--ink);
       font-size: 0.95rem;
       cursor: pointer;
       margin-left: 8px;
@@ -135,18 +133,19 @@
     .hero {
       position: relative;
       padding: clamp(64px, 16vw, 140px) clamp(20px, 6vw, 40px) clamp(60px, 12vw, 120px);
-      background: radial-gradient(120% 120% at 10% 10%, rgba(63,102,199,0.36), transparent 55%),
-                  radial-gradient(120% 120% at 80% 20%, rgba(21,28,54,0.7), rgba(15,20,40,0.9));
-      color: #fff;
+      background: radial-gradient(120% 120% at 10% 5%, rgba(63,102,199,0.25), transparent 55%),
+                  radial-gradient(120% 120% at 85% 0%, rgba(47,78,162,0.18), transparent 65%),
+                  linear-gradient(180deg, rgba(244,246,255,0.95), rgba(244,246,255,0.65));
+      color: var(--ink);
       text-align: center;
     }
     .hero::after {
       content: "";
       position: absolute;
       inset: 0;
-      background: linear-gradient(120deg, rgba(244,246,255,0.08), transparent 45%),
-                  repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 1px, transparent 1px 10px);
-      opacity: 0.2;
+      background: linear-gradient(120deg, rgba(63,102,199,0.16), transparent 45%),
+                  repeating-linear-gradient(90deg, rgba(63,102,199,0.16) 0 1px, transparent 1px 10px);
+      opacity: 0.25;
       pointer-events: none;
     }
     .hero > * { position: relative; z-index: 1; }
@@ -160,7 +159,7 @@
       margin: 18px auto 0;
       max-width: 640px;
       font-size: 1.05rem;
-      color: rgba(255,255,255,0.86);
+      color: var(--muted);
     }
     .form-card-critical {
       background: var(--panel);
@@ -177,7 +176,7 @@
       .hmj-menu.is-open {
         display: flex;
         flex-direction: column;
-        background: rgba(21,28,54,0.96);
+        background: rgba(255,255,255,0.98);
         position: absolute;
         right: 16px;
         left: 16px;
@@ -186,6 +185,7 @@
         border-radius: 18px;
         gap: 8px;
         box-shadow: var(--shadow);
+        border: 1px solid rgba(15,27,63,0.12);
       }
       .hmj-burger { display: inline-flex; }
       .hmj-scrim[aria-hidden="false"] { display: block; }
