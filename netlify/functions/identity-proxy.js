@@ -45,6 +45,26 @@ function rewriteCookieDomain(cookie, host) {
   return `${cookie}; Domain=${host}`;
 }
 
+function normaliseHost(value = '') {
+  if (!value) return '';
+  const first = String(value).split(',')[0].trim();
+  return first.replace(/:\d+$/, '');
+}
+
+function rewriteCookieDomain(cookie, host) {
+  if (!cookie || !host) return cookie;
+  const domainPattern = /;\s*domain=[^;]*/i;
+  const name = String(cookie).split(';', 1)[0].split('=')[0].trim();
+  if (name && name.startsWith('__Host-')) {
+    // __Host- cookies must not specify Domain attributes
+    return cookie.replace(domainPattern, '');
+  }
+  if (domainPattern.test(cookie)) {
+    return cookie.replace(domainPattern, `; Domain=${host}`);
+  }
+  return `${cookie}; Domain=${host}`;
+}
+
 function buildUrl(pathname = '', params = {}) {
   const trimmed = String(pathname || '').replace(/^\/+/, '');
   const base = PRODUCTION_IDENTITY_BASE;
