@@ -247,6 +247,105 @@
       color: var(--muted);
     }
 
+    .report-card__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .report-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .report-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 12px 0 16px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .filter-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .filter-control {
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 19, 34, 0.2);
+      background: #fff;
+      font-size: 0.9rem;
+    }
+
+    .btn-secondary {
+      border: 1px solid rgba(58, 102, 179, 0.4);
+      background: #fff;
+      color: var(--accent);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      background: var(--soft);
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(15, 19, 34, 0.08);
+    }
+
+    .metric span {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .metric strong {
+      font-size: 1.05rem;
+      color: var(--ink);
+    }
+
+    .exception-group {
+      border: 1px solid rgba(15, 19, 34, 0.1);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+
+    .exception-group summary {
+      cursor: pointer;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -434,6 +533,73 @@
         </div>
       </div>
     </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="report-grid">
+          <div class="report-card" id="weekly-summary-card">
+            <div class="report-card__header">
+              <h3>Weekly Payroll &amp; GM Summary</h3>
+              <div class="report-actions">
+                <button class="btn-secondary" id="btn-summary-refresh">Refresh</button>
+                <button class="btn-primary" id="btn-summary-export">Download CSV</button>
+              </div>
+            </div>
+            <div class="report-filters">
+              <div class="filter-group">
+                <label class="filter-label" for="summary-week">Week ending</label>
+                <select class="filter-control" id="summary-week"></select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label" for="summary-client">Client</label>
+                <select class="filter-control" id="summary-client"></select>
+              </div>
+            </div>
+            <div class="metrics-grid" id="summary-metrics"></div>
+            <div class="report-summary" id="summary-statuses">Awaiting data...</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Contractor</th>
+                  <th>Client</th>
+                  <th>Week ending</th>
+                  <th>Std</th>
+                  <th>OT</th>
+                  <th>Pay</th>
+                  <th>Charge</th>
+                  <th>GP</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="summary-rows">
+                <tr><td colspan="9">Run “Refresh” to populate.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="report-card" id="exceptions-card">
+            <div class="report-card__header">
+              <h3>Data Quality / Exceptions Report</h3>
+              <div class="report-actions">
+                <button class="btn-secondary" id="btn-exceptions-refresh">Refresh</button>
+                <button class="btn-primary" id="btn-exceptions-export">Export exceptions CSV</button>
+              </div>
+            </div>
+            <div class="report-filters">
+              <div class="filter-group">
+                <label class="filter-label" for="exceptions-week">Week ending</label>
+                <select class="filter-control" id="exceptions-week"></select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label" for="exceptions-client">Client</label>
+                <select class="filter-control" id="exceptions-client"></select>
+              </div>
+            </div>
+            <div class="report-summary" id="exceptions-summary">Awaiting data...</div>
+            <div id="exceptions-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -512,19 +678,13 @@
 
       if (authMode === "oauth") {
         badge.classList.add("status-success");
-        badge.textContent = "Auth: OAuth";
-        return;
-      }
-
-      if (authMode === "api_key") {
-        badge.classList.add("status-warning");
-        badge.textContent = note ? "Auth: API Key fallback (OAuth not configured)" : "Auth: API Key";
+        badge.textContent = "Auth: OAuth (client credentials)";
         return;
       }
 
       if (authMode === "none") {
         badge.classList.add("status-error");
-        badge.textContent = "Auth: Missing";
+        badge.textContent = "Auth: Not configured";
         return;
       }
 
@@ -554,6 +714,15 @@
       if (!button) return;
       button.disabled = running;
       button.textContent = running ? button.dataset.running : button.dataset.default;
+    };
+
+    const setRunAllEnabled = (canRun) => {
+      const button = document.getElementById("run-all");
+      if (!button) return;
+      button.disabled = !canRun;
+      if (!canRun) {
+        button.textContent = button.dataset.default;
+      }
     };
 
     const updateTimestamp = () => {
@@ -625,7 +794,8 @@
         { total: 0 }
       );
 
-      summary.textContent = `Total: ${counts.total} · Active: ${counts.active || 0} · Inactive: ${counts.inactive || 0} · Unknown: ${counts.unknown || 0}`;
+      const endpointNote = payload.resolved_endpoint ? ` · Endpoint: ${payload.resolved_endpoint}` : "";
+      summary.textContent = `Total: ${counts.total} · Active: ${counts.active || 0} · Inactive: ${counts.inactive || 0} · Unknown: ${counts.unknown || 0}${endpointNote}`;
 
       table.innerHTML = "";
       const rows = placements.slice(0, 10);
@@ -640,6 +810,308 @@
         row.innerHTML = `<td>${placement.title}</td><td>${placement.clientName}</td><td>${dates}</td>`;
         table.appendChild(row);
       });
+    };
+
+    const formatNumber = (value, digits = 2) => {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "0";
+      return number.toFixed(digits);
+    };
+
+    const formatCurrency = (value) => formatNumber(value, 2);
+
+    const populateSelect = (select, options, selectedValue, placeholder = "All") => {
+      if (!select) return;
+      select.innerHTML = "";
+
+      const placeholderOption = document.createElement("option");
+      placeholderOption.value = "";
+      placeholderOption.textContent = placeholder;
+      select.appendChild(placeholderOption);
+
+      options.forEach((option) => {
+        const item = document.createElement("option");
+        item.value = option.value;
+        item.textContent = option.label;
+        if (selectedValue && option.value === selectedValue) {
+          item.selected = true;
+        }
+        select.appendChild(item);
+      });
+    };
+
+    const summaryState = { data: null };
+    const exceptionsState = { data: null };
+
+    const renderSummary = (payload) => {
+      summaryState.data = payload;
+      const metrics = document.getElementById("summary-metrics");
+      const statusSummary = document.getElementById("summary-statuses");
+      const rowsTable = document.getElementById("summary-rows");
+
+      if (metrics) {
+        const summary = payload.summary || {};
+        const cards = [
+          { label: "Std hours", value: formatNumber(summary.std_hours) },
+          { label: "OT hours", value: formatNumber(summary.ot_hours) },
+          { label: "Pay amount", value: formatCurrency(summary.pay_amount) },
+          { label: "Charge amount", value: formatCurrency(summary.charge_amount) },
+          { label: "Gross profit", value: formatCurrency(summary.gp_amount) },
+          { label: "Gross margin %", value: formatNumber(summary.gross_margin_pct) },
+        ];
+
+        metrics.innerHTML = cards
+          .map((card) => `<div class="metric"><span>${card.label}</span><strong>${card.value}</strong></div>`)
+          .join("");
+      }
+
+      if (statusSummary) {
+        const statusCounts = payload.summary?.status_counts || {};
+        const summaryText = Object.entries(statusCounts)
+          .map(([status, count]) => `${status}: ${count}`)
+          .join(" · ");
+        statusSummary.textContent = summaryText || "No status counts available.";
+      }
+
+      if (rowsTable) {
+        const rows = Array.isArray(payload.rows) ? payload.rows : [];
+        rowsTable.innerHTML = "";
+        if (!rows.length) {
+          rowsTable.innerHTML = '<tr><td colspan="9">No timesheets matched the filters.</td></tr>';
+          return;
+        }
+
+        rows.slice(0, 25).forEach((row) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.contractor_name || row.candidate_name || "—"}</td>
+            <td>${row.client_name || "—"}</td>
+            <td>${row.week_ending || "—"}</td>
+            <td>${formatNumber(row.std_hours)}</td>
+            <td>${formatNumber(row.ot_hours)}</td>
+            <td>${formatCurrency(row.pay_amount)}</td>
+            <td>${formatCurrency(row.charge_amount)}</td>
+            <td>${formatCurrency(row.gp_amount)}</td>
+            <td>${row.payroll_status || "—"}</td>
+          `;
+          rowsTable.appendChild(tr);
+        });
+      }
+    };
+
+    const renderExceptions = (payload) => {
+      exceptionsState.data = payload;
+      const summary = document.getElementById("exceptions-summary");
+      const list = document.getElementById("exceptions-list");
+
+      if (summary) {
+        const counts = payload.summary?.counts || {};
+        const total = payload.summary?.total_exceptions || 0;
+        const summaryText = Object.entries(counts)
+          .map(([key, count]) => `${key.replace(/_/g, " ")}: ${count}`)
+          .join(" · ");
+        summary.textContent = `Total exceptions: ${total}${summaryText ? ` · ${summaryText}` : ""}`;
+      }
+
+      if (list) {
+        list.innerHTML = "";
+        const exceptions = payload.exceptions || {};
+        const entries = Object.entries(exceptions);
+        if (!entries.length) {
+          list.innerHTML = "<p>No exceptions reported.</p>";
+          return;
+        }
+
+        entries.forEach(([key, exception]) => {
+          const rows = exception.rows || [];
+          const detail = document.createElement("details");
+          detail.className = "exception-group";
+          detail.innerHTML = `
+            <summary>${exception.label} <span>${rows.length}</span></summary>
+            <div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Contractor</th>
+                    <th>Client</th>
+                    <th>Week</th>
+                    <th>Hours</th>
+                    <th>Pay</th>
+                    <th>Charge</th>
+                    <th>GP</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows
+                    .slice(0, 20)
+                    .map(
+                      (row) => `
+                        <tr>
+                          <td>${row.contractor_name || row.candidate_name || "—"}</td>
+                          <td>${row.client_name || "—"}</td>
+                          <td>${row.week_ending || "—"}</td>
+                          <td>${formatNumber(row.total_hours)}</td>
+                          <td>${formatCurrency(row.pay_amount)}</td>
+                          <td>${formatCurrency(row.charge_amount)}</td>
+                          <td>${formatCurrency(row.gp_amount)}</td>
+                          <td>${row.payroll_status || row.status || "—"}</td>
+                        </tr>
+                      `
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+            </div>
+          `;
+          list.appendChild(detail);
+        });
+      }
+    };
+
+    const downloadCsv = (filename, rows) => {
+      const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    const exportSummaryCsv = () => {
+      const payload = summaryState.data;
+      if (!payload) return;
+      const summary = payload.summary || {};
+      const rows = payload.rows || [];
+      const csvRows = [
+        ["Summary", "Value"],
+        ["Std hours", formatNumber(summary.std_hours)],
+        ["OT hours", formatNumber(summary.ot_hours)],
+        ["Pay amount", formatCurrency(summary.pay_amount)],
+        ["Charge amount", formatCurrency(summary.charge_amount)],
+        ["Gross profit", formatCurrency(summary.gp_amount)],
+        ["Gross margin %", formatNumber(summary.gross_margin_pct)],
+        [],
+        [
+          "Contractor",
+          "Client",
+          "Week ending",
+          "Std hours",
+          "OT hours",
+          "Pay amount",
+          "Charge amount",
+          "GP amount",
+          "Status",
+        ],
+        ...rows.map((row) => [
+          row.contractor_name || row.candidate_name || "",
+          row.client_name || "",
+          row.week_ending || "",
+          formatNumber(row.std_hours),
+          formatNumber(row.ot_hours),
+          formatCurrency(row.pay_amount),
+          formatCurrency(row.charge_amount),
+          formatCurrency(row.gp_amount),
+          row.payroll_status || row.status || "",
+        ]),
+      ];
+      downloadCsv("weekly-payroll-summary.csv", csvRows);
+    };
+
+    const exportExceptionsCsv = () => {
+      const payload = exceptionsState.data;
+      if (!payload) return;
+      const exceptions = payload.exceptions || {};
+      const rows = [];
+      Object.entries(exceptions).forEach(([key, exception]) => {
+        (exception.rows || []).forEach((row) => {
+          rows.push([
+            key,
+            exception.label,
+            row.id || "",
+            row.contractor_name || row.candidate_name || "",
+            row.contractor_email || "",
+            row.client_name || "",
+            row.week_ending || "",
+            row.assignment_id || "",
+            row.assignment_ref || "",
+            row.ts_ref || "",
+            formatNumber(row.total_hours),
+            formatCurrency(row.pay_amount),
+            formatCurrency(row.charge_amount),
+            formatCurrency(row.gp_amount),
+            row.payroll_status || row.status || "",
+          ]);
+        });
+      });
+      const csvRows = [[
+        "Exception type",
+        "Exception label",
+        "Timesheet ID",
+        "Contractor",
+        "Contractor email",
+        "Client",
+        "Week ending",
+        "Assignment ID",
+        "Assignment ref",
+        "Timesheet ref",
+        "Total hours",
+        "Pay amount",
+        "Charge amount",
+        "GP amount",
+        "Status",
+      ], ...rows];
+      downloadCsv("timesheet-exceptions.csv", csvRows);
+    };
+
+    const loadSummary = async () => {
+      const weekSelect = document.getElementById("summary-week");
+      const clientSelect = document.getElementById("summary-client");
+      const params = new URLSearchParams();
+      if (weekSelect?.value) params.set("week_ending", weekSelect.value);
+      if (clientSelect?.value) params.set("client_id", clientSelect.value);
+
+      const response = await fetch(`/.netlify/functions/admin-timesheets-summary?${params.toString()}`);
+      const payload = await response.json();
+      if (!response.ok || payload.ok === false) {
+        renderSummary({ summary: {}, rows: [], ...payload });
+        const statusSummary = document.getElementById("summary-statuses");
+        if (statusSummary) {
+          statusSummary.textContent = payload.error || "Unable to load summary.";
+        }
+        return;
+      }
+
+      populateSelect(weekSelect, payload.available?.weeks || [], payload.filters?.week_ending || "");
+      populateSelect(clientSelect, payload.available?.clients || [], payload.filters?.client_id || "");
+      renderSummary(payload);
+    };
+
+    const loadExceptions = async () => {
+      const weekSelect = document.getElementById("exceptions-week");
+      const clientSelect = document.getElementById("exceptions-client");
+      const params = new URLSearchParams();
+      if (weekSelect?.value) params.set("week_ending", weekSelect.value);
+      if (clientSelect?.value) params.set("client_id", clientSelect.value);
+
+      const response = await fetch(`/.netlify/functions/admin-timesheets-exceptions?${params.toString()}`);
+      const payload = await response.json();
+      if (!response.ok || payload.ok === false) {
+        renderExceptions({ summary: {}, exceptions: {}, ...payload });
+        const summary = document.getElementById("exceptions-summary");
+        if (summary) {
+          summary.textContent = payload.error || "Unable to load exceptions report.";
+        }
+        return;
+      }
+
+      populateSelect(weekSelect, payload.available?.weeks || [], payload.filters?.week_ending || "");
+      populateSelect(clientSelect, payload.available?.clients || [], payload.filters?.client_id || "");
+      renderExceptions(payload);
     };
 
     const runRequest = async (key) => {
@@ -659,6 +1131,9 @@
         updateTimestamp();
         updateModeFromResponse(data, response.status);
         updateAuthFromResponse(data);
+        if (key === "ping" && data?.can_run !== undefined) {
+          setRunAllEnabled(Boolean(data.can_run));
+        }
         if (!ok) {
           showDebug(data.debug || data);
         }
@@ -697,6 +1172,46 @@
         setButtonState(runAllButton, false);
       });
     }
+
+    const summaryRefresh = document.getElementById("btn-summary-refresh");
+    const summaryExport = document.getElementById("btn-summary-export");
+    const summaryWeek = document.getElementById("summary-week");
+    const summaryClient = document.getElementById("summary-client");
+
+    if (summaryRefresh) {
+      summaryRefresh.addEventListener("click", loadSummary);
+    }
+    if (summaryExport) {
+      summaryExport.addEventListener("click", exportSummaryCsv);
+    }
+    if (summaryWeek) {
+      summaryWeek.addEventListener("change", loadSummary);
+    }
+    if (summaryClient) {
+      summaryClient.addEventListener("change", loadSummary);
+    }
+
+    const exceptionsRefresh = document.getElementById("btn-exceptions-refresh");
+    const exceptionsExport = document.getElementById("btn-exceptions-export");
+    const exceptionsWeek = document.getElementById("exceptions-week");
+    const exceptionsClient = document.getElementById("exceptions-client");
+
+    if (exceptionsRefresh) {
+      exceptionsRefresh.addEventListener("click", loadExceptions);
+    }
+    if (exceptionsExport) {
+      exceptionsExport.addEventListener("click", exportExceptionsCsv);
+    }
+    if (exceptionsWeek) {
+      exceptionsWeek.addEventListener("change", loadExceptions);
+    }
+    if (exceptionsClient) {
+      exceptionsClient.addEventListener("change", loadExceptions);
+    }
+
+    runRequest("ping");
+    loadSummary();
+    loadExceptions();
   </script>
 </body>
 </html>

@@ -3,9 +3,13 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js"
+    "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js",
+    "test:unit": "jest"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }
