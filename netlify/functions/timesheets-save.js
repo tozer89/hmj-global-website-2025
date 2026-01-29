@@ -48,6 +48,9 @@ exports.handler = async (event, context) => {
     const entries = body.entries && typeof body.entries === 'object' ? body.entries : {};
 
     const { assignment } = await getContext(context);
+    if (!assignment?.id) {
+      return respond(400, { error: 'no_active_assignment' });
+    }
     const week_ending = weekEndingSaturdayISO();
     const ts = await ensureTimesheet(assignment.id, week_ending);
 
@@ -78,7 +81,7 @@ exports.handler = async (event, context) => {
     return respond(200, { ok: true, status: upd.data.status });
   } catch (e) {
     const msg = e?.message || 'Failed to save draft';
-    const status = (e?.code === 401 || msg === 'Unauthorized') ? 401 : 400;
+    const status = (e?.code === 404 || msg === 'Not Found') ? 404 : 400;
     console.error('timesheets-save exception:', e);
     return respond(status, { error: msg });
   }

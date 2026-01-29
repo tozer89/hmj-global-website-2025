@@ -50,7 +50,10 @@ function hasToken(event) {
 }
 
 function withAdminCors(handler, options = {}) {
-  const requireToken = options.requireToken !== false;
+  const requireToken = false;
+  if (options.requireToken) {
+    console.warn('[#hmjg] auth disabled for admin function: ignoring requireToken=true');
+  }
   return async function wrapped(event = {}, context = {}) {
     const cors = buildCors(event);
     const trace = header(event, 'x-trace');
@@ -63,11 +66,7 @@ function withAdminCors(handler, options = {}) {
     }
 
     if (requireToken && !hasToken(event)) {
-      const body = JSON.stringify({ ok: false, error: 'missing token', msg: 'missing token' });
-      const headers = Object.assign({}, cors);
-      if (trace) headers['x-trace'] = trace;
-      console.warn('[#hmjg] admin function missing token', event.path || event.rawUrl || '');
-      return { statusCode: 401, headers, body };
+      console.warn('[#hmjg] admin function missing token (auth disabled)', event.path || event.rawUrl || '');
     }
 
     try {

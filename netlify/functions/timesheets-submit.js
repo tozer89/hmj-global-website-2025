@@ -45,6 +45,9 @@ exports.handler = async (event, context) => {
     const entries = body.entries && typeof body.entries === 'object' ? body.entries : {};
 
     const { assignment } = await getContext(context);
+    if (!assignment?.id) {
+      return respond(400, { error: 'no_active_assignment' });
+    }
     const week_ending = weekEndingSaturdayISO();
     const ts = await ensureTimesheet(assignment.id, week_ending);
 
@@ -77,7 +80,6 @@ exports.handler = async (event, context) => {
   } catch (e) {
     const msg = e?.message || 'Failed to submit';
     const status =
-      e?.code === 401 || msg === 'Unauthorized' ? 401 :
       e?.code === 404 ? 404 : 500;
 
     console.error('timesheets-submit exception:', e);

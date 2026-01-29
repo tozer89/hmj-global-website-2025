@@ -7,9 +7,6 @@ const respond = (s, b) => ({ statusCode: s, headers: H, body: JSON.stringify(b) 
 
 const baseHandler = async (event, context) => {
   try {
-    const { user } = context.clientContext || {};
-    if (!user) return respond(401, { error: 'identity_required' });
-
     const q = event.queryStringParameters || {};
     const weekStr = q.week_ending;      // preferred
     const idParam = q.id && Number(q.id);

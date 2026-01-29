@@ -1,3 +1,4 @@
+# TODO: WARNING: Admin portal is public. Re-add security later (Identity roles, IP allowlist, secret header, etc.).
 [build]
   publish = "/"
   functions = "admin-v2/functions"
@@ -6,28 +7,11 @@
   node_bundler = "esbuild"
   included_files = ["data/*.json", "admin-v2/functions/_data/*.json"]
 
-# Gate the timesheets admin to users with the "admin" role
 [[redirects]]
   from = "/admin/timesheets*"
   to = "/admin/timesheets.html"
   status = 200
-  conditions = { Role = ["admin"] }
-
-# Fallback for non-admins
-[[redirects]]
-  from = "/admin/timesheets*"
-  to = "/unauthorized.html"
-  status = 401
-
-[[headers]]
-  for = "/admin"
-  [headers.values]
-    Basic-Auth = "hmj:payrolltsp"
-
-[[headers]]
-  for = "/admin/*"
-  [headers.values]
-    Basic-Auth = "hmj:payrolltsp"
+  force = true
 
 [[plugins]]
   package = "./netlify/plugins/admin-build-info"
