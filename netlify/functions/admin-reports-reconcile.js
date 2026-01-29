@@ -31,7 +31,7 @@ const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
   } catch (err) {
-    const status = err?.code === 401 ? 401 : 403;
+    const status = 403;
     return fail(status, err?.message || 'Unauthorized');
   }
 

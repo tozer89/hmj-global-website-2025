@@ -19,7 +19,7 @@ const baseHandler = async (event, context) => {
     if (error) throw coded(500, error.message);
     return { statusCode: 200, body: JSON.stringify(data) };
   } catch (e) {
-    const status = e.code === 401 || e.code === 403 ? e.code : 500;
+    const status = e.code === 401 || e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };

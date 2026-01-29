@@ -179,7 +179,7 @@ const baseHandler = async (event, context) => {
     return respond(filtered, 'supabase');
   } catch (err) {
     return {
-      statusCode: err.code === 401 ? 401 : err.code === 403 ? 403 : 500,
+      statusCode: err.code === 401 ? 403 : err.code === 403 ? 403 : 500,
       headers: JSON_HEADERS,
       body: JSON.stringify({ ok: false, error: err.message || 'Unexpected error', code: err.code || 'report_error' }),
     };

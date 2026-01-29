@@ -28,7 +28,7 @@ const baseHandler = async (event, context) => {
       body: JSON.stringify({ ok: true, data, settings, source, supabase }),
     };
   } catch (err) {
-    const status = err.code === 401 ? 401 : err.code === 403 ? 403 : err.code === 'supabase_unavailable' ? 503 : 500;
+    const status = err.code === 401 ? 403 : err.code === 403 ? 403 : err.code === 'supabase_unavailable' ? 503 : 500;
     return {
       statusCode: status,
       headers: { 'content-type': 'application/json' },

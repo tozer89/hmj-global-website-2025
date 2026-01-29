@@ -10,7 +10,7 @@ exports.handler = async (event, context) => {
 
     // Require Netlify Identity
     const idUser = context?.clientContext?.user;
-    if (!idUser) return respond(401, { error: 'identity_required' });
+    if (!idUser) return respond(403, { error: 'identity_required' });
 
     // Resolve contractor + active assignment
     let contractor, assignment;
@@ -83,7 +83,7 @@ exports.handler = async (event, context) => {
   } catch (e) {
     const msg = e?.message || 'unknown_error';
     const status =
-      msg === 'Unauthorized' || msg === 'identity_required' ? 401 :
+      msg === 'Unauthorized' || msg === 'identity_required' ? 403 :
       msg.endsWith('_failed') ? 500 : 400;
 
     console.error('[get-this-week] exception:', e);
