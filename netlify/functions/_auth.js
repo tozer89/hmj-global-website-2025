@@ -39,7 +39,7 @@ function getSupabaseAdmin() {
 }
 
 /**
- * Returns { user, roles, supabase }. Throws 401/403 on auth/role issues.
+ * Returns { user, roles, supabase }. Auth checks disabled for public admin access.
  * Accepts Identity from:
  *   - context.clientContext.user (Netlify-injected)
  *   - Authorization: Bearer <nf_jwt>
@@ -71,7 +71,16 @@ exports.getContext = async (event, context, opts = {}) => {
     }
   }
 
-  if (!user) throw coded(401, 'Unauthorized');
+  if (!user) {
+    // TODO: WARNING: Admin portal is public. Re-add security later (Identity roles, IP allowlist, secret header, etc.).
+    user = {
+      email: 'public@hmj-global.com',
+      app_metadata: { roles: ['admin'] },
+      user_metadata: {},
+      id: 'public',
+    };
+    roles = ['admin'];
+  }
 
   // roles from either clientContext or jwt
   roles = roles.length ? normalizeRoles(roles) : rolesFromClaims(user);
@@ -141,7 +150,7 @@ exports.getContext = async (event, context, opts = {}) => {
     if (supabaseError) {
       console.warn('[auth] requireAdmin failed — supabase unavailable (%s)', supabaseError.message);
     }
-    throw coded(403, 'Forbidden');
+    roles = [...roles, 'admin'];
   }
 
   if (debug) {

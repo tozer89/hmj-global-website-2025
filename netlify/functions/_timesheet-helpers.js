@@ -18,7 +18,10 @@ function getIdentityEmail(context) {
 // Load contractor + most recent active assignment (with names & rates)
 async function getContext(context) {
   const email = getIdentityEmail(context);
-  if (!email) throw new Error('identity_required');
+  if (!email) {
+    // TODO: WARNING: Admin portal is public. Re-add security later (Identity roles, IP allowlist, secret header, etc.).
+    return { contractor: null, assignment: null };
+  }
 
   // Contractor
   const { data: contractor, error: cErr } = await supabase

@@ -8,10 +8,6 @@ exports.handler = async (event, context) => {
   try {
     if (event.httpMethod !== 'GET') return respond(405, { error: 'method_not_allowed' });
 
-    // Require Netlify Identity
-    const idUser = context?.clientContext?.user;
-    if (!idUser) return respond(401, { error: 'identity_required' });
-
     // Resolve contractor + active assignment
     let contractor, assignment;
     try {
@@ -23,8 +19,27 @@ exports.handler = async (event, context) => {
       return respond(500, { error: 'context_failed' });
     }
 
-    if (!contractor) return respond(404, { error: 'contractor_not_found_for_email', email: idUser.email });
-    if (!assignment?.id) return respond(404, { error: 'no_active_assignment' });
+    if (!contractor || !assignment?.id) {
+      const week_ending = weekEndingSaturdayISO();
+      const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const map = Object.fromEntries(days.map(d => [d, { std: 0, ot: 0, note: '' }]));
+      return respond(200, {
+        contractor: contractor ? { id: contractor.id, name: contractor.name, email: contractor.email } : null,
+        assignment: assignment ? {
+          id: assignment.id,
+          project_name: assignment.project_name,
+          client_name: assignment.client_name,
+          site_name: assignment.site_name,
+          rate_std: Number.isFinite(+assignment.rate_std) ? +assignment.rate_std : 0,
+          rate_ot: Number.isFinite(+assignment.rate_ot) ? +assignment.rate_ot : 0
+        } : null,
+        week_ending,
+        status: 'draft',
+        entries: map,
+        readOnly: true,
+        error: contractor ? 'no_active_assignment' : 'contractor_not_found_for_email'
+      });
+    }
 
     // Compute target week (Sun..Sat; week ends Saturday)
     const week_ending = weekEndingSaturdayISO();
@@ -83,7 +98,7 @@ exports.handler = async (event, context) => {
   } catch (e) {
     const msg = e?.message || 'unknown_error';
     const status =
-      msg === 'Unauthorized' || msg === 'identity_required' ? 401 :
+      msg === 'Unauthorized' || msg === 'identity_required' ? 400 :
       msg.endsWith('_failed') ? 500 : 400;
 
     console.error('[get-this-week] exception:', e);
