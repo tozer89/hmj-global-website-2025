@@ -19,6 +19,16 @@
   to = "/unauthorized.html"
   status = 401
 
+[[headers]]
+  for = "/admin"
+  [headers.values]
+    Basic-Auth = "hmj:payrolltsp"
+
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    Basic-Auth = "hmj:payrolltsp"
+
 [[plugins]]
   package = "./netlify/plugins/admin-build-info"
 

@@ -2,7 +2,7 @@
   'use strict';
 
   const currentScript = document.currentScript;
-  const loginFallback = '/timesheets.html';
+  const loginFallback = '/admin/';
   const logoutFallback = '/';
 
   const loginDestination = currentScript?.dataset?.hmjLoginRedirect || loginFallback;
