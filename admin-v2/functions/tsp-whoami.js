@@ -30,9 +30,11 @@ exports.handler = async () => {
         body: JSON.stringify({
           ok: false,
           mode: result.mode,
+          auth_mode: result.auth_mode,
           status: result.status,
           error: result.error,
           details: result.details,
+          upstream: result.upstream,
           debug: result.debug,
         }),
       };
@@ -40,14 +42,15 @@ exports.handler = async () => {
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ok: true,
-        mode: "live",
-        user: result.data,
-        source: "whoami",
-      }),
-    };
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ok: true,
+      mode: result.mode,
+      auth_mode: result.auth_mode,
+      user: result.data,
+      source: "whoami",
+    }),
+  };
   }
 
   const email = (process.env.TSP_API_USER_EMAIL || "").trim();
@@ -62,10 +65,12 @@ exports.handler = async () => {
       body: JSON.stringify({
         ok: false,
         mode: result.mode,
+        auth_mode: result.auth_mode,
         status: result.status,
         error: result.error,
         details: result.details,
         note: "whoami endpoint not configured",
+        upstream: result.upstream,
         debug: result.debug,
       }),
     };
@@ -81,7 +86,8 @@ exports.handler = async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ok: true,
-      mode: "live",
+      mode: result.mode,
+      auth_mode: result.auth_mode,
       user,
       note: match
         ? undefined

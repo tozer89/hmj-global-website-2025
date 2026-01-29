@@ -324,6 +324,7 @@
             </div>
             <div class="admin-panel__actions">
               <span class="status-badge status-idle" id="mode-badge">Mode: Unknown</span>
+              <span class="status-badge status-idle" id="auth-badge">Auth: Unknown</span>
               <button class="btn-primary" id="run-all" data-default="Run all checks" data-running="Running checks...">
                 Run all checks
               </button>
@@ -504,6 +505,33 @@
       badge.textContent = "Mode: Unknown";
     };
 
+    const setAuthBadge = (authMode, note) => {
+      const badge = document.getElementById("auth-badge");
+      if (!badge) return;
+      badge.classList.remove("status-idle", "status-success", "status-warning", "status-error");
+
+      if (authMode === "oauth") {
+        badge.classList.add("status-success");
+        badge.textContent = "Auth: OAuth";
+        return;
+      }
+
+      if (authMode === "api_key") {
+        badge.classList.add("status-warning");
+        badge.textContent = note ? "Auth: API Key fallback (OAuth not configured)" : "Auth: API Key";
+        return;
+      }
+
+      if (authMode === "none") {
+        badge.classList.add("status-error");
+        badge.textContent = "Auth: Missing";
+        return;
+      }
+
+      badge.classList.add("status-idle");
+      badge.textContent = "Auth: Unknown";
+    };
+
     const updateModeFromResponse = (data, status) => {
       if (data?.mode === "standby") {
         setModeBadge("standby");
@@ -513,6 +541,13 @@
       if (data?.mode === "live" || data?.ok === true || [401, 403, 429].includes(status)) {
         setModeBadge("live");
       }
+    };
+
+    const updateAuthFromResponse = (data) => {
+      const authMode = data?.auth_mode || data?.debug?.auth?.mode;
+      if (!authMode) return;
+      const note = data?.note;
+      setAuthBadge(authMode, note);
     };
 
     const setButtonState = (button, running) => {
@@ -623,6 +658,7 @@
         renderJson(config.outputId, data);
         updateTimestamp();
         updateModeFromResponse(data, response.status);
+        updateAuthFromResponse(data);
         if (!ok) {
           showDebug(data.debug || data);
         }
