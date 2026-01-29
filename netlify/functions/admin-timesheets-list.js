@@ -134,7 +134,7 @@ function shouldFallback(err) {
   return false;
 }
 
-module.const baseHandler = async (event, context) => {
+const baseHandler = async (event, context) => {
   const trace = `ts-${Date.now()}`;
 
   let body = {};
