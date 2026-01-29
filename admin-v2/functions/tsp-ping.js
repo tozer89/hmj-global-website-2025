@@ -1,7 +1,8 @@
-const { getEnv } = require("./_lib/tsp");
+const { getEnv, detectAuthMethod } = require("./_lib/tsp");
 
 exports.handler = async () => {
   const env = getEnv();
+  const authMethod = detectAuthMethod(env);
 
   return {
     statusCode: 200,
@@ -9,7 +10,10 @@ exports.handler = async () => {
     body: JSON.stringify({
       ok: true,
       tsp_base_url_present: env.hasBaseUrl,
-      tsp_api_key_present: env.hasApiKey,
+      auth_method: authMethod,
+      oauth_ready: env.hasClientId && env.hasClientSecret,
+      regular_ready: env.hasEmail && env.hasPassword && env.hasAccountName,
+      api_key_present: env.hasApiKey,
     }),
   };
 };

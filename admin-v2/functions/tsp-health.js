@@ -1,35 +1,43 @@
-const { getEnv, tspFetch } = require("./_lib/tsp");
+const { fetchTsp } = require("./_lib/tsp");
 
-const REACHABLE_STATUSES = new Set([200, 401, 403]);
+const DEFAULT_CLIENTS_PATH = "/clients";
 
 exports.handler = async () => {
-  const env = getEnv();
   const start = Date.now();
-  const result = await tspFetch("/");
+  const healthPath = (process.env.TSP_HEALTH_PATH || "").trim();
+  const clientsPath = (process.env.TSP_CLIENTS_PATH || DEFAULT_CLIENTS_PATH).trim() || DEFAULT_CLIENTS_PATH;
+  const path = healthPath || clientsPath;
+
+  const result = await fetchTsp(path, {
+    query: healthPath ? undefined : { limit: 1 },
+  });
+
   const responseTime = Date.now() - start;
 
-  let ok = false;
-  let message = "";
-
-  if (!env.hasBaseUrl) {
-    message = "Missing TSP_BASE_URL";
-  } else if (result.error) {
-    message = result.error;
-  } else if (REACHABLE_STATUSES.has(result.status)) {
-    ok = true;
-    message = result.status === 200 ? "TSP reachable" : "TSP reachable (auth required)";
-  } else {
-    message = `Unexpected status ${result.status}`;
+  if (!result.ok) {
+    return {
+      statusCode: result.status || 502,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ok: false,
+        status: result.status,
+        response_time_ms: responseTime,
+        error: result.error,
+        details: result.details,
+      }),
+    };
   }
 
   return {
-    statusCode: ok ? 200 : 502,
+    statusCode: 200,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ok,
+      ok: true,
       status: result.status,
       response_time_ms: responseTime,
-      message,
+      message: "TSP reachable",
+      sample: result.data,
+      path,
     }),
   };
 };

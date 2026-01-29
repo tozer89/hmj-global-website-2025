@@ -1,32 +1,95 @@
-const { getEnv, tspFetch } = require("./_lib/tsp");
+const { fetchTsp } = require("./_lib/tsp");
+
+const DEFAULT_USERS_PATH = "/users";
+
+const extractArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.users)) return payload.users;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+};
+
+const matchByEmail = (users, email) => {
+  if (!email) return null;
+  const target = email.toLowerCase();
+  return users.find((user) => {
+    const candidate = user.email || user.Email || user.userEmail || "";
+    return candidate.toLowerCase() === target;
+  });
+};
 
 exports.handler = async () => {
-  const env = getEnv();
   const whoamiPath = (process.env.TSP_WHOAMI_PATH || "").trim();
 
-  if (!whoamiPath) {
+  if (whoamiPath) {
+    const result = await fetchTsp(whoamiPath);
+    if (!result.ok) {
+      return {
+        statusCode: result.status || 502,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ok: false,
+          status: result.status,
+          error: result.error,
+          details: result.details,
+        }),
+      };
+    }
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ok: true,
-        note: "whoami endpoint not configured",
-        reachable: env.hasBaseUrl,
+        user: result.data,
+        source: "whoami",
       }),
     };
   }
 
-  const result = await tspFetch(whoamiPath);
-  const ok = result.ok;
+  const email = (process.env.TSP_API_USER_EMAIL || "").trim();
+  if (!email) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ok: false,
+        note: "whoami endpoint not configured",
+        error: "Missing TSP_API_USER_EMAIL for fallback lookup",
+      }),
+    };
+  }
+
+  const usersPath = (process.env.TSP_USERS_PATH || DEFAULT_USERS_PATH).trim() || DEFAULT_USERS_PATH;
+  const result = await fetchTsp(usersPath, {
+    query: { email },
+  });
+
+  if (!result.ok) {
+    return {
+      statusCode: result.status || 502,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ok: false,
+        status: result.status,
+        error: result.error,
+        details: result.details,
+        note: "whoami endpoint not configured",
+      }),
+    };
+  }
+
+  const items = extractArray(result.data);
+  const match = matchByEmail(items, email);
 
   return {
-    statusCode: ok ? 200 : 502,
+    statusCode: 200,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ok,
-      status: result.status,
-      data: result.data ?? null,
-      message: ok ? "User fetched" : result.error || "Whoami request failed",
+      ok: Boolean(match),
+      user: match || null,
+      note: match ? undefined : "No matching user found",
+      source: "email_lookup",
     }),
   };
 };
