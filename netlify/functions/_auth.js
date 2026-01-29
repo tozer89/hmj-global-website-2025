@@ -39,7 +39,7 @@ function getSupabaseAdmin() {
 }
 
 /**
- * Returns { user, roles, supabase }. Throws 401/403 on auth/role issues.
+ * Returns { user, roles, supabase }. Throws 403 on auth/role issues.
  * Accepts Identity from:
  *   - context.clientContext.user (Netlify-injected)
  *   - Authorization: Bearer <nf_jwt>
@@ -71,7 +71,7 @@ exports.getContext = async (event, context, opts = {}) => {
     }
   }
 
-  if (!user) throw coded(401, 'Unauthorized');
+  if (!user) throw coded(403, 'Unauthorized');
 
   // roles from either clientContext or jwt
   roles = roles.length ? normalizeRoles(roles) : rolesFromClaims(user);

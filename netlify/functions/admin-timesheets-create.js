@@ -18,7 +18,7 @@ const baseHandler = async (event, context) => {
 
     return { statusCode: 200, body: JSON.stringify({ id: ts.id, week_ending: week_ending, status: ts.status }) };
   } catch (e) {
-    const status = e.code === 401 ? 401 : 500;
+    const status = e.code === 401 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };
   }
 };

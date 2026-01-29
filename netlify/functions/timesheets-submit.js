@@ -77,7 +77,7 @@ exports.handler = async (event, context) => {
   } catch (e) {
     const msg = e?.message || 'Failed to submit';
     const status =
-      e?.code === 401 || msg === 'Unauthorized' ? 401 :
+      e?.code === 401 || msg === 'Unauthorized' ? 403 :
       e?.code === 404 ? 404 : 500;
 
     console.error('timesheets-submit exception:', e);

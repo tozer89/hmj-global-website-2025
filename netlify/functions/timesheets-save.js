@@ -78,7 +78,7 @@ exports.handler = async (event, context) => {
     return respond(200, { ok: true, status: upd.data.status });
   } catch (e) {
     const msg = e?.message || 'Failed to save draft';
-    const status = (e?.code === 401 || msg === 'Unauthorized') ? 401 : 400;
+    const status = (e?.code === 401 || msg === 'Unauthorized') ? 403 : 400;
     console.error('timesheets-save exception:', e);
     return respond(status, { error: msg });
   }

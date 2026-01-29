@@ -110,7 +110,7 @@ const baseHandler = async (event, context) => {
     };
   } catch (e) {
     const schemaIssue = isSchemaError(e);
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
+    const status = e.code === 401 ? 403 : e.code === 403 ? 403 : 500;
     const source = fallbackJobs.length ? 'static' : 'empty';
     ensureStaticJobs();
     return {
@@ -120,7 +120,7 @@ const baseHandler = async (event, context) => {
         jobs: fallbackJobs,
         readOnly: isPublicRequest ? undefined : true,
         source,
-        error: e.message || fallbackError?.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
+        error: e.message || fallbackError?.message || (status === 403 ? 'Unauthorized' : 'Unexpected error'),
         schema: schemaIssue,
         warning: schemaIssue
           ? 'Jobs table schema mismatch detected — serving static jobs.'
