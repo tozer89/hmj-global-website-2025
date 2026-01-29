@@ -134,7 +134,8 @@ function shouldFallback(err) {
   return false;
 }
 
-module.const baseHandler = async (event, context) => {
+const baseHandler = async (event, context) => {
+
   const trace = `ts-${Date.now()}`;
 
   let body = {};
@@ -278,4 +279,5 @@ module.const baseHandler = async (event, context) => {
   }
 };
 
-exports.handler = withAdminCors(baseHandler);
+module.exports = { handler: withAdminCors(baseHandler) };
+
