@@ -1,7 +1,7 @@
 const DEFAULT_TOKEN_EXPIRES_IN = 3600;
 const TOKEN_EXPIRY_BUFFER_MS = 60 * 1000;
 const DEFAULT_BASE_URL = "https://brightwater.api.timesheetportal.com";
-const DEFAULT_TOKEN_PATH = "/token";
+const DEFAULT_TOKEN_PATH = "/oauth/token";
 
 let cachedOAuthToken = null;
 let cachedOAuthExpiry = 0;
@@ -16,8 +16,8 @@ let lastOAuthAttempt = {
 const getOAuthEnv = () => {
   const baseUrlRaw = (process.env.TSP_BASE_URL || "").trim();
   const baseUrl = (baseUrlRaw || DEFAULT_BASE_URL).trim().replace(/\/+$/, "");
-  const clientId = (process.env.TSP_OAUTH_CLIENT_ID || "").trim();
-  const clientSecret = (process.env.TSP_OAUTH_CLIENT_SECRET || "").trim();
+  const clientId = (process.env.TSP_OAUTH_CLIENT_ID || "").replace(/\s+/g, "");
+  const clientSecret = (process.env.TSP_OAUTH_CLIENT_SECRET || "").replace(/\s+/g, "");
   const scope = (process.env.TSP_OAUTH_SCOPE || "").trim();
   const tokenUrlRaw = (process.env.TSP_TOKEN_URL || "").trim();
 
@@ -70,22 +70,20 @@ const resetTokenCache = () => {
 };
 
 const requestOAuthToken = async (env, fetchJson) => {
-  const payload = {
-    grant_type: "client_credentials",
-    client_id: env.clientId,
-    client_secret: env.clientSecret,
-  };
+  const params = new URLSearchParams({ grant_type: "client_credentials" });
   if (env.scope) {
-    payload.scope = env.scope;
+    params.set("scope", env.scope);
   }
 
-  const body = new URLSearchParams(payload).toString();
+  const basic = Buffer.from(`${env.clientId}:${env.clientSecret}`).toString("base64");
+  const body = params.toString();
 
   const { response, data, text, error } = await fetchJson(env.tokenUrl, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${basic}`,
     },
     body,
   });
@@ -101,12 +99,16 @@ const requestOAuthToken = async (env, fetchJson) => {
 
   if (!response.ok) {
     const message = data?.error_description || data?.error || text || "OAuth token request failed";
+    const details = {};
+    if (data?.error) details.error = data.error;
+    if (data?.error_description) details.error_description = data.error_description;
+    if (text && !data?.error && !data?.error_description) details.text = text.slice(0, 500);
     recordOAuthAttempt({ status: response.status, error: message, tokenUrl: env.tokenUrl });
     return {
       ok: false,
       status: response.status,
       error: message,
-      details: data ?? (text ? { text: text.slice(0, 500) } : undefined),
+      details: Object.keys(details).length ? details : undefined,
     };
   }
 
