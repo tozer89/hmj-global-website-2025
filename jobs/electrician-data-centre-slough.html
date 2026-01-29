@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Electrician — Data Centre Construction Project | HMJ Global</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    :root {
+      color-scheme: light;
+
+      --hmj-blue: #2f4ea2;
+      --hmj-blue-dark: #1f3b82;
+      --hmj-text: #0f1b3f;
+      --hmj-muted: #5b6474;
+      --hmj-border: rgba(47, 78, 162, 0.18);
+      --hmj-focus: rgba(63, 102, 199, 0.35);
+      --chip-bg: rgba(63, 102, 199, 0.12);
+      --chip-border: rgba(63, 102, 199, 0.26);
+      --chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      --cta-shadow: 0 12px 28px rgba(47, 78, 162, 0.18);
+      --cta-shadow-hover: 0 18px 38px rgba(47, 78, 162, 0.22);
+
+      --bg: linear-gradient(135deg, #f6f8ff 0%, #eef3ff 45%, #f8faff 100%);
+      --surface: #ffffff;
+      --shadow: 0 28px 64px rgba(47, 78, 162, 0.15);
+      --ink: var(--hmj-text);
+      --ink-strong: var(--hmj-blue-dark);
+      --ink-soft: #5d6f9e;
+      --accent: var(--hmj-blue);
+      --accent-strong: var(--hmj-blue-dark);
+      --accent-soft: rgba(63, 102, 199, 0.12);
+      --badge-live-bg: rgba(19, 135, 84, 0.12);
+      --badge-live-border: rgba(19, 135, 84, 0.32);
+      --badge-live-text: #0f5132;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: clamp(24px, 5vw, 56px);
+      line-height: 1.6;
+    }
+
+    .card {
+      width: min(920px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--hmj-border);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: clamp(26px, 3vw, 36px);
+      display: grid;
+      gap: 22px;
+    }
+
+    header {
+      display: grid;
+      gap: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 40px);
+      color: var(--ink-strong);
+      letter-spacing: -0.01em;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      color: var(--ink-strong);
+      font-weight: 700;
+    }
+
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      border: 1px solid var(--chip-border);
+      box-shadow: var(--chip-shadow);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--badge-live-text);
+      background: var(--badge-live-bg);
+      border: 1px solid var(--badge-live-border);
+      box-shadow: var(--chip-shadow);
+      justify-self: start;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tags span {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      border: 1px solid var(--chip-border);
+      box-shadow: var(--chip-shadow);
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    h2 {
+      margin: 12px 0 6px;
+      font-size: 16px;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    ul {
+      margin: 0 0 12px 22px;
+      color: var(--ink);
+      line-height: 1.6;
+      font-weight: 500;
+    }
+
+    p {
+      margin: 0;
+      color: var(--ink);
+      line-height: 1.65;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      font-weight: 800;
+      font-size: 15px;
+      padding: 13px 22px;
+      border-radius: 14px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .btn.primary {
+      background: linear-gradient(180deg, rgba(63, 102, 199, 0.2), rgba(63, 102, 199, 0.08));
+      border-color: rgba(63, 102, 199, 0.42);
+      color: #fff;
+      box-shadow: var(--cta-shadow);
+    }
+
+    .btn.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--cta-shadow-hover);
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--accent-strong);
+      border-color: rgba(63, 102, 199, 0.26);
+      box-shadow: inset 0 0 0 1px rgba(63, 102, 199, 0.06);
+    }
+
+    .btn.secondary:hover {
+      background: rgba(63, 102, 199, 0.08);
+      color: var(--accent-strong);
+    }
+
+    .btn:focus-visible {
+      outline: 3px solid var(--hmj-focus);
+      outline-offset: 2px;
+    }
+
+    .muted {
+      color: var(--hmj-muted);
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 24px;
+      }
+
+      .card {
+        padding: 24px;
+        border-radius: 24px;
+        gap: 18px;
+      }
+
+      h1 {
+        font-size: clamp(26px, 6vw, 34px);
+      }
+
+      .meta span {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .cta {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <article class="card">
+    <header>
+      <span class="badge">Live Role</span>
+      <h1>Electrician — Data Centre Construction Project</h1>
+      <div class="meta">
+        <span>Slough, UK</span>
+        <span>Contract (CIS)</span>
+        <span>Data Centre Construction</span>
+      </div>
+      <div class="tags">
+        <span>Gold Card</span>
+        <span>18th Edition</span>
+        <span>11-hour paid days</span>
+        <span>ASAP start</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>Overview</h2>
+      <p>We are recruiting experienced Gold Card Electricians to support a major data centre construction project in Slough. This is an excellent opportunity to work on a large-scale, technically demanding project within a highly regulated and safety-driven environment. Data centre experience is preferred, but strong commercial or industrial backgrounds will also be considered.</p>
+    </section>
+
+    <section>
+      <h2>Key Responsibilities</h2>
+      <ul>
+        <li>Install electrical systems on a live data centre construction site.</li>
+        <li>Cable pulling, containment (tray, basket, trunking, conduit) and wiring installations.</li>
+        <li>Terminate power and distribution systems.</li>
+        <li>Work from electrical drawings, schematics, and method statements.</li>
+        <li>Ensure all work complies with project QA/QC standards.</li>
+        <li>Maintain high health &amp; safety standards at all times.</li>
+        <li>Collaborate with supervisors and other site trades.</li>
+        <li>Report progress, issues, or defects to site management.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Required Experience &amp; Qualifications</h2>
+      <ul>
+        <li>Gold JIB/ECS Card (essential).</li>
+        <li>NVQ Level 3 Electrical Installation or equivalent.</li>
+        <li>18th Edition (BS7671).</li>
+        <li>Experience on large commercial, industrial, or data centre projects.</li>
+        <li>Ability to work independently and as part of a team.</li>
+        <li>Strong attention to detail and safety compliance.</li>
+        <li>IPAF.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Desirable (Not Essential)</h2>
+      <ul>
+        <li>Previous data centre or mission-critical project experience.</li>
+        <li>Experience working long-hour shift patterns.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Contract Details</h2>
+      <ul>
+        <li>Pay Rate: £23.00 per hour (UK CIS).</li>
+        <li>Hours: 11 hours paid per day.</li>
+        <li>Working Pattern: Monday to Friday.</li>
+        <li>Start Date: ASAP.</li>
+        <li>Contract Length: Ongoing / long-term potential.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Why Apply?</h2>
+      <ul>
+        <li>Long-hour working days with consistent weekly income.</li>
+        <li>Opportunity to work on a high-profile data centre project.</li>
+        <li>Well-organised site with clear scope of works.</li>
+        <li>Potential for follow-on work on future projects.</li>
+      </ul>
+    </section>
+
+    <footer class="cta">
+      <a class="btn primary" href="/contact.html?role=Electrician%20%E2%80%94%20Data%20Centre%20Construction%20Project%20%E2%80%94%20Slough%2C%20UK">Apply now</a>
+      <button class="btn secondary" type="button" id="copyLink">Copy link</button>
+      <a class="btn secondary" href="/jobs.html">Back to jobs</a>
+    </footer>
+    <p class="muted" id="copyStatus" aria-live="polite"></p>
+  </article>
+
+  <script>
+    (function(){
+      const copyBtn = document.getElementById('copyLink');
+      const copyStatus = document.getElementById('copyStatus');
+      if (!copyBtn || !navigator.clipboard) return;
+
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          copyStatus.textContent = 'Link copied to clipboard.';
+        } catch (err) {
+          copyStatus.textContent = 'Copy failed. Please copy the URL from your browser.';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
