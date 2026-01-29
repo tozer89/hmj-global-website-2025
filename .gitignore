@@ -8,3 +8,4 @@ netlify/functions/node_modules/
 # Editor cruft
 .DS_Store
 Thumbs.db
+.DS_Store
