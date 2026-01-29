@@ -21,10 +21,12 @@ exports.handler = async () => {
       body: JSON.stringify({
         ok: false,
         mode: result.mode,
+        auth_mode: result.auth_mode,
         status: result.status,
         response_time_ms: responseTime,
         error: result.error,
         details: result.details,
+        upstream: result.upstream,
         debug: result.debug,
       }),
     };
@@ -35,7 +37,8 @@ exports.handler = async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ok: true,
-      mode: "live",
+      mode: result.mode,
+      auth_mode: result.auth_mode,
       status: result.status,
       response_time_ms: responseTime,
       message: "TSP reachable",
