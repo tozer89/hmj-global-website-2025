@@ -1,10 +1,10 @@
 [build]
   publish = "/"
-  functions = "netlify/functions"
+  functions = "admin-v2/functions"
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["data/*.json", "netlify/functions/_data/*.json"]
+  included_files = ["data/*.json", "admin-v2/functions/_data/*.json"]
 
 # Gate the timesheets admin to users with the "admin" role
 [[redirects]]
@@ -23,7 +23,7 @@
   package = "./netlify/plugins/admin-build-info"
 
 [context.production]
-  functions = "netlify/functions"
+  functions = "admin-v2/functions"
 
 [context.deploy-preview]
   functions = "admin-v2/functions"
