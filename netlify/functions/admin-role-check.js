@@ -11,7 +11,7 @@ const baseHandler = async (event, context) => {
       body: JSON.stringify({ ok: true, email: user?.email || '', roles: roles || [] }),
     };
   } catch (err) {
-    const status = err?.code === 401 ? 401 : err?.code === 403 ? 403 : 500;
+    const status = err?.code === 401 ? 403 : err?.code === 403 ? 403 : 500;
     return {
       statusCode: status,
       headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },

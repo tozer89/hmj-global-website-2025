@@ -67,7 +67,7 @@ function withAdminCors(handler, options = {}) {
       const headers = Object.assign({}, cors);
       if (trace) headers['x-trace'] = trace;
       console.warn('[#hmjg] admin function missing token', event.path || event.rawUrl || '');
-      return { statusCode: 401, headers, body };
+      return { statusCode: 403, headers, body };
     }
 
     try {

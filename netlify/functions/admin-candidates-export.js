@@ -102,7 +102,7 @@ const baseHandler = async (event, context) => {
   try {
     ctx = await getContext(event, context, { requireAdmin: true });
   } catch (err) {
-    return { statusCode: err.code || 401, body: JSON.stringify({ error: err.message || 'Unauthorized' }) };
+    return { statusCode: err.code || 403, body: JSON.stringify({ error: err.message || 'Unauthorized' }) };
   }
 
   const { supabase, supabaseError } = ctx;
