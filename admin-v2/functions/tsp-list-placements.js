@@ -1,4 +1,4 @@
-const { fetchTsp } = require("./_lib/tsp");
+const { tspFetch, isLiveMode } = require("./_lib/tsp");
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_PLACEMENTS_PATH = "/placements";
@@ -42,12 +42,23 @@ const extractArray = (payload) => {
 };
 
 exports.handler = async (event) => {
+  if (!isLiveMode()) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ok: false,
+        mode: "standby",
+      }),
+    };
+  }
+
   const limitParam = parseInt(event.queryStringParameters?.limit, 10);
   const statusParam = event.queryStringParameters?.status;
   const limit = Number.isFinite(limitParam) ? Math.min(limitParam, 200) : DEFAULT_LIMIT;
   const endpoint = (process.env.TSP_PLACEMENTS_PATH || DEFAULT_PLACEMENTS_PATH).trim() || DEFAULT_PLACEMENTS_PATH;
 
-  const result = await fetchTsp(endpoint, { query: { limit, status: statusParam } });
+  const result = await tspFetch(endpoint, { query: { limit, status: statusParam } });
   if (!result.ok) {
     return {
       statusCode: result.status || 502,
@@ -69,6 +80,7 @@ exports.handler = async (event) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ok: true,
+      mode: "live",
       limit,
       status: statusParam || "all",
       count: normalized.length,
