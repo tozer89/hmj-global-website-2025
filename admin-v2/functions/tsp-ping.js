@@ -5,7 +5,6 @@ exports.handler = async () => {
   const authMode = getAuthMode(env);
   const mode = isLiveMode(env) ? "live" : "standby";
   const ok = mode === "live";
-  const note = authMode === "api_key" ? "OAuth not configured; using API key fallback" : undefined;
 
   return {
     statusCode: 200,
@@ -15,13 +14,14 @@ exports.handler = async () => {
       mode,
       auth_mode: authMode,
       can_run: ok,
-      note,
       tsp_base_url_present: env.baseUrlPresent,
       oauth_client_id_present: env.hasClientId,
       oauth_client_secret_present: env.hasClientSecret,
       oauth_scope_present: env.hasScope,
+      token_url_present: env.tokenUrlPresent,
       tsp_api_key_present: env.hasApiKey,
-      error: ok ? undefined : "Missing Timesheet Portal credentials",
+      tsp_api_key_deprecated: env.hasApiKey,
+      error: ok ? undefined : "Missing Timesheet Portal OAuth credentials",
       debug: ok ? undefined : getDebugSnapshot(env, { authMode }),
     }),
   };
