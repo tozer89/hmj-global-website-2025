@@ -116,6 +116,32 @@
       gap: 18px;
     }
 
+    .debug-panel {
+      margin-top: 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 19, 34, 0.12);
+      background: #fff;
+      padding: 16px 18px;
+    }
+
+    .debug-panel summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .debug-panel__body {
+      margin-top: 12px;
+      background: var(--soft);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .debug-panel__body .json-output {
+      margin-top: 8px;
+      max-height: 280px;
+    }
+
     .tool-card {
       border-radius: 16px;
       border: 1px solid rgba(15, 19, 34, 0.08);
@@ -349,7 +375,23 @@
               <button class="btn-primary" id="btn-placements" data-default="List placements" data-running="Running...">List placements</button>
               <pre class="json-output" id="result-placements">{}</pre>
             </div>
+            <div class="tool-card">
+              <div>
+                <h3>List users</h3>
+                <p class="admin-updated">Pull users for verification.</p>
+              </div>
+              <span class="status-badge status-idle" id="status-users">Idle</span>
+              <button class="btn-primary" id="btn-users" data-default="List users" data-running="Running...">List users</button>
+              <pre class="json-output" id="result-users">{}</pre>
+            </div>
           </div>
+          <details class="debug-panel" id="debug-panel">
+            <summary>Debug</summary>
+            <div class="debug-panel__body">
+              <p class="admin-updated">Shown automatically when a TSP request fails.</p>
+              <pre class="json-output" id="debug-output">{}</pre>
+            </div>
+          </details>
         </div>
       </div>
     </section>
@@ -425,6 +467,12 @@
         badgeId: "status-placements",
         outputId: "result-placements",
       },
+      users: {
+        url: "/.netlify/functions/tsp-list-users?limit=20",
+        buttonId: "btn-users",
+        badgeId: "status-users",
+        outputId: "result-users",
+      },
     };
 
     const setBadge = (id, state, text) => {
@@ -484,6 +532,14 @@
       if (output) {
         output.textContent = JSON.stringify(data, null, 2);
       }
+    };
+
+    const showDebug = (payload) => {
+      const debugPanel = document.getElementById("debug-panel");
+      const debugOutput = document.getElementById("debug-output");
+      if (!debugPanel || !debugOutput) return;
+      debugOutput.textContent = JSON.stringify(payload || {}, null, 2);
+      debugPanel.open = true;
     };
 
     const summarizeClients = (payload) => {
@@ -567,6 +623,9 @@
         renderJson(config.outputId, data);
         updateTimestamp();
         updateModeFromResponse(data, response.status);
+        if (!ok) {
+          showDebug(data.debug || data);
+        }
 
         if (key === "clients") {
           summarizeClients(data);
@@ -576,8 +635,10 @@
         }
       } catch (error) {
         setBadge(config.badgeId, "error", "Fail");
-        renderJson(config.outputId, { ok: false, error: error.message });
+        const errorPayload = { ok: false, error: error.message };
+        renderJson(config.outputId, errorPayload);
         updateTimestamp();
+        showDebug({ error: error.message });
       } finally {
         setButtonState(button, false);
       }
