@@ -1,4 +1,4 @@
-const { fetchTsp } = require("./_lib/tsp");
+const { tspFetch, isLiveMode } = require("./_lib/tsp");
 
 const DEFAULT_USERS_PATH = "/users";
 
@@ -19,10 +19,21 @@ const matchByEmail = (users, email) => {
 };
 
 exports.handler = async () => {
+  if (!isLiveMode()) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ok: false,
+        mode: "standby",
+      }),
+    };
+  }
+
   const whoamiPath = (process.env.TSP_WHOAMI_PATH || "").trim();
 
   if (whoamiPath) {
-    const result = await fetchTsp(whoamiPath);
+    const result = await tspFetch(whoamiPath);
     if (!result.ok) {
       return {
         statusCode: result.status || 502,
@@ -41,6 +52,7 @@ exports.handler = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ok: true,
+        mode: "live",
         user: result.data,
         source: "whoami",
       }),
@@ -61,7 +73,7 @@ exports.handler = async () => {
   }
 
   const usersPath = (process.env.TSP_USERS_PATH || DEFAULT_USERS_PATH).trim() || DEFAULT_USERS_PATH;
-  const result = await fetchTsp(usersPath, {
+  const result = await tspFetch(usersPath, {
     query: { email },
   });
 
@@ -87,6 +99,7 @@ exports.handler = async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ok: Boolean(match),
+      mode: "live",
       user: match || null,
       note: match ? undefined : "No matching user found",
       source: "email_lookup",

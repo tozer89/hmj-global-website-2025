@@ -1,41 +1,33 @@
 const DEFAULT_TIMEOUT_MS = 8000;
+const DEFAULT_TOKEN_EXPIRES_IN = 3600;
 const TOKEN_EXPIRY_BUFFER_MS = 60 * 1000;
+const DEFAULT_BASE_URL = "https://brightwater.api.timesheetportal.com";
 
 let cachedOAuthToken = null;
 let cachedOAuthExpiry = 0;
 
 const getEnv = () => {
-  const baseUrl = (process.env.TSP_BASE_URL || "").trim().replace(/\/+$/, "");
-  const apiKey = (process.env.TSP_API_KEY || "").trim();
+  const baseUrl = (process.env.TSP_BASE_URL || DEFAULT_BASE_URL).trim().replace(/\/+$/, "");
   const clientId = (process.env.TSP_CLIENT_ID || "").trim();
   const clientSecret = (process.env.TSP_CLIENT_SECRET || "").trim();
-  const email = (process.env.TSP_EMAIL || "").trim();
-  const password = (process.env.TSP_PASSWORD || "").trim();
-  const accountName = (process.env.TSP_ACCOUNT_NAME || "").trim();
+  const scope = (process.env.TSP_SCOPE || "").trim();
+  const mode = (process.env.TSP_MODE || "").trim().toLowerCase();
 
   return {
     baseUrl,
-    apiKey,
     clientId,
     clientSecret,
-    email,
-    password,
-    accountName,
-    hasBaseUrl: Boolean(baseUrl),
-    hasApiKey: Boolean(apiKey),
+    scope,
+    mode,
     hasClientId: Boolean(clientId),
     hasClientSecret: Boolean(clientSecret),
-    hasEmail: Boolean(email),
-    hasPassword: Boolean(password),
-    hasAccountName: Boolean(accountName),
+    hasScope: Boolean(scope),
   };
 };
 
-const detectAuthMethod = (env) => {
-  if (env.hasClientId && env.hasClientSecret) return "oauth";
-  if (env.hasEmail && env.hasPassword && env.hasAccountName) return "regular";
-  if (env.hasApiKey) return "api_key";
-  return "none";
+const isLiveMode = () => {
+  const { mode } = getEnv();
+  return mode === "live";
 };
 
 const fetchJson = async (url, options = {}) => {
@@ -74,26 +66,38 @@ const fetchJson = async (url, options = {}) => {
   }
 };
 
-const getOAuthToken = async (env) => {
+const getOAuthToken = async () => {
+  const env = getEnv();
   const now = Date.now();
   if (cachedOAuthToken && cachedOAuthExpiry > now) {
     return { ok: true, token: cachedOAuthToken };
   }
 
+  if (!env.hasClientId || !env.hasClientSecret || !env.baseUrl) {
+    return {
+      ok: false,
+      status: 0,
+      error: "Missing OAuth credentials for Timesheet Portal",
+    };
+  }
+
   const url = `${env.baseUrl}/oauth/token`;
-  const body = {
+  const body = new URLSearchParams({
     grant_type: "client_credentials",
     client_id: env.clientId,
     client_secret: env.clientSecret,
-  };
+  });
+  if (env.scope) {
+    body.set("scope", env.scope);
+  }
 
   const { response, data, text, error } = await fetchJson(url, {
     method: "POST",
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: JSON.stringify(body),
+    body: body.toString(),
   });
 
   if (error) {
@@ -114,7 +118,7 @@ const getOAuthToken = async (env) => {
   }
 
   const accessToken = data?.access_token || data?.token || null;
-  const expiresInSeconds = Number(data?.expires_in || 3600);
+  const expiresInSeconds = Number(data?.expires_in || DEFAULT_TOKEN_EXPIRES_IN);
 
   if (!accessToken) {
     return {
@@ -131,115 +135,22 @@ const getOAuthToken = async (env) => {
   return { ok: true, token: accessToken };
 };
 
-const getRegularToken = async (env) => {
-  const url = `${env.baseUrl}/token`;
-  const body = {
-    Email: env.email,
-    Password: env.password,
-    AccountName: env.accountName,
-  };
-
-  const { response, data, text, error } = await fetchJson(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (error) {
-    return {
-      ok: false,
-      status: 0,
-      error: error.name === "AbortError" ? "Request timed out" : error.message,
-    };
-  }
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      status: response.status,
-      error: data?.error || text || "Token request failed",
-      details: data ?? text,
-    };
-  }
-
-  const token = data?.Token || data?.token || null;
-  if (!token) {
-    return {
-      ok: false,
-      status: response.status,
-      error: "Token response did not include a token",
-      details: data ?? text,
-    };
-  }
-
-  return { ok: true, token };
-};
-
-const getAuthHeader = async () => {
+const tspFetch = async (path = "/", options = {}) => {
   const env = getEnv();
 
-  if (!env.hasBaseUrl) {
+  if (!env.baseUrl) {
     return {
       ok: false,
       status: 0,
-      error: "Missing TSP_BASE_URL",
+      error: "Missing TSP base URL",
     };
   }
 
-  const method = detectAuthMethod(env);
-  if (method === "oauth") {
-    const tokenResult = await getOAuthToken(env);
-    if (!tokenResult.ok) return tokenResult;
-    return {
-      ok: true,
-      method,
-      headers: {
-        Authorization: `Bearer ${tokenResult.token}`,
-      },
-    };
-  }
-
-  if (method === "regular") {
-    const tokenResult = await getRegularToken(env);
-    if (!tokenResult.ok) return tokenResult;
-    return {
-      ok: true,
-      method,
-      headers: {
-        Authorization: tokenResult.token,
-      },
-    };
-  }
-
-  if (method === "api_key") {
-    const token = env.apiKey;
-    return {
-      ok: true,
-      method,
-      headers: {
-        Authorization: token.startsWith("Bearer ") ? token : token,
-      },
-    };
-  }
-
-  return {
-    ok: false,
-    status: 0,
-    error: "No authentication credentials configured",
-  };
-};
-
-const fetchTsp = async (path = "/", options = {}) => {
-  const env = getEnv();
-
-  if (!env.hasBaseUrl) {
+  if (!env.hasClientId || !env.hasClientSecret) {
     return {
       ok: false,
       status: 0,
-      error: "Missing TSP_BASE_URL",
+      error: "Missing TSP_CLIENT_ID or TSP_CLIENT_SECRET",
     };
   }
 
@@ -254,20 +165,15 @@ const fetchTsp = async (path = "/", options = {}) => {
     });
   }
 
-  const authResult = await getAuthHeader();
-  if (!authResult.ok) {
-    return {
-      ok: false,
-      status: authResult.status || 0,
-      error: authResult.error || "Authentication failed",
-      details: authResult.details,
-    };
+  const tokenResult = await getOAuthToken();
+  if (!tokenResult.ok) {
+    return tokenResult;
   }
 
   const headers = new Headers({
     Accept: "application/json",
     ...(options.headers || {}),
-    ...(authResult.headers || {}),
+    Authorization: `Bearer ${tokenResult.token}`,
   });
 
   let body = options.body;
@@ -310,7 +216,6 @@ const fetchTsp = async (path = "/", options = {}) => {
 
 module.exports = {
   getEnv,
-  detectAuthMethod,
-  getAuthHeader,
-  fetchTsp,
+  isLiveMode,
+  tspFetch,
 };

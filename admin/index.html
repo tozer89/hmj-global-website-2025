@@ -169,6 +169,11 @@
       color: var(--danger);
     }
 
+    .status-warning {
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--warning);
+    }
+
     pre.json-output {
       margin: 0;
       padding: 12px;
@@ -198,6 +203,13 @@
     .report-card h3 {
       margin-top: 0;
       margin-bottom: 10px;
+    }
+
+    .admin-panel__actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .report-summary {
@@ -284,9 +296,12 @@
               <h2>TSP API Tools</h2>
               <p class="admin-updated">Last updated: <span id="last-updated">—</span></p>
             </div>
-            <button class="btn-primary" id="run-all" data-default="Run all checks" data-running="Running checks...">
-              Run all checks
-            </button>
+            <div class="admin-panel__actions">
+              <span class="status-badge status-idle" id="mode-badge">Mode: Unknown</span>
+              <button class="btn-primary" id="run-all" data-default="Run all checks" data-running="Running checks...">
+                Run all checks
+              </button>
+            </div>
           </div>
           <div class="admin-grid">
             <div class="tool-card">
@@ -420,6 +435,38 @@
       badge.textContent = text;
     };
 
+    const setModeBadge = (mode) => {
+      const badge = document.getElementById("mode-badge");
+      if (!badge) return;
+      badge.classList.remove("status-idle", "status-success", "status-warning");
+
+      if (mode === "live") {
+        badge.classList.add("status-success");
+        badge.textContent = "Mode: LIVE";
+        return;
+      }
+
+      if (mode === "standby") {
+        badge.classList.add("status-warning");
+        badge.textContent = "Mode: Standby";
+        return;
+      }
+
+      badge.classList.add("status-idle");
+      badge.textContent = "Mode: Unknown";
+    };
+
+    const updateModeFromResponse = (data, status) => {
+      if (data?.mode === "standby") {
+        setModeBadge("standby");
+        return;
+      }
+
+      if (data?.mode === "live" || data?.ok === true || [401, 403, 429].includes(status)) {
+        setModeBadge("live");
+      }
+    };
+
     const setButtonState = (button, running) => {
       if (!button) return;
       button.disabled = running;
@@ -519,6 +566,7 @@
         setBadge(config.badgeId, ok ? "success" : "error", ok ? "Success" : "Fail");
         renderJson(config.outputId, data);
         updateTimestamp();
+        updateModeFromResponse(data, response.status);
 
         if (key === "clients") {
           summarizeClients(data);

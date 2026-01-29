@@ -1,30 +1,30 @@
 const { tspFetch, isLiveMode } = require("./_lib/tsp");
 
 const DEFAULT_LIMIT = 50;
-const DEFAULT_CLIENTS_PATH = "/clients";
+const DEFAULT_USERS_PATH = "/users";
 
 const normalizeStatus = (value) => {
   if (!value) return "unknown";
   return String(value).toLowerCase();
 };
 
-const normalizeClient = (client, index) => {
-  const id = client.id || client.clientId || client.uuid || `client-${index + 1}`;
+const normalizeUser = (user, index) => {
+  const id = user.id || user.userId || user.uuid || `user-${index + 1}`;
   const name =
-    client.name ||
-    client.clientName ||
-    client.companyName ||
-    client.description ||
-    client.title ||
-    "Unknown Client";
-  const status = normalizeStatus(client.status || client.state || client.activeStatus || client.isActive);
+    user.name ||
+    user.fullName ||
+    user.displayName ||
+    `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+    "Unknown User";
+  const email = user.email || user.Email || user.userEmail || null;
+  const status = normalizeStatus(user.status || user.state || user.activeStatus || user.isActive);
 
-  return { id, name, status, raw: client };
+  return { id, name, email, status, raw: user };
 };
 
 const extractArray = (payload) => {
   if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.clients)) return payload.clients;
+  if (payload && Array.isArray(payload.users)) return payload.users;
   if (payload && Array.isArray(payload.data)) return payload.data;
   return [];
 };
@@ -43,7 +43,7 @@ exports.handler = async (event) => {
 
   const limitParam = parseInt(event.queryStringParameters?.limit, 10);
   const limit = Number.isFinite(limitParam) ? Math.min(limitParam, 200) : DEFAULT_LIMIT;
-  const endpoint = (process.env.TSP_CLIENTS_PATH || DEFAULT_CLIENTS_PATH).trim() || DEFAULT_CLIENTS_PATH;
+  const endpoint = (process.env.TSP_USERS_PATH || DEFAULT_USERS_PATH).trim() || DEFAULT_USERS_PATH;
 
   const result = await tspFetch(endpoint, { query: { limit } });
   if (!result.ok) {
@@ -60,7 +60,7 @@ exports.handler = async (event) => {
   }
 
   const items = extractArray(result.data);
-  const normalized = items.map(normalizeClient).slice(0, limit);
+  const normalized = items.map(normalizeUser).slice(0, limit);
 
   return {
     statusCode: 200,
@@ -70,7 +70,7 @@ exports.handler = async (event) => {
       mode: "live",
       limit,
       count: normalized.length,
-      clients: normalized.map(({ raw, ...client }) => client),
+      users: normalized.map(({ raw, ...user }) => user),
     }),
   };
 };

@@ -1,14 +1,25 @@
-const { fetchTsp } = require("./_lib/tsp");
+const { tspFetch, isLiveMode } = require("./_lib/tsp");
 
 const DEFAULT_CLIENTS_PATH = "/clients";
 
 exports.handler = async () => {
+  if (!isLiveMode()) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ok: false,
+        mode: "standby",
+      }),
+    };
+  }
+
   const start = Date.now();
   const healthPath = (process.env.TSP_HEALTH_PATH || "").trim();
   const clientsPath = (process.env.TSP_CLIENTS_PATH || DEFAULT_CLIENTS_PATH).trim() || DEFAULT_CLIENTS_PATH;
   const path = healthPath || clientsPath;
 
-  const result = await fetchTsp(path, {
+  const result = await tspFetch(path, {
     query: healthPath ? undefined : { limit: 1 },
   });
 
@@ -33,6 +44,7 @@ exports.handler = async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ok: true,
+      mode: "live",
       status: result.status,
       response_time_ms: responseTime,
       message: "TSP reachable",
