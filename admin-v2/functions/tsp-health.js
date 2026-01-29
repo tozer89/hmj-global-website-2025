@@ -1,19 +1,8 @@
-const { tspFetch, isLiveMode } = require("./_lib/tsp");
+const { tspFetch } = require("./_lib/tsp");
 
 const DEFAULT_CLIENTS_PATH = "/clients";
 
 exports.handler = async () => {
-  if (!isLiveMode()) {
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ok: false,
-        mode: "standby",
-      }),
-    };
-  }
-
   const start = Date.now();
   const healthPath = (process.env.TSP_HEALTH_PATH || "").trim();
   const clientsPath = (process.env.TSP_CLIENTS_PATH || DEFAULT_CLIENTS_PATH).trim() || DEFAULT_CLIENTS_PATH;
@@ -31,10 +20,12 @@ exports.handler = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ok: false,
+        mode: result.mode,
         status: result.status,
         response_time_ms: responseTime,
         error: result.error,
         details: result.details,
+        debug: result.debug,
       }),
     };
   }
