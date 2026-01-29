@@ -3,26 +3,20 @@ const { tspFetch } = require("./_lib/tsp");
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 50;
 
-const normalizeStatus = (value) => {
-  if (!value) return "unknown";
-  return String(value).toLowerCase();
-};
-
-const normalizeClient = (client) => {
-  const code = client.code || client.clientCode || client.id || client.clientId || client.uuid;
-  const name = client.name || client.clientName || client.title || "Unknown Client";
-  const status = normalizeStatus(client.status || client.state || client.activeStatus);
-
-  return { code, name, status };
-};
-
 const extractArray = (payload) => {
   if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.clients)) return payload.clients;
+  if (payload && Array.isArray(payload.chargecodes)) return payload.chargecodes;
+  if (payload && Array.isArray(payload.chargeCodes)) return payload.chargeCodes;
   if (payload && Array.isArray(payload.data)) return payload.data;
   if (payload && Array.isArray(payload.items)) return payload.items;
   return [];
 };
+
+const normalizeChargeCode = (code) => ({
+  code: code.code || code.chargeCode || code.id,
+  description: code.description || code.name || "—",
+  status: code.status || code.state || "—",
+});
 
 exports.handler = async (event) => {
   const pageParam = parseInt(event.queryStringParameters?.page, 10);
@@ -30,9 +24,18 @@ exports.handler = async (event) => {
   const page = Number.isFinite(pageParam) ? Math.max(pageParam, 1) : DEFAULT_PAGE;
   const pageSize = Number.isFinite(pageSizeParam) ? Math.min(Math.max(pageSizeParam, 1), 200) : DEFAULT_PAGE_SIZE;
 
-  const result = await tspFetch("/clients", { query: { page, pageSize } });
+  let result = await tspFetch("/v2/chargecodes", { query: { page, pageSize } });
+  let endpoint = "/v2/chargecodes";
+  let fallbackUsed = false;
+
+  if (!result.ok) {
+    fallbackUsed = true;
+    endpoint = "/chargecodes";
+    result = await tspFetch(endpoint, { query: { page, pageSize } });
+  }
+
   const items = extractArray(result.data);
-  const clients = items.map(normalizeClient);
+  const chargecodes = items.map(normalizeChargeCode);
 
   return {
     statusCode: result.ok ? 200 : 502,
@@ -40,14 +43,15 @@ exports.handler = async (event) => {
     body: JSON.stringify({
       ok: result.ok,
       status: result.status,
-      clients,
-      count: clients.length,
+      chargecodes,
+      count: chargecodes.length,
       page,
       pageSize,
       ms: result.ms,
       raw: result.data ?? null,
       meta: {
-        endpoint: "/clients",
+        endpoint,
+        fallbackUsed,
       },
     }),
   };

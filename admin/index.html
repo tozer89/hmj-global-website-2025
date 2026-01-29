@@ -137,6 +137,13 @@
       cursor: pointer;
     }
 
+    .tool-card input {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 19, 34, 0.2);
+      font-size: 0.9rem;
+    }
+
     .status-badge {
       display: inline-flex;
       align-items: center;
@@ -209,6 +216,18 @@
       color: var(--muted);
     }
 
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .admin-meta.admin-meta--live {
+      background: rgba(22, 163, 74, 0.16);
+      color: var(--success);
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -272,7 +291,8 @@
             This test-only dashboard runs on the <strong>feature/payroll-admin</strong> branch.
             It is safe to use in deploy previews and does not affect production payroll data.
           </p>
-          <div class="admin-meta">Environment: TEST / DEPLOY PREVIEW</div>
+          <div class="admin-meta" id="env-indicator">Environment: TEST / DEPLOY PREVIEW</div>
+          <div class="admin-meta" id="mode-indicator">Mode: Standby</div>
         </div>
       </div>
     </section>
@@ -311,7 +331,7 @@
             <div class="tool-card">
               <div>
                 <h3>Who am I</h3>
-                <p class="admin-updated">Fetch current API user info.</p>
+                <p class="admin-updated">Verify token reachability (no whoami endpoint).</p>
               </div>
               <span class="status-badge status-idle" id="status-whoami">Idle</span>
               <button class="btn-primary" id="btn-whoami" data-default="Who am I" data-running="Running...">Who am I</button>
@@ -328,12 +348,58 @@
             </div>
             <div class="tool-card">
               <div>
-                <h3>List placements</h3>
-                <p class="admin-updated">Fetch placements/assignments.</p>
+                <h3>List projects</h3>
+                <p class="admin-updated">Fetch projects (placements).</p>
               </div>
               <span class="status-badge status-idle" id="status-placements">Idle</span>
-              <button class="btn-primary" id="btn-placements" data-default="List placements" data-running="Running...">List placements</button>
+              <button class="btn-primary" id="btn-placements" data-default="List projects" data-running="Running...">List projects</button>
               <pre class="json-output" id="result-placements">{}</pre>
+            </div>
+            <div class="tool-card">
+              <div>
+                <h3>List users</h3>
+                <p class="admin-updated">Fetch user directory page.</p>
+              </div>
+              <span class="status-badge status-idle" id="status-users">Idle</span>
+              <button class="btn-primary" id="btn-users" data-default="List users" data-running="Running...">List users</button>
+              <pre class="json-output" id="result-users">{}</pre>
+            </div>
+            <div class="tool-card">
+              <div>
+                <h3>Search users</h3>
+                <p class="admin-updated">Search users by keyword.</p>
+              </div>
+              <input id="search-users-input" type="text" placeholder="Search users (e.g. joe)" />
+              <span class="status-badge status-idle" id="status-search-users">Idle</span>
+              <button class="btn-primary" id="btn-search-users" data-default="Search users" data-running="Running...">Search users</button>
+              <pre class="json-output" id="result-search-users">{}</pre>
+            </div>
+            <div class="tool-card">
+              <div>
+                <h3>List cost centres</h3>
+                <p class="admin-updated">Fetch cost centres.</p>
+              </div>
+              <span class="status-badge status-idle" id="status-costcentres">Idle</span>
+              <button class="btn-primary" id="btn-costcentres" data-default="List cost centres" data-running="Running...">List cost centres</button>
+              <pre class="json-output" id="result-costcentres">{}</pre>
+            </div>
+            <div class="tool-card">
+              <div>
+                <h3>List charge codes</h3>
+                <p class="admin-updated">Fetch charge codes.</p>
+              </div>
+              <span class="status-badge status-idle" id="status-chargecodes">Idle</span>
+              <button class="btn-primary" id="btn-chargecodes" data-default="List charge codes" data-running="Running...">List charge codes</button>
+              <pre class="json-output" id="result-chargecodes">{}</pre>
+            </div>
+            <div class="tool-card">
+              <div>
+                <h3>List timesheets</h3>
+                <p class="admin-updated">Fetch timesheets (last 14 days).</p>
+              </div>
+              <span class="status-badge status-idle" id="status-timesheets">Idle</span>
+              <button class="btn-primary" id="btn-timesheets" data-default="List timesheets" data-running="Running...">List timesheets</button>
+              <pre class="json-output" id="result-timesheets">{}</pre>
             </div>
           </div>
         </div>
@@ -359,18 +425,50 @@
             </table>
           </div>
           <div class="report-card">
-            <h3>Placements summary</h3>
+            <h3>Projects summary</h3>
             <div class="report-summary" id="placements-summary">Awaiting data...</div>
             <table>
               <thead>
                 <tr>
-                  <th>Placement</th>
+                  <th>Project</th>
                   <th>Client</th>
                   <th>Dates</th>
                 </tr>
               </thead>
               <tbody id="placements-table">
-                <tr><td colspan="3">Run “List placements” to populate.</td></tr>
+                <tr><td colspan="3">Run “List projects” to populate.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="report-card">
+            <h3>Timesheet summary</h3>
+            <div class="report-summary" id="timesheet-summary">Awaiting data...</div>
+            <div class="quick-actions">
+              <button class="btn-primary" id="btn-summary-7">Last 7 days</button>
+              <button class="btn-primary" id="btn-summary-14">Last 14 days</button>
+              <button class="btn-primary" id="btn-summary-30">Last 30 days</button>
+            </div>
+            <pre class="json-output" id="result-summary">{}</pre>
+          </div>
+          <div class="report-card">
+            <h3>Top clients by charge</h3>
+            <div class="report-summary" id="top-clients-summary">Awaiting data...</div>
+            <div class="quick-actions">
+              <button class="btn-primary" id="btn-top-7">Last 7 days</button>
+              <button class="btn-primary" id="btn-top-14">Last 14 days</button>
+              <button class="btn-primary" id="btn-top-30">Last 30 days</button>
+            </div>
+            <pre class="json-output" id="result-top-clients">{}</pre>
+            <table>
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Timesheets</th>
+                  <th>Total charge</th>
+                </tr>
+              </thead>
+              <tbody id="top-clients-table">
+                <tr><td colspan="3">Run summary to populate.</td></tr>
               </tbody>
             </table>
           </div>
@@ -400,16 +498,54 @@
         outputId: "result-whoami",
       },
       clients: {
-        url: "/.netlify/functions/tsp-list-clients?limit=20",
+        url: "/.netlify/functions/tsp-list-clients?page=1&pageSize=20",
         buttonId: "btn-clients",
         badgeId: "status-clients",
         outputId: "result-clients",
       },
       placements: {
-        url: "/.netlify/functions/tsp-list-placements?status=active&limit=20",
+        url: "/.netlify/functions/tsp-list-placements?status=active&page=1&pageSize=20",
         buttonId: "btn-placements",
         badgeId: "status-placements",
         outputId: "result-placements",
+      },
+      users: {
+        url: "/.netlify/functions/tsp-list-users?page=1&pageSize=20",
+        buttonId: "btn-users",
+        badgeId: "status-users",
+        outputId: "result-users",
+      },
+      searchUsers: {
+        url: "/.netlify/functions/tsp-search-users",
+        buttonId: "btn-search-users",
+        badgeId: "status-search-users",
+        outputId: "result-search-users",
+      },
+      costcentres: {
+        url: "/.netlify/functions/tsp-list-costcentres?page=1&pageSize=20",
+        buttonId: "btn-costcentres",
+        badgeId: "status-costcentres",
+        outputId: "result-costcentres",
+      },
+      chargecodes: {
+        url: "/.netlify/functions/tsp-list-chargecodes?page=1&pageSize=20",
+        buttonId: "btn-chargecodes",
+        badgeId: "status-chargecodes",
+        outputId: "result-chargecodes",
+      },
+      timesheets: {
+        url: "/.netlify/functions/tsp-list-timesheets?days=14&page=1&pageSize=20",
+        buttonId: "btn-timesheets",
+        badgeId: "status-timesheets",
+        outputId: "result-timesheets",
+      },
+      summary: {
+        url: "/.netlify/functions/tsp-timesheet-summary?days=14",
+        outputId: "result-summary",
+      },
+      topClients: {
+        url: "/.netlify/functions/tsp-top-clients-by-charge?days=14",
+        outputId: "result-top-clients",
       },
     };
 
@@ -431,6 +567,13 @@
       const stamp = document.getElementById("last-updated");
       if (!stamp) return;
       stamp.textContent = new Date().toLocaleString();
+    };
+
+    const setLiveMode = () => {
+      const indicator = document.getElementById("mode-indicator");
+      if (!indicator) return;
+      indicator.textContent = "Mode: LIVE (API)";
+      indicator.classList.add("admin-meta--live");
     };
 
     const renderJson = (outputId, data) => {
@@ -505,6 +648,36 @@
       });
     };
 
+    const summarizeTimesheets = (payload) => {
+      const summary = document.getElementById("timesheet-summary");
+      if (!summary) return;
+      if (!payload.summary) return;
+      const { count, totalHours, totalCharge, byStatus } = payload.summary;
+      const statusSummary = Object.entries(byStatus || {})
+        .map(([status, value]) => `${status}: ${value}`)
+        .join(" · ");
+      summary.textContent = `Count: ${count} · Hours: ${Number(totalHours || 0).toFixed(2)} · Charge: ${Number(totalCharge || 0).toFixed(2)}${statusSummary ? ` · ${statusSummary}` : ""}`;
+    };
+
+    const renderTopClients = (payload) => {
+      const summary = document.getElementById("top-clients-summary");
+      const table = document.getElementById("top-clients-table");
+      if (!summary || !table) return;
+      const clients = Array.isArray(payload.clients) ? payload.clients : [];
+      summary.textContent = `Clients: ${clients.length} · Days: ${payload.days || "—"}`;
+
+      table.innerHTML = "";
+      if (clients.length === 0) {
+        table.innerHTML = '<tr><td colspan="3">No clients returned.</td></tr>';
+        return;
+      }
+      clients.forEach((client) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${client.client}</td><td>${client.count}</td><td>${Number(client.totalCharge || 0).toFixed(2)}</td>`;
+        table.appendChild(row);
+      });
+    };
+
     const runRequest = async (key) => {
       const config = endpoints[key];
       if (!config) return;
@@ -521,11 +694,20 @@
         renderJson(config.outputId, data);
         updateTimestamp();
 
+        if (ok && key !== "ping") {
+          setLiveMode();
+        }
         if (key === "clients") {
           summarizeClients(data);
         }
         if (key === "placements") {
           summarizePlacements(data);
+        }
+        if (key === "summary") {
+          summarizeTimesheets(data);
+        }
+        if (key === "topClients") {
+          renderTopClients(data);
         }
       } catch (error) {
         setBadge(config.badgeId, "error", "Fail");
@@ -537,10 +719,39 @@
     };
 
     Object.entries(endpoints).forEach(([key, config]) => {
+      if (key === "searchUsers") return;
       const button = document.getElementById(config.buttonId);
       if (button) {
         button.addEventListener("click", () => runRequest(key));
       }
+    });
+
+    const searchButton = document.getElementById("btn-search-users");
+    if (searchButton) {
+      searchButton.addEventListener("click", () => {
+        const input = document.getElementById("search-users-input");
+        const query = input ? input.value.trim() : \"\";
+        endpoints.searchUsers.url = `/.netlify/functions/tsp-search-users?q=${encodeURIComponent(query)}`;
+        runRequest(\"searchUsers\");
+      });
+    }
+
+    const summaryButtons = [
+      { id: \"btn-summary-7\", days: 7, key: \"summary\" },
+      { id: \"btn-summary-14\", days: 14, key: \"summary\" },
+      { id: \"btn-summary-30\", days: 30, key: \"summary\" },
+      { id: \"btn-top-7\", days: 7, key: \"topClients\" },
+      { id: \"btn-top-14\", days: 14, key: \"topClients\" },
+      { id: \"btn-top-30\", days: 30, key: \"topClients\" },
+    ];
+
+    summaryButtons.forEach(({ id, days, key }) => {
+      const button = document.getElementById(id);
+      if (!button) return;
+      button.addEventListener(\"click\", () => {
+        endpoints[key].url = `/.netlify/functions/${key === \"summary\" ? \"tsp-timesheet-summary\" : \"tsp-top-clients-by-charge\"}?days=${days}`;
+        runRequest(key);
+      });
     });
 
     const runAllButton = document.getElementById("run-all");
