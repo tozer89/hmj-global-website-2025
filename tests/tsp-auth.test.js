@@ -78,9 +78,10 @@ describe('tsp oauth token helper', () => {
     await getAccessToken(env, fetchJson);
 
     expect(capturedHeaders['Content-Type']).toBe('application/x-www-form-urlencoded');
+    expect(capturedHeaders.Authorization).toMatch(/^Basic\s+/);
     expect(capturedBody).toContain('grant_type=client_credentials');
-    expect(capturedBody).toContain('client_id=client-id');
-    expect(capturedBody).toContain('client_secret=client-secret');
+    expect(capturedBody).not.toContain('client_id=');
+    expect(capturedBody).not.toContain('client_secret=');
     expect(capturedBody).not.toContain('scope=');
   });
 
@@ -92,9 +93,11 @@ describe('tsp oauth token helper', () => {
 
     const env = getOAuthEnv();
     let capturedBody = '';
+    let capturedHeaders = {};
 
     const fetchJson = jest.fn().mockImplementation(async (_url, options) => {
       capturedBody = options.body;
+      capturedHeaders = options.headers;
       return {
         response: { ok: true, status: 200 },
         data: { access_token: 'token-1', expires_in: 3600 },
@@ -103,7 +106,19 @@ describe('tsp oauth token helper', () => {
 
     await getAccessToken(env, fetchJson);
 
+    expect(capturedHeaders.Authorization).toMatch(/^Basic\s+/);
     expect(capturedBody).toContain('scope=read+write');
+  });
+
+  test('sanitizes oauth credentials by stripping whitespace', async () => {
+    process.env.TSP_BASE_URL = 'https://example.test';
+    process.env.TSP_OAUTH_CLIENT_ID = 'client-id\n';
+    process.env.TSP_OAUTH_CLIENT_SECRET = 'client secret\t';
+
+    const env = getOAuthEnv();
+
+    expect(env.clientId).toBe('client-id');
+    expect(env.clientSecret).toBe('clientsecret');
   });
 
   test('handles failed token responses', async () => {
