@@ -143,7 +143,7 @@
     <a class="btn ghost" href="/">← Website</a>
     <button class="btn ghost" id="btnDiag" title="Show diagnostics">◉</button>
     <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
-    <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+    <button class="btn" type="button" data-admin-logout>Sign out</button>
   </div></div>
 
   <div class="wrap" id="gate" style="display:none">
@@ -156,7 +156,7 @@
         <li>If you are signed in but still blocked, your HMJ account probably does not have admin access on this host yet.</li>
       </ul>
       <div class="gate-actions">
-        <button class="btn primary" onclick="window.netlifyIdentity?.open('login')">Log in with HMJ email</button>
+        <button class="btn primary" type="button" data-admin-login>Log in with HMJ email</button>
         <a class="btn ghost" href="/admin/">Back to admin home</a>
       </div>
     </div>

@@ -48,14 +48,14 @@
     <div class="brand">HMJ Global Admin</div>
     <div class="sp"></div>
     <a class="btn outline" href="/">← Website</a>
-    <button class="btn outline" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+    <button class="btn outline" type="button" data-admin-logout>Sign out</button>
   </div></div>
 
   <div class="wrap" id="gate" style="display:none">
     <div class="panel">
       <strong>Admin only.</strong>
       <p class="muted why">Checking your session…</p>
-      <button class="btn outline" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+      <button class="btn outline" type="button" data-admin-login>Log in</button>
     </div>
   </div>
 

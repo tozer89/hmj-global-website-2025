@@ -508,31 +508,46 @@
     return false;
   }
 
+  function matchesText(button, expected) {
+    const text = String(button?.textContent || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    return text === expected;
+  }
+
   function bindIdentityButtons(root = document) {
     if (!root || typeof root.querySelectorAll !== 'function') return;
 
-    const loginButtons = root.querySelectorAll(
-      '#gate button, button[onclick*="open(\'login\')"], button[onclick*="open(\"login\")"]'
-    );
+    const loginButtons = new Set(root.querySelectorAll('button[data-admin-login]'));
+    const gateButton = root.querySelector('#gate button');
+    if (gateButton) loginButtons.add(gateButton);
+    root.querySelectorAll('.gate-actions button, .top button').forEach((button) => {
+      if (matchesText(button, 'log in') || matchesText(button, 'log in with hmj email') || matchesText(button, 'sign in with hmj email')) {
+        loginButtons.add(button);
+      }
+    });
+
     loginButtons.forEach((button) => {
       if (!button || button.dataset.hmjLoginBound === '1') return;
       button.dataset.hmjLoginBound = '1';
       button.type = 'button';
       button.style.pointerEvents = 'auto';
+      button.removeAttribute('onclick');
       button.onclick = async (event) => {
         if (event) event.preventDefault();
         await openIdentityDialog('login');
       };
     });
 
-    const signOutButtons = root.querySelectorAll(
-      'button[onclick*="logout"], button[aria-label="Sign out"], button[data-hmj-action="logout"]'
-    );
+    const signOutButtons = new Set(root.querySelectorAll('button[data-admin-logout], #btnSignOut'));
+    root.querySelectorAll('.top button').forEach((button) => {
+      if (matchesText(button, 'sign out')) signOutButtons.add(button);
+    });
+
     signOutButtons.forEach((button) => {
       if (!button || button.dataset.hmjLogoutBound === '1') return;
       button.dataset.hmjLogoutBound = '1';
       button.type = 'button';
       button.style.pointerEvents = 'auto';
+      button.removeAttribute('onclick');
       button.onclick = async (event) => {
         if (event) event.preventDefault();
         await logoutIdentitySession();
@@ -1076,7 +1091,8 @@
       event.preventDefault();
       runWhoamiDiagnostics();
     });
-    const signOut = row.querySelector('button[onclick*="logout"],button[onclick*="netlifyIdentity"]');
+    const signOut = row.querySelector('button[data-admin-logout], #btnSignOut') ||
+      Array.from(row.querySelectorAll('button')).find((button) => matchesText(button, 'sign out'));
     if (signOut && signOut.parentElement === row) {
       row.insertBefore(btn, signOut);
     } else {
@@ -1168,6 +1184,11 @@
         const app = $('#app');
         if (g) g.style.display = '';
         if (app) app.style.display = 'none';
+        bindIdentityButtons(document);
+        const heading = g ? $('strong, h1, h2', g) : null;
+        const why = g ? $('.why', g) : null;
+        if (heading) heading.textContent = 'HMJ admin sign-in';
+        if (why) why.textContent = 'Admin failed to finish loading cleanly. You can still sign in again on this host, or refresh and try again.';
       } catch {}
     }
   };
