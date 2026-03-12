@@ -330,6 +330,7 @@
         <span data-field="host">Host: ${HOSTNAME || '—'}</span>
         <span data-field="email">User: —</span>
         <span data-field="roles">Roles: —</span>
+        <span data-field="auth">Auth: —</span>
       `;
       document.body.appendChild(host);
     }
@@ -342,6 +343,11 @@
     const email = session?.email || session?.identityEmail || '—';
     const roles = Array.isArray(session?.roles) ? session.roles : (session?.role ? [session.role] : []);
     const roleText = roles.length ? roles.join(', ') : '—';
+    const authText = session?.token
+      ? 'JWT token ready'
+      : session?.sessionVerified
+        ? 'Verified host session cookie'
+        : 'No verified session';
     const whoami = chip.querySelector('[data-field="email"]');
     if (whoami) whoami.textContent = `User: ${email || '—'}`;
     const rolesNode = chip.querySelector('[data-field="roles"]');
@@ -350,6 +356,8 @@
     if (identityNode) identityNode.textContent = `Identity: ${IDENTITY_URL || '—'}`;
     const hostNode = chip.querySelector('[data-field="host"]');
     if (hostNode) hostNode.textContent = `Host: ${HOSTNAME || '—'}`;
+    const authNode = chip.querySelector('[data-field="auth"]');
+    if (authNode) authNode.textContent = `Auth: ${authText}`;
   }
 
   function brandIdentityWidget(id) {
@@ -576,6 +584,10 @@
     return list.map((role) => String(role || '').toLowerCase()).filter(Boolean);
   }
 
+  function hasVerifiedSession(snapshot) {
+    return !!(snapshot?.token || snapshot?.sessionVerified);
+  }
+
   const WHOAMI_CACHE = { token: '', data: null, ts: 0 };
 
   async function fetchWhoamiSnapshot(token, opts = {}) {
@@ -642,7 +654,7 @@
       const cached = Object.assign({}, identityCache);
       if (required) {
         const hasRole = Array.isArray(cached.roles) && cached.roles.includes(required);
-        cached.ok = !!cached.token && (cached.role === required || hasRole);
+        cached.ok = hasVerifiedSession(cached) && (cached.role === required || hasRole);
       }
       if (verbose && cached.ok) {
         toast.ok(`Gate opened for role: ${cached.role || 'unknown'}`, 3800);
@@ -692,10 +704,7 @@
       if (token && verbose) toast.warn('Using nf_jwt cookie fallback', 4200);
     }
 
-    if (!token && verbose) {
-      toast.err('No JWT available — sign in on this host.', 5200);
-      if (tokenError) Debug.warn('Token retrieval failed', tokenError);
-    } else if (token && verbose) {
+    if (token && verbose) {
       toast.ok('JWT acquired', 3600);
     }
 
@@ -731,6 +740,20 @@
       Debug.warn('whoami snapshot failed', err);
     }
 
+    if (!token && user && whoami?.identityEmail) {
+      try {
+        const refreshedUser = await getIdentityUser();
+        if (refreshedUser) user = refreshedUser;
+        token = await getUserToken(user);
+        if (token && verbose) {
+          toast.ok('JWT acquired after session verification', 3600);
+        }
+      } catch (err) {
+        tokenError = tokenError || err;
+        Debug.warn('late token retrieval failed', err);
+      }
+    }
+
     if (whoami?.identityEmail) {
       email = whoami.identityEmail || email;
     }
@@ -738,15 +761,35 @@
       roles = normaliseRolesList(whoami.roles);
     }
 
+    if (token && !jwtPayload) {
+      jwtPayload = decodeJwt(token);
+      if (jwtPayload) {
+        const jwtEmail = jwtPayload?.email || jwtPayload?.user_metadata?.email || jwtPayload?.sub || '';
+        if (!email && jwtEmail) email = jwtEmail;
+        if (!roles.length) {
+          const payloadRoles = jwtPayload?.app_metadata?.roles || jwtPayload?.roles || jwtPayload?.role;
+          if (payloadRoles) {
+            roles = normaliseRolesList(Array.isArray(payloadRoles) ? payloadRoles : [payloadRoles]);
+          }
+        }
+      }
+    }
+
     role = roles.includes('admin') ? 'admin' :
            roles.includes('recruiter') ? 'recruiter' :
            roles.includes('client') ? 'client' :
            (roles[0] || '');
 
+    const sessionVerified = !!token || !!whoami?.identityEmail;
+    const authMode = token ? 'jwt' : (sessionVerified ? 'cookie' : 'none');
+
     const base = {
-      ok: !!token,
+      ok: sessionVerified,
       user: user || null,
       token,
+      tokenAvailable: !!token,
+      sessionVerified,
+      authMode,
       role,
       roles,
       email,
@@ -762,9 +805,17 @@
 
     if (verbose) {
       if (enriched.ok) {
-        toast.ok(`Gate opened for role: ${enriched.role || 'unknown'}`, 4200);
+        if (enriched.token) {
+          toast.ok(`Gate opened for role: ${enriched.role || 'unknown'}`, 4200);
+        } else {
+          toast.warn(`Gate opened using verified host session for role: ${enriched.role || 'unknown'}`, 4600);
+        }
       } else {
-        const reason = !enriched.token ? 'missing token' : 'no admin role';
+        const reason = !enriched.sessionVerified ? 'missing session' : 'no admin role';
+        if (!enriched.sessionVerified) {
+          toast.err('No verified admin session available on this host. Sign in again on this host.', 5200);
+          if (tokenError) Debug.warn('Token retrieval failed', tokenError);
+        }
         toast.err(`Gate blocked: ${reason}`, 5200);
         Debug.warn(`Gate blocked: ${reason}`);
       }
@@ -870,13 +921,13 @@
     if (app) app.style.display = 'none';
     if (g) g.style.display = '';
     if (heading) {
-      heading.textContent = !who.token ? 'HMJ admin sign-in' : 'Admin access required';
+      heading.textContent = !who.sessionVerified ? 'HMJ admin sign-in' : 'Admin access required';
     }
     if (button) {
       button.textContent = 'Sign in with HMJ email';
     }
     if (why) {
-      if (!who.token) {
+      if (!who.sessionVerified) {
         why.textContent = targetPath
           ? `Sign in with your HMJ staff email to continue to ${targetLabel}.`
           : 'Sign in with your HMJ staff email to access HMJ admin on this site.';
@@ -1026,7 +1077,7 @@
           diag.innerHTML = '';
           addChip(diag, 'init: ok', true);
           addChip(diag, 'identity: ok', true);
-          addChip(diag, 'token: ok', true);
+          addChip(diag, who.token ? 'token: ok' : 'auth: cookie session', true);
           addChip(diag, 'role: ' + (who.role || 'admin'), true);
         }
       } catch {}
