@@ -134,7 +134,7 @@
         <div class="sp"></div>
         <button class="btn ghost small" id="btnReconRefresh">Refresh</button>
       </div>
-      <p class="muted" style="margin-top:0">Compare Supabase tables with the bundled preview datasets so you can spot when deploy previews are using fallback data.</p>
+      <p class="muted" style="margin-top:0">Compare Supabase tables with the bundled preview datasets where they still exist. Jobs now use the live jobs endpoint instead of a bundled runtime fallback.</p>
       <div class="table-scroll" style="max-height:260px">
         <table>
           <thead><tr><th>Dataset</th><th>Supabase</th><th>Fallback</th><th>Delta</th><th>Notes</th></tr></thead>
@@ -415,6 +415,14 @@
             return data;
           }
 
+          async function loadLiveJobsCount() {
+            const res = await fetch('/.netlify/functions/jobs-list', { credentials: 'include' });
+            if (!res.ok) throw new Error(`Failed to load live jobs (${res.status})`);
+            const json = await res.json();
+            const jobs = Array.isArray(json?.jobs) ? json.jobs : [];
+            return jobs.length;
+          }
+
           async function loadStaticReport(filters = {}, config = {}) {
             const baseWeekEnding = config.week1Ending || config.fiscal_week1_ending || DEFAULTS.week1Ending;
             const [timesheets, assignments] = await Promise.all([
@@ -464,8 +472,8 @@
           }
 
           async function buildStaticReconciliation(baseWeekEnding = DEFAULTS.week1Ending, errorMessage = '') {
-            const [jobs, candidates, clients, assignments, timesheets] = await Promise.all([
-              loadStaticArray('/data/jobs.json', 'jobs'),
+            const [liveJobsCount, candidates, clients, assignments, timesheets] = await Promise.all([
+              loadLiveJobsCount().catch(() => null),
               loadStaticArray('/data/candidates.json', 'candidates'),
               loadStaticArray('/data/clients.json', 'clients'),
               loadStaticArray('/data/assignments.json', 'assignments'),
@@ -475,7 +483,7 @@
             const unpaidTimesheets = timesheets.filter((ts) => String(ts.payroll_status || '').toLowerCase() !== 'paid').length;
 
             const staticCounts = {
-              jobs: jobs.length,
+              jobs: liveJobsCount,
               candidates: candidates.length,
               clients: clients.length,
               assignments: assignments.length,
@@ -484,7 +492,14 @@
             };
 
             const datasets = [
-              { key: 'jobs', label: 'Jobs', static: staticCounts.jobs, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
+              {
+                key: 'jobs',
+                label: 'Jobs',
+                static: '—',
+                supabase: liveJobsCount === null ? '—' : liveJobsCount,
+                delta: null,
+                notes: [liveJobsCount === null ? 'Live jobs endpoint unavailable' : 'Uses the canonical live jobs endpoint only'],
+              },
               { key: 'candidates', label: 'Candidates', static: staticCounts.candidates, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
               { key: 'clients', label: 'Clients', static: staticCounts.clients, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
               { key: 'assignments', label: 'Assignments', static: staticCounts.assignments, supabase: null, delta: null, notes: ['Using static fallback dataset'] },
@@ -671,7 +686,7 @@
                 reconNotice.textContent = `Supabase response: ${error}`;
               } else if (fallback) {
                 reconNotice.style.display = '';
-                reconNotice.textContent = 'Supabase was unavailable. Preview data is being used for admin pages.';
+                reconNotice.textContent = 'Supabase was unavailable. Preview datasets are still being used for some reports, but jobs now rely on the live jobs endpoint when available.';
               } else if (state.reconciliation?.schemaIssues?.length) {
                 reconNotice.style.display = '';
                 reconNotice.textContent = `Schema issues: ${state.reconciliation.schemaIssues.join(' · ')}`;

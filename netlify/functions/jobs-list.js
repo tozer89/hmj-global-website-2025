@@ -1,38 +1,36 @@
 // netlify/functions/jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
-const { toJob, loadStaticJobs, ensureStaticJobs, isSchemaError } = require('./_jobs-helpers.js');
+const { toJob, isSchemaError } = require('./_jobs-helpers.js');
 
 const JOB_SELECT = '*';
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 
-function filterPublishedJobs(list = []) {
-  return Array.isArray(list) ? list.filter((job) => job && job.published !== false) : [];
+function isLocalDebugRequest(event) {
+  const host = String(event?.headers?.host || '');
+  return process.env.NETLIFY_DEV === 'true' || /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host);
+}
+
+function buildLocalDebugPayload(error) {
+  if (!error) return null;
+  return {
+    message: error.message || String(error),
+    code: error.code || error.status || error.statusCode || null,
+    details: error.details || null,
+    hint: error.hint || null,
+    stack: error.stack || null,
+  };
 }
 
 exports.handler = async (event) => {
-  let fallback = [];
-  let fallbackError = null;
-  try {
-    fallback = filterPublishedJobs(loadStaticJobs());
-  } catch (err) {
-    fallbackError = err;
-    console.warn('[jobs] static load failed', err?.message || err);
-  }
-  const fallbackCount = fallback.length;
-
   if (!hasSupabase()) {
     return {
-      statusCode: 200,
+      statusCode: 503,
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        jobs: fallback,
-        source: fallback.length ? 'static' : 'empty',
-        warning: fallback.length
-          ? 'Supabase unavailable — showing static jobs.'
-          : (fallbackError?.message || 'Supabase client unavailable'),
+        error: 'Live jobs service unavailable',
+        code: 'supabase_unavailable',
         supabase: supabaseStatus(),
-        fallbackCount,
         schema: false,
       }),
     };
@@ -55,43 +53,40 @@ exports.handler = async (event) => {
     const jobs = Array.isArray(data)
       ? data.map(toJob).filter((job) => job && job.published !== false)
       : [];
-    if (!jobs.length && fallback.length) {
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
-          jobs: fallback,
-          source: 'static',
-          supabase: supabaseStatus(),
-          fallbackCount,
-          schema: false,
-        }),
-      };
-    }
     return {
       statusCode: 200,
       headers: JSON_HEADERS,
       body: JSON.stringify({
         jobs,
-        source: jobs.length ? 'supabase' : 'empty',
+        source: 'supabase',
         supabase: supabaseStatus(),
-        fallbackCount,
         schema: false,
       }),
     };
   } catch (e) {
     const schemaIssue = isSchemaError(e);
-    ensureStaticJobs();
+    const localDebug = isLocalDebugRequest(event);
+    if (localDebug) {
+      console.error('[jobs-list][local-debug] query failed', {
+        message: e?.message || String(e),
+        code: e?.code || e?.status || e?.statusCode || null,
+        details: e?.details || null,
+        hint: e?.hint || null,
+        stack: e?.stack || null,
+        supabase: supabaseStatus(),
+      });
+    }
     return {
-      statusCode: 200,
+      statusCode: schemaIssue ? 409 : 503,
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        jobs: fallback,
-        source: fallback.length ? 'static' : 'empty',
-        warning: e.message || fallbackError?.message || 'Unable to load jobs',
+        error: schemaIssue
+          ? 'Jobs service is unavailable because the jobs table schema does not match the live site.'
+          : 'Live jobs service unavailable',
+        code: schemaIssue ? 'schema_mismatch' : 'jobs_unavailable',
         supabase: supabaseStatus(),
-        fallbackCount,
         schema: schemaIssue,
+        ...(localDebug ? { debug: buildLocalDebugPayload(e) } : {}),
       }),
     };
   }

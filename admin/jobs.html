@@ -37,8 +37,31 @@
     .wrap{max-width:1420px;margin:24px auto;padding:0 20px;display:grid;gap:18px}
     .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(15,27,63,.12)}
     .panel.notice{display:none;background:#eef2ff;border:1px solid rgba(47,78,162,.25);color:var(--highlight);font-weight:600;gap:6px}
+    .panel.notice[data-tone="warn"]{background:#fff8e8;border-color:rgba(122,91,0,.22);color:#7a5b00}
+    .panel.notice[data-tone="ok"]{background:#ecfdf3;border-color:rgba(19,135,84,.24);color:#0f6b43}
+    .panel.notice[data-tone="info"]{background:#eef2ff;border-color:rgba(47,78,162,.25);color:var(--highlight)}
     .panel h2{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
     .muted{color:var(--muted)}
+    .gate-panel{display:grid;gap:12px}
+    .gate-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .gate-help{margin:0;padding-left:18px;color:var(--muted)}
+
+    .status-panel{display:grid;gap:14px}
+    .status-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px;align-items:flex-start}
+    .status-copy{display:grid;gap:6px}
+    .status-summary{font-weight:700;color:var(--ink)}
+    .status-chips{display:flex;flex-wrap:wrap;gap:10px}
+    .status-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#f8faff;color:var(--ink);font-weight:800;font-size:12px;letter-spacing:.03em}
+    .status-chip::before{content:'';width:8px;height:8px;border-radius:999px;background:currentColor;opacity:.7}
+    .status-chip[data-tone="neutral"]{background:#f8faff;color:var(--muted)}
+    .status-chip[data-tone="live"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.26);color:var(--ok)}
+    .status-chip[data-tone="ok"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.26);color:var(--ok)}
+    .status-chip[data-tone="warn"]{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.36);color:#8a5a00}
+    .status-chip[data-tone="error"]{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.28);color:var(--danger)}
+    .status-detail{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .status-detail .slot{background:#f8faff;border:1px solid rgba(47,78,162,.12);border-radius:14px;padding:12px}
+    .status-detail span{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .status-detail strong{display:block;margin-top:5px;font-size:14px;color:var(--ink)}
 
     .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
     .filters-grid .search{grid-column:span 2;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid rgba(47,78,162,.15);border-radius:12px;padding:6px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
@@ -99,6 +122,9 @@
     .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
     .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
     .share-box .share-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .board.busy{opacity:.7;pointer-events:none;transition:opacity .18s ease}
+    .drawer[data-busy="true"] .drawer-foot,
+    .drawer[data-busy="true"] .drawer-head{opacity:.92}
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid rgba(47,78,162,.25);box-shadow:0 18px 34px rgba(15,27,63,.2);font-weight:700}
@@ -121,21 +147,61 @@
   </div></div>
 
   <div class="wrap" id="gate" style="display:none">
-    <div class="panel">
-      <h2>Restricted</h2>
+    <div class="panel gate-panel">
+      <h2>Jobs Console Access</h2>
       <p class="muted why">Checking your session…</p>
-      <button class="btn primary" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+      <p class="muted">Sign in with your HMJ staff email. This page is only available to users with the <strong>admin</strong> role.</p>
+      <ul class="gate-help">
+        <li>If you are not signed in, use the login button below.</li>
+        <li>If you are signed in but still blocked, your HMJ account probably does not have admin access on this host yet.</li>
+      </ul>
+      <div class="gate-actions">
+        <button class="btn primary" onclick="window.netlifyIdentity?.open('login')">Log in with HMJ email</button>
+        <a class="btn ghost" href="/admin/">Back to admin home</a>
+      </div>
     </div>
   </div>
 
   <div class="wrap" id="app" style="display:none">
-    <section class="panel notice" id="readOnlyNotice">
-      <div>Read-only mode.</div>
-      <div class="muted">Supabase credentials are missing so jobs are loaded from the static fallback. Configure the environment to enable editing.</div>
+    <section class="panel status-panel" id="statusPanel">
+      <div class="status-row">
+        <div class="status-copy">
+          <h2>Console Status</h2>
+          <div class="status-summary" id="statusSummary">Checking your HMJ admin session and loading jobs…</div>
+        </div>
+        <div class="status-chips">
+          <span class="status-chip" id="sessionChip" data-tone="neutral">Session pending</span>
+          <span class="status-chip" id="authChip" data-tone="neutral">Access pending</span>
+          <span class="status-chip" id="modeChip" data-tone="neutral">Mode pending</span>
+          <span class="status-chip" id="activityChip" data-tone="neutral">Starting up</span>
+        </div>
+      </div>
+      <div class="status-detail">
+        <div class="slot">
+          <span>Signed in</span>
+          <strong id="statusUser">Checking session…</strong>
+        </div>
+        <div class="slot">
+          <span>Access</span>
+          <strong id="statusAccess">Verifying admin access…</strong>
+        </div>
+        <div class="slot">
+          <span>Data source</span>
+          <strong id="statusMode">Checking live jobs connection…</strong>
+        </div>
+        <div class="slot">
+          <span>Last refresh</span>
+          <strong id="statusTime">Not loaded yet</strong>
+        </div>
+      </div>
     </section>
-    <section class="panel notice" id="seedNotice" style="display:none">
-      <div>Imported from the legacy jobs board.</div>
-      <div class="muted">These jobs came from the static site. Save a job to import it into Supabase and unlock sharing.</div>
+    <section class="panel notice" id="readOnlyNotice" data-tone="warn">
+      <div id="readOnlyTitle">Read-only mode.</div>
+      <div class="muted" id="readOnlyBody">The live HMJ jobs system is currently unavailable. You can review the console state here, but changes cannot be saved until the connection is restored.</div>
+    </section>
+    <section class="panel notice" id="seedNotice" data-tone="info" style="display:none">
+      <div id="seedTitle">Imported from the legacy jobs board.</div>
+      <div class="muted" id="seedBody">These jobs came from the static site. Save a job to import it into Supabase and unlock sharing.</div>
     </section>
     <section class="panel" id="filtersPanel">
       <div class="filters-grid">
@@ -162,7 +228,7 @@
         </select>
       </div>
       <div class="filters-actions">
-        <div class="muted" id="resultMeta">0 jobs</div>
+        <div class="muted" id="resultMeta">Loading jobs…</div>
         <div class="sp"></div>
         <button class="btn ghost small" id="clearFilters">Clear filters</button>
         <button class="btn ghost small" id="btnRefresh">Refresh</button>
@@ -218,7 +284,7 @@
       <div class="share-box">
         <div>
           <strong>Shareable spec</strong>
-          <p class="muted">Generate a standalone advert page for this job. Links expire automatically. When Supabase is offline the page is stored locally for 30 days.</p>
+          <p class="muted" id="shareDescription">Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.</p>
         </div>
         <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
         <div id="shareResult" style="display:none">
@@ -262,6 +328,15 @@
         fallbackSource: '',
         seeded: false,
         schemaMismatch: false,
+        loadingJobs: false,
+        saving: false,
+        deleting: false,
+        reordering: false,
+        sharing: false,
+        currentUser: null,
+        lastAction: 'Starting up',
+        lastActionTone: 'neutral',
+        lastLoadedAt: '',
       };
 
       const board = sel('#boardColumns');
@@ -274,6 +349,7 @@
       const resultMeta = sel('#resultMeta');
       const addSectionForm = sel('#addSectionForm');
       const newSectionInput = sel('#newSectionInput');
+      const addSectionBtn = addSectionForm?.querySelector('button[type="submit"]') || null;
       const sectionOptions = sel('#sectionOptions');
       const drawer = sel('#drawer');
       const drawerTitle = sel('#drawerTitle');
@@ -281,16 +357,120 @@
       const shareBox = sel('#shareResult');
       const shareMeta = sel('#shareMeta');
       const shareUrl = sel('#shareUrl');
+      const shareDescription = sel('#shareDescription');
       const btnRefreshShare = sel('#btnRefreshShare');
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
       const readOnlyNotice = sel('#readOnlyNotice');
+      const readOnlyTitle = sel('#readOnlyTitle');
+      const readOnlyBody = sel('#readOnlyBody');
       const seedNotice = sel('#seedNotice');
+      const seedTitle = sel('#seedTitle');
+      const seedBody = sel('#seedBody');
       const readOnlyControls = Array.from(document.querySelectorAll('[data-readonly]'));
       const btnDiag = sel('#btnDiag');
+      const statusSummary = sel('#statusSummary');
+      const sessionChip = sel('#sessionChip');
+      const authChip = sel('#authChip');
+      const modeChip = sel('#modeChip');
+      const activityChip = sel('#activityChip');
+      const statusUser = sel('#statusUser');
+      const statusAccess = sel('#statusAccess');
+      const statusMode = sel('#statusMode');
+      const statusTime = sel('#statusTime');
+      const btnRefresh = sel('#btnRefresh');
+      const btnNew = sel('#btnNew');
+      const btnClose = sel('#btnClose');
+      const btnSave = sel('#btnSave');
+      const btnDelete = sel('#btnDelete');
+      const btnShare = sel('#btnShare');
+      const btnCopyShare = sel('#btnCopyShare');
+      const editorFields = Array.from(document.querySelectorAll('#jobForm input, #jobForm select, #jobForm textarea, #edPublished'));
 
-      function applyReadOnly() {
-        if (readOnlyNotice) readOnlyNotice.style.display = state.readOnly ? '' : 'none';
+      function friendlySourceLabel(source) {
+        const value = String(source || '').toLowerCase();
+        if (!value || value === 'empty') return 'No jobs returned';
+        if (value === 'supabase') return 'Supabase live jobs';
+        if (value === 'unavailable') return 'Live jobs service unavailable';
+        return source;
+      }
+
+      function setChip(el, text, tone = 'neutral') {
+        if (!el) return;
+        el.textContent = text;
+        el.dataset.tone = tone;
+      }
+
+      function setLastAction(text, tone = 'neutral') {
+        state.lastAction = text;
+        state.lastActionTone = tone;
+      }
+
+      function updateStatusPanel() {
+        const signedInEmail = state.currentUser?.email || 'Signed in with HMJ admin account';
+        const accessLabel = state.currentUser
+          ? 'Admin role confirmed'
+          : 'Waiting for admin session';
+        let modeLabel = 'Checking live jobs connection…';
+        let modeTone = 'neutral';
+        if (state.loadingJobs) {
+          modeLabel = 'Checking live jobs connection…';
+        } else if (state.readOnly) {
+          modeLabel = 'Read-only · Live jobs unavailable';
+          modeTone = 'warn';
+        } else if (state.supabaseOk) {
+          modeLabel = 'Live editing enabled';
+          modeTone = 'live';
+        } else {
+          modeLabel = 'Connection unavailable';
+          modeTone = 'warn';
+        }
+
+        let activityLabel = state.lastAction || 'Ready';
+        let activityTone = state.lastActionTone || 'neutral';
+        if (state.loadingJobs) {
+          activityLabel = 'Loading jobs…';
+          activityTone = 'neutral';
+        } else if (state.saving) {
+          activityLabel = 'Saving changes…';
+          activityTone = 'live';
+        } else if (state.deleting) {
+          activityLabel = 'Deleting job…';
+          activityTone = 'warn';
+        } else if (state.reordering) {
+          activityLabel = 'Saving new board order…';
+          activityTone = 'neutral';
+        } else if (state.sharing) {
+          activityLabel = 'Preparing share link…';
+          activityTone = state.readOnly ? 'warn' : 'live';
+        }
+
+        setChip(sessionChip, state.currentUser ? 'Signed in' : 'Session pending', state.currentUser ? 'ok' : 'neutral');
+        setChip(authChip, accessLabel, state.currentUser ? 'ok' : 'neutral');
+        setChip(modeChip, modeLabel, modeTone);
+        setChip(activityChip, activityLabel, activityTone);
+
+        if (statusSummary) {
+          if (state.loadingJobs) {
+            statusSummary.textContent = 'Checking your admin access and loading the latest jobs board…';
+          } else if (state.readOnly) {
+            statusSummary.textContent = 'The live HMJ jobs system is currently unavailable. You can review the board and create local preview links, but changes will not go live from this page.';
+          } else {
+            statusSummary.textContent = 'This console is connected to the live HMJ jobs database. Saving here updates the admin jobs system directly.';
+          }
+        }
+        if (statusUser) statusUser.textContent = signedInEmail;
+        if (statusAccess) {
+          const overrides = Array.isArray(state.currentUser?.overrides) && state.currentUser.overrides.length
+            ? `Admin access confirmed (${state.currentUser.overrides.join(', ')})`
+            : accessLabel;
+          statusAccess.textContent = overrides;
+        }
+        if (statusMode) statusMode.textContent = modeLabel;
+        if (statusTime) statusTime.textContent = state.lastLoadedAt ? formatDate(state.lastLoadedAt) : 'Not loaded yet';
+      }
+
+      function updateControlState() {
         readOnlyControls.forEach((el) => {
           if (!el) return;
           const mode = (el.dataset.readonly || 'hard').toLowerCase();
@@ -301,11 +481,130 @@
             el.disabled = disable;
           }
         });
+
+        if (board) {
+          const boardBusy = state.loadingJobs || state.reordering;
+          board.classList.toggle('busy', boardBusy);
+          board.setAttribute('aria-busy', boardBusy ? 'true' : 'false');
+        }
+        if (drawer) {
+          const drawerBusy = state.saving || state.deleting || state.sharing;
+          drawer.dataset.busy = drawerBusy ? 'true' : 'false';
+        }
+
+        const controlsBusy = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing;
+        if (btnRefresh) {
+          if (!btnRefresh.dataset.defaultLabel) btnRefresh.dataset.defaultLabel = btnRefresh.textContent;
+          btnRefresh.textContent = state.loadingJobs ? 'Refreshing…' : btnRefresh.dataset.defaultLabel;
+          btnRefresh.disabled = controlsBusy;
+        }
+        if (btnNew) {
+          if (!btnNew.dataset.defaultLabel) btnNew.dataset.defaultLabel = btnNew.textContent;
+          btnNew.textContent = state.loadingJobs ? 'Loading…' : btnNew.dataset.defaultLabel;
+          btnNew.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
+        }
+        if (btnSave) {
+          if (!btnSave.dataset.defaultLabel) btnSave.dataset.defaultLabel = btnSave.textContent;
+          btnSave.textContent = state.saving ? 'Saving…' : btnSave.dataset.defaultLabel;
+          btnSave.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing;
+        }
+        if (btnDelete) {
+          if (!btnDelete.dataset.defaultLabel) btnDelete.dataset.defaultLabel = btnDelete.textContent;
+          btnDelete.textContent = state.deleting ? 'Deleting…' : btnDelete.dataset.defaultLabel;
+          btnDelete.disabled = state.readOnly || !state.editing?.id || state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing;
+        }
+        if (btnShare) {
+          if (!btnShare.dataset.defaultLabel) btnShare.dataset.defaultLabel = btnShare.textContent;
+          btnShare.textContent = state.sharing ? 'Preparing…' : btnShare.dataset.defaultLabel;
+          btnShare.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing;
+        }
+        if (btnCopyShare) {
+          btnCopyShare.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || !shareUrl?.value;
+        }
+        if (btnRefreshShare) {
+          btnRefreshShare.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || !shareUrl?.value;
+        }
+        if (btnClose) {
+          btnClose.disabled = state.saving || state.deleting;
+        }
+        if (tagInput) {
+          tagInput.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
+        }
+        if (newSectionInput) {
+          newSectionInput.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
+        }
+        if (addSectionBtn) {
+          addSectionBtn.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
+        }
+        const editorDisabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
+        editorFields.forEach((field) => {
+          if (!field) return;
+          const tag = (field.tagName || '').toLowerCase();
+          const type = (field.type || '').toLowerCase();
+          const usesDisabled = tag === 'select' || type === 'checkbox' || type === 'radio';
+          if (usesDisabled) {
+            field.disabled = editorDisabled;
+            if ('readOnly' in field) field.readOnly = false;
+          } else if ('readOnly' in field) {
+            field.readOnly = editorDisabled;
+            field.disabled = false;
+          } else {
+            field.disabled = editorDisabled;
+          }
+        });
+      }
+
+      function applyReadOnly() {
+        if (!readOnlyNotice) return;
+        if (!state.readOnly) {
+          readOnlyNotice.style.display = 'none';
+          updateControlState();
+          updateStatusPanel();
+          return;
+        }
+
+        let title = 'Read-only mode';
+        let body = 'The live HMJ jobs system is currently unavailable, so editing is disabled on this page until the connection is restored.';
+        if (state.schemaMismatch) {
+          title = 'Read-only mode — schema issue detected';
+          body = 'The jobs table schema does not match what this editor expects. Fix the schema, then refresh this page to resume live editing.';
+        } else if (state.fallbackSource === 'unavailable') {
+          body = 'The live jobs API could not be reached. Review the board here if needed, but changes cannot be saved until the backend connection is restored.';
+        } else if (state.fallbackSource) {
+          body = `${friendlySourceLabel(state.fallbackSource)}. Review the board here, but changes cannot be saved until the live jobs connection returns.`;
+        }
+        if (readOnlyTitle) readOnlyTitle.textContent = title;
+        if (readOnlyBody) readOnlyBody.textContent = body;
+        readOnlyNotice.dataset.tone = 'warn';
+        readOnlyNotice.style.display = '';
+        updateControlState();
+        updateStatusPanel();
       }
 
       function applySeedNotice() {
         if (!seedNotice) return;
-        seedNotice.style.display = state.seeded ? '' : 'none';
+        if (!state.seeded) {
+          seedNotice.style.display = 'none';
+          if (shareDescription) {
+            shareDescription.textContent = 'Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
+          }
+          return;
+        }
+        if (seedTitle) {
+          seedTitle.textContent = state.readOnly
+            ? 'Fallback jobs loaded from the existing website'
+            : 'Legacy jobs ready to import into the live database';
+        }
+        if (seedBody) {
+          seedBody.textContent = state.readOnly
+            ? 'These jobs came from the static site fallback. You can review them here, but live editing will stay disabled until the database connection returns.'
+            : 'These jobs came from the static site and are ready to be saved into Supabase. Open a job and press Save to import it into the live system.';
+        }
+        seedNotice.dataset.tone = state.readOnly ? 'warn' : 'info';
+        seedNotice.style.display = '';
+        if (shareDescription && state.seeded && !state.readOnly) {
+          shareDescription.textContent = 'Generate a standalone advert page for this job. Save imported jobs first so the share link is created from the live database instead of a static fallback.';
+        }
       }
 
       const form = {
@@ -722,8 +1021,12 @@
         return column;
       }
 
-      async function persistOrder(jobs) {
+      async function persistOrder(jobs, rollback) {
         if (state.readOnly || !jobs.length) return;
+        state.reordering = true;
+        setLastAction('Saving new board order…', 'neutral');
+        updateControlState();
+        updateStatusPanel();
         try {
           const payload = jobs.map((job) => ({ id: job.id, section: job.section, sortOrder: job.sortOrder }));
           const res = await api('admin-jobs-reorder', 'POST', { updates: payload });
@@ -733,16 +1036,32 @@
               if (found) Object.assign(found, updated);
             });
           }
+          setLastAction('Board order saved', 'ok');
+          toast('Board order saved', 'ok', 1800);
         } catch (e) {
           console.error('[jobs] reorder failed', e);
+          if (typeof rollback === 'function') rollback();
+          setLastAction('Board order failed to save', 'error');
+          renderAll();
           toast('Reorder failed: ' + (e.message || e), 'error', 4200);
+        } finally {
+          state.reordering = false;
+          updateControlState();
+          updateStatusPanel();
         }
       }
 
       function moveJob(jobId, targetKey, beforeId) {
-        if (state.readOnly) return;
+        if (state.readOnly || state.reordering || state.loadingJobs) return;
         const job = state.jobs.find((j) => j.id === jobId);
         if (!job) return;
+        const rollbackState = state.jobs.map((item) => ({
+          id: item.id,
+          section: item.section,
+          sectionKey: item.sectionKey,
+          sectionLabel: item.sectionLabel,
+          sortOrder: item.sortOrder,
+        }));
         const originKey = job.sectionKey || 'general';
         if (!targetKey) targetKey = 'general';
         const targetLabel = state.sectionOrder.find((s) => s.key === targetKey)?.label || 'General';
@@ -765,7 +1084,19 @@
           touched = touched.concat(reindexColumn(originKey));
         }
         renderBoard();
-        persistOrder(Array.from(new Map(touched.map((j) => [j.id, j])).values()));
+        persistOrder(
+          Array.from(new Map(touched.map((j) => [j.id, j])).values()),
+          () => {
+            rollbackState.forEach((snapshot) => {
+              const existing = state.jobs.find((item) => item.id === snapshot.id);
+              if (!existing) return;
+              existing.section = snapshot.section;
+              existing.sectionKey = snapshot.sectionKey;
+              existing.sectionLabel = snapshot.sectionLabel;
+              existing.sortOrder = snapshot.sortOrder;
+            });
+          }
+        );
       }
 
       function renderBoard() {
@@ -785,9 +1116,10 @@
         });
         state.sectionOrder = Array.from(new Map(state.sectionOrder.map((s) => [s.key, s])).values());
         updateSectionSelect();
-        let total = 0;
-        groups.forEach((list) => { total += list.length; });
-        resultMeta.textContent = `${matches.length} of ${state.jobs.length} jobs`;
+        const modeSuffix = state.readOnly ? 'Read-only' : 'Live editing';
+        resultMeta.textContent = state.loadingJobs
+          ? 'Loading jobs…'
+          : `${matches.length} of ${state.jobs.length} jobs · ${modeSuffix}`;
 
         const frag = document.createDocumentFragment();
         for (const section of state.sectionOrder) {
@@ -806,7 +1138,11 @@
           if (!jobs.length) {
             const empty = document.createElement('div');
             empty.className = 'drop-zone';
-            empty.textContent = 'Drop job here';
+            empty.textContent = state.loadingJobs
+              ? 'Loading jobs…'
+              : state.readOnly
+                ? 'Live jobs unavailable'
+                : 'Drop job here';
             body.appendChild(empty);
           } else {
             jobs.forEach((job) => body.appendChild(renderCard(job)));
@@ -820,7 +1156,7 @@
       function renderCard(job) {
         const card = document.createElement('article');
         card.className = 'card';
-        if (!state.readOnly) {
+        if (!state.readOnly && !state.reordering && !state.loadingJobs) {
           card.setAttribute('draggable', 'true');
         } else {
           card.removeAttribute('draggable');
@@ -843,7 +1179,7 @@
             openEditor(job);
           }
         });
-        if (!state.readOnly) {
+        if (!state.readOnly && !state.reordering && !state.loadingJobs) {
           card.addEventListener('dragstart', (e) => {
             state.dragging = job.id;
             e.dataTransfer.setData('text/plain', job.id);
@@ -871,13 +1207,13 @@
 
       function setupDropZone(column, key) {
         column.addEventListener('dragover', (e) => {
-          if (state.readOnly) return;
+          if (state.readOnly || state.reordering || state.loadingJobs) return;
           e.preventDefault();
           column.classList.add('drag-target');
         });
         column.addEventListener('dragleave', () => column.classList.remove('drag-target'));
         column.addEventListener('drop', (e) => {
-          if (state.readOnly) return;
+          if (state.readOnly || state.reordering || state.loadingJobs) return;
           e.preventDefault();
           column.classList.remove('drag-target');
           const jobId = e.dataTransfer.getData('text/plain') || state.dragging;
@@ -894,10 +1230,15 @@
           const token = document.createElement('span');
           token.className = 'token';
           token.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">×</button>`;
-          token.querySelector('button').onclick = () => {
-            state.editingTags.splice(idx, 1);
-            renderTagTokens();
-          };
+          const removeBtn = token.querySelector('button');
+          if (removeBtn) {
+            removeBtn.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
+            removeBtn.onclick = () => {
+              if (state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering) return;
+              state.editingTags.splice(idx, 1);
+              renderTagTokens();
+            };
+          }
           tagEditor.insertBefore(token, tagInput);
         });
       }
@@ -905,6 +1246,7 @@
       function openDrawer() {
         drawer.classList.add('open');
         drawer.setAttribute('aria-hidden', 'false');
+        updateControlState();
       }
 
       function closeDrawer() {
@@ -921,6 +1263,12 @@
             shareBox.dataset.slug = '';
           }
           if (btnRefreshShare) btnRefreshShare.style.display = 'none';
+          if (shareDescription) {
+            shareDescription.textContent = state.readOnly
+              ? 'This console is in read-only mode, so share links stay local to this browser for 30 days.'
+              : 'Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
+          }
+          updateControlState();
         }, 150);
       }
 
@@ -946,10 +1294,12 @@
       function openEditor(job) {
         state.editing = job ? { ...job } : null;
         drawerTitle.textContent = job?.title || 'New job';
-        if (job?.__seed) {
-          drawerMeta.textContent = 'Static import — save to sync with Supabase';
+        if (state.readOnly) {
+          drawerMeta.textContent = `Live jobs unavailable · ${friendlySourceLabel(state.fallbackSource)} · Changes cannot be saved from this page`;
+        } else if (job?.__seed) {
+          drawerMeta.textContent = 'Imported from the legacy site — save once to move this job into Supabase';
         } else {
-          drawerMeta.textContent = job ? `Updated ${formatDate(job.updatedAt || job.createdAt)}` : 'Draft not yet saved';
+          drawerMeta.textContent = job ? `Connected to live jobs database · Updated ${formatDate(job.updatedAt || job.createdAt)}` : 'Connected to live jobs database · Draft not yet saved';
         }
         fillForm(job);
         shareBox.style.display = 'none';
@@ -960,6 +1310,13 @@
           shareBox.dataset.slug = '';
         }
         if (btnRefreshShare) btnRefreshShare.style.display = 'none';
+        if (shareDescription) {
+          shareDescription.textContent = state.readOnly
+            ? 'This console is in read-only mode, so share links stay local to this browser for 30 days.'
+            : job?.__seed
+              ? 'This job still comes from the legacy static site. Save it once to Supabase before creating a live share link.'
+              : 'Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
+        }
         openDrawer();
       }
 
@@ -985,9 +1342,13 @@
 
       async function saveJob() {
         if (state.readOnly || !state.supabaseOk) {
-          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+          toast('Jobs are read-only until the live jobs system is available.', 'warn', 3200);
           return;
         }
+        state.saving = true;
+        setLastAction('Saving job…', 'live');
+        updateControlState();
+        updateStatusPanel();
         try {
           const payload = readForm();
           const res = await api('admin-jobs-save', 'POST', { job: payload });
@@ -1008,30 +1369,49 @@
             toast('Job saved', 'ok', 1800);
             state.seeded = state.jobs.some((j) => j.__seed);
             applySeedNotice();
+            state.lastLoadedAt = new Date().toISOString();
+            setLastAction(`Saved ${hydrated.title || 'job'}`, 'ok');
           }
         } catch (e) {
           console.error('[jobs] save failed', e);
+          setLastAction('Save failed', 'error');
           toast('Save failed: ' + (e.message || e), 'error', 4200);
+        } finally {
+          state.saving = false;
+          updateControlState();
+          updateStatusPanel();
         }
       }
 
       async function deleteJob() {
         if (state.readOnly || !state.supabaseOk) {
-          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+          toast('Jobs are read-only until the live jobs system is available.', 'warn', 3200);
           return;
         }
         if (!state.editing?.id) return;
-        if (!confirm('Delete this job?')) return;
+        if (!confirm('Delete this job from the HMJ jobs system? This cannot be undone.')) return;
+        state.deleting = true;
+        setLastAction('Deleting job…', 'warn');
+        updateControlState();
+        updateStatusPanel();
         try {
           await api('admin-jobs-delete', 'POST', { id: state.editing.id });
+          const deletedTitle = state.editing?.title || state.editing?.id || 'job';
           state.jobs = state.jobs.filter((j) => j.id !== state.editing.id);
           buildSections();
           buildTags();
           renderAll();
           closeDrawer();
           toast('Job deleted', 'ok', 1800);
+          state.lastLoadedAt = new Date().toISOString();
+          setLastAction(`Deleted ${deletedTitle}`, 'ok');
         } catch (e) {
+          setLastAction('Delete failed', 'error');
           toast('Delete failed: ' + (e.message || e), 'error', 4200);
+        } finally {
+          state.deleting = false;
+          updateControlState();
+          updateStatusPanel();
         }
       }
 
@@ -1042,10 +1422,18 @@
           return;
         }
 
+        state.sharing = true;
+        setLastAction(state.readOnly ? 'Preparing local preview link…' : 'Preparing share link…', state.readOnly ? 'warn' : 'live');
+        updateControlState();
+        updateStatusPanel();
         if (state.readOnly) {
           const existingSlug = shareBox?.dataset?.slug || null;
           const result = ensureLocalShare(target, { preferredSlug: existingSlug });
           if (!result || !result.entry) {
+            state.sharing = false;
+            setLastAction('Share link failed', 'error');
+            updateControlState();
+            updateStatusPanel();
             toast('Local storage unavailable — unable to create a share link.', 'error', 3600);
             return;
           }
@@ -1069,15 +1457,27 @@
           }
           if (btnRefreshShare) btnRefreshShare.style.display = '';
           toast(reused ? 'Share link ready (local cache)' : 'Share link created (local cache)', 'info', 2400);
+          setLastAction(reused ? 'Local preview link ready' : 'Local preview link created', 'ok');
+          state.sharing = false;
+          updateControlState();
+          updateStatusPanel();
           return;
         }
 
         if (target?.__seed) {
+          state.sharing = false;
+          setLastAction('Save imported job before sharing', 'warn');
+          updateControlState();
+          updateStatusPanel();
           toast('Save this job to Supabase before generating a share link.', 'warn', 3200);
           return;
         }
 
         if (!target?.id) {
+          state.sharing = false;
+          setLastAction('Save job before sharing', 'warn');
+          updateControlState();
+          updateStatusPanel();
           toast('Save the job before generating a share link', 'warn', 2600);
           return;
         }
@@ -1109,8 +1509,14 @@
             'ok',
             2000
           );
+          setLastAction(fallback ? 'Fallback share link ready' : 'Live share link created', fallback ? 'warn' : 'ok');
         } catch (e) {
+          setLastAction('Share link failed', 'error');
           toast('Share failed: ' + (e.message || e), 'error', 4200);
+        } finally {
+          state.sharing = false;
+          updateControlState();
+          updateStatusPanel();
         }
       }
 
@@ -1140,33 +1546,16 @@
         }
         if (btnRefreshShare) btnRefreshShare.style.display = '';
         toast('Local share refreshed', 'ok', 2000);
-      }
-
-      async function loadJobsFromStatic(reason) {
-        try {
-          const res = await fetch('/data/jobs.json', { cache: 'no-store' });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const json = await res.json();
-          const rows = Array.isArray(json?.jobs) ? json.jobs : [];
-          if (!rows.length) return false;
-          state.jobs = rows.map((row) => ({ ...normalizeJob(row), __seed: true }));
-          state.readOnly = true;
-          state.supabaseOk = false;
-          state.fallbackSource = reason || 'static';
-          state.seeded = true;
-          applySeedNotice();
-          applyReadOnly();
-          buildSections();
-          buildTags();
-          renderAll();
-          return true;
-        } catch (err) {
-          console.error('[jobs] static fallback failed', err);
-          return false;
-        }
+        setLastAction('Local preview link refreshed', 'ok');
+        updateStatusPanel();
       }
 
       async function loadJobs() {
+        state.loadingJobs = true;
+        setLastAction('Loading jobs…', 'neutral');
+        if (resultMeta) resultMeta.textContent = 'Loading jobs…';
+        updateControlState();
+        updateStatusPanel();
         try {
           const res = await api('admin-jobs-list', 'POST', { includeDrafts: true });
           const rawJobs = Array.isArray(res?.jobs) ? res.jobs : [];
@@ -1178,19 +1567,18 @@
           });
           state.supabaseOk = !!res?.supabase?.ok;
           state.readOnly = !!res?.readOnly || !state.supabaseOk;
-          state.fallbackSource = res?.source || '';
-          state.seeded = !!res?.seeded && state.jobs.length > 0;
+          state.fallbackSource = state.readOnly ? (res?.source || 'unavailable') : 'supabase';
+          state.seeded = false;
           state.schemaMismatch = !!res?.schema;
+          state.lastLoadedAt = new Date().toISOString();
+          setLastAction(state.readOnly ? 'Live jobs unavailable' : 'Live jobs loaded', state.readOnly ? 'warn' : 'ok');
           applySeedNotice();
-          if (state.seeded) {
-            toast('Static jobs loaded — save them to sync with Supabase.', 'info', 2800);
-          }
           applyReadOnly();
           if (state.readOnly) {
             const schemaWarning = res?.schema
-              ? 'Jobs table schema mismatch detected — displaying read-only preview data.'
+              ? 'Jobs table schema mismatch detected — live editing is unavailable.'
               : null;
-            const message = schemaWarning || res?.error || res?.warning;
+            const message = schemaWarning || res?.error || 'Live jobs system unavailable.';
             if (message) {
               toast(message, 'warn', 3600);
             }
@@ -1200,13 +1588,25 @@
           renderAll();
         } catch (e) {
           console.error('[jobs] load failed', e);
+          state.jobs = [];
           state.supabaseOk = false;
-          const fallbackOk = await loadJobsFromStatic('static-client');
-          if (fallbackOk) {
-            toast('Supabase unavailable — showing static jobs (read-only).', 'warn', 3800);
-          } else {
-            toast('Load failed: ' + (e.message || e), 'error', 4200);
-          }
+          state.readOnly = true;
+          state.fallbackSource = e?.details?.source || 'unavailable';
+          state.seeded = false;
+          state.schemaMismatch = !!(e?.details?.schema || e?.status === 409);
+          buildSections();
+          buildTags();
+          renderAll();
+          setLastAction('Live jobs unavailable', 'error');
+          if (resultMeta) resultMeta.textContent = 'Live jobs system unavailable';
+          toast(e?.message || 'Live jobs system unavailable', 'error', 4200);
+        } finally {
+          state.loadingJobs = false;
+          renderAll();
+          applyReadOnly();
+          applySeedNotice();
+          updateControlState();
+          updateStatusPanel();
         }
       }
 
@@ -1217,7 +1617,7 @@
 
       function addSection(label) {
         if (state.readOnly) {
-          toast('Jobs are read-only until Supabase is configured.', 'warn', 3200);
+          toast('Jobs are read-only until the live jobs system is available.', 'warn', 3200);
           return;
         }
         const clean = label.trim();
@@ -1228,13 +1628,15 @@
           state.sectionOrder.sort((a, b) => a.label.localeCompare(b.label));
           updateSectionSelect();
           toast(`Category “${clean}” ready`, 'info', 1800);
+          setLastAction(`Category “${clean}” added locally`, 'ok');
+          updateStatusPanel();
         }
       }
 
       // ---- Event wires ----
       sel('#btnRefresh').onclick = loadJobs;
       sel('#btnNew').onclick = () => {
-        if (state.readOnly) { toast('Jobs are read-only until Supabase is configured.', 'warn', 3200); return; }
+        if (state.readOnly) { toast('Jobs are read-only until the live jobs system is available.', 'warn', 3200); return; }
         openEditor(null);
       };
       sel('#btnClose').onclick = closeDrawer;
@@ -1291,7 +1693,7 @@
       };
 
       tagInput.addEventListener('keydown', (e) => {
-        if (state.readOnly) { e.preventDefault(); toast('Jobs are read-only until Supabase is configured.', 'warn', 3200); return; }
+        if (state.readOnly) { e.preventDefault(); toast('Jobs are read-only until the live jobs system is available.', 'warn', 3200); return; }
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
           const value = tagInput.value.trim();
@@ -1326,6 +1728,19 @@
         }
       });
 
+      try {
+        const who = await identity('admin');
+        if (who?.ok) {
+          state.currentUser = who;
+          setLastAction('Admin session confirmed', 'ok');
+        }
+      } catch (err) {
+        console.warn('[jobs] unable to resolve admin identity', err);
+        setLastAction('Unable to confirm admin session details', 'warn');
+      }
+
+      updateControlState();
+      updateStatusPanel();
       applyReadOnly();
       await loadJobs();
     });

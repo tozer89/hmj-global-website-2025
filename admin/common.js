@@ -58,16 +58,6 @@
     }
     return '';
   })();
-  const PRODUCTION_HOSTS = ['hmjg.netlify.app'];
-  const ALWAYS_ADMIN_EMAILS = String(ADMIN_ENV.ALWAYS_ADMIN_EMAILS || window.ALWAYS_ADMIN_EMAILS || '')
-    .split(/[,\s]+/)
-    .map((v) => v.trim().toLowerCase())
-    .filter(Boolean);
-  const FORCE_ADMIN_KEY = String(ADMIN_ENV.FORCE_ADMIN_KEY || window.FORCE_ADMIN_KEY || '').trim();
-  const FORCE_ADMIN_STORAGE_KEY = `hmjg:force-admin:${HOSTNAME}`;
-  let previewForceAdminActive = false;
-  let previewAllowlistAnnounced = false;
-  let previewForceToastAnnounced = false;
   let identityCache = null;
   let identityCacheTs = 0;
 
@@ -254,86 +244,66 @@
     return getCookie('nf_jwt') || '';
   }
 
-  function toggleForceBanner(active) {
-    let banner = document.getElementById('hmjForceAdminBanner');
-    if (!active || !IS_PREVIEW_HOST) {
-      if (banner) banner.remove();
-      return;
-    }
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'hmjForceAdminBanner';
-      banner.textContent = 'ForceAdmin (preview) is ON';
-      banner.style.position = 'fixed';
-      banner.style.top = '14px';
-      banner.style.left = '50%';
-      banner.style.transform = 'translateX(-50%)';
-      banner.style.padding = '7px 14px';
-      banner.style.borderRadius = '999px';
-      banner.style.fontSize = '12px';
-      banner.style.fontWeight = '800';
-      banner.style.letterSpacing = '.08em';
-      banner.style.textTransform = 'uppercase';
-      banner.style.background = '#40281f';
-      banner.style.color = '#ffddc8';
-      banner.style.border = '1px solid rgba(255,221,200,.4)';
-      banner.style.zIndex = '99999';
-      banner.style.boxShadow = '0 12px 30px rgba(0,0,0,.25)';
-      banner.dataset.todo = 'TODO: REMOVE BEFORE PROD MERGE';
-      document.body.appendChild(banner);
+  function getCurrentAdminPath() {
+    try {
+      const path = String(window.location?.pathname || '');
+      return path || '/';
+    } catch {
+      return '/';
     }
   }
 
-  function syncForceAdminFlag() {
-    if (!IS_PREVIEW_HOST) {
-      try { sessionStorage.removeItem(FORCE_ADMIN_STORAGE_KEY); } catch {}
-      toggleForceBanner(false);
-      return false;
+  function isAdminEntryPath(path = getCurrentAdminPath()) {
+    return path === '/admin/' || path === '/admin/index.html';
+  }
+
+  function normaliseAdminTarget(input) {
+    const raw = String(input || '').trim();
+    if (!raw || /^([a-z]+:)?\/\//i.test(raw) || raw.includes('..')) return '';
+    let candidate = raw;
+    if (!candidate.startsWith('/')) {
+      candidate = candidate.startsWith('admin/') ? `/${candidate}` : `/admin/${candidate}`;
     }
-    let active = false;
-    let keepForLoad = false;
+    try {
+      const url = new URL(candidate, window.location.origin);
+      const path = url.pathname || '';
+      const file = path.split('/').pop() || '';
+      if (!path.startsWith('/admin/')) return '';
+      if (!/^[a-z0-9-]+\.html$/i.test(file)) return '';
+      if (file.toLowerCase() === 'index.html') return '';
+      return `${path}${url.search || ''}${url.hash || ''}`;
+    } catch (err) {
+      Debug.warn('admin target normalise failed', err);
+      return '';
+    }
+  }
+
+  function getRequestedAdminPath() {
     try {
       const params = new URLSearchParams(window.location.search || '');
-      const paramPresent = params.has('forceAdmin');
-      const provided = params.get('forceAdmin') || '';
-      if (paramPresent) {
-        if (FORCE_ADMIN_KEY && provided === FORCE_ADMIN_KEY) {
-          try { sessionStorage.setItem(FORCE_ADMIN_STORAGE_KEY, '1'); } catch {}
-          active = true;
-          keepForLoad = true;
-          toast.warn('ForceAdmin (preview) is ON', 5200); // TODO: REMOVE BEFORE PROD MERGE
-          Debug.warn('ForceAdmin override active for preview host');
-          try {
-            params.delete('forceAdmin');
-            const url = new URL(window.location.href);
-            url.search = params.toString();
-            window.history.replaceState({}, document.title, url.toString());
-          } catch (err) {
-            Debug.warn('forceAdmin history.replaceState failed', err);
-          }
-        } else {
-          try { sessionStorage.removeItem(FORCE_ADMIN_STORAGE_KEY); } catch {}
-          toast.err('ForceAdmin key invalid for this preview host.', 5200);
-          Debug.warn('ForceAdmin override rejected: key mismatch');
-        }
-      }
-      if (!keepForLoad) {
-        const stored = (() => { try { return sessionStorage.getItem(FORCE_ADMIN_STORAGE_KEY); } catch { return null; } })();
-        if (stored === '1' && !paramPresent) {
-          try { sessionStorage.removeItem(FORCE_ADMIN_STORAGE_KEY); } catch {}
-        } else if (stored === '1') {
-          active = true;
-        }
-      }
+      return normaliseAdminTarget(params.get('next') || '');
     } catch (err) {
-      Debug.warn('ForceAdmin flag sync failed', err);
-      try { sessionStorage.removeItem(FORCE_ADMIN_STORAGE_KEY); } catch {}
+      Debug.warn('admin next param read failed', err);
+      return '';
     }
-    toggleForceBanner(active);
-    return active;
   }
 
-  previewForceAdminActive = syncForceAdminFlag();
+  function getAdminEntryUrl(targetPath) {
+    const safeTarget = normaliseAdminTarget(targetPath);
+    const suffix = safeTarget ? safeTarget.replace(/^\/admin\//, '') : '';
+    return suffix ? `/admin/?next=${encodeURIComponent(suffix)}` : '/admin/';
+  }
+
+  function adminTargetLabel(path) {
+    const safePath = normaliseAdminTarget(path);
+    if (!safePath) return 'HMJ admin';
+    const file = (safePath.split('/').pop() || '').replace(/\.html$/i, '');
+    const words = file.split(/[-_]+/).filter(Boolean).map((part) => {
+      const lower = part.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    });
+    return words.length ? words.join(' ') : 'HMJ admin';
+  }
 
   function ensureDebugChip() {
     let host = document.getElementById('hmjDebugChip');
@@ -360,7 +330,6 @@
         <span data-field="host">Host: ${HOSTNAME || '—'}</span>
         <span data-field="email">User: —</span>
         <span data-field="roles">Roles: —</span>
-        <span data-field="override" style="display:none">Override: —</span>
       `;
       document.body.appendChild(host);
     }
@@ -381,24 +350,6 @@
     if (identityNode) identityNode.textContent = `Identity: ${IDENTITY_URL || '—'}`;
     const hostNode = chip.querySelector('[data-field="host"]');
     if (hostNode) hostNode.textContent = `Host: ${HOSTNAME || '—'}`;
-    const overrideNode = chip.querySelector('[data-field="override"]');
-    const overrides = [];
-    if (session?.override === 'allowlist') overrides.push('Allowlist');
-    if (session?.override === 'forceAdmin' || session?.forceAdmin) overrides.push('ForceAdmin');
-    if (Array.isArray(session?.overrides)) {
-      for (const item of session.overrides) {
-        if (!overrides.includes(item)) overrides.push(item);
-      }
-    }
-    if (previewForceAdminActive && !overrides.includes('ForceAdmin')) overrides.push('ForceAdmin');
-    if (overrideNode) {
-      if (overrides.length) {
-        overrideNode.style.display = '';
-        overrideNode.textContent = `Override: ${overrides.join(', ')}`;
-      } else {
-        overrideNode.style.display = 'none';
-      }
-    }
   }
 
   function brandIdentityWidget(id) {
@@ -670,50 +621,6 @@
     }
   }
 
-  function applyPreviewBackups(snapshot) {
-    if (!snapshot) return snapshot;
-    const result = Object.assign({}, snapshot);
-    const email = String(result.email || result.identityEmail || '').toLowerCase();
-    const roles = Array.isArray(result.roles) ? result.roles.slice() : [];
-    let ok = !!result.ok;
-    const overrides = [];
-
-    if (!ok && email && IS_PREVIEW_HOST && !PRODUCTION_HOSTS.includes(HOSTNAME)) {
-      if (ALWAYS_ADMIN_EMAILS.includes(email)) {
-        ok = true;
-        if (!roles.includes('admin')) roles.push('admin');
-        result.role = 'admin';
-        result.override = 'allowlist';
-        overrides.push('Allowlist');
-        if (!previewAllowlistAnnounced) {
-          toast.warn(`Preview override active for ${email}.`, 5200);
-          Debug.warn('Preview override via allowlist', email);
-          previewAllowlistAnnounced = true;
-        }
-      }
-      if (!ok && previewForceAdminActive && FORCE_ADMIN_KEY) {
-        ok = true;
-        if (!roles.includes('admin')) roles.push('admin');
-        result.role = 'admin';
-        result.override = 'forceAdmin';
-        overrides.push('ForceAdmin');
-        result.forceAdmin = true;
-        if (!previewForceToastAnnounced) {
-          toast.warn('ForceAdmin preview override active.', 5200); // TODO: REMOVE BEFORE PROD MERGE
-          Debug.warn('ForceAdmin override granting admin role');
-          previewForceToastAnnounced = true;
-        }
-      }
-    }
-
-    result.ok = ok;
-    result.roles = roles;
-    if (!result.email) result.email = email;
-    if (!result.identityEmail) result.identityEmail = email;
-    if (overrides.length) result.overrides = overrides;
-    return result;
-  }
-
   // Public, promise-based identity snapshot used by pages & console
   async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' | undefined */, options) {
     let opts = {};
@@ -746,8 +653,6 @@
       updateDebugChip(cached);
       return cached;
     }
-
-    previewForceAdminActive = syncForceAdminFlag();
 
     const id = ensureIdentityInit();
     if (verbose && id) toast.ok('Identity widget ready', 3200);
@@ -853,7 +758,7 @@
 
     base.ok = base.ok && (!required || role === required || roles.includes(required));
 
-    const enriched = applyPreviewBackups(base);
+    const enriched = Object.assign({}, base);
 
     if (verbose) {
       if (enriched.ok) {
@@ -947,7 +852,12 @@
   async function gate({ adminOnly = true } = {}) {
     const g = $('#gate'); const app = $('#app');
     const why = g ? $('.why', g) : null;
+    const heading = g ? $('strong, h1, h2', g) : null;
+    const button = g ? $('button', g) : null;
     const who = await identity(adminOnly ? 'admin' : undefined, { verbose: true, forceFresh: true });
+    const currentPath = getCurrentAdminPath();
+    const targetPath = isAdminEntryPath(currentPath) ? getRequestedAdminPath() : normaliseAdminTarget(currentPath);
+    const targetLabel = adminTargetLabel(targetPath);
 
     if (who.ok && (!adminOnly || who.role === 'admin')) {
       if (g) g.style.display = 'none';
@@ -959,12 +869,23 @@
     // No session / wrong role
     if (app) app.style.display = 'none';
     if (g) g.style.display = '';
+    if (heading) {
+      heading.textContent = !who.token ? 'HMJ admin sign-in' : 'Admin access required';
+    }
+    if (button) {
+      button.textContent = 'Sign in with HMJ email';
+    }
     if (why) {
       if (!who.token) {
-        why.textContent = 'Sign in required on this host.';
+        why.textContent = targetPath
+          ? `Sign in with your HMJ staff email to continue to ${targetLabel}.`
+          : 'Sign in with your HMJ staff email to access HMJ admin on this site.';
       } else if (adminOnly) {
         const roles = Array.isArray(who.roles) && who.roles.length ? who.roles.join(', ') : 'none';
-        why.textContent = `Admin role required. Current roles: ${roles}.`;
+        const identityEmail = who.email || who.identityEmail || 'this account';
+        why.textContent = targetPath
+          ? `You are signed in as ${identityEmail}, but this account does not have HMJ admin access to open ${targetLabel}. Current roles: ${roles}. Use Sign out above if you need to switch accounts.`
+          : `You are signed in as ${identityEmail}, but this account does not have HMJ admin access on this site. Current roles: ${roles}. Use Sign out above if you need to switch accounts.`;
       } else {
         why.textContent = 'Access limited for your role.';
       }
@@ -1042,6 +963,8 @@
   window.Admin.bootAdmin = async function bootAdmin(mainFn) {
     try {
       const helpers = await window.adminReady();
+      const currentPath = getCurrentAdminPath();
+      const entryPage = isAdminEntryPath(currentPath);
 
       injectPreviewDebugButton();
 
@@ -1069,8 +992,31 @@
 
       const who = await helpers.gate({ adminOnly: true });
       if (!who) {
+        if (!entryPage) {
+          const target = getAdminEntryUrl(currentPath);
+          if (target && target !== `${window.location.pathname}${window.location.search}`) {
+            try {
+              window.location.replace(target);
+              return;
+            } catch (err) {
+              Debug.warn('redirect to admin entry failed', err);
+            }
+          }
+        }
         Debug.warn('Gate blocked: no session / no admin role');
         return;
+      }
+
+      if (entryPage) {
+        const requestedPath = getRequestedAdminPath();
+        if (requestedPath) {
+          try {
+            window.location.replace(requestedPath);
+            return;
+          } catch (err) {
+            Debug.warn('redirect to requested admin page failed', err);
+          }
+        }
       }
 
       // Debug chip line (optional)

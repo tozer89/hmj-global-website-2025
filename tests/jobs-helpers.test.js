@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   toJob,
@@ -105,9 +107,22 @@ test('slugify and resolveSection provide stable keys', () => {
   assert.equal(custom.key, 'critical-infrastructure');
 });
 
-test('loadStaticJobs loads seed data for offline fallback', () => {
+test('loadStaticJobs still exposes a legacy static seed for deferred secondary paths', () => {
   const jobs = loadStaticJobs();
   assert.ok(Array.isArray(jobs));
   assert.ok(jobs.length > 0, 'expected seed jobs for fallback');
   assert.ok(jobs.every((job) => job.title && job.sectionKey));
+});
+
+test('loadStaticJobs prefers the authored seed file without duplicating rows', () => {
+  const jobs = loadStaticJobs();
+  const localJsonPath = path.join(__dirname, '..', 'data', 'jobs.json');
+  const localJson = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
+  const localJobs = Array.isArray(localJson?.jobs) ? localJson.jobs : [];
+
+  assert.equal(jobs.length, localJobs.length);
+  assert.deepEqual(
+    jobs.map((job) => job.id),
+    localJobs.map((job) => job.id)
+  );
 });

@@ -2,6 +2,14 @@
 const path = require('path');
 const fs = require('fs');
 
+// Canonical jobs helpers for the active HMJ jobs runtime.
+// The main public/admin jobs flow should use Supabase through Netlify Functions
+// and rely on this module only for normalization and mapping.
+//
+// Legacy static dataset helpers are retained below only for deferred secondary
+// paths such as share/spec compatibility. They are no longer part of the main
+// public jobs board or admin jobs editor runtime flow.
+
 const SECTION_PRESETS = new Map([
   ['commercial', 'Commercial'],
   ['dc', 'Data Centre Delivery'],
@@ -31,6 +39,12 @@ function extractJobs(source) {
   return [];
 }
 
+function readJobsDataset(filePath) {
+  const parsed = readJsonSafe(filePath);
+  if (parsed === null) return null;
+  return extractJobs(parsed);
+}
+
 const SEED_PATH = path.join(__dirname, '_data', 'jobs.seed.json');
 const LOCAL_PATH = path.join(__dirname, '..', '..', 'data', 'jobs.json');
 
@@ -45,27 +59,34 @@ try {
 let STATIC_JOBS = [];
 let STATIC_LOOKUP = null;
 
+// Legacy static snapshot loader retained for deferred share/spec compatibility.
 function ensureStaticJobs() {
   if (STATIC_JOBS.length) return STATIC_JOBS;
 
-  let embedded = extractJobs(EMBEDDED_DATA);
-  if (!embedded.length) {
-    embedded = extractJobs(readJsonSafe(SEED_PATH));
-  }
-
-  let local = [];
+  let local = null;
   // In the Netlify bundle the data/ directory may sit outside __dirname, so fall back to cwd.
   const localPaths = [LOCAL_PATH, path.join(process.cwd(), 'data', 'jobs.json')];
   for (const candidate of localPaths) {
-    if (local.length) break;
-    local = extractJobs(readJsonSafe(candidate));
+    if (local !== null) break;
+    const dataset = readJobsDataset(candidate);
+    if (dataset !== null) {
+      local = dataset;
+    }
   }
 
-  const combined = [...embedded, ...local];
-  if (!combined.length) {
+  let embedded = EMBEDDED_DATA !== null ? extractJobs(EMBEDDED_DATA) : null;
+  if (embedded === null) {
+    embedded = readJobsDataset(SEED_PATH);
+  }
+
+  const selected = local !== null ? local : embedded;
+  const datasetFound = local !== null || embedded !== null;
+  const fallback = Array.isArray(selected) ? selected.slice() : [];
+
+  if (!datasetFound) {
     console.warn('[jobs] no static datasets found — using hard-coded seed');
     // Minimal inline seed so previews never break entirely.
-    combined.push({
+    fallback.push({
       id: 'hmj-demo-role',
       title: 'Construction Manager — Data Centre',
       status: 'live',
@@ -87,7 +108,7 @@ function ensureStaticJobs() {
     });
   }
 
-  STATIC_JOBS = combined;
+  STATIC_JOBS = fallback;
   STATIC_LOOKUP = null; // reset memoised map so helpers rebuild with latest dataset
   return STATIC_JOBS;
 }
