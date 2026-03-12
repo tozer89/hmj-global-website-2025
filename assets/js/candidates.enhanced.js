@@ -921,7 +921,7 @@
 
   function initJobsWidget() {
     if (!els.jobsWidget || !window.fetch) return;
-    fetch('/data/jobs.json', { credentials: 'same-origin' })
+    fetch('/.netlify/functions/jobs-list', { credentials: 'same-origin' })
       .then((response) => {
         if (!response.ok) throw new Error('Network response was not ok');
         return response.json();

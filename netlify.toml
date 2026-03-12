@@ -6,18 +6,96 @@
   node_bundler = "esbuild"
   included_files = ["data/*.json", "netlify/functions/_data/*.json"]
 
-# Gate the timesheets admin to users with the "admin" role
+# Keep /admin/ public as the single sign-in entry, but require an admin
+# role for the actual tool pages. Non-admin visitors are sent back to the
+# dashboard gate with a safe continuation target.
 [[redirects]]
-  from = "/admin/timesheets*"
+  from = "/admin/assignments.html"
+  to = "/admin/assignments.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/assignments.html"
+  to = "/admin/?next=assignments.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/candidate-profile.html"
+  to = "/admin/candidate-profile.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/candidate-profile.html"
+  to = "/admin/?next=candidate-profile.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/candidates.html"
+  to = "/admin/candidates.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/candidates.html"
+  to = "/admin/?next=candidates.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/clients.html"
+  to = "/admin/clients.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/clients.html"
+  to = "/admin/?next=clients.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/jobs.html"
+  to = "/admin/jobs.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/jobs.html"
+  to = "/admin/?next=jobs.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/payroll.html"
+  to = "/admin/payroll.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/payroll.html"
+  to = "/admin/?next=payroll.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/reports.html"
+  to = "/admin/reports.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/reports.html"
+  to = "/admin/?next=reports.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/timesheets.html"
   to = "/admin/timesheets.html"
   status = 200
   conditions = { Role = ["admin"] }
 
-# Fallback for non-admins
 [[redirects]]
-  from = "/admin/timesheets*"
-  to = "/unauthorized.html"
-  status = 401
+  from = "/admin/timesheets.html"
+  to = "/admin/?next=timesheets.html"
+  status = 302
 
 [[plugins]]
   package = "./netlify/plugins/admin-build-info"

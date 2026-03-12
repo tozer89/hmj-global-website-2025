@@ -2,7 +2,7 @@
 const { withAdminCors } = require('./_http.js');
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, loadStaticJobs, ensureStaticJobs, isSchemaError } = require('./_jobs-helpers.js');
+const { toJob, isSchemaError } = require('./_jobs-helpers.js');
 
 const JOB_SELECT = '*';
 
@@ -15,24 +15,8 @@ function truthy(value) {
   return !!value;
 }
 
-function filterPublishedJobs(list = []) {
-  if (!Array.isArray(list)) return [];
-  return list.filter((job) => job && job.published !== false);
-}
-
 const baseHandler = async (event, context) => {
-  let fallback = [];
-  let fallbackError = null;
-  try {
-    fallback = loadStaticJobs();
-  } catch (err) {
-    fallbackError = err;
-    console.warn('[admin-jobs] static load failed', err?.message || err);
-  }
-  const fallbackCount = fallback.length;
-
   const queryParams = event?.queryStringParameters || {};
-  const headers = event?.headers || {};
   let body = {};
   try {
     body = event.body ? JSON.parse(event.body) : {};
@@ -41,40 +25,41 @@ const baseHandler = async (event, context) => {
   }
 
   const modeValue = typeof queryParams.mode === 'string' ? queryParams.mode : '';
-  const publicFlag =
-    truthy(queryParams.public) ||
-    modeValue.toLowerCase() === 'public' ||
-    truthy(headers['x-hmj-public']) ||
-    truthy(body.public);
-
-  const isPublicRequest = !!publicFlag;
-  const fallbackJobs = isPublicRequest ? filterPublishedJobs(fallback) : fallback;
+  const publicFlag = truthy(queryParams.public) || modeValue.toLowerCase() === 'public' || truthy(body.public);
 
   try {
-    if (!isPublicRequest) {
-      await getContext(event, context, { requireAdmin: true });
+    if (publicFlag) {
+      return {
+        statusCode: 410,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({
+          error: 'Public jobs mode has been removed from this endpoint. Use /.netlify/functions/jobs-list instead.',
+          code: 'public_mode_removed',
+        }),
+      };
     }
+
+    await getContext(event, context, { requireAdmin: true });
 
     if (!hasSupabase()) {
       return {
-        statusCode: 200,
+        statusCode: 503,
         headers: JSON_HEADERS,
         body: JSON.stringify({
-          jobs: fallbackJobs,
-          source: fallbackJobs.length ? 'static' : 'empty',
-          readOnly: isPublicRequest ? undefined : true,
-          warning: fallback.length
-            ? 'Supabase unavailable — showing static jobs.'
-            : (fallbackError?.message || 'Supabase client unavailable'),
+          jobs: [],
+          source: 'unavailable',
+          readOnly: true,
+          error: 'Live jobs system unavailable',
+          code: 'supabase_unavailable',
           supabase: supabaseStatus(),
-          fallbackCount,
+          schema: false,
         }),
       };
     }
 
     const supabase = getSupabase(event);
 
-    const includeDrafts = !isPublicRequest && body.includeDrafts !== false;
+    const includeDrafts = body.includeDrafts !== false;
 
     let query = supabase
       .from('jobs')
@@ -91,42 +76,34 @@ const baseHandler = async (event, context) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    const jobsRaw = Array.isArray(data) ? data.map(toJob) : [];
-    const jobs = isPublicRequest ? filterPublishedJobs(jobsRaw) : jobsRaw;
-    if (!jobs.length && fallbackJobs.length) {
-      const seeded = isPublicRequest
-        ? fallbackJobs
-        : fallbackJobs.map((job) => ({ ...job, __seed: true }));
-      return {
-        statusCode: 200,
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ jobs: seeded, source: 'static', seeded: true, supabase: supabaseStatus(), fallbackCount }),
-      };
-    }
+    const jobs = Array.isArray(data) ? data.map(toJob) : [];
     return {
       statusCode: 200,
       headers: JSON_HEADERS,
-      body: JSON.stringify({ jobs, source: jobs.length ? 'supabase' : 'empty', supabase: supabaseStatus(), fallbackCount }),
+      body: JSON.stringify({
+        jobs,
+        source: 'supabase',
+        readOnly: false,
+        supabase: supabaseStatus(),
+        schema: false,
+      }),
     };
   } catch (e) {
     const schemaIssue = isSchemaError(e);
-    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
-    const source = fallbackJobs.length ? 'static' : 'empty';
-    ensureStaticJobs();
+    const status = e.code === 401 ? 401 : e.code === 403 ? 403 : (schemaIssue ? 409 : 503);
     return {
-      statusCode: fallbackJobs.length ? 200 : status,
+      statusCode: status,
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        jobs: fallbackJobs,
-        readOnly: isPublicRequest ? undefined : true,
-        source,
-        error: e.message || fallbackError?.message || (status === 401 ? 'Unauthorized' : 'Unexpected error'),
+        jobs: [],
+        readOnly: true,
+        source: 'unavailable',
+        error: schemaIssue
+          ? 'Live jobs system unavailable because the jobs table schema does not match this editor.'
+          : (e.message || (status === 401 ? 'Unauthorized' : 'Live jobs system unavailable')),
+        code: schemaIssue ? 'schema_mismatch' : undefined,
         schema: schemaIssue,
-        warning: schemaIssue
-          ? 'Jobs table schema mismatch detected — serving static jobs.'
-          : (fallbackError?.message || e.message || undefined),
         supabase: supabaseStatus(),
-        fallbackCount,
       }),
     };
   }

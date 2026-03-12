@@ -380,7 +380,7 @@
   async function decorateCards(cards) {
     try {
       const [jobs, timesheets] = await Promise.all([
-        fetchJson('/data/jobs.json'),
+        fetchJson('/.netlify/functions/jobs-list'),
         fetchJson('/data/timesheets.json')
       ]);
       if (jobs?.jobs?.length) {
@@ -460,7 +460,7 @@
 
   async function buildKpiFallback() {
     const [jobs, candidates, timesheets] = await Promise.all([
-      fetchJson('/data/jobs.json'),
+      fetchJson('/.netlify/functions/jobs-list'),
       fetchJson('/data/candidates.json'),
       fetchJson('/data/timesheets.json')
     ]);

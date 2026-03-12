@@ -5,7 +5,6 @@
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { hasSupabase, getSupabase, supabaseStatus } = require('./_supabase.js');
-const { loadStaticJobs } = require('./_jobs-helpers.js');
 const { loadStaticCandidates } = require('./_candidates-helpers.js');
 const { loadStaticClients } = require('./_clients-helpers.js');
 const { loadStaticAssignments } = require('./_assignments-helpers.js');
@@ -39,14 +38,13 @@ const baseHandler = async (event, context) => {
   const { settings } = await fetchSettings(event, ['fiscal_week1_ending']);
   const baseWeek = settings?.fiscal_week1_ending || DEFAULT_SETTINGS.fiscal_week1_ending;
 
-  const staticJobs = loadStaticJobs();
   const staticCandidates = loadStaticCandidates();
   const staticClients = loadStaticClients();
   const staticAssignments = loadStaticAssignments();
   const staticTimesheets = loadStaticTimesheets(baseWeek);
 
   const staticCounts = {
-    jobs: staticJobs.length,
+    jobs: null,
     candidates: staticCandidates.length,
     clients: staticClients.length,
     assignments: staticAssignments.length,
@@ -55,7 +53,7 @@ const baseHandler = async (event, context) => {
   };
 
   const datasets = [
-    { key: 'jobs', label: 'Jobs', static: staticCounts.jobs, supabase: null, delta: null, notes: [] },
+    { key: 'jobs', label: 'Jobs', static: null, supabase: null, delta: null, notes: ['Jobs now use the canonical live jobs endpoint only'] },
     { key: 'candidates', label: 'Candidates', static: staticCounts.candidates, supabase: null, delta: null, notes: [] },
     { key: 'clients', label: 'Clients', static: staticCounts.clients, supabase: null, delta: null, notes: [] },
     { key: 'assignments', label: 'Assignments', static: staticCounts.assignments, supabase: null, delta: null, notes: [] },
@@ -106,11 +104,14 @@ const baseHandler = async (event, context) => {
     datasets.forEach((entry) => {
       const supaValue = supabaseCounts[entry.key] ?? null;
       entry.supabase = supaValue;
-      if (typeof supaValue === 'number') {
+      if (typeof supaValue === 'number' && typeof entry.static === 'number') {
         entry.delta = supaValue - entry.static;
         if (entry.delta === 0) entry.notes.push('Counts aligned');
         else if (entry.delta > 0) entry.notes.push(`Supabase has ${entry.delta} more records`);
         else entry.notes.push(`${Math.abs(entry.delta)} records only exist in preview data`);
+      } else if (entry.key === 'jobs' && typeof supaValue === 'number') {
+        entry.delta = null;
+        entry.notes.push('Static jobs runtime fallback retired');
       } else {
         entry.notes.push('Supabase count unavailable — check permissions or schema');
       }
@@ -119,7 +120,11 @@ const baseHandler = async (event, context) => {
     datasets.forEach((entry) => {
       entry.supabase = null;
       entry.delta = null;
-      entry.notes.push('Using static fallback dataset');
+      if (entry.key === 'jobs') {
+        entry.notes.push('No static runtime fallback remains for jobs');
+      } else {
+        entry.notes.push('Using static fallback dataset');
+      }
     });
   }
 
