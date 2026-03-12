@@ -1,11 +1,8 @@
 (function () {
   'use strict';
 
-  const rolesOf = (user) => {
-    if (Array.isArray(user?.app_metadata?.roles)) return user.app_metadata.roles;
-    if (Array.isArray(user?.roles)) return user.roles;
-    return [];
-  };
+  const TIMESHEETS_URL = 'https://login.timesheetportal.com/?_gl=1*wfpx6g*_gcl_au*NzU1ODYwMTI5LjE3NjkwODg5MjA.*_ga*ODQ0OTU3NzQ5LjE3NjkwODg5MTk.*_ga_9Y6DNF71JK*czE3NzMzNTY1NjEkbzMkZzAkdDE3NzMzNTY1NjEkajYwJGwwJGgw';
+  const ADMIN_URL = '/admin/';
 
   const ensureIdentity = () => {
     try {
@@ -18,57 +15,27 @@
     }
   };
 
-  const updateTimesheetsLink = (link, user) => {
+  const updateTimesheetsLink = (link) => {
     if (!link) return;
-    if (user) {
-      link.href = '/timesheets.html';
-      link.removeAttribute('aria-disabled');
-      link.title = 'Open timesheets';
-    } else {
-      link.href = '#';
-      link.setAttribute('aria-disabled', 'true');
-      link.title = 'Sign in to access timesheets';
-    }
+    link.href = TIMESHEETS_URL;
+    link.removeAttribute('aria-disabled');
+    link.textContent = 'Timesheets';
+    link.title = 'Open Timesheets';
   };
 
-  const updateAdminLink = (link, user) => {
+  const updateAdminLink = (link) => {
     if (!link) return;
-    const isAdmin = rolesOf(user).includes('admin');
-    if (isAdmin) {
-      link.style.display = 'inline-block';
-      link.href = '/admin/';
-      link.removeAttribute('aria-disabled');
-      link.classList.remove('requires-admin');
-      link.textContent = 'Admin Dashboard';
-      link.title = 'Open the admin dashboard';
-    } else {
-      link.style.display = 'none';
-      link.href = '/admin/';
-      link.setAttribute('aria-disabled', 'true');
-      link.classList.add('requires-admin');
-      link.textContent = 'Admin Dashboard';
-      link.title = 'Admin access only';
-    }
+    link.style.display = '';
+    link.href = ADMIN_URL;
+    link.removeAttribute('aria-disabled');
+    link.classList.remove('requires-admin');
+    link.textContent = 'Admin';
+    link.title = 'Open the admin sign-in page';
   };
 
-  const applyUserToNav = (adminLink, timesheetsLink, user) => {
-    updateTimesheetsLink(timesheetsLink, user);
-    updateAdminLink(adminLink, user);
-  };
-
-  const requireLogin = (event, destination) => {
-    if (event) event.preventDefault();
-    const identity = ensureIdentity();
-    if (!identity || typeof identity.open !== 'function') {
-      if (destination) {
-        window.location.href = destination;
-      }
-      return;
-    }
-    if (destination) {
-      sessionStorage.setItem('afterLogin', destination);
-    }
-    identity.open('login');
+  const applyNavLinks = (adminLink, timesheetsLink) => {
+    updateTimesheetsLink(timesheetsLink);
+    updateAdminLink(adminLink);
   };
 
   const bindIdentity = (identity, callbacks) => {
@@ -91,34 +58,20 @@
     const adminLink = document.getElementById('nav-admin');
     const timesheetsLink = document.getElementById('nav-timesheets');
 
-    const render = (user) => applyUserToNav(adminLink, timesheetsLink, user);
+    const render = () => applyNavLinks(adminLink, timesheetsLink);
 
     const callbacks = { render };
-
-    timesheetsLink?.addEventListener('click', (event) => {
-      const identity = ensureIdentity();
-      const user = identity?.currentUser?.();
-      if (user) return;
-      requireLogin(event, '/timesheets.html');
-    });
-
-    adminLink?.addEventListener('click', (event) => {
-      const identity = ensureIdentity();
-      const user = identity?.currentUser?.();
-      if (user) return;
-      requireLogin(event, '/admin/');
-    });
 
     const attachAndRender = (identity) => {
       const id = bindIdentity(identity || ensureIdentity(), callbacks);
       if (!id) {
-        render(null);
+        render();
         return;
       }
       try {
-        render(id.currentUser?.() || null);
+        render();
       } catch {
-        render(null);
+        render();
       }
     };
 
