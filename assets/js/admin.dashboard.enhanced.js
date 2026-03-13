@@ -247,21 +247,23 @@
   }
 
   function applyTileOrder() {
-    const grid = document.querySelector('.grid[data-tile-order]');
-    if (!grid) return;
-    const cards = Array.from(grid.querySelectorAll('a.card'));
-    let sorted = cards;
-    if (state.view.order === 'alpha') {
-      sorted = cards.slice().sort((a, b) => a.textContent.trim().localeCompare(b.textContent.trim()));
-    } else if (state.view.order === 'recent') {
-      const history = state.view.lastVisited || [];
-      const score = (href) => {
-        const idx = history.indexOf(href);
-        return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
-      };
-      sorted = cards.slice().sort((a, b) => score(a.href) - score(b.href));
-    }
-    sorted.forEach(card => grid.appendChild(card));
+    const grids = Array.from(document.querySelectorAll('.grid[data-tile-order]'));
+    if (!grids.length) return;
+    grids.forEach((grid) => {
+      const cards = Array.from(grid.querySelectorAll('a.card'));
+      let sorted = cards;
+      if (state.view.order === 'alpha') {
+        sorted = cards.slice().sort((a, b) => a.textContent.trim().localeCompare(b.textContent.trim()));
+      } else if (state.view.order === 'recent') {
+        const history = state.view.lastVisited || [];
+        const score = (href) => {
+          const idx = history.indexOf(href);
+          return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+        };
+        sorted = cards.slice().sort((a, b) => score(a.href) - score(b.href));
+      }
+      sorted.forEach((card) => grid.appendChild(card));
+    });
   }
 
   function loadActivity() {
@@ -360,9 +362,9 @@
   }
 
   function initCards() {
-    const grid = document.querySelector('.grid[data-tile-order]');
-    if (!grid) return;
-    const cards = Array.from(grid.querySelectorAll('a.card'));
+    const grids = Array.from(document.querySelectorAll('.grid[data-tile-order]'));
+    if (!grids.length) return;
+    const cards = grids.flatMap((grid) => Array.from(grid.querySelectorAll('a.card')));
     cards.forEach((card) => {
       card.addEventListener('click', (ev) => {
         const label = card.querySelector('h3')?.textContent?.trim() || card.textContent.trim();
@@ -403,6 +405,7 @@
   }
 
   function appendBadge(card, text, type) {
+    if (!card || card.hasAttribute('data-static-badge')) return;
     let badge = card.querySelector('.badge');
     if (!badge) {
       badge = createEl('span', { className: 'badge' });
