@@ -3,10 +3,12 @@ const assert = require('node:assert/strict');
 
 const core = require('../lib/candidate-matcher-core.js');
 const {
+  createCandidateMatchStatusBaseHandler,
   createCandidatePrepareBaseHandler,
   createCandidateHistoryListBaseHandler,
   createCandidateMatchBaseHandler,
   createCandidateRunMatchBaseHandler,
+  createCandidateRunMatchBackgroundBaseHandler,
 } = require('../lib/admin-candidate-match-function.js');
 
 test('prepareCandidateFiles marks unsupported extensions without crashing the run', () => {
@@ -496,102 +498,138 @@ test('candidate prepare handler stores prepared evidence and returns a review pa
   assert.equal(payload.extraction.success_count, 1);
 });
 
-test('candidate run match handler reuses prepared evidence without files in the request', async () => {
+test('candidate run match handler queues background work without re-uploading files', async () => {
   const originals = {
     getMatchRun: core.getMatchRun,
+    updatePreparedRunJobState: core.updatePreparedRunJobState,
+  };
+
+  let getCount = 0;
+  core.getMatchRun = async () => {
+    getCount += 1;
+    return {
+      id: 'prepared-2',
+      created_at: '2026-03-13T12:00:00Z',
+      updated_at: '2026-03-13T12:10:00Z',
+      recruiter_notes: 'Reuse saved evidence.',
+      status: 'pending',
+      ready_for_match: true,
+      has_result: false,
+      match_job: getCount > 1
+        ? {
+          id: 'job-queued-1',
+          status: 'queued',
+          queued_at: '2026-03-13T12:11:00Z',
+          started_at: '',
+          completed_at: '',
+          failed_at: '',
+          last_error: '',
+        }
+        : null,
+      prepared_evidence: {
+        ready_for_match: true,
+        files_attempted: 2,
+        files_text_read: 1,
+        image_evidence_count: 1,
+        limited_count: 0,
+        unsupported_count: 0,
+        failed_count: 0,
+        preview_text: 'Candidate evidence text',
+        text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+        image_evidence_files: [{ name: 'certificate.png', status: 'image_only', sizeLabel: '4 B', contentType: 'image/png' }],
+        limited_files: [],
+        unsupported_files: [],
+        failed_files: [],
+        documents: [
+          { name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' },
+          { name: 'certificate.png', status: 'image_only', size: 4, contentType: 'image/png' },
+        ],
+      },
+      file_names: ['candidate.pdf', 'certificate.png'],
+      files: [{ storage_bucket: 'candidate-matcher-uploads' }],
+      raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
+    };
+  };
+  core.updatePreparedRunJobState = async () => ({ id: 'prepared-2' });
+
+  let dispatchedPayload = null;
+
+  const handler = createCandidateRunMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    }),
+    dispatchBackgroundImpl: async (_event, payload) => {
+      dispatchedPayload = payload;
+    },
+  });
+
+  const response = await handler({
+    headers: {
+      host: 'deploy-preview-100--hmjg.netlify.app',
+      'x-forwarded-proto': 'https',
+      authorization: 'Bearer fake-token',
+    },
+    body: JSON.stringify({
+      preparedRunId: 'prepared-2',
+      recruiterNotes: 'Reuse saved evidence.',
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 202);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.prepared_run.id, 'prepared-2');
+  assert.equal(payload.queued, true);
+  assert.equal(payload.prepared_run.match_job.status, 'queued');
+  assert.equal(dispatchedPayload.preparedRunId, 'prepared-2');
+});
+
+test('candidate run match background handler completes matching from prepared evidence', async () => {
+  const originals = {
+    getMatchRun: core.getMatchRun,
+    updatePreparedRunJobState: core.updatePreparedRunJobState,
     buildCandidatePayloadFromPreparedRun: core.buildCandidatePayloadFromPreparedRun,
     fetchPublishedLiveJobs: core.fetchPublishedLiveJobs,
     callOpenAIForMatch: core.callOpenAIForMatch,
     updatePreparedRunWithMatch: core.updatePreparedRunWithMatch,
   };
 
-  core.getMatchRun = async () => ({
-    id: 'prepared-2',
-    created_at: '2026-03-13T12:00:00Z',
-    updated_at: '2026-03-13T12:10:00Z',
-    recruiter_notes: 'Reuse saved evidence.',
-    status: 'pending',
-    ready_for_match: true,
-    has_result: false,
-    prepared_evidence: {
-      ready_for_match: true,
-      files_attempted: 2,
-      files_text_read: 1,
-      image_evidence_count: 1,
-      limited_count: 0,
-      unsupported_count: 0,
-      failed_count: 0,
-      preview_text: 'Candidate evidence text',
-      text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
-      image_evidence_files: [{ name: 'certificate.png', status: 'image_only', sizeLabel: '4 B', contentType: 'image/png' }],
-      limited_files: [],
-      unsupported_files: [],
-      failed_files: [],
-      documents: [
-        { name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' },
-        { name: 'certificate.png', status: 'image_only', size: 4, contentType: 'image/png' },
-      ],
-    },
-    file_names: ['candidate.pdf', 'certificate.png'],
-    files: [{ storage_bucket: 'candidate-matcher-uploads' }],
-    raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
-  });
-  core.buildCandidatePayloadFromPreparedRun = () => ({
-    recruiter_notes: 'Reuse saved evidence.',
-    extraction_summary: [{ name: 'candidate.pdf', status: 'ok' }],
-    candidate_text: 'Candidate evidence text',
-    candidate_text_truncated: false,
-    image_evidence: [{ name: 'certificate.png', file_kind: 'image', note: 'Supporting image evidence included but not text-extracted in V1.' }],
-  });
-  core.fetchPublishedLiveJobs = async () => [{ job_id: 'job-1', title: 'Planner', published: true, status: 'live' }];
-  core.callOpenAIForMatch = async () => ({
-    model: 'gpt-5-mini',
-    raw: {},
-    result: {
-      candidate_summary: {
-        name: 'Alex Example',
-        current_or_recent_title: 'Planner',
-        seniority_level: 'Senior',
-        primary_discipline: 'Project Controls',
-        sectors: ['Data Centres'],
-        locations: ['London'],
-        key_skills: ['Primavera P6'],
-        key_qualifications: ['SMSTS'],
-        summary: 'Strong planner.',
-      },
-      top_matches: [{
-        job_id: 'job-1',
-        job_title: 'Planner',
-        score: 91,
-        recommendation: 'shortlist',
-        why_match: 'Direct planning experience.',
-        matched_skills: ['Primavera P6'],
-        matched_qualifications: ['SMSTS'],
-        transferable_experience: [],
-        gaps: [],
-        follow_up_questions: [],
-        uncertainty_notes: '',
-      }],
-      other_matches: [],
-      overall_recommendation: 'Shortlist.',
-      general_follow_up_questions: [],
-      no_strong_match_reason: '',
-    }
-  });
-  core.updatePreparedRunWithMatch = async () => ({ id: 'prepared-2' });
-
   let getCount = 0;
-  const baseRun = await core.getMatchRun();
   core.getMatchRun = async () => {
     getCount += 1;
     return getCount > 1
       ? {
-        ...baseRun,
-        has_result: true,
+        id: 'prepared-3',
+        created_at: '2026-03-13T12:00:00Z',
+        updated_at: '2026-03-13T12:15:00Z',
+        recruiter_notes: 'Reuse saved evidence.',
         status: 'completed',
+        ready_for_match: true,
+        has_result: true,
+        match_job: { id: 'job-async-1', status: 'completed', started_at: '2026-03-13T12:10:00Z', completed_at: '2026-03-13T12:15:00Z', failed_at: '', last_error: '' },
+        prepared_evidence: {
+          ready_for_match: true,
+          files_attempted: 1,
+          files_text_read: 1,
+          image_evidence_count: 0,
+          limited_count: 0,
+          unsupported_count: 0,
+          failed_count: 0,
+          preview_text: 'Candidate evidence text',
+          text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+          image_evidence_files: [],
+          limited_files: [],
+          unsupported_files: [],
+          failed_files: [],
+          documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' }],
+        },
+        file_names: ['candidate.pdf'],
+        files: [{ storage_bucket: 'candidate-matcher-uploads' }],
         best_match_job_title: 'Planner',
         best_match_score: 91,
-        overall_recommendation: 'Shortlist.',
         raw_result_json: {
           preparation: { combined_candidate_text: 'Candidate evidence text' },
           result: {
@@ -604,10 +642,60 @@ test('candidate run match handler reuses prepared evidence without files in the 
           }
         },
       }
-      : baseRun;
+      : {
+        id: 'prepared-3',
+        created_at: '2026-03-13T12:00:00Z',
+        updated_at: '2026-03-13T12:10:00Z',
+        recruiter_notes: 'Reuse saved evidence.',
+        status: 'processing',
+        ready_for_match: true,
+        has_result: false,
+        match_job: { id: 'job-async-1', status: 'queued', queued_at: '2026-03-13T12:10:00Z', started_at: '', completed_at: '', failed_at: '', last_error: '' },
+        prepared_evidence: {
+          ready_for_match: true,
+          files_attempted: 1,
+          files_text_read: 1,
+          image_evidence_count: 0,
+          limited_count: 0,
+          unsupported_count: 0,
+          failed_count: 0,
+          preview_text: 'Candidate evidence text',
+          text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+          image_evidence_files: [],
+          limited_files: [],
+          unsupported_files: [],
+          failed_files: [],
+          documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' }],
+        },
+        file_names: ['candidate.pdf'],
+        files: [{ storage_bucket: 'candidate-matcher-uploads' }],
+        raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
+      };
   };
+  core.updatePreparedRunJobState = async () => ({ id: 'prepared-3' });
+  core.buildCandidatePayloadFromPreparedRun = () => ({
+    recruiter_notes: 'Reuse saved evidence.',
+    extraction_summary: [{ name: 'candidate.pdf', status: 'ok' }],
+    candidate_text: 'Candidate evidence text',
+    candidate_text_truncated: false,
+    image_evidence: [],
+  });
+  core.fetchPublishedLiveJobs = async () => [{ job_id: 'job-1', title: 'Planner', published: true, status: 'live' }];
+  core.callOpenAIForMatch = async () => ({
+    model: 'gpt-5-mini',
+    raw: {},
+    result: {
+      candidate_summary: { name: 'Alex Example', current_or_recent_title: 'Planner', seniority_level: 'Senior', primary_discipline: 'Project Controls', sectors: [], locations: [], key_skills: [], key_qualifications: [], summary: 'Strong planner.' },
+      top_matches: [{ job_id: 'job-1', job_title: 'Planner', score: 91, recommendation: 'shortlist', why_match: 'Direct planning experience.', matched_skills: [], matched_qualifications: [], transferable_experience: [], gaps: [], follow_up_questions: [], uncertainty_notes: '' }],
+      other_matches: [],
+      overall_recommendation: 'Shortlist.',
+      general_follow_up_questions: [],
+      no_strong_match_reason: '',
+    }
+  });
+  core.updatePreparedRunWithMatch = async () => ({ id: 'prepared-3' });
 
-  const handler = createCandidateRunMatchBaseHandler({
+  const handler = createCandidateRunMatchBackgroundBaseHandler({
     getContextImpl: async () => ({
       supabase: {},
       user: { email: 'recruiter@hmjglobal.test' },
@@ -616,8 +704,9 @@ test('candidate run match handler reuses prepared evidence without files in the 
 
   const response = await handler({
     body: JSON.stringify({
-      preparedRunId: 'prepared-2',
+      preparedRunId: 'prepared-3',
       recruiterNotes: 'Reuse saved evidence.',
+      jobId: 'job-async-1',
     })
   }, {});
 
@@ -626,8 +715,37 @@ test('candidate run match handler reuses prepared evidence without files in the 
   assert.equal(response.statusCode, 200);
   const payload = JSON.parse(response.body);
   assert.equal(payload.ok, true);
-  assert.equal(payload.prepared_run.id, 'prepared-2');
+  assert.equal(payload.prepared_run.match_job.status, 'completed');
   assert.equal(payload.result.top_matches[0].job_id, 'job-1');
+});
+
+test('candidate match status handler returns the latest prepared run state', async () => {
+  const original = core.getMatchRun;
+  core.getMatchRun = async () => ({
+    id: 'prepared-4',
+    created_at: '2026-03-13T12:00:00Z',
+    updated_at: '2026-03-13T12:16:00Z',
+    recruiter_notes: 'Reuse saved evidence.',
+    status: 'processing',
+    ready_for_match: true,
+    has_result: false,
+    match_job: { id: 'job-async-2', status: 'running', queued_at: '2026-03-13T12:14:00Z', started_at: '2026-03-13T12:15:00Z', completed_at: '', failed_at: '', last_error: '' },
+    prepared_evidence: { ready_for_match: true, files_attempted: 1, files_text_read: 1, image_evidence_count: 0, limited_count: 0, unsupported_count: 0, failed_count: 0, preview_text: 'Candidate evidence text', text_files: [], image_evidence_files: [], limited_files: [], unsupported_files: [], failed_files: [], documents: [] },
+    file_names: ['candidate.pdf'],
+    raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
+  });
+
+  const handler = createCandidateMatchStatusBaseHandler({
+    getContextImpl: async () => ({ supabase: {} })
+  });
+
+  const response = await handler({ body: JSON.stringify({ preparedRunId: 'prepared-4' }) }, {});
+  core.getMatchRun = original;
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.prepared_run.match_job.status, 'running');
 });
 
 test('candidate match handler returns per-file extraction diagnostics when no file is readable', async () => {

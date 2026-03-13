@@ -16,6 +16,7 @@ const requiredMarkers = [
   'id="historyList"',
   'id="preparedEvidenceShell"',
   'id="runDiagnosticsList"',
+  'id="jobStatusList"',
   'id="retryAnalysisButton"'
 ];
 

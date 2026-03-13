@@ -9,7 +9,9 @@ select
   array[
     'application/pdf',
     'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png'
   ]::text[]
 where not exists (
   select 1 from storage.buckets where id = 'candidate-matcher-uploads'
@@ -35,7 +37,14 @@ create table if not exists public.candidate_match_runs (
   best_match_score numeric,
   overall_recommendation text,
   no_strong_match_reason text,
-  error_message text
+  error_message text,
+  match_job_id text,
+  match_job_status text check (match_job_status is null or match_job_status = any (array['queued', 'running', 'completed', 'failed'])),
+  match_job_queued_at timestamptz,
+  match_job_started_at timestamptz,
+  match_job_completed_at timestamptz,
+  match_job_failed_at timestamptz,
+  match_job_last_error text
 );
 
 create table if not exists public.candidate_match_files (

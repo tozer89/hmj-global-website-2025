@@ -73,6 +73,7 @@
     render: 6,
   };
   const CLIENT_REQUEST_TIMEOUT_MS = 65000;
+  const MATCH_STATUS_POLL_MS = 2500;
   const SESSION_STATE_KEY = 'hmj-candidate-matcher-session';
   const SESSION_ID_KEY = 'hmj-candidate-matcher-session-id';
   const QUEUE_DB_NAME = 'hmj-candidate-matcher';
@@ -87,6 +88,7 @@
     preparedRun: null,
     latestResultPayload: null,
     latestResultMeta: null,
+    matchPollTimer: 0,
     busy: false,
     progressIndex: -1,
     progressFailureIndex: -1,
@@ -220,6 +222,13 @@
     }
   }
 
+  function elapsedSince(isoString) {
+    if (!isoString) return '—';
+    const timestamp = new Date(isoString).getTime();
+    if (!Number.isFinite(timestamp)) return '—';
+    return formatDuration(Date.now() - timestamp);
+  }
+
   function recommendationLabel(value) {
     const key = String(value || '').toLowerCase();
     if (key === 'shortlist') return 'Shortlist';
@@ -233,6 +242,24 @@
 
   function safeArray(value) {
     return Array.isArray(value) ? value.filter(Boolean) : [];
+  }
+
+  function currentMatchJob(run) {
+    return run && typeof run === 'object' ? (run.match_job || null) : null;
+  }
+
+  function matchJobStatusLabel(status) {
+    const key = String(status || '').toLowerCase();
+    if (key === 'queued') return 'Queued';
+    if (key === 'running') return 'Running';
+    if (key === 'completed') return 'Completed';
+    if (key === 'failed') return 'Failed';
+    return 'Idle';
+  }
+
+  function isMatchJobActive(run) {
+    const status = String(currentMatchJob(run)?.status || '').toLowerCase();
+    return status === 'queued' || status === 'running';
   }
 
   function createSessionId() {
@@ -563,6 +590,7 @@
     const ready = !!prepared?.ready_for_match;
     const hasResult = !!prepared?.has_result;
     const hasFailure = !!prepared?.error_message && !hasResult;
+    const inProgress = isMatchJobActive(prepared);
 
     if (!prepared) {
       setWorkflowStep(
@@ -591,9 +619,11 @@
     setWorkflowStep(
       elements.workflowStepMatch,
       elements.workflowStepMatchText,
-      hasResult ? 'ready' : (ready ? (hasFailure ? 'warn' : 'active') : ''),
+      hasResult ? 'ready' : (inProgress ? 'active' : (ready ? (hasFailure ? 'warn' : 'active') : '')),
       hasResult
         ? 'A match result has been saved for this prepared evidence and can be reopened at any time.'
+        : inProgress
+          ? 'The background recruiter analysis is active. Results will load automatically when ready.'
         : hasFailure
           ? 'Matching can be retried from the saved evidence without re-parsing the files.'
           : ready
@@ -892,6 +922,53 @@
     persistSessionSnapshot();
   }
 
+  function renderJobStatus(run) {
+    if (!elements.jobStatusList) return;
+    const job = currentMatchJob(run);
+    if (!job || !job.id) {
+      elements.jobStatusList.innerHTML = `
+        <div class="ops-item">
+          <strong>No active match job</strong>
+          <p>Prepared evidence can be queued for background recruiter analysis when you are ready.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const status = String(job.status || '').toLowerCase();
+    const startedAt = job.started_at || job.queued_at || '';
+    const lastUpdate = job.completed_at || job.failed_at || job.started_at || job.queued_at || run?.updated_at || '';
+    elements.jobStatusList.innerHTML = [
+      {
+        label: 'Current job state',
+        value: matchJobStatusLabel(status),
+        note: status === 'queued'
+          ? 'Waiting for the background matcher worker to start.'
+          : status === 'running'
+            ? 'OpenAI recruiter analysis is running in the background.'
+            : status === 'completed'
+              ? 'The latest background matcher job completed successfully.'
+              : 'The latest background matcher job failed and can be retried.',
+      },
+      { label: 'Current job id', value: job.id, note: 'Use this when checking logs for a specific async run.' },
+      { label: 'Started / queued', value: formatDateTime(startedAt), note: `Elapsed: ${elapsedSince(startedAt)}` },
+      { label: 'Last update', value: formatDateTime(lastUpdate), note: run?.best_match_job_title ? `Best role: ${run.best_match_job_title}` : (job.last_error || 'No result saved yet.') },
+    ].map((item) => `
+      <div class="ops-item">
+        <strong>${escapeHtml(item.label)}</strong>
+        <p>${escapeHtml(item.value || '—')}</p>
+        <p class="muted">${escapeHtml(item.note || '')}</p>
+      </div>
+    `).join('');
+  }
+
+  function stopMatchPolling() {
+    if (state.matchPollTimer) {
+      window.clearTimeout(state.matchPollTimer);
+      state.matchPollTimer = 0;
+    }
+  }
+
   function renderEvidenceDocumentList(items, fallback) {
     const documents = safeArray(items);
     if (!documents.length) {
@@ -932,12 +1009,12 @@
       }
     }
     if (elements.runMatchButton) {
-      elements.runMatchButton.hidden = !ready || hasFailure;
-      elements.runMatchButton.disabled = state.busy || !ready;
+      elements.runMatchButton.hidden = !ready || hasFailure || inProgress;
+      elements.runMatchButton.disabled = state.busy || !ready || inProgress;
     }
     if (elements.retryMatchButton) {
-      elements.retryMatchButton.hidden = !ready || !hasFailure;
-      elements.retryMatchButton.disabled = state.busy || !ready;
+      elements.retryMatchButton.hidden = !ready || !hasFailure || inProgress;
+      elements.retryMatchButton.disabled = state.busy || !ready || inProgress;
     }
     updateWorkflowState();
   }
@@ -959,6 +1036,7 @@
       elements.preparedImageList.innerHTML = '';
       elements.preparedLimitedList.innerHTML = '';
       elements.preparedFailedList.innerHTML = '';
+      renderJobStatus(null);
       updateMatchActionState();
       return;
     }
@@ -998,11 +1076,13 @@
       'No limited or unsupported files in this prepared evidence set.'
     );
     elements.preparedFailedList.innerHTML = renderEvidenceDocumentList(prepared.failed_files, 'No extraction failures in this prepared evidence set.');
+    renderJobStatus(run);
     persistSessionSnapshot();
     updateMatchActionState();
   }
 
   function resetPreparedState() {
+    stopMatchPolling();
     state.preparedRun = null;
     clearPersistedResultState();
     renderPreparedEvidence(null);
@@ -1261,6 +1341,11 @@
         const run = state.historyRuns.find((item) => item.id === id);
         const payload = run && run.raw_result_json && run.raw_result_json.result ? run.raw_result_json.result : null;
         renderPreparedEvidence(run);
+        if (isMatchJobActive(run)) {
+          scheduleMatchPolling(run.id, { silentComplete: true });
+        } else {
+          stopMatchPolling();
+        }
         const diagnostics = {
           started_at: run.updated_at || run.created_at,
           total_elapsed_ms: 0,
@@ -1404,6 +1489,12 @@
       const response = await state.helpers.api('admin-candidate-history-list', 'POST', { limit: 8 });
       state.historyRuns = safeArray(response.runs);
       renderHistory(state.historyRuns, response.history_enabled !== false);
+      if (state.preparedRun?.id) {
+        const refreshed = state.historyRuns.find((run) => run.id === state.preparedRun.id);
+        if (refreshed) {
+          renderPreparedEvidence(refreshed);
+        }
+      }
     } catch (error) {
       elements.historyChip.textContent = 'History unavailable';
       elements.historyChip.className = 'chip warn';
@@ -1516,6 +1607,113 @@
       renderPreparedEvidence(state.preparedRun);
     }
     persistSessionSnapshot();
+  }
+
+  async function refreshQueuedMatch(preparedRunId, options) {
+    const response = await state.helpers.api('admin-candidate-match-status', 'POST', {
+      preparedRunId,
+    });
+
+    if (response.prepared_run) {
+      renderPreparedEvidence(response.prepared_run);
+      renderJobStatus(response.prepared_run);
+    }
+
+    const job = response.prepared_run?.match_job || null;
+    const status = String(job?.status || '').toLowerCase();
+    if (status === 'completed' && response.result) {
+      stopMatchPolling();
+      renderWarnings(response.warnings || []);
+      renderWarningActions(false);
+      renderResult(response.result, {
+        liveJobsCount: response.live_jobs_count || 'saved',
+        model: response.analysis_meta?.model || 'saved result',
+        savedToHistory: true,
+        warningCount: safeArray(response.warnings).length,
+        historyNote: 'Background recruiter analysis complete',
+      });
+      renderRunDiagnostics(response.run_diagnostics || state.runDiagnostics || {
+        started_at: job.completed_at || response.prepared_run?.updated_at || '',
+        total_elapsed_ms: 0,
+        files_attempted: response.prepared_run?.prepared_evidence?.files_attempted || 0,
+        files_text_read: response.prepared_run?.prepared_evidence?.files_text_read || 0,
+        files_skipped: (response.prepared_run?.prepared_evidence?.limited_count || 0)
+          + (response.prepared_run?.prepared_evidence?.unsupported_count || 0)
+          + (response.prepared_run?.prepared_evidence?.failed_count || 0),
+        warning_count: safeArray(response.warnings).length,
+        failed_stage: '',
+      });
+      setProgress('Results ready', 'Background recruiter analysis completed. Review the saved ranked result below.', 6, true, -1, 100);
+      elements.jobsChip.textContent = 'Background match complete';
+      elements.jobsChip.className = 'chip ok';
+      if (!options?.silentComplete) {
+        state.helpers.toast.ok('Background recruiter match completed.', 2600);
+      }
+      await loadHistory();
+      return response;
+    }
+
+    if (status === 'failed') {
+      stopMatchPolling();
+      renderWarnings([{
+        file: 'Background match',
+        message: job?.last_error || response.prepared_run?.error_message || 'The async recruiter match failed.',
+        status: 'failed',
+      }]);
+      renderWarningActions(true);
+      renderRunDiagnostics({
+        started_at: job.failed_at || response.prepared_run?.updated_at || '',
+        total_elapsed_ms: 0,
+        files_attempted: response.prepared_run?.prepared_evidence?.files_attempted || 0,
+        files_text_read: response.prepared_run?.prepared_evidence?.files_text_read || 0,
+        files_skipped: (response.prepared_run?.prepared_evidence?.limited_count || 0)
+          + (response.prepared_run?.prepared_evidence?.unsupported_count || 0)
+          + (response.prepared_run?.prepared_evidence?.failed_count || 0),
+        warning_count: 1,
+        failed_stage: 'Background recruiter analysis',
+      });
+      setProgress('Background match failed', job?.last_error || response.prepared_run?.error_message || 'The queued recruiter match did not complete.', 5, false, 5, 88);
+      elements.jobsChip.textContent = 'Background match failed';
+      elements.jobsChip.className = 'chip bad';
+      await loadHistory();
+      return response;
+    }
+
+    if (status === 'running') {
+      setStageDetail(5, 'Background recruiter analysis is currently running.', 'working');
+      setProgress('Running recruiter match', 'Prepared evidence is saved. The AI recruiter analysis is running in the background.', 5, false, -1, 84);
+      elements.jobsChip.textContent = 'Background match running';
+      elements.jobsChip.className = 'chip warn';
+    } else {
+      setStageDetail(4, 'Prepared evidence loaded and match job is queued.', 'working');
+      setProgress('Match queued', 'Prepared evidence is ready. Waiting for the background recruiter analysis to start.', 4, false, -1, 66);
+      elements.jobsChip.textContent = 'Match queued';
+      elements.jobsChip.className = 'chip warn';
+    }
+
+    return response;
+  }
+
+  function scheduleMatchPolling(preparedRunId, options) {
+    stopMatchPolling();
+    if (!preparedRunId) return;
+    const poll = async () => {
+      try {
+        const response = await refreshQueuedMatch(preparedRunId, options);
+        if (isMatchJobActive(response?.prepared_run)) {
+          state.matchPollTimer = window.setTimeout(poll, MATCH_STATUS_POLL_MS);
+        }
+      } catch (error) {
+        stopMatchPolling();
+        renderWarnings([{
+          file: 'Match status',
+          message: error.message || 'Could not refresh background match status.',
+          status: 'failed',
+        }]);
+        renderWarningActions(true);
+      }
+    };
+    state.matchPollTimer = window.setTimeout(poll, MATCH_STATUS_POLL_MS);
   }
 
   async function copyTextToClipboard(text, successMessage) {
@@ -1668,8 +1866,8 @@
     setStageDetail(3, 'Prepared evidence already saved. Reusing it for this match run.', 'done');
     setStageDetail(4, 'Loading prepared evidence and current live roles.', 'working');
     setProgress(
-      isRetry ? 'Retrying recruiter match' : 'Running recruiter match',
-      'Step 2 is reusing the saved prepared evidence so files do not need to be uploaded again.',
+      isRetry ? 'Queueing recruiter match retry' : 'Queueing recruiter match',
+      'Step 2 reuses the saved prepared evidence. No files will be uploaded or re-parsed.',
       4,
       false,
       -1,
@@ -1687,23 +1885,34 @@
       });
       if (state.activeRequestId !== requestId) return;
 
-      deriveStageDetailsFromRun(response, null);
-      renderWarnings(response.warnings || []);
-      renderWarningActions(false);
-      renderResult(response.result, {
-        liveJobsCount: response.live_jobs_count || 0,
-        model: response.analysis_meta?.model || '',
-        savedToHistory: true,
-        warningCount: safeArray(response.warnings).length,
-        historyNote: 'Prepared evidence reused without re-uploading',
-      });
-      renderRunDiagnostics(response.run_diagnostics || null);
       renderPreparedEvidence(response.prepared_run || state.preparedRun);
-      setStageDetail(6, 'Results rendered and linked back to the prepared evidence record.', 'done');
-      setProgress('Recruiter match complete', 'The ranked recruiter-focused results are ready to review.', 6, true, -1, 100);
-      elements.jobsChip.textContent = `${response.live_jobs_count || 0} live jobs analysed`;
-      elements.jobsChip.className = 'chip ok';
-      state.helpers.toast.ok(isRetry ? 'Recruiter match retried successfully.' : 'Recruiter match complete.', 3200);
+      renderWarnings([]);
+      renderWarningActions(false);
+      renderRunDiagnostics(response.run_diagnostics || {
+        started_at: response.prepared_run?.match_job?.queued_at || new Date().toISOString(),
+        total_elapsed_ms: 0,
+        files_attempted: response.prepared_run?.prepared_evidence?.files_attempted || 0,
+        files_text_read: response.prepared_run?.prepared_evidence?.files_text_read || 0,
+        files_skipped: (response.prepared_run?.prepared_evidence?.limited_count || 0)
+          + (response.prepared_run?.prepared_evidence?.unsupported_count || 0)
+          + (response.prepared_run?.prepared_evidence?.failed_count || 0),
+        warning_count: 0,
+        failed_stage: '',
+      });
+      setStageDetail(4, 'Prepared evidence loaded and the background match has been queued.', 'done');
+      setStageDetail(5, 'Background recruiter analysis will update automatically when complete.', 'working');
+      setProgress(
+        isRetry ? 'Retry queued' : 'Match queued',
+        'The recruiter match is running asynchronously in the background. You can stay on this page and it will refresh automatically.',
+        5,
+        false,
+        -1,
+        68
+      );
+      elements.jobsChip.textContent = 'Match queued';
+      elements.jobsChip.className = 'chip warn';
+      state.helpers.toast.ok(isRetry ? 'Retry queued from the saved evidence.' : 'Recruiter match queued in the background.', 3200);
+      scheduleMatchPolling(state.preparedRun.id, { silentComplete: false });
       await loadHistory();
     } catch (error) {
       handleMatcherFailure(error, requestId, {
@@ -1816,6 +2025,7 @@
     elements.noStrongMatchNotice = sel('#noStrongMatchNotice');
     elements.historyList = sel('#historyList');
     elements.runDiagnosticsList = sel('#runDiagnosticsList');
+    elements.jobStatusList = sel('#jobStatusList');
   }
 
   function bindEvents() {
@@ -1903,11 +2113,15 @@
       }
       renderStageList(-1, false, -1);
       setProgress(
-        state.preparedRun?.ready_for_match
-          ? 'Prepared evidence ready'
+        isMatchJobActive(state.preparedRun)
+          ? 'Background match in progress'
+          : state.preparedRun?.ready_for_match
+            ? 'Prepared evidence ready'
           : 'Ready to prepare evidence',
-        state.preparedRun?.ready_for_match
-          ? 'A saved prepared evidence set is available. You can run or retry the recruiter match without uploading again.'
+        isMatchJobActive(state.preparedRun)
+          ? 'A background recruiter match is already queued or running for the selected prepared evidence.'
+          : state.preparedRun?.ready_for_match
+            ? 'A saved prepared evidence set is available. You can run or retry the recruiter match without uploading again.'
           : 'Upload one or more files, add optional recruiter context, then prepare a reusable evidence record.',
         -1,
         false,
@@ -1936,6 +2150,11 @@
       elements.jobsChip.className = 'chip ok';
       if (state.files.length) {
         state.helpers.toast.ok(`${pluralise(state.files.length, 'queued file')} restored for this session.`, 2600);
+      }
+      if (isMatchJobActive(state.preparedRun)) {
+        elements.jobsChip.textContent = 'Background match active';
+        elements.jobsChip.className = 'chip warn';
+        scheduleMatchPolling(state.preparedRun.id, { silentComplete: true });
       }
     });
   }

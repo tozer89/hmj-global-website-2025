@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
-  <script defer src="/admin/candidate-matcher.js?v=3"></script>
+  <script defer src="/admin/candidate-matcher.js?v=4"></script>
 
   <style>
     :root{
@@ -740,6 +740,22 @@
             <div class="ops-item">
               <strong>No run diagnostics yet</strong>
               <p>The next analysis will populate elapsed time, file counts, stage timings, and any failure stage.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel status-card" aria-labelledby="jobStatusHeading">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Async match job</p>
+              <h2 id="jobStatusHeading">Current background status</h2>
+            </div>
+            <p class="section-note">Run Match now queues a background recruiter analysis so the page is not blocked by OpenAI runtime limits.</p>
+          </div>
+          <div class="ops-list" id="jobStatusList">
+            <div class="ops-item">
+              <strong>No active match job</strong>
+              <p>Prepare evidence first, then queue a recruiter match. The latest queued, running, completed, or failed state will appear here.</p>
             </div>
           </div>
         </section>
