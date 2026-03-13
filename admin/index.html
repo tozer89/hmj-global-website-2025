@@ -10,10 +10,12 @@
   <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/js/hmj-auth-flow.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
   <script defer src="/admin/short-links.js?v=1"></script>
   <link rel="stylesheet" href="/assets/css/admin.dashboard.enhanced.css?v=1"/>
   <script defer src="/assets/js/admin.dashboard.enhanced.js?v=2"></script>
+  <script defer src="/assets/js/admin.auth.experience.js?v=1"></script>
 
   <style>
     :root{ --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --muted:#5d6f9e; --ink:#0f1b3f; }
@@ -125,21 +127,109 @@
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/admin.auth.experience.css?v=1" />
 </head>
 <body>
   <div class="top"><div class="row">
     <div class="brand">HMJ Global Admin</div>
     <div class="sp"></div>
     <a class="btn outline" href="/">← Website</a>
-    <button class="btn outline" type="button" data-admin-logout>Sign out</button>
+    <button class="btn outline" type="button" data-admin-logout hidden aria-hidden="true">Sign out</button>
   </div></div>
 
   <div class="wrap" id="gate" style="display:none">
-    <div class="panel">
-      <strong>Admin only.</strong>
-      <p class="muted why">Checking your session…</p>
-      <button class="btn outline" type="button" data-admin-login>Log in</button>
-    </div>
+    <section class="auth-gate" aria-labelledby="gateHeading">
+      <div class="auth-grid">
+        <div class="auth-overview auth-surface">
+          <div class="auth-kicker-row">
+            <p class="eyebrow">Admin / Operations Portal</p>
+            <span class="auth-security-badge">Secure HMJ access</span>
+          </div>
+          <div>
+            <h1 id="gateHeading" data-gate-heading>HMJ admin sign-in</h1>
+            <p class="muted auth-lede why">Secure access for HMJ internal team. Use your work email to continue.</p>
+          </div>
+
+          <div class="auth-bullet-grid" aria-label="Portal overview">
+            <article class="auth-bullet">
+              <strong>Who should sign in here</strong>
+              <p class="muted">HMJ internal team members using an approved work account for jobs, CRM, payroll, reports, and operations.</p>
+            </article>
+            <article class="auth-bullet">
+              <strong>What this portal is for</strong>
+              <p class="muted">Manage live admin modules, review business data, and work with protected internal tools from one secure entry point.</p>
+            </article>
+            <article class="auth-bullet">
+              <strong>Built for secure access</strong>
+              <p class="muted">HMJ admin access stays behind Netlify Identity, role checks, and the existing protected route rules already in place.</p>
+            </article>
+          </div>
+
+          <section class="auth-status" aria-live="polite" aria-labelledby="authStateTitle">
+            <div class="auth-status__header">
+              <div>
+                <p class="eyebrow">Access help</p>
+                <h3 id="authStateTitle">Access guidance</h3>
+              </div>
+              <span class="auth-context-badge" id="authContextBadge">Secure HMJ access</span>
+            </div>
+            <p class="muted" id="authStateCopy">Use your HMJ work email to sign in, reset your password, or finish a setup link without leaving this page.</p>
+            <ol class="auth-step-list" id="authStateSteps">
+              <li data-step="1"><div><strong>Sign in with your HMJ email</strong><span>Open the secure sign-in dialog and use the work email tied to your HMJ admin account.</span></div></li>
+              <li data-step="2"><div><strong>Reset a forgotten password</strong><span>Send yourself a fresh password reset email if you cannot sign in.</span></div></li>
+              <li data-step="3"><div><strong>Need first-time access?</strong><span>Open your invite email on this page, or contact the system administrator for a fresh invite.</span></div></li>
+            </ol>
+          </section>
+        </div>
+
+        <aside class="auth-card auth-surface" aria-labelledby="authCardHeading">
+          <div class="auth-card__head">
+            <p class="eyebrow">Secure access</p>
+            <h2 id="authCardHeading">Sign in to continue</h2>
+            <p class="muted auth-card__intro" id="authCardIntro">Use your HMJ work email. If you opened an invite or reset email, this page will guide you through the next step.</p>
+          </div>
+
+          <div class="auth-message" id="authMessage" hidden></div>
+
+          <div class="auth-actions">
+            <button class="btn" type="button" data-admin-login data-admin-login-primary>Open secure sign-in</button>
+            <button class="btn outline" type="button" data-auth-action="continue-token">Continue email link</button>
+          </div>
+
+          <div class="auth-secondary-actions">
+            <a class="btn outline" href="/">Back to main site</a>
+            <a class="btn outline" data-auth-support-link href="mailto:info@hmj-global.com?subject=HMJ%20Admin%20Access%20Help">Request fresh invite</a>
+          </div>
+
+          <div class="auth-help-grid" aria-label="Password help options">
+            <button class="auth-link-card" type="button" data-auth-action="show-reset" aria-pressed="false">
+              <strong>Reset password</strong>
+              <span>Send a fresh reset email to your HMJ work inbox.</span>
+            </button>
+            <button class="auth-link-card" type="button" data-auth-action="show-setup" aria-pressed="false">
+              <strong>Create / set password</strong>
+              <span>Use your invite or setup email here, or get help if it has expired.</span>
+            </button>
+          </div>
+
+          <form id="authRecoveryForm" class="auth-recovery-form" novalidate>
+            <label class="auth-field">
+              <span>Work email</span>
+              <input id="authRecoveryEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@hmj-global.com" />
+            </label>
+            <div class="auth-form-actions">
+              <button class="btn outline" id="authRecoverySubmit" type="submit">Send password reset</button>
+              <p class="auth-inline-hint" id="authRecoveryNote">Use your HMJ work email. If you never created a password and the invite has expired, contact the system administrator for a fresh invite.</p>
+            </div>
+          </form>
+
+          <div class="auth-inline-links">
+            <a href="/">Back to site</a>
+            <a data-auth-support-link href="mailto:info@hmj-global.com?subject=HMJ%20Admin%20Access%20Help">Account help</a>
+          </div>
+        </aside>
+      </div>
+    </section>
   </div>
 
   <div class="wrap" id="app" style="display:none">
@@ -363,6 +453,11 @@
       try {
         const who = await identity('admin');
         if (who?.ok) {
+          const signOutButton = sel('[data-admin-logout]');
+          if (signOutButton) {
+            signOutButton.hidden = false;
+            signOutButton.removeAttribute('aria-hidden');
+          }
           sel('#welcomeMeta').textContent = `Signed in as ${who.email || 'admin user'}`;
           if (window.HMJDashboardEnhancer && typeof window.HMJDashboardEnhancer.init === 'function') {
             window.HMJDashboardEnhancer.init({ helpers, who });

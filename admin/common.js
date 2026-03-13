@@ -42,6 +42,23 @@
   const HOSTNAME = (() => { try { return window.location?.hostname || ''; } catch { return ''; } })();
   const IS_PREVIEW_HOST = /^deploy-preview-/i.test(HOSTNAME) || HOSTNAME.includes('--');
   const DEBUG_CHIP_STORE = 'hmj.admin.debug-chip-expanded:v1';
+  const DEBUG_CHIP_ENABLE_STORE = 'hmj.admin.debug-chip-enabled:v1';
+  const DEBUG_CHIP_ENABLED = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      if (params.get('debugAuth') === '1') {
+        window.localStorage.setItem(DEBUG_CHIP_ENABLE_STORE, '1');
+        return true;
+      }
+      if (params.get('debugAuth') === '0') {
+        window.localStorage.removeItem(DEBUG_CHIP_ENABLE_STORE);
+        return false;
+      }
+      return IS_PREVIEW_HOST || window.localStorage.getItem(DEBUG_CHIP_ENABLE_STORE) === '1';
+    } catch {
+      return IS_PREVIEW_HOST;
+    }
+  })();
   function normaliseIdentityCandidate(url) {
     if (!url) return '';
     const trimmed = String(url).trim();
@@ -330,7 +347,43 @@
     return words.length ? words.join(' ') : 'HMJ admin';
   }
 
+  function scrubAuthCallbackUrl() {
+    try {
+      const helpers = window.HMJAuthFlow || {};
+      const authKeys = Array.isArray(helpers.AUTH_PARAM_KEYS)
+        ? helpers.AUTH_PARAM_KEYS
+        : ['invite_token', 'recovery_token', 'confirmation_token', 'email_change_token', 'access_token', 'refresh_token', 'type', 'error', 'error_description'];
+      const url = new URL(window.location.href);
+      let changed = false;
+
+      authKeys.forEach((key) => {
+        if (url.searchParams.has(key)) {
+          url.searchParams.delete(key);
+          changed = true;
+        }
+      });
+
+      if (url.hash) {
+        const parsed = typeof helpers.parseAuthState === 'function'
+          ? helpers.parseAuthState({ pathname: url.pathname, search: url.search, hash: url.hash })
+          : null;
+        if (parsed?.isAuthCallback) {
+          url.hash = '';
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+        window.history.replaceState({}, document.title, nextUrl);
+      }
+    } catch (err) {
+      Debug.warn('auth callback url scrub failed', err);
+    }
+  }
+
   function ensureDebugChip() {
+    if (!DEBUG_CHIP_ENABLED) return null;
     let host = document.getElementById('hmjDebugChip');
     if (!host) {
       host = document.createElement('aside');
@@ -413,7 +466,7 @@
   }
 
   function getLoginBindingState() {
-    const button = document.querySelector('button[data-admin-login]') || document.querySelector('#gate button');
+    const button = document.querySelector('button[data-admin-login-primary]') || document.querySelector('button[data-admin-login]');
     if (!button) return 'no button';
     return button.dataset.hmjLoginBound === '1' ? 'bound' : 'not bound';
   }
@@ -618,7 +671,7 @@
     if (!root || typeof root.querySelectorAll !== 'function') return;
 
     const loginButtons = new Set(root.querySelectorAll('button[data-admin-login]'));
-    const gateButton = root.querySelector('#gate button');
+    const gateButton = root.querySelector('#gate [data-admin-login-primary]');
     if (gateButton) loginButtons.add(gateButton);
     root.querySelectorAll('.gate-actions button, .top button').forEach((button) => {
       if (matchesText(button, 'log in') || matchesText(button, 'log in with hmj email') || matchesText(button, 'sign in with hmj email')) {
@@ -1089,17 +1142,27 @@
   async function gate({ adminOnly = true } = {}) {
     const g = $('#gate'); const app = $('#app');
     const why = g ? $('.why', g) : null;
-    const heading = g ? $('strong, h1, h2', g) : null;
-    const button = g ? $('button', g) : null;
-    const who = await identity(adminOnly ? 'admin' : undefined, { verbose: true, forceFresh: true });
+    const heading = g ? $('[data-gate-heading], strong, h1, h2', g) : null;
+    const button = g ? $('[data-admin-login-primary], button[data-admin-login], button', g) : null;
+    const signOut = document.querySelector('[data-admin-logout]');
+    const who = await identity(adminOnly ? 'admin' : undefined, { verbose: false, forceFresh: true });
     const currentPath = getCurrentAdminPath();
     const targetPath = isAdminEntryPath(currentPath) ? getRequestedAdminPath() : normaliseAdminTarget(currentPath);
     const targetLabel = adminTargetLabel(targetPath);
 
+    if (signOut) {
+      const showSignOut = !!(who && who.sessionVerified);
+      signOut.hidden = !showSignOut;
+      if (showSignOut) signOut.removeAttribute('aria-hidden');
+      else signOut.setAttribute('aria-hidden', 'true');
+    }
+    if (who.sessionVerified) {
+      scrubAuthCallbackUrl();
+    }
+
     if (who.ok && (!adminOnly || who.role === 'admin')) {
       if (g) g.style.display = 'none';
       if (app) app.style.display = '';
-      toast.ok('Admin ready.', 3200);
       return who; // { ok, user, token, role, email }
     }
 
@@ -1111,7 +1174,9 @@
     }
     if (button) {
       button.type = 'button';
-      button.textContent = 'Sign in with HMJ email';
+      if (!button.textContent || /log\s*in/i.test(button.textContent) || /sign\s*in/i.test(button.textContent)) {
+        button.textContent = 'Open secure sign-in';
+      }
       button.onclick = async (event) => {
         if (event) event.preventDefault();
         await openIdentityDialog('login');

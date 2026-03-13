@@ -6,7 +6,8 @@
     "node": ">=20.16.0 <21 || >=22.3.0"
   },
   "scripts": {
-    "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js"
+    "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js",
+    "test:layout": "node scripts/layout-smoke-check.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

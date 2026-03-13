@@ -46,7 +46,12 @@ canvas {
 .editor__foot,
 .notice-shell__head,
 .warning-actions,
-.small-btns {
+.small-btns,
+.shortlink-panel__head,
+.shortlink-history__head,
+.shortlink-item__top,
+.shortlink-actions,
+.shortlink-item__actions {
   flex-wrap: wrap;
 }
 
@@ -88,7 +93,16 @@ main,
 .evidence-grid,
 .profile,
 .drawer,
-.editor {
+.editor,
+.hero-shell,
+.shortlink-form,
+.shortlink-result,
+.shortlink-history,
+.shortlink-fields,
+.shortlink-result__row,
+.quick-grid,
+.module-grid,
+.module-grid--active {
   min-width: 0;
 }
 
@@ -234,6 +248,36 @@ button {
   white-space: normal;
 }
 
+body:not(.public-page):not(.clients-body) :is(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  small,
+  label,
+  legend,
+  dt,
+  dd,
+  th,
+  td,
+  button,
+  a,
+  .muted,
+  .pill,
+  .chip,
+  .badge,
+  .status-chip,
+  .status-pill,
+  .tag,
+  .hero-copy__intro,
+  .shortlink-item__url
+) {
+  overflow-wrap: anywhere;
+}
+
 .view-panel {
   max-width: min(320px, calc(100vw - 32px));
 }
@@ -264,6 +308,10 @@ button {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
+  .hero-shell {
+    grid-template-columns: minmax(0, 1.24fr) minmax(320px, 0.9fr);
+  }
+
   .grid-main {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
@@ -282,6 +330,7 @@ button {
   .layout,
   .grid-main,
   .hero,
+  .hero-shell,
   .toggle-panel,
   .image-panel,
   .intake-layout,
@@ -320,6 +369,21 @@ button {
   .control-note {
     max-width: none;
   }
+
+  .shortlink-fields,
+  .shortlink-result__row {
+    grid-template-columns: 1fr;
+  }
+
+  .shortlink-result__row > *,
+  .shortlink-actions > *,
+  .shortlink-item__actions > * {
+    min-width: 0;
+  }
+
+  .shortlink-item__top {
+    align-items: stretch;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -327,6 +391,7 @@ button {
   .layout,
   .grid-main,
   .hero,
+  .hero-shell,
   .toggle-panel,
   .image-panel,
   .intake-layout,
@@ -415,13 +480,19 @@ button {
 
   .notice-card,
   .file-card,
-  .match-head {
+  .match-head,
+  .shortlink-result__row {
     grid-template-columns: 1fr;
   }
 
   .status-detail,
   .two-step-grid {
     grid-template-columns: 1fr;
+  }
+
+  .shortlink-item__top {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .match-metrics,
