@@ -26,7 +26,6 @@
     err: (...a) => console.error('%c[ERR]', 'color:#b73b3b;font-weight:600', ...a),
   };
 
-  const CANONICAL_IDENTITY_URL = 'https://hmjg.netlify.app/.netlify/identity';
   const ORIGIN_BASE = (() => {
     try {
       const loc = window.location;
@@ -42,19 +41,30 @@
   const ADMIN_ENV = window.__HMJ_ADMIN_ENV || {};
   const HOSTNAME = (() => { try { return window.location?.hostname || ''; } catch { return ''; } })();
   const IS_PREVIEW_HOST = /^deploy-preview-/i.test(HOSTNAME) || HOSTNAME.includes('--');
+  function normaliseIdentityCandidate(url) {
+    if (!url) return '';
+    const trimmed = String(url).trim();
+    if (!trimmed) return '';
+    try {
+      const parsed = new URL(trimmed, window.location.origin);
+      if (parsed.origin !== window.location.origin) return '';
+      return parsed.toString().replace(/\/$/, '');
+    } catch (err) {
+      Debug.warn('identity candidate normalise failed', err);
+      return '';
+    }
+  }
   const IDENTITY_URL = (() => {
     const candidates = [
       ADMIN_ENV.ADMIN_IDENTITY_URL,
       window.ADMIN_IDENTITY_URL,
       IS_PREVIEW_HOST ? ORIGIN_PROXY_IDENTITY_URL : '',
       !IS_PREVIEW_HOST ? ORIGIN_IDENTITY_URL : '',
-      CANONICAL_IDENTITY_URL
+      IS_PREVIEW_HOST ? ORIGIN_IDENTITY_URL : ''
     ];
     for (const candidate of candidates) {
-      if (!candidate) continue;
-      const trimmed = String(candidate).trim();
-      if (!trimmed) continue;
-      return trimmed.replace(/\/$/, '');
+      const resolved = normaliseIdentityCandidate(candidate);
+      if (resolved) return resolved;
     }
     return '';
   })();
@@ -64,8 +74,8 @@
   if (IDENTITY_URL) {
     window.ADMIN_IDENTITY_URL = IDENTITY_URL;
     window.__hmjResolvedIdentityUrl = IDENTITY_URL;
-    if (!window.NETLIFY_IDENTITY_URL) window.NETLIFY_IDENTITY_URL = IDENTITY_URL;
-    if (!window.HMJ_IDENTITY_URL) window.HMJ_IDENTITY_URL = IDENTITY_URL;
+    window.NETLIFY_IDENTITY_URL = IDENTITY_URL;
+    window.HMJ_IDENTITY_URL = IDENTITY_URL;
     Debug.log('Resolved Identity API URL →', IDENTITY_URL, IS_PREVIEW_HOST ? '(preview host)' : '');
   }
 
@@ -331,10 +341,27 @@
         <span data-field="email">User: —</span>
         <span data-field="roles">Roles: —</span>
         <span data-field="auth">Auth: —</span>
+        <span data-field="widget">Widget: checking…</span>
+        <span data-field="login">Login: checking…</span>
       `;
       document.body.appendChild(host);
     }
     return host;
+  }
+
+  function getWidgetDebugState() {
+    const loader = window.__hmjIdentityLoaderState || {};
+    if (loader.widgetReady) return 'ready';
+    if (loader.widgetError) return `error (${loader.widgetError})`;
+    if (loader.widgetScriptLoaded) return 'script loaded';
+    if (loader.widgetScriptInjected) return 'loading';
+    return 'not loaded';
+  }
+
+  function getLoginBindingState() {
+    const button = document.querySelector('button[data-admin-login]') || document.querySelector('#gate button');
+    if (!button) return 'no button';
+    return button.dataset.hmjLoginBound === '1' ? 'bound' : 'not bound';
   }
 
   function updateDebugChip(session) {
@@ -358,6 +385,10 @@
     if (hostNode) hostNode.textContent = `Host: ${HOSTNAME || '—'}`;
     const authNode = chip.querySelector('[data-field="auth"]');
     if (authNode) authNode.textContent = `Auth: ${authText}`;
+    const widgetNode = chip.querySelector('[data-field="widget"]');
+    if (widgetNode) widgetNode.textContent = `Widget: ${getWidgetDebugState()}`;
+    const loginNode = chip.querySelector('[data-field="login"]');
+    if (loginNode) loginNode.textContent = `Login: ${getLoginBindingState()}`;
   }
 
   function brandIdentityWidget(id) {
@@ -459,6 +490,14 @@
   }
 
   async function waitIdentityReady(maxMs = 6000) {
+    try {
+      if (typeof window.hmjEnsureIdentityWidget === 'function') {
+        const force = !!window.__hmjIdentityLoaderState?.widgetError;
+        window.hmjEnsureIdentityWidget(force);
+      }
+    } catch (err) {
+      Debug.warn('identity widget ensure failed', err);
+    }
     let waited = 0;
     while (waited < maxMs) {
       const id = ensureIdentityInit();
@@ -474,6 +513,10 @@
 
   async function openIdentityDialog(mode = 'login') {
     try {
+      if (typeof window.hmjEnsureIdentityWidget === 'function') {
+        const force = !!window.__hmjIdentityLoaderState?.widgetError;
+        window.hmjEnsureIdentityWidget(force);
+      }
       if (typeof window.hmjConfigureIdentity === 'function') {
         try { window.hmjConfigureIdentity(true); } catch (err) { Debug.warn('hmjConfigureIdentity failed', err); }
       }
@@ -553,6 +596,8 @@
         await logoutIdentitySession();
       };
     });
+
+    updateDebugChip(identityCache || null);
   }
 
   // Resolve active user (works with widget or cookie-only)
@@ -1210,6 +1255,8 @@
 
   ensureDebugChip();
   bindIdentityButtons(document);
+  document.addEventListener('hmj:identity-loader-state', () => updateDebugChip(identityCache || null));
+  document.addEventListener('hmjIdentityUnavailable', () => updateDebugChip(identityCache || null));
 
   Debug.log('common.js loaded');
 })();
