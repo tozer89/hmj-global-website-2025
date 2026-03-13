@@ -1,5 +1,36 @@
 create extension if not exists pgcrypto;
 
+create or replace function public.set_row_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create table if not exists public.admin_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgname = 'admin_settings_set_updated_at'
+  ) then
+    create trigger admin_settings_set_updated_at
+      before update on public.admin_settings
+      for each row
+      execute function public.set_row_updated_at();
+  end if;
+end
+$$;
+
 create table if not exists public.noticeboard_posts (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -38,8 +69,29 @@ alter table public.noticeboard_posts enable row level security;
 comment on table public.noticeboard_posts is
   'HMJ public noticeboard posts. Browser clients should not query this table directly; Netlify Functions handle public filtering and admin writes.';
 
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-select
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgname = 'noticeboard_posts_set_updated_at'
+  ) then
+    create trigger noticeboard_posts_set_updated_at
+      before update on public.noticeboard_posts
+      for each row
+      execute function public.set_row_updated_at();
+  end if;
+end
+$$;
+
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
   'noticeboard-images',
   'noticeboard-images',
   true,
@@ -50,20 +102,14 @@ select
     'image/webp',
     'image/avif'
   ]::text[]
-where not exists (
-  select 1 from storage.buckets where id = 'noticeboard-images'
-);
+)
+on conflict (id) do update
+set
+  name = excluded.name,
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 insert into public.admin_settings (key, value)
-select 'noticeboard_enabled', 'true'::jsonb
-where exists (
-  select 1
-  from information_schema.tables
-  where table_schema = 'public'
-    and table_name = 'admin_settings'
-)
-and not exists (
-  select 1
-  from public.admin_settings
-  where key = 'noticeboard_enabled'
-);
+values ('noticeboard_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
