@@ -81,11 +81,39 @@
     .apply-card{background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%),#fff;border:1px solid var(--border);border-radius:16px;padding:18px 18px 20px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
     .apply-card h2{margin:0 0 10px 0;color:var(--ink)}
     .helper{font-size:.9rem;color:var(--muted)}
+    .job-context{display:grid;gap:18px;background:
+      radial-gradient(520px 180px at 0% 0%, rgba(58,102,179,.14), transparent 65%),
+      linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,249,255,.94));
+    }
+    .job-context__header{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+    .job-context__eyebrow{margin:0 0 6px 0;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#5266a8}
+    .job-context__title{margin:0;color:var(--ink);font-size:clamp(1.35rem, 2.6vw, 2rem)}
+    .job-context__summary{margin:8px 0 0 0;color:#475569;font-weight:600;max-width:780px}
+    .job-context__actions{display:flex;gap:10px;flex-wrap:wrap}
+    .job-context__link{
+      display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:12px;
+      border:1px solid rgba(58,102,179,.22);background:#fff;text-decoration:none;color:#36579c;font-weight:800;
+    }
+    .job-context__link:hover{background:#edf3ff}
+    .job-context__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .job-context__stat{
+      padding:14px 14px 15px;border-radius:14px;background:#fff;border:1px solid rgba(58,102,179,.14);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+    }
+    .job-context__label{display:block;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#64748b}
+    .job-context__value{display:block;margin-top:6px;font-weight:800;color:var(--ink);line-height:1.4}
+    .job-context__note{margin:0;color:#475569;font-weight:600}
 
     /* Grid */
     .apply-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
     .apply-grid .full{grid-column:1/-1}
     @media (max-width:780px){ .apply-grid{grid-template-columns:1fr} }
+    @media (max-width:780px){ .job-context__grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    @media (max-width:520px){
+      .job-context__grid{grid-template-columns:1fr}
+      .job-context__actions{width:100%}
+      .job-context__link{width:100%}
+    }
 
     /* Floating fields */
     .field{position:relative}
@@ -200,6 +228,42 @@
 
   <!-- ===== Apply content ===== -->
   <section class="apply-wrap">
+    <div id="jobContextCard" class="apply-card job-context" hidden>
+      <div class="job-context__header">
+        <div>
+          <p class="job-context__eyebrow">Role selected</p>
+          <h2 id="jobContextTitle" class="job-context__title"></h2>
+          <p id="jobContextSummary" class="job-context__summary"></p>
+        </div>
+        <div class="job-context__actions">
+          <a id="jobContextSpecLink" class="job-context__link" href="#" hidden>Back to job details</a>
+          <a class="job-context__link" href="jobs.html">Browse live jobs</a>
+        </div>
+      </div>
+      <div class="job-context__grid">
+        <div id="jobContextReferenceWrap" class="job-context__stat" hidden>
+          <span class="job-context__label">Reference</span>
+          <span id="jobContextReference" class="job-context__value"></span>
+        </div>
+        <div id="jobContextLocationWrap" class="job-context__stat" hidden>
+          <span class="job-context__label">Location</span>
+          <span id="jobContextLocation" class="job-context__value"></span>
+        </div>
+        <div id="jobContextTypeWrap" class="job-context__stat" hidden>
+          <span class="job-context__label">Employment</span>
+          <span id="jobContextType" class="job-context__value"></span>
+        </div>
+        <div id="jobContextPayWrap" class="job-context__stat" hidden>
+          <span class="job-context__label">Package</span>
+          <span id="jobContextPay" class="job-context__value"></span>
+        </div>
+        <div id="jobContextShareWrap" class="job-context__stat" hidden>
+          <span class="job-context__label">Share code</span>
+          <span id="jobContextShare" class="job-context__value"></span>
+        </div>
+      </div>
+      <p id="jobContextNote" class="job-context__note">This application will be tagged to the selected HMJ role when it is submitted.</p>
+    </div>
 
     <!-- quick contact card -->
     <div class="apply-card">
@@ -235,6 +299,16 @@
 
         <!-- Subject filled from ?role= -->
         <input type="hidden" id="subject" name="subject" />
+        <input type="hidden" id="roleField" name="role" />
+        <input type="hidden" id="jobTitleField" name="job_title" />
+        <input type="hidden" id="jobIdField" name="job_id" />
+        <input type="hidden" id="jobReferenceField" name="job_reference" />
+        <input type="hidden" id="jobLocationField" name="job_location" />
+        <input type="hidden" id="jobTypeField" name="job_type" />
+        <input type="hidden" id="jobPayField" name="job_pay" />
+        <input type="hidden" id="jobShareCodeField" name="job_share_code" />
+        <input type="hidden" id="jobSourceField" name="job_source" />
+        <input type="hidden" id="jobSpecUrlField" name="job_spec_url" />
 
         <div class="apply-grid">
 
@@ -348,6 +422,7 @@
   </footer>
 
   <!-- ===== Scripts ===== -->
+  <script src="js/job-application-context.js"></script>
   <script>
     /* ---------- Nav ---------- */
     const burger = document.querySelector('.hmj-burger');
@@ -371,16 +446,126 @@
       el.addEventListener('change', ()=>setFilled(el));
     });
 
-    /* ---------- Role autofill from ?role= ---------- */
+    function toTitleCase(value){
+      return String(value || '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+    }
+
+    /* ---------- Role autofill from query params ---------- */
     const params = new URLSearchParams(location.search);
-    const role = params.get('role');
+    const applicationContextApi = window.HMJJobApplicationContext;
+    const context = applicationContextApi
+      ? applicationContextApi.extractApplicationContext(params)
+      : {
+          role: params.get('role') || '',
+          title: params.get('role') || '',
+          jobId: '',
+          reference: '',
+          locationText: '',
+          employmentType: '',
+          payText: '',
+          shareCode: '',
+          source: params.get('source') || '',
+          specUrl: '',
+          hasContext: Boolean(params.get('role')),
+        };
     const subjectEl = document.getElementById('subject');
     const applyingFor = document.getElementById('applyingFor');
     const roleHint = document.getElementById('roleHint');
-    if (role){
-      subjectEl.value = `Application: ${role}`;
-      applyingFor.textContent = `Applying for: ${role}`;
-      roleHint.textContent = `Role: ${role}`;
+    const roleField = document.getElementById('roleField');
+    const jobTitleField = document.getElementById('jobTitleField');
+    const jobIdField = document.getElementById('jobIdField');
+    const jobReferenceField = document.getElementById('jobReferenceField');
+    const jobLocationField = document.getElementById('jobLocationField');
+    const jobTypeField = document.getElementById('jobTypeField');
+    const jobPayField = document.getElementById('jobPayField');
+    const jobShareCodeField = document.getElementById('jobShareCodeField');
+    const jobSourceField = document.getElementById('jobSourceField');
+    const jobSpecUrlField = document.getElementById('jobSpecUrlField');
+    const jobContextCard = document.getElementById('jobContextCard');
+    const jobContextTitle = document.getElementById('jobContextTitle');
+    const jobContextSummary = document.getElementById('jobContextSummary');
+    const jobContextSpecLink = document.getElementById('jobContextSpecLink');
+    const jobContextNote = document.getElementById('jobContextNote');
+    const contextFieldMap = [
+      { value: context.reference, wrap: 'jobContextReferenceWrap', field: 'jobContextReference' },
+      { value: context.locationText, wrap: 'jobContextLocationWrap', field: 'jobContextLocation' },
+      { value: context.employmentType ? toTitleCase(context.employmentType) : '', wrap: 'jobContextTypeWrap', field: 'jobContextType' },
+      { value: context.payText, wrap: 'jobContextPayWrap', field: 'jobContextPay' },
+      { value: context.shareCode, wrap: 'jobContextShareWrap', field: 'jobContextShare' },
+    ];
+
+    subjectEl.value = applicationContextApi
+      ? applicationContextApi.buildApplicationSubject(context)
+      : (context.title ? `Application: ${context.title}` : 'General application');
+
+    roleField.value = context.title || context.role || '';
+    jobTitleField.value = context.title || '';
+    jobIdField.value = context.jobId || '';
+    jobReferenceField.value = context.reference || '';
+    jobLocationField.value = context.locationText || '';
+    jobTypeField.value = context.employmentType || '';
+    jobPayField.value = context.payText || '';
+    jobShareCodeField.value = context.shareCode || '';
+    jobSourceField.value = context.source || '';
+    jobSpecUrlField.value = context.specUrl || '';
+
+    if (context.hasContext && context.title){
+      const summary = applicationContextApi
+        ? applicationContextApi.buildApplicationSummary({
+            title: context.title,
+            locationText: context.locationText,
+            employmentType: context.employmentType ? toTitleCase(context.employmentType) : '',
+            payText: context.payText,
+          })
+        : context.title;
+
+      applyingFor.textContent = summary ? `Applying for: ${summary}` : `Applying for: ${context.title}`;
+      roleHint.textContent = context.reference
+        ? `Reference: ${context.reference}`
+        : `Role: ${context.title}`;
+      document.title = `Apply for ${context.title} | HMJ-Global`;
+
+      if (jobContextCard && jobContextTitle && jobContextSummary) {
+        jobContextTitle.textContent = context.title;
+        jobContextSummary.textContent = summary || 'Your application will be linked to this role.';
+        jobContextCard.hidden = false;
+      }
+
+      contextFieldMap.forEach(({ value, wrap, field }) => {
+        const wrapEl = document.getElementById(wrap);
+        const fieldEl = document.getElementById(field);
+        if (!wrapEl || !fieldEl) return;
+        if (value) {
+          fieldEl.textContent = value;
+          wrapEl.hidden = false;
+        } else {
+          fieldEl.textContent = '';
+          wrapEl.hidden = true;
+        }
+      });
+
+      if (jobContextSpecLink) {
+        if (context.specUrl) {
+          jobContextSpecLink.href = context.specUrl;
+          jobContextSpecLink.hidden = false;
+        } else {
+          jobContextSpecLink.removeAttribute('href');
+          jobContextSpecLink.hidden = true;
+        }
+      }
+
+      if (jobContextNote) {
+        jobContextNote.textContent = context.shareCode
+          ? `This application will be tagged to share code ${context.shareCode} and the role above when it is submitted.`
+          : 'This application will be tagged to the selected HMJ role when it is submitted.';
+      }
+    } else if (context.role) {
+      applyingFor.textContent = `Applying for: ${context.role}`;
+      roleHint.textContent = `Role: ${context.role}`;
     } else {
       subjectEl.value = 'General application';
     }

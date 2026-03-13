@@ -8,217 +8,378 @@
   <style>
     :root {
       color-scheme: light;
-
-      /* Brand palette */
       --hmj-blue: #2f4ea2;
-      --hmj-blue-dark: #1f3b82;
-      --hmj-blue-light: #e8eeff;
-      --hmj-text: #0f1b3f;
-      --hmj-muted: #5b6474;
-      --hmj-border: rgba(47, 78, 162, 0.18);
-      --hmj-focus: rgba(63, 102, 199, 0.35);
-      --chip-bg: rgba(63, 102, 199, 0.12);
-      --chip-border: rgba(63, 102, 199, 0.26);
-      --chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-      --cta-shadow: 0 12px 28px rgba(47, 78, 162, 0.18);
-      --cta-shadow-hover: 0 18px 38px rgba(47, 78, 162, 0.22);
-
-      /* Surfaces + accents */
-      --bg: linear-gradient(135deg, #f6f8ff 0%, #eef3ff 45%, #f8faff 100%);
-      --surface: #ffffff;
-      --surface-soft: rgba(255, 255, 255, 0.88);
-      --shadow: 0 28px 64px rgba(47, 78, 162, 0.15);
-      --ink: var(--hmj-text);
-      --ink-strong: var(--hmj-blue-dark);
-      --ink-soft: #5d6f9e;
-      --accent: var(--hmj-blue);
-      --accent-strong: var(--hmj-blue-dark);
-      --accent-soft: rgba(63, 102, 199, 0.12);
-
-      /* Status tokens */
-      --badge-live-bg: rgba(19, 135, 84, 0.12);
-      --badge-live-border: rgba(19, 135, 84, 0.32);
-      --badge-live-text: #0f5132;
-      --badge-int-bg: rgba(250, 204, 21, 0.16);
-      --badge-int-border: rgba(250, 204, 21, 0.36);
-      --badge-int-text: #854d0e;
-      --badge-closed-bg: rgba(180, 35, 24, 0.14);
-      --badge-closed-border: rgba(180, 35, 24, 0.34);
-      --badge-closed-text: #842029;
-      --danger-bg: rgba(180, 35, 24, 0.12);
-      --danger-border: rgba(180, 35, 24, 0.32);
+      --hmj-blue-dark: #17306c;
+      --hmj-blue-soft: #edf3ff;
+      --hmj-navy: #0f1b3f;
+      --hmj-ink: #12213f;
+      --hmj-muted: #5d677a;
+      --hmj-line: rgba(47, 78, 162, 0.14);
+      --hmj-line-strong: rgba(47, 78, 162, 0.24);
+      --hmj-surface: rgba(255, 255, 255, 0.96);
+      --hmj-surface-soft: rgba(246, 249, 255, 0.92);
+      --hmj-shadow: 0 24px 60px rgba(20, 39, 85, 0.12);
+      --hmj-shadow-soft: 0 16px 36px rgba(20, 39, 85, 0.09);
+      --hmj-success-bg: rgba(28, 135, 90, 0.12);
+      --hmj-success-line: rgba(28, 135, 90, 0.28);
+      --hmj-success-text: #0f6a43;
+      --hmj-warn-bg: rgba(233, 178, 0, 0.16);
+      --hmj-warn-line: rgba(233, 178, 0, 0.3);
+      --hmj-warn-text: #8b5b00;
+      --hmj-stop-bg: rgba(178, 39, 30, 0.12);
+      --hmj-stop-line: rgba(178, 39, 30, 0.28);
+      --hmj-stop-text: #8b241e;
+      --hmj-toast: #0f1730;
+      --hmj-focus: rgba(47, 78, 162, 0.28);
+      --page-bg:
+        radial-gradient(960px 420px at 0% 0%, rgba(47, 78, 162, 0.14), transparent 55%),
+        radial-gradient(780px 340px at 100% 0%, rgba(47, 78, 162, 0.1), transparent 55%),
+        linear-gradient(180deg, #f5f8ff 0%, #f8fbff 100%);
     }
 
     * {
       box-sizing: border-box;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
       margin: 0;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: clamp(24px, 5vw, 56px);
+      background: var(--page-bg);
+      color: var(--hmj-ink);
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
       line-height: 1.6;
     }
 
-    .card {
-      width: min(860px, 100%);
-      background: var(--surface);
-      border: 1px solid var(--hmj-border);
-      border-radius: 26px;
-      box-shadow: var(--shadow);
-      padding: clamp(26px, 3vw, 36px);
+    a {
+      color: inherit;
+    }
+
+    .page-shell {
+      width: min(1220px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 130px;
+    }
+
+    .panel,
+    .status-shell {
+      border: 1px solid var(--hmj-line);
+      border-radius: 28px;
+      background: var(--hmj-surface);
+      box-shadow: var(--hmj-shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .status-shell {
+      padding: 24px 28px;
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--hmj-blue-dark);
+      margin-top: 14vh;
+    }
+
+    .status-shell--error {
+      color: var(--hmj-stop-text);
+      background: rgba(255, 250, 250, 0.96);
+      border-color: var(--hmj-stop-line);
+      box-shadow: 0 22px 48px rgba(139, 36, 30, 0.12);
+      letter-spacing: normal;
+      text-transform: none;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.7;
+    }
+
+    .page {
       display: grid;
       gap: 22px;
-      position: relative;
     }
 
-    header {
-      display: grid;
-      gap: 16px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(28px, 4vw, 40px);
-      color: var(--ink-strong);
-      letter-spacing: -0.01em;
-    }
-
-    .meta {
+    .topbar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      color: var(--ink-strong);
-      font-weight: 700;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 16px 18px;
+      background: rgba(255, 255, 255, 0.84);
     }
 
-    .meta span {
+    .brand {
       display: inline-flex;
       align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      min-width: 0;
+    }
+
+    .brand img {
+      width: 46px;
+      height: 46px;
+      object-fit: contain;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(23, 48, 108, 0.12);
+      padding: 8px;
+    }
+
+    .brand__label {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .brand__label strong {
+      font-size: 1rem;
+      color: var(--hmj-navy);
+      letter-spacing: 0.02em;
+    }
+
+    .brand__label span {
+      color: var(--hmj-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .topbar__actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .topbar__link,
+    .topbar__meta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       gap: 8px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      background: var(--chip-bg);
-      border: 1px solid var(--chip-border);
-      box-shadow: var(--chip-shadow);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      font-size: 12px;
+      min-height: 42px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--hmj-line-strong);
+      background: #fff;
+      color: var(--hmj-blue-dark);
+      text-decoration: none;
+      font-weight: 800;
+      box-shadow: var(--hmj-shadow-soft);
+    }
+
+    .topbar__meta {
+      color: var(--hmj-muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+      background: var(--hmj-surface-soft);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .hero__main {
+      padding: clamp(26px, 4vw, 42px);
+      background:
+        radial-gradient(560px 240px at 0% 0%, rgba(47, 78, 162, 0.14), transparent 65%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 255, 0.96));
+    }
+
+    .hero__eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
+      justify-content: center;
+      min-height: 34px;
+      padding: 7px 14px;
       border-radius: 999px;
-      font-weight: 800;
-      font-size: 12px;
+      font-size: 0.76rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--accent-strong);
-      background: var(--chip-bg);
-      border: 1px solid var(--chip-border);
-      box-shadow: var(--chip-shadow);
-      justify-self: start;
+      border: 1px solid var(--hmj-line-strong);
+      background: var(--hmj-blue-soft);
+      color: var(--hmj-blue-dark);
     }
 
     .badge.live {
-      background: var(--badge-live-bg);
-      border-color: var(--badge-live-border);
-      color: var(--badge-live-text);
+      background: var(--hmj-success-bg);
+      border-color: var(--hmj-success-line);
+      color: var(--hmj-success-text);
     }
 
     .badge.interviewing {
-      background: var(--badge-int-bg);
-      border-color: var(--badge-int-border);
-      color: var(--badge-int-text);
+      background: var(--hmj-warn-bg);
+      border-color: var(--hmj-warn-line);
+      color: var(--hmj-warn-text);
     }
 
     .badge.closed {
-      background: var(--badge-closed-bg);
-      border-color: var(--badge-closed-border);
-      color: var(--badge-closed-text);
+      background: var(--hmj-stop-bg);
+      border-color: var(--hmj-stop-line);
+      color: var(--hmj-stop-text);
     }
 
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+    .badge--section {
+      color: var(--hmj-navy);
+      background: #fff;
     }
 
-    .tags span {
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: var(--chip-bg);
-      border: 1px solid var(--chip-border);
-      box-shadow: var(--chip-shadow);
-      font-weight: 700;
-      color: var(--accent-strong);
-    }
-
-    h2 {
-      margin: 12px 0 6px;
-      font-size: 16px;
-      color: var(--ink-soft);
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-    }
-
-    ul {
-      margin: 0 0 12px 22px;
-      color: var(--ink);
-      line-height: 1.6;
-      font-weight: 500;
-    }
-
-    p {
+    .hero__title {
       margin: 0;
-      color: var(--ink);
-      line-height: 1.65;
-      font-size: 16px;
-      font-weight: 500;
+      color: var(--hmj-navy);
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      max-width: 12ch;
     }
 
-    .cta {
-      display: flex;
-      flex-wrap: wrap;
+    .hero__intro {
+      margin: 18px 0 0;
+      max-width: 62ch;
+      color: #33415f;
+      font-size: clamp(1rem, 2vw, 1.14rem);
+      font-weight: 600;
+    }
+
+    .hero__note {
+      margin: 16px 0 0;
+      color: var(--hmj-muted);
+      font-size: 0.94rem;
+      font-weight: 600;
+    }
+
+    .fact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
-      margin-top: 12px;
+      margin-top: 24px;
     }
 
-    .btn {
+    .fact-card {
+      padding: 16px 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--hmj-line);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+      min-height: 100px;
+    }
+
+    .fact-card__label {
+      display: block;
+      color: var(--hmj-muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       font-weight: 800;
-      font-size: 15px;
-      padding: 13px 22px;
-      border-radius: 14px;
-      text-decoration: none;
+    }
+
+    .fact-card__value {
+      display: block;
+      margin-top: 8px;
+      color: var(--hmj-navy);
+      font-size: 1rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .chip-group {
+      display: grid;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .section-label,
+    .section-kicker,
+    .side__eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      cursor: pointer;
-      transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      color: var(--hmj-muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 900;
+      margin: 0;
+    }
+
+    .chip-list,
+    .benefit-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip,
+    .benefit-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--hmj-line-strong);
+      background: rgba(47, 78, 162, 0.08);
+      color: var(--hmj-blue-dark);
+      font-weight: 800;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .benefit-pill {
+      background: rgba(28, 135, 90, 0.08);
+      color: var(--hmj-success-text);
+    }
+
+    .action-row,
+    .action-column,
+    .cta-band__actions,
+    .sticky-cta__actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .action-row {
+      margin-top: 24px;
+    }
+
+    .action-column {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 52px;
+      padding: 13px 18px;
+      border-radius: 16px;
       border: 1px solid transparent;
-      background: transparent;
+      font-size: 0.96rem;
+      font-weight: 900;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease;
+      box-shadow: none;
     }
 
-    .btn.primary,
-    .btn:not(.secondary) {
-      background: linear-gradient(180deg, rgba(63, 102, 199, 0.2), rgba(63, 102, 199, 0.08));
-      border-color: rgba(63, 102, 199, 0.42);
-      color: #fff;
-      box-shadow: var(--cta-shadow);
-    }
-
-    .btn.primary:hover,
-    .btn:not(.secondary):hover {
+    .btn:hover {
       transform: translateY(-1px);
-      box-shadow: var(--cta-shadow-hover);
     }
 
     .btn:focus-visible {
@@ -226,60 +387,311 @@
       outline-offset: 2px;
     }
 
-    .btn.secondary {
-      background: #fff;
-      color: var(--accent-strong);
-      border-color: rgba(63, 102, 199, 0.26);
-      box-shadow: inset 0 0 0 1px rgba(63, 102, 199, 0.06);
-    }
-
-    .btn.secondary:hover {
-      background: rgba(63, 102, 199, 0.08);
-      color: var(--accent-strong);
-    }
-
-    .btn.secondary:focus-visible {
-      outline-color: rgba(63, 102, 199, 0.45);
-    }
-
     .btn[disabled],
     .btn[aria-disabled="true"] {
-      opacity: 0.55;
+      opacity: 0.58;
       cursor: not-allowed;
-      box-shadow: none;
       transform: none;
+      box-shadow: none;
     }
 
-    .muted {
+    .btn-primary {
+      background: linear-gradient(180deg, #3b67bc, #294b93);
+      border-color: rgba(41, 75, 147, 0.92);
+      color: #fff;
+      box-shadow: 0 18px 38px rgba(41, 75, 147, 0.22);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 22px 42px rgba(41, 75, 147, 0.26);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      border-color: var(--hmj-line-strong);
+      color: var(--hmj-blue-dark);
+      box-shadow: var(--hmj-shadow-soft);
+    }
+
+    .btn-secondary:hover,
+    .btn-ghost:hover,
+    .topbar__link:hover {
+      background: #eef4ff;
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.78);
+      border-color: var(--hmj-line);
+      color: var(--hmj-navy);
+      box-shadow: var(--hmj-shadow-soft);
+    }
+
+    .hero__side {
+      padding: 24px;
+      display: grid;
+      align-content: start;
+      gap: 16px;
+      background:
+        radial-gradient(420px 180px at 100% 0%, rgba(47, 78, 162, 0.12), transparent 60%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 255, 0.96));
+    }
+
+    .side__title {
+      margin: 4px 0 0;
+      color: var(--hmj-navy);
+      font-size: 1.35rem;
+    }
+
+    .highlight-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .highlight-card,
+    .detail-card,
+    .system-item {
+      padding: 16px 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--hmj-line);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    }
+
+    .highlight-card__label,
+    .detail-card__label,
+    .system-item span {
+      display: block;
       color: var(--hmj-muted);
-      font-weight: 600;
-      font-size: 14px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    #error {
-      color: var(--badge-closed-text);
-      background: var(--danger-bg);
-      border: 1px solid var(--danger-border);
-      padding: 22px;
-      border-radius: 20px;
-      max-width: 520px;
-      text-align: center;
-      font-weight: 700;
-      box-shadow: 0 16px 40px rgba(180, 35, 24, 0.18);
-    }
-
-    #loading {
-      color: var(--accent-strong);
-      font-weight: 800;
-      font-size: 18px;
+      font-size: 0.77rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      background: var(--surface-soft);
-      padding: 12px 18px;
+      font-weight: 900;
+    }
+
+    .highlight-card__value,
+    .detail-card__value,
+    .system-item strong {
+      display: block;
+      margin-top: 6px;
+      color: var(--hmj-navy);
+      font-size: 1rem;
+      line-height: 1.4;
+      font-weight: 900;
+    }
+
+    .highlight-card__text,
+    .detail-card__text,
+    .system-meta {
+      margin: 8px 0 0;
+      color: var(--hmj-muted);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(300px, 0.88fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .content-main,
+    .sticky-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .sticky-stack {
+      position: sticky;
+      top: 24px;
+    }
+
+    .section-card {
+      padding: clamp(24px, 3vw, 32px);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+    }
+
+    .section-card__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .section-card h2 {
+      margin: 6px 0 0;
+      color: var(--hmj-navy);
+      font-size: clamp(1.32rem, 2vw, 1.7rem);
+      letter-spacing: -0.02em;
+    }
+
+    .rich-text,
+    .list-card ul {
+      margin: 0;
+      color: #253555;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .list-card ul {
+      padding-left: 18px;
+    }
+
+    .list-card li + li {
+      margin-top: 12px;
+    }
+
+    .apply-panel {
+      padding: 24px;
+      color: #eef3ff;
+      background:
+        radial-gradient(420px 180px at 10% 0%, rgba(103, 145, 241, 0.28), transparent 62%),
+        linear-gradient(180deg, #15285b, #0f1b3f);
+      border-color: rgba(22, 40, 91, 0.7);
+      box-shadow: 0 22px 48px rgba(15, 27, 63, 0.28);
+    }
+
+    .apply-panel h2 {
+      margin: 6px 0 10px;
+      font-size: 1.55rem;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .apply-panel__summary {
+      margin: 0;
+      color: #d6e2ff;
+      font-weight: 600;
+    }
+
+    .apply-panel__checks {
+      margin: 18px 0;
+      padding-left: 18px;
+      color: #d9e4ff;
+      font-weight: 600;
+    }
+
+    .apply-panel__checks li + li {
+      margin-top: 10px;
+    }
+
+    .apply-panel .btn-secondary,
+    .apply-panel .btn-ghost {
+      background: rgba(255, 255, 255, 0.92);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .system-panel {
+      padding: 22px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.96));
+    }
+
+    .system-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+
+    .cta-band {
+      padding: clamp(24px, 3vw, 32px);
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+      background:
+        radial-gradient(520px 200px at 0% 0%, rgba(47, 78, 162, 0.18), transparent 62%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.95));
+    }
+
+    .cta-band__copy {
+      display: grid;
+      gap: 8px;
+      max-width: 640px;
+    }
+
+    .cta-band__copy h2 {
+      margin: 0;
+      color: var(--hmj-navy);
+      font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+      line-height: 1.2;
+    }
+
+    .cta-band__copy p {
+      margin: 0;
+      color: var(--hmj-muted);
+      font-weight: 600;
+    }
+
+    .sticky-cta {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      width: min(1120px, calc(100% - 24px));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(15, 27, 63, 0.12);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 22px 40px rgba(15, 27, 63, 0.16);
+      backdrop-filter: blur(20px);
+      z-index: 20;
+    }
+
+    .sticky-cta__copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .sticky-cta__copy strong {
+      color: var(--hmj-navy);
+      font-size: 1rem;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sticky-cta__copy span {
+      color: var(--hmj-muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 98px;
+      transform: translateX(-50%);
+      min-width: 220px;
+      max-width: calc(100% - 28px);
+      padding: 12px 14px;
       border-radius: 14px;
-      box-shadow: var(--cta-shadow);
+      background: var(--hmj-toast);
+      color: #eef3ff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 18px 32px rgba(15, 27, 63, 0.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 21;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .toast.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
     }
 
     .sr-only {
@@ -294,85 +706,279 @@
       border: 0;
     }
 
-    @media (max-width: 720px) {
-      body {
-        padding: 24px;
+    @media (max-width: 1080px) {
+      .hero,
+      .content-grid {
+        grid-template-columns: 1fr;
       }
 
-      .card {
-        padding: 24px;
+      .sticky-stack {
+        position: static;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .page-shell {
+        width: min(100% - 20px, 1220px);
+        padding: 18px 0 144px;
+      }
+
+      .fact-grid,
+      .system-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .topbar__actions {
+        justify-content: flex-start;
+      }
+
+      .sticky-cta {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .sticky-cta__actions .btn {
+        flex: 1 1 auto;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .hero__main,
+      .hero__side,
+      .section-card,
+      .apply-panel,
+      .system-panel,
+      .cta-band {
+        padding: 22px 18px;
         border-radius: 24px;
-        gap: 18px;
       }
 
-      h1 {
-        font-size: clamp(26px, 6vw, 34px);
+      .fact-grid,
+      .system-grid {
+        grid-template-columns: 1fr;
       }
 
-      .meta span {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .cta {
+      .action-row,
+      .cta-band__actions,
+      .sticky-cta__actions {
         flex-direction: column;
       }
 
-      .btn {
+      .action-row .btn,
+      .action-column .btn,
+      .cta-band__actions .btn,
+      .sticky-cta__actions .btn,
+      .sticky-cta__actions a {
         width: 100%;
-        justify-content: center;
+      }
+
+      .sticky-cta__copy strong,
+      .sticky-cta__copy span {
+        white-space: normal;
       }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .btn,
-      body {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
         transition: none !important;
       }
     }
   </style>
 </head>
 <body>
-  <div id="loading">Loading role…</div>
-  <div id="error" style="display:none"></div>
-  <article id="spec" class="card" style="display:none">
-    <header>
-      <span id="status" class="badge"></span>
-      <h1 id="title"></h1>
-      <div class="meta">
-        <span id="location"></span>
-        <span id="employment"></span>
-        <span id="pay" style="display:none"></span>
-      </div>
-      <div class="tags" id="tags"></div>
-    </header>
-    <section>
-      <p id="overview"></p>
-    </section>
-    <section id="customerSection" style="display:none">
-      <h2>Customer</h2>
-      <p id="customer"></p>
-    </section>
-    <section id="benefitsSection" style="display:none">
-      <h2>Benefits</h2>
-      <div class="tags" id="benefits"></div>
-    </section>
-    <section id="responsibilities" style="display:none">
-      <h2>Key Responsibilities</h2>
-      <ul id="respList"></ul>
-    </section>
-    <section id="requirements" style="display:none">
-      <h2>Requirements</h2>
-      <ul id="reqList"></ul>
-    </section>
-    <footer class="cta">
-      <a id="applyBtn" class="btn" href="#" target="_blank" rel="noopener">Apply now</a>
-      <button id="copyBtn" class="btn secondary" type="button">Copy link</button>
-      <span class="sr-only" id="copyStatus" aria-live="polite"></span>
-    </footer>
-    <p class="muted" id="meta"></p>
-  </article>
+  <div class="page-shell">
+    <div id="loading" class="status-shell">Loading role…</div>
+    <div id="error" class="status-shell status-shell--error" style="display:none"></div>
 
+    <main id="specPage" class="page" style="display:none">
+      <header class="topbar panel">
+        <a class="brand" href="../index.html">
+          <img src="../images/logo.png" alt="HMJ Global logo"/>
+          <span class="brand__label">
+            <strong>HMJ Global</strong>
+            <span>Shareable job specification</span>
+          </span>
+        </a>
+        <div class="topbar__actions">
+          <a class="topbar__link" href="../jobs.html">Back to live jobs</a>
+          <span id="topMetaBadge" class="topbar__meta" style="display:none"></span>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="panel hero__main">
+          <div class="hero__eyebrow">
+            <span id="status" class="badge"></span>
+            <span id="sectionBadge" class="badge badge--section" style="display:none"></span>
+          </div>
+
+          <h1 id="title" class="hero__title"></h1>
+          <p id="heroIntro" class="hero__intro"></p>
+
+          <div class="fact-grid">
+            <div class="fact-card">
+              <span class="fact-card__label">Location</span>
+              <span id="location" class="fact-card__value"></span>
+            </div>
+            <div class="fact-card">
+              <span class="fact-card__label">Employment</span>
+              <span id="employment" class="fact-card__value"></span>
+            </div>
+            <div id="payCard" class="fact-card" style="display:none">
+              <span class="fact-card__label">Package</span>
+              <span id="pay" class="fact-card__value"></span>
+            </div>
+            <div id="referenceCard" class="fact-card" style="display:none">
+              <span class="fact-card__label">Reference</span>
+              <span id="reference" class="fact-card__value"></span>
+            </div>
+          </div>
+
+          <div id="tagsGroup" class="chip-group" style="display:none">
+            <p class="section-label">Key skills</p>
+            <div id="tags" class="chip-list"></div>
+          </div>
+
+          <div class="action-row">
+            <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
+            <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+            <a class="btn btn-secondary" data-email-share href="#">Share by email</a>
+            <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
+          </div>
+
+          <p class="hero__note">HMJ Global keeps this role flow direct and professional, so candidates can move from job share page to application form with the right context attached.</p>
+        </div>
+
+        <aside class="panel hero__side">
+          <p class="side__eyebrow">Why apply</p>
+          <h2 class="side__title">Role highlights</h2>
+          <div id="highlights" class="highlight-list"></div>
+
+          <div id="customerCard" class="detail-card" style="display:none">
+            <span class="detail-card__label">Customer</span>
+            <span id="customer" class="detail-card__value"></span>
+            <p class="detail-card__text">Shared publicly only where HMJ has been given permission to reference the customer context.</p>
+          </div>
+
+          <div id="benefitsCard" class="detail-card" style="display:none">
+            <span class="detail-card__label">Benefits</span>
+            <div id="benefits" class="benefit-list" style="margin-top:10px"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="content-grid">
+        <div class="content-main">
+          <section class="panel section-card">
+            <div class="section-card__head">
+              <div>
+                <p class="section-kicker">Overview</p>
+                <h2>Role summary</h2>
+              </div>
+            </div>
+            <p id="overview" class="rich-text"></p>
+          </section>
+
+          <section id="responsibilitiesSection" class="panel section-card list-card" style="display:none">
+            <div class="section-card__head">
+              <div>
+                <p class="section-kicker">Responsibilities</p>
+                <h2>Key responsibilities</h2>
+              </div>
+            </div>
+            <ul id="respList"></ul>
+          </section>
+
+          <section id="requirementsSection" class="panel section-card list-card" style="display:none">
+            <div class="section-card__head">
+              <div>
+                <p class="section-kicker">Requirements</p>
+                <h2>What this role needs</h2>
+              </div>
+            </div>
+            <ul id="reqList"></ul>
+          </section>
+        </div>
+
+        <aside class="content-side">
+          <div class="sticky-stack">
+            <section class="panel apply-panel">
+              <p class="section-kicker" style="color:#aec4ff">Apply for this role</p>
+              <h2>Move straight into the HMJ application flow</h2>
+              <p id="applyPanelSummary" class="apply-panel__summary"></p>
+              <ul class="apply-panel__checks">
+                <li>Your application opens with this role already attached.</li>
+                <li>HMJ receives the job reference and share context with the submission.</li>
+                <li>You can still return to the live jobs list if you want to compare roles.</li>
+              </ul>
+              <div class="action-column">
+                <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
+                <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+                <a class="btn btn-ghost" data-email-share href="#">Share by email</a>
+              </div>
+            </section>
+
+            <section class="panel system-panel">
+              <p class="section-kicker">Share details</p>
+              <div class="system-grid">
+                <div class="system-item">
+                  <span>Share code</span>
+                  <strong id="shareCode">Not available</strong>
+                </div>
+                <div class="system-item">
+                  <span>Availability</span>
+                  <strong id="shareExpiry">Active</strong>
+                </div>
+                <div class="system-item">
+                  <span>Last update</span>
+                  <strong id="shareTimestamp">Current</strong>
+                </div>
+              </div>
+              <p id="meta" class="system-meta"></p>
+            </section>
+          </div>
+        </aside>
+      </section>
+
+      <section class="panel cta-band">
+        <div class="cta-band__copy">
+          <p class="section-kicker">Next step</p>
+          <h2>Ready to put yourself forward?</h2>
+          <p>Apply with this role already attached, share the page with a colleague, or head back to the wider HMJ vacancies list.</p>
+        </div>
+        <div class="cta-band__actions">
+          <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
+          <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+          <a class="btn btn-secondary" data-email-share href="#">Share by email</a>
+          <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="stickyCta" class="sticky-cta" style="display:none">
+    <div class="sticky-cta__copy">
+      <strong id="stickyTitle"></strong>
+      <span id="stickyMeta"></span>
+    </div>
+    <div class="sticky-cta__actions">
+      <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+      <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
+    </div>
+  </div>
+
+  <div id="copyToast" class="toast" role="status" aria-live="polite"></div>
+  <span id="copyStatus" class="sr-only" aria-live="polite"></span>
+
+  <script src="../js/job-application-context.js"></script>
   <script>
     (async function(){
       const LOCAL_SHARE_KEY = 'hmj.jobs.share-cache';
@@ -381,17 +987,67 @@
       const payloadParam = params.get('payload');
       const slug = params.get('slug');
       const jobId = params.get('id') || params.get('job');
+
       const loading = document.getElementById('loading');
       const errorBox = document.getElementById('error');
-      const card = document.getElementById('spec');
-      const copyBtn = document.getElementById('copyBtn');
-      const defaultCopyLabel = copyBtn?.textContent || 'Copy link';
+      const page = document.getElementById('specPage');
+      const stickyCta = document.getElementById('stickyCta');
+      const copyToast = document.getElementById('copyToast');
       const copyStatus = document.getElementById('copyStatus');
-      let shareContext = null;
+      const topMetaBadge = document.getElementById('topMetaBadge');
+      const applicationContextApi = window.HMJJobApplicationContext;
 
-      if (copyBtn) {
-        copyBtn.disabled = true;
-        copyBtn.setAttribute('aria-disabled', 'true');
+      const copyButtons = Array.from(document.querySelectorAll('[data-copy-link]'));
+      const applyLinks = Array.from(document.querySelectorAll('[data-apply-link]'));
+      const emailLinks = Array.from(document.querySelectorAll('[data-email-share]'));
+
+      let shareContext = null;
+      let toastTimer = null;
+
+      copyButtons.forEach((button) => {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      });
+
+      function showToast(message) {
+        if (!copyToast) return;
+        copyToast.textContent = message;
+        copyToast.classList.add('is-visible');
+        if (copyStatus) {
+          copyStatus.textContent = message;
+        }
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+        }
+        toastTimer = setTimeout(() => {
+          copyToast.classList.remove('is-visible');
+          if (copyStatus) {
+            copyStatus.textContent = '';
+          }
+        }, 2200);
+      }
+
+      function escapeHtml(value = '') {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function toTitleCase(value = '') {
+        return String(value || '')
+          .replace(/[_-]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .replace(/\b([a-z])/g, (match) => match.toUpperCase());
+      }
+
+      function truncateText(value = '', max = 240) {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (text.length <= max) return text;
+        return `${text.slice(0, max).replace(/\s+\S*$/, '')}…`;
       }
 
       function decodeSharePayload(value){
@@ -403,7 +1059,7 @@
             const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
             json = new TextDecoder().decode(bytes);
           } else {
-            json = decodeURIComponent(Array.from(binary).map((ch) => `%${ch.charCodeAt(0).toString(16).padStart(2,'0')}`).join(''));
+            json = decodeURIComponent(Array.from(binary).map((ch) => `%${ch.charCodeAt(0).toString(16).padStart(2, '0')}`).join(''));
           }
           return JSON.parse(json);
         } catch (err) {
@@ -443,22 +1099,29 @@
         let dirty = false;
         const bySlug = { ...store.bySlug };
         const byJob = { ...store.byJob };
+
         Object.entries(bySlug).forEach(([slugKey, entry]) => {
           if (!entry || !entry.expiresAt || entry.expiresAt < now) {
             dirty = true;
             delete bySlug[slugKey];
             const jobKey = entry && entry.jobKey;
-            if (jobKey && byJob[jobKey] === slugKey) delete byJob[jobKey];
+            if (jobKey && byJob[jobKey] === slugKey) {
+              delete byJob[jobKey];
+            }
           }
         });
+
         Object.entries(byJob).forEach(([jobKey, slugKey]) => {
           if (!slugKey || !bySlug[slugKey]) {
             dirty = true;
             delete byJob[jobKey];
           }
         });
+
         const next = { version: store.version || 1, bySlug, byJob };
-        if (dirty) writeLocalShareStore(next);
+        if (dirty) {
+          writeLocalShareStore(next);
+        }
         return next;
       }
 
@@ -482,35 +1145,7 @@
         return entry;
       }
 
-      copyBtn?.addEventListener('click', () => {
-        if (!shareContext) return;
-        const { jobTitle, locationText, applyUrl, shareLink } = shareContext;
-        const lines = [jobTitle, locationText, applyUrl, shareLink].filter(Boolean);
-        if (!lines.length) return;
-        const text = lines.join('\n');
-        const notify = (label) => {
-          copyBtn.textContent = label;
-          if (copyStatus) {
-            copyStatus.textContent = label;
-          }
-          setTimeout(() => {
-            copyBtn.textContent = defaultCopyLabel;
-            if (copyStatus) {
-              copyStatus.textContent = '';
-            }
-          }, 1800);
-        };
-        if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(text).then(
-            () => notify('Link copied'),
-            () => fallbackCopy(text, notify)
-          );
-        } else {
-          fallbackCopy(text, notify);
-        }
-      });
-
-      function fallbackCopy(text, notify) {
+      function fallbackCopy(text) {
         try {
           const helper = document.createElement('textarea');
           helper.value = text;
@@ -521,12 +1156,27 @@
           helper.select();
           document.execCommand('copy');
           document.body.removeChild(helper);
-          notify('Link copied');
+          showToast('Share link copied');
         } catch (err) {
           console.warn('[spec] clipboard copy failed', err);
-          notify('Copy failed');
+          showToast('Unable to copy link');
         }
       }
+
+      copyButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          if (!shareContext?.shareLink) return;
+          const text = shareContext.shareLink;
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(
+              () => showToast('Share link copied'),
+              () => fallbackCopy(text)
+            );
+          } else {
+            fallbackCopy(text);
+          }
+        });
+      });
 
       function toAmount(value) {
         if (value === null || value === undefined || value === '') return null;
@@ -535,7 +1185,7 @@
       }
 
       function normaliseCurrency(value, fallback = '') {
-        const raw = (value || '').toString().trim().toUpperCase();
+        const raw = String(value || '').trim().toUpperCase();
         if (!raw) return fallback;
         if (raw === '£') return 'GBP';
         if (raw === '€') return 'EUR';
@@ -544,7 +1194,7 @@
       }
 
       function inferPayType(job = {}) {
-        const explicit = (job.payType || job.pay_type || '').toString().trim().toLowerCase();
+        const explicit = String(job.payType || job.pay_type || '').trim().toLowerCase();
         if (['day_rate', 'salary_range', 'hourly_range', 'competitive', 'negotiable'].includes(explicit)) {
           return explicit;
         }
@@ -620,6 +1270,316 @@
         return '';
       }
 
+      function formatDate(value, includeTime = false) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return includeTime
+          ? date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+          : date.toLocaleDateString(undefined, { dateStyle: 'medium' });
+      }
+
+      function buildHighlights(job, details) {
+        const cards = [];
+        if (details.payText) {
+          cards.push({
+            label: 'Package',
+            value: details.payText,
+            text: 'Compensation is already surfaced clearly on the role page.',
+          });
+        }
+        if (details.locationText) {
+          cards.push({
+            label: 'Location',
+            value: details.locationText,
+            text: 'Candidates can immediately see the project geography.',
+          });
+        }
+        if (details.employmentText) {
+          cards.push({
+            label: 'Employment',
+            value: details.employmentText,
+            text: 'The role type is clear before entering the application form.',
+          });
+        }
+        if (details.customerText) {
+          cards.push({
+            label: 'Project context',
+            value: details.customerText,
+            text: 'Public customer information is integrated into the offer story.',
+          });
+        }
+        if (!cards.length && details.tags.length) {
+          cards.push({
+            label: 'Skills focus',
+            value: details.tags.slice(0, 3).join(' • '),
+            text: 'Key capability signals pulled from the published role data.',
+          });
+        }
+        if (cards.length < 4 && details.benefits.length) {
+          cards.push({
+            label: 'Candidate support',
+            value: details.benefits.slice(0, 2).join(' • '),
+            text: 'Benefits and support points are surfaced earlier in the page.',
+          });
+        }
+        if (cards.length < 4 && details.tags.length) {
+          cards.push({
+            label: 'Skills focus',
+            value: details.tags.slice(0, 3).join(' • '),
+            text: 'Useful at-a-glance keywords from the role profile.',
+          });
+        }
+        return cards.slice(0, 4);
+      }
+
+      function setText(id, value) {
+        const node = document.getElementById(id);
+        if (node) node.textContent = value || '';
+      }
+
+      function setHtmlList(id, items, className) {
+        const node = document.getElementById(id);
+        if (!node) return;
+        node.innerHTML = (items || []).map((item) => `<span class="${className}">${escapeHtml(item)}</span>`).join('');
+      }
+
+      function buildAvailability(meta) {
+        if (meta.local) return 'Local preview';
+        if (meta.snapshot) return 'Snapshot preview';
+        if (meta.expires_at) return `Expires ${formatDate(meta.expires_at)}`;
+        if (meta.fallback) return 'Direct live link';
+        return 'Active share link';
+      }
+
+      function buildTopBadge(meta) {
+        if (meta.local) return 'Local preview';
+        if (meta.snapshot) return 'Snapshot preview';
+        if (meta.fallback) return meta.schema ? 'Schema fallback' : 'Static fallback';
+        return 'Share page';
+      }
+
+      function buildApplyUrl(job, meta, details) {
+        if (applicationContextApi?.buildApplicationUrl) {
+          return applicationContextApi.buildApplicationUrl({
+            origin: location.origin,
+            currentUrl: location.href,
+            rawApplyUrl: job.applyUrl || job.apply_url || '',
+            shareCode: meta.slug || localSlug || '',
+            source: meta.local ? 'job-share-local' : 'job-share',
+            job: {
+              id: meta.jobId || job.id,
+              title: job.title,
+              locationText: details.locationText,
+              type: details.rawEmploymentType,
+              payText: details.payText,
+              applyUrl: job.applyUrl || job.apply_url || '',
+            },
+          });
+        }
+
+        const fallback = new URL('/contact.html', location.origin);
+        if (job.title) {
+          fallback.searchParams.set('role', job.title);
+          fallback.searchParams.set('job_title', job.title);
+        }
+        if (meta.jobId || job.id) {
+          fallback.searchParams.set('job_id', meta.jobId || job.id);
+        }
+        if (details.locationText) {
+          fallback.searchParams.set('job_location', details.locationText);
+        }
+        if (details.rawEmploymentType) {
+          fallback.searchParams.set('job_type', details.rawEmploymentType);
+        }
+        if (details.payText) {
+          fallback.searchParams.set('job_pay', details.payText);
+        }
+        if (meta.slug || localSlug) {
+          fallback.searchParams.set('job_share_code', meta.slug || localSlug);
+        }
+        fallback.searchParams.set('job_source', meta.local ? 'job-share-local' : 'job-share');
+        fallback.searchParams.set('job_spec_url', location.href);
+        return `${fallback.pathname}${fallback.search}`;
+      }
+
+      function buildEmailHref(details) {
+        if (!details.shareLink) return '#';
+        const lines = [
+          'I thought this HMJ Global role might be relevant.',
+          '',
+          details.title,
+          details.locationText ? `Location: ${details.locationText}` : '',
+          details.employmentText ? `Employment: ${details.employmentText}` : '',
+          details.payText ? `Package: ${details.payText}` : '',
+          '',
+          `View role: ${details.shareLink}`,
+          details.applyUrl ? `Apply: ${new URL(details.applyUrl, location.origin).href}` : '',
+        ].filter(Boolean);
+        const subject = `HMJ Global role: ${details.title}`;
+        return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+      }
+
+      function renderSpec(job, meta){
+        const payText = job.payText || buildPayText(job);
+        const locationText = job.locationText || 'Flexible / discussed with HMJ';
+        const rawEmploymentType = String(job.type || '').trim();
+        const employmentText = rawEmploymentType ? toTitleCase(rawEmploymentType) : 'Discuss with HMJ';
+        const customerText = String(job.customer || '').trim();
+        const benefits = Array.isArray(job.benefits) ? job.benefits.filter(Boolean) : [];
+        const tags = Array.isArray(job.tags) ? job.tags.filter(Boolean) : [];
+        const reference = meta.jobId || job.id || '';
+        const shareCode = meta.slug || localSlug || '';
+        const overviewText = String(job.overview || '').trim();
+        const intro = overviewText
+          ? truncateText(overviewText, 210)
+          : `Explore this HMJ Global opportunity${locationText ? ` in ${locationText}` : ''} and move straight into the application flow with the role context attached.`;
+
+        const details = {
+          title: job.title || 'Role',
+          locationText,
+          rawEmploymentType,
+          employmentText,
+          payText,
+          customerText,
+          benefits,
+          tags,
+          shareLink: location.href,
+        };
+
+        const applyUrl = buildApplyUrl(job, meta, details);
+        details.applyUrl = applyUrl;
+
+        const emailHref = buildEmailHref(details);
+        const highlights = buildHighlights(job, details);
+
+        document.title = `${details.title} | HMJ Global`;
+
+        const statusEl = document.getElementById('status');
+        const status = String(job.status || 'live').toLowerCase();
+        statusEl.textContent = status === 'closed' ? 'Closed' : status === 'interviewing' ? 'Interviewing' : 'Live';
+        statusEl.className = `badge ${status === 'closed' ? 'closed' : status === 'interviewing' ? 'interviewing' : 'live'}`;
+
+        setText('title', details.title);
+        setText('heroIntro', intro);
+        setText('location', details.locationText);
+        setText('employment', details.employmentText);
+        setText('overview', overviewText || 'HMJ Global will share further detail during the application conversation.');
+        setText('reference', reference);
+        setText('customer', customerText);
+        setText('shareCode', shareCode || 'Direct link');
+        setText('shareExpiry', buildAvailability(meta));
+        setText('shareTimestamp', formatDate(meta.refreshed_at || meta.created_at || meta.expires_at, true) || 'Current');
+        setText('applyPanelSummary', [details.title, details.locationText, details.employmentText].filter(Boolean).join(' • '));
+        setText('stickyTitle', details.title);
+        setText('stickyMeta', [details.locationText, details.employmentText, details.payText || reference].filter(Boolean).join(' • '));
+
+        const payCard = document.getElementById('payCard');
+        if (payText) {
+          setText('pay', payText);
+          payCard.style.display = '';
+        } else {
+          payCard.style.display = 'none';
+        }
+
+        const referenceCard = document.getElementById('referenceCard');
+        referenceCard.style.display = reference ? '' : 'none';
+
+        const sectionBadge = document.getElementById('sectionBadge');
+        if (job.sectionLabel || job.section) {
+          sectionBadge.textContent = job.sectionLabel || job.section;
+          sectionBadge.style.display = '';
+        } else {
+          sectionBadge.style.display = 'none';
+        }
+
+        const tagsGroup = document.getElementById('tagsGroup');
+        if (tags.length) {
+          setHtmlList('tags', tags, 'chip');
+          tagsGroup.style.display = '';
+        } else {
+          document.getElementById('tags').innerHTML = '';
+          tagsGroup.style.display = 'none';
+        }
+
+        const highlightsNode = document.getElementById('highlights');
+        highlightsNode.innerHTML = highlights.map((card) => `
+          <article class="highlight-card">
+            <span class="highlight-card__label">${escapeHtml(card.label)}</span>
+            <span class="highlight-card__value">${escapeHtml(card.value)}</span>
+            <p class="highlight-card__text">${escapeHtml(card.text)}</p>
+          </article>
+        `).join('');
+
+        const customerCard = document.getElementById('customerCard');
+        customerCard.style.display = customerText ? '' : 'none';
+
+        const benefitsCard = document.getElementById('benefitsCard');
+        if (benefits.length) {
+          setHtmlList('benefits', benefits, 'benefit-pill');
+          benefitsCard.style.display = '';
+        } else {
+          document.getElementById('benefits').innerHTML = '';
+          benefitsCard.style.display = 'none';
+        }
+
+        const respItems = Array.isArray(job.responsibilities) ? job.responsibilities.filter(Boolean) : [];
+        const respSection = document.getElementById('responsibilitiesSection');
+        const respList = document.getElementById('respList');
+        respList.innerHTML = respItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+        respSection.style.display = respItems.length ? '' : 'none';
+
+        const reqItems = Array.isArray(job.requirements) ? job.requirements.filter(Boolean) : [];
+        const reqSection = document.getElementById('requirementsSection');
+        const reqList = document.getElementById('reqList');
+        reqList.innerHTML = reqItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+        reqSection.style.display = reqItems.length ? '' : 'none';
+
+        const metaParts = [];
+        if (meta.snapshot) metaParts.push('Snapshot preview');
+        if (meta.local) metaParts.push('Local preview');
+        if (meta.slug && !meta.local) metaParts.push(`Share code ${meta.slug}`);
+        if (meta.created_at) metaParts.push(`Created ${formatDate(meta.created_at, true)}`);
+        if (meta.refreshed_at) metaParts.push(`Updated ${formatDate(meta.refreshed_at, true)}`);
+        if (meta.last_accessed && meta.local) metaParts.push(`Opened ${formatDate(meta.last_accessed, true)}`);
+        if (meta.expires_at) metaParts.push(`Expires ${formatDate(meta.expires_at)}`);
+        if (meta.fallback) metaParts.push(meta.schema ? 'Schema fallback' : 'Static fallback');
+        setText('meta', metaParts.join(' • '));
+
+        const badgeText = buildTopBadge(meta);
+        if (topMetaBadge && badgeText) {
+          topMetaBadge.textContent = badgeText;
+          topMetaBadge.style.display = '';
+        }
+
+        shareContext = {
+          shareLink: location.href,
+          emailHref,
+          applyUrl,
+        };
+
+        applyLinks.forEach((link) => {
+          link.href = applyUrl;
+        });
+        emailLinks.forEach((link) => {
+          link.href = emailHref;
+        });
+        copyButtons.forEach((button) => {
+          button.disabled = false;
+          button.removeAttribute('aria-disabled');
+        });
+
+        if (stickyCta) {
+          stickyCta.style.display = '';
+        }
+      }
+
+      function showError(message) {
+        loading.style.display = 'none';
+        errorBox.textContent = message;
+        errorBox.style.display = 'block';
+      }
+
       if (payloadParam) {
         const payload = decodeSharePayload(payloadParam);
         if (payload && payload.job) {
@@ -627,6 +1587,7 @@
             ...(payload.meta || {}),
             snapshot: true,
             local: false,
+            jobId: payload.job?.id || payload.meta?.jobId || null,
           };
           if (localSlug) {
             try {
@@ -637,12 +1598,10 @@
           }
           renderSpec(payload.job, meta);
           loading.style.display = 'none';
-          card.style.display = 'grid';
+          page.style.display = 'grid';
           return;
         }
-        loading.style.display = 'none';
-        errorBox.textContent = 'This share link is invalid or has expired. Please generate a new link from the HMJ Global admin dashboard.';
-        errorBox.style.display = 'block';
+        showError('This share link is invalid or has expired. Please generate a new link from the HMJ Global admin dashboard.');
         return;
       }
 
@@ -652,25 +1611,22 @@
           renderSpec(localEntry.job, {
             slug: localEntry.slug,
             local: true,
+            jobId: localEntry.job?.id || null,
             created_at: localEntry.createdAt || null,
             expires_at: localEntry.expiresAt || null,
             refreshed_at: localEntry.updatedAt || null,
             last_accessed: localEntry.lastAccessed || null,
           });
           loading.style.display = 'none';
-          card.style.display = 'grid';
+          page.style.display = 'grid';
           return;
         }
-        loading.style.display = 'none';
-        errorBox.textContent = 'This preview link has expired or is unavailable on this device. Please generate a fresh link from the HMJ Global admin dashboard.';
-        errorBox.style.display = 'block';
+        showError('This preview link has expired or is unavailable on this device. Please generate a fresh link from the HMJ Global admin dashboard.');
         return;
       }
 
       if (!slug && !jobId) {
-        loading.style.display = 'none';
-        errorBox.textContent = 'Missing share link. Please contact HMJ Global for a fresh link.';
-        errorBox.style.display = 'block';
+        showError('Missing share link. Please contact HMJ Global for a fresh link.');
         return;
       }
 
@@ -680,98 +1636,18 @@
         if (jobId) qs.set('id', jobId);
         const res = await fetch(`/.netlify/functions/job-spec-get?${qs.toString()}`, { cache: 'no-store' });
         if (!res.ok) {
-          const msg = await res.json().catch(()=>({}));
+          const msg = await res.json().catch(() => ({}));
           throw new Error(msg.error || `Unable to load spec (${res.status})`);
         }
         const data = await res.json();
-        if (!data?.job) throw new Error('Job not found');
+        if (!data?.job) {
+          throw new Error('Job not found');
+        }
         renderSpec(data.job, data);
         loading.style.display = 'none';
-        card.style.display = 'grid';
+        page.style.display = 'grid';
       } catch (err) {
-        loading.style.display = 'none';
-        errorBox.textContent = err.message || 'Unable to load job spec.';
-        errorBox.style.display = 'block';
-      }
-
-      function renderSpec(job, meta){
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = job.status ? job.status.toUpperCase() : 'OPEN';
-        statusEl.className = `badge ${job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live'}`;
-        document.getElementById('title').textContent = job.title || 'Role';
-        if (job.title) {
-          document.title = `${job.title} | HMJ Global`;
-        }
-        const locationText = job.locationText || 'Flexible';
-        document.getElementById('location').textContent = locationText;
-        document.getElementById('employment').textContent = job.type ? job.type.toUpperCase() : '';
-        const payText = job.payText || buildPayText(job);
-        const payEl = document.getElementById('pay');
-        if (payText) {
-          payEl.textContent = payText;
-          payEl.style.display = '';
-        } else {
-          payEl.textContent = '';
-          payEl.style.display = 'none';
-        }
-        const tags = Array.isArray(job.tags) ? job.tags : [];
-        const tagHost = document.getElementById('tags');
-        if (tags.length) {
-          tagHost.innerHTML = tags.map(tag => `<span>${tag}</span>`).join('');
-          tagHost.style.display = '';
-        } else {
-          tagHost.innerHTML = '';
-          tagHost.style.display = 'none';
-        }
-        document.getElementById('overview').textContent = job.overview || '';
-        const customerText = (job.customer || '').toString().trim();
-        const customerSection = document.getElementById('customerSection');
-        const customerEl = document.getElementById('customer');
-        customerEl.textContent = customerText;
-        customerSection.style.display = customerText ? '' : 'none';
-        const benefits = Array.isArray(job.benefits) ? job.benefits : [];
-        const benefitsSection = document.getElementById('benefitsSection');
-        const benefitsEl = document.getElementById('benefits');
-        if (benefits.length) {
-          benefitsEl.innerHTML = benefits.map(item => `<span>${item}</span>`).join('');
-          benefitsSection.style.display = '';
-        } else {
-          benefitsEl.innerHTML = '';
-          benefitsSection.style.display = 'none';
-        }
-        const respSection = document.getElementById('responsibilities');
-        const respList = document.getElementById('respList');
-        respList.innerHTML = (job.responsibilities || []).map(item => `<li>${item}</li>`).join('');
-        respSection.style.display = respList.innerHTML ? '' : 'none';
-        const reqSection = document.getElementById('requirements');
-        const reqList = document.getElementById('reqList');
-        reqList.innerHTML = (job.requirements || []).map(item => `<li>${item}</li>`).join('');
-        reqSection.style.display = reqList.innerHTML ? '' : 'none';
-        const apply = job.applyUrl && job.applyUrl.trim() ? job.applyUrl.trim() : `https://www.hmj-global.com/contact.html?role=${encodeURIComponent(job.title||'Role')}`;
-        const applyBtn = document.getElementById('applyBtn');
-        applyBtn.href = apply;
-        const metaParts = [];
-        if (meta.snapshot) metaParts.push('Snapshot preview');
-        if (meta.local) metaParts.push('Local preview');
-        if (meta.slug && !meta.local) metaParts.push(`Share code ${meta.slug}`);
-        if (meta.created_at) metaParts.push(new Date(meta.created_at).toLocaleString());
-        if (meta.refreshed_at) metaParts.push(`Updated ${new Date(meta.refreshed_at).toLocaleString()}`);
-        if (meta.last_accessed && meta.local) metaParts.push(`Opened ${new Date(meta.last_accessed).toLocaleString()}`);
-        if (meta.expires_at) metaParts.push(`Expires ${new Date(meta.expires_at).toLocaleDateString()}`);
-        if (meta.fallback) metaParts.push('Static preview');
-        const metaEl = document.getElementById('meta');
-        metaEl.textContent = metaParts.join(' • ');
-        metaEl.style.display = metaParts.length ? '' : 'none';
-        shareContext = {
-          jobTitle: job.title || 'Role',
-          locationText,
-          applyUrl: apply,
-          shareLink: location.href,
-        };
-        if (copyBtn) {
-          copyBtn.disabled = false;
-          copyBtn.removeAttribute('aria-disabled');
-        }
+        showError(err.message || 'Unable to load job spec.');
       }
     })();
   </script>
