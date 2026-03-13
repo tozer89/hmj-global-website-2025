@@ -76,6 +76,30 @@ startxref
   assert.match(result.combinedText, /Readable HMJ PDF text/);
 });
 
+test('extractCandidateDocuments reads text from a readable DOCX buffer', async () => {
+  const docxBase64 = 'UEsDBBQAAAAIAIBybVzXeYTq8QAAALgBAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbH2QzU7DMBCE730Ky9cqccoBIZSkB36OwKE8wMreJFb9J69b2rdn00KREOVozXwz62nXB+/EHjPZGDq5qhspMOhobBg7+b55ru6koALBgIsBO3lEkut+0W6OCUkwHKiTUynpXinSE3qgOiYMrAwxeyj8zKNKoLcworppmlulYygYSlXmDNkvhGgfcYCdK+LpwMr5loyOpHg4e+e6TkJKzmoorKt9ML+Kqq+SmsmThyabaMkGqa6VzOL1jh/0lSfK1qB4g1xewLNRfcRslIl65xmu/0/649o4DFbjhZ/TUo4aiXh77+qL4sGG71+06jR8/wlQSwMEFAAAAAgAgHJtXCAbhuqyAAAALgEAAAsAAABfcmVscy8ucmVsc43Puw6CMBQG4J2naM4uBQdjDIXFmLAafICmPZRGeklbL7y9HRzEODie23fyN93TzOSOIWpnGdRlBQStcFJbxeAynDZ7IDFxK/nsLDJYMELXFs0ZZ57yTZy0jyQjNjKYUvIHSqOY0PBYOo82T0YXDE+5DIp6Lq5cId1W1Y6GTwPagpAVS3rJIPSyBjIsHv/h3ThqgUcnbgZt+vHlayPLPChMDB4uSCrf7TKzQHNKuorZvgBQSwMEFAAAAAgAgHJtXEjS6NmyAAAA7AAAABEAAAB3b3JkL2RvY3VtZW50LnhtbDWOwQrCMBBE737FkrumehApbXpQRAQRRMFrbFYtNLshiVb/3qTg5THDwNutmo/t4Y0+dEy1mM8KAUgtm44etbict9OVgBA1Gd0zYS2+GESjJtVQGm5fFilCMlAoh1o8Y3SllKF9otVhxg4pbXf2VsdU/UMO7I3z3GII6YDt5aIoltLqjoSaACTrjc03x7E4leAzojqhNvrWI+wOe9gc11eI+ImVzFumH+lGjfx7cvr/qX5QSwECFAMUAAAACACAcm1c13mE6vEAAAC4AQAAEwAAAAAAAAAAAAAAgAEAAAAAW0NvbnRlbnRfVHlwZXNdLnhtbFBLAQIUAxQAAAAIAIBybVwgG4bqsgAAAC4BAAALAAAAAAAAAAAAAACAASIBAABfcmVscy8ucmVsc1BLAQIUAxQAAAAIAIBybVxI0ujZsgAAAOwAAAARAAAAAAAAAAAAAACAAf0BAAB3b3JkL2RvY3VtZW50LnhtbFBLBQYAAAAAAwADALkAAADeAgAAAAA=';
+  const buffer = Buffer.from(docxBase64, 'base64');
+
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-2',
+    name: 'Readable CV.docx',
+    extension: 'docx',
+    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    size: buffer.byteLength,
+    status: 'ready',
+    buffer,
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }]);
+
+  assert.equal(result.successCount, 1);
+  assert.equal(result.failureCount, 0);
+  assert.equal(result.documents[0].status, 'ok');
+  assert.match(result.combinedText, /Readable HMJ DOCX text/);
+});
+
 test('fetchPublishedLiveJobs keeps only published roles with live status', async () => {
   const rows = [
     { id: 'job-1', title: 'Live role', published: true, status: 'live', type: 'contract' },
@@ -299,6 +323,89 @@ test('candidate match handler returns per-file extraction diagnostics when no fi
   assert.equal(Array.isArray(payload.details.documents), true);
   assert.equal(payload.details.documents[0].name, 'candidate.pdf');
   assert.match(payload.details.documents[0].error, /PDF extraction dependency is unavailable/);
+});
+
+test('candidate match handler returns stage metadata when OpenAI times out', async () => {
+  const originals = {
+    prepareCandidateFiles: core.prepareCandidateFiles,
+    extractCandidateDocuments: core.extractCandidateDocuments,
+    fetchPublishedLiveJobs: core.fetchPublishedLiveJobs,
+    maybeStoreUploads: core.maybeStoreUploads,
+    callOpenAIForMatch: core.callOpenAIForMatch,
+  };
+
+  core.prepareCandidateFiles = () => [{
+    id: 'file-1',
+    name: 'candidate.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: 1024,
+    status: 'ready',
+    buffer: Buffer.from('fake'),
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+    storageKey: '',
+  }];
+  core.extractCandidateDocuments = async (documents) => ({
+    documents: [{
+      ...documents[0],
+      status: 'ok',
+      extractedText: 'Candidate text',
+      extractedTextLength: 14,
+    }],
+    successful: [{
+      ...documents[0],
+      status: 'ok',
+      extractedText: 'Candidate text',
+      extractedTextLength: 14,
+    }],
+    failed: [],
+    successCount: 1,
+    failureCount: 0,
+    combinedText: 'Candidate text',
+  });
+  core.fetchPublishedLiveJobs = async () => [{
+    job_id: 'job-1',
+    title: 'Live role',
+    published: true,
+    status: 'live',
+  }];
+  core.maybeStoreUploads = async () => ({ stored: false, bucket: '', warnings: [] });
+  core.callOpenAIForMatch = async () => {
+    throw core.coded(504, 'OpenAI candidate matching timed out after 18000ms.', 'openai_timeout', {
+      details: {
+        stage: 'openai',
+        stage_label: 'Run recruiter matching',
+        timeout_ms: 18000,
+      }
+    });
+  };
+
+  const handler = createCandidateMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      files: [{ name: 'candidate.pdf', data: 'ignored' }],
+      recruiterNotes: '',
+      saveHistory: false,
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 504);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, 'openai_timeout');
+  assert.equal(payload.details.stage, 'openai');
+  assert.equal(payload.details.stage_label, 'Run recruiter matching');
+  assert.equal(Array.isArray(payload.details.timings), true);
 });
 
 test('history list handler returns disabled state when no table is configured', async () => {

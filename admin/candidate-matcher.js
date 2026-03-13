@@ -24,13 +24,23 @@
       message: 'Running structured OpenAI matching and preparing results…',
     }
   ];
+  const STAGE_INDEX_BY_KEY = {
+    prepare_intake: 0,
+    extraction: 1,
+    storage_upload: 1,
+    jobs_fetch: 2,
+    openai: 3,
+    history_save: 3,
+  };
+  const CLIENT_REQUEST_TIMEOUT_MS = 35000;
 
   const state = {
     files: [],
     historyRuns: [],
     busy: false,
-    progressTimer: null,
     progressIndex: -1,
+    progressFailureIndex: -1,
+    activeRequestId: '',
     helpers: null,
   };
 
@@ -135,16 +145,21 @@
     elements.recruiterNotes.disabled = state.busy;
   }
 
-  function renderStageList(activeIndex, complete) {
+  function renderStageList(activeIndex, complete, failedIndex) {
     elements.stageList.innerHTML = PROGRESS_STAGES.map((stage, index) => {
-      const stateClass = complete
-        ? 'complete'
-        : activeIndex === index
-          ? 'current'
-          : activeIndex > index
-            ? 'complete'
-            : '';
-      const stateLabel = complete || activeIndex > index
+      const isFailed = failedIndex === index;
+      const stateClass = isFailed
+        ? 'failed'
+        : complete
+          ? 'complete'
+          : activeIndex === index
+            ? 'current'
+            : activeIndex > index
+              ? 'complete'
+              : '';
+      const stateLabel = isFailed
+        ? '<span class="stage-state bad">Failed</span>'
+        : complete || activeIndex > index
         ? '<span class="stage-state ok">Done</span>'
         : activeIndex === index
           ? '<span class="stage-state">Working</span>'
@@ -159,28 +174,63 @@
     }).join('');
   }
 
-  function setProgress(statusText, detailText, activeIndex, complete) {
+  function setProgress(statusText, detailText, activeIndex, complete, failedIndex) {
     elements.analysisStatus.textContent = statusText;
     elements.progressText.textContent = detailText;
     state.progressIndex = Number.isFinite(activeIndex) ? activeIndex : -1;
-    renderStageList(state.progressIndex, !!complete);
+    state.progressFailureIndex = Number.isFinite(failedIndex) ? failedIndex : -1;
+    renderStageList(state.progressIndex, !!complete, state.progressFailureIndex);
   }
 
   function startProgress() {
-    stopProgress();
-    let index = 0;
-    setProgress('Processing candidate analysis', PROGRESS_STAGES[index].message, index, false);
-    state.progressTimer = window.setInterval(() => {
-      index = (index + 1) % PROGRESS_STAGES.length;
-      setProgress('Processing candidate analysis', PROGRESS_STAGES[index].message, index, false);
-    }, 1700);
+    setProgress('Preparing candidate analysis', PROGRESS_STAGES[0].message, 0, false, -1);
   }
 
   function stopProgress() {
-    if (state.progressTimer) {
-      window.clearInterval(state.progressTimer);
-      state.progressTimer = null;
-    }
+    return undefined;
+  }
+
+  function stageIndexForKey(key) {
+    return Object.prototype.hasOwnProperty.call(STAGE_INDEX_BY_KEY, key)
+      ? STAGE_INDEX_BY_KEY[key]
+      : -1;
+  }
+
+  function buildFailureProgress(error) {
+    const stageKey = String(error?.details?.stage || '').toLowerCase();
+    const failureIndex = stageIndexForKey(stageKey);
+    const stageLabel = error?.details?.stage_label || '';
+    const timeoutMs = Number(error?.details?.timeout_ms) || 0;
+    const durationMs = Number(error?.details?.stage_duration_ms) || 0;
+    const bits = [];
+    if (stageLabel) bits.push(`${stageLabel} failed.`);
+    if (timeoutMs) bits.push(`Timeout limit ${Math.round(timeoutMs / 1000)}s.`);
+    if (durationMs) bits.push(`Stage ran for ${(durationMs / 1000).toFixed(1)}s.`);
+    if (!bits.length) bits.push(error?.message || 'The matcher could not complete this run.');
+    return {
+      failureIndex: failureIndex >= 0 ? failureIndex : Math.max(state.progressIndex, 1),
+      detail: bits.join(' '),
+    };
+  }
+
+  function callMatcherApi(path, body) {
+    let timer = null;
+    return Promise.race([
+      state.helpers.api(path, 'POST', body),
+      new Promise((_, reject) => {
+        timer = window.setTimeout(() => {
+          const error = new Error(`The matcher did not return within ${Math.round(CLIENT_REQUEST_TIMEOUT_MS / 1000)} seconds.`);
+          error.details = {
+            stage: 'openai',
+            stage_label: 'Run recruiter matching',
+            timeout_ms: CLIENT_REQUEST_TIMEOUT_MS,
+          };
+          reject(error);
+        }, CLIENT_REQUEST_TIMEOUT_MS);
+      }),
+    ]).finally(() => {
+      if (timer) window.clearTimeout(timer);
+    });
   }
 
   function renderQueueSummary() {
@@ -587,6 +637,8 @@
       return;
     }
 
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    state.activeRequestId = requestId;
     setBusy(true);
     startProgress();
     renderWarnings([]);
@@ -595,11 +647,20 @@
 
     try {
       const files = await buildFilesPayload();
-      const response = await state.helpers.api('admin-candidate-match', 'POST', {
+      if (state.activeRequestId !== requestId) return;
+      setProgress(
+        'Server-side extraction in progress',
+        'Candidate files were packaged successfully. The server is now extracting evidence and preparing the matcher run.',
+        1,
+        false,
+        -1
+      );
+      const response = await callMatcherApi('admin-candidate-match', {
         files,
         recruiterNotes: elements.recruiterNotes.value,
         saveHistory: elements.saveHistory.checked,
       });
+      if (state.activeRequestId !== requestId) return;
 
       renderWarnings(response.warnings || []);
       renderResult(response.result, {
@@ -610,7 +671,7 @@
       });
 
       stopProgress();
-      setProgress('Analysis complete', 'The candidate summary and ranked role matches are ready to review.', PROGRESS_STAGES.length - 1, true);
+      setProgress('Analysis complete', 'The candidate summary and ranked role matches are ready to review.', PROGRESS_STAGES.length - 1, true, -1);
       elements.jobsChip.textContent = `${response.live_jobs_count || 0} live jobs analysed`;
       elements.jobsChip.className = 'chip ok';
       state.helpers.toast.ok('Candidate analysis complete.', 3200);
@@ -618,8 +679,16 @@
         await loadHistory();
       }
     } catch (error) {
+      if (state.activeRequestId !== requestId) return;
       stopProgress();
-      setProgress('Analysis failed', error.message || 'The matcher could not complete this run.', -1, false);
+      const failure = buildFailureProgress(error);
+      setProgress(
+        'Analysis failed',
+        failure.detail,
+        failure.failureIndex,
+        false,
+        failure.failureIndex
+      );
       elements.jobsChip.textContent = 'Analysis failed';
       elements.jobsChip.className = 'chip bad';
       const diagnostics = safeArray(error?.details?.details?.documents).map((document) => ({
@@ -631,10 +700,30 @@
         ].filter(Boolean).join(' | '),
         status: document.status || 'error',
       }));
+      const stageSummary = error?.details?.stage_label
+        ? [{
+          file: error.details.stage_label,
+          message: [
+            error.message || 'Matcher stage failed.',
+            Number.isFinite(Number(error?.details?.stage_duration_ms))
+              ? `Stage duration: ${(Number(error.details.stage_duration_ms) / 1000).toFixed(1)}s`
+              : '',
+            Number.isFinite(Number(error?.details?.total_duration_ms))
+              ? `Total request: ${(Number(error.details.total_duration_ms) / 1000).toFixed(1)}s`
+              : '',
+          ].filter(Boolean).join(' | '),
+          status: error?.details?.stage || 'error',
+        }]
+        : [];
       renderWarnings(diagnostics.length
         ? diagnostics
+        : stageSummary.length
+          ? stageSummary
         : [{ file: 'Analysis', message: error.message || 'Unexpected matcher failure.', status: 'error' }]);
     } finally {
+      if (state.activeRequestId === requestId) {
+        state.activeRequestId = '';
+      }
       setBusy(false);
     }
   }
@@ -728,8 +817,8 @@
       bindEvents();
       renderFileQueue();
       renderEmptyResults();
-      renderStageList(-1, false);
-      setProgress('Ready to analyse', 'Upload one or more files, add optional recruiter context, then run the matcher.', -1, false);
+      renderStageList(-1, false, -1);
+      setProgress('Ready to analyse', 'Upload one or more files, add optional recruiter context, then run the matcher.', -1, false, -1);
 
       try {
         const who = await helpers.identity('admin');
