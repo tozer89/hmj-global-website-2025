@@ -11,6 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="/admin/short-links.js?v=1"></script>
   <link rel="stylesheet" href="/assets/css/admin.dashboard.enhanced.css?v=1"/>
   <script defer src="/assets/js/admin.dashboard.enhanced.js?v=2"></script>
 
@@ -37,6 +38,44 @@
     .section-head h3{margin:4px 0 0;font-size:22px;line-height:1.15}
     .section-head .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
     .section-head p:last-child{margin:0;max-width:54ch}
+
+    .hero-shell{display:grid;gap:18px;grid-template-columns:minmax(0,1.32fr) minmax(320px,.98fr);align-items:start}
+    .hero-copy{display:grid;gap:16px}
+    .hero-copy__intro{margin:0;max-width:60ch}
+    .shortlink-panel{display:grid;gap:14px;padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.16);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 18px 36px rgba(15,27,63,.08)}
+    .shortlink-panel .btn:not(.outline){background:linear-gradient(180deg,#3657b3,#29489e);color:#fff;border-color:rgba(41,72,158,.48);box-shadow:0 12px 24px rgba(47,78,162,.16)}
+    .shortlink-panel .btn:not(.outline):hover{border-color:rgba(41,72,158,.62)}
+    .shortlink-panel__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .shortlink-panel__head h3{margin:4px 0 0;font-size:22px;line-height:1.15}
+    .shortlink-panel__intro{margin:0}
+    .shortlink-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(47,78,162,.08);border:1px solid rgba(47,78,162,.14);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--highlight)}
+    .shortlink-form,.shortlink-result,.shortlink-history{display:grid;gap:12px}
+    .shortlink-fields{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .utility-field{display:grid;gap:6px}
+    .utility-field--wide{grid-column:1 / -1}
+    .utility-field span{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+    .utility-field input{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink)}
+    .utility-field input[readonly]{background:#f7f9ff;color:var(--highlight);font-weight:800}
+    .utility-note{margin:0;font-size:12px;color:var(--muted)}
+    .shortlink-actions,.shortlink-item__actions{display:flex;gap:8px;flex-wrap:wrap}
+    .shortlink-feedback{padding:11px 12px;border-radius:14px;border:1px solid transparent;font-weight:700}
+    .shortlink-feedback[data-tone="info"]{background:rgba(47,78,162,.08);border-color:rgba(47,78,162,.14);color:var(--highlight)}
+    .shortlink-feedback[data-tone="ok"]{background:rgba(19,135,84,.09);border-color:rgba(19,135,84,.18);color:#0e6f46}
+    .shortlink-feedback[data-tone="error"]{background:rgba(180,35,24,.08);border-color:rgba(180,35,24,.16);color:#9f2c22}
+    .shortlink-result{padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(255,255,255,.78)}
+    .shortlink-result__row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+    .shortlink-history__head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+    .shortlink-history__head h4{margin:0;font-size:16px}
+    .shortlink-list{display:grid;gap:10px}
+    .shortlink-item{display:grid;gap:10px;padding:12px 14px;border-radius:14px;border:1px solid rgba(47,78,162,.12);background:rgba(255,255,255,.88)}
+    .shortlink-item__top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .shortlink-item__title{font-weight:800;line-height:1.25}
+    .shortlink-item__slug{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:rgba(47,78,162,.08);color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.04em}
+    .shortlink-item__slug--inactive{background:rgba(93,111,158,.12);color:var(--muted)}
+    .shortlink-item__meta,.shortlink-item__url{margin:0}
+    .shortlink-item__meta{font-size:12px;color:var(--muted)}
+    .shortlink-item__url{font-size:13px;color:var(--ink);word-break:break-all}
+    .shortlink-empty{padding:14px;border-radius:14px;border:1px dashed rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(247,249,255,.95),rgba(255,255,255,.95));color:var(--muted)}
 
     .quick-strip-panel,.module-shell{display:grid;gap:18px}
     .quick-grid,.module-grid{display:grid;gap:16px}
@@ -77,12 +116,15 @@
       .section-head{align-items:flex-start}
       .card{min-height:unset}
       .quick-link{min-height:unset}
+      .shortlink-fields,.shortlink-result__row,.hero-shell{grid-template-columns:1fr}
+      .shortlink-item__top{flex-direction:column}
     }
 
     @media (min-width:1100px){
       .quick-strip-panel,.module-shell{grid-column:1 / 2}
     }
   </style>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=1" />
 </head>
 <body>
   <div class="top"><div class="row">
@@ -102,30 +144,94 @@
 
   <div class="wrap" id="app" style="display:none">
     <section class="panel hero" aria-labelledby="welcomeHeading">
-      <div class="hero-main">
-        <div>
-          <p class="eyebrow">Welcome back</p>
-          <h2 id="welcomeHeading">Admin</h2>
-          <p class="muted" id="welcomeMeta">Loading user…</p>
-        </div>
-        <div class="hero-meta" aria-live="polite" id="envMeta">Environment • Detecting…</div>
-      </div>
-      <div class="hero-actions">
-        <button id="themeToggle" class="btn ghost small" aria-pressed="false" title="Toggle theme">🌓</button>
-        <details class="view-settings">
-          <summary class="btn ghost small" aria-haspopup="true">View options</summary>
-          <div class="view-panel" role="group" aria-label="Dashboard view preferences">
-            <label class="switch">
-              <span>Future module order</span>
-              <select id="tileOrderSelect">
-                <option value="default">Default</option>
-                <option value="alpha">A → Z</option>
-                <option value="recent">Most recent</option>
-              </select>
-            </label>
-            <button type="button" class="btn ghost small" id="resetView">Reset view</button>
+      <div class="hero-shell">
+        <div class="hero-copy">
+          <div class="hero-main">
+            <div>
+              <p class="eyebrow">Welcome back</p>
+              <h2 id="welcomeHeading">Admin</h2>
+              <p class="muted" id="welcomeMeta">Loading user…</p>
+            </div>
+            <div class="hero-meta" aria-live="polite" id="envMeta">Environment • Detecting…</div>
           </div>
-        </details>
+          <p class="muted hero-copy__intro">Open the live HMJ modules below, or use the utility panel to create clean branded short links for specs, forms, and other shareable resources.</p>
+          <div class="hero-actions">
+            <button id="themeToggle" class="btn ghost small" aria-pressed="false" title="Toggle theme">🌓</button>
+            <details class="view-settings">
+              <summary class="btn ghost small" aria-haspopup="true">View options</summary>
+              <div class="view-panel" role="group" aria-label="Dashboard view preferences">
+                <label class="switch">
+                  <span>Future module order</span>
+                  <select id="tileOrderSelect">
+                    <option value="default">Default</option>
+                    <option value="alpha">A → Z</option>
+                    <option value="recent">Most recent</option>
+                  </select>
+                </label>
+                <button type="button" class="btn ghost small" id="resetView">Reset view</button>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <aside class="shortlink-panel" aria-labelledby="shortLinkHeading">
+          <div class="shortlink-panel__head">
+            <div>
+              <p class="eyebrow">Admin utility</p>
+              <h3 id="shortLinkHeading">Short links</h3>
+            </div>
+            <span class="shortlink-badge">Internal create only</span>
+          </div>
+          <p class="muted shortlink-panel__intro">Generate clean HMJ links at <strong>/go/:slug</strong> for jobs, forms, and polished outbound sharing.</p>
+
+          <form id="shortLinkForm" class="shortlink-form" novalidate>
+            <div class="shortlink-fields">
+              <label class="utility-field">
+                <span>Label</span>
+                <input id="shortLinkTitle" type="text" maxlength="120" placeholder="Candidate pack"/>
+              </label>
+              <label class="utility-field">
+                <span>Short code</span>
+                <input id="shortLinkSlug" type="text" maxlength="80" inputmode="text" placeholder="Leave blank to auto-generate"/>
+              </label>
+              <label class="utility-field utility-field--wide">
+                <span>Destination URL</span>
+                <input id="shortLinkDestination" type="url" required placeholder="https://example.com/long/path"/>
+              </label>
+            </div>
+            <p class="utility-note" id="shortLinkPreview">Leave the short code blank to auto-generate a clean HMJ short link.</p>
+            <div class="shortlink-actions">
+              <button type="button" class="btn outline small" id="btnSuggestShortLink">Suggest code</button>
+              <button type="submit" class="btn small" id="btnCreateShortLink">Generate link</button>
+            </div>
+          </form>
+
+          <div class="shortlink-feedback" id="shortLinkFeedback" hidden></div>
+
+          <section class="shortlink-result" id="shortLinkResult" hidden aria-labelledby="shortLinkResultHeading">
+            <div>
+              <p class="eyebrow">Generated link</p>
+              <h4 id="shortLinkResultHeading" style="margin:4px 0 0;font-size:16px">Ready to copy</h4>
+            </div>
+            <div class="shortlink-result__row">
+              <input id="shortLinkOutput" type="text" readonly aria-label="Generated HMJ short link"/>
+              <button type="button" class="btn outline small" id="btnCopyShortLink">Copy</button>
+              <a class="btn small" id="shortLinkOpen" href="#" target="_blank" rel="noopener">Open</a>
+            </div>
+            <p class="utility-note" id="shortLinkMeta"></p>
+          </section>
+
+          <section class="shortlink-history" aria-labelledby="shortLinkHistoryHeading">
+            <div class="shortlink-history__head">
+              <div>
+                <p class="eyebrow">Recent links</p>
+                <h4 id="shortLinkHistoryHeading">Reuse recent HMJ links</h4>
+              </div>
+              <button type="button" class="btn outline small" id="btnRefreshShortLinks">Refresh</button>
+            </div>
+            <div class="shortlink-list" id="shortLinkList" aria-live="polite"></div>
+          </section>
+        </aside>
       </div>
     </section>
 
@@ -260,6 +366,9 @@
           sel('#welcomeMeta').textContent = `Signed in as ${who.email || 'admin user'}`;
           if (window.HMJDashboardEnhancer && typeof window.HMJDashboardEnhancer.init === 'function') {
             window.HMJDashboardEnhancer.init({ helpers, who });
+          }
+          if (window.HMJShortLinks && typeof window.HMJShortLinks.init === 'function') {
+            window.HMJShortLinks.init({ helpers, who });
           }
         }
       } catch (e) {

@@ -1,0 +1,475 @@
+:root {
+  --hmj-responsive-pad: clamp(14px, 3vw, 28px);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body.public-page,
+.clients-body {
+  overflow-x: hidden;
+}
+
+body.public-page img,
+.clients-body img,
+body:not(.public-page):not(.clients-body) img,
+body:not(.public-page):not(.clients-body) canvas,
+body:not(.public-page):not(.clients-body) svg {
+  max-width: 100%;
+}
+
+body.public-page :is(
+  .public-hero-grid,
+  .public-window--split,
+  .public-callout-band__inner,
+  .public-card-grid,
+  .public-card,
+  .public-window,
+  .public-hero-panel,
+  .entry-hero__card,
+  .jobs-overview__grid,
+  .candidate-support__grid,
+  .apply-rail,
+  .contact-content,
+  .timesheet-hero__panel
+) > *,
+.clients-body :is(
+  .client-hero .hero-inner,
+  .tools-intro,
+  .framework-grid,
+  .form-layout,
+  .notes-layout,
+  .tools-feature-strip,
+  .proof-band,
+  .client-cta-band__inner,
+  .tools-grid
+) > * {
+  min-width: 0;
+}
+
+body.public-page :is(
+  .entry-hero__title,
+  .public-section-head h2,
+  .public-panel__title,
+  .public-card h3,
+  .jobs-overview__card h2,
+  .job h3,
+  .job-context__title,
+  .timesheet-hero__meta h1
+),
+.clients-body :is(
+  .hero-copy h1,
+  .section-heading h2,
+  .hero-panel h2,
+  .client-cta-band__inner h2
+),
+.about-page :is(
+  .about-hero__inner h1,
+  .about-section__header h2,
+  .about-team__card h3,
+  .about-noticeboard__featured-card h3,
+  .about-noticeboard__card h3
+) {
+  overflow-wrap: anywhere;
+}
+
+body.public-page :is(
+  .public-panel__copy,
+  .public-card p,
+  .public-card li,
+  .entry-hero__lead,
+  .public-section-head__copy,
+  .job-summary,
+  .job-context__summary
+),
+.clients-body :is(
+  .hero-lead,
+  .section-copy
+) {
+  max-width: 70ch;
+}
+
+.announce .inner {
+  flex-wrap: wrap;
+  text-align: center;
+}
+
+.hmj-nav {
+  gap: clamp(12px, 2vw, 18px);
+  padding-inline: var(--hmj-responsive-pad);
+}
+
+.hmj-menu {
+  align-items: center;
+}
+
+.hmj-menu li,
+.hmj-menu a {
+  min-width: 0;
+}
+
+.hmj-menu a {
+  white-space: normal;
+}
+
+body.public-page .entry-hero__card,
+body.public-page .public-window,
+body.public-page .public-card,
+body.public-page .public-hero-panel,
+body.public-page .public-callout-band__inner,
+body.public-page .public-cta-band,
+.clients-body .hero-inner,
+.clients-body .hero-panel,
+.clients-body .tool-card,
+.clients-body .client-cta-band__inner,
+.about-page .about-hero__inner,
+.about-page .about-noticeboard__surface,
+.about-page .about-noticeboard__featured-card,
+.about-page .about-dialog__panel,
+body:not(.public-page):not(.clients-body) .panel,
+body:not(.public-page):not(.clients-body) .status-shell {
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  body.public-page .entry-hero__wrap,
+  body.public-page .wrap,
+  body.public-page .public-cta-band,
+  body.public-page .public-callout-band,
+  .about-page .about-shell,
+  .clients-body .client-shell {
+    width: min(100%, calc(100% - 40px));
+  }
+
+  body.public-page .public-hero-grid,
+  body.public-page .public-window--split,
+  body.public-page .public-callout-band__inner,
+  .timesheets-page .timesheet-hero__panel,
+  .contact-page .apply-rail,
+  .client-contact-page .contact-content {
+    gap: 20px;
+  }
+
+  .clients-body .client-hero .hero-inner {
+    gap: 22px;
+  }
+
+  body:not(.public-page):not(.clients-body) .page-shell {
+    width: min(1180px, calc(100% - 32px));
+    padding-bottom: 96px;
+  }
+
+  body:not(.public-page):not(.clients-body) .page-shell .hero {
+    grid-template-columns: minmax(0, 1.12fr) minmax(300px, 0.88fr);
+  }
+
+  body:not(.public-page):not(.clients-body) .page-shell .content-grid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  body:not(.public-page):not(.clients-body) .entry-hero--job .entry-hero__wrap {
+    width: min(100%, calc(100% - 32px));
+  }
+}
+
+@media (max-width: 1120px) {
+  body.public-page .public-hero-grid,
+  body.public-page .public-window--split,
+  body.public-page .public-callout-band__inner,
+  .timesheets-page .timesheet-hero__panel,
+  .timesheets-page .grid,
+  .contact-page .apply-rail,
+  .client-contact-page .contact-content,
+  .about-page .about-noticeboard__surface,
+  .clients-body .client-hero .hero-inner,
+  .clients-body .framework-grid,
+  .clients-body .tools-intro,
+  .clients-body .form-layout,
+  .clients-body .notes-layout,
+  body:not(.public-page):not(.clients-body) .page-shell .hero,
+  body:not(.public-page):not(.clients-body) .page-shell .content-grid,
+  body:not(.public-page):not(.clients-body) main .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  body.public-page .public-card-grid--3,
+  body.public-page .public-card-grid--4,
+  .jobs-page .jobs-overview__grid,
+  .candidates-page .candidate-support__grid,
+  .home-page .grid-3,
+  .candidates-page .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .jobs-page .jobs-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .jobs-page .jobs-overview {
+    margin-top: -16px;
+  }
+
+  .jobs-page .section-title,
+  .jobs-page .jobs-board,
+  .jobs-page .jobs-overview {
+    padding-inline: 16px;
+  }
+
+  .jobs-page .filter-row {
+    align-items: stretch;
+  }
+
+  .jobs-page .search {
+    flex: 1 1 100%;
+  }
+
+  .jobs-page .select,
+  .jobs-page .btn {
+    flex: 1 1 180px;
+  }
+
+  .contact-page .job-context__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contact-page .job-context__header,
+  .contact-page .job-context__actions,
+  .timesheets-page .toprow,
+  body:not(.public-page):not(.clients-body) .topbar {
+    flex-wrap: wrap;
+  }
+
+  .clients-body .brief-sidebar,
+  body:not(.public-page):not(.clients-body) .sticky-cta {
+    position: static;
+  }
+
+  body:not(.public-page):not(.clients-body) .fact-grid,
+  body:not(.public-page):not(.clients-body) .system-grid,
+  body:not(.public-page):not(.clients-body) .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .announce .inner {
+    justify-content: flex-start;
+  }
+
+  .hmj-nav {
+    padding-inline: 14px;
+  }
+
+  body.public-page .entry-hero,
+  .clients-body .client-hero,
+  .about-page .about-hero {
+    padding-inline: 14px;
+  }
+
+  body.public-page .entry-hero__card,
+  body.public-page .public-window,
+  body.public-page .public-card,
+  body.public-page .public-hero-panel,
+  body.public-page .public-callout-band__inner,
+  body.public-page .public-cta-band,
+  .clients-body .hero-inner,
+  .clients-body .hero-panel,
+  .clients-body .tool-card,
+  .clients-body .client-cta-band__inner,
+  .about-page .about-hero__inner,
+  .about-page .about-noticeboard__surface,
+  .about-page .about-noticeboard__featured-card,
+  .about-page .about-dialog__panel,
+  body:not(.public-page):not(.clients-body) .panel,
+  body:not(.public-page):not(.clients-body) .status-shell {
+    border-radius: 24px;
+  }
+
+  .clients-body .tools-feature-strip,
+  .clients-body .proof-band,
+  .clients-body .client-cta-band__inner,
+  body:not(.public-page):not(.clients-body) .fact-grid,
+  body:not(.public-page):not(.clients-body) .system-grid,
+  body:not(.public-page):not(.clients-body) .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-page .about-operating-model__grid,
+  .about-page .about-team__grid,
+  .about-page .about-values__grid,
+  .about-page .about-stats__grid {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(.public-page):not(.clients-body) .topbar__actions,
+  body:not(.public-page):not(.clients-body) .action-row,
+  body:not(.public-page):not(.clients-body) .cta-band__actions,
+  body:not(.public-page):not(.clients-body) .sticky-cta__actions,
+  body:not(.public-page):not(.clients-body) .chip-group {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 720px) {
+  body.public-page .public-card-grid--3,
+  body.public-page .public-card-grid--4,
+  .jobs-page .jobs-overview__grid,
+  .jobs-page .jobs-board,
+  .candidates-page .candidate-support__grid,
+  .home-page .grid-3,
+  .candidates-page .grid-3,
+  .contact-page .job-context__grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.public-page .entry-hero__actions,
+  body.public-page .public-hero-actions,
+  body.public-page .public-card-actions,
+  body.public-page .public-window__actions,
+  body.public-page .public-form-actions,
+  .jobs-page .job-primary-actions,
+  .jobs-page .job-secondary-actions,
+  .jobs-page .empty-actions,
+  .clients-body .hero-actions,
+  .clients-body .client-cta-band__actions,
+  .clients-body .tool-action-row,
+  body:not(.public-page):not(.clients-body) .cta,
+  body:not(.public-page):not(.clients-body) .topbar__actions,
+  body:not(.public-page):not(.clients-body) .action-row,
+  body:not(.public-page):not(.clients-body) .cta-band__actions,
+  body:not(.public-page):not(.clients-body) .sticky-cta__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.public-page .entry-hero__actions > *,
+  body.public-page .public-hero-actions > *,
+  body.public-page .public-card-actions > *,
+  body.public-page .public-window__actions > *,
+  body.public-page .public-form-actions > *,
+  .jobs-page .job-primary-actions > *,
+  .jobs-page .job-secondary-actions > *,
+  .jobs-page .empty-actions > *,
+  .clients-body .hero-actions > *,
+  .clients-body .client-cta-band__actions > *,
+  .clients-body .tool-action-row > *,
+  body:not(.public-page):not(.clients-body) .cta > *,
+  body:not(.public-page):not(.clients-body) .topbar__actions > *,
+  body:not(.public-page):not(.clients-body) .action-row > *,
+  body:not(.public-page):not(.clients-body) .cta-band__actions > *,
+  body:not(.public-page):not(.clients-body) .sticky-cta__actions > * {
+    width: 100%;
+  }
+
+  body.public-page .entry-hero,
+  .clients-body .client-hero,
+  .about-page .about-hero {
+    padding-inline: 12px;
+  }
+
+  body.public-page .entry-hero__card,
+  body.public-page .public-window,
+  body.public-page .public-card,
+  body.public-page .public-hero-panel,
+  body.public-page .public-callout-band__inner,
+  body.public-page .public-cta-band,
+  .timesheets-page .timesheet-hero__panel,
+  .contact-page .apply-support__panel,
+  .contact-page .apply-card,
+  .client-contact-page .contact-form,
+  .client-contact-page .contact-sidecard,
+  .clients-body .hero-inner,
+  .clients-body .hero-panel,
+  .clients-body .tool-card,
+  .clients-body .client-cta-band__inner,
+  .about-page .about-hero__inner,
+  .about-page .about-noticeboard__content,
+  .about-page .about-dialog__content,
+  body:not(.public-page):not(.clients-body) .panel,
+  body:not(.public-page):not(.clients-body) .status-shell {
+    padding: 18px 16px;
+  }
+
+  .jobs-page .jobs-board,
+  .jobs-page .jobs-overview,
+  .jobs-page .section-title,
+  .candidates-page .candidate-support {
+    padding-inline: 12px;
+  }
+
+  .jobs-page .jobs-overview,
+  .candidates-page .candidate-support {
+    margin-top: -12px;
+  }
+
+  .contact-page .apply-wrap,
+  .client-contact-page .contact-content,
+  .timesheets-page .timesheet-hero,
+  .about-page .about-shell,
+  .clients-body .client-shell {
+    width: min(100%, calc(100% - 24px));
+  }
+
+  .contact-page .apply-wrap {
+    margin-top: 24px;
+  }
+
+  .jobs-page .search {
+    min-width: 100%;
+  }
+
+  .jobs-page .chip {
+    justify-content: center;
+  }
+
+  .timesheets-page .toprow {
+    padding: 12px 14px;
+  }
+
+  .timesheets-page .wrap {
+    margin-top: 18px;
+  }
+
+  body:not(.public-page):not(.clients-body) .page-shell {
+    width: min(100%, calc(100% - 24px));
+    padding-bottom: 72px;
+  }
+
+  body:not(.public-page):not(.clients-body) .topbar {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .hmj-nav {
+    padding-inline: 12px;
+  }
+
+  .announce .inner {
+    padding-inline: 12px;
+  }
+
+  body.public-page :is(.entry-hero__title, .public-section-head h2, .public-panel__title),
+  .clients-body :is(.hero-copy h1, .section-heading h2, .client-cta-band__inner h2),
+  .about-page :is(.about-hero__inner h1, .about-section__header h2),
+  body:not(.public-page):not(.clients-body) :is(.hero__title, .hero h1) {
+    font-size: clamp(1.95rem, 9vw, 2.65rem);
+  }
+
+  .clients-body .client-section {
+    padding-inline: 16px;
+  }
+
+  .clients-body .hero-inner,
+  .about-page .about-hero__inner {
+    gap: 14px;
+  }
+
+  body:not(.public-page):not(.clients-body) .topbar__link,
+  body:not(.public-page):not(.clients-body) .topbar__meta,
+  body:not(.public-page):not(.clients-body) .sticky-cta__actions > *,
+  body:not(.public-page):not(.clients-body) .action-row > * {
+    width: 100%;
+  }
+}

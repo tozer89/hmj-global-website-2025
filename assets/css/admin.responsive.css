@@ -1,0 +1,417 @@
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.row,
+.bar,
+.toolbar,
+.filters,
+.filters-row,
+.section-head,
+.summary-head,
+.status-row,
+.hero-main,
+.hero-actions,
+.toggle-line,
+.range-controls,
+.actions,
+.progress-meta,
+.narrative-head,
+.history-top,
+.note-card header,
+.drawer-head,
+.drawer-foot,
+.editor__head,
+.editor__foot,
+.notice-shell__head,
+.warning-actions,
+.small-btns {
+  flex-wrap: wrap;
+}
+
+.row > *,
+.bar > *,
+.toolbar > *,
+.filters > *,
+.filters-row > *,
+.section-head > *,
+.summary-head > *,
+.status-row > *,
+.hero-main > *,
+.hero-actions > * {
+  min-width: 0;
+}
+
+.wrap,
+main,
+.panel,
+.card,
+.layout,
+.workspace,
+.grid-main,
+.hero,
+.summary-grid,
+.summary-splits,
+.results-summary-strip,
+.info-strip,
+.metric-grid,
+.notice-grid,
+.board,
+.table-card,
+.form-grid,
+.grid,
+.control-grid,
+.intake-layout,
+.result-grid,
+.match-grid,
+.evidence-grid,
+.profile,
+.drawer,
+.editor {
+  min-width: 0;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+.table-scroll,
+.vscroll,
+.table-viewport,
+.rows-inner,
+.drawer-body,
+.editor__body,
+.audit-list,
+.activity-list,
+.dbg-logs {
+  overflow: auto;
+}
+
+.toolbar input,
+.search,
+.search input,
+.filters input,
+.filters select,
+.filters-grid .search {
+  min-width: 0;
+}
+
+.pill,
+.chip,
+.badge,
+.status-chip,
+.hero-meta,
+.counter,
+.tag,
+.status-pill {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.view-panel {
+  max-width: min(320px, calc(100vw - 32px));
+}
+
+@media (max-width: 1320px) {
+  .row,
+  .bar,
+  .wrap,
+  main {
+    padding-left: clamp(16px, 2vw, 20px);
+    padding-right: clamp(16px, 2vw, 20px);
+  }
+
+  .panel,
+  .card {
+    border-radius: 18px;
+  }
+
+  .filters-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filters-grid .search {
+    grid-column: 1 / -1;
+  }
+
+  .board {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .grid-main {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .hero-meta,
+  .results-summary-strip,
+  .info-strip,
+  .metric-grid,
+  .summary-splits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .workspace,
+  .layout,
+  .grid-main,
+  .hero,
+  .toggle-panel,
+  .image-panel,
+  .intake-layout,
+  .control-grid,
+  .client-contact-page .contact-content {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar,
+  .qv,
+  .brief-sidebar {
+    position: static;
+    top: auto;
+  }
+
+  .form-grid,
+  .grid,
+  .result-grid,
+  .match-grid,
+  .evidence-grid,
+  .public-visibility__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notice-card {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+
+  .table-header,
+  .table-row {
+    min-width: 1040px;
+  }
+
+  .thead,
+  .trow {
+    min-width: 1080px;
+  }
+
+  #tableWrap,
+  #listWrap,
+  #clientList,
+  #reportTable {
+    overflow: auto;
+  }
+
+  #tableWrap table,
+  #clientList table,
+  #reportTable {
+    min-width: 920px;
+  }
+
+  .drawer,
+  .editor {
+    width: min(720px, calc(100vw - 20px));
+  }
+}
+
+@media (max-width: 900px) {
+  .row,
+  .bar,
+  .wrap,
+  main {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .form-grid,
+  .grid,
+  .hero-meta,
+  .info-strip,
+  .results-summary-strip,
+  .metric-grid,
+  .summary-splits,
+  .result-grid,
+  .match-grid,
+  .evidence-grid,
+  .public-visibility__grid,
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notice-card,
+  .file-card,
+  .match-head {
+    grid-template-columns: 1fr;
+  }
+
+  .match-metrics,
+  .action-cluster,
+  .toggle-controls {
+    justify-items: start;
+  }
+
+  .view-panel {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    top: 74px;
+    min-width: 0;
+  }
+
+  .drawer,
+  .editor {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .table-header,
+  .table-row {
+    min-width: 980px;
+  }
+
+  .thead,
+  .trow {
+    min-width: 980px;
+  }
+
+  #tableWrap table,
+  #clientList table,
+  #reportTable {
+    min-width: 860px;
+  }
+
+  .bulk-bar,
+  .bulkbar {
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 720px) {
+  .panel,
+  .card,
+  .summary-card,
+  .split,
+  .metric,
+  .metric-card,
+  .notice-card,
+  .hero-card,
+  .control-card,
+  .warning-card,
+  .status-card,
+  .match-card {
+    padding: 16px;
+  }
+
+  .drawer-head,
+  .drawer-body,
+  .drawer-foot,
+  .editor__head,
+  .editor__body,
+  .editor__foot,
+  .d-head,
+  .d-body,
+  .d-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .row,
+  .bar {
+    gap: 10px;
+  }
+
+  .btn,
+  .btn.small,
+  .btn.tiny {
+    min-height: 40px;
+  }
+
+  .toolbar > .btn,
+  .toolbar > a,
+  .filters-row .btn,
+  .actions .btn,
+  .hero-actions .btn,
+  .drawer-foot .btn,
+  .editor__foot .btn,
+  .small-btns .btn {
+    flex: 1 1 180px;
+  }
+
+  .kv,
+  dl {
+    grid-template-columns: 1fr;
+  }
+
+  #toast,
+  .toast-zone {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .toolbar,
+  .filters,
+  .filters-row,
+  .actions,
+  .range-controls,
+  .toggle-line,
+  .small-btns,
+  .control-actions,
+  .hero-actions,
+  .notice-card__actions,
+  .editor-actions,
+  .drawer-foot,
+  .editor__foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar > *,
+  .filters > *,
+  .filters-row > *,
+  .actions > *,
+  .range-controls > *,
+  .toggle-line > *,
+  .small-btns > *,
+  .control-actions > *,
+  .hero-actions > *,
+  .notice-card__actions > *,
+  .editor-actions > *,
+  .drawer-foot > *,
+  .editor__foot > * {
+    width: 100%;
+  }
+
+  .brand,
+  .row .brand {
+    width: 100%;
+  }
+
+  .bulk-bar,
+  .bulkbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-header,
+  .table-row,
+  .thead,
+  .trow {
+    min-width: 920px;
+  }
+}
