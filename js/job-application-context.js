@@ -58,7 +58,10 @@
     try {
       const parsed = new URL(raw, base.origin);
       if (isInternalContactUrl(parsed, base.origin)) {
-        return parsed;
+        const normalised = new URL(parsed.pathname || '/contact.html', base.origin);
+        normalised.search = parsed.search;
+        normalised.hash = parsed.hash;
+        return normalised;
       }
     } catch (err) {
       return base;

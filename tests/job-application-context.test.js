@@ -26,6 +26,8 @@ test('buildApplicationUrl normalises HMJ contact links and appends structured jo
   });
 
   const parsed = new URL(url, 'https://deploy-preview-42--hmj-global.netlify.app');
+  assert.equal(url.startsWith('/contact.html?'), true);
+  assert.equal(parsed.origin, 'https://deploy-preview-42--hmj-global.netlify.app');
   assert.equal(parsed.pathname, '/contact.html');
   assert.equal(parsed.searchParams.get('utm_source'), 'share');
   assert.equal(parsed.searchParams.get('role'), 'Senior Planner');
