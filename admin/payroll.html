@@ -143,14 +143,14 @@
     <div id="diagChips" class="chips" style="display:flex;gap:8px"></div>
     <a class="btn ghost" href="/">Website</a>
     <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
-    <button class="btn" onclick="window.netlifyIdentity?.logout()">Sign out</button>
+    <button class="btn" type="button" data-admin-logout>Sign out</button>
   </div></div>
 
   <div class="wrap" id="gate" style="display:none">
     <div class="panel">
       <strong>Admin only.</strong>
       <p class="muted why">Checking your session…</p>
-      <button class="btn" onclick="window.netlifyIdentity?.open('login')">Log in</button>
+      <button class="btn" type="button" data-admin-login>Log in</button>
     </div>
   </div>
 

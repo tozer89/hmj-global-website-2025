@@ -472,6 +472,89 @@
     return ensureIdentityInit(); // allow fallback
   }
 
+  async function openIdentityDialog(mode = 'login') {
+    try {
+      if (typeof window.hmjConfigureIdentity === 'function') {
+        try { window.hmjConfigureIdentity(true); } catch (err) { Debug.warn('hmjConfigureIdentity failed', err); }
+      }
+      const id = await waitIdentityReady(6000);
+      const ready = ensureIdentityInit() || id || window.netlifyIdentity || null;
+      if (ready && typeof ready.open === 'function') {
+        ready.open(mode);
+        return true;
+      }
+    } catch (err) {
+      Debug.warn('identity dialog open failed', err);
+    }
+    toast.err('Sign-in is still loading on this host. Refresh and try again.', 5200);
+    return false;
+  }
+
+  async function logoutIdentitySession() {
+    try {
+      if (typeof window.hmjConfigureIdentity === 'function') {
+        try { window.hmjConfigureIdentity(true); } catch (err) { Debug.warn('hmjConfigureIdentity failed', err); }
+      }
+      const id = await waitIdentityReady(4000);
+      const ready = ensureIdentityInit() || id || window.netlifyIdentity || null;
+      if (ready && typeof ready.logout === 'function') {
+        ready.logout();
+        return true;
+      }
+    } catch (err) {
+      Debug.warn('identity logout failed', err);
+    }
+    toast.err('Sign-out is still loading on this host. Refresh and try again.', 5200);
+    return false;
+  }
+
+  function matchesText(button, expected) {
+    const text = String(button?.textContent || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    return text === expected;
+  }
+
+  function bindIdentityButtons(root = document) {
+    if (!root || typeof root.querySelectorAll !== 'function') return;
+
+    const loginButtons = new Set(root.querySelectorAll('button[data-admin-login]'));
+    const gateButton = root.querySelector('#gate button');
+    if (gateButton) loginButtons.add(gateButton);
+    root.querySelectorAll('.gate-actions button, .top button').forEach((button) => {
+      if (matchesText(button, 'log in') || matchesText(button, 'log in with hmj email') || matchesText(button, 'sign in with hmj email')) {
+        loginButtons.add(button);
+      }
+    });
+
+    loginButtons.forEach((button) => {
+      if (!button || button.dataset.hmjLoginBound === '1') return;
+      button.dataset.hmjLoginBound = '1';
+      button.type = 'button';
+      button.style.pointerEvents = 'auto';
+      button.removeAttribute('onclick');
+      button.onclick = async (event) => {
+        if (event) event.preventDefault();
+        await openIdentityDialog('login');
+      };
+    });
+
+    const signOutButtons = new Set(root.querySelectorAll('button[data-admin-logout], #btnSignOut'));
+    root.querySelectorAll('.top button').forEach((button) => {
+      if (matchesText(button, 'sign out')) signOutButtons.add(button);
+    });
+
+    signOutButtons.forEach((button) => {
+      if (!button || button.dataset.hmjLogoutBound === '1') return;
+      button.dataset.hmjLogoutBound = '1';
+      button.type = 'button';
+      button.style.pointerEvents = 'auto';
+      button.removeAttribute('onclick');
+      button.onclick = async (event) => {
+        if (event) event.preventDefault();
+        await logoutIdentitySession();
+      };
+    });
+  }
+
   // Resolve active user (works with widget or cookie-only)
   async function getIdentityUser() {
     try {
@@ -924,8 +1007,14 @@
       heading.textContent = !who.sessionVerified ? 'HMJ admin sign-in' : 'Admin access required';
     }
     if (button) {
+      button.type = 'button';
       button.textContent = 'Sign in with HMJ email';
+      button.onclick = async (event) => {
+        if (event) event.preventDefault();
+        await openIdentityDialog('login');
+      };
     }
+    bindIdentityButtons(g || document);
     if (why) {
       if (!who.sessionVerified) {
         why.textContent = targetPath
@@ -1002,7 +1091,8 @@
       event.preventDefault();
       runWhoamiDiagnostics();
     });
-    const signOut = row.querySelector('button[onclick*="logout"],button[onclick*="netlifyIdentity"]');
+    const signOut = row.querySelector('button[data-admin-logout], #btnSignOut') ||
+      Array.from(row.querySelectorAll('button')).find((button) => matchesText(button, 'sign out'));
     if (signOut && signOut.parentElement === row) {
       row.insertBefore(btn, signOut);
     } else {
@@ -1017,6 +1107,7 @@
       const currentPath = getCurrentAdminPath();
       const entryPage = isAdminEntryPath(currentPath);
 
+      bindIdentityButtons(document);
       injectPreviewDebugButton();
 
       // Hook Identity events once so that a successful login triggers a reload
@@ -1093,6 +1184,11 @@
         const app = $('#app');
         if (g) g.style.display = '';
         if (app) app.style.display = 'none';
+        bindIdentityButtons(document);
+        const heading = g ? $('strong, h1, h2', g) : null;
+        const why = g ? $('.why', g) : null;
+        if (heading) heading.textContent = 'HMJ admin sign-in';
+        if (why) why.textContent = 'Admin failed to finish loading cleanly. You can still sign in again on this host, or refresh and try again.';
       } catch {}
     }
   };
@@ -1113,6 +1209,7 @@
   }
 
   ensureDebugChip();
+  bindIdentityButtons(document);
 
   Debug.log('common.js loaded');
 })();
