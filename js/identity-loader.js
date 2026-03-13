@@ -67,37 +67,42 @@
   window.hmjIdentityReady = function(cb) {
     if (typeof cb !== 'function') return;
     const id = window.netlifyIdentity;
-    if (id && typeof id.on === 'function') {
-      cb(id);
+    if (typeof id !== 'undefined') {
+      cb(id || null);
     } else {
       readyQueue.push(cb);
     }
   };
 
+  function hasWidgetTag() {
+    return !!document.querySelector(`script[src="${WIDGET_SRC}"]`);
+  }
+
   function markReady(instance) {
-    const id = instance || window.netlifyIdentity;
-    if (!id || typeof id.on !== 'function') return;
+    const id = typeof instance !== 'undefined' ? instance : window.netlifyIdentity;
+    const available = typeof id !== 'undefined';
     emitState({
-      widgetScriptInjected: true,
-      widgetScriptLoaded: true,
-      widgetReady: true,
-      widgetError: '',
-      mode: 'ready'
+      widgetScriptInjected: hasWidgetTag(),
+      widgetScriptLoaded: available,
+      widgetReady: available && !!id,
+      widgetError: hasWidgetTag() ? '' : 'Widget script tag missing',
+      mode: available ? 'ready' : (hasWidgetTag() ? 'waiting-for-widget' : 'missing-script')
     });
-    flushReady(id);
+    if (available) flushReady(id || null);
   }
 
   function observeIdentity() {
-    const mark = () => markReady(window.netlifyIdentity);
-    document.addEventListener('netlifyIdentityLoad', mark);
+    const sync = () => markReady(window.netlifyIdentity);
+    document.addEventListener('netlifyIdentityLoad', sync);
     const poll = setInterval(() => {
-      const id = window.netlifyIdentity;
-      if (id && typeof id.on === 'function') {
+      sync();
+      if (typeof window.netlifyIdentity !== 'undefined') {
         clearInterval(poll);
-        markReady(id);
       }
     }, 120);
     setTimeout(() => clearInterval(poll), 12000);
+    document.addEventListener('DOMContentLoaded', sync, { once: true });
+    window.addEventListener('load', sync, { once: true });
   }
 
   function resolveIdentityUrl() {
@@ -115,7 +120,6 @@
     const isPreviewHost = /^deploy-preview-/i.test(host) || host.includes('--');
     const originIdentity = originBase ? `${originBase}/.netlify/identity` : '';
     const originProxyIdentity = originBase ? `${originBase}/.netlify/functions/identity-proxy` : '';
-
     const envIdentity = ADMIN_ENV.ADMIN_IDENTITY_URL || '';
     const inlineIdentity = window.ADMIN_IDENTITY_URL || '';
     const netlifyIdentityUrl = window.NETLIFY_IDENTITY_URL || '';
@@ -140,7 +144,10 @@
   function configureSettings(apiUrl) {
     const resolved = normalise(apiUrl);
     if (!resolved) {
-      emitState({ mode: 'unavailable', widgetError: 'No same-host identity API URL resolved' });
+      emitState({
+        mode: 'unavailable',
+        widgetError: hasWidgetTag() ? 'No same-host identity API URL resolved' : 'Widget script tag missing'
+      });
       flushReady(null);
       document.dispatchEvent(new CustomEvent('hmjIdentityUnavailable'));
       return '';
@@ -154,58 +161,24 @@
     const settings = window.netlifyIdentitySettings = window.netlifyIdentitySettings || {};
     settings.APIUrl = resolved;
 
-    emitState({ apiUrl: resolved, mode: 'configured' });
+    emitState({
+      apiUrl: resolved,
+      widgetScriptInjected: hasWidgetTag(),
+      widgetScriptLoaded: typeof window.netlifyIdentity !== 'undefined',
+      widgetReady: typeof window.netlifyIdentity !== 'undefined' && !!window.netlifyIdentity,
+      widgetError: hasWidgetTag() ? '' : 'Widget script tag missing',
+      mode: hasWidgetTag() ? 'configured' : 'missing-script'
+    });
     return resolved;
   }
 
-  function injectWidgetScript(force = false) {
-    const current = document.getElementById('netlify-identity-widget');
-    if (current && !force) {
-      emitState({ widgetScriptInjected: true, mode: state.widgetReady ? 'ready' : 'script-present' });
-      if (window.netlifyIdentity && typeof window.netlifyIdentity.on === 'function') {
-        markReady(window.netlifyIdentity);
-      }
-      return current;
-    }
-
-    if (current && force) current.remove();
-
-    const script = document.createElement('script');
-    script.id = 'netlify-identity-widget';
-    script.src = WIDGET_SRC;
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    script.onload = () => {
-      emitState({
-        widgetScriptInjected: true,
-        widgetScriptLoaded: true,
-        widgetError: '',
-        mode: 'script-loaded'
-      });
-      setTimeout(() => markReady(window.netlifyIdentity), 0);
-    };
-    script.onerror = () => {
-      emitState({
-        widgetScriptInjected: true,
-        widgetScriptLoaded: false,
-        widgetReady: false,
-        widgetError: 'Widget script failed to load',
-        mode: 'script-error'
-      });
-      flushReady(null);
-      document.dispatchEvent(new CustomEvent('hmjIdentityUnavailable'));
-    };
-    emitState({ widgetScriptInjected: true, widgetError: '', mode: 'loading-script' });
-    document.head.appendChild(script);
-    return script;
-  }
-
-  window.hmjEnsureIdentityWidget = function(force = false) {
+  window.hmjEnsureIdentityWidget = function() {
     const apiUrl = configureSettings(resolveIdentityUrl());
     if (!apiUrl) return null;
-    return injectWidgetScript(force);
+    markReady(window.netlifyIdentity);
+    return typeof window.netlifyIdentity !== 'undefined' ? window.netlifyIdentity : null;
   };
 
   observeIdentity();
-  window.hmjEnsureIdentityWidget(false);
+  window.hmjEnsureIdentityWidget();
 })();
