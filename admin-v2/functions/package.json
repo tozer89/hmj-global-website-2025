@@ -1,6 +1,9 @@
 {
   "name": "hmjg-functions-preview",
   "private": true,
+  "engines": {
+    "node": ">=20.16.0 <21 || >=22.3.0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "jsonwebtoken": "^9.0.2",

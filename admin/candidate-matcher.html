@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
-  <script defer src="/admin/candidate-matcher.js?v=2"></script>
+  <script defer src="/admin/candidate-matcher.js?v=3"></script>
 
   <style>
     :root{
@@ -177,6 +177,11 @@
     .file-meta{display:grid;gap:6px}
     .file-meta-line{font-size:13px;color:var(--muted)}
     .file-pill-row{display:flex;flex-wrap:wrap;gap:8px}
+    .file-pill.ok{background:rgba(21,115,71,.10);border-color:rgba(21,115,71,.18);color:var(--ok)}
+    .file-pill.failed{background:rgba(180,35,24,.10);border-color:rgba(180,35,24,.18);color:var(--bad)}
+    .file-pill.limited,.file-pill.warn{background:rgba(166,106,0,.10);border-color:rgba(166,106,0,.18);color:var(--warn)}
+    .file-pill.image_only{background:rgba(15,91,141,.10);border-color:rgba(15,91,141,.18);color:var(--accent)}
+    .file-pill.unsupported{background:rgba(180,35,24,.10);border-color:rgba(180,35,24,.18);color:var(--bad)}
     .file-remove{border:0;background:transparent;color:var(--muted);font-weight:800;cursor:pointer;padding:8px 4px}
     .file-remove:hover{color:var(--bad)}
     .guidance-card{
@@ -200,19 +205,34 @@
       padding:16px;border-radius:18px;border:1px solid rgba(41,75,152,.12);background:var(--panel-alt);display:grid;gap:10px
     }
     .control-card p{margin:0;color:var(--muted)}
+    .progress-meter{display:grid;gap:10px}
+    .progress-bar{height:12px;border-radius:999px;background:#dfe7fb;overflow:hidden;border:1px solid rgba(41,75,152,.12)}
+    .progress-fill{
+      height:100%;width:0%;
+      background:linear-gradient(90deg,#2c57b6,#153a72);
+      border-radius:999px;
+      transition:width .26s ease;
+    }
+    .progress-meta{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+    .progress-meta strong{font-size:15px;color:var(--highlight-deep)}
+    .progress-stage-detail{font-size:13px;color:var(--muted)}
     .toggle{display:inline-flex;align-items:center;gap:10px;font-weight:800;color:var(--highlight-deep)}
     .toggle input{width:18px;height:18px}
     .action-cluster{display:grid;justify-items:end;gap:10px}
     .analysis-status{font-size:18px;font-weight:800;color:var(--highlight-deep)}
     .progress{font-weight:700;color:var(--muted)}
     .stage-list{
-      margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px
+      margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px
     }
     .stage{
       padding:12px;border-radius:16px;border:1px solid rgba(41,75,152,.10);background:#fff;display:grid;gap:6px;min-height:88px
     }
     .stage strong{font-size:13px;line-height:1.2}
     .stage small{color:var(--muted)}
+    .stage-detail{font-size:12px;color:var(--ink);line-height:1.45}
+    .stage-detail.failed{color:var(--bad)}
+    .stage-detail.done{color:var(--highlight-deep)}
+    .stage-detail.working{color:var(--accent)}
     .stage.current{border-color:rgba(41,75,152,.34);background:linear-gradient(180deg,#f8fbff,#eef4ff)}
     .stage.complete{border-color:rgba(21,115,71,.22);background:rgba(21,115,71,.06)}
     .stage.failed{border-color:rgba(180,35,24,.18);background:#fff4f2}
@@ -232,6 +252,10 @@
     .notice.bad{background:#fff4f2;border-color:rgba(180,35,24,.14)}
     .warning-card{padding:14px 16px;display:grid;gap:6px}
     .warning-card strong{font-size:14px}
+    .warning-card.failed,.warning-card.error{background:#fff4f2;border-color:rgba(180,35,24,.18)}
+    .warning-card.image_only,.warning-card.limited{background:#fff8eb;border-color:rgba(166,106,0,.18)}
+    .warning-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .warning-actions[hidden]{display:none}
 
     .results-panel{display:grid;gap:14px}
     .results-summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
@@ -363,8 +387,8 @@
       <div class="hero-meta" aria-label="Matcher summary">
         <article class="stat-card">
           <span>Accepted formats</span>
-          <strong>PDF, DOCX, DOC</strong>
-          <small>DOC uploads are accepted; legacy extraction degrades gracefully if the runtime cannot parse them.</small>
+          <strong>PDF, DOCX, DOC, JPG, PNG</strong>
+          <small>Images are accepted as supporting evidence. PDF and DOCX are the primary text-extraction formats in V1.</small>
         </article>
         <article class="stat-card">
           <span>Comparison set</span>
@@ -421,18 +445,20 @@
                 <div class="drop-zone-copy">
                   <strong>Drop candidate files here</strong>
                   <p>Drag in one or more documents, or use the file picker to build a review queue before analysis.</p>
-                  <small id="acceptedTypes">Accepted file types: PDF, DOCX, DOC. Multiple files supported.</small>
+                  <small id="acceptedTypes">Accepted file types: PDF, DOCX, DOC, JPG, JPEG, PNG. Multiple files supported.</small>
                 </div>
                 <div class="accepted-formats" aria-hidden="true">
                   <span class="format-chip">PDF</span>
                   <span class="format-chip">DOCX</span>
                   <span class="format-chip">DOC</span>
+                  <span class="format-chip">JPG</span>
+                  <span class="format-chip">PNG</span>
                 </div>
                 <div class="drop-actions">
                   <button class="btn secondary" id="pickFilesButton" type="button">Choose files</button>
                   <button class="btn" id="clearFilesButton" type="button">Clear queue</button>
                 </div>
-                <input id="fileInput" type="file" accept=".pdf,.docx,.doc" multiple hidden/>
+                <input id="fileInput" type="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,image/jpeg,image/png" multiple hidden/>
               </div>
 
               <div class="queue-summary" id="queueSummary" aria-live="polite">
@@ -457,6 +483,7 @@
               <ul>
                 <li>Upload the latest CV or resume as the core candidate document.</li>
                 <li>Add certificates, qualifications, or trade documentation when they are role-critical.</li>
+                <li>Certification photos or qualification screenshots can be included as supporting image evidence.</li>
                 <li>Include a cover letter only if it adds useful context on mobility, rates, or sector interest.</li>
                 <li>Use recruiter notes for constraints, concerns, or commercial context the documents do not cover.</li>
               </ul>
@@ -494,6 +521,15 @@
               <div class="control-card">
                 <strong class="analysis-status" id="analysisStatus">Ready to analyse</strong>
                 <p class="progress" id="progressText">Upload one or more files, add optional recruiter context, then run the matcher.</p>
+                <div class="progress-meter" aria-label="Matcher run progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                  </div>
+                  <div class="progress-meta">
+                    <strong id="progressPercent">0%</strong>
+                    <span class="progress-stage-detail" id="progressStageDetail">Waiting to begin</span>
+                  </div>
+                </div>
               </div>
               <ol class="stage-list" id="stageList" aria-label="Analysis stages"></ol>
             </div>
@@ -514,7 +550,12 @@
               <p class="eyebrow">Run warnings</p>
               <h2 id="warningHeading">Extraction and storage notes</h2>
             </div>
-            <p class="section-note">Warnings here do not always invalidate the run; they highlight files or steps that need recruiter attention.</p>
+            <p class="section-note" id="warningNote">Warnings here do not always invalidate the run; they highlight files or steps that need recruiter attention.</p>
+          </div>
+          <div class="warning-actions" id="warningActions" hidden>
+            <button class="btn secondary" id="retryAnalysisButton" type="button">Retry analysis</button>
+            <button class="btn secondary" id="removeProblemFilesButton" type="button" hidden>Remove problematic files</button>
+            <button class="btn" id="clearProblemFilesButton" type="button">Clear queue</button>
           </div>
           <div class="results-stack" id="warningList"></div>
         </section>
@@ -599,6 +640,22 @@
             <div class="ops-item">
               <strong>Security model</strong>
               <p>Uploads, text extraction, and OpenAI requests run through admin-only Netlify Functions.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel status-card" aria-labelledby="runDiagnosticsHeading">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Run diagnostics</p>
+              <h2 id="runDiagnosticsHeading">Latest matcher session</h2>
+            </div>
+            <p class="section-note">This panel shows the latest run timing, file counts, and the failed stage if a request stops early.</p>
+          </div>
+          <div class="ops-list" id="runDiagnosticsList">
+            <div class="ops-item">
+              <strong>No run diagnostics yet</strong>
+              <p>The next analysis will populate elapsed time, file counts, stage timings, and any failure stage.</p>
             </div>
           </div>
         </section>

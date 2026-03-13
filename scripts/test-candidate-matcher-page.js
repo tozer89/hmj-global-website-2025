@@ -7,8 +7,11 @@ const requiredMarkers = [
   'id="dropZone"',
   'id="fileInput"',
   'id="analyseButton"',
+  'id="progressFill"',
   'id="resultsShell"',
-  'id="historyList"'
+  'id="historyList"',
+  'id="runDiagnosticsList"',
+  'id="retryAnalysisButton"'
 ];
 
 requiredMarkers.forEach((marker) => {

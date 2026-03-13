@@ -18,6 +18,24 @@ test('prepareCandidateFiles marks unsupported extensions without crashing the ru
   assert.equal(files[1].status, 'unsupported');
 });
 
+test('prepareCandidateFiles accepts image evidence and strips data-url payload prefixes', () => {
+  const imageBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+  const files = core.prepareCandidateFiles([
+    {
+      name: 'certificate.png',
+      contentType: 'image/png',
+      data: `data:image/png;base64,${imageBytes.toString('base64')}`,
+      size: imageBytes.length,
+    }
+  ]);
+
+  assert.equal(files.length, 1);
+  assert.equal(files[0].status, 'ready');
+  assert.equal(files[0].fileKind, 'image');
+  assert.equal(files[0].extractionMode, 'image_only');
+  assert.equal(files[0].buffer.byteLength, imageBytes.length);
+});
+
 test('extractCandidateDocuments reads text from a readable PDF buffer', async () => {
   const pdf = `%PDF-1.4
 1 0 obj
@@ -98,6 +116,31 @@ test('extractCandidateDocuments reads text from a readable DOCX buffer', async (
   assert.equal(result.failureCount, 0);
   assert.equal(result.documents[0].status, 'ok');
   assert.match(result.combinedText, /Readable HMJ DOCX text/);
+});
+
+test('extractCandidateDocuments keeps image evidence without crashing the run', async () => {
+  const buffer = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-3',
+    name: 'Cert photo.png',
+    extension: 'png',
+    fileKind: 'image',
+    extractionMode: 'image_only',
+    parserPath: 'image-evidence',
+    contentType: 'image/png',
+    size: buffer.byteLength,
+    status: 'ready',
+    buffer,
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }]);
+
+  assert.equal(result.successCount, 0);
+  assert.equal(result.documents[0].status, 'image_only');
+  assert.equal(result.imageEvidence.length, 1);
+  assert.equal(result.combinedText, '');
 });
 
 test('fetchPublishedLiveJobs keeps only published roles with live status', async () => {
@@ -580,7 +623,7 @@ test('saveMatchRun writes live-schema aligned run and file records', async () =>
   assert.equal(savedFilePayload[0].match_run_id, 'f0f0f0f0-1111-2222-3333-444444444444');
   assert.equal(savedFilePayload[0].storage_bucket, 'candidate-matcher-uploads');
   assert.equal(savedFilePayload[0].extraction_status, 'completed');
-  assert.equal(savedFilePayload[1].extraction_status, 'failed');
+  assert.equal(savedFilePayload[1].extraction_status, 'completed');
 });
 
 test('listMatchRuns hydrates file names from candidate_match_files', async () => {

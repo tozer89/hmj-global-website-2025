@@ -2,6 +2,9 @@
   "name": "hmj-global",
   "private": true,
   "type": "commonjs",
+  "engines": {
+    "node": ">=20.16.0 <21 || >=22.3.0"
+  },
   "scripts": {
     "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js"
   },
