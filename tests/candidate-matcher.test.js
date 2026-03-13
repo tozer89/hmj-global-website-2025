@@ -18,6 +18,64 @@ test('prepareCandidateFiles marks unsupported extensions without crashing the ru
   assert.equal(files[1].status, 'unsupported');
 });
 
+test('extractCandidateDocuments reads text from a readable PDF buffer', async () => {
+  const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 67 >>
+stream
+BT
+/F1 12 Tf
+72 100 Td
+(Readable HMJ PDF text) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000063 00000 n 
+0000000122 00000 n 
+0000000248 00000 n 
+0000000365 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+435
+%%EOF`;
+
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-1',
+    name: 'Readable CV (Final).pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: Buffer.byteLength(pdf),
+    status: 'ready',
+    buffer: Buffer.from(pdf, 'utf8'),
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }]);
+
+  assert.equal(result.successCount, 1);
+  assert.equal(result.failureCount, 0);
+  assert.equal(result.documents[0].status, 'ok');
+  assert.match(result.combinedText, /Readable HMJ PDF text/);
+});
+
 test('fetchPublishedLiveJobs keeps only published roles with live status', async () => {
   const rows = [
     { id: 'job-1', title: 'Live role', published: true, status: 'live', type: 'contract' },
@@ -173,6 +231,74 @@ test('candidate match handler returns a happy-path payload with mocked dependenc
   assert.equal(payload.result.candidate_summary.name, 'Alex Example');
   assert.equal(payload.result.top_matches[0].job_id, 'job-1');
   assert.equal(payload.saved_to_history, true);
+});
+
+test('candidate match handler returns per-file extraction diagnostics when no file is readable', async () => {
+  const originals = {
+    prepareCandidateFiles: core.prepareCandidateFiles,
+    extractCandidateDocuments: core.extractCandidateDocuments,
+  };
+
+  core.prepareCandidateFiles = () => [{
+    id: 'file-1',
+    name: 'candidate.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: 2048,
+    status: 'ready',
+    buffer: Buffer.from('fake'),
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+    storageKey: '',
+  }];
+  core.extractCandidateDocuments = async (documents) => ({
+    documents: [{
+      ...documents[0],
+      status: 'failed',
+      error: 'PDF extraction dependency is unavailable on the server. MODULE_NOT_FOUND Cannot find module',
+      extractedText: '',
+      extractedTextLength: 0,
+    }],
+    successful: [],
+    failed: [{
+      ...documents[0],
+      status: 'failed',
+      error: 'PDF extraction dependency is unavailable on the server. MODULE_NOT_FOUND Cannot find module',
+      extractedText: '',
+      extractedTextLength: 0,
+    }],
+    successCount: 0,
+    failureCount: 1,
+    combinedText: '',
+  });
+
+  const handler = createCandidateMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      files: [{ name: 'candidate.pdf', data: 'ignored' }],
+      recruiterNotes: '',
+      saveHistory: false,
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 422);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, 'all_files_failed');
+  assert.equal(payload.details.stage, 'extraction');
+  assert.equal(payload.details.storage_readback, 'not_used');
+  assert.equal(Array.isArray(payload.details.documents), true);
+  assert.equal(payload.details.documents[0].name, 'candidate.pdf');
+  assert.match(payload.details.documents[0].error, /PDF extraction dependency is unavailable/);
 });
 
 test('history list handler returns disabled state when no table is configured', async () => {

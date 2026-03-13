@@ -41,6 +41,7 @@
   const ADMIN_ENV = window.__HMJ_ADMIN_ENV || {};
   const HOSTNAME = (() => { try { return window.location?.hostname || ''; } catch { return ''; } })();
   const IS_PREVIEW_HOST = /^deploy-preview-/i.test(HOSTNAME) || HOSTNAME.includes('--');
+  const DEBUG_CHIP_STORE = 'hmj.admin.debug-chip-expanded:v1';
   function normaliseIdentityCandidate(url) {
     if (!url) return '';
     const trimmed = String(url).trim();
@@ -70,6 +71,20 @@
   })();
   let identityCache = null;
   let identityCacheTs = 0;
+
+  function readDebugChipExpanded() {
+    try {
+      return window.localStorage.getItem(DEBUG_CHIP_STORE) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function writeDebugChipExpanded(expanded) {
+    try {
+      window.localStorage.setItem(DEBUG_CHIP_STORE, expanded ? '1' : '0');
+    } catch {}
+  }
 
   if (IDENTITY_URL) {
     window.ADMIN_IDENTITY_URL = IDENTITY_URL;
@@ -327,26 +342,65 @@
       host.style.background = 'rgba(8,18,32,.92)';
       host.style.border = '1px solid rgba(132,158,255,.25)';
       host.style.borderRadius = '14px';
-      host.style.padding = '10px 14px';
+      host.style.padding = '8px 10px';
       host.style.color = '#e7f1ff';
       host.style.fontSize = '12px';
       host.style.fontFamily = '"Inter", system-ui, -apple-system, Segoe UI, sans-serif';
       host.style.boxShadow = '0 18px 32px rgba(5,12,28,.45)';
       host.style.display = 'grid';
-      host.style.gap = '4px';
+      host.style.gap = '0';
+      host.style.width = 'min(240px, calc(100vw - 36px))';
       host.innerHTML = `
-        <strong style="letter-spacing:.08em;font-size:11px;text-transform:uppercase;opacity:.7">Admin debug</strong>
-        <span data-field="identity">Identity: ${IDENTITY_URL || '—'}</span>
-        <span data-field="host">Host: ${HOSTNAME || '—'}</span>
-        <span data-field="email">User: —</span>
-        <span data-field="roles">Roles: —</span>
-        <span data-field="auth">Auth: —</span>
-        <span data-field="widget">Widget: checking…</span>
-        <span data-field="login">Login: checking…</span>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div style="display:grid;gap:3px;min-width:0">
+            <strong style="letter-spacing:.08em;font-size:11px;text-transform:uppercase;opacity:.7">Admin debug</strong>
+            <span data-field="summary" style="opacity:.86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Session checking…</span>
+          </div>
+          <button
+            type="button"
+            data-action="toggle-debug"
+            aria-expanded="false"
+            style="appearance:none;border:1px solid rgba(160,185,255,.28);background:rgba(255,255,255,.08);color:#e7f1ff;border-radius:999px;padding:4px 10px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap"
+          >Show</button>
+        </div>
+        <div data-debug-body style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(160,185,255,.16);gap:4px">
+          <span data-field="identity">Identity: ${IDENTITY_URL || '—'}</span>
+          <span data-field="host">Host: ${HOSTNAME || '—'}</span>
+          <span data-field="email">User: —</span>
+          <span data-field="roles">Roles: —</span>
+          <span data-field="auth">Auth: —</span>
+          <span data-field="widget">Widget: checking…</span>
+          <span data-field="login">Login: checking…</span>
+        </div>
       `;
+      const toggle = host.querySelector('[data-action="toggle-debug"]');
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          const expanded = host.getAttribute('data-expanded') !== 'true';
+          setDebugChipExpanded(host, expanded);
+        });
+      }
       document.body.appendChild(host);
     }
+    setDebugChipExpanded(host, readDebugChipExpanded());
     return host;
+  }
+
+  function setDebugChipExpanded(host, expanded) {
+    if (!host) return;
+    host.setAttribute('data-expanded', expanded ? 'true' : 'false');
+    host.style.padding = expanded ? '10px 14px' : '8px 10px';
+    host.style.width = expanded
+      ? 'min(420px, calc(100vw - 36px))'
+      : 'min(240px, calc(100vw - 36px))';
+    const body = host.querySelector('[data-debug-body]');
+    if (body) body.style.display = expanded ? 'grid' : 'none';
+    const toggle = host.querySelector('[data-action="toggle-debug"]');
+    if (toggle) {
+      toggle.textContent = expanded ? 'Hide' : 'Show';
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    writeDebugChipExpanded(expanded);
   }
 
   function getWidgetDebugState() {
@@ -375,6 +429,13 @@
       : session?.sessionVerified
         ? 'Verified host session cookie'
         : 'No verified session';
+    const summaryNode = chip.querySelector('[data-field="summary"]');
+    if (summaryNode) {
+      const compactRole = roles.length ? roles[0] : 'no role';
+      summaryNode.textContent = email !== '—'
+        ? `${email} • ${compactRole}`
+        : authText;
+    }
     const whoami = chip.querySelector('[data-field="email"]');
     if (whoami) whoami.textContent = `User: ${email || '—'}`;
     const rolesNode = chip.querySelector('[data-field="roles"]');

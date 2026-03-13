@@ -622,7 +622,18 @@
       setProgress('Analysis failed', error.message || 'The matcher could not complete this run.', -1, false);
       elements.jobsChip.textContent = 'Analysis failed';
       elements.jobsChip.className = 'chip bad';
-      renderWarnings([{ file: 'Analysis', message: error.message || 'Unexpected matcher failure.', status: 'error' }]);
+      const diagnostics = safeArray(error?.details?.details?.documents).map((document) => ({
+        file: document.name || document.file || 'Candidate file',
+        message: [
+          document.error || 'Extraction failed.',
+          document.contentType ? `MIME: ${document.contentType}` : '',
+          Number.isFinite(Number(document.size)) ? `Bytes seen: ${document.size}` : '',
+        ].filter(Boolean).join(' | '),
+        status: document.status || 'error',
+      }));
+      renderWarnings(diagnostics.length
+        ? diagnostics
+        : [{ file: 'Analysis', message: error.message || 'Unexpected matcher failure.', status: 'error' }]);
     } finally {
       setBusy(false);
     }
