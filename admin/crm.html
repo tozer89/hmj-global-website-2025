@@ -11,6 +11,8 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
+  <link rel="stylesheet" href="/assets/css/admin.dashboard.enhanced.css?v=1"/>
+  <script defer src="/assets/js/admin.dashboard.enhanced.js?v=2"></script>
 
   <style>
     :root{ --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --muted:#5d6f9e; --ink:#0f1b3f; }
@@ -35,6 +37,10 @@
     .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
     .intro h1{margin:0;font-size:30px;line-height:1.1}
     .intro p{margin:0}
+    .summary-panel{display:grid;gap:16px}
+    .summary-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+    .summary-head h2{margin:4px 0 0;font-size:24px;line-height:1.15}
+    .summary-head p:last-child{margin:0;max-width:56ch}
 
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
     .card{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;border:1px solid rgba(47,78,162,.18);background:#fff;box-shadow:0 18px 36px rgba(15,27,63,.12);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
@@ -44,6 +50,10 @@
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.25);box-shadow:0 16px 30px rgba(15,27,63,.18);font-weight:700}
+
+    @media (max-width:720px){
+      .summary-head{align-items:flex-start}
+    }
   </style>
 </head>
 <body>
@@ -69,6 +79,17 @@
       <h1 id="crmHeading">CRM</h1>
       <p class="muted" id="welcomeMeta">Loading user…</p>
       <p class="muted">Choose a CRM module to continue.</p>
+    </section>
+
+    <section class="panel summary-panel" aria-labelledby="crmSnapshotHeading">
+      <div class="summary-head">
+        <div>
+          <p class="eyebrow">Operations snapshot</p>
+          <h2 id="crmSnapshotHeading">Assignments &amp; timesheets</h2>
+        </div>
+        <p class="muted">Live indicators for placements, candidate movement, and payroll follow-up within the CRM workspace.</p>
+      </div>
+      <div id="kpis" class="kpi-row" data-force-visible="true" hidden aria-label="CRM operations summary"></div>
     </section>
 
     <section class="grid" aria-label="CRM areas">
@@ -113,6 +134,9 @@
         const who = await identity('admin');
         if (who?.ok) {
           sel('#welcomeMeta').textContent = `Signed in as ${who.email || 'admin user'}`;
+          if (window.HMJDashboardEnhancer && typeof window.HMJDashboardEnhancer.init === 'function') {
+            window.HMJDashboardEnhancer.init({ helpers, who });
+          }
         }
       } catch (e) {
         toast('Unable to load user details', 'warn', 2600);

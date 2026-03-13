@@ -116,11 +116,7 @@
           <summary class="btn ghost small" aria-haspopup="true">View options</summary>
           <div class="view-panel" role="group" aria-label="Dashboard view preferences">
             <label class="switch">
-              <input type="checkbox" id="toggleKpis" checked>
-              <span>Show KPI row</span>
-            </label>
-            <label class="switch">
-              <span>Tile order</span>
+              <span>Future module order</span>
               <select id="tileOrderSelect">
                 <option value="default">Default</option>
                 <option value="alpha">A → Z</option>
@@ -170,41 +166,6 @@
       </nav>
     </section>
 
-    <section id="kpis" class="panel kpi-row" hidden></section>
-
-    <section class="panel module-shell" aria-labelledby="activeModulesHeading">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Current workspace</p>
-          <h3 id="activeModulesHeading">Active Modules</h3>
-        </div>
-        <p class="muted">These are the live entry points the team uses today for day-to-day admin operations.</p>
-      </div>
-      <section class="module-grid module-grid--active grid" aria-label="Active admin modules" data-tile-order>
-        <a class="card card--primary" href="/admin/jobs.html" data-status="Live" data-static-badge="true" aria-labelledby="jobsTileTitle" aria-describedby="jobsTileDesc">
-          <span class="card-mark" aria-hidden="true">J</span>
-          <div class="card-copy">
-            <h3 id="jobsTileTitle">Jobs</h3>
-            <p id="jobsTileDesc">Manage job specs, live roles, and shareable job links</p>
-          </div>
-        </a>
-        <a class="card card--primary" href="/admin/crm.html" data-status="Live" data-static-badge="true" aria-labelledby="crmTileTitle" aria-describedby="crmTileDesc">
-          <span class="card-mark" aria-hidden="true">C</span>
-          <div class="card-copy">
-            <h3 id="crmTileTitle">CRM</h3>
-            <p id="crmTileDesc">Access clients, candidates, assignments, payroll, and reports</p>
-          </div>
-        </a>
-        <a class="card card--primary" href="/admin/candidate-matcher.html" data-status="Live" data-static-badge="true" aria-labelledby="matcherTileTitle" aria-describedby="matcherTileDesc">
-          <span class="card-mark" aria-hidden="true">M</span>
-          <div class="card-copy">
-            <h3 id="matcherTileTitle">Candidate Matcher</h3>
-            <p id="matcherTileDesc">Analyse candidate documents against the current live jobs list.</p>
-          </div>
-        </a>
-      </section>
-    </section>
-
     <section class="panel module-shell" id="future-modules" aria-labelledby="futureModulesHeading">
       <div class="section-head">
         <div>
@@ -215,24 +176,24 @@
       </div>
       <section class="module-grid grid" aria-label="Future admin modules" data-tile-order>
         <a class="card card--placeholder" id="placeholder-1" href="#placeholder-1" data-status="Coming Soon" data-static-badge="true" aria-labelledby="placeholder1Title" aria-describedby="placeholder1Desc">
-          <span class="card-mark" aria-hidden="true">P1</span>
+          <span class="card-mark" aria-hidden="true">CH</span>
           <div class="card-copy">
-            <h3 id="placeholder1Title">Placeholder 1</h3>
-            <p id="placeholder1Desc">Future module reserved for an upcoming workflow.</p>
+            <h3 id="placeholder1Title">Compliance Hub</h3>
+            <p id="placeholder1Desc">Track right-to-work checks, expiring documents, and onboarding compliance in one place.</p>
           </div>
         </a>
         <a class="card card--placeholder" id="placeholder-2" href="#placeholder-2" data-status="Coming Soon" data-static-badge="true" aria-labelledby="placeholder2Title" aria-describedby="placeholder2Desc">
-          <span class="card-mark" aria-hidden="true">P2</span>
+          <span class="card-mark" aria-hidden="true">INV</span>
           <div class="card-copy">
-            <h3 id="placeholder2Title">Placeholder 2</h3>
-            <p id="placeholder2Desc">Reserved for an upcoming admin workflow.</p>
+            <h3 id="placeholder2Title">Invoicing</h3>
+            <p id="placeholder2Desc">Prepare client invoices from approved assignments, timesheets, and agreed billing terms.</p>
           </div>
         </a>
         <a class="card card--placeholder" id="placeholder-3" href="#placeholder-3" data-status="Coming Soon" data-static-badge="true" aria-labelledby="placeholder3Title" aria-describedby="placeholder3Desc">
-          <span class="card-mark" aria-hidden="true">P3</span>
+          <span class="card-mark" aria-hidden="true">WP</span>
           <div class="card-copy">
-            <h3 id="placeholder3Title">Placeholder 3</h3>
-            <p id="placeholder3Desc">Future module space for a planned operational tool.</p>
+            <h3 id="placeholder3Title">Workforce Planner</h3>
+            <p id="placeholder3Desc">Map worker availability, upcoming starts, and coverage gaps across client assignments.</p>
           </div>
         </a>
         <a class="card card--placeholder" id="placeholder-4" href="#placeholder-4" data-status="Coming Soon" data-static-badge="true" aria-labelledby="placeholder4Title" aria-describedby="placeholder4Desc">

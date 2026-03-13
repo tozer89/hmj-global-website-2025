@@ -239,11 +239,13 @@
   function syncKpiVisibility() {
     const kpis = document.getElementById('kpis');
     if (!kpis) return;
-    if (state.view.showKpis) {
-      kpis.hidden = false;
-    } else {
-      kpis.hidden = true;
-    }
+    kpis.hidden = !shouldShowKpis(kpis);
+  }
+
+  function shouldShowKpis(host) {
+    if (!host) return false;
+    if (host.dataset.forceVisible === 'true') return true;
+    return !!state.view.showKpis;
   }
 
   function applyTileOrder() {
@@ -443,7 +445,7 @@
       tile.appendChild(createEl('span', { text: item.label }));
       host.appendChild(tile);
     });
-    host.hidden = !state.view.showKpis;
+    host.hidden = !shouldShowKpis(host);
     requestIdleCallbackSafe(async () => {
       const kpiData = await fetchJson('/admin/kpi.json');
       if (kpiData) {

@@ -11,6 +11,39 @@ const {
   createCandidateRunMatchBackgroundBaseHandler,
 } = require('../lib/admin-candidate-match-function.js');
 
+function buildValidMatcherResult() {
+  return {
+    candidate_summary: {
+      name: 'Alex Example',
+      current_or_recent_title: 'Commissioning Engineer',
+      seniority_level: 'Mid-Senior',
+      primary_discipline: 'Electrical Commissioning',
+      sectors: ['Data Centres'],
+      locations: ['London'],
+      key_skills: ['HV commissioning', 'QA/QC'],
+      key_qualifications: ['SSSTS'],
+      summary: 'Strong site delivery candidate with direct commissioning evidence.',
+    },
+    top_matches: [{
+      job_id: 'job-1',
+      job_title: 'HV Commissioning Engineer',
+      score: 89,
+      recommendation: 'shortlist',
+      why_match: 'Directly aligned experience.',
+      matched_skills: ['HV commissioning'],
+      matched_qualifications: ['SSSTS'],
+      transferable_experience: [],
+      gaps: [],
+      follow_up_questions: ['Can the candidate start in two weeks?'],
+      uncertainty_notes: '',
+    }],
+    other_matches: [],
+    overall_recommendation: 'Shortlist for recruiter review.',
+    general_follow_up_questions: ['Confirm current location.'],
+    no_strong_match_reason: '',
+  };
+}
+
 test('prepareCandidateFiles marks unsupported extensions without crashing the run', () => {
   const files = core.prepareCandidateFiles([
     { name: 'profile.doc', data: Buffer.from('legacy').toString('base64'), size: 6 },
@@ -265,6 +298,138 @@ test('fetchPublishedLiveJobs keeps only published roles with live status', async
   });
 
   assert.deepEqual(jobs.map((job) => job.job_id), ['job-1']);
+});
+
+test('parseOpenAIMatchResponse recovers wrapped matcher JSON safely', () => {
+  const payload = {
+    id: 'resp_123',
+    status: 'completed',
+    output: [{
+      status: 'completed',
+      content: [{
+        type: 'output_text',
+        text: `\`\`\`json\n${JSON.stringify({ result: buildValidMatcherResult() }, null, 2)}\n\`\`\``,
+      }],
+    }],
+  };
+
+  const parsed = core.parseOpenAIMatchResponse(payload, {
+    model: 'gpt-5.4',
+    maxOutputTokens: 3200,
+    repairMode: false,
+  });
+
+  assert.equal(parsed.result.candidate_summary.name, 'Alex Example');
+  assert.equal(parsed.result.top_matches[0].job_id, 'job-1');
+  assert.equal(parsed.diagnostics.parser_strategy, 'code_fence');
+  assert.equal(parsed.diagnostics.wrapper_key, 'result');
+});
+
+test('parseOpenAIMatchResponse reports incomplete structured output clearly', () => {
+  assert.throws(() => {
+    core.parseOpenAIMatchResponse({
+      id: 'resp_incomplete',
+      status: 'incomplete',
+      incomplete_details: { reason: 'max_output_tokens' },
+      output: [{
+        status: 'incomplete',
+        content: [{ type: 'output_text', text: '{"candidate_summary": {' }],
+      }],
+    }, {
+      model: 'gpt-5.4',
+      maxOutputTokens: 3200,
+      repairMode: false,
+    });
+  }, (error) => {
+    assert.equal(error.code, 'openai_incomplete_output');
+    assert.match(error.message, /max_output_tokens/i);
+    assert.equal(error.details.parse_stage, 'incomplete');
+    return true;
+  });
+});
+
+test('parseOpenAIMatchResponse reports truncated JSON clearly', () => {
+  assert.throws(() => {
+    core.parseOpenAIMatchResponse({
+      id: 'resp_bad_json',
+      status: 'completed',
+      output: [{
+        status: 'completed',
+        content: [{ type: 'output_text', text: '{"candidate_summary":{"name":"Alex"}' }],
+      }],
+    }, {
+      model: 'gpt-5.4',
+      maxOutputTokens: 3200,
+      repairMode: false,
+    });
+  }, (error) => {
+    assert.equal(error.code, 'openai_invalid_json');
+    assert.equal(error.details.parse_stage, 'json_parse');
+    return true;
+  });
+});
+
+test('callOpenAIForMatch retries once after incomplete structured output', async () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalModel = process.env.OPENAI_CANDIDATE_MATCH_MODEL;
+  const originalFallback = process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL;
+  const originalMaxTokens = process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS;
+  process.env.OPENAI_API_KEY = 'test-key';
+  process.env.OPENAI_CANDIDATE_MATCH_MODEL = 'gpt-5.4';
+  process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL = 'gpt-5-mini';
+  delete process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS;
+
+  let callCount = 0;
+  const fetchImpl = async () => {
+    callCount += 1;
+    const body = callCount === 1
+      ? {
+        id: 'resp_retry_1',
+        status: 'incomplete',
+        incomplete_details: { reason: 'max_output_tokens' },
+        output: [{
+          status: 'incomplete',
+          content: [{ type: 'output_text', text: '{"candidate_summary": {' }],
+        }],
+      }
+      : {
+        id: 'resp_retry_2',
+        status: 'completed',
+        output: [{
+          status: 'completed',
+          content: [{ type: 'output_text', text: JSON.stringify(buildValidMatcherResult()) }],
+        }],
+      };
+
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify(body),
+    };
+  };
+
+  try {
+    const response = await core.callOpenAIForMatch({
+      candidate: { candidate_text: 'Candidate text' },
+      live_jobs: [{ job_id: 'job-1', title: 'HV Commissioning Engineer' }],
+    }, {
+      timeoutMs: 2000,
+      fetchImpl,
+    });
+
+    assert.equal(callCount, 2);
+    assert.equal(response.result.candidate_summary.name, 'Alex Example');
+    assert.equal(response.result.top_matches[0].job_id, 'job-1');
+  } finally {
+    if (originalApiKey == null) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalApiKey;
+    if (originalModel == null) delete process.env.OPENAI_CANDIDATE_MATCH_MODEL;
+    else process.env.OPENAI_CANDIDATE_MATCH_MODEL = originalModel;
+    if (originalFallback == null) delete process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL;
+    else process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL = originalFallback;
+    if (originalMaxTokens == null) delete process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS;
+    else process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS = originalMaxTokens;
+  }
 });
 
 test('candidate match handler returns a happy-path payload with mocked dependencies', async () => {
