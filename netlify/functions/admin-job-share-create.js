@@ -3,7 +3,7 @@ const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, findStaticJob, slugify, isSchemaError } = require('./_jobs-helpers.js');
+const { toJob, findStaticJob, slugify, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
 
 function adjustRecordForSchema(record, err) {
   const message = (err?.message || '').toLowerCase();
@@ -91,10 +91,7 @@ const baseHandler = async (event, context) => {
           .single();
 
         if (jobError) {
-          if (isSchemaError(jobError)) {
-            supabaseErr = jobError;
-            supabase = null;
-          } else if (jobError?.code === '42P01' || /relation\s+"?jobs"?/i.test(jobError?.message || '')) {
+          if (isSchemaError(jobError) || isMissingTableError(jobError, 'jobs')) {
             supabaseErr = jobError;
             supabase = null;
           } else {
@@ -152,7 +149,10 @@ const baseHandler = async (event, context) => {
           .single();
         if (!error) {
           const inserted = data || {};
-          const url = `${origin}/jobs/spec.html?slug=${encodeURIComponent(inserted.slug || slug)}`;
+          const params = new URLSearchParams();
+          params.set('slug', inserted.slug || slug);
+          if (job.id) params.set('id', job.id);
+          const url = `${origin}/jobs/spec.html?${params.toString()}`;
           return {
             statusCode: 200,
             body: JSON.stringify({
@@ -164,8 +164,8 @@ const baseHandler = async (event, context) => {
           };
         }
 
-        const missingTable = error?.code === '42P01' || /relation\s+"?job_specs"?/i.test(error?.message || '');
-        const schemaIssue = isSchemaError(error);
+        const missingTable = isMissingTableError(error, 'job_specs');
+        const schemaIssue = isSchemaError(error) || missingTable;
         if (!schemaIssue || missingTable) {
           if (missingTable) {
             schemaAdjusted = schemaAdjusted || schemaIssue || missingTable;

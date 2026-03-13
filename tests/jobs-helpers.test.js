@@ -10,6 +10,7 @@ const {
   slugify,
   resolveSection,
   loadStaticJobs,
+  isMissingTableError,
 } = require('../netlify/functions/_jobs-helpers.js');
 
 test('toJob normalises database row fields and derives tags/section meta', () => {
@@ -124,5 +125,31 @@ test('loadStaticJobs prefers the authored seed file without duplicating rows', (
   assert.deepEqual(
     jobs.map((job) => job.id),
     localJobs.map((job) => job.id)
+  );
+});
+
+test('isMissingTableError matches both legacy relation errors and schema-cache errors', () => {
+  assert.equal(
+    isMissingTableError(
+      { code: '42P01', message: 'relation "public.job_specs" does not exist' },
+      'job_specs'
+    ),
+    true
+  );
+
+  assert.equal(
+    isMissingTableError(
+      { code: 'PGRST205', message: "Could not find the table 'public.job_specs' in the schema cache" },
+      'job_specs'
+    ),
+    true
+  );
+
+  assert.equal(
+    isMissingTableError(
+      { code: 'PGRST205', message: "Could not find the table 'public.jobs' in the schema cache" },
+      'job_specs'
+    ),
+    false
   );
 });

@@ -121,7 +121,44 @@ function isSchemaError(err) {
   return (
     (msg.includes('relation') && msg.includes('does not exist')) ||
     (msg.includes('column') && msg.includes('does not exist')) ||
-    msg.includes('undefined column')
+      msg.includes('undefined column')
+  );
+}
+
+function isMissingTableError(err, tableName = '') {
+  if (!err) return false;
+  const code = String(err.code || err.status || err.statusCode || '').toUpperCase();
+  const table = String(tableName || '')
+    .replace(/^public\./i, '')
+    .replace(/"/g, '')
+    .toLowerCase();
+  const sources = [
+    String(err.message || '').toLowerCase(),
+    String(err.details || '').toLowerCase(),
+    String(err.hint || '').toLowerCase(),
+  ].filter(Boolean);
+  const mentionsTable = !table || sources.some((source) => (
+    source.includes(`public.${table}`) ||
+    source.includes(`'public.${table}'`) ||
+    source.includes(`"${table}"`) ||
+    source.includes(`'${table}'`) ||
+    source.includes(table)
+  ));
+
+  if ((code === '42P01' || code === 'PGRST205') && mentionsTable) {
+    return true;
+  }
+
+  return sources.some((source) => (
+    source.includes('relation') &&
+    source.includes('does not exist') &&
+    mentionsTable
+  )) || (
+    mentionsTable &&
+    sources.some((source) => (
+      source.includes('schema cache') &&
+      source.includes('could not find the table')
+    ))
   );
 }
 
@@ -290,4 +327,5 @@ module.exports = {
   ensureStaticJobs,
   findStaticJob,
   isSchemaError,
+  isMissingTableError,
 };
