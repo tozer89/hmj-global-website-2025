@@ -640,7 +640,6 @@
     const activeFilterPills = document.getElementById('activeFilterPills');
     const locationSel = document.getElementById('locationFilter');
     const searchBox = document.getElementById('searchBox');
-    const searchBoxMobile = document.getElementById('searchBoxMobile');
     const clearBtn = document.getElementById('clearFilters');
     const filtersEl = document.getElementById('filters');
     const toggleFiltersBtn = document.getElementById('toggleFilters');
@@ -1512,11 +1511,9 @@
 
     function syncSearch(value){
       if(searchBox && document.activeElement!==searchBox){ searchBox.value=value; }
-      if(searchBoxMobile && document.activeElement!==searchBoxMobile){ searchBoxMobile.value=value; }
       state.search=value.trim().toLowerCase(); applyFilters();
     }
     searchBox?.addEventListener('input',e=>syncSearch(e.target.value));
-    searchBoxMobile?.addEventListener('input',e=>syncSearch(e.target.value));
 
     function refreshPinsUI(){
       const pins=getPins();
@@ -1543,7 +1540,6 @@
       state.status='all'; state.location='all'; state.type='all'; state.disc='all'; state.search=''; state.shortlistOnly=false;
       if (locationSel) locationSel.value='all';
       if (searchBox) searchBox.value='';
-      if (searchBoxMobile) searchBoxMobile.value='';
       shortlistBtn.classList.remove('btn-primary');
       shortlistBtn.title='Show saved roles';
       ['status','type','disc'].forEach((group)=>setChipSelection(group,'all'));
