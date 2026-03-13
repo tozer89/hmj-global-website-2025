@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Noticeboard | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="/admin/noticeboard.js?v=1"></script>
+
+  <style>
+    :root{
+      --bg:#eef2fb;
+      --panel:#ffffff;
+      --panel-soft:#f7f9ff;
+      --border:#d9e1f4;
+      --highlight:#2f4ea2;
+      --accent:#3f66c7;
+      --ink:#0f1b3f;
+      --muted:#6072a2;
+      --ok:#138754;
+      --warn:#a96b00;
+      --danger:#b42318;
+      --shadow:0 20px 44px rgba(15,27,63,.12);
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(circle at top left,rgba(63,102,199,.12),transparent 36%),var(--bg);color:var(--ink);font:15px/1.6 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit;text-decoration:none}
+    button,input,select,textarea{font:inherit}
+
+    .top{position:sticky;top:0;z-index:120;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 12px 28px rgba(15,27,63,.22)}
+    .row{max-width:1400px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em}
+    .sp{flex:1}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+
+    .btn{appearance:none;border:1px solid rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.05));color:var(--ink);padding:10px 15px;border-radius:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(47,78,162,.16);border-color:rgba(47,78,162,.36)}
+    .btn.primary{background:linear-gradient(180deg,#3657b3,#29489e);border-color:rgba(255,255,255,.28);color:#fff}
+    .btn.ghost{background:#fff;color:var(--highlight);border-color:rgba(47,78,162,.18)}
+    .btn.soft{background:var(--panel-soft);color:var(--highlight)}
+    .btn.danger{background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08));color:var(--danger);border-color:rgba(180,35,24,.24)}
+    .btn.small{padding:8px 12px;border-radius:10px;font-size:13px}
+    .btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-shadow:none}
+
+    .wrap{max-width:1400px;margin:28px auto;padding:0 20px;display:grid;gap:18px}
+    .panel{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:20px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+    .muted{color:var(--muted)}
+    .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+    .hero{display:grid;gap:18px;grid-template-columns:minmax(0,1.4fr) minmax(280px,.95fr);align-items:start}
+    .hero h1{margin:4px 0 0;font-size:32px;line-height:1.08}
+    .hero p{margin:0}
+    .hero-card{padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(47,78,162,.08),rgba(255,255,255,.92));border:1px solid rgba(47,78,162,.12);display:grid;gap:14px}
+    .hero-chips,.metric-grid,.filters-row,.toggle-meta,.image-actions,.notice-card__meta,.notice-card__actions,.editor-actions,.preview-card__meta{display:flex;flex-wrap:wrap;gap:10px}
+    .chip,.status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;border:1px solid rgba(47,78,162,.16);background:var(--panel-soft);font-size:12px;font-weight:800;letter-spacing:.04em}
+    .chip strong{color:var(--ink)}
+    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .metric{padding:16px;border-radius:18px;background:var(--panel-soft);border:1px solid rgba(47,78,162,.1);display:grid;gap:6px}
+    .metric span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .metric strong{font-size:28px;line-height:1}
+    .metric small{color:var(--muted)}
+
+    .toggle-panel{display:grid;gap:16px;grid-template-columns:minmax(0,1.2fr) auto}
+    .toggle-panel h2,.notice-shell__head h2{margin:0;font-size:22px;line-height:1.15}
+    .toggle-controls{display:grid;justify-items:end;gap:10px}
+    .switch{display:inline-flex;align-items:center;gap:12px;font-weight:800;color:var(--ink)}
+    .switch input{position:absolute;opacity:0;pointer-events:none}
+    .switch-ui{width:60px;height:34px;border-radius:999px;background:#d2dcf3;border:1px solid rgba(47,78,162,.16);position:relative;transition:background .18s ease,border-color .18s ease}
+    .switch-ui::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 4px 12px rgba(15,27,63,.18);transition:transform .18s ease}
+    .switch input:checked + .switch-ui{background:rgba(19,135,84,.85);border-color:rgba(19,135,84,.36)}
+    .switch input:checked + .switch-ui::after{transform:translateX(26px)}
+
+    .filters-panel{display:grid;gap:14px}
+    .filters-row{align-items:center}
+    .search{display:flex;align-items:center;gap:10px;flex:1;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid rgba(47,78,162,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
+    .search input{width:100%;border:0;background:transparent;color:var(--ink);padding:0}
+    .search input:focus{outline:none}
+    .filters-row select{min-width:180px;padding:10px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.16);background:#fff;color:var(--ink);font-weight:700}
+
+    .notice-shell{display:grid;gap:16px}
+    .notice-shell__head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+    .notice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    .notice-card{display:grid;grid-template-columns:118px minmax(0,1fr);gap:16px;padding:16px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,255,.98));border:1px solid rgba(47,78,162,.14);box-shadow:0 16px 32px rgba(15,27,63,.08)}
+    .notice-card__media{position:relative;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,rgba(47,78,162,.22),rgba(63,102,199,.08));min-height:126px}
+    .notice-card__media img{width:100%;height:100%;object-fit:cover;display:block}
+    .notice-card__placeholder{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.65)}
+    .notice-card__body{display:grid;gap:10px;min-width:0}
+    .notice-card__header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .notice-card__header h3{margin:0;font-size:20px;line-height:1.18}
+    .notice-card__summary{margin:0;color:var(--muted)}
+    .notice-card__meta{font-size:12px;color:var(--muted)}
+    .status-pill--published{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.22);color:var(--ok)}
+    .status-pill--scheduled{background:rgba(243,187,47,.14);border-color:rgba(214,156,23,.28);color:var(--warn)}
+    .status-pill--draft{background:rgba(93,111,158,.12);border-color:rgba(93,111,158,.2);color:var(--muted)}
+    .status-pill--archived{background:rgba(180,35,24,.1);border-color:rgba(180,35,24,.16);color:var(--danger)}
+    .notice-card__actions{margin-top:auto}
+    .notice-card__actions .btn{flex:1}
+
+    .empty-state,.notice-banner{padding:24px;border-radius:18px;border:1px dashed rgba(47,78,162,.24);background:linear-gradient(180deg,rgba(247,249,255,.95),rgba(255,255,255,.95));display:grid;gap:8px;text-align:center}
+    .empty-state strong,.notice-banner strong{font-size:18px}
+    .notice-banner{display:none;text-align:left}
+    .notice-banner[data-tone="warn"]{display:grid;background:rgba(255,247,232,.92);border-style:solid;border-color:rgba(169,107,0,.24)}
+    .notice-banner[data-tone="info"]{display:grid;background:rgba(238,242,255,.92);border-style:solid;border-color:rgba(47,78,162,.16)}
+
+    .editor{position:fixed;top:0;right:0;bottom:0;width:min(760px,96vw);transform:translateX(100%);transition:transform .22s ease;z-index:220;background:#f7f9ff;border-left:1px solid var(--border);box-shadow:-24px 0 60px rgba(15,27,63,.22);display:grid;grid-template-rows:auto 1fr auto}
+    .editor.is-open{transform:translateX(0)}
+    .editor__head,.editor__foot{padding:18px 22px;background:#fff;border-bottom:1px solid var(--border)}
+    .editor__head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+    .editor__head h2{margin:4px 0 0;font-size:24px;line-height:1.08}
+    .editor__body{padding:20px 22px;overflow:auto;display:grid;gap:18px}
+    .editor__foot{border-top:1px solid var(--border);border-bottom:0}
+    .editor__meta{display:grid;gap:8px}
+    .editor__status{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .field,.section-card{display:grid;gap:7px}
+    .field label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.16);background:#fff;color:var(--ink)}
+    .field textarea{min-height:140px;resize:vertical}
+    .field--wide,.section-card{grid-column:1 / -1}
+    .field-note{margin:0;color:var(--muted);font-size:12px}
+    .checkline{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--highlight)}
+    .checkline input{width:18px;height:18px}
+
+    .image-panel{display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px;padding:16px;border-radius:18px;background:#fff;border:1px solid rgba(47,78,162,.12)}
+    .image-frame{border-radius:16px;overflow:hidden;min-height:160px;background:linear-gradient(135deg,rgba(47,78,162,.18),rgba(63,102,199,.06));display:grid;place-items:center;position:relative}
+    .image-frame img{width:100%;height:100%;object-fit:cover;display:none}
+    .image-frame.has-image img{display:block}
+    .image-placeholder{padding:14px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.6)}
+    .image-frame.has-image .image-placeholder{display:none}
+
+    .preview-card{display:grid;gap:14px;padding:18px;border-radius:22px;background:linear-gradient(180deg,rgba(18,27,63,.96),rgba(32,51,110,.92));color:#eef2ff;box-shadow:0 18px 40px rgba(15,27,63,.24);overflow:hidden}
+    .preview-card__media{border-radius:16px;overflow:hidden;aspect-ratio:16/9;background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.04));display:grid;place-items:center}
+    .preview-card__media img{width:100%;height:100%;object-fit:cover;display:block}
+    .preview-card__media span{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+    .preview-card__title{margin:0;font-size:24px;line-height:1.12}
+    .preview-card__summary,.preview-card__body{margin:0;color:rgba(234,240,255,.78)}
+    .preview-card__cta{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:#fff;color:var(--highlight);font-weight:800;align-self:start}
+    .preview-card__tag{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+
+    #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.22);box-shadow:0 18px 32px rgba(15,27,63,.2);font-weight:800}
+
+    @media (max-width:1100px){
+      .hero,.toggle-panel,.image-panel{grid-template-columns:1fr}
+      .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+
+    @media (max-width:780px){
+      .wrap{padding:0 14px}
+      .row{padding:12px 14px;flex-wrap:wrap}
+      .notice-card{grid-template-columns:1fr}
+      .notice-card__media{min-height:180px}
+      .form-grid{grid-template-columns:1fr}
+      .editor{width:100vw}
+      .metric-grid{grid-template-columns:1fr}
+      .filters-row{flex-direction:column;align-items:stretch}
+      .filters-row select{min-width:0;width:100%}
+      .toggle-controls{justify-items:start}
+    }
+  </style>
+</head>
+<body>
+  <div class="top"><div class="row">
+    <div class="brand">HMJ Global Admin</div>
+    <span class="pill">Noticeboard</span>
+    <div class="sp"></div>
+    <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
+    <a class="btn ghost" href="/">← Website</a>
+    <button class="btn ghost" type="button" data-admin-logout>Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn ghost" type="button" data-admin-login>Log in</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel hero" aria-labelledby="noticeboardHeading">
+      <div>
+        <p class="eyebrow">Public communications</p>
+        <h1 id="noticeboardHeading">Noticeboard</h1>
+        <p class="muted" id="welcomeMeta">Loading user…</p>
+        <p class="muted">Manage polished About Us updates with draft, scheduling, imagery, and controlled public visibility from one place.</p>
+      </div>
+      <aside class="hero-card" aria-live="polite">
+        <p class="eyebrow">Presentation status</p>
+        <div class="hero-chips">
+          <span class="chip"><strong id="heroVisibilityLabel">Public section live</strong></span>
+          <span class="chip">About page feed</span>
+          <span class="chip">Featured post layout</span>
+        </div>
+        <p class="muted" id="heroSummary">Loading noticeboard status…</p>
+      </aside>
+    </section>
+
+    <section class="panel toggle-panel" aria-labelledby="publicToggleHeading">
+      <div>
+        <p class="eyebrow">Visibility control</p>
+        <h2 id="publicToggleHeading">Show or hide the public noticeboard section</h2>
+        <p class="muted">Switching this off removes the entire noticeboard section from the About Us page without deleting any posts.</p>
+        <div class="toggle-meta">
+          <span class="chip" id="toggleStateChip">Loading setting…</span>
+          <span class="chip">Drafts remain admin-only</span>
+          <span class="chip">Schedules still stay saved</span>
+        </div>
+      </div>
+      <div class="toggle-controls">
+        <label class="switch" for="noticeboardEnabled">
+          <input id="noticeboardEnabled" type="checkbox"/>
+          <span class="switch-ui" aria-hidden="true"></span>
+          <span id="toggleStateLabel">Public off</span>
+        </label>
+        <button class="btn primary" id="saveVisibilityBtn" type="button">Save visibility</button>
+      </div>
+    </section>
+
+    <section class="metric-grid" aria-label="Noticeboard overview">
+      <article class="panel metric">
+        <span>Published now</span>
+        <strong id="metricPublished">0</strong>
+        <small id="metricPublishedLabel">Visible on About Us</small>
+      </article>
+      <article class="panel metric">
+        <span>Scheduled</span>
+        <strong id="metricScheduled">0</strong>
+        <small id="metricScheduledLabel">Waiting for publish time</small>
+      </article>
+      <article class="panel metric">
+        <span>Drafts</span>
+        <strong id="metricDraft">0</strong>
+        <small id="metricDraftLabel">Internal only</small>
+      </article>
+      <article class="panel metric">
+        <span>Featured</span>
+        <strong id="metricFeatured">0</strong>
+        <small id="metricFeaturedLabel">Priority story cards</small>
+      </article>
+    </section>
+
+    <section class="panel filters-panel" aria-labelledby="manageHeading">
+      <div class="notice-shell__head">
+        <div>
+          <p class="eyebrow">Management</p>
+          <h2 id="manageHeading">Existing posts</h2>
+        </div>
+        <div class="filters-row">
+          <button class="btn soft small" id="refreshBtn" type="button">Refresh</button>
+          <button class="btn primary small" id="newNoticeBtn" type="button">＋ New notice</button>
+        </div>
+      </div>
+      <div class="filters-row">
+        <label class="search" for="searchInput">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4d67b0" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="searchInput" type="search" autocomplete="off" placeholder="Search title or summary"/>
+        </label>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option value="published">Published now</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="draft">Drafts</option>
+          <option value="archived">Archived / expired</option>
+        </select>
+        <select id="presentationFilter" aria-label="Filter by presentation">
+          <option value="all">Any presentation</option>
+          <option value="featured">Featured only</option>
+          <option value="with-image">With image</option>
+          <option value="cta">With CTA</option>
+        </select>
+      </div>
+      <p class="muted" id="resultMeta">Loading notices…</p>
+    </section>
+
+    <section class="notice-banner panel" id="noticeBanner" hidden>
+      <strong id="noticeBannerTitle">Noticeboard setup required</strong>
+      <p class="muted" id="noticeBannerBody">The noticeboard data source is not ready yet.</p>
+    </section>
+
+    <section class="panel notice-shell" aria-labelledby="noticeListHeading">
+      <div class="notice-shell__head">
+        <div>
+          <p class="eyebrow">Content board</p>
+          <h2 id="noticeListHeading">Posts</h2>
+        </div>
+        <span class="chip" id="boardSourceChip">Loading source…</span>
+      </div>
+      <div class="notice-grid" id="noticeGrid" aria-live="polite"></div>
+      <div class="empty-state" id="emptyState" hidden>
+        <strong>No noticeboard posts yet</strong>
+        <p class="muted" id="emptyStateCopy">Create the first notice to populate the About Us noticeboard.</p>
+      </div>
+    </section>
+  </div>
+
+  <aside class="editor" id="editor" aria-hidden="true">
+    <div class="editor__head">
+      <div class="editor__meta">
+        <p class="eyebrow">Notice editor</p>
+        <h2 id="editorTitle">New notice</h2>
+        <div class="editor__status">
+          <span class="status-pill status-pill--draft" id="editorStatusPill">Draft</span>
+          <span class="muted" id="editorMeta">New notice</span>
+        </div>
+      </div>
+      <button class="btn ghost small" id="closeEditorBtn" type="button">Close</button>
+    </div>
+    <div class="editor__body">
+      <form id="noticeForm" novalidate>
+        <div class="form-grid">
+          <div class="field field--wide">
+            <label for="fieldTitle">Title</label>
+            <input id="fieldTitle" maxlength="140" required/>
+          </div>
+          <div class="field">
+            <label for="fieldSlug">Slug</label>
+            <input id="fieldSlug" maxlength="80" placeholder="auto-generated from the title"/>
+          </div>
+          <div class="field">
+            <label for="fieldStatus">Status</label>
+            <select id="fieldStatus">
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div class="field field--wide">
+            <label for="fieldSummary">Summary</label>
+            <textarea id="fieldSummary" rows="4" placeholder="Short excerpt shown on the public noticeboard cards"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="fieldBody">Body content</label>
+            <textarea id="fieldBody" rows="10" placeholder="Full notice content. Paragraph breaks are preserved in the public dialog."></textarea>
+          </div>
+          <div class="field">
+            <label for="fieldPublishAt">Publish at</label>
+            <input id="fieldPublishAt" type="datetime-local"/>
+            <p class="field-note">For scheduled or future-dated publishing. Leave blank to publish immediately when using “Published”.</p>
+          </div>
+          <div class="field">
+            <label for="fieldExpiresAt">Expires at</label>
+            <input id="fieldExpiresAt" type="datetime-local"/>
+            <p class="field-note">Optional. Once reached, the notice is hidden from the public page automatically.</p>
+          </div>
+          <div class="field">
+            <label for="fieldSortOrder">Sort order</label>
+            <input id="fieldSortOrder" type="number" min="0" step="1" value="100"/>
+            <p class="field-note">Lower numbers rise higher within the public list.</p>
+          </div>
+          <div class="field">
+            <label for="fieldCtaLabel">CTA label</label>
+            <input id="fieldCtaLabel" maxlength="60" placeholder="Read more"/>
+          </div>
+          <div class="field field--wide">
+            <label for="fieldCtaUrl">CTA link</label>
+            <input id="fieldCtaUrl" placeholder="https://example.com or /contact.html"/>
+          </div>
+          <div class="field field--wide">
+            <label class="checkline" for="fieldFeatured">
+              <input id="fieldFeatured" type="checkbox"/>
+              Feature this notice in the public layout
+            </label>
+            <p class="field-note">Featured notices receive the strongest visual emphasis on the About Us page.</p>
+          </div>
+        </div>
+
+        <section class="section-card">
+          <div class="image-panel">
+            <div class="image-frame" id="imageFrame">
+              <img id="imagePreview" alt=""/>
+              <div class="image-placeholder">No image uploaded</div>
+            </div>
+            <div class="section-card">
+              <div>
+                <p class="eyebrow">Accompanying image</p>
+                <h3 style="margin:4px 0 0;font-size:22px;line-height:1.15">Premium visual treatment</h3>
+              </div>
+              <p class="muted" id="imageMeta">JPG, PNG, WebP, or AVIF up to 6MB. Images are cropped responsively for the public cards.</p>
+              <div class="image-actions">
+                <button class="btn soft small" id="uploadImageBtn" type="button">Upload image</button>
+                <button class="btn ghost small" id="removeImageBtn" type="button">Remove image</button>
+              </div>
+              <div class="field">
+                <label for="fieldImageAlt">Image alt text</label>
+                <input id="fieldImageAlt" maxlength="140" placeholder="Describe the uploaded image for accessibility"/>
+              </div>
+              <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden/>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div>
+            <p class="eyebrow">Public preview</p>
+            <h3 style="margin:4px 0 0;font-size:22px;line-height:1.15">How this card will feel on the About Us page</h3>
+            <p class="muted" id="publishHint">Draft notices remain visible only in admin until you publish or schedule them.</p>
+          </div>
+          <article class="preview-card" id="previewCard"></article>
+        </section>
+      </form>
+    </div>
+    <div class="editor__foot">
+      <div class="editor-actions">
+        <button class="btn danger" id="deleteNoticeBtn" type="button">Delete</button>
+        <button class="btn soft" id="saveDraftBtn" type="button">Save draft</button>
+        <button class="btn soft" id="scheduleBtn" type="button">Schedule</button>
+        <button class="btn soft" id="archiveBtn" type="button">Hide</button>
+        <button class="btn primary" id="publishBtn" type="button">Publish now</button>
+        <button class="btn ghost" id="saveNoticeBtn" type="button">Save changes</button>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

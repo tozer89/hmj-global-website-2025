@@ -10,6 +10,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="js/hmj-nav.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
+  <link rel="stylesheet" href="assets/css/public.facelift.css" />
 
   <style>
     :root{
@@ -189,7 +190,7 @@
     }
   </style>
 </head>
-<body>
+<body class="public-page timesheets-page">
   <!-- Announcement -->
   <div class="announce" role="region" aria-label="Announcement">
     <div class="inner">
@@ -220,8 +221,31 @@
     </nav>
   </header>
 
-  
-
+  <section class="timesheet-hero" aria-label="Timesheet portal overview">
+    <div class="timesheet-hero__panel">
+      <div class="timesheet-hero__meta">
+        <p class="public-hero-panel__eyebrow">Contractor portal</p>
+        <h1>Timesheets with clearer weekly visibility.</h1>
+        <p>Submit hours, review previous weeks and keep payment-critical deadlines visible through the HMJ contractor workspace.</p>
+        <div class="public-pills" role="list" aria-label="Timesheet highlights">
+          <span class="public-pill" role="listitem">Deadline visibility</span>
+          <span class="public-pill" role="listitem">Draft and submit flow</span>
+          <span class="public-pill" role="listitem">History and payslip access</span>
+        </div>
+      </div>
+      <div class="timesheet-hero__side">
+        <div class="public-card public-card--tint">
+          <span class="public-card__kicker">Before you submit</span>
+          <h3>Keep the weekly handoff clean.</h3>
+          <ul class="public-list">
+            <li>Check standard and overtime entries before sending</li>
+            <li>Use notes for anything payroll or approvals should know</li>
+            <li>Raise an issue early if assignment details look wrong</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
 
 <script>
     (function(){

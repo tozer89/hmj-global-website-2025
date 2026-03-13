@@ -16,6 +16,8 @@ const {
   isPublicJob,
   isPublishedLiveJob,
   buildPublicJobDetailPath,
+  PUBLIC_PAGE_DEFAULTS,
+  normalisePublicPageConfig,
 } = require('../netlify/functions/_jobs-helpers.js');
 
 test('toJob normalises database row fields and derives tags/section meta', () => {
@@ -44,6 +46,11 @@ test('toJob normalises database row fields and derives tags/section meta', () =>
     sort_order: 10,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-02T00:00:00Z',
+    public_page_config: {
+      showCustomer: false,
+      showPageMeta: 'true',
+      showReference: 'false',
+    },
   };
 
   const job = toJob(row);
@@ -67,6 +74,12 @@ test('toJob normalises database row fields and derives tags/section meta', () =>
   assert.equal(job.clientName, 'Confidential Client');
   assert.equal(job.customer, 'Main contractor');
   assert.deepEqual(job.benefits, ['Travel allowance', 'Bonus']);
+  assert.deepEqual(job.publicPageConfig, {
+    ...PUBLIC_PAGE_DEFAULTS,
+    showCustomer: false,
+    showPageMeta: true,
+    showReference: false,
+  });
   assert.equal(job.payType, 'day_rate');
   assert.equal(job.dayRateMin, 450);
   assert.equal(job.dayRateMax, 550);
@@ -91,6 +104,11 @@ test('toDbPayload trims values, converts arrays, and flattens tags to keywords s
     benefits: ['Bonus', ' Pension '],
     customer: 'End client: Confidential',
     clientName: 'Stealth operator',
+    publicPageConfig: {
+      showCustomer: false,
+      showBenefits: false,
+      showPageMeta: true,
+    },
     payType: 'salary_range',
     salaryMin: '65000',
     salaryMax: 80000,
@@ -116,6 +134,12 @@ test('toDbPayload trims values, converts arrays, and flattens tags to keywords s
     benefits: ['Bonus', 'Pension'],
     client_name: 'Stealth operator',
     customer: 'End client: Confidential',
+    public_page_config: {
+      ...PUBLIC_PAGE_DEFAULTS,
+      showCustomer: false,
+      showBenefits: false,
+      showPageMeta: true,
+    },
     pay_type: 'salary_range',
     day_rate_min: null,
     day_rate_max: null,
@@ -151,6 +175,25 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
   assert.equal(job.payType, 'hourly_range');
   assert.equal(job.payText, '£28 - £35 per hour');
   assert.equal(job.publicDetailPath, '/jobs/spec.html?id=role-3');
+  assert.deepEqual(job.publicPageConfig, PUBLIC_PAGE_DEFAULTS);
+});
+
+test('normalisePublicPageConfig applies defaults and understands string booleans', () => {
+  assert.deepEqual(
+    normalisePublicPageConfig({
+      showOverview: 'false',
+      showBenefits: true,
+      showSecondaryCta: 'true',
+      showReference: 'invalid',
+    }),
+    {
+      ...PUBLIC_PAGE_DEFAULTS,
+      showOverview: false,
+      showBenefits: true,
+      showSecondaryCta: true,
+      showReference: false,
+    }
+  );
 });
 
 test('cleanArray supports newline, comma, and bullet-separated strings', () => {

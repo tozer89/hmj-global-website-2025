@@ -184,6 +184,10 @@
       align-items: stretch;
     }
 
+    .hero--single {
+      grid-template-columns: 1fr;
+    }
+
     .hero__main {
       padding: clamp(26px, 4vw, 42px);
       background:
@@ -495,6 +499,10 @@
       align-items: start;
     }
 
+    .content-grid--single {
+      grid-template-columns: 1fr;
+    }
+
     .content-main,
     .sticky-stack {
       display: grid;
@@ -804,7 +812,7 @@
           <img src="../images/logo.png" alt="HMJ Global logo"/>
           <span class="brand__label">
             <strong>HMJ Global</strong>
-            <span>Public role overview</span>
+            <span>Role advert</span>
           </span>
         </a>
         <div class="topbar__actions">
@@ -813,7 +821,7 @@
         </div>
       </header>
 
-      <section class="hero">
+      <section id="heroSection" class="hero">
         <div class="panel hero__main">
           <div class="hero__eyebrow">
             <span id="status" class="badge"></span>
@@ -849,23 +857,23 @@
 
           <div class="action-row">
             <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
-            <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+            <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
             <a class="btn btn-secondary" data-email-share href="#">Share by email</a>
             <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
           </div>
 
-          <p class="hero__note">HMJ Global keeps this role flow direct and professional, so candidates can move from the role detail page to the application form with the right context attached.</p>
+          <p class="hero__note">If this role feels aligned, you can move directly into the HMJ application flow with the advert context already attached.</p>
         </div>
 
-        <aside class="panel hero__side">
-          <p class="side__eyebrow">Why apply</p>
+        <aside id="heroSide" class="panel hero__side">
+          <p class="side__eyebrow">At a glance</p>
           <h2 class="side__title">Role highlights</h2>
           <div id="highlights" class="highlight-list"></div>
 
           <div id="customerCard" class="detail-card" style="display:none">
             <span class="detail-card__label">Customer</span>
             <span id="customer" class="detail-card__value"></span>
-            <p class="detail-card__text">Shared publicly only where HMJ has been given permission to reference the customer context.</p>
+            <p class="detail-card__text">Shown only where HMJ has permission to reference the project or customer context publicly.</p>
           </div>
 
           <div id="benefitsCard" class="detail-card" style="display:none">
@@ -875,9 +883,9 @@
         </aside>
       </section>
 
-      <section class="content-grid">
+      <section id="contentGrid" class="content-grid">
         <div class="content-main">
-          <section class="panel section-card">
+          <section id="overviewSection" class="panel section-card">
             <div class="section-card__head">
               <div>
                 <p class="section-kicker">Overview</p>
@@ -908,47 +916,47 @@
           </section>
         </div>
 
-        <aside class="content-side">
+        <aside id="contentSide" class="content-side">
           <div class="sticky-stack">
-            <section class="panel apply-panel">
+            <section id="applyPanel" class="panel apply-panel">
               <p class="section-kicker" style="color:#aec4ff">Apply for this role</p>
-              <h2>Move straight into the HMJ application flow</h2>
+              <h2>Apply directly with HMJ Global</h2>
               <p id="applyPanelSummary" class="apply-panel__summary"></p>
               <ul class="apply-panel__checks">
                 <li>Your application opens with this role already attached.</li>
-                <li>HMJ receives the job reference and page context with the submission.</li>
+                <li>HMJ receives the role context with your submission.</li>
                 <li>You can still return to the live jobs list if you want to compare roles.</li>
               </ul>
               <div class="action-column">
                 <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
-                <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+                <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
                 <a class="btn btn-ghost" data-email-share href="#">Share by email</a>
               </div>
             </section>
 
-            <section class="panel system-panel">
-              <p class="section-kicker">Page details</p>
+            <section id="metaPanel" class="panel system-panel" style="display:none">
+              <p class="section-kicker">Role page details</p>
               <div class="system-grid">
                 <div class="system-item">
-                  <span>Share code</span>
-                  <strong id="shareCode">Not available</strong>
+                  <span>Advertised by</span>
+                  <strong id="metaPublisher">HMJ Global</strong>
                 </div>
                 <div class="system-item">
-                  <span>Availability</span>
-                  <strong id="shareExpiry">Active</strong>
+                  <span>Role status</span>
+                  <strong id="metaStatus">Live</strong>
                 </div>
                 <div class="system-item">
-                  <span>Last update</span>
-                  <strong id="shareTimestamp">Current</strong>
+                  <span>Last updated</span>
+                  <strong id="metaUpdated">Current</strong>
                 </div>
               </div>
-              <p id="meta" class="system-meta"></p>
+              <p id="meta" class="system-meta" style="display:none"></p>
             </section>
           </div>
         </aside>
       </section>
 
-      <section class="panel cta-band">
+      <section id="ctaBand" class="panel cta-band" style="display:none">
         <div class="cta-band__copy">
           <p class="section-kicker">Next step</p>
           <h2>Ready to put yourself forward?</h2>
@@ -956,7 +964,7 @@
         </div>
         <div class="cta-band__actions">
           <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
-          <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+          <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
           <a class="btn btn-secondary" data-email-share href="#">Share by email</a>
           <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
         </div>
@@ -970,7 +978,7 @@
       <span id="stickyMeta"></span>
     </div>
     <div class="sticky-cta__actions">
-      <button class="btn btn-secondary" data-copy-link type="button">Copy link</button>
+      <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
       <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
     </div>
   </div>
@@ -1004,6 +1012,20 @@
 
       let shareContext = null;
       let toastTimer = null;
+      const PUBLIC_PAGE_DEFAULTS = Object.freeze({
+        showOverview: true,
+        showPay: true,
+        showCustomer: true,
+        showBenefits: true,
+        showResponsibilities: true,
+        showRequirements: true,
+        showTags: true,
+        showRoleHighlights: true,
+        showApplyPanel: true,
+        showSecondaryCta: false,
+        showPageMeta: false,
+        showReference: false,
+      });
 
       copyButtons.forEach((button) => {
         button.disabled = true;
@@ -1049,6 +1071,25 @@
         const text = String(value || '').replace(/\s+/g, ' ').trim();
         if (text.length <= max) return text;
         return `${text.slice(0, max).replace(/\s+\S*$/, '')}…`;
+      }
+
+      function normalizePublicPageConfig(value) {
+        const input = value && typeof value === 'object' ? value : {};
+        const next = {};
+        Object.entries(PUBLIC_PAGE_DEFAULTS).forEach(([key, fallback]) => {
+          if (typeof input[key] === 'boolean') {
+            next[key] = input[key];
+            return;
+          }
+          const raw = String(input[key] ?? '').trim().toLowerCase();
+          next[key] = raw === 'true' ? true : raw === 'false' ? false : fallback;
+        });
+        return next;
+      }
+
+      function applyNodeVisibility(node, visible, display = '') {
+        if (!node) return;
+        node.style.display = visible ? display : 'none';
       }
 
       function decodeSharePayload(value){
@@ -1157,10 +1198,10 @@
           helper.select();
           document.execCommand('copy');
           document.body.removeChild(helper);
-          showToast('Share link copied');
+          showToast('Role link copied');
         } catch (err) {
           console.warn('[spec] clipboard copy failed', err);
-          showToast('Unable to copy link');
+          showToast('Unable to copy role link');
         }
       }
 
@@ -1170,7 +1211,7 @@
           const text = shareContext.shareLink;
           if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(text).then(
-              () => showToast('Share link copied'),
+              () => showToast('Role link copied'),
               () => fallbackCopy(text)
             );
           } else {
@@ -1280,48 +1321,61 @@
           : date.toLocaleDateString(undefined, { dateStyle: 'medium' });
       }
 
-      function buildHighlights(job, details) {
+      function buildRoleStatusLabel(status) {
+        if (status === 'closed') return 'Closed';
+        if (status === 'interviewing') return 'Interviewing';
+        return 'Live';
+      }
+
+      function buildMetaBadge(status, showMeta) {
+        if (!showMeta) return '';
+        if (status === 'closed') return 'Closed role advert';
+        if (status === 'interviewing') return 'Interviewing role advert';
+        return 'Role advert';
+      }
+
+      function buildHighlights(details) {
         const cards = [];
         if (details.payText) {
           cards.push({
             label: 'Package',
             value: details.payText,
-            text: 'Compensation is already surfaced clearly on the role page.',
+            text: 'Compensation is set out clearly from the outset.',
           });
         }
         if (details.locationText) {
           cards.push({
             label: 'Location',
             value: details.locationText,
-            text: 'Candidates can immediately see the project geography.',
+            text: 'Project location is clear before the application step.',
           });
         }
         if (details.employmentText) {
           cards.push({
             label: 'Employment',
             value: details.employmentText,
-            text: 'The role type is clear before entering the application form.',
+            text: 'Contract structure is clear before you apply.',
           });
         }
         if (details.customerText) {
           cards.push({
             label: 'Project context',
             value: details.customerText,
-            text: 'Public customer information is integrated into the offer story.',
+            text: 'Helpful public project context is included where available.',
           });
         }
         if (!cards.length && details.tags.length) {
           cards.push({
             label: 'Skills focus',
             value: details.tags.slice(0, 3).join(' • '),
-            text: 'Key capability signals pulled from the published role data.',
+            text: 'Core experience areas aligned to the role.',
           });
         }
         if (cards.length < 4 && details.benefits.length) {
           cards.push({
-            label: 'Candidate support',
+            label: 'Benefits',
             value: details.benefits.slice(0, 2).join(' • '),
-            text: 'Benefits and support points are surfaced earlier in the page.',
+            text: 'Candidate support and package benefits are highlighted early.',
           });
         }
         if (cards.length < 4 && details.tags.length) {
@@ -1343,23 +1397,6 @@
         const node = document.getElementById(id);
         if (!node) return;
         node.innerHTML = (items || []).map((item) => `<span class="${className}">${escapeHtml(item)}</span>`).join('');
-      }
-
-      function buildAvailability(meta) {
-        if (meta.publicDetail) return 'Live role page';
-        if (meta.local) return 'Local preview';
-        if (meta.snapshot) return 'Snapshot preview';
-        if (meta.expires_at) return `Expires ${formatDate(meta.expires_at)}`;
-        if (meta.fallback) return 'Direct live link';
-        return 'Active share link';
-      }
-
-      function buildTopBadge(meta) {
-        if (meta.publicDetail) return 'Live role detail';
-        if (meta.local) return 'Local preview';
-        if (meta.snapshot) return 'Snapshot preview';
-        if (meta.fallback) return meta.schema ? 'Schema fallback' : 'Static fallback';
-        return 'Share page';
       }
 
       function buildApplyUrl(job, meta, details) {
@@ -1425,6 +1462,7 @@
       }
 
       function renderSpec(job, meta){
+        const publicPageConfig = normalizePublicPageConfig(job.publicPageConfig || job.public_page_config);
         const payText = job.payText || buildPayText(job);
         const locationText = job.locationText || 'Flexible / discussed with HMJ';
         const rawEmploymentType = String(job.type || '').trim();
@@ -1433,9 +1471,14 @@
         const benefits = Array.isArray(job.benefits) ? job.benefits.filter(Boolean) : [];
         const tags = Array.isArray(job.tags) ? job.tags.filter(Boolean) : [];
         const reference = meta.jobId || job.id || '';
-        const shareCode = meta.slug || localSlug || '';
         const overviewText = String(job.overview || '').trim();
-        const intro = overviewText
+        const visiblePayText = publicPageConfig.showPay ? payText : '';
+        const visibleCustomerText = publicPageConfig.showCustomer ? customerText : '';
+        const visibleBenefits = publicPageConfig.showBenefits ? benefits : [];
+        const visibleTags = publicPageConfig.showTags ? tags : [];
+        const visibleReference = publicPageConfig.showReference ? reference : '';
+        const showOverview = publicPageConfig.showOverview && !!overviewText;
+        const intro = showOverview
           ? truncateText(overviewText, 210)
           : `Explore this HMJ Global opportunity${locationText ? ` in ${locationText}` : ''} and move straight into the application flow with the role context attached.`;
 
@@ -1444,10 +1487,11 @@
           locationText,
           rawEmploymentType,
           employmentText,
-          payText,
-          customerText,
-          benefits,
-          tags,
+          payText: visiblePayText,
+          customerText: visibleCustomerText,
+          benefits: visibleBenefits,
+          tags: visibleTags,
+          reference: visibleReference,
           shareLink: location.href,
         };
 
@@ -1455,13 +1499,14 @@
         details.applyUrl = applyUrl;
 
         const emailHref = buildEmailHref(details);
-        const highlights = buildHighlights(job, details);
+        const highlights = publicPageConfig.showRoleHighlights ? buildHighlights(details) : [];
 
         document.title = `${details.title} | HMJ Global`;
 
         const statusEl = document.getElementById('status');
         const status = String(job.status || 'live').toLowerCase();
-        statusEl.textContent = status === 'closed' ? 'Closed' : status === 'interviewing' ? 'Interviewing' : 'Live';
+        const statusText = buildRoleStatusLabel(status);
+        statusEl.textContent = statusText;
         statusEl.className = `badge ${status === 'closed' ? 'closed' : status === 'interviewing' ? 'interviewing' : 'live'}`;
 
         setText('title', details.title);
@@ -1469,25 +1514,35 @@
         setText('location', details.locationText);
         setText('employment', details.employmentText);
         setText('overview', overviewText || 'HMJ Global will share further detail during the application conversation.');
-        setText('reference', reference);
-        setText('customer', customerText);
-        setText('shareCode', shareCode || 'Direct link');
-        setText('shareExpiry', buildAvailability(meta));
-        setText('shareTimestamp', formatDate(meta.refreshed_at || meta.created_at || meta.expires_at, true) || 'Current');
+        setText('reference', visibleReference);
+        setText('customer', visibleCustomerText);
+        setText('metaPublisher', 'HMJ Global');
+        setText('metaStatus', statusText);
+        setText('metaUpdated', formatDate(meta.refreshed_at || job.updatedAt || meta.created_at || job.createdAt, true) || 'Current');
         setText('applyPanelSummary', [details.title, details.locationText, details.employmentText].filter(Boolean).join(' • '));
         setText('stickyTitle', details.title);
-        setText('stickyMeta', [details.locationText, details.employmentText, details.payText || reference].filter(Boolean).join(' • '));
+        setText('stickyMeta', [details.locationText, details.employmentText, details.payText, details.reference].filter(Boolean).join(' • ') || 'Apply directly with HMJ Global');
+
+        const heroSection = document.getElementById('heroSection');
+        const heroSide = document.getElementById('heroSide');
+        const contentGrid = document.getElementById('contentGrid');
+        const contentSide = document.getElementById('contentSide');
+        const overviewSection = document.getElementById('overviewSection');
+        const applyPanel = document.getElementById('applyPanel');
+        const metaPanel = document.getElementById('metaPanel');
+        const metaSummary = document.getElementById('meta');
+        const ctaBand = document.getElementById('ctaBand');
 
         const payCard = document.getElementById('payCard');
-        if (payText) {
-          setText('pay', payText);
-          payCard.style.display = '';
+        if (visiblePayText) {
+          setText('pay', visiblePayText);
+          applyNodeVisibility(payCard, true);
         } else {
-          payCard.style.display = 'none';
+          applyNodeVisibility(payCard, false);
         }
 
         const referenceCard = document.getElementById('referenceCard');
-        referenceCard.style.display = reference ? '' : 'none';
+        applyNodeVisibility(referenceCard, !!visibleReference);
 
         const sectionBadge = document.getElementById('sectionBadge');
         if (job.sectionLabel || job.section) {
@@ -1498,12 +1553,12 @@
         }
 
         const tagsGroup = document.getElementById('tagsGroup');
-        if (tags.length) {
-          setHtmlList('tags', tags, 'chip');
-          tagsGroup.style.display = '';
+        if (visibleTags.length) {
+          setHtmlList('tags', visibleTags, 'chip');
+          applyNodeVisibility(tagsGroup, true);
         } else {
           document.getElementById('tags').innerHTML = '';
-          tagsGroup.style.display = 'none';
+          applyNodeVisibility(tagsGroup, false);
         }
 
         const highlightsNode = document.getElementById('highlights');
@@ -1514,48 +1569,56 @@
             <p class="highlight-card__text">${escapeHtml(card.text)}</p>
           </article>
         `).join('');
+        applyNodeVisibility(highlightsNode, highlights.length > 0);
 
         const customerCard = document.getElementById('customerCard');
-        customerCard.style.display = customerText ? '' : 'none';
+        const showCustomerCard = !!visibleCustomerText;
+        applyNodeVisibility(customerCard, showCustomerCard);
 
         const benefitsCard = document.getElementById('benefitsCard');
-        if (benefits.length) {
-          setHtmlList('benefits', benefits, 'benefit-pill');
-          benefitsCard.style.display = '';
+        if (visibleBenefits.length) {
+          setHtmlList('benefits', visibleBenefits, 'benefit-pill');
+          applyNodeVisibility(benefitsCard, true);
         } else {
           document.getElementById('benefits').innerHTML = '';
-          benefitsCard.style.display = 'none';
+          applyNodeVisibility(benefitsCard, false);
         }
+        const showHeroSide = highlights.length > 0 || showCustomerCard || visibleBenefits.length > 0;
+        applyNodeVisibility(heroSide, showHeroSide);
+        heroSection.classList.toggle('hero--single', !showHeroSide);
 
         const respItems = Array.isArray(job.responsibilities) ? job.responsibilities.filter(Boolean) : [];
         const respSection = document.getElementById('responsibilitiesSection');
         const respList = document.getElementById('respList');
         respList.innerHTML = respItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-        respSection.style.display = respItems.length ? '' : 'none';
+        applyNodeVisibility(respSection, publicPageConfig.showResponsibilities && respItems.length > 0);
 
         const reqItems = Array.isArray(job.requirements) ? job.requirements.filter(Boolean) : [];
         const reqSection = document.getElementById('requirementsSection');
         const reqList = document.getElementById('reqList');
         reqList.innerHTML = reqItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-        reqSection.style.display = reqItems.length ? '' : 'none';
+        applyNodeVisibility(reqSection, publicPageConfig.showRequirements && reqItems.length > 0);
+        applyNodeVisibility(overviewSection, showOverview);
 
-        const metaParts = [];
-        if (meta.publicDetail) metaParts.push('Public role page');
-        if (meta.snapshot) metaParts.push('Snapshot preview');
-        if (meta.local) metaParts.push('Local preview');
-        if (meta.slug && !meta.local) metaParts.push(`Share code ${meta.slug}`);
-        if (meta.created_at) metaParts.push(`Created ${formatDate(meta.created_at, true)}`);
-        if (meta.refreshed_at) metaParts.push(`Updated ${formatDate(meta.refreshed_at, true)}`);
-        if (meta.last_accessed && meta.local) metaParts.push(`Opened ${formatDate(meta.last_accessed, true)}`);
-        if (meta.expires_at) metaParts.push(`Expires ${formatDate(meta.expires_at)}`);
-        if (meta.fallback) metaParts.push(meta.schema ? 'Schema fallback' : 'Static fallback');
-        setText('meta', metaParts.join(' • '));
+        const metaText = visibleReference ? `Role reference: ${visibleReference}` : '';
+        setText('meta', metaText);
+        applyNodeVisibility(metaSummary, !!metaText);
 
-        const badgeText = buildTopBadge(meta);
+        const badgeText = buildMetaBadge(status, publicPageConfig.showPageMeta);
         if (topMetaBadge && badgeText) {
           topMetaBadge.textContent = badgeText;
           topMetaBadge.style.display = '';
+        } else if (topMetaBadge) {
+          topMetaBadge.textContent = '';
+          topMetaBadge.style.display = 'none';
         }
+
+        applyNodeVisibility(applyPanel, publicPageConfig.showApplyPanel);
+        applyNodeVisibility(metaPanel, publicPageConfig.showPageMeta);
+        const showContentSide = publicPageConfig.showApplyPanel || publicPageConfig.showPageMeta;
+        applyNodeVisibility(contentSide, showContentSide);
+        contentGrid.classList.toggle('content-grid--single', !showContentSide);
+        applyNodeVisibility(ctaBand, publicPageConfig.showSecondaryCta);
 
         shareContext = {
           shareLink: location.href,

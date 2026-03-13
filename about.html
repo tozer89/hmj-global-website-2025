@@ -9,6 +9,7 @@
   <script defer src="js/hmj-nav.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="assets/css/public.facelift.css" />
   <link rel="stylesheet" href="assets/css/about.enhanced.css" />
   <style>
     :root{
@@ -84,7 +85,7 @@
   </style>
 </head>
 
-<body class="about-body">
+<body class="about-body public-page about-page">
   <!-- Announcement -->
   <div class="announce" role="region" aria-label="Announcement">
     <div class="inner">
@@ -167,6 +168,60 @@
             <p class="about-timeline__summary">Deploy cross-functional pods that align CSA, MEP, commissioning and ops talent end-to-end.</p>
             <p class="about-timeline__detail">Standing up project controls, HSE and reliability teams with digital reporting, giving clients real-time visibility on programme health.</p>
           </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-operating-model about-section" id="aboutApproach">
+      <div class="about-shell">
+        <div class="about-section__header" data-reveal>
+          <p class="about-eyebrow">How HMJ works</p>
+          <h2>Structured support for programmes where mobilisation has to be dependable.</h2>
+          <p class="about-text">We support projects that need recruitment to plug into delivery reality: package deadlines, onboarding readiness, payroll clarity and contractor care across multiple regions.</p>
+        </div>
+        <div class="about-operating-model__grid" data-reveal>
+          <article class="about-operating-model__panel about-operating-model__panel--primary">
+            <span class="about-operating-model__label">Who HMJ supports</span>
+            <h3>Clients, contractors and teams working in environments that do not tolerate loose delivery.</h3>
+            <ul class="about-operating-model__list">
+              <li>Tier-one contractors and specialist packages across CSA, MEP and commissioning</li>
+              <li>Pharma and clean utilities teams working inside regulated project environments</li>
+              <li>Critical facilities and operations functions that need reliable contractor support</li>
+            </ul>
+          </article>
+          <div class="about-operating-model__stack">
+            <article class="about-operating-model__panel">
+              <span class="about-operating-model__label">Operating approach</span>
+              <p>We combine recruitment, compliance, onboarding and payroll support so teams move from approval to mobilisation with less friction and stronger visibility.</p>
+            </article>
+            <article class="about-operating-model__panel">
+              <span class="about-operating-model__label">UK &amp; EU reach</span>
+              <p>Our network and payroll frameworks support projects across the UK, Ireland, Benelux, Nordics, DACH and wider European programme locations.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-noticeboard about-section" id="aboutNoticeboard" hidden>
+      <div class="about-shell">
+        <div class="about-section__header about-noticeboard__header" data-reveal>
+          <p class="about-eyebrow">Noticeboard</p>
+          <h2>Latest HMJ updates, programme notices and company bulletin items</h2>
+          <p class="about-text">A curated stream of announcements, delivery milestones and sector updates from across HMJ’s mission-critical programmes.</p>
+        </div>
+        <div class="about-noticeboard__surface" data-reveal>
+          <div id="noticeboardFeatured" class="about-noticeboard__featured"></div>
+          <div id="noticeboardRail" class="about-noticeboard__rail"></div>
+        </div>
+        <div id="noticeboardGrid" class="about-noticeboard__grid" data-reveal></div>
+        <div id="noticeboardEmpty" class="about-noticeboard__empty" hidden>
+          <strong>Fresh updates will appear here soon</strong>
+          <p>We use this space for company announcements, sector moves and current programme milestones as soon as they are ready for public release.</p>
+          <div class="about-noticeboard__empty-actions">
+            <a class="btn-secondary" href="jobs.html">Browse open roles</a>
+            <a class="btn-primary" href="contact.html">Contact HMJ</a>
+          </div>
         </div>
       </div>
     </section>
@@ -437,6 +492,21 @@
       </div>
     </section>
   </main>
+
+  <div class="about-dialog" id="aboutNoticeDialog" hidden aria-hidden="true">
+    <div class="about-dialog__scrim" data-notice-close></div>
+    <div class="about-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="aboutNoticeDialogTitle">
+      <button type="button" class="about-dialog__close" data-notice-close aria-label="Close notice"></button>
+      <div class="about-dialog__media" id="aboutNoticeDialogMedia"></div>
+      <div class="about-dialog__content">
+        <p class="about-eyebrow">Noticeboard</p>
+        <p class="about-dialog__date" id="aboutNoticeDialogDate"></p>
+        <h2 id="aboutNoticeDialogTitle"></h2>
+        <div id="aboutNoticeDialogBody" class="about-dialog__body"></div>
+        <div id="aboutNoticeDialogActions" class="about-dialog__actions"></div>
+      </div>
+    </div>
+  </div>
 
   <footer class="about-footer">
     <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>

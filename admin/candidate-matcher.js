@@ -275,7 +275,7 @@
     if (key === 'prepared_evidence_ready') return 'Prepared evidence ready';
     if (key === 'loading_live_jobs') return 'Loading live roles';
     if (key === 'live_jobs_loaded') return 'Live roles loaded';
-    if (key === 'openai_request_started') return 'Data transferred to OpenAI';
+    if (key === 'openai_request_started') return 'Data successfully transferred to OpenAI';
     if (key === 'openai_thinking') return 'OpenAI thinking';
     if (key === 'openai_response_received') return 'OpenAI response received';
     if (key === 'parsing_result') return 'Validating structured result';

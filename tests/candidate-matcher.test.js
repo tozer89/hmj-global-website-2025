@@ -44,6 +44,15 @@ function buildValidMatcherResult() {
   };
 }
 
+function assertStageSequence(actualStages, expectedStages) {
+  let cursor = -1;
+  for (const expected of expectedStages) {
+    const nextIndex = actualStages.indexOf(expected, cursor + 1);
+    assert.notEqual(nextIndex, -1, `Expected stage "${expected}" in sequence ${JSON.stringify(actualStages)}`);
+    cursor = nextIndex;
+  }
+}
+
 test('prepareCandidateFiles marks unsupported extensions without crashing the run', () => {
   const files = core.prepareCandidateFiles([
     { name: 'profile.doc', data: Buffer.from('legacy').toString('base64'), size: 6 },
@@ -487,6 +496,94 @@ test('callOpenAIForMatch retries once after incomplete structured output', async
   }
 });
 
+test('callOpenAIForMatch compacts heavy matcher requests and prefers a faster model', async () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  const originalModel = process.env.OPENAI_CANDIDATE_MATCH_MODEL;
+  const originalFallback = process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL;
+  const originalMaxTokens = process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS;
+  process.env.OPENAI_API_KEY = 'test-key';
+  process.env.OPENAI_CANDIDATE_MATCH_MODEL = 'gpt-5.4';
+  process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL = 'gpt-5-mini';
+  delete process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS;
+
+  let requestBody = null;
+  const fetchImpl = async (_url, options) => {
+    requestBody = JSON.parse(options.body);
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        id: 'resp_heavy_request',
+        status: 'completed',
+        output: [{
+          status: 'completed',
+          content: [{ type: 'output_text', text: JSON.stringify(buildValidMatcherResult()) }],
+        }],
+      }),
+    };
+  };
+
+  try {
+    const response = await core.callOpenAIForMatch({
+      candidate: {
+        recruiter_notes: 'Prioritise HV commissioning, planning, and data centre delivery candidates in London.',
+        candidate_text: 'HV commissioning data centre planner London '.repeat(1200),
+        evidence_summary: {
+          preview_text: 'HV commissioning candidate with planning experience.',
+          files_attempted: 3,
+          files_text_read: 2,
+          image_evidence_count: 1,
+          failed_file_count: 0,
+        },
+        documents: Array.from({ length: 8 }, (_, index) => ({
+          name: `candidate-${index + 1}.pdf`,
+          fileKind: 'pdf',
+          status: 'ok',
+          extractedTextLength: 3000 + index,
+          error: '',
+        })),
+        image_evidence: Array.from({ length: 6 }, (_, index) => ({
+          name: `certificate-${index + 1}.png`,
+          fileKind: 'image',
+          extension: 'png',
+          error: '',
+        })),
+      },
+      live_jobs: Array.from({ length: 12 }, (_, index) => ({
+        job_id: `job-${index + 1}`,
+        title: index < 4 ? `HV Commissioning Engineer ${index + 1}` : `Planner ${index + 1}`,
+        location: index % 2 === 0 ? 'London' : 'Manchester',
+        employment_type: 'contract',
+        discipline: index < 4 ? 'Commissioning' : 'Planning',
+        summary: 'Long job summary '.repeat(40),
+        required_skills: ['HV commissioning', 'planning', 'QA/QC', 'client interface', 'method statements'],
+        requirements: ['Data centre experience', 'ECS card', 'SSSTS', 'Ability to mobilise quickly', 'Right to work'],
+        responsibilities: ['Own work package', 'Attend client meetings', 'Produce reports', 'Coordinate subcontractors'],
+      })),
+    }, {
+      timeoutMs: 2000,
+      fetchImpl,
+    });
+
+    assert.equal(requestBody.model, 'gpt-4.1-mini');
+    assert.equal(requestBody.max_output_tokens, 2200);
+    assert.equal(response.model, 'gpt-4.1-mini');
+    assert.ok(response.diagnostics.candidate_text_chars < response.diagnostics.candidate_text_source_chars);
+    assert.equal(response.diagnostics.live_jobs_total_count, 12);
+    assert.equal(response.diagnostics.live_jobs_sent_count, 8);
+    assert.ok(response.diagnostics.request_payload_json_chars > 0);
+  } finally {
+    if (originalApiKey == null) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalApiKey;
+    if (originalModel == null) delete process.env.OPENAI_CANDIDATE_MATCH_MODEL;
+    else process.env.OPENAI_CANDIDATE_MATCH_MODEL = originalModel;
+    if (originalFallback == null) delete process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL;
+    else process.env.OPENAI_CANDIDATE_MATCH_FALLBACK_MODEL = originalFallback;
+    if (originalMaxTokens == null) delete process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS;
+    else process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS = originalMaxTokens;
+  }
+});
+
 test('summariseMatcherFailure keeps recruiter copy friendly while preserving technical schema detail', () => {
   const failure = core.summariseMatcherFailure(core.coded(
     500,
@@ -826,6 +923,152 @@ test('candidate run match handler queues background work without re-uploading fi
   assert.equal(dispatchedPayload.preparedRunId, 'prepared-2');
 });
 
+test('candidate run match handler retries cleanly after a failed background job', async () => {
+  const originals = {
+    getMatchRun: core.getMatchRun,
+    updatePreparedRunJobState: core.updatePreparedRunJobState,
+  };
+
+  let getCount = 0;
+  let queuedJobId = '';
+  core.getMatchRun = async () => {
+    getCount += 1;
+    return getCount > 1
+      ? {
+        id: 'prepared-retry-1',
+        created_at: '2026-03-13T12:00:00Z',
+        updated_at: '2026-03-13T12:20:00Z',
+        recruiter_notes: 'Reuse saved evidence.',
+        status: 'processing',
+        ready_for_match: true,
+        has_result: false,
+        match_job: {
+          id: queuedJobId,
+          status: 'queued',
+          stage: 'queued',
+          stage_label: 'Prepared evidence ready',
+          queued_at: '2026-03-13T12:20:00Z',
+          started_at: '',
+          completed_at: '',
+          failed_at: '',
+          last_error: '',
+        },
+        prepared_evidence: {
+          ready_for_match: true,
+          files_attempted: 1,
+          files_text_read: 1,
+          image_evidence_count: 0,
+          limited_count: 0,
+          unsupported_count: 0,
+          failed_count: 0,
+          preview_text: 'Candidate evidence text',
+          text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+          image_evidence_files: [],
+          limited_files: [],
+          unsupported_files: [],
+          failed_files: [],
+          documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' }],
+        },
+        file_names: ['candidate.pdf'],
+        files: [{ storage_bucket: 'candidate-matcher-uploads' }],
+        raw_result_json: {
+          preparation: { combined_candidate_text: 'Candidate evidence text' },
+          match: {
+            status: 'queued',
+            stage: 'queued',
+            stage_label: 'Prepared evidence ready',
+          },
+        },
+      }
+      : {
+        id: 'prepared-retry-1',
+        created_at: '2026-03-13T12:00:00Z',
+        updated_at: '2026-03-13T12:18:00Z',
+        recruiter_notes: 'Reuse saved evidence.',
+        status: 'failed',
+        ready_for_match: true,
+        has_result: false,
+        match_job: {
+          id: 'job-failed-1',
+          status: 'failed',
+          stage: 'openai_thinking',
+          stage_label: 'OpenAI analysing candidate against live roles',
+          queued_at: '2026-03-13T12:15:00Z',
+          started_at: '2026-03-13T12:15:10Z',
+          completed_at: '',
+          failed_at: '2026-03-13T12:16:30Z',
+          last_error: 'openai_timeout: OpenAI candidate matching timed out after 60000ms.',
+        },
+        prepared_evidence: {
+          ready_for_match: true,
+          files_attempted: 1,
+          files_text_read: 1,
+          image_evidence_count: 0,
+          limited_count: 0,
+          unsupported_count: 0,
+          failed_count: 0,
+          preview_text: 'Candidate evidence text',
+          text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+          image_evidence_files: [],
+          limited_files: [],
+          unsupported_files: [],
+          failed_files: [],
+          documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' }],
+        },
+        file_names: ['candidate.pdf'],
+        files: [{ storage_bucket: 'candidate-matcher-uploads' }],
+        raw_result_json: {
+          preparation: { combined_candidate_text: 'Candidate evidence text' },
+          match: {
+            status: 'failed',
+            stage: 'openai_thinking',
+            stage_label: 'OpenAI analysing candidate against live roles',
+            error: 'openai_timeout: OpenAI candidate matching timed out after 60000ms.',
+          },
+        },
+      };
+  };
+  core.updatePreparedRunJobState = async (input) => {
+    queuedJobId = input.jobId;
+    return { id: 'prepared-retry-1' };
+  };
+
+  let dispatchedPayload = null;
+  const handler = createCandidateRunMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    }),
+    dispatchBackgroundImpl: async (_event, payload) => {
+      dispatchedPayload = payload;
+    },
+  });
+
+  const response = await handler({
+    headers: {
+      host: 'deploy-preview-100--hmjg.netlify.app',
+      'x-forwarded-proto': 'https',
+      authorization: 'Bearer fake-token',
+    },
+    body: JSON.stringify({
+      preparedRunId: 'prepared-retry-1',
+      recruiterNotes: 'Reuse saved evidence.',
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 202);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.queued, true);
+  assert.equal(payload.prepared_run.match_job.status, 'queued');
+  assert.equal(payload.prepared_run.match_job.stage, 'queued');
+  assert.notEqual(payload.prepared_run.match_job.id, 'job-failed-1');
+  assert.equal(dispatchedPayload.preparedRunId, 'prepared-retry-1');
+  assert.equal(dispatchedPayload.jobId, payload.prepared_run.match_job.id);
+});
+
 test('candidate run match background handler completes matching from prepared evidence', async () => {
   const originals = {
     getMatchRun: core.getMatchRun,
@@ -837,6 +1080,8 @@ test('candidate run match background handler completes matching from prepared ev
   };
 
   let getCount = 0;
+  const stageCalls = [];
+  let openAiTimeoutMs = 0;
   core.getMatchRun = async () => {
     getCount += 1;
     return getCount > 1
@@ -848,7 +1093,7 @@ test('candidate run match background handler completes matching from prepared ev
         status: 'completed',
         ready_for_match: true,
         has_result: true,
-        match_job: { id: 'job-async-1', status: 'completed', started_at: '2026-03-13T12:10:00Z', completed_at: '2026-03-13T12:15:00Z', failed_at: '', last_error: '' },
+        match_job: { id: 'job-async-1', status: 'completed', stage: 'completed', stage_label: 'Match complete', stage_updated_at: '2026-03-13T12:15:00Z', started_at: '2026-03-13T12:10:00Z', completed_at: '2026-03-13T12:15:00Z', failed_at: '', last_error: '' },
         prepared_evidence: {
           ready_for_match: true,
           files_attempted: 1,
@@ -889,7 +1134,7 @@ test('candidate run match background handler completes matching from prepared ev
         status: 'processing',
         ready_for_match: true,
         has_result: false,
-        match_job: { id: 'job-async-1', status: 'queued', queued_at: '2026-03-13T12:10:00Z', started_at: '', completed_at: '', failed_at: '', last_error: '' },
+        match_job: { id: 'job-async-1', status: 'queued', stage: 'queued', stage_label: 'Prepared evidence ready', stage_updated_at: '2026-03-13T12:10:00Z', queued_at: '2026-03-13T12:10:00Z', started_at: '', completed_at: '', failed_at: '', last_error: '' },
         prepared_evidence: {
           ready_for_match: true,
           files_attempted: 1,
@@ -911,27 +1156,71 @@ test('candidate run match background handler completes matching from prepared ev
         raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
       };
   };
-  core.updatePreparedRunJobState = async () => ({ id: 'prepared-3' });
+  core.updatePreparedRunJobState = async (input) => {
+    stageCalls.push({ status: input.status, stage: input.stage, stageLabel: input.stageLabel });
+    return { id: 'prepared-3' };
+  };
   core.buildCandidatePayloadFromPreparedRun = () => ({
     recruiter_notes: 'Reuse saved evidence.',
-    extraction_summary: [{ name: 'candidate.pdf', status: 'ok' }],
     candidate_text: 'Candidate evidence text',
-    candidate_text_truncated: false,
+    evidence_summary: {
+      preview_text: 'Candidate evidence text',
+      files_attempted: 1,
+      files_text_read: 1,
+      image_evidence_count: 0,
+      failed_file_count: 0,
+    },
+    documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf', extractedTextLength: 23 }],
     image_evidence: [],
   });
   core.fetchPublishedLiveJobs = async () => [{ job_id: 'job-1', title: 'Planner', published: true, status: 'live' }];
-  core.callOpenAIForMatch = async () => ({
-    model: 'gpt-5-mini',
-    raw: {},
-    result: {
-      candidate_summary: { name: 'Alex Example', current_or_recent_title: 'Planner', seniority_level: 'Senior', primary_discipline: 'Project Controls', sectors: [], locations: [], key_skills: [], key_qualifications: [], summary: 'Strong planner.' },
-      top_matches: [{ job_id: 'job-1', job_title: 'Planner', score: 91, recommendation: 'shortlist', why_match: 'Direct planning experience.', matched_skills: [], matched_qualifications: [], transferable_experience: [], gaps: [], follow_up_questions: [], uncertainty_notes: '' }],
-      other_matches: [],
-      overall_recommendation: 'Shortlist.',
-      general_follow_up_questions: [],
-      no_strong_match_reason: '',
+  core.callOpenAIForMatch = async (_payload, options = {}) => {
+    openAiTimeoutMs = Number(options.timeoutMs) || 0;
+    if (typeof options.onStage === 'function') {
+      const details = {
+        model: 'gpt-4.1-mini',
+        candidate_text_chars: 23,
+        candidate_text_source_chars: 23,
+        live_jobs_total_count: 1,
+        live_jobs_sent_count: 1,
+        live_jobs_json_chars: 120,
+        request_payload_json_chars: 420,
+        max_output_tokens: 2200,
+      };
+      await options.onStage({ stage: 'openai_request_started', stage_label: 'Data successfully transferred to OpenAI', details });
+      await options.onStage({ stage: 'openai_thinking', stage_label: 'OpenAI analysing candidate against live roles', details });
+      await options.onStage({ stage: 'openai_response_received', stage_label: 'OpenAI response received', details: { ...details, openai_status: 200, duration_ms: 512, response_received: true } });
+      await options.onStage({ stage: 'parsing_result', stage_label: 'Validating structured result', details: { ...details, response_received: true } });
+      await options.onStage({ stage: 'structured_result_validated', stage_label: 'Structured result validated', details: { ...details, parser_strategy: 'direct', response_received: true } });
     }
-  });
+    return {
+      model: 'gpt-4.1-mini',
+      raw: {},
+      result: {
+        candidate_summary: { name: 'Alex Example', current_or_recent_title: 'Planner', seniority_level: 'Senior', primary_discipline: 'Project Controls', sectors: [], locations: [], key_skills: [], key_qualifications: [], summary: 'Strong planner.' },
+        top_matches: [{ job_id: 'job-1', job_title: 'Planner', score: 91, recommendation: 'shortlist', why_match: 'Direct planning experience.', matched_skills: [], matched_qualifications: [], transferable_experience: [], gaps: [], follow_up_questions: [], uncertainty_notes: '' }],
+        other_matches: [],
+        overall_recommendation: 'Shortlist.',
+        general_follow_up_questions: [],
+        no_strong_match_reason: '',
+      },
+      diagnostics: {
+        candidate_text_chars: 23,
+        candidate_text_source_chars: 23,
+        live_jobs_total_count: 1,
+        live_jobs_sent_count: 1,
+        live_jobs_json_chars: 120,
+        request_payload_json_chars: 420,
+        max_output_tokens: 2200,
+        response_id: 'resp-123',
+        response_status: 'completed',
+        output_text_length: 512,
+        parser_strategy: 'direct',
+        schema_name: core.MATCH_RESULT_SCHEMA_NAME,
+        wrapper_key: '',
+      },
+    };
+  };
   core.updatePreparedRunWithMatch = async () => ({ id: 'prepared-3' });
 
   const handler = createCandidateRunMatchBackgroundBaseHandler({
@@ -955,7 +1244,23 @@ test('candidate run match background handler completes matching from prepared ev
   const payload = JSON.parse(response.body);
   assert.equal(payload.ok, true);
   assert.equal(payload.prepared_run.match_job.status, 'completed');
+  assert.equal(payload.prepared_run.match_job.stage, 'completed');
   assert.equal(payload.result.top_matches[0].job_id, 'job-1');
+  assert.equal(payload.analysis_meta.model, 'gpt-4.1-mini');
+  assert.equal(payload.analysis_meta.request_metrics.live_jobs_total_count, 1);
+  assert.ok(openAiTimeoutMs >= 170000);
+  assertStageSequence(stageCalls.map((entry) => entry.stage), [
+    'loading_prepared_evidence',
+    'prepared_evidence_ready',
+    'loading_live_jobs',
+    'live_jobs_loaded',
+    'openai_request_started',
+    'openai_thinking',
+    'openai_response_received',
+    'parsing_result',
+    'structured_result_validated',
+    'saving_result',
+  ]);
 });
 
 test('candidate match status handler returns the latest prepared run state', async () => {
@@ -968,7 +1273,7 @@ test('candidate match status handler returns the latest prepared run state', asy
     status: 'processing',
     ready_for_match: true,
     has_result: false,
-    match_job: { id: 'job-async-2', status: 'running', queued_at: '2026-03-13T12:14:00Z', started_at: '2026-03-13T12:15:00Z', completed_at: '', failed_at: '', last_error: '' },
+    match_job: { id: 'job-async-2', status: 'running', stage: 'openai_thinking', stage_label: 'OpenAI analysing candidate against live roles', stage_updated_at: '2026-03-13T12:15:30Z', queued_at: '2026-03-13T12:14:00Z', started_at: '2026-03-13T12:15:00Z', completed_at: '', failed_at: '', last_error: '' },
     prepared_evidence: { ready_for_match: true, files_attempted: 1, files_text_read: 1, image_evidence_count: 0, limited_count: 0, unsupported_count: 0, failed_count: 0, preview_text: 'Candidate evidence text', text_files: [], image_evidence_files: [], limited_files: [], unsupported_files: [], failed_files: [], documents: [] },
     file_names: ['candidate.pdf'],
     raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
@@ -985,6 +1290,120 @@ test('candidate match status handler returns the latest prepared run state', asy
   const payload = JSON.parse(response.body);
   assert.equal(payload.ok, true);
   assert.equal(payload.prepared_run.match_job.status, 'running');
+  assert.equal(payload.prepared_run.match_job.stage, 'openai_thinking');
+  assert.equal(payload.prepared_run.match_job.stage_label, 'OpenAI analysing candidate against live roles');
+});
+
+test('candidate run match background handler returns precise AI timeout diagnostics', async () => {
+  const originals = {
+    getMatchRun: core.getMatchRun,
+    updatePreparedRunJobState: core.updatePreparedRunJobState,
+    buildCandidatePayloadFromPreparedRun: core.buildCandidatePayloadFromPreparedRun,
+    fetchPublishedLiveJobs: core.fetchPublishedLiveJobs,
+    callOpenAIForMatch: core.callOpenAIForMatch,
+    markPreparedRunFailure: core.markPreparedRunFailure,
+  };
+
+  let openAiTimeoutMs = 0;
+  let failureArgs = null;
+  core.getMatchRun = async () => ({
+    id: 'prepared-timeout-1',
+    created_at: '2026-03-13T12:00:00Z',
+    updated_at: '2026-03-13T12:10:00Z',
+    recruiter_notes: 'Reuse saved evidence.',
+    status: 'processing',
+    ready_for_match: true,
+    has_result: false,
+    match_job: { id: 'job-timeout-1', status: 'running', stage: 'openai_thinking', stage_label: 'OpenAI analysing candidate against live roles', queued_at: '2026-03-13T12:10:00Z', started_at: '2026-03-13T12:10:05Z', completed_at: '', failed_at: '', last_error: '' },
+    prepared_evidence: {
+      ready_for_match: true,
+      files_attempted: 1,
+      files_text_read: 1,
+      image_evidence_count: 0,
+      limited_count: 0,
+      unsupported_count: 0,
+      failed_count: 0,
+      preview_text: 'Candidate evidence text',
+      text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+      image_evidence_files: [],
+      limited_files: [],
+      unsupported_files: [],
+      failed_files: [],
+      documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' }],
+    },
+    file_names: ['candidate.pdf'],
+    files: [{ storage_bucket: 'candidate-matcher-uploads' }],
+    raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
+  });
+  core.updatePreparedRunJobState = async () => ({ id: 'prepared-timeout-1' });
+  core.buildCandidatePayloadFromPreparedRun = () => ({
+    recruiter_notes: 'Reuse saved evidence.',
+    candidate_text: 'Candidate evidence text',
+    evidence_summary: {
+      preview_text: 'Candidate evidence text',
+      files_attempted: 1,
+      files_text_read: 1,
+      image_evidence_count: 0,
+      failed_file_count: 0,
+    },
+    documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf', extractedTextLength: 23 }],
+    image_evidence: [],
+  });
+  core.fetchPublishedLiveJobs = async () => Array.from({ length: 12 }, (_, index) => ({
+    job_id: `job-${index + 1}`,
+    title: `Planner ${index + 1}`,
+    published: true,
+    status: 'live',
+  }));
+  core.callOpenAIForMatch = async (_payload, options = {}) => {
+    openAiTimeoutMs = Number(options.timeoutMs) || 0;
+    throw core.coded(504, `OpenAI candidate matching timed out after ${openAiTimeoutMs}ms.`, 'openai_timeout', {
+      details: {
+        stage: 'openai',
+        match_stage: 'openai_thinking',
+        match_stage_label: 'OpenAI analysing candidate against live roles',
+        timeout_ms: openAiTimeoutMs,
+        model: 'gpt-4.1-mini',
+        candidate_text_chars: 23,
+        candidate_text_source_chars: 23,
+        live_jobs_total_count: 12,
+        live_jobs_sent_count: 8,
+        request_payload_json_chars: 14800,
+      }
+    });
+  };
+  core.markPreparedRunFailure = async (input) => {
+    failureArgs = input;
+  };
+
+  const handler = createCandidateRunMatchBackgroundBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      preparedRunId: 'prepared-timeout-1',
+      recruiterNotes: 'Reuse saved evidence.',
+      jobId: 'job-timeout-1',
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 504);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, 'openai_timeout');
+  assert.equal(payload.details.match_stage, 'openai_thinking');
+  assert.equal(payload.details.match_stage_label, 'OpenAI analysing candidate against live roles');
+  assert.equal(payload.run_diagnostics.failed_stage, 'OpenAI analysing candidate against live roles');
+  assert.ok(openAiTimeoutMs >= 170000);
+  assert.equal(failureArgs.runId, 'prepared-timeout-1');
+  assert.equal(failureArgs.jobId, 'job-timeout-1');
+  assert.equal(failureArgs.error.details.match_stage_label, 'OpenAI analysing candidate against live roles');
 });
 
 test('candidate match handler returns per-file extraction diagnostics when no file is readable', async () => {

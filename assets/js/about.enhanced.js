@@ -475,6 +475,237 @@
     startAutoplay();
   };
 
+  const initNoticeboard = () => {
+    const section = document.getElementById('aboutNoticeboard');
+    if (!section) return;
+
+    const featuredHost = document.getElementById('noticeboardFeatured');
+    const railHost = document.getElementById('noticeboardRail');
+    const gridHost = document.getElementById('noticeboardGrid');
+    const emptyState = document.getElementById('noticeboardEmpty');
+    const dialog = document.getElementById('aboutNoticeDialog');
+    const dialogMedia = document.getElementById('aboutNoticeDialogMedia');
+    const dialogDate = document.getElementById('aboutNoticeDialogDate');
+    const dialogTitle = document.getElementById('aboutNoticeDialogTitle');
+    const dialogBody = document.getElementById('aboutNoticeDialogBody');
+    const dialogActions = document.getElementById('aboutNoticeDialogActions');
+    const closeControls = dialog ? Array.from(dialog.querySelectorAll('[data-notice-close]')) : [];
+    const closeButton = dialog ? dialog.querySelector('.about-dialog__close') : null;
+
+    const state = {
+      notices: [],
+      lastTrigger: null,
+    };
+
+    const formatDate = (() => {
+      try {
+        const formatter = new Intl.DateTimeFormat('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+        return (value) => formatter.format(new Date(value));
+      } catch (error) {
+        return (value) => value;
+      }
+    })();
+
+    const escapeHtml = (value) => String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const deriveExcerpt = (value, maxLength = 170) => {
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return `${text.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+    };
+
+    const renderNoticeBlocks = (value) => {
+      const blocks = String(value || '')
+        .split(/\n\s*\n/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      if (!blocks.length) {
+        return '<p>No additional detail is available for this update yet.</p>';
+      }
+
+      return blocks.map((block) => {
+        const lines = block
+          .split(/\n/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        if (lines.length > 1 && lines.every((line) => /^[-*]\s+/.test(line))) {
+          return `<ul>${lines.map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ''))}</li>`).join('')}</ul>`;
+        }
+
+        return `<p>${lines.map((line) => escapeHtml(line)).join('<br/>')}</p>`;
+      }).join('');
+    };
+
+    const mediaMarkup = (notice, placeholder = 'HMJ Update') => {
+      if (notice?.imageUrl) {
+        return `<img src="${escapeHtml(notice.imageUrl)}" alt="${escapeHtml(notice.imageAltText || notice.title || placeholder)}" loading="lazy" />`;
+      }
+      return `<div class="about-noticeboard__media-placeholder">${escapeHtml(placeholder)}</div>`;
+    };
+
+    const featuredMarkup = (notice, index) => {
+      const summary = notice.summary || deriveExcerpt(notice.body, 180);
+      const kicker = notice.featured ? 'Featured update' : 'Latest update';
+      const ctaMarkup = notice.ctaUrl
+        ? `<a class="btn-secondary" href="${escapeHtml(notice.ctaUrl)}">${escapeHtml(notice.ctaLabel || 'Related link')}</a>`
+        : '';
+
+      return `
+        <article class="about-noticeboard__featured-card">
+          <div class="about-noticeboard__media">${mediaMarkup(notice, 'HMJ Bulletin')}</div>
+          <div class="about-noticeboard__content">
+            <div class="about-noticeboard__meta">
+              <span class="about-noticeboard__tag">${escapeHtml(kicker)}</span>
+              <time class="about-noticeboard__date" datetime="${escapeHtml(notice.publishAt || '')}">${escapeHtml(formatDate(notice.publishAt || Date.now()))}</time>
+            </div>
+            <h3>${escapeHtml(notice.title)}</h3>
+            <p class="about-noticeboard__body-copy">${escapeHtml(summary)}</p>
+            <div class="about-noticeboard__actions">
+              <button type="button" class="btn-primary about-noticeboard__read" data-notice-open="${index}">Read update</button>
+              ${ctaMarkup}
+            </div>
+          </div>
+        </article>
+      `;
+    };
+
+    const cardMarkup = (notice, index) => {
+      const summary = notice.summary || deriveExcerpt(notice.body, 120);
+      const ctaMarkup = notice.ctaUrl
+        ? `<a class="btn-secondary" href="${escapeHtml(notice.ctaUrl)}">${escapeHtml(notice.ctaLabel || 'Open link')}</a>`
+        : '';
+
+      return `
+        <article class="about-noticeboard__card">
+          <div class="about-noticeboard__media">${mediaMarkup(notice, 'Company Notice')}</div>
+          <div class="about-noticeboard__content">
+            <div class="about-noticeboard__meta">
+              <time class="about-noticeboard__date" datetime="${escapeHtml(notice.publishAt || '')}">${escapeHtml(formatDate(notice.publishAt || Date.now()))}</time>
+              ${notice.featured ? '<span class="about-noticeboard__tag">Featured</span>' : ''}
+            </div>
+            <h3>${escapeHtml(notice.title)}</h3>
+            <p>${escapeHtml(summary)}</p>
+            <div class="about-noticeboard__card-actions">
+              <button type="button" class="btn-primary about-noticeboard__read" data-notice-open="${index}">Read update</button>
+              ${ctaMarkup}
+            </div>
+          </div>
+        </article>
+      `;
+    };
+
+    const openDialog = (index, trigger) => {
+      const notice = state.notices[index];
+      if (!notice || !dialog) return;
+
+      state.lastTrigger = trigger || null;
+      dialogDate.textContent = formatDate(notice.publishAt || Date.now());
+      dialogTitle.textContent = notice.title || 'Notice';
+      dialogBody.innerHTML = renderNoticeBlocks(notice.body);
+      dialogMedia.innerHTML = notice.imageUrl
+        ? `<img src="${escapeHtml(notice.imageUrl)}" alt="${escapeHtml(notice.imageAltText || notice.title || 'Notice image')}" />`
+        : '<div class="about-dialog__media-placeholder">HMJ Bulletin</div>';
+      dialogActions.innerHTML = notice.ctaUrl
+        ? `<a class="btn-primary" href="${escapeHtml(notice.ctaUrl)}">${escapeHtml(notice.ctaLabel || 'Open link')}</a>`
+        : '';
+
+      dialog.hidden = false;
+      dialog.setAttribute('aria-hidden', 'false');
+      body.classList.add('about-dialog-open');
+      closeButton?.focus({ preventScroll: true });
+    };
+
+    const closeDialog = () => {
+      if (!dialog || dialog.hidden) return;
+      dialog.hidden = true;
+      dialog.setAttribute('aria-hidden', 'true');
+      body.classList.remove('about-dialog-open');
+      if (state.lastTrigger && typeof state.lastTrigger.focus === 'function') {
+        state.lastTrigger.focus({ preventScroll: true });
+      }
+      state.lastTrigger = null;
+    };
+
+    closeControls.forEach((control) => {
+      control.addEventListener('click', closeDialog);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeDialog();
+      }
+    });
+
+    section.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-notice-open]');
+      if (!trigger) return;
+      const index = Number(trigger.getAttribute('data-notice-open'));
+      if (Number.isFinite(index)) {
+        openDialog(index, trigger);
+      }
+    });
+
+    fetch('/.netlify/functions/noticeboard-list', {
+      headers: { Accept: 'application/json' }
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Noticeboard request failed (${response.status})`);
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        if (payload?.enabled === false) {
+          section.hidden = true;
+          return;
+        }
+
+        const notices = Array.isArray(payload?.notices) ? payload.notices : [];
+        state.notices = notices;
+        section.hidden = false;
+
+        if (!notices.length) {
+          if (featuredHost) featuredHost.innerHTML = '';
+          if (railHost) railHost.innerHTML = '';
+          if (gridHost) gridHost.innerHTML = '';
+          if (emptyState) emptyState.hidden = false;
+          return;
+        }
+
+        if (emptyState) emptyState.hidden = true;
+
+        const [featured, ...rest] = notices;
+        const rail = rest.slice(0, 3);
+        const grid = rest.slice(3);
+
+        if (featuredHost) {
+          featuredHost.innerHTML = featured ? featuredMarkup(featured, 0) : '';
+        }
+        if (railHost) {
+          railHost.innerHTML = rail.map((notice, offset) => cardMarkup(notice, offset + 1)).join('');
+        }
+        if (gridHost) {
+          gridHost.innerHTML = grid.map((notice, offset) => cardMarkup(notice, offset + 4)).join('');
+          gridHost.hidden = !grid.length;
+        }
+      })
+      .catch((error) => {
+        console.warn('[about] noticeboard unavailable', error);
+      });
+  };
+
   const initReveal = () => {
     const targets = Array.from(document.querySelectorAll('[data-reveal]'));
     if (!targets.length) return;
@@ -507,6 +738,7 @@
     initNav();
     initHeroParallax();
     initTimeline();
+    initNoticeboard();
     initTeam();
     initValues();
     initCounters();

@@ -16,6 +16,7 @@
 
   <!-- Your site stylesheet -->
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="assets/css/public.facelift.css" />
 
   <style>
     :root{ --ink:#0f1b3f; --accent:#3A66B3; --muted:#6b7280; --panel:#0f1322; --soft:#f7f8ff; }
@@ -117,7 +118,7 @@
   </style>
 </head>
 
-<body>
+<body class="public-page home-page">
   <!-- Announcement -->
   <div class="announce" role="region" aria-label="Announcement">
     <div class="inner">
@@ -153,33 +154,59 @@
   
 
 <!-- ===== HERO ===== -->
-  <section class="entry-hero entry-hero--home entry-hero--no-scan">
+  <section class="entry-hero entry-hero--home entry-hero--no-scan entry-hero--align-left">
     <div class="entry-hero__wrap">
       <div class="entry-hero__card">
-        <p class="entry-hero__eyebrow">Specialist recruitment for mission-critical delivery</p>
-        <h1 class="entry-hero__title">People-first teams powering hyperscale data centres &amp; pharma manufacturing</h1>
+        <div class="public-hero-grid">
+          <div class="public-hero-copy">
+            <p class="entry-hero__eyebrow">Specialist recruitment for mission-critical delivery</p>
+            <h1 class="entry-hero__title">People-first teams powering hyperscale data centres &amp; pharma manufacturing</h1>
 
-        <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
-          <path d="M2 7 C 100 7, 140 7, 180 7
-                   C 220 7, 240 2, 260 7
-                   C 280 12, 300 7, 340 7
-                   C 380 7, 420 7, 460 7
-                   C 500 7, 520 2, 540 7
-                   C 560 12, 580 7, 620 7
-                   C 660 7, 720 7, 798 7" />
-        </svg>
+            <svg class="power-underline" viewBox="0 0 800 14" role="img" aria-label="animated power line">
+              <path d="M2 7 C 100 7, 140 7, 180 7
+                       C 220 7, 240 2, 260 7
+                       C 280 12, 300 7, 340 7
+                       C 380 7, 420 7, 460 7
+                       C 500 7, 520 2, 540 7
+                       C 560 12, 580 7, 620 7
+                       C 660 7, 720 7, 798 7" />
+            </svg>
 
-        <p class="entry-hero__lead">We embed with programmes across Europe to mobilise CSA, MEP, commissioning and operations talent on pace—while keeping compliance, wellbeing and commercial control front and centre.</p>
+            <p class="entry-hero__lead">We embed with programmes across Europe to mobilise CSA, MEP, commissioning and operations talent on pace while keeping compliance, wellbeing and commercial control front and centre.</p>
 
-        <div class="entry-hero__actions">
-          <a href="jobs.html" class="btn-primary">Search jobs</a>
-          <a href="clients.html" class="btn-secondary">Hire talent</a>
-        </div>
+            <div class="entry-hero__actions">
+              <a href="jobs.html" class="btn-primary">Search jobs</a>
+              <a href="clients.html" class="btn-secondary">Hire talent</a>
+            </div>
 
-        <div class="entry-hero__meta" role="list" aria-label="Key delivery commitments">
-          <span class="entry-hero__chip" role="listitem">48 hrs to first shortlist</span>
-          <span class="entry-hero__chip" role="listitem">EU mobility &amp; visas managed</span>
-          <span class="entry-hero__chip" role="listitem">Weekly contractor payroll</span>
+            <div class="entry-hero__meta" role="list" aria-label="Key delivery commitments">
+              <span class="entry-hero__chip" role="listitem">48 hrs to first shortlist</span>
+              <span class="entry-hero__chip" role="listitem">EU mobility &amp; visas managed</span>
+              <span class="entry-hero__chip" role="listitem">Weekly contractor payroll</span>
+            </div>
+          </div>
+
+          <aside class="public-hero-side">
+            <div class="public-hero-panel">
+              <p class="public-hero-panel__eyebrow">Programme support</p>
+              <h2>Built for live delivery, not just job boards.</h2>
+              <p>HMJ combines technical recruitment, contractor care and finance control so clients and candidates get one joined-up delivery partner.</p>
+              <div class="home-hero-panel__stats">
+                <div class="home-hero-stat">
+                  <strong>Project-ready mobilisation</strong>
+                  <span>Right-to-work, inductions, payroll and site readiness aligned to programme start dates.</span>
+                </div>
+                <div class="home-hero-stat">
+                  <strong>Cross-border confidence</strong>
+                  <span>Coverage across the UK, Benelux, Nordics and DACH with region-specific compliance support.</span>
+                </div>
+                <div class="home-hero-stat">
+                  <strong>Senior delivery visibility</strong>
+                  <span>Commercial reporting, contractor wellbeing and escalation routes kept visible from day one.</span>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -187,26 +214,47 @@
 
   <!-- ===== STATS / CREDIBILITY ===== -->
   <section class="section">
-    <div class="wrap grid grid-4">
+    <div class="wrap">
+      <div class="public-section-head" style="margin-bottom:22px;">
+        <p class="public-section-head__eyebrow">Why teams trust HMJ</p>
+        <h2>Credibility built around pace, compliance and retention.</h2>
+        <p class="public-section-head__copy">The same operational discipline we bring into client programmes shapes the public HMJ experience: clear numbers, strong delivery framing and support that feels accountable.</p>
+      </div>
+      <div class="grid grid-4">
       <div class="card kpi soft reveal"><h3>500+</h3><p>Specialists placed across DC & Life Sciences</p></div>
       <div class="card kpi soft reveal"><h3>12</h3><p>EU countries covered with payroll & compliance</p></div>
       <div class="card kpi soft reveal"><h3>48 hrs</h3><p>Typical shortlist turnaround</p></div>
       <div class="card kpi soft reveal"><h3>97%</h3><p>Assignment completion rate</p></div>
+      </div>
     </div>
   </section>
 
   <!-- ===== WHO WE ARE ===== -->
   <section class="section">
     <div class="wrap">
-      <div class="card reveal">
-        <h2 style="margin:0 0 8px;">Who We Are</h2>
-        <p style="margin:0; line-height:1.8;">
-          HMJ-Global is a specialist talent partner for mission-critical environments. We support
-          <strong>data centre construction</strong>, <strong>commissioning</strong>, <strong>substations & power</strong>,
-          and <strong>pharmaceutical manufacturing & cleanroom projects</strong>. Our model is built on pace, precision and compliance:
-          rapid shortlists, rigorous vetting, and smooth cross-border mobilisation including payroll, right-to-work checks and
-          H&S onboarding. We partner with tier-one contractors, systems integrators and operators to de-risk delivery and keep programmes on track.
-        </p>
+      <div class="public-window public-window--split reveal">
+        <div>
+          <p class="public-panel__eyebrow">Who we are</p>
+          <h2 class="public-panel__title">A delivery-minded recruitment partner for critical environments.</h2>
+          <p class="public-panel__copy">HMJ-Global supports <strong>data centre construction</strong>, <strong>commissioning</strong>, <strong>substations &amp; power</strong>, and <strong>pharmaceutical manufacturing &amp; cleanroom projects</strong>. Our model is built on pace, precision and compliance: rapid shortlists, rigorous vetting and smooth cross-border mobilisation including payroll, right-to-work checks and H&amp;S onboarding.</p>
+          <p class="public-panel__copy">We partner with tier-one contractors, systems integrators and operators to de-risk delivery and keep programmes on track through every project phase.</p>
+        </div>
+        <div class="public-window__side home-intro-rail">
+          <div class="public-card public-card--tint">
+            <span class="public-card__kicker">Coverage</span>
+            <h3>Built around mission-critical programmes.</h3>
+            <ul class="public-list">
+              <li>Hyperscale campus builds and fit-outs</li>
+              <li>Commissioning, IST and live operations support</li>
+              <li>Regulated pharma and clean utilities projects</li>
+            </ul>
+          </div>
+          <div class="public-card public-card--deep">
+            <span class="public-card__kicker">Operating model</span>
+            <h3>One partner for talent, onboarding and payroll.</h3>
+            <p>Clients get cleaner governance and candidates get a joined-up experience from first call to first payslip.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -214,10 +262,11 @@
   <!-- ===== SPECIALISMS ===== -->
   <section class="section">
     <div class="wrap">
-      <h2 style="text-align:center;">Our Specialisms</h2>
-      <p class="trust-line" style="text-align:center; margin-bottom:18px;">
-        From greenfield builds to brownfield upgrades and live operational sites.
-      </p>
+      <div class="public-section-head">
+        <p class="public-section-head__eyebrow">Specialisms</p>
+        <h2>Coverage shaped around the environments where uptime, safety and schedule matter most.</h2>
+        <p class="trust-line">From greenfield builds to brownfield upgrades and live operational sites, HMJ stays focused on disciplines that genuinely move programme risk.</p>
+      </div>
       <div class="grid grid-3">
         <div class="card soft reveal">
           <h3>Data Centre Construction <span class="tag">Design–Go-Live</span></h3>
@@ -250,7 +299,11 @@
   <!-- ===== SERVICES ===== -->
   <section class="section" style="background:var(--soft);">
     <div class="wrap">
-      <h2 style="text-align:center;">How We Help</h2>
+      <div class="public-section-head">
+        <p class="public-section-head__eyebrow">How we help</p>
+        <h2>Structured support that keeps projects moving cleanly.</h2>
+        <p class="public-section-head__copy">We combine recruitment delivery with the practical detail programmes need: commercial clarity, compliant mobilisation and strong contractor care.</p>
+      </div>
       <div class="grid grid-3" style="margin-top:12px;">
         <div class="card reveal"><h3>Permanent Recruitment</h3><p>Executive to site-level hiring with market mapping, competency screening and precise shortlists. Offer management and onboarding handled end-to-end.</p></div>
         <div class="card reveal"><h3>Contract & Interim</h3><p>Rapid deployment of vetted contractors aligned to programme milestones. Weekly payroll, compliant cross-border setups and timesheet management.</p></div>
@@ -265,7 +318,11 @@
   <!-- ===== HIRING PROCESS ===== -->
   <section class="section">
     <div class="wrap">
-      <h2>Our Hiring Process</h2>
+      <div class="public-section-head public-section-head--left">
+        <p class="public-section-head__eyebrow">Hiring process</p>
+        <h2>One clear route from brief to mobilisation.</h2>
+        <p class="public-section-head__copy">The process is designed to feel structured and accountable rather than improvised, giving both clients and candidates confidence in every hand-off.</p>
+      </div>
       <div class="card timeline reveal">
         <div class="step"><h3 style="margin:0 0 4px;">1. Brief & Success Profile</h3><p>We capture scope, outcomes and culture, then define a success profile with must-have competencies and compliance needs.</p></div>
         <div class="step"><h3 style="margin:0 0 4px;">2. Targeted Search</h3><p>Proactive outreach into our DC & Life-Sciences networks, referrals and project alumni. Diversity and location filters built in.</p></div>
@@ -279,7 +336,10 @@
   <!-- ===== REGIONS ===== -->
   <section class="section" style="background:var(--soft);">
     <div class="wrap">
-      <h2>Where We Operate</h2>
+      <div class="public-section-head public-section-head--left">
+        <p class="public-section-head__eyebrow">Geography</p>
+        <h2>Operating across the UK and European mission-critical hubs.</h2>
+      </div>
       <div class="grid grid-4" style="margin-top:12px;">
         <div class="card reveal"><strong>Ireland & UK</strong><p>Hyperscale and pharma hubs: Dublin, London Corridor, North-West, Midlands.</p></div>
         <div class="card reveal"><strong>Nordics</strong><p>Finland, Sweden and Denmark for green energy data centres and clean manufacturing.</p></div>
@@ -292,7 +352,10 @@
   <!-- ===== CASE STUDIES ===== -->
   <section class="section">
     <div class="wrap">
-      <h2>Recent Engagements</h2>
+      <div class="public-section-head public-section-head--left">
+        <p class="public-section-head__eyebrow">Recent engagements</p>
+        <h2>Programme snapshots that reflect how HMJ supports delivery.</h2>
+      </div>
       <div class="grid grid-3" style="margin-top:12px;">
         <div class="card soft reveal"><h3>Campus Build – Northern Europe</h3><p>Deployed a blended team (MEP, CSA and Commissioning) across three phases. Achieved on-time energisation and zero lost-time incidents.</p></div>
         <div class="card soft reveal"><h3>Cleanroom Expansion – UK</h3><p>Delivered E&I and CQV contractors under weekly payroll with full GMP documentation support. Handover completed to schedule.</p></div>
@@ -304,7 +367,10 @@
   <!-- ===== NEWS / INSIGHTS ===== -->
   <section class="section" style="background:var(--soft);">
     <div class="wrap">
-      <h2>News & Insights</h2>
+      <div class="public-section-head public-section-head--left">
+        <p class="public-section-head__eyebrow">Market view</p>
+        <h2>Signals from the sectors and regions our teams support every day.</h2>
+      </div>
       <div class="grid grid-3" style="margin-top:12px;">
         <div class="card reveal"><h3>EU Data Centre Growth & Skills</h3><p>Power availability and planning remain key constraints. Skilled commissioning and HV talent are the pinch-points for 2025–26 programmes.</p></div>
         <div class="card reveal"><h3>Pharma: CQV Demand Rising</h3><p>Validation engineers with clean utilities experience continue to command premium rates as expansion and tech-transfer projects accelerate.</p></div>
@@ -316,7 +382,10 @@
   <!-- ===== SOCIAL FEED ===== -->
   <section class="section" style="padding-top:20px;">
     <div class="wrap">
-      <h2>Live from the HMJ Global network</h2>
+      <div class="public-section-head">
+        <p class="public-section-head__eyebrow">HMJ network</p>
+        <h2>Live from the HMJ Global network</h2>
+      </div>
       <p class="trust-line" style="text-align:center;margin-bottom:16px;">Highlights from recent LinkedIn updates and project wins.</p>
       <div class="feed-slider" aria-hidden="true">
         <div class="feed-track" id="feedTrack">
@@ -372,7 +441,10 @@
   <!-- ===== LATEST ROLES TEASER ===== -->
   <section class="section">
     <div class="wrap">
-      <h2>Latest Roles</h2>
+      <div class="public-section-head">
+        <p class="public-section-head__eyebrow">Current opportunities</p>
+        <h2>Latest roles from across our live recruitment programmes.</h2>
+      </div>
       <p class="trust-line" style="text-align:center; margin-bottom:18px;">A snapshot of what we’re hiring for right now.</p>
       <div class="jobs-mini">
         <div class="job-mini reveal">
@@ -403,7 +475,11 @@
   <!-- ===== FAQ ===== -->
   <section class="section" style="background:var(--soft);">
     <div class="wrap">
-      <h2>FAQs</h2>
+      <div class="public-section-head">
+        <p class="public-section-head__eyebrow">FAQs</p>
+        <h2>Answers to the questions we hear most often.</h2>
+      </div>
+      <p class="faq-intro">If you need something more specific, our team can guide you on active hiring plans, mobilisation support or current contractor availability.</p>
       <details class="reveal">
         <summary>What roles do you cover?</summary>
         <p>Construction (CSA/MEP), Commissioning, CQV, HV/Substations, Security & Cabling, and Critical Facilities Operations from manager to site-level.</p>
@@ -421,10 +497,15 @@
 
   <!-- ===== CTA ===== -->
   <section class="cta">
-    <h2>Ready to Get Started?</h2>
-    <p>Looking for your next project or your next hire? Talk to us today.</p>
-    <a href="jobs.html" class="btn-primary">Search Jobs</a>
-    <a href="contact.html" class="btn-secondary">Apply / Hire Talent</a>
+    <div class="public-cta-band">
+      <p class="public-section-head__eyebrow">Next step</p>
+      <h2>Ready to move your next hire or your next project forward?</h2>
+      <p>Whether you need specialist talent, cross-border mobilisation support or your next assignment, HMJ is set up to respond quickly and professionally.</p>
+      <div class="public-hero-actions">
+        <a href="jobs.html" class="btn-primary">Search Jobs</a>
+        <a href="contact.html" class="btn-secondary">Apply / Hire Talent</a>
+      </div>
+    </div>
   </section>
 
   <!-- ===== Footer ===== -->

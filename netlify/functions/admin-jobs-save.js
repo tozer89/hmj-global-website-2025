@@ -12,6 +12,16 @@ function slugify(text = '') {
     .slice(0, 80) || `job-${Date.now()}`;
 }
 
+function adjustPayloadForSchema(payload, err) {
+  const message = String(err?.message || '').toLowerCase();
+  if (!/public_page_config/.test(message) || !('public_page_config' in payload)) {
+    return null;
+  }
+  const next = { ...payload };
+  delete next.public_page_config;
+  return next;
+}
+
 const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
@@ -48,14 +58,27 @@ const baseHandler = async (event, context) => {
     if (!Array.isArray(payload.responsibilities)) payload.responsibilities = [];
     if (!Array.isArray(payload.requirements)) payload.requirements = [];
 
-    const { data, error } = await supabase
-      .from('jobs')
-      .upsert(payload, { onConflict: 'id', ignoreDuplicates: false })
-      .select('*')
-      .single();
+    let schemaAdjusted = false;
+    let record = { ...payload };
+    let data = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const result = await supabase
+        .from('jobs')
+        .upsert(record, { onConflict: 'id', ignoreDuplicates: false })
+        .select('*')
+        .single();
 
-    if (error) {
-      if (isSchemaError(error)) {
+      if (!result.error) {
+        data = result.data;
+        break;
+      }
+
+      if (!isSchemaError(result.error)) {
+        throw result.error;
+      }
+
+      const adjusted = adjustPayloadForSchema(record, result.error);
+      if (!adjusted) {
         return {
           statusCode: 409,
           body: JSON.stringify({
@@ -64,10 +87,27 @@ const baseHandler = async (event, context) => {
           }),
         };
       }
-      throw error;
+      record = adjusted;
+      schemaAdjusted = true;
     }
 
-    return { statusCode: 200, body: JSON.stringify({ job: toJob(data) }) };
+    if (!data) {
+      return {
+        statusCode: 409,
+        body: JSON.stringify({
+          error: 'Jobs table schema mismatch — update columns or refresh seeds.',
+          code: 'schema_mismatch',
+        }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        job: toJob(data),
+        schema: schemaAdjusted || undefined,
+      }),
+    };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : (e.code === 'schema_mismatch' ? 409 : 500);
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Unexpected error', code: e.code || undefined }) };

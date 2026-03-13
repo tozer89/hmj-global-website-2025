@@ -30,6 +30,21 @@ const PAY_TYPE_SET = new Set([
   'negotiable',
 ]);
 
+const PUBLIC_PAGE_DEFAULTS = Object.freeze({
+  showOverview: true,
+  showPay: true,
+  showCustomer: true,
+  showBenefits: true,
+  showResponsibilities: true,
+  showRequirements: true,
+  showTags: true,
+  showRoleHighlights: true,
+  showApplyPanel: true,
+  showSecondaryCta: false,
+  showPageMeta: false,
+  showReference: false,
+});
+
 function readJsonSafe(filePath) {
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -336,12 +351,31 @@ function tagsToString(tags) {
   return asString(tags);
 }
 
+function normalisePublicPageConfig(value) {
+  const input = value && typeof value === 'object' ? value : {};
+  const next = {};
+  Object.entries(PUBLIC_PAGE_DEFAULTS).forEach(([key, fallback]) => {
+    if (typeof input[key] === 'boolean') {
+      next[key] = input[key];
+      return;
+    }
+    const raw = asString(input[key]).toLowerCase();
+    if (raw === 'true' || raw === 'false') {
+      next[key] = raw === 'true';
+      return;
+    }
+    next[key] = fallback;
+  });
+  return next;
+}
+
 function toJob(row = {}) {
   row = row && typeof row === 'object' ? row : {};
   const sectionSource = row.section || row.sectionLabel;
   const sectionInfo = resolveSection(sectionSource);
   const payType = inferPayType(row);
   const currency = normaliseCurrency(row.currency);
+  const publicPageConfig = normalisePublicPageConfig(row.public_page_config ?? row.publicPageConfig);
   return {
     id: asString(row.id),
     title: asString(row.title),
@@ -379,6 +413,7 @@ function toJob(row = {}) {
         : null,
     createdAt: row.created_at || row.createdAt || null,
     updatedAt: row.updated_at || row.updatedAt || null,
+    publicPageConfig,
   };
 }
 
@@ -435,6 +470,7 @@ function toPublicJob(row = {}) {
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
     publicDetailPath: buildPublicJobDetailPath(job),
+    publicPageConfig: job.publicPageConfig,
   };
 }
 
@@ -460,6 +496,7 @@ function toDbPayload(job = {}) {
     benefits: cleanArray(job.benefits || j.benefits),
     client_name: asString(job.clientName || job.client_name || j.clientName) || null,
     customer: asString(job.customer || j.customer) || null,
+    public_page_config: normalisePublicPageConfig(job.publicPageConfig || job.public_page_config || j.publicPageConfig),
     pay_type: payType || null,
     day_rate_min: null,
     day_rate_max: null,
@@ -537,6 +574,8 @@ module.exports = {
   findStaticJob,
   isSchemaError,
   isMissingTableError,
+  PUBLIC_PAGE_DEFAULTS,
+  normalisePublicPageConfig,
   isPublicJob,
   isPublishedLiveJob,
   buildPublicJobDetailPath,

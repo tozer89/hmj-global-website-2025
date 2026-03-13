@@ -120,6 +120,15 @@
     .tag-editor .token{padding:6px 10px;border-radius:999px;background:rgba(47,78,162,.12);display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--highlight)}
     .tag-editor .token button{background:transparent;border:0;color:var(--highlight);font-weight:900;cursor:pointer}
     .tag-editor input{flex:1;min-width:140px;border:0;background:transparent;color:var(--ink);font-weight:600;padding:4px}
+    .public-visibility{display:grid;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(47,78,162,.18);background:#f8faff}
+    .public-visibility__head{display:grid;gap:6px}
+    .public-visibility__head strong{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .public-visibility__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+    .check-item{display:grid;gap:6px;padding:12px 13px;border-radius:14px;border:1px solid rgba(47,78,162,.14);background:#fff}
+    .check-item__top{display:flex;gap:10px;align-items:flex-start}
+    .check-item input{margin-top:2px;width:18px;height:18px}
+    .check-item span{font-weight:800;color:var(--ink)}
+    .check-item small{color:var(--muted);font-size:12px;line-height:1.45}
 
     .share-box{display:grid;gap:10px;background:#f4f6ff;border:1px solid rgba(47,78,162,.2);border-radius:14px;padding:14px}
     .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
@@ -341,12 +350,69 @@
           <div class="field"><label for="edResponsibilities">Responsibilities (one per line)</label><textarea id="edResponsibilities"></textarea></div>
           <div class="field"><label for="edRequirements">Requirements (one per line)</label><textarea id="edRequirements"></textarea></div>
         </div>
+
+        <section class="public-visibility">
+          <div class="public-visibility__head">
+            <strong>Public role page visibility</strong>
+            <p class="muted">These toggles affect the public/shareable role page only. Internal-only data such as client name stays private regardless of these settings.</p>
+          </div>
+          <div class="public-visibility__grid">
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowOverview" type="checkbox"/><span>Show overview</span></div>
+              <small>Displays the summary copy at the top of the advert and in the overview section.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowPay" type="checkbox"/><span>Show package/pay</span></div>
+              <small>Displays package details in the advert when pay information is available.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowCustomer" type="checkbox"/><span>Show customer</span></div>
+              <small>Use only when the customer or project context is appropriate to show publicly.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowBenefits" type="checkbox"/><span>Show benefits</span></div>
+              <small>Shows benefits or support points on the public advert.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowResponsibilities" type="checkbox"/><span>Show responsibilities</span></div>
+              <small>Displays the responsibilities section on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowRequirements" type="checkbox"/><span>Show requirements</span></div>
+              <small>Displays the requirements section on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowTags" type="checkbox"/><span>Show key skills</span></div>
+              <small>Shows the key skills/tags chip group.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowRoleHighlights" type="checkbox"/><span>Show role highlights</span></div>
+              <small>Displays the “At a glance” / highlights panel on the advert.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowApplyPanel" type="checkbox"/><span>Show apply panel</span></div>
+              <small>Displays the right-hand apply panel on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowSecondaryCta" type="checkbox"/><span>Show secondary CTA block</span></div>
+              <small>Displays the extra bottom CTA section on the advert.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowPageMeta" type="checkbox"/><span>Show page meta</span></div>
+              <small>Displays the optional small footer/meta block on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowReference" type="checkbox"/><span>Show reference</span></div>
+              <small>Displays the job reference on the advert when useful externally.</small>
+            </label>
+          </div>
+        </section>
       </form>
 
       <div class="share-box">
         <div>
           <strong>Shareable spec</strong>
-          <p class="muted" id="shareDescription">Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.</p>
+          <p class="muted" id="shareDescription">Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.</p>
         </div>
         <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
         <div id="shareResult" style="display:none">
@@ -652,7 +718,7 @@
         if (!state.seeded) {
           seedNotice.style.display = 'none';
           if (shareDescription) {
-            shareDescription.textContent = 'Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
+            shareDescription.textContent = 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
           }
           return;
         }
@@ -669,7 +735,7 @@
         seedNotice.dataset.tone = state.readOnly ? 'warn' : 'info';
         seedNotice.style.display = '';
         if (shareDescription && state.seeded && !state.readOnly) {
-          shareDescription.textContent = 'Generate a standalone advert page for this job. Save imported jobs first so the share link is created from the live database instead of a static fallback.';
+          shareDescription.textContent = 'Generate a public/shareable role page for this job. Save imported jobs first so the share link is created from the live database instead of a static fallback.';
         }
       }
 
@@ -698,7 +764,34 @@
         apply: sel('#edApply'),
         published: sel('#edPublished'),
         sortOrder: sel('#edSortOrder'),
+        pvShowOverview: sel('#pvShowOverview'),
+        pvShowPay: sel('#pvShowPay'),
+        pvShowCustomer: sel('#pvShowCustomer'),
+        pvShowBenefits: sel('#pvShowBenefits'),
+        pvShowResponsibilities: sel('#pvShowResponsibilities'),
+        pvShowRequirements: sel('#pvShowRequirements'),
+        pvShowTags: sel('#pvShowTags'),
+        pvShowRoleHighlights: sel('#pvShowRoleHighlights'),
+        pvShowApplyPanel: sel('#pvShowApplyPanel'),
+        pvShowSecondaryCta: sel('#pvShowSecondaryCta'),
+        pvShowPageMeta: sel('#pvShowPageMeta'),
+        pvShowReference: sel('#pvShowReference'),
       };
+
+      const PUBLIC_PAGE_DEFAULTS = Object.freeze({
+        showOverview: true,
+        showPay: true,
+        showCustomer: true,
+        showBenefits: true,
+        showResponsibilities: true,
+        showRequirements: true,
+        showTags: true,
+        showRoleHighlights: true,
+        showApplyPanel: true,
+        showSecondaryCta: false,
+        showPageMeta: false,
+        showReference: false,
+      });
 
       const statusBadgeClass = (status) => {
         const v = (status || '').toLowerCase();
@@ -731,6 +824,53 @@
         if (value === null || value === undefined || value === '') return null;
         const parsed = Number(String(value).replace(/,/g, '').trim());
         return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function normalizePublicPageConfig(value) {
+        const input = value && typeof value === 'object' ? value : {};
+        const next = {};
+        Object.entries(PUBLIC_PAGE_DEFAULTS).forEach(([key, fallback]) => {
+          if (typeof input[key] === 'boolean') {
+            next[key] = input[key];
+            return;
+          }
+          const raw = (input[key] ?? '').toString().trim().toLowerCase();
+          next[key] = raw === 'true' ? true : raw === 'false' ? false : fallback;
+        });
+        return next;
+      }
+
+      function readPublicPageConfigFromForm() {
+        return normalizePublicPageConfig({
+          showOverview: !!form.pvShowOverview?.checked,
+          showPay: !!form.pvShowPay?.checked,
+          showCustomer: !!form.pvShowCustomer?.checked,
+          showBenefits: !!form.pvShowBenefits?.checked,
+          showResponsibilities: !!form.pvShowResponsibilities?.checked,
+          showRequirements: !!form.pvShowRequirements?.checked,
+          showTags: !!form.pvShowTags?.checked,
+          showRoleHighlights: !!form.pvShowRoleHighlights?.checked,
+          showApplyPanel: !!form.pvShowApplyPanel?.checked,
+          showSecondaryCta: !!form.pvShowSecondaryCta?.checked,
+          showPageMeta: !!form.pvShowPageMeta?.checked,
+          showReference: !!form.pvShowReference?.checked,
+        });
+      }
+
+      function fillPublicPageConfigForm(value) {
+        const config = normalizePublicPageConfig(value);
+        if (form.pvShowOverview) form.pvShowOverview.checked = config.showOverview;
+        if (form.pvShowPay) form.pvShowPay.checked = config.showPay;
+        if (form.pvShowCustomer) form.pvShowCustomer.checked = config.showCustomer;
+        if (form.pvShowBenefits) form.pvShowBenefits.checked = config.showBenefits;
+        if (form.pvShowResponsibilities) form.pvShowResponsibilities.checked = config.showResponsibilities;
+        if (form.pvShowRequirements) form.pvShowRequirements.checked = config.showRequirements;
+        if (form.pvShowTags) form.pvShowTags.checked = config.showTags;
+        if (form.pvShowRoleHighlights) form.pvShowRoleHighlights.checked = config.showRoleHighlights;
+        if (form.pvShowApplyPanel) form.pvShowApplyPanel.checked = config.showApplyPanel;
+        if (form.pvShowSecondaryCta) form.pvShowSecondaryCta.checked = config.showSecondaryCta;
+        if (form.pvShowPageMeta) form.pvShowPageMeta.checked = config.showPageMeta;
+        if (form.pvShowReference) form.pvShowReference.checked = config.showReference;
       }
 
       function normaliseCurrency(value, fallback = '') {
@@ -848,6 +988,7 @@
         }
 
         const payType = inferPayType(row);
+        const publicPageConfig = normalizePublicPageConfig(row.publicPageConfig || row.public_page_config);
         const normalized = {
           id: (row.id || row.slug || '').toString().trim(),
           title: (row.title || row.name || '').toString().trim(),
@@ -886,6 +1027,7 @@
           keywords: (row.keywords || '').toString().trim(),
           createdAt: row.createdAt || row.created_at || null,
           updatedAt: row.updatedAt || row.updated_at || null,
+          publicPageConfig,
         };
         normalized.payText = buildPayText(normalized);
         if (!normalized.id) {
@@ -926,6 +1068,7 @@
           apply_url: normalized.applyUrl,
           published: normalized.published,
           sort_order: normalized.sortOrder ?? null,
+          public_page_config: normalizePublicPageConfig(normalized.publicPageConfig),
         };
       }
 
@@ -1031,6 +1174,7 @@
           keywords: normalized.keywords || '',
           published: normalized.published !== false,
           sortOrder: Number.isFinite(normalized.sortOrder) ? normalized.sortOrder : null,
+          publicPageConfig: normalizePublicPageConfig(normalized.publicPageConfig),
         };
       }
 
@@ -1520,7 +1664,7 @@
           if (shareDescription) {
             shareDescription.textContent = state.readOnly
               ? 'This console is in read-only mode, so share links stay local to this browser for 30 days.'
-              : 'Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
+              : 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
           }
           updatePayFieldVisibility();
           updateControlState();
@@ -1552,6 +1696,7 @@
         form.apply.value = job?.applyUrl || '';
         form.published.checked = !!job?.published;
         form.sortOrder.value = Number.isFinite(job?.sortOrder) ? job.sortOrder : '';
+        fillPublicPageConfigForm(job?.publicPageConfig);
         state.editingTags = Array.isArray(job?.tags) ? [...job.tags] : [];
         state.editingBenefits = Array.isArray(job?.benefits) ? [...job.benefits] : [];
         renderTagTokens();
@@ -1583,7 +1728,7 @@
             ? 'This console is in read-only mode, so share links stay local to this browser for 30 days.'
             : job?.__seed
               ? 'This job still comes from the legacy static site. Save it once to Supabase before creating a live share link.'
-              : 'Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
+              : 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
         }
         openDrawer();
       }
@@ -1616,7 +1761,20 @@
           sortOrder: form.sortOrder.value ? Number(form.sortOrder.value) : undefined,
           tags: [...state.editingTags],
           benefits: [...state.editingBenefits],
+          publicPageConfig: readPublicPageConfigFromForm(),
         };
+      }
+
+      function getCurrentEditorDraft() {
+        if (!drawer?.classList.contains('open')) return null;
+        const draft = readForm();
+        if (state.editing) {
+          return {
+            ...state.editing,
+            ...draft,
+          };
+        }
+        return draft;
       }
 
       async function saveJob() {
@@ -1632,6 +1790,7 @@
           const payload = readForm();
           const res = await api('admin-jobs-save', 'POST', { job: payload });
           const job = res?.job;
+          const schemaAdjusted = !!res?.schema;
           if (job) {
             const hydrated = { ...job, ...normalizeJob(job) };
             const existing = state.jobs.find((j) => j.id === hydrated.id);
@@ -1645,11 +1804,22 @@
             buildTags();
             renderAll();
             openEditor(hydrated);
-            toast('Job saved', 'ok', 1800);
+            toast(
+              schemaAdjusted
+                ? 'Job saved. Run the public role page visibility migration before expecting those settings to persist.'
+                : 'Job saved',
+              schemaAdjusted ? 'warn' : 'ok',
+              schemaAdjusted ? 3600 : 1800
+            );
             state.seeded = state.jobs.some((j) => j.__seed);
             applySeedNotice();
             state.lastLoadedAt = new Date().toISOString();
-            setLastAction(`Saved ${hydrated.title || 'job'}`, 'ok');
+            setLastAction(
+              schemaAdjusted
+                ? `Saved ${hydrated.title || 'job'} (visibility settings need the schema update)`
+                : `Saved ${hydrated.title || 'job'}`,
+              schemaAdjusted ? 'warn' : 'ok'
+            );
           }
         } catch (e) {
           console.error('[jobs] save failed', e);
@@ -1695,7 +1865,8 @@
       }
 
       async function shareJob(job) {
-        const target = job && (job.id || job.title) ? job : state.editing || readForm();
+        const editorDraft = getCurrentEditorDraft();
+        const target = editorDraft || (job && (job.id || job.title) ? job : state.editing || readForm());
         if (!target || !(target.id || target.title)) {
           toast('Select or save a job first', 'warn', 2400);
           return;
@@ -1827,7 +1998,7 @@
       }
 
       function refreshLocalShare() {
-        const target = state.editing || readForm();
+        const target = getCurrentEditorDraft() || state.editing || readForm();
         if (!target || !(target.id || target.title)) {
           toast('Select or save a job first', 'warn', 2400);
           return;
@@ -1948,7 +2119,7 @@
       sel('#btnClose').onclick = closeDrawer;
       sel('#btnSave').onclick = (e) => { e.preventDefault(); saveJob(); };
       sel('#btnDelete').onclick = (e) => { e.preventDefault(); deleteJob(); };
-      sel('#btnShare').onclick = (e) => { e.preventDefault(); shareJob(state.editing || readForm()); };
+      sel('#btnShare').onclick = (e) => { e.preventDefault(); shareJob(); };
       sel('#btnCopyShare').onclick = (e) => {
         e.preventDefault();
         if (!shareUrl.value) return;
