@@ -1,0 +1,439 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const core = require('../lib/candidate-matcher-core.js');
+const {
+  createCandidateHistoryListBaseHandler,
+  createCandidateMatchBaseHandler,
+} = require('../lib/admin-candidate-match-function.js');
+
+test('prepareCandidateFiles marks unsupported extensions without crashing the run', () => {
+  const files = core.prepareCandidateFiles([
+    { name: 'profile.doc', data: Buffer.from('legacy').toString('base64'), size: 6 },
+    { name: 'notes.txt', data: Buffer.from('bad').toString('base64'), size: 3 }
+  ]);
+
+  assert.equal(files.length, 2);
+  assert.equal(files[0].status, 'ready');
+  assert.equal(files[1].status, 'unsupported');
+});
+
+test('fetchPublishedLiveJobs keeps only published roles with live status', async () => {
+  const rows = [
+    { id: 'job-1', title: 'Live role', published: true, status: 'live', type: 'contract' },
+    { id: 'job-2', title: 'Closed role', published: true, status: 'closed', type: 'contract' },
+    { id: 'job-3', title: 'Draft role', published: false, status: 'live', type: 'contract' }
+  ];
+
+  const query = {
+    select() { return this; },
+    eq() { return this; },
+    order() { return this; },
+    then(resolve) { return Promise.resolve(resolve({ data: rows, error: null })); }
+  };
+
+  const jobs = await core.fetchPublishedLiveJobs({
+    from(tableName) {
+      assert.equal(tableName, 'jobs');
+      return query;
+    }
+  });
+
+  assert.deepEqual(jobs.map((job) => job.job_id), ['job-1']);
+});
+
+test('candidate match handler returns a happy-path payload with mocked dependencies', async () => {
+  const originals = {
+    prepareCandidateFiles: core.prepareCandidateFiles,
+    extractCandidateDocuments: core.extractCandidateDocuments,
+    fetchPublishedLiveJobs: core.fetchPublishedLiveJobs,
+    maybeStoreUploads: core.maybeStoreUploads,
+    callOpenAIForMatch: core.callOpenAIForMatch,
+    saveMatchRun: core.saveMatchRun,
+    buildCandidatePayload: core.buildCandidatePayload,
+    summariseDocument: core.summariseDocument,
+  };
+
+  core.prepareCandidateFiles = () => [{
+    id: 'file-1',
+    name: 'candidate.docx',
+    extension: 'docx',
+    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    size: 1234,
+    status: 'ready',
+    buffer: Buffer.from('docx'),
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+    storageKey: '',
+  }];
+  core.extractCandidateDocuments = async (documents) => ({
+    documents: [{
+      ...documents[0],
+      status: 'ok',
+      extractedText: 'Candidate has HV commissioning experience and SSSTS.',
+      extractedTextLength: 56,
+      storageKey: 'candidate-matcher/run/file.docx',
+    }],
+    successful: [{
+      ...documents[0],
+      status: 'ok',
+      extractedText: 'Candidate has HV commissioning experience and SSSTS.',
+      extractedTextLength: 56,
+      storageKey: 'candidate-matcher/run/file.docx',
+    }],
+    failed: [],
+    successCount: 1,
+    failureCount: 0,
+    combinedText: 'Candidate has HV commissioning experience and SSSTS.',
+  });
+  core.fetchPublishedLiveJobs = async () => [{
+    job_id: 'job-1',
+    title: 'HV Commissioning Engineer',
+    location: 'London',
+    employment_type: 'contract',
+    published: true,
+    status: 'live',
+  }];
+  core.maybeStoreUploads = async () => ({ stored: true, bucket: 'candidate-matcher-uploads', warnings: [] });
+  core.buildCandidatePayload = () => ({ candidate_text: 'Candidate text', recruiter_notes: 'notes' });
+  core.callOpenAIForMatch = async () => ({
+    model: 'gpt-5.4',
+    raw: {},
+    result: {
+      candidate_summary: {
+        name: 'Alex Example',
+        current_or_recent_title: 'Commissioning Engineer',
+        seniority_level: 'Mid-Senior',
+        primary_discipline: 'Electrical Commissioning',
+        sectors: ['Data Centres'],
+        locations: ['London'],
+        key_skills: ['HV commissioning', 'SSSTS'],
+        key_qualifications: ['SSSTS'],
+        summary: 'Strong site delivery candidate with direct commissioning evidence.'
+      },
+      top_matches: [{
+        job_id: 'job-1',
+        job_title: 'HV Commissioning Engineer',
+        score: 89,
+        recommendation: 'shortlist',
+        why_match: 'Directly aligned experience.',
+        matched_skills: ['HV commissioning'],
+        matched_qualifications: ['SSSTS'],
+        transferable_experience: [],
+        gaps: [],
+        follow_up_questions: ['Can the candidate start in two weeks?'],
+        uncertainty_notes: ''
+      }],
+      other_matches: [],
+      overall_recommendation: 'Shortlist for recruiter review.',
+      general_follow_up_questions: ['Confirm current location.'],
+      no_strong_match_reason: ''
+    }
+  });
+  core.saveMatchRun = async () => ({
+    saved: true,
+    enabled: true,
+    record: { id: 'run-1', created_at: '2026-03-13T10:00:00Z' }
+  });
+  core.summariseDocument = (document) => ({
+    id: document.id,
+    name: document.name,
+    status: document.status,
+    size: document.size,
+    sizeLabel: '1 KB',
+    extension: document.extension,
+    contentType: document.contentType,
+    extractedTextLength: document.extractedTextLength,
+    error: document.error,
+    storageKey: document.storageKey,
+  });
+
+  const handler = createCandidateMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      files: [{ name: 'candidate.docx', data: 'ignored' }],
+      recruiterNotes: 'Prioritise data centre roles.',
+      saveHistory: true,
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.live_jobs_count, 1);
+  assert.equal(payload.result.candidate_summary.name, 'Alex Example');
+  assert.equal(payload.result.top_matches[0].job_id, 'job-1');
+  assert.equal(payload.saved_to_history, true);
+});
+
+test('history list handler returns disabled state when no table is configured', async () => {
+  const original = core.listMatchRuns;
+  core.listMatchRuns = async () => ({ enabled: false, runs: [] });
+
+  const handler = createCandidateHistoryListBaseHandler({
+    getContextImpl: async () => ({ supabase: {} })
+  });
+
+  const response = await handler({ body: JSON.stringify({ limit: 5 }) }, {});
+  core.listMatchRuns = original;
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.history_enabled, false);
+  assert.deepEqual(payload.runs, []);
+});
+
+test('saveMatchRun writes live-schema aligned run and file records', async () => {
+  let savedRunPayload = null;
+  let savedFilePayload = null;
+
+  const supabase = {
+    from(tableName) {
+      if (tableName === 'candidate_match_runs') {
+        return {
+          insert(payload) {
+            savedRunPayload = payload;
+            return {
+              select() {
+                return {
+                  single: async () => ({
+                    data: {
+                      id: payload.id,
+                      created_at: '2026-03-13T12:00:00Z',
+                      candidate_name: payload.candidate_name,
+                      best_match_job_id: payload.best_match_job_id,
+                      best_match_score: payload.best_match_score,
+                      status: payload.status,
+                    },
+                    error: null,
+                  })
+                };
+              }
+            };
+          }
+        };
+      }
+
+      if (tableName === 'candidate_match_files') {
+        return {
+          insert(payload) {
+            savedFilePayload = payload;
+            return {
+              select: async () => ({
+                data: payload.map((row, index) => ({ id: `file-${index + 1}` })),
+                error: null,
+              })
+            };
+          }
+        };
+      }
+
+      throw new Error(`Unexpected table ${tableName}`);
+    }
+  };
+
+  const result = await core.saveMatchRun({
+    supabase,
+    runId: 'f0f0f0f0-1111-2222-3333-444444444444',
+    actorEmail: 'recruiter@hmjglobal.test',
+    recruiterNotes: 'Prioritise contract roles.',
+    extraction: {
+      successCount: 1,
+      failureCount: 1,
+      documents: [
+        {
+          id: 'doc-1',
+          name: 'candidate.pdf',
+          extension: 'pdf',
+          contentType: 'application/pdf',
+          size: 1400,
+          status: 'ok',
+          extractedText: 'Candidate text',
+          extractedTextLength: 14,
+          storageKey: 'candidate-matcher/f0/run-candidate.pdf',
+        },
+        {
+          id: 'doc-2',
+          name: 'cert.doc',
+          extension: 'doc',
+          contentType: 'application/msword',
+          size: 900,
+          status: 'unsupported',
+          extractedText: '',
+          extractedTextLength: 0,
+          error: 'Legacy DOC uploads are accepted, but automatic text extraction is not configured for this runtime yet.',
+          storageKey: 'candidate-matcher/f0/run-cert.doc',
+        }
+      ]
+    },
+    analysisResult: {
+      candidate_summary: {
+        name: 'Alex Example',
+        current_or_recent_title: 'Commissioning Engineer',
+        seniority_level: 'Mid-Senior',
+        primary_discipline: 'Electrical Commissioning',
+        sectors: ['Data Centres'],
+        locations: ['London'],
+        key_skills: ['HV commissioning'],
+        key_qualifications: ['SSSTS'],
+        summary: 'Strong site delivery candidate.',
+      },
+      top_matches: [{
+        job_id: 'job-1',
+        job_title: 'HV Commissioning Engineer',
+        score: 89,
+        recommendation: 'shortlist',
+        why_match: 'Directly aligned experience.',
+        matched_skills: ['HV commissioning'],
+        matched_qualifications: ['SSSTS'],
+        transferable_experience: [],
+        gaps: [],
+        follow_up_questions: [],
+        uncertainty_notes: '',
+      }],
+      other_matches: [],
+      overall_recommendation: 'Shortlist for recruiter review.',
+      general_follow_up_questions: [],
+      no_strong_match_reason: '',
+    },
+    documents: [
+      {
+        id: 'doc-1',
+        name: 'candidate.pdf',
+        extension: 'pdf',
+        contentType: 'application/pdf',
+        size: 1400,
+        status: 'ok',
+        extractedText: 'Candidate text',
+        extractedTextLength: 14,
+        storageKey: 'candidate-matcher/f0/run-candidate.pdf',
+      },
+      {
+        id: 'doc-2',
+        name: 'cert.doc',
+        extension: 'doc',
+        contentType: 'application/msword',
+        size: 900,
+        status: 'unsupported',
+        extractedText: '',
+        extractedTextLength: 0,
+        error: 'Legacy DOC uploads are accepted, but automatic text extraction is not configured for this runtime yet.',
+        storageKey: 'candidate-matcher/f0/run-cert.doc',
+      }
+    ],
+    bucket: 'candidate-matcher-uploads',
+    liveJobs: [{ job_id: 'job-1', job_slug: 'hv-commissioning-engineer', title: 'HV Commissioning Engineer' }],
+    enabled: true,
+  });
+
+  assert.equal(result.saved, true);
+  assert.equal(savedRunPayload.created_by, null);
+  assert.equal(savedRunPayload.best_match_job_slug, 'hv-commissioning-engineer');
+  assert.equal(savedRunPayload.best_match_job_title, 'HV Commissioning Engineer');
+  assert.equal(savedRunPayload.status, 'completed');
+  assert.ok(!('uploaded_file_names' in savedRunPayload));
+  assert.equal(Array.isArray(savedFilePayload), true);
+  assert.equal(savedFilePayload.length, 2);
+  assert.equal(savedFilePayload[0].match_run_id, 'f0f0f0f0-1111-2222-3333-444444444444');
+  assert.equal(savedFilePayload[0].storage_bucket, 'candidate-matcher-uploads');
+  assert.equal(savedFilePayload[0].extraction_status, 'completed');
+  assert.equal(savedFilePayload[1].extraction_status, 'failed');
+});
+
+test('listMatchRuns hydrates file names from candidate_match_files', async () => {
+  const supabase = {
+    from(tableName) {
+      if (tableName === 'candidate_match_runs') {
+        return {
+          select() {
+            return {
+              order() {
+                return {
+                  limit: async () => ({
+                    data: [{
+                      id: 'run-1',
+                      created_at: '2026-03-13T12:00:00Z',
+                      candidate_name: 'Alex Example',
+                      current_or_recent_title: 'Commissioning Engineer',
+                      seniority_level: 'Mid-Senior',
+                      primary_discipline: 'Electrical Commissioning',
+                      recruiter_notes: 'Prioritise contract roles.',
+                      extracted_text_summary: 'Strong site delivery candidate.',
+                      candidate_summary_json: {
+                        name: 'Alex Example',
+                        current_or_recent_title: 'Commissioning Engineer',
+                        seniority_level: 'Mid-Senior',
+                        primary_discipline: 'Electrical Commissioning',
+                      },
+                      raw_result_json: {
+                        result: {
+                          candidate_summary: { name: 'Alex Example' },
+                          top_matches: [{ job_id: 'job-1', job_title: 'HV Commissioning Engineer', score: 89 }],
+                        }
+                      },
+                      best_match_job_id: 'job-1',
+                      best_match_job_slug: 'hv-commissioning-engineer',
+                      best_match_job_title: 'HV Commissioning Engineer',
+                      best_match_score: 89,
+                      overall_recommendation: 'Shortlist',
+                      no_strong_match_reason: '',
+                      error_message: null,
+                      status: 'completed',
+                    }],
+                    error: null,
+                  })
+                };
+              }
+            };
+          }
+        };
+      }
+
+      if (tableName === 'candidate_match_files') {
+        return {
+          select() {
+            return {
+              in() {
+                return {
+                  order: async () => ({
+                    data: [{
+                      id: 'file-1',
+                      match_run_id: 'run-1',
+                      original_filename: 'candidate.pdf',
+                      mime_type: 'application/pdf',
+                      file_size_bytes: 1400,
+                      storage_bucket: 'candidate-matcher-uploads',
+                      storage_path: 'candidate-matcher/run-1/candidate.pdf',
+                      extraction_status: 'completed',
+                      extraction_error: null,
+                    }],
+                    error: null,
+                  })
+                };
+              }
+            };
+          }
+        };
+      }
+
+      throw new Error(`Unexpected table ${tableName}`);
+    }
+  };
+
+  const history = await core.listMatchRuns(supabase, 5);
+
+  assert.equal(history.enabled, true);
+  assert.equal(history.runs.length, 1);
+  assert.deepEqual(history.runs[0].file_names, ['candidate.pdf']);
+  assert.equal(history.runs[0].best_match_job_slug, 'hv-commissioning-engineer');
+});

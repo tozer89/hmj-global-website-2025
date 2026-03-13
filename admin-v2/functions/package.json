@@ -1,5 +1,5 @@
 {
-  "name": "hmjg-functions",
+  "name": "hmjg-functions-preview",
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

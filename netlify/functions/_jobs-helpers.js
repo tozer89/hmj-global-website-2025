@@ -242,15 +242,15 @@ function normalisePayType(value) {
 }
 
 function inferPayType(row = {}) {
-  const explicit = normalisePayType(row.pay_type || row.payType);
+  const explicit = normalisePayType(row.pay_type ?? row.payType);
   if (explicit) return explicit;
-  if (asNumber(row.day_rate_min || row.dayRateMin) !== null || asNumber(row.day_rate_max || row.dayRateMax) !== null) {
+  if (asNumber(row.day_rate_min ?? row.dayRateMin) !== null || asNumber(row.day_rate_max ?? row.dayRateMax) !== null) {
     return 'day_rate';
   }
-  if (asNumber(row.salary_min || row.salaryMin) !== null || asNumber(row.salary_max || row.salaryMax) !== null) {
+  if (asNumber(row.salary_min ?? row.salaryMin) !== null || asNumber(row.salary_max ?? row.salaryMax) !== null) {
     return 'salary_range';
   }
-  if (asNumber(row.hourly_min || row.hourlyMin) !== null || asNumber(row.hourly_max || row.hourlyMax) !== null) {
+  if (asNumber(row.hourly_min ?? row.hourlyMin) !== null || asNumber(row.hourly_max ?? row.hourlyMax) !== null) {
     return 'hourly_range';
   }
   return '';
@@ -303,15 +303,15 @@ function buildPayText(row = {}) {
   const currency = normaliseCurrency(row.currency, 'GBP');
 
   if (payType === 'day_rate') {
-    return formatPayRange(row.day_rate_min || row.dayRateMin, row.day_rate_max || row.dayRateMax, currency, 'per day', {
+    return formatPayRange(row.day_rate_min ?? row.dayRateMin, row.day_rate_max ?? row.dayRateMax, currency, 'per day', {
       maxFractionDigits: 2,
     });
   }
   if (payType === 'salary_range') {
-    return formatPayRange(row.salary_min || row.salaryMin, row.salary_max || row.salaryMax, currency, 'per year');
+    return formatPayRange(row.salary_min ?? row.salaryMin, row.salary_max ?? row.salaryMax, currency, 'per year');
   }
   if (payType === 'hourly_range') {
-    return formatPayRange(row.hourly_min || row.hourlyMin, row.hourly_max || row.hourlyMax, currency, 'per hour', {
+    return formatPayRange(row.hourly_min ?? row.hourlyMin, row.hourly_max ?? row.hourlyMax, currency, 'per hour', {
       maxFractionDigits: 2,
     });
   }
@@ -361,12 +361,12 @@ function toJob(row = {}) {
     customer: asString(row.customer),
     benefits: cleanArray(row.benefits),
     payType,
-    dayRateMin: asNumber(row.day_rate_min || row.dayRateMin),
-    dayRateMax: asNumber(row.day_rate_max || row.dayRateMax),
-    salaryMin: asNumber(row.salary_min || row.salaryMin),
-    salaryMax: asNumber(row.salary_max || row.salaryMax),
-    hourlyMin: asNumber(row.hourly_min || row.hourlyMin),
-    hourlyMax: asNumber(row.hourly_max || row.hourlyMax),
+    dayRateMin: asNumber(row.day_rate_min ?? row.dayRateMin),
+    dayRateMax: asNumber(row.day_rate_max ?? row.dayRateMax),
+    salaryMin: asNumber(row.salary_min ?? row.salaryMin),
+    salaryMax: asNumber(row.salary_max ?? row.salaryMax),
+    hourlyMin: asNumber(row.hourly_min ?? row.hourlyMin),
+    hourlyMax: asNumber(row.hourly_max ?? row.hourlyMax),
     currency,
     payText: buildPayText({ ...row, pay_type: payType, currency }),
     applyUrl: asString(row.apply_url || row.applyUrl),

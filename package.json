@@ -6,6 +6,8 @@
     "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "mammoth": "^1.12.0",
+    "pdf-parse": "^2.4.5"
   }
 }

@@ -656,6 +656,7 @@
         const key = event.key.toLowerCase();
         const map = {
           c: '/admin/clients.html',
+          m: '/admin/candidate-matcher.html',
           n: '/admin/candidates.html',
           a: '/admin/assignments.html',
           j: '/admin/jobs.html',
@@ -695,6 +696,7 @@
     const shortcuts = [
       ['⌘K / Ctrl+K', 'Open command palette'],
       ['g c', 'Go to Clients'],
+      ['g m', 'Go to Candidate Matcher'],
       ['g n', 'Go to Candidates'],
       ['g a', 'Go to Assignments'],
       ['g j', 'Go to Jobs'],

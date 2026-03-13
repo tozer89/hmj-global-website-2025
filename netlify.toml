@@ -43,6 +43,17 @@
   status = 302
 
 [[redirects]]
+  from = "/admin/candidate-matcher.html"
+  to = "/admin/candidate-matcher.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/candidate-matcher.html"
+  to = "/admin/?next=candidate-matcher.html"
+  status = 302
+
+[[redirects]]
   from = "/admin/clients.html"
   to = "/admin/clients.html"
   status = 200
