@@ -87,11 +87,11 @@
 
     /* ===== JOB CARDS ===== */
     .jobs-board{max-width:1200px;margin:12px auto 50px;padding:0 20px; display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;}
-    .job{background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%),#fff; border:1px solid var(--cardBorder); border-radius:18px; padding:18px 18px 20px; box-shadow:0 8px 22px rgba(0,0,0,.08); transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease, outline .12s ease; outline:0 solid transparent;}
+    .job{display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%),#fff; border:1px solid var(--cardBorder); border-radius:18px; padding:18px 18px 20px; box-shadow:0 8px 22px rgba(0,0,0,.08); transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease, outline .12s ease; outline:0 solid transparent;}
     .job:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.14);border-color:rgba(58,102,179,.35)}
     .job:focus-within{outline:3px solid rgba(58,102,179,.25)}
     .job--has-detail{border-color:rgba(58,102,179,.22)}
-    .job-card-link{display:block;color:inherit;text-decoration:none;border-radius:14px;padding:4px;margin:-4px -4px 8px;transition:background .2s ease,box-shadow .2s ease}
+    .job-card-link{display:block;flex:1 1 auto;color:inherit;text-decoration:none;border-radius:14px;padding:4px;margin:-4px -4px 8px;transition:background .2s ease,box-shadow .2s ease}
     .job-card-link--static{cursor:default}
     .job--has-detail .job-card-link{cursor:pointer}
     .job--has-detail .job-card-link:hover{background:rgba(58,102,179,.06);box-shadow:inset 0 0 0 1px rgba(58,102,179,.12)}
@@ -523,6 +523,16 @@
       return `contact.html?${params.toString()}`;
     }
 
+    function resolvePublicDetailUrl(job = {}) {
+      const direct = (job.publicDetailPath || '').toString().trim();
+      if (direct) return direct;
+      const jobId = (job.id || '').toString().trim();
+      if (!jobId || job.published === false) return '';
+      const params = new URLSearchParams();
+      params.set('id', jobId);
+      return `/jobs/spec.html?${params.toString()}`;
+    }
+
     function getStatusLabel(status = '') {
       if (status === 'closed') return 'Recently filled';
       if (status === 'interviewing') return 'Interviewing now';
@@ -941,7 +951,7 @@
       const statusClass = job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live';
       const applyUrl = resolveApplyUrl(job);
       const contactUrl = resolveContactUrl(job);
-      const publicDetailUrl = (job.publicDetailPath || '').trim();
+      const publicDetailUrl = resolvePublicDetailUrl(job);
       const hasPublicDetails = !!publicDetailUrl;
       const tagsList = Array.isArray(job.tags) ? job.tags : [];
       const tags = tagsList.length ? tagsList.slice(0, 4).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('') : '';

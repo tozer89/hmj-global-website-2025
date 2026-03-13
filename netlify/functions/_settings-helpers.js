@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS = {
   fiscal_week_day: 'sunday',
   timesheet_deadline_note: 'Submit approved timesheets by Monday 10:00 (UK time) to guarantee payroll.',
   timesheet_deadline_timezone: 'Europe/London',
+  noticeboard_enabled: true,
 };
 
 const MS_DAY = 86400000;

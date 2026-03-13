@@ -13,6 +13,7 @@ const {
   resolveSection,
   loadStaticJobs,
   isMissingTableError,
+  isPublicJob,
   isPublishedLiveJob,
   buildPublicJobDetailPath,
 } = require('../netlify/functions/_jobs-helpers.js');
@@ -133,7 +134,7 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
   const job = toPublicJob({
     id: 'role-3',
     title: 'Planner',
-    status: 'live',
+    status: 'interviewing',
     published: true,
     client_name: 'Internal Client',
     customer: 'Hyperscale data centre client',
@@ -168,12 +169,15 @@ test('slugify and resolveSection provide stable keys', () => {
   assert.equal(custom.key, 'critical-infrastructure');
 });
 
-test('published live helper only exposes stable public detail paths for live jobs', () => {
-  assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'live', published: true }), true);
-  assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'interviewing', published: true }), false);
-  assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'live', published: false }), false);
+test('public helper exposes stable public detail paths for any published job', () => {
+  assert.equal(isPublicJob({ id: 'role-1', status: 'live', published: true }), true);
+  assert.equal(isPublicJob({ id: 'role-1', status: 'interviewing', published: true }), true);
+  assert.equal(isPublicJob({ id: 'role-1', status: 'closed', published: true }), true);
+  assert.equal(isPublicJob({ id: 'role-1', status: 'live', published: false }), false);
+  assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'interviewing', published: true }), true);
   assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'live', published: true }), '/jobs/spec.html?id=role-1');
-  assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'closed', published: true }), '');
+  assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'closed', published: true }), '/jobs/spec.html?id=role-1');
+  assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'live', published: false }), '');
 });
 
 test('buildPayText handles competitive and salary range formats', () => {

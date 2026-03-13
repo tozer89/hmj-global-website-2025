@@ -634,6 +634,16 @@ img {
   outline: none;
 }
 
+.tool-secondary:disabled,
+.tool-ghost:disabled,
+.tool-pill:disabled,
+.segmented-control button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .tool-ghost {
   background: transparent;
 }
@@ -1054,7 +1064,7 @@ img {
 
 .checklist-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   align-items: start;
   padding: 12px 14px;
@@ -1096,6 +1106,12 @@ img {
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.48;
+}
+
+.checklist-item .tool-ghost {
+  min-height: 34px;
+  padding: 8px 12px;
+  align-self: center;
 }
 
 .checklist-custom {

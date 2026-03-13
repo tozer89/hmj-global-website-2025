@@ -67,9 +67,20 @@
     storage_upload: 3,
     prepared_evidence_save: 3,
     prepared_evidence_load: 4,
+    loading_prepared_evidence: 4,
+    prepared_evidence_ready: 4,
+    loading_live_jobs: 4,
+    live_jobs_loaded: 4,
     jobs_fetch: 4,
+    openai_request_started: 5,
+    openai_thinking: 5,
+    openai_response_received: 5,
+    parsing_result: 5,
+    structured_result_validated: 5,
     openai: 5,
+    saving_result: 6,
     history_save: 6,
+    completed: 6,
     render: 6,
   };
   const CLIENT_REQUEST_TIMEOUT_MS = 65000;
@@ -255,6 +266,158 @@
     if (key === 'completed') return 'Completed';
     if (key === 'failed') return 'Failed';
     return 'Idle';
+  }
+
+  function matchJobStageLabel(stage, fallbackLabel) {
+    const key = String(stage || '').toLowerCase();
+    if (key === 'queued') return 'Prepared evidence ready';
+    if (key === 'loading_prepared_evidence') return 'Loading prepared evidence';
+    if (key === 'prepared_evidence_ready') return 'Prepared evidence ready';
+    if (key === 'loading_live_jobs') return 'Loading live roles';
+    if (key === 'live_jobs_loaded') return 'Live roles loaded';
+    if (key === 'openai_request_started') return 'Data transferred to OpenAI';
+    if (key === 'openai_thinking') return 'OpenAI thinking';
+    if (key === 'openai_response_received') return 'OpenAI response received';
+    if (key === 'parsing_result') return 'Validating structured result';
+    if (key === 'structured_result_validated') return 'Structured result validated';
+    if (key === 'saving_result') return 'Saving recruiter match result';
+    if (key === 'completed') return 'Match complete';
+    if (key === 'failed') return 'Match failed';
+    return fallbackLabel || 'Waiting for progress update';
+  }
+
+  function buildProgressStateFromJob(run) {
+    const job = currentMatchJob(run);
+    const status = String(job?.status || '').toLowerCase();
+    const stage = String(job?.stage || '').toLowerCase();
+    const stageLabel = matchJobStageLabel(stage, job?.stage_label);
+
+    if (status === 'failed') {
+      return {
+        activeIndex: stageIndexForKey(stage || 'openai'),
+        failedIndex: stageIndexForKey(stage || 'openai'),
+        percent: progressPercentForStage(stageIndexForKey(stage || 'openai'), true),
+        statusText: 'Background match failed',
+        detailText: run?.error_message || job?.last_error || 'The queued recruiter match did not complete.',
+        stageDetail: stageLabel || 'Background recruiter analysis failed.',
+      };
+    }
+
+    if (status === 'completed') {
+      return {
+        activeIndex: 6,
+        failedIndex: -1,
+        percent: 100,
+        statusText: 'Match complete',
+        detailText: 'Background recruiter analysis completed. Review the saved ranked result below.',
+        stageDetail: 'Match complete',
+      };
+    }
+
+    if (stage === 'queued' || status === 'queued') {
+      return {
+        activeIndex: 4,
+        failedIndex: -1,
+        percent: 66,
+        statusText: 'Match queued',
+        detailText: 'Prepared evidence is ready. Waiting for the background recruiter analysis to start.',
+        stageDetail: 'Prepared evidence ready',
+      };
+    }
+
+    if (stage === 'loading_prepared_evidence') {
+      return {
+        activeIndex: 4,
+        failedIndex: -1,
+        percent: 70,
+        statusText: 'Loading prepared evidence',
+        detailText: 'Prepared evidence is being loaded for the background recruiter match.',
+        stageDetail: 'Loading prepared evidence',
+      };
+    }
+
+    if (stage === 'prepared_evidence_ready') {
+      return {
+        activeIndex: 4,
+        failedIndex: -1,
+        percent: 74,
+        statusText: 'Prepared evidence ready',
+        detailText: 'Prepared evidence is ready for the AI match stage.',
+        stageDetail: 'Prepared evidence ready',
+      };
+    }
+
+    if (stage === 'loading_live_jobs' || stage === 'live_jobs_loaded') {
+      return {
+        activeIndex: 4,
+        failedIndex: -1,
+        percent: 78,
+        statusText: stage === 'live_jobs_loaded' ? 'Live roles loaded' : 'Loading live roles',
+        detailText: stage === 'live_jobs_loaded'
+          ? 'Current HMJ live roles have been loaded for the matcher.'
+          : 'Loading current HMJ live roles for the matcher.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (stage === 'openai_request_started' || stage === 'openai_thinking') {
+      return {
+        activeIndex: 5,
+        failedIndex: -1,
+        percent: 86,
+        statusText: 'OpenAI analysing candidate',
+        detailText: 'Data successfully transferred to OpenAI. OpenAI is analysing the candidate against the live roles.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (stage === 'openai_response_received') {
+      return {
+        activeIndex: 5,
+        failedIndex: -1,
+        percent: 90,
+        statusText: 'OpenAI response received',
+        detailText: 'OpenAI has returned a response and the matcher is moving to validation.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (stage === 'parsing_result' || stage === 'structured_result_validated') {
+      return {
+        activeIndex: 5,
+        failedIndex: -1,
+        percent: 94,
+        statusText: stage === 'structured_result_validated' ? 'Structured result validated' : 'Validating structured result',
+        detailText: stage === 'structured_result_validated'
+          ? 'The structured recruiter result passed validation and is preparing to save.'
+          : 'Validating the structured recruiter result returned by OpenAI.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (stage === 'saving_result') {
+      return {
+        activeIndex: 6,
+        failedIndex: -1,
+        percent: 97,
+        statusText: 'Saving recruiter match result',
+        detailText: 'Saving the validated recruiter match result to the private history record.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (status === 'running') {
+      return {
+        activeIndex: 5,
+        failedIndex: -1,
+        percent: 84,
+        statusText: 'Running recruiter match',
+        detailText: 'Prepared evidence is saved. The AI recruiter analysis is running in the background.',
+        stageDetail: stageLabel || 'Background recruiter analysis is currently running.',
+      };
+    }
+
+    return null;
   }
 
   function isMatchJobActive(run) {
@@ -939,7 +1102,7 @@
       files_text_read: Number(prepared.files_text_read) || 0,
       files_skipped: skipped,
       warning_count: warningCount,
-      failed_stage: overrides.failed_stage || '',
+      failed_stage: overrides.failed_stage || run?.match_job?.stage_label || '',
     };
   }
 
@@ -959,6 +1122,7 @@
     const status = String(job.status || '').toLowerCase();
     const startedAt = job.started_at || job.queued_at || '';
     const lastUpdate = job.completed_at || job.failed_at || job.started_at || job.queued_at || run?.updated_at || '';
+    const stageLabel = matchJobStageLabel(job.stage, job.stage_label);
     elements.jobStatusList.innerHTML = [
       {
         label: 'Current job state',
@@ -970,6 +1134,11 @@
             : status === 'completed'
               ? 'The latest background matcher job completed successfully.'
               : 'The latest background matcher job failed and can be retried.',
+      },
+      {
+        label: 'Current sub-stage',
+        value: stageLabel,
+        note: job.stage_updated_at ? `Updated ${elapsedSince(job.stage_updated_at)} ago.` : 'Live progress from the background matcher worker.',
       },
       { label: 'Current job id', value: job.id, note: 'Use this when checking logs for a specific async run.' },
       { label: 'Started / queued', value: formatDateTime(startedAt), note: `Elapsed: ${elapsedSince(startedAt)}` },
@@ -1650,7 +1819,7 @@
       started_at: job?.started_at || job?.queued_at || response.prepared_run?.updated_at || '',
       total_elapsed_ms: 0,
       warning_count: safeArray(response.warnings).length,
-      failed_stage: status === 'failed' ? 'Background recruiter analysis' : '',
+      failed_stage: status === 'failed' ? (job?.stage_label || 'Background recruiter analysis') : '',
     });
     if (status === 'completed' && response.result) {
       stopMatchPolling();
@@ -1691,9 +1860,20 @@
         started_at: job.failed_at || response.prepared_run?.updated_at || '',
         total_elapsed_ms: 0,
         warning_count: 1,
-        failed_stage: 'Background recruiter analysis',
+        failed_stage: job?.stage_label || 'Background recruiter analysis',
       }));
-      setProgress('Background match failed', response.prepared_run?.error_message || job?.last_error || 'The queued recruiter match did not complete.', 5, false, 5, 88);
+      const failedProgress = buildProgressStateFromJob(response.prepared_run);
+      if (failedProgress?.stageDetail) {
+        setStageDetail(Number.isFinite(failedProgress.activeIndex) ? failedProgress.activeIndex : 5, failedProgress.stageDetail, 'failed');
+      }
+      setProgress(
+        failedProgress?.statusText || 'Background match failed',
+        failedProgress?.detailText || response.prepared_run?.error_message || job?.last_error || 'The queued recruiter match did not complete.',
+        Number.isFinite(failedProgress?.activeIndex) ? failedProgress.activeIndex : 5,
+        false,
+        Number.isFinite(failedProgress?.failedIndex) ? failedProgress.failedIndex : 5,
+        Number.isFinite(failedProgress?.percent) ? failedProgress.percent : 88
+      );
       elements.jobsChip.textContent = 'Background match failed';
       elements.jobsChip.className = 'chip bad';
       await loadHistory();
@@ -1701,15 +1881,21 @@
     }
 
     renderRunDiagnostics(baseDiagnostics);
-    if (status === 'running') {
-      setStageDetail(5, 'Background recruiter analysis is currently running.', 'working');
-      setProgress('Running recruiter match', 'Prepared evidence is saved. The AI recruiter analysis is running in the background.', 5, false, -1, 84);
-      elements.jobsChip.textContent = 'Background match running';
-      elements.jobsChip.className = 'chip warn';
-    } else {
-      setStageDetail(4, 'Prepared evidence loaded and match job is queued.', 'working');
-      setProgress('Match queued', 'Prepared evidence is ready. Waiting for the background recruiter analysis to start.', 4, false, -1, 66);
-      elements.jobsChip.textContent = 'Match queued';
+    const progressState = buildProgressStateFromJob(response.prepared_run);
+    if (progressState) {
+      const activeIndex = Number.isFinite(progressState.activeIndex) ? progressState.activeIndex : (status === 'queued' ? 4 : 5);
+      if (progressState.stageDetail) {
+        setStageDetail(activeIndex, progressState.stageDetail, 'working');
+      }
+      setProgress(
+        progressState.statusText,
+        progressState.detailText,
+        activeIndex,
+        false,
+        Number.isFinite(progressState.failedIndex) ? progressState.failedIndex : -1,
+        Number.isFinite(progressState.percent) ? progressState.percent : (status === 'queued' ? 66 : 84)
+      );
+      elements.jobsChip.textContent = status === 'queued' ? 'Match queued' : 'Background match running';
       elements.jobsChip.className = 'chip warn';
     }
 

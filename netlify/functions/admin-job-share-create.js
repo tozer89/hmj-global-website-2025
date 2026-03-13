@@ -3,7 +3,7 @@ const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, toPublicJob, findStaticJob, slugify, isSchemaError, isMissingTableError, isPublishedLiveJob, buildPublicJobDetailPath } = require('./_jobs-helpers.js');
+const { toJob, toPublicJob, findStaticJob, slugify, isSchemaError, isMissingTableError, isPublicJob, buildPublicJobDetailPath } = require('./_jobs-helpers.js');
 const { createShareAccessToken, buildTokenizedJobDetailPath } = require('./_job-detail-tokens.js');
 
 function adjustRecordForSchema(record, err) {
@@ -78,7 +78,7 @@ function buildFallbackShareLink({ origin, job, expiresAt }) {
   }
 
   const publicDetailPath = buildPublicJobDetailPath(job);
-  if (publicDetailPath && isPublishedLiveJob(job)) {
+  if (publicDetailPath && isPublicJob(job)) {
     return {
       url: `${safeOrigin}${publicDetailPath}`,
       expiresAt: null,

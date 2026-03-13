@@ -382,14 +382,19 @@ function toJob(row = {}) {
   };
 }
 
-function isPublishedLiveJob(row = {}) {
+function isPublicJob(row = {}) {
   const job = toJob(row);
-  return job.published === true && asString(job.status).toLowerCase() === 'live';
+  return job.published === true;
+}
+
+// Backward-compatible alias retained for older callers.
+function isPublishedLiveJob(row = {}) {
+  return isPublicJob(row);
 }
 
 function buildPublicJobDetailPath(row = {}) {
   const job = toJob(row);
-  if (!job.id || !isPublishedLiveJob(job)) return '';
+  if (!job.id || !isPublicJob(job)) return '';
   const params = new URLSearchParams();
   params.set('id', job.id);
   return `/jobs/spec.html?${params.toString()}`;
@@ -532,6 +537,7 @@ module.exports = {
   findStaticJob,
   isSchemaError,
   isMissingTableError,
+  isPublicJob,
   isPublishedLiveJob,
   buildPublicJobDetailPath,
 };

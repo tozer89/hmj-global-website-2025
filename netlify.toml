@@ -79,6 +79,17 @@
   status = 302
 
 [[redirects]]
+  from = "/admin/noticeboard.html"
+  to = "/admin/noticeboard.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/noticeboard.html"
+  to = "/admin/?next=noticeboard.html"
+  status = 302
+
+[[redirects]]
   from = "/admin/payroll.html"
   to = "/admin/payroll.html"
   status = 200

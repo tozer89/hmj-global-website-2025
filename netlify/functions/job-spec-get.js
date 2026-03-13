@@ -1,6 +1,6 @@
 // netlify/functions/job-spec-get.js
 const { getSupabase } = require('./_supabase.js');
-const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError, isPublishedLiveJob } = require('./_jobs-helpers.js');
+const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError, isPublicJob } = require('./_jobs-helpers.js');
 const { verifyShareAccessToken } = require('./_job-detail-tokens.js');
 
 function parseBody(body) {
@@ -51,7 +51,7 @@ exports.handler = async (event) => {
     if (!id) return null;
     const guard = (job) => {
       if (!job) return null;
-      if (allowRestrictedShare || isPublishedLiveJob(job)) {
+      if (allowRestrictedShare || isPublicJob(job)) {
         return toPublicJob(job);
       }
       return null;
@@ -101,7 +101,7 @@ exports.handler = async (event) => {
 
     if (!supabase) {
       const fallback = findStaticJob(slug) || findStaticJob(jobIdParam);
-      const publicFallback = fallback && isPublishedLiveJob(fallback) ? toPublicJob(fallback) : null;
+      const publicFallback = fallback && isPublicJob(fallback) ? toPublicJob(fallback) : null;
       return respondFallback(publicFallback);
     }
 
@@ -141,7 +141,8 @@ exports.handler = async (event) => {
           }
         }
         const staticJob = findStaticJob(slug);
-        return respondFallback(staticJob ? toPublicJob(staticJob) : null);
+        const publicFallback = staticJob && isPublicJob(staticJob) ? toPublicJob(staticJob) : null;
+        return respondFallback(publicFallback);
       }
 
       const expiresColumn = data.expires_at ?? data.expiresAt ?? null;
@@ -172,7 +173,7 @@ exports.handler = async (event) => {
       const fallback = await fetchJobById(slug || jobIdParam, { allowRestrictedShare: hasShareAccessToken });
       if (!fallback) {
         const staticFallback = findStaticJob(slug || jobIdParam);
-        const publicFallback = (staticFallback && (hasShareAccessToken || isPublishedLiveJob(staticFallback)))
+        const publicFallback = (staticFallback && (hasShareAccessToken || isPublicJob(staticFallback)))
           ? toPublicJob(staticFallback)
           : null;
         return respondFallback(publicFallback, { schema: schemaMismatch || missingTable || undefined });
