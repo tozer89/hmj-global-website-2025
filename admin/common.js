@@ -492,8 +492,7 @@
   async function waitIdentityReady(maxMs = 6000) {
     try {
       if (typeof window.hmjEnsureIdentityWidget === 'function') {
-        const force = !!window.__hmjIdentityLoaderState?.widgetError;
-        window.hmjEnsureIdentityWidget(force);
+        window.hmjEnsureIdentityWidget();
       }
     } catch (err) {
       Debug.warn('identity widget ensure failed', err);
@@ -501,21 +500,19 @@
     let waited = 0;
     while (waited < maxMs) {
       const id = ensureIdentityInit();
-      if (id && typeof id.on === 'function') {
-        // Widget is live
-        return id;
+      if (typeof window.netlifyIdentity !== 'undefined') {
+        return id || window.netlifyIdentity || null;
       }
       await sleep(100);
       waited += 100;
     }
-    return ensureIdentityInit(); // allow fallback
+    return ensureIdentityInit() || (typeof window.netlifyIdentity !== 'undefined' ? window.netlifyIdentity : null);
   }
 
   async function openIdentityDialog(mode = 'login') {
     try {
       if (typeof window.hmjEnsureIdentityWidget === 'function') {
-        const force = !!window.__hmjIdentityLoaderState?.widgetError;
-        window.hmjEnsureIdentityWidget(force);
+        window.hmjEnsureIdentityWidget();
       }
       if (typeof window.hmjConfigureIdentity === 'function') {
         try { window.hmjConfigureIdentity(true); } catch (err) { Debug.warn('hmjConfigureIdentity failed', err); }
