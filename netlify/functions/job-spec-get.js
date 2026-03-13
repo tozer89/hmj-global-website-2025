@@ -1,6 +1,6 @@
 // netlify/functions/job-spec-get.js
 const { getSupabase } = require('./_supabase.js');
-const { toJob, findStaticJob, isSchemaError } = require('./_jobs-helpers.js');
+const { toJob, findStaticJob, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
@@ -41,7 +41,7 @@ exports.handler = async (event) => {
     }
     const { data, error } = await supabase.from('jobs').select('*').eq('id', id).maybeSingle();
     if (error) {
-      if (isSchemaError(error)) {
+      if (isSchemaError(error) || isMissingTableError(error, 'jobs')) {
         return findStaticJob(id);
       }
       throw error;
@@ -89,7 +89,7 @@ exports.handler = async (event) => {
         .single();
 
       if (error) {
-        if (isSchemaError(error)) {
+        if (isSchemaError(error) || isMissingTableError(error, 'job_specs')) {
           const fallback = await fetchJobById(jobIdParam || slug);
           if (fallback) {
             return respondFallback(fallback, { schema: true });
@@ -141,7 +141,7 @@ exports.handler = async (event) => {
         }),
       };
     } catch (err) {
-      const missingTable = err?.code === '42P01' || /relation\s+"?job_specs"?/i.test(err?.message || '');
+      const missingTable = isMissingTableError(err, 'job_specs');
       const schemaMismatch = isSchemaError(err);
       if (!missingTable && !schemaMismatch) throw err;
       const fallback = await fetchJobById(slug || jobIdParam);
