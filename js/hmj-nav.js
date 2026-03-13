@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const TIMESHEETS_URL = 'https://login.timesheetportal.com/?_gl=1*wfpx6g*_gcl_au*NzU1ODYwMTI5LjE3NjkwODg5MjA.*_ga*ODQ0OTU3NzQ5LjE3NjkwODg5MTk.*_ga_9Y6DNF71JK*czE3NzMzNTY1NjEkbzMkZzAkdDE3NzMzNTY1NjEkajYwJGwwJGgw';
+  const TIMESHEETS_URL = 'https://hmjglobal.timesheetportal.com';
   const ADMIN_URL = '/admin/';
 
   const ensureIdentity = () => {

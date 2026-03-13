@@ -1,4 +1,6 @@
 (function(){
+  const TIMESHEETS_URL = 'https://hmjglobal.timesheetportal.com';
+
   function rolesOf(user) {
     if (Array.isArray(user?.app_metadata?.roles)) return user.app_metadata.roles;
     if (Array.isArray(user?.roles)) return user.roles;
@@ -24,17 +26,11 @@
       identity.open('login');
     }
 
-    function setTimesheets(user) {
+    function setTimesheets() {
       if (!timesheets) return;
-      if (user) {
-        timesheets.href = '/timesheets.html';
-        timesheets.removeAttribute('aria-disabled');
-        timesheets.title = 'Open timesheets';
-      } else {
-        timesheets.href = '#';
-        timesheets.setAttribute('aria-disabled', 'true');
-        timesheets.title = 'Sign in to access timesheets';
-      }
+      timesheets.href = TIMESHEETS_URL;
+      timesheets.removeAttribute('aria-disabled');
+      timesheets.title = 'Open timesheets';
     }
 
     function setAdmin(user) {
@@ -59,17 +55,11 @@
     }
 
     function renderFor(user) {
-      setTimesheets(user);
+      setTimesheets();
       setAdmin(user);
     }
 
     renderFor(null);
-
-    timesheets?.addEventListener('click', (event) => {
-      const user = identity?.currentUser?.();
-      if (user) return;
-      requireLogin(event, '/timesheets.html');
-    });
 
     admin?.addEventListener('click', (event) => {
       const user = identity?.currentUser?.();
