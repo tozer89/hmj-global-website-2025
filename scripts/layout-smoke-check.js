@@ -21,6 +21,8 @@ const SCENARIOS = [
   { label: 'contact-mobile', route: '/contact.html', width: 390, height: 2200 },
   { label: 'timesheets-mobile', route: '/timesheets.html', width: 390, height: 1800 },
   { label: 'admin-gate-desktop', route: '/admin/index.html', width: 1280, height: 1200 },
+  { label: 'admin-jobs-mobile', route: '/admin/jobs.html', width: 390, height: 2200 },
+  { label: 'admin-jobs-tablet', route: '/admin/jobs.html', width: 768, height: 2200 },
 ];
 
 const ACTIVE_SCENARIOS = (() => {

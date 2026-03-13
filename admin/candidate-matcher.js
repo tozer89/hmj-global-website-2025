@@ -91,6 +91,11 @@
   const QUEUE_DB_VERSION = 1;
   const QUEUE_STORE = 'queued-files';
   const QUEUE_RETENTION_MS = 12 * 60 * 60 * 1000;
+  const PDF_MIME_TYPES = new Set(['application/pdf', 'application/x-pdf', 'application/acrobat', 'applications/vnd.pdf', 'text/pdf', 'text/x-pdf']);
+  const DOCX_MIME_TYPES = new Set(['application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+  const DOC_MIME_TYPES = new Set(['application/msword', 'application/doc', 'application/x-doc', 'application/vnd.msword', 'application/vnd.ms-word']);
+  const JPEG_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/pjpeg']);
+  const PNG_MIME_TYPES = new Set(['image/png', 'image/x-png']);
 
   const state = {
     files: [],
@@ -136,11 +141,11 @@
 
   function inferExtensionFromMime(contentType) {
     const mime = normaliseContentType(contentType);
-    if (mime === 'application/pdf') return 'pdf';
-    if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
-    if (mime === 'application/msword') return 'doc';
-    if (mime === 'image/jpeg' || mime === 'image/jpg') return 'jpg';
-    if (mime === 'image/png') return 'png';
+    if (PDF_MIME_TYPES.has(mime)) return 'pdf';
+    if (DOCX_MIME_TYPES.has(mime)) return 'docx';
+    if (DOC_MIME_TYPES.has(mime)) return 'doc';
+    if (JPEG_MIME_TYPES.has(mime)) return 'jpg';
+    if (PNG_MIME_TYPES.has(mime)) return 'png';
     return '';
   }
 

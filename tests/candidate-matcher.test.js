@@ -82,6 +82,22 @@ test('prepareCandidateFiles accepts image evidence and strips data-url payload p
   assert.equal(files[0].buffer.byteLength, imageBytes.length);
 });
 
+test('prepareCandidateFiles routes x-pdf MIME uploads through the PDF parser path', () => {
+  const pdfBytes = Buffer.from('%PDF-1.4');
+  const files = core.prepareCandidateFiles([{
+    name: 'Resume.PDF',
+    contentType: 'application/x-pdf',
+    data: pdfBytes.toString('base64'),
+    size: pdfBytes.length,
+  }]);
+
+  assert.equal(files.length, 1);
+  assert.equal(files[0].extension, 'pdf');
+  assert.equal(files[0].fileKind, 'pdf');
+  assert.equal(files[0].parserPath, 'pdf');
+  assert.equal(files[0].status, 'ready');
+});
+
 test('extractCandidateDocuments reads text from a readable PDF buffer', async () => {
   const pdf = `%PDF-1.4
 1 0 obj
@@ -140,6 +156,49 @@ startxref
   assert.match(result.combinedText, /Readable HMJ PDF text/);
 });
 
+test('extractCandidateDocuments rejects artifact-only PDF output with a clear message', async () => {
+  const blankPdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] >>
+endobj
+xref
+0 4
+0000000000 65535 f 
+0000000010 00000 n 
+0000000063 00000 n 
+0000000122 00000 n 
+trailer
+<< /Size 4 /Root 1 0 R >>
+startxref
+192
+%%EOF`;
+
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-blank',
+    name: 'Scanned Candidate CV.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: Buffer.byteLength(blankPdf),
+    status: 'ready',
+    buffer: Buffer.from(blankPdf, 'utf8'),
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }]);
+
+  assert.equal(result.successCount, 0);
+  assert.equal(result.failureCount, 1);
+  assert.equal(result.documents[0].status, 'failed');
+  assert.match(result.documents[0].error, /little or no extractable text|only page markers/i);
+});
+
 test('extractCandidateDocuments reads text from a readable DOCX buffer', async () => {
   const docxBase64 = 'UEsDBBQAAAAIAIBybVzXeYTq8QAAALgBAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbH2QzU7DMBCE730Ky9cqccoBIZSkB36OwKE8wMreJFb9J69b2rdn00KREOVozXwz62nXB+/EHjPZGDq5qhspMOhobBg7+b55ru6koALBgIsBO3lEkut+0W6OCUkwHKiTUynpXinSE3qgOiYMrAwxeyj8zKNKoLcworppmlulYygYSlXmDNkvhGgfcYCdK+LpwMr5loyOpHg4e+e6TkJKzmoorKt9ML+Kqq+SmsmThyabaMkGqa6VzOL1jh/0lSfK1qB4g1xewLNRfcRslIl65xmu/0/649o4DFbjhZ/TUo4aiXh77+qL4sGG71+06jR8/wlQSwMEFAAAAAgAgHJtXCAbhuqyAAAALgEAAAsAAABfcmVscy8ucmVsc43Puw6CMBQG4J2naM4uBQdjDIXFmLAafICmPZRGeklbL7y9HRzEODie23fyN93TzOSOIWpnGdRlBQStcFJbxeAynDZ7IDFxK/nsLDJYMELXFs0ZZ57yTZy0jyQjNjKYUvIHSqOY0PBYOo82T0YXDE+5DIp6Lq5cId1W1Y6GTwPagpAVS3rJIPSyBjIsHv/h3ThqgUcnbgZt+vHlayPLPChMDB4uSCrf7TKzQHNKuorZvgBQSwMEFAAAAAgAgHJtXEjS6NmyAAAA7AAAABEAAAB3b3JkL2RvY3VtZW50LnhtbDWOwQrCMBBE737FkrumehApbXpQRAQRRMFrbFYtNLshiVb/3qTg5THDwNutmo/t4Y0+dEy1mM8KAUgtm44etbict9OVgBA1Gd0zYS2+GESjJtVQGm5fFilCMlAoh1o8Y3SllKF9otVhxg4pbXf2VsdU/UMO7I3z3GII6YDt5aIoltLqjoSaACTrjc03x7E4leAzojqhNvrWI+wOe9gc11eI+ImVzFumH+lGjfx7cvr/qX5QSwECFAMUAAAACACAcm1c13mE6vEAAAC4AQAAEwAAAAAAAAAAAAAAgAEAAAAAW0NvbnRlbnRfVHlwZXNdLnhtbFBLAQIUAxQAAAAIAIBybVwgG4bqsgAAAC4BAAALAAAAAAAAAAAAAACAASIBAABfcmVscy8ucmVsc1BLAQIUAxQAAAAIAIBybVxI0ujZsgAAAOwAAAARAAAAAAAAAAAAAACAAf0BAAB3b3JkL2RvY3VtZW50LnhtbFBLBQYAAAAAAwADALkAAADeAgAAAAA=';
   const buffer = Buffer.from(docxBase64, 'base64');
@@ -162,6 +221,28 @@ test('extractCandidateDocuments reads text from a readable DOCX buffer', async (
   assert.equal(result.failureCount, 0);
   assert.equal(result.documents[0].status, 'ok');
   assert.match(result.combinedText, /Readable HMJ DOCX text/);
+});
+
+test('extractCandidateDocuments reports invalid PDF files clearly', async () => {
+  const buffer = Buffer.from('not a real pdf');
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-bad-pdf',
+    name: 'Broken CV.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: buffer.byteLength,
+    status: 'ready',
+    buffer,
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }]);
+
+  assert.equal(result.successCount, 0);
+  assert.equal(result.failureCount, 1);
+  assert.equal(result.documents[0].status, 'failed');
+  assert.match(result.documents[0].error, /could not be parsed|corrupted or unsupported/i);
 });
 
 test('extractCandidateDocuments keeps image evidence without crashing the run', async () => {
@@ -834,6 +915,109 @@ test('candidate prepare handler stores prepared evidence and returns a review pa
   assert.equal(payload.extraction.success_count, 1);
 });
 
+test('candidate match handler passes extracted PDF text into the matcher payload', async () => {
+  const originals = {
+    fetchPublishedLiveJobs: core.fetchPublishedLiveJobs,
+    callOpenAIForMatch: core.callOpenAIForMatch,
+  };
+
+  const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 67 >>
+stream
+BT
+/F1 12 Tf
+72 100 Td
+(Readable HMJ PDF text) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000063 00000 n 
+0000000122 00000 n 
+0000000248 00000 n 
+0000000365 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+435
+%%EOF`;
+
+  let receivedCandidateText = '';
+  core.fetchPublishedLiveJobs = async () => [{
+    job_id: 'job-1',
+    title: 'HV Commissioning Engineer',
+    published: true,
+    status: 'live',
+  }];
+  core.callOpenAIForMatch = async ({ candidate }) => {
+    receivedCandidateText = candidate.candidate_text;
+    return {
+      model: 'gpt-4.1-mini',
+      raw: {},
+      result: buildValidMatcherResult(),
+      diagnostics: {
+        candidate_text_chars: candidate.candidate_text.length,
+        candidate_text_source_chars: candidate.candidate_text.length,
+        live_jobs_total_count: 1,
+        live_jobs_sent_count: 1,
+        live_jobs_json_chars: 120,
+        request_payload_json_chars: 420,
+        max_output_tokens: 2200,
+        response_id: 'resp-pdf',
+        response_status: 'completed',
+        output_text_length: 320,
+        parser_strategy: 'direct',
+        schema_name: core.MATCH_RESULT_SCHEMA_NAME,
+        wrapper_key: '',
+      },
+    };
+  };
+
+  const handler = createCandidateMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      files: [{
+        name: 'candidate.PDF',
+        contentType: 'application/x-pdf',
+        size: Buffer.byteLength(pdf),
+        data: Buffer.from(pdf, 'utf8').toString('base64'),
+      }],
+      recruiterNotes: '',
+      saveHistory: false,
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.match(receivedCandidateText, /Readable HMJ PDF text/);
+  assert.equal(payload.extraction.success_count, 1);
+});
+
 test('candidate run match handler queues background work without re-uploading files', async () => {
   const originals = {
     getMatchRun: core.getMatchRun,
@@ -1472,6 +1656,57 @@ test('candidate match handler returns per-file extraction diagnostics when no fi
   assert.equal(Array.isArray(payload.details.documents), true);
   assert.equal(payload.details.documents[0].name, 'candidate.pdf');
   assert.match(payload.details.documents[0].error, /PDF extraction dependency is unavailable/);
+});
+
+test('candidate match handler explains scanned or no-text PDFs clearly', async () => {
+  const blankPdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] >>
+endobj
+xref
+0 4
+0000000000 65535 f 
+0000000010 00000 n 
+0000000063 00000 n 
+0000000122 00000 n 
+trailer
+<< /Size 4 /Root 1 0 R >>
+startxref
+192
+%%EOF`;
+
+  const handler = createCandidateMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      files: [{
+        name: 'scanned-candidate.pdf',
+        contentType: 'application/pdf',
+        size: Buffer.byteLength(blankPdf),
+        data: Buffer.from(blankPdf, 'utf8').toString('base64'),
+      }],
+      recruiterNotes: '',
+      saveHistory: false,
+    })
+  }, {});
+
+  assert.equal(response.statusCode, 422);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.code, 'all_files_failed');
+  assert.match(payload.error, /little or no extractable text/i);
+  assert.match(payload.details.documents[0].error, /little or no extractable text|only page markers/i);
 });
 
 test('candidate match handler returns stage metadata when OpenAI times out', async () => {

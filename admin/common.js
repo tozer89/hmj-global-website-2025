@@ -709,7 +709,176 @@
     });
 
     updateDebugChip(identityCache || null);
+    enhanceAdminTopbarMenu(root);
   }
+
+  let adminTopbarMenuSeq = 0;
+
+  function syncAdminTopbarBodyState() {
+    const anyOpen = !!document.querySelector('.top .row.hmj-admin-mobile-nav-open');
+    document.body.classList.toggle('hmj-admin-mobile-menu-open', anyOpen);
+  }
+
+  function setAdminTopbarMenuOpen(row, open) {
+    if (!row) return;
+    const trigger = Array.from(row.children).find((child) => child.classList?.contains('hmj-admin-mobile-trigger'));
+    const actionsWrap = Array.from(row.children).find((child) => child.classList?.contains('hmj-admin-top-actions'));
+    const backdropId = row.dataset.hmjMobileMenuBackdropId || '';
+    const backdrop = backdropId ? document.getElementById(backdropId) : null;
+
+    row.classList.toggle('hmj-admin-mobile-nav-open', !!open);
+    if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (actionsWrap) actionsWrap.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (backdrop) {
+      backdrop.hidden = !open;
+      backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+    syncAdminTopbarBodyState();
+  }
+
+  function enhanceAdminTopbarMenu(root = document) {
+    if (!root || typeof root.querySelectorAll !== 'function') return;
+
+    const rows = Array.from(root.querySelectorAll('.top .row'));
+    rows.forEach((row) => {
+      const spacer = Array.from(row.children).find((child) => child.classList?.contains('sp'));
+      if (!spacer) return;
+
+      let actionsWrap = Array.from(row.children).find((child) => child.classList?.contains('hmj-admin-top-actions'));
+      if (!actionsWrap) {
+        actionsWrap = document.createElement('div');
+        actionsWrap.className = 'hmj-admin-top-actions';
+        actionsWrap.setAttribute('role', 'dialog');
+        actionsWrap.setAttribute('aria-modal', 'false');
+        row.insertBefore(actionsWrap, spacer.nextSibling);
+      }
+
+      let afterSpacer = false;
+      Array.from(row.children).forEach((child) => {
+        if (child === spacer) {
+          afterSpacer = true;
+          return;
+        }
+        if (!afterSpacer) return;
+        if (child === actionsWrap) return;
+        if (child.classList?.contains('hmj-admin-mobile-trigger')) return;
+        actionsWrap.appendChild(child);
+      });
+
+      const pageLabel = String(row.querySelector('.brand')?.textContent || document.title || 'Admin').replace(/\s+/g, ' ').trim();
+      let heading = Array.from(actionsWrap.children).find((child) => child.classList?.contains('hmj-admin-mobile-heading'));
+      if (!heading) {
+        heading = document.createElement('div');
+        heading.className = 'hmj-admin-mobile-heading';
+        const title = document.createElement('strong');
+        const copy = document.createElement('span');
+        title.textContent = pageLabel || 'Admin';
+        copy.textContent = 'Quick navigation and account actions';
+        heading.appendChild(title);
+        heading.appendChild(copy);
+        actionsWrap.insertBefore(heading, actionsWrap.firstChild);
+      } else {
+        const title = heading.querySelector('strong');
+        if (title) title.textContent = pageLabel || 'Admin';
+      }
+
+      const hasActions = Array.from(actionsWrap.children).some((child) => !child.classList?.contains('hmj-admin-mobile-heading'));
+      if (!hasActions) {
+        row.classList.remove('hmj-admin-mobile-nav-ready', 'hmj-admin-mobile-nav-open');
+        actionsWrap.setAttribute('aria-hidden', 'true');
+        syncAdminTopbarBodyState();
+        return;
+      }
+
+      row.classList.add('hmj-admin-mobile-nav-ready');
+      if (!actionsWrap.id) {
+        adminTopbarMenuSeq += 1;
+        actionsWrap.id = `hmj-admin-mobile-actions-${adminTopbarMenuSeq}`;
+      }
+      actionsWrap.setAttribute('aria-label', `${pageLabel || 'Admin'} navigation`);
+
+      let trigger = Array.from(row.children).find((child) => child.classList?.contains('hmj-admin-mobile-trigger'));
+      if (!trigger) {
+        trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'hmj-admin-mobile-trigger';
+
+        const icon = document.createElement('span');
+        icon.className = 'hmj-admin-mobile-trigger__icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.appendChild(document.createElement('span'));
+
+        const label = document.createElement('span');
+        label.textContent = 'Menu';
+
+        trigger.appendChild(icon);
+        trigger.appendChild(label);
+        row.appendChild(trigger);
+      }
+
+      trigger.setAttribute('aria-haspopup', 'dialog');
+      trigger.setAttribute('aria-controls', actionsWrap.id);
+      trigger.setAttribute('aria-expanded', row.classList.contains('hmj-admin-mobile-nav-open') ? 'true' : 'false');
+      actionsWrap.setAttribute('aria-hidden', row.classList.contains('hmj-admin-mobile-nav-open') ? 'false' : 'true');
+
+      if (row.dataset.hmjMobileMenuBound === '1') return;
+      row.dataset.hmjMobileMenuBound = '1';
+
+      const backdrop = document.createElement('button');
+      backdrop.type = 'button';
+      backdrop.className = 'hmj-admin-mobile-backdrop';
+      backdrop.hidden = true;
+      backdrop.setAttribute('aria-hidden', 'true');
+      backdrop.setAttribute('aria-label', 'Close admin menu');
+      adminTopbarMenuSeq += 1;
+      backdrop.id = `hmj-admin-mobile-backdrop-${adminTopbarMenuSeq}`;
+      row.dataset.hmjMobileMenuBackdropId = backdrop.id;
+      document.body.appendChild(backdrop);
+
+      trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        const next = !row.classList.contains('hmj-admin-mobile-nav-open');
+        Array.from(document.querySelectorAll('.top .row.hmj-admin-mobile-nav-open')).forEach((other) => {
+          if (other !== row) setAdminTopbarMenuOpen(other, false);
+        });
+        setAdminTopbarMenuOpen(row, next);
+      });
+
+      backdrop.addEventListener('click', (event) => {
+        event.preventDefault();
+        setAdminTopbarMenuOpen(row, false);
+      });
+
+      actionsWrap.addEventListener('click', (event) => {
+        const action = event.target?.closest?.('a, button');
+        if (!action || action === trigger || action.disabled) return;
+        setTimeout(() => setAdminTopbarMenuOpen(row, false), 0);
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!row.classList.contains('hmj-admin-mobile-nav-open')) return;
+        if (row.contains(event.target)) return;
+        setAdminTopbarMenuOpen(row, false);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !row.classList.contains('hmj-admin-mobile-nav-open')) return;
+        event.preventDefault();
+        setAdminTopbarMenuOpen(row, false);
+        trigger.focus();
+      });
+
+      const collapseMobileMenu = () => {
+        const compact = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 900px)').matches : false;
+        if (!compact) setAdminTopbarMenuOpen(row, false);
+      };
+      window.addEventListener('resize', collapseMobileMenu);
+    });
+
+    syncAdminTopbarBodyState();
+  }
+
+  window.__hmjEnhanceAdminTopbar = enhanceAdminTopbarMenu;
 
   // Resolve active user (works with widget or cookie-only)
   async function getIdentityUser() {
@@ -1266,6 +1435,7 @@
     } else {
       row.appendChild(btn);
     }
+    enhanceAdminTopbarMenu(document);
   }
 
   window.Admin = window.Admin || {};
@@ -1277,6 +1447,7 @@
 
       bindIdentityButtons(document);
       injectPreviewDebugButton();
+      enhanceAdminTopbarMenu(document);
 
       // Hook Identity events once so that a successful login triggers a reload
       // even if the initial gate check blocks the user. Without this the page
