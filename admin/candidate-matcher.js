@@ -32,30 +32,30 @@
       targetPercent: 48,
     },
     {
+      key: 'prepared_evidence_save',
+      label: 'Store prepared evidence',
+      helper: 'Save extracted evidence privately so matching can be retried without re-uploading.',
+      message: 'Saving prepared evidence for later matching…',
+      targetPercent: 74,
+    },
+    {
       key: 'jobs_fetch',
       label: 'Read live roles',
       helper: 'Load HMJ published live jobs from the live source.',
       message: 'Reading HMJ published live roles from Supabase…',
-      targetPercent: 62,
-    },
-    {
-      key: 'storage_upload',
-      label: 'Stage uploads',
-      helper: 'Store private files for admin-only audit and history support.',
-      message: 'Staging private uploads for this matcher run…',
-      targetPercent: 74,
+      targetPercent: 92,
     },
     {
       key: 'openai',
       label: 'Run recruiter match',
       helper: 'Send extracted evidence and live roles into the structured OpenAI analysis stage.',
       message: 'Running structured recruiter matching…',
-      targetPercent: 92,
+      targetPercent: 96,
     },
     {
       key: 'render',
       label: 'Render results',
-      helper: 'Display the ranked outcome and save history when enabled.',
+      helper: 'Display the ranked outcome and save the latest recruiter review.',
       message: 'Rendering the ranked recruiter view…',
       targetPercent: 100,
     }
@@ -64,18 +64,29 @@
     prepare_intake: 0,
     transmit_files: 1,
     extraction: 2,
-    jobs_fetch: 3,
-    storage_upload: 4,
+    storage_upload: 3,
+    prepared_evidence_save: 3,
+    prepared_evidence_load: 4,
+    jobs_fetch: 4,
     openai: 5,
     history_save: 6,
     render: 6,
   };
-  const CLIENT_REQUEST_TIMEOUT_MS = 35000;
+  const CLIENT_REQUEST_TIMEOUT_MS = 65000;
+  const SESSION_STATE_KEY = 'hmj-candidate-matcher-session';
+  const SESSION_ID_KEY = 'hmj-candidate-matcher-session-id';
+  const QUEUE_DB_NAME = 'hmj-candidate-matcher';
+  const QUEUE_DB_VERSION = 1;
+  const QUEUE_STORE = 'queued-files';
+  const QUEUE_RETENTION_MS = 12 * 60 * 60 * 1000;
 
   const state = {
     files: [],
     fileDiagnostics: new Map(),
     historyRuns: [],
+    preparedRun: null,
+    latestResultPayload: null,
+    latestResultMeta: null,
     busy: false,
     progressIndex: -1,
     progressFailureIndex: -1,
@@ -86,6 +97,7 @@
     runDiagnostics: null,
     problemFileKeys: new Set(),
     helpers: null,
+    sessionId: '',
   };
 
   const elements = {};
@@ -167,7 +179,7 @@
 
   function extractionStatusLabel(status) {
     const key = String(status || '').toLowerCase();
-    if (key === 'ok') return 'Text read';
+    if (key === 'ok') return 'Parsed';
     if (key === 'image_only') return 'Image evidence';
     if (key === 'limited') return 'Limited';
     if (key === 'unsupported') return 'Unsupported';
@@ -176,7 +188,7 @@
     if (key === 'openai') return 'AI stage';
     if (key === 'jobs_fetch') return 'Jobs stage';
     if (key === 'error') return 'Error';
-    return 'Queued';
+    return 'Ready';
   }
 
   function formatDuration(ms) {
@@ -221,6 +233,192 @@
 
   function safeArray(value) {
     return Array.isArray(value) ? value.filter(Boolean) : [];
+  }
+
+  function createSessionId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function ensureSessionId() {
+    if (state.sessionId) return state.sessionId;
+    try {
+      const existing = window.sessionStorage.getItem(SESSION_ID_KEY);
+      state.sessionId = existing || createSessionId();
+      window.sessionStorage.setItem(SESSION_ID_KEY, state.sessionId);
+    } catch {
+      state.sessionId = createSessionId();
+    }
+    return state.sessionId;
+  }
+
+  function readSessionSnapshot() {
+    try {
+      return JSON.parse(window.sessionStorage.getItem(SESSION_STATE_KEY) || 'null');
+    } catch {
+      return null;
+    }
+  }
+
+  function persistSessionSnapshot() {
+    try {
+      window.sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify({
+        recruiterNotes: elements.recruiterNotes ? elements.recruiterNotes.value : '',
+        preparedRun: state.preparedRun,
+        latestResultPayload: state.latestResultPayload,
+        latestResultMeta: state.latestResultMeta,
+        runDiagnostics: state.runDiagnostics,
+      }));
+    } catch {
+      // Ignore session storage failures in restricted browser modes.
+    }
+  }
+
+  function clearPersistedResultState() {
+    state.latestResultPayload = null;
+    state.latestResultMeta = null;
+    persistSessionSnapshot();
+  }
+
+  function setLatestResult(resultPayload, meta) {
+    state.latestResultPayload = resultPayload || null;
+    state.latestResultMeta = meta || null;
+    persistSessionSnapshot();
+  }
+
+  function supportsIndexedDb() {
+    return typeof window.indexedDB !== 'undefined';
+  }
+
+  function openQueueDb() {
+    if (!supportsIndexedDb()) return Promise.resolve(null);
+    return new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(QUEUE_DB_NAME, QUEUE_DB_VERSION);
+      request.onerror = () => reject(request.error);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(QUEUE_STORE)) {
+          db.createObjectStore(QUEUE_STORE, { keyPath: 'id' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+    });
+  }
+
+  function requestToPromise(request) {
+    return new Promise((resolve, reject) => {
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+  }
+
+  async function withQueueStore(mode, work) {
+    const db = await openQueueDb();
+    if (!db) return null;
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(QUEUE_STORE, mode);
+      const store = tx.objectStore(QUEUE_STORE);
+      Promise.resolve(work(store))
+        .then((result) => {
+          tx.oncomplete = () => {
+            db.close();
+            resolve(result);
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        })
+        .catch((error) => {
+          db.close();
+          reject(error);
+        });
+    });
+  }
+
+  function queueRecordId(file) {
+    return `${ensureSessionId()}::${fileKey(file)}`;
+  }
+
+  async function persistQueuedFiles(files) {
+    if (!supportsIndexedDb()) return;
+    const items = safeArray(files);
+    if (!items.length) return;
+    await withQueueStore('readwrite', async (store) => {
+      items.forEach((file) => {
+        store.put({
+          id: queueRecordId(file),
+          sessionId: ensureSessionId(),
+          updatedAt: Date.now(),
+          file,
+        });
+      });
+    }).catch(() => {});
+  }
+
+  async function removeQueuedFileFromStore(file) {
+    if (!supportsIndexedDb()) return;
+    await withQueueStore('readwrite', async (store) => {
+      store.delete(queueRecordId(file));
+    }).catch(() => {});
+  }
+
+  async function clearQueuedFilesFromStore() {
+    if (!supportsIndexedDb()) return;
+    const sessionId = ensureSessionId();
+    await withQueueStore('readwrite', async (store) => {
+      const request = store.getAll ? store.getAll() : store.openCursor();
+      const rows = store.getAll
+        ? await requestToPromise(request)
+        : await new Promise((resolve, reject) => {
+          const items = [];
+          request.onerror = () => reject(request.error);
+          request.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (!cursor) {
+              resolve(items);
+              return;
+            }
+            items.push(cursor.value);
+            cursor.continue();
+          };
+        });
+      rows.filter((row) => row?.sessionId === sessionId).forEach((row) => store.delete(row.id));
+    }).catch(() => {});
+  }
+
+  async function restoreQueuedFilesFromStore() {
+    if (!supportsIndexedDb()) return [];
+    const sessionId = ensureSessionId();
+    return withQueueStore('readonly', async (store) => {
+      const request = store.getAll ? store.getAll() : store.openCursor();
+      const rows = store.getAll
+        ? await requestToPromise(request)
+        : await new Promise((resolve, reject) => {
+          const items = [];
+          request.onerror = () => reject(request.error);
+          request.onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (!cursor) {
+              resolve(items);
+              return;
+            }
+            items.push(cursor.value);
+            cursor.continue();
+          };
+        });
+      const now = Date.now();
+      return rows
+        .filter((row) => row?.sessionId === sessionId && row?.file)
+        .filter((row) => now - Number(row.updatedAt || 0) < QUEUE_RETENTION_MS)
+        .map((row) => row.file);
+    }).catch(() => []);
   }
 
   function progressPercentForStage(index, failed) {
@@ -272,20 +470,27 @@
     ].filter(Boolean).join(' • ');
     if (extractionLine) setStageDetail(2, extractionLine, extractionTiming?.status === 'failed' ? 'failed' : 'done');
 
-    const jobsTiming = timingByStage.jobs_fetch;
-    if (response || jobsTiming) {
-      setStageDetail(3, [
-        liveJobsCount ? `${liveJobsCount} live job${liveJobsCount === 1 ? '' : 's'} loaded` : '',
-        jobsTiming ? formatDuration(jobsTiming.duration_ms) : '',
-      ].filter(Boolean).join(' • ') || PROGRESS_STAGES[3].helper, jobsTiming?.status === 'failed' ? 'failed' : (response ? 'done' : ''));
+    const storageTiming = timingByStage.storage_upload;
+    const preparedSaveTiming = timingByStage.prepared_evidence_save;
+    if (response || storageTiming || preparedSaveTiming) {
+      const storageMessage = response?.upload_storage?.enabled
+        ? (response?.upload_storage?.stored ? 'Prepared evidence stored privately' : 'Prepared evidence saved without private upload copies')
+        : 'Prepared evidence save still completed';
+      setStageDetail(
+        3,
+        [storageMessage, storageTiming ? formatDuration(storageTiming.duration_ms) : '', preparedSaveTiming ? formatDuration(preparedSaveTiming.duration_ms) : '']
+          .filter(Boolean)
+          .join(' • '),
+        storageTiming?.status === 'failed' || preparedSaveTiming?.status === 'failed' ? 'failed' : (response ? 'done' : '')
+      );
     }
 
-    const storageTiming = timingByStage.storage_upload;
-    if (response || storageTiming) {
-      const storageMessage = response?.upload_storage?.enabled
-        ? (response?.upload_storage?.stored ? 'Private upload staging complete' : 'Upload storage skipped or unavailable')
-        : 'Upload storage disabled for this run';
-      setStageDetail(4, [storageMessage, storageTiming ? formatDuration(storageTiming.duration_ms) : ''].filter(Boolean).join(' • '), storageTiming?.status === 'failed' ? 'failed' : (response ? 'done' : ''));
+    const jobsTiming = timingByStage.jobs_fetch || timingByStage.prepared_evidence_load;
+    if (response || jobsTiming) {
+      setStageDetail(4, [
+        liveJobsCount ? `${liveJobsCount} live job${liveJobsCount === 1 ? '' : 's'} loaded` : 'Prepared evidence reloaded for matching',
+        jobsTiming ? formatDuration(jobsTiming.duration_ms) : '',
+      ].filter(Boolean).join(' • ') || PROGRESS_STAGES[4].helper, jobsTiming?.status === 'failed' ? 'failed' : (response ? 'done' : ''));
     }
 
     const openAiTiming = timingByStage.openai;
@@ -347,20 +552,81 @@
     `;
   }
 
+  function setWorkflowStep(element, textElement, stateClass, text) {
+    if (!element || !textElement) return;
+    element.className = `workflow-step ${stateClass || ''}`.trim();
+    textElement.textContent = text;
+  }
+
+  function updateWorkflowState() {
+    const prepared = state.preparedRun;
+    const ready = !!prepared?.ready_for_match;
+    const hasResult = !!prepared?.has_result;
+    const hasFailure = !!prepared?.error_message && !hasResult;
+
+    if (!prepared) {
+      setWorkflowStep(
+        elements.workflowStepPrepare,
+        elements.workflowStepPrepareText,
+        'active',
+        'Upload and extract candidate evidence, then save a reusable private preparation record.'
+      );
+      setWorkflowStep(
+        elements.workflowStepMatch,
+        elements.workflowStepMatchText,
+        '',
+        'Reuse prepared evidence to compare the candidate against the current live HMJ roles.'
+      );
+      return;
+    }
+
+    setWorkflowStep(
+      elements.workflowStepPrepare,
+      elements.workflowStepPrepareText,
+      ready ? 'ready' : 'warn',
+      ready
+        ? 'Prepared evidence is stored privately and ready to be reused without uploading again.'
+        : 'Prepared evidence was saved, but recruiter review is still needed before matching.'
+    );
+    setWorkflowStep(
+      elements.workflowStepMatch,
+      elements.workflowStepMatchText,
+      hasResult ? 'ready' : (ready ? (hasFailure ? 'warn' : 'active') : ''),
+      hasResult
+        ? 'A match result has been saved for this prepared evidence and can be reopened at any time.'
+        : hasFailure
+          ? 'Matching can be retried from the saved evidence without re-parsing the files.'
+          : ready
+            ? 'Run the recruiter match now using the prepared evidence snapshot.'
+            : 'Matching stays unavailable until at least one readable text document is prepared.'
+    );
+  }
+
+  function syncCopyActionState() {
+    const hasResult = !!state.latestResultPayload;
+    if (elements.copyCandidateSummaryButton) elements.copyCandidateSummaryButton.disabled = !hasResult;
+    if (elements.copyTopMatchButton) elements.copyTopMatchButton.disabled = !hasResult;
+    if (elements.copyFollowUpsButton) elements.copyFollowUpsButton.disabled = !hasResult;
+  }
+
   function setBusy(isBusy) {
     state.busy = !!isBusy;
     if (elements.app) {
       elements.app.setAttribute('aria-busy', state.busy ? 'true' : 'false');
     }
-    elements.analyseButton.disabled = state.busy;
+    if (elements.analyseButton) elements.analyseButton.disabled = state.busy;
     elements.pickFilesButton.disabled = state.busy;
     elements.clearFilesButton.disabled = state.busy;
     elements.fileInput.disabled = state.busy;
-    elements.saveHistory.disabled = state.busy;
+    if (elements.saveHistory) elements.saveHistory.disabled = state.busy;
     elements.recruiterNotes.disabled = state.busy;
     if (elements.retryAnalysisButton) elements.retryAnalysisButton.disabled = state.busy;
     if (elements.removeProblemFilesButton) elements.removeProblemFilesButton.disabled = state.busy;
     if (elements.clearProblemFilesButton) elements.clearProblemFilesButton.disabled = state.busy;
+    if (elements.prepareEvidenceButton) elements.prepareEvidenceButton.disabled = state.busy;
+    if (elements.runMatchButton) elements.runMatchButton.disabled = state.busy;
+    if (elements.retryMatchButton) elements.retryMatchButton.disabled = state.busy;
+    syncCopyActionState();
   }
 
   function renderStageList(activeIndex, complete, failedIndex) {
@@ -512,22 +778,14 @@
       const isImageEvidence = classification.fileKind === 'image';
       const diagnostic = state.fileDiagnostics.get(fileKey(file));
       const updatedLabel = file.lastModified ? `Updated ${formatDateTime(file.lastModified)}` : 'Ready for analysis';
-      const extractionStatus = diagnostic?.status || '';
+      const extractionStatus = diagnostic?.status || (isImageEvidence ? 'image_only' : (isLegacyDoc ? 'limited' : 'ready'));
       const extractionLabel = extractionStatusLabel(extractionStatus);
-      const extractionMessage = diagnostic?.error || classification.warning || '';
+      const extractionMessage = diagnostic?.error || classification.warning || (extractionStatus === 'ready' ? 'Ready for extraction in Step 1.' : '');
       const statusPills = [
         `<span class="file-pill">${escapeHtml(updatedLabel)}</span>`,
         `<span class="file-pill">${escapeHtml(classification.eligibility)}</span>`,
       ];
-      if (extractionStatus) {
-        statusPills.push(`<span class="file-pill ${escapeHtml(extractionStatus)}">${escapeHtml(extractionLabel)}</span>`);
-      } else if (isLegacyDoc) {
-        statusPills.push('<span class="file-pill limited">Legacy DOC may need PDF fallback</span>');
-      } else if (isImageEvidence) {
-        statusPills.push('<span class="file-pill image_only">Supporting image evidence</span>');
-      } else {
-        statusPills.push('<span class="file-pill ok">Eligible for text extraction</span>');
-      }
+      statusPills.push(`<span class="file-pill ${escapeHtml(extractionStatus === 'ready' ? 'ok' : extractionStatus)}">${escapeHtml(extractionLabel)}</span>`);
       return `
         <article class="file-card">
           <div class="file-icon" aria-hidden="true">${escapeHtml(extension.toUpperCase())}</div>
@@ -549,7 +807,10 @@
     elements.fileList.querySelectorAll('[data-remove-file]').forEach((button) => {
       button.addEventListener('click', () => {
         const index = Number(button.getAttribute('data-remove-file'));
+        const removed = state.files[index];
         state.files.splice(index, 1);
+        if (removed) void removeQueuedFileFromStore(removed);
+        resetPreparedState();
         renderFileQueue();
       });
     });
@@ -628,6 +889,125 @@
         <p class="muted">${escapeHtml(item.note)}</p>
       </div>
     `).join('');
+    persistSessionSnapshot();
+  }
+
+  function renderEvidenceDocumentList(items, fallback) {
+    const documents = safeArray(items);
+    if (!documents.length) {
+      return `
+        <div class="empty-state compact">
+          <strong>${escapeHtml(fallback)}</strong>
+        </div>
+      `;
+    }
+
+    return documents.map((document) => `
+      <article class="evidence-card">
+        <div class="evidence-card-head">
+          <strong>${escapeHtml(document.name || document.original_filename || 'Candidate file')}</strong>
+          <span class="file-pill ${escapeHtml(String(document.status || document.extraction_status || '').toLowerCase())}">${escapeHtml(extractionStatusLabel(document.status || document.extraction_status || 'queued'))}</span>
+        </div>
+        <div class="file-meta-line">${escapeHtml(document.sizeLabel || formatSize(document.size || document.file_size_bytes || 0))} • ${escapeHtml(document.contentType || document.mime_type || document.extension || 'File')}</div>
+        ${document.error || document.extraction_error ? `<div class="file-meta-line">${escapeHtml(document.error || document.extraction_error)}</div>` : ''}
+      </article>
+    `).join('');
+  }
+
+  function updateMatchActionState() {
+    const prepared = state.preparedRun;
+    const ready = !!prepared?.ready_for_match;
+    const hasResult = !!prepared?.has_result;
+    const hasFailure = !!prepared?.error_message && !hasResult;
+    if (elements.preparedStateChip) {
+      if (!prepared) {
+        elements.preparedStateChip.textContent = 'No prepared evidence';
+        elements.preparedStateChip.className = 'chip warn';
+      } else if (ready) {
+        elements.preparedStateChip.textContent = hasResult ? 'Prepared and matched' : 'Prepared and match-ready';
+        elements.preparedStateChip.className = 'chip ok';
+      } else {
+        elements.preparedStateChip.textContent = 'Prepared but not match-ready';
+        elements.preparedStateChip.className = 'chip warn';
+      }
+    }
+    if (elements.runMatchButton) {
+      elements.runMatchButton.hidden = !ready || hasFailure;
+      elements.runMatchButton.disabled = state.busy || !ready;
+    }
+    if (elements.retryMatchButton) {
+      elements.retryMatchButton.hidden = !ready || !hasFailure;
+      elements.retryMatchButton.disabled = state.busy || !ready;
+    }
+    updateWorkflowState();
+  }
+
+  function renderPreparedEvidence(run) {
+    state.preparedRun = run || null;
+    if (!elements.preparedEvidenceShell) return;
+
+    if (!run) {
+      elements.preparedEvidenceShell.hidden = false;
+      elements.preparedEvidenceMeta.textContent = 'Prepare evidence to review extracted text, image evidence, and file readiness before running the recruiter match.';
+      elements.preparedEvidenceSummary.innerHTML = `
+        <div class="empty-state">
+          <strong>No prepared evidence yet</strong>
+          <p>Step 1 will parse readable documents, classify supporting images, and save a private evidence record that can be reused if matching fails.</p>
+        </div>
+      `;
+      elements.preparedTextList.innerHTML = '';
+      elements.preparedImageList.innerHTML = '';
+      elements.preparedLimitedList.innerHTML = '';
+      elements.preparedFailedList.innerHTML = '';
+      updateMatchActionState();
+      return;
+    }
+
+    const prepared = run.prepared_evidence || {};
+    const candidateName = run.candidate_name || prepared.inferred_candidate_name || 'Candidate not confidently identified';
+    const warningCount = (prepared.failed_count || 0) + (prepared.limited_count || 0) + (prepared.unsupported_count || 0);
+    const matchReadyLabel = run.ready_for_match ? 'Ready for matching' : 'Review required before matching';
+    const matchedLabel = run.has_result ? 'Latest result saved on this prepared evidence.' : 'No match run has been completed yet.';
+    elements.preparedEvidenceShell.hidden = false;
+    elements.preparedEvidenceMeta.textContent = `${matchReadyLabel}. ${matchedLabel}`;
+    elements.preparedEvidenceSummary.innerHTML = `
+      <div class="prepared-highlight">
+        <div class="section-head" style="margin-bottom:0">
+          <div>
+            <p class="eyebrow">Prepared candidate</p>
+            <h3>${escapeHtml(candidateName)}</h3>
+          </div>
+          <div class="chip-list">
+            <span class="chip ${run.ready_for_match ? 'ok' : 'warn'}">${escapeHtml(matchReadyLabel)}</span>
+            <span class="chip">${escapeHtml(formatDateTime(run.updated_at || run.created_at))}</span>
+          </div>
+        </div>
+        <p>${escapeHtml(prepared.preview_text || 'No readable candidate text preview is available for this prepared run yet.')}</p>
+      </div>
+      <div class="results-summary-strip">
+        ${buildMetricCard('Text-read files', String(prepared.files_text_read || 0), 'Readable CV / text evidence')}
+        ${buildMetricCard('Image evidence', String(prepared.image_evidence_count || 0), 'Supporting image-only files')}
+        ${buildMetricCard('Warnings', String(warningCount), 'Limited, unsupported, or failed files')}
+        ${buildMetricCard('Evidence text', `${Number(prepared.combined_text_length || 0).toLocaleString()} chars`, run.error_message || 'Prepared privately for reruns')}
+      </div>
+    `;
+    elements.preparedTextList.innerHTML = renderEvidenceDocumentList(prepared.text_files, 'No text-readable files were extracted.');
+    elements.preparedImageList.innerHTML = renderEvidenceDocumentList(prepared.image_evidence_files, 'No supporting image evidence files were included.');
+    elements.preparedLimitedList.innerHTML = renderEvidenceDocumentList(
+      safeArray(prepared.limited_files).concat(safeArray(prepared.unsupported_files)),
+      'No limited or unsupported files in this prepared evidence set.'
+    );
+    elements.preparedFailedList.innerHTML = renderEvidenceDocumentList(prepared.failed_files, 'No extraction failures in this prepared evidence set.');
+    persistSessionSnapshot();
+    updateMatchActionState();
+  }
+
+  function resetPreparedState() {
+    state.preparedRun = null;
+    clearPersistedResultState();
+    renderPreparedEvidence(null);
+    renderEmptyResults();
+    updateMatchActionState();
   }
 
   function updateDiagnosticsFromDocuments(documents, hasFailure) {
@@ -698,6 +1078,8 @@
   }
 
   function renderEmptyResults() {
+    state.latestResultPayload = null;
+    state.latestResultMeta = null;
     elements.resultsEmptyState.hidden = false;
     elements.resultsContent.hidden = true;
     elements.resultsMeta.textContent = 'No analysis has been run yet. Results will appear here once a candidate is processed.';
@@ -712,6 +1094,8 @@
     elements.noStrongMatchNotice.hidden = true;
     elements.noStrongMatchNotice.innerHTML = '';
     renderRunDiagnostics(null);
+    syncCopyActionState();
+    persistSessionSnapshot();
   }
 
   function renderResult(resultPayload, meta) {
@@ -725,17 +1109,18 @@
     const liveJobsValue = meta?.liveJobsCount == null ? '—' : String(meta.liveJobsCount);
     const topScore = featured ? `${Math.round(Number(featured.score) || 0)}%` : '—';
     const topRecommendation = featured ? recommendationLabel(featured.recommendation) : (result.no_strong_match_reason ? 'No strong match' : 'Pending');
-    const historyLabel = meta?.savedToHistory ? 'Saved' : 'Not saved';
+    const warningCount = Number(meta?.warningCount) || 0;
     const modelLabel = meta?.model || 'OpenAI';
+    setLatestResult(result, meta || null);
 
     elements.resultsEmptyState.hidden = true;
     elements.resultsContent.hidden = false;
     elements.resultsMeta.textContent = `Analysed against ${liveJobsValue} published live job${liveJobsValue === '1' ? '' : 's'} using ${modelLabel}.`;
     elements.resultsSummaryStrip.innerHTML = [
-      buildMetricCard('Live roles analysed', liveJobsValue, 'Published + live jobs only'),
-      buildMetricCard('Top score', topScore, featured ? featured.job_title || 'Highest-ranked role' : 'No scored top match'),
-      buildMetricCard('Recommendation', topRecommendation, result.overall_recommendation || 'Recruiter summary from the model'),
-      buildMetricCard('History status', historyLabel, meta?.historyNote || 'Private admin history only'),
+      buildMetricCard('Best match role', featured?.job_title || 'No strong match', featured ? 'Highest-ranked live role' : 'No lead match returned'),
+      buildMetricCard('Top score', topScore, featured ? topRecommendation : 'No scored top match'),
+      buildMetricCard('Roles assessed', liveJobsValue, 'Published + live jobs only'),
+      buildMetricCard('Warnings', String(warningCount), meta?.historyNote || 'Extraction or match warnings returned'),
     ].join('');
 
     elements.overallRecommendation.innerHTML = `
@@ -808,6 +1193,8 @@
       elements.noStrongMatchNotice.hidden = true;
       elements.noStrongMatchNotice.innerHTML = '';
     }
+    syncCopyActionState();
+    persistSessionSnapshot();
   }
 
   function summariseHistoryFiles(fileNames) {
@@ -862,8 +1249,9 @@
         <div class="history-files">
           <span class="history-tag">${escapeHtml(summariseHistoryFiles(run.file_names))}</span>
           ${run.primary_discipline ? `<span class="history-tag">${escapeHtml(run.primary_discipline)}</span>` : ''}
+          ${run.ready_for_match && !run.has_result ? '<span class="history-tag">Prepared only</span>' : ''}
         </div>
-        <button class="btn history-action" type="button" data-history-id="${escapeHtml(run.id)}">Open saved result</button>
+        <button class="btn history-action" type="button" data-history-id="${escapeHtml(run.id)}">${escapeHtml(run.has_result ? 'Open saved result' : 'Use prepared evidence')}</button>
       </article>
     `).join('');
 
@@ -872,18 +1260,33 @@
         const id = button.getAttribute('data-history-id');
         const run = state.historyRuns.find((item) => item.id === id);
         const payload = run && run.raw_result_json && run.raw_result_json.result ? run.raw_result_json.result : null;
-        if (!payload) {
-          state.helpers.toast.warn('This saved run does not include a renderable result payload.', 3600);
+        renderPreparedEvidence(run);
+        const diagnostics = {
+          started_at: run.updated_at || run.created_at,
+          total_elapsed_ms: 0,
+          files_attempted: run.prepared_evidence?.files_attempted || 0,
+          files_text_read: run.prepared_evidence?.files_text_read || 0,
+          files_skipped: (run.prepared_evidence?.limited_count || 0) + (run.prepared_evidence?.unsupported_count || 0) + (run.prepared_evidence?.failed_count || 0),
+          warning_count: (run.prepared_evidence?.failed_count || 0) + (run.prepared_evidence?.limited_count || 0),
+          failed_stage: run.error_message ? 'Previous match failed' : '',
+        };
+        if (payload) {
+          renderRunDiagnostics(diagnostics);
+          renderWarnings([]);
+          renderResult(payload, {
+            liveJobsCount: 'saved',
+            model: 'saved result',
+            savedToHistory: true,
+            warningCount: diagnostics.warning_count,
+            historyNote: summariseHistoryFiles(run.file_names),
+          });
+          window.scrollTo({ top: elements.resultsShell.offsetTop - 80, behavior: 'smooth' });
           return;
         }
-        renderWarnings([]);
-        renderResult(payload, {
-          liveJobsCount: 'saved',
-          model: 'saved result',
-          savedToHistory: true,
-          historyNote: summariseHistoryFiles(run.file_names),
-        });
-        window.scrollTo({ top: elements.resultsShell.offsetTop - 80, behavior: 'smooth' });
+        renderEmptyResults();
+        renderRunDiagnostics(diagnostics);
+        state.helpers.toast.ok('Prepared evidence loaded. You can run or retry the recruiter match without uploading again.', 3600);
+        window.scrollTo({ top: elements.preparedEvidenceShell.offsetTop - 80, behavior: 'smooth' });
       });
     });
   }
@@ -909,6 +1312,8 @@
     }
 
     state.files = state.files.concat(additions);
+    void persistQueuedFiles(additions);
+    resetPreparedState();
     renderFileQueue();
     if (additions.length) {
       state.helpers.toast.ok(`${pluralise(additions.length, 'file')} queued for analysis.`, 2600);
@@ -920,6 +1325,8 @@
     state.fileDiagnostics = new Map();
     state.problemFileKeys = new Set();
     elements.fileInput.value = '';
+    void clearQueuedFilesFromStore();
+    resetPreparedState();
     renderFileQueue();
     renderWarnings([]);
     renderWarningActions(false);
@@ -1009,10 +1416,161 @@
     }
   }
 
-  async function analyse() {
+  async function restoreSessionState() {
+    ensureSessionId();
+    const restoredFiles = await restoreQueuedFilesFromStore();
+    if (restoredFiles.length) {
+      state.files = restoredFiles;
+    }
+
+    const snapshot = readSessionSnapshot();
+    if (!snapshot || typeof snapshot !== 'object') return;
+
+    if (elements.recruiterNotes && typeof snapshot.recruiterNotes === 'string') {
+      elements.recruiterNotes.value = snapshot.recruiterNotes;
+    }
+    if (snapshot.preparedRun && typeof snapshot.preparedRun === 'object') {
+      state.preparedRun = snapshot.preparedRun;
+    }
+    if (snapshot.latestResultPayload && typeof snapshot.latestResultPayload === 'object') {
+      state.latestResultPayload = snapshot.latestResultPayload;
+      state.latestResultMeta = snapshot.latestResultMeta || null;
+    } else if (snapshot.preparedRun?.raw_result_json?.result) {
+      state.latestResultPayload = snapshot.preparedRun.raw_result_json.result;
+      state.latestResultMeta = {
+        liveJobsCount: 'saved',
+        model: 'saved result',
+        savedToHistory: true,
+      };
+    }
+    if (snapshot.runDiagnostics && typeof snapshot.runDiagnostics === 'object') {
+      state.runDiagnostics = snapshot.runDiagnostics;
+    }
+  }
+
+  function buildDiagnosticsWarnings(error) {
+    const documents = safeArray(error?.details?.documents);
+    const diagnostics = documents.map((document) => ({
+      file: document.name || document.file || 'Candidate file',
+      message: [
+        document.error || 'Extraction failed.',
+        document.contentType || document.content_type ? `MIME: ${document.contentType || document.content_type}` : '',
+        Number.isFinite(Number(document.size || document.declared_size_bytes)) ? `Bytes seen: ${document.size || document.declared_size_bytes}` : '',
+        document.parserPath || document.parser_path ? `Parser: ${document.parserPath || document.parser_path}` : '',
+      ].filter(Boolean).join(' | '),
+      status: document.status || 'error',
+    }));
+    const stageSummary = error?.details?.stage_label
+      ? [{
+        file: error.details.stage_label,
+        message: [
+          error.message || 'Matcher stage failed.',
+          Number.isFinite(Number(error?.details?.stage_duration_ms))
+            ? `Stage duration: ${(Number(error.details.stage_duration_ms) / 1000).toFixed(1)}s`
+            : '',
+          Number.isFinite(Number(error?.details?.total_duration_ms))
+            ? `Total request: ${(Number(error.details.total_duration_ms) / 1000).toFixed(1)}s`
+            : '',
+        ].filter(Boolean).join(' | '),
+        status: error?.details?.stage || 'error',
+      }]
+      : [];
+    return { documents, diagnostics, stageSummary };
+  }
+
+  function handleMatcherFailure(error, requestId, options) {
+    if (state.activeRequestId !== requestId) return;
+    stopProgress();
+    deriveStageDetailsFromRun(null, error);
+    const failure = buildFailureProgress(error);
+    setProgress(
+      options?.statusText || 'Step failed',
+      failure.detail,
+      failure.failureIndex,
+      false,
+      failure.failureIndex,
+      failure.percent
+    );
+    const { documents, diagnostics, stageSummary } = buildDiagnosticsWarnings(error);
+    updateDiagnosticsFromDocuments(documents, true);
+    renderRunDiagnostics(error?.run_diagnostics || {
+      started_at: error?.details?.started_at || '',
+      total_elapsed_ms: Number(error?.details?.total_duration_ms) || 0,
+      files_attempted: documents.length,
+      files_text_read: documents.filter((document) => document.status === 'ok').length,
+      files_skipped: documents.filter((document) => document.status !== 'ok').length,
+      warning_count: diagnostics.length || stageSummary.length,
+      failed_stage: error?.details?.stage_label || error?.details?.stage || '',
+    });
+    renderWarnings(diagnostics.length
+      ? diagnostics
+      : stageSummary.length
+        ? stageSummary
+        : [{ file: options?.warningLabel || 'Analysis', message: error.message || 'Unexpected matcher failure.', status: 'error' }]);
+    renderWarningActions(true);
+    if (options?.preparedFailure && state.preparedRun) {
+      state.preparedRun = {
+        ...state.preparedRun,
+        error_message: error.message || 'Match failed.',
+      };
+      renderPreparedEvidence(state.preparedRun);
+    }
+    persistSessionSnapshot();
+  }
+
+  async function copyTextToClipboard(text, successMessage) {
+    const safeText = String(text || '').trim();
+    if (!safeText) {
+      state.helpers.toast.warn('There is no content ready to copy yet.', 2600);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(safeText);
+      state.helpers.toast.ok(successMessage, 2200);
+    } catch {
+      state.helpers.toast.warn('Clipboard access failed in this browser session.', 3200);
+    }
+  }
+
+  function buildCandidateSummaryCopy() {
+    const result = state.latestResultPayload || {};
+    const summary = result.candidate_summary || {};
+    return [
+      summary.name || 'Candidate',
+      summary.current_or_recent_title || '',
+      summary.summary || '',
+      safeArray(summary.key_skills).length ? `Key skills: ${safeArray(summary.key_skills).join(', ')}` : '',
+      safeArray(summary.key_qualifications).length ? `Key qualifications: ${safeArray(summary.key_qualifications).join(', ')}` : '',
+      safeArray(summary.sectors).length ? `Sectors: ${safeArray(summary.sectors).join(', ')}` : '',
+      safeArray(summary.locations).length ? `Locations: ${safeArray(summary.locations).join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  function buildTopMatchCopy() {
+    const topMatch = safeArray(state.latestResultPayload?.top_matches)[0];
+    if (!topMatch) return '';
+    return [
+      topMatch.job_title || 'Top match',
+      `Score: ${Math.round(Number(topMatch.score) || 0)}%`,
+      `Recommendation: ${recommendationLabel(topMatch.recommendation)}`,
+      topMatch.why_match || '',
+      safeArray(topMatch.gaps).length ? `Gaps: ${safeArray(topMatch.gaps).join('; ')}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  function buildFollowUpsCopy() {
+    const topMatch = safeArray(state.latestResultPayload?.top_matches)[0];
+    const followUps = safeArray(state.latestResultPayload?.general_follow_up_questions)
+      .concat(safeArray(topMatch?.follow_up_questions));
+    return followUps.length
+      ? followUps.map((item, index) => `${index + 1}. ${item}`).join('\n')
+      : '';
+  }
+
+  async function prepareEvidence() {
     if (state.busy) return;
     if (!state.files.length) {
-      state.helpers.toast.warn('Add at least one candidate document before analysing.', 3600);
+      state.helpers.toast.warn('Add at least one candidate document before preparing evidence.', 3600);
       return;
     }
 
@@ -1026,125 +1584,141 @@
     renderWarnings([]);
     renderWarningActions(false);
     renderRunDiagnostics(null);
-    elements.jobsChip.textContent = 'Analysis in progress';
+    renderPreparedEvidence(null);
+    renderEmptyResults();
+    elements.jobsChip.textContent = 'Preparing evidence';
     elements.jobsChip.className = 'chip warn';
 
     try {
       setStageDetail(0, `${pluralise(state.files.length, 'file')} passed client-side intake validation.`, 'done');
       setStageDetail(1, 'Packaging the current queue for secure transmission.', 'working');
-      setProgress(
-        'Packaging candidate files',
-        PROGRESS_STAGES[1].message,
-        1,
-        false,
-        -1,
-        10
-      );
+      setProgress('Preparing candidate evidence', PROGRESS_STAGES[1].message, 1, false, -1, 10);
 
       const files = await buildFilesPayload(requestId);
       if (state.activeRequestId !== requestId) return;
       setStageDetail(1, `${pluralise(files.length, 'file')} transmitted to the secure matcher function.`, 'done');
-      setStageDetail(2, 'Server processing underway. Waiting for extraction diagnostics…', 'working');
-      setProgress(
-        'Server-side extraction in progress',
-        'Candidate files were packaged successfully. The server is now extracting evidence and preparing the matcher run.',
-        2,
-        false,
-        -1,
-        32
-      );
-      const response = await callMatcherApi('admin-candidate-match', {
+      setStageDetail(2, 'Server extraction is running for the prepared evidence set.', 'working');
+      setProgress('Extracting candidate evidence', PROGRESS_STAGES[2].message, 2, false, -1, 34);
+
+      const response = await callMatcherApi('admin-candidate-prepare', {
         files,
         recruiterNotes: elements.recruiterNotes.value,
-        saveHistory: elements.saveHistory.checked,
       });
       if (state.activeRequestId !== requestId) return;
 
-      deriveStageDetailsFromRun(response, null);
+      deriveStageDetailsFromRun({
+        analysis_meta: { timings: [] },
+        extraction: response.extraction,
+        upload_storage: response.upload_storage,
+        run_diagnostics: response.run_diagnostics,
+      }, null);
+      setStageDetail(3, response.prepared_run?.ready_for_match
+        ? 'Prepared evidence stored and ready to be matched without re-uploading.'
+        : 'Prepared evidence stored, but recruiter review is still needed before matching.', 'done');
+      setProgress(
+        response.prepared_run?.ready_for_match ? 'Prepared evidence ready' : 'Prepared evidence saved with review required',
+        response.prepared_run?.ready_for_match
+          ? 'Step 1 completed. Review the extracted evidence summary, then run the recruiter match.'
+          : 'Step 1 completed, but no readable candidate text is ready for matching yet.',
+        3,
+        false,
+        -1,
+        100
+      );
       updateDiagnosticsFromDocuments(response?.extraction?.documents, false);
       renderWarnings(response.warnings || []);
       renderWarningActions(false);
-      renderResult(response.result, {
-        liveJobsCount: response.live_jobs_count || 0,
-        model: response.analysis_meta?.model || '',
-        savedToHistory: !!response.saved_to_history,
-        historyNote: response.saved_to_history ? 'Stored in private admin history' : 'This run was not added to history',
-      });
       renderRunDiagnostics(response.run_diagnostics || null);
-
-      stopProgress();
-      setStageDetail(6, response.saved_to_history
-        ? 'Results rendered and saved to private admin history.'
-        : 'Results rendered for review. History save was skipped or unavailable.', 'done');
-      setProgress('Analysis complete', 'The candidate summary and ranked role matches are ready to review.', PROGRESS_STAGES.length - 1, true, -1, 100);
-      elements.jobsChip.textContent = `${response.live_jobs_count || 0} live jobs analysed`;
-      elements.jobsChip.className = 'chip ok';
-      state.helpers.toast.ok('Candidate analysis complete.', 3200);
-      if (response.history_enabled !== false) {
-        await loadHistory();
-      }
+      renderPreparedEvidence(response.prepared_run || null);
+      elements.jobsChip.textContent = response.prepared_run?.ready_for_match ? 'Prepared evidence ready' : 'Prepared evidence needs review';
+      elements.jobsChip.className = response.prepared_run?.ready_for_match ? 'chip ok' : 'chip warn';
+      state.helpers.toast.ok('Candidate evidence prepared and saved privately.', 3200);
+      await loadHistory();
     } catch (error) {
-      if (state.activeRequestId !== requestId) return;
-      stopProgress();
-      deriveStageDetailsFromRun(null, error);
-      const failure = buildFailureProgress(error);
-      setProgress(
-        'Analysis failed',
-        failure.detail,
-        failure.failureIndex,
-        false,
-        failure.failureIndex,
-        failure.percent
-      );
-      elements.jobsChip.textContent = 'Analysis failed';
-      elements.jobsChip.className = 'chip bad';
-      const documents = safeArray(error?.details?.documents);
-      updateDiagnosticsFromDocuments(documents, true);
-      const diagnostics = documents.map((document) => ({
-        file: document.name || document.file || 'Candidate file',
-        message: [
-          document.error || 'Extraction failed.',
-          document.contentType || document.content_type ? `MIME: ${document.contentType || document.content_type}` : '',
-          Number.isFinite(Number(document.size || document.declared_size_bytes)) ? `Bytes seen: ${document.size || document.declared_size_bytes}` : '',
-          document.parserPath || document.parser_path ? `Parser: ${document.parserPath || document.parser_path}` : '',
-        ].filter(Boolean).join(' | '),
-        status: document.status || 'error',
-      }));
-      const stageSummary = error?.details?.stage_label
-        ? [{
-          file: error.details.stage_label,
-          message: [
-            error.message || 'Matcher stage failed.',
-            Number.isFinite(Number(error?.details?.stage_duration_ms))
-              ? `Stage duration: ${(Number(error.details.stage_duration_ms) / 1000).toFixed(1)}s`
-              : '',
-            Number.isFinite(Number(error?.details?.total_duration_ms))
-              ? `Total request: ${(Number(error.details.total_duration_ms) / 1000).toFixed(1)}s`
-              : '',
-          ].filter(Boolean).join(' | '),
-          status: error?.details?.stage || 'error',
-        }]
-        : [];
-      renderRunDiagnostics(error?.run_diagnostics || {
-        started_at: error?.details?.started_at || '',
-        total_elapsed_ms: Number(error?.details?.total_duration_ms) || 0,
-        files_attempted: documents.length,
-        files_text_read: documents.filter((document) => document.status === 'ok').length,
-        files_skipped: documents.filter((document) => document.status !== 'ok').length,
-        warning_count: diagnostics.length || stageSummary.length,
-        failed_stage: error?.details?.stage_label || error?.details?.stage || '',
+      handleMatcherFailure(error, requestId, {
+        statusText: 'Evidence preparation failed',
+        warningLabel: 'Prepare evidence',
       });
-      renderWarnings(diagnostics.length
-        ? diagnostics
-        : stageSummary.length
-          ? stageSummary
-        : [{ file: 'Analysis', message: error.message || 'Unexpected matcher failure.', status: 'error' }]);
-      renderWarningActions(true);
+      elements.jobsChip.textContent = 'Evidence preparation failed';
+      elements.jobsChip.className = 'chip bad';
     } finally {
       if (state.activeRequestId === requestId) {
         state.activeRequestId = '';
       }
       setBusy(false);
+      updateMatchActionState();
+    }
+  }
+
+  async function runMatch(isRetry) {
+    if (state.busy) return;
+    if (!state.preparedRun?.id) {
+      state.helpers.toast.warn('Prepare evidence first before running the recruiter match.', 3600);
+      return;
+    }
+    if (!state.preparedRun.ready_for_match) {
+      state.helpers.toast.warn('This prepared evidence is not ready for matching yet. Review the extracted evidence summary first.', 3600);
+      return;
+    }
+
+    const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    state.activeRequestId = requestId;
+    setBusy(true);
+    resetProgressState();
+    setStageDetail(3, 'Prepared evidence already saved. Reusing it for this match run.', 'done');
+    setStageDetail(4, 'Loading prepared evidence and current live roles.', 'working');
+    setProgress(
+      isRetry ? 'Retrying recruiter match' : 'Running recruiter match',
+      'Step 2 is reusing the saved prepared evidence so files do not need to be uploaded again.',
+      4,
+      false,
+      -1,
+      58
+    );
+    renderWarnings([]);
+    renderWarningActions(false);
+    elements.jobsChip.textContent = isRetry ? 'Retrying match' : 'Matching in progress';
+    elements.jobsChip.className = 'chip warn';
+
+    try {
+      const response = await callMatcherApi('admin-candidate-run-match', {
+        preparedRunId: state.preparedRun.id,
+        recruiterNotes: elements.recruiterNotes.value,
+      });
+      if (state.activeRequestId !== requestId) return;
+
+      deriveStageDetailsFromRun(response, null);
+      renderWarnings(response.warnings || []);
+      renderWarningActions(false);
+      renderResult(response.result, {
+        liveJobsCount: response.live_jobs_count || 0,
+        model: response.analysis_meta?.model || '',
+        savedToHistory: true,
+        warningCount: safeArray(response.warnings).length,
+        historyNote: 'Prepared evidence reused without re-uploading',
+      });
+      renderRunDiagnostics(response.run_diagnostics || null);
+      renderPreparedEvidence(response.prepared_run || state.preparedRun);
+      setStageDetail(6, 'Results rendered and linked back to the prepared evidence record.', 'done');
+      setProgress('Recruiter match complete', 'The ranked recruiter-focused results are ready to review.', 6, true, -1, 100);
+      elements.jobsChip.textContent = `${response.live_jobs_count || 0} live jobs analysed`;
+      elements.jobsChip.className = 'chip ok';
+      state.helpers.toast.ok(isRetry ? 'Recruiter match retried successfully.' : 'Recruiter match complete.', 3200);
+      await loadHistory();
+    } catch (error) {
+      handleMatcherFailure(error, requestId, {
+        statusText: isRetry ? 'Retry match failed' : 'Recruiter match failed',
+        warningLabel: 'Run match',
+        preparedFailure: true,
+      });
+      elements.jobsChip.textContent = 'Match failed';
+      elements.jobsChip.className = 'chip bad';
+    } finally {
+      if (state.activeRequestId === requestId) {
+        state.activeRequestId = '';
+      }
+      setBusy(false);
+      updateMatchActionState();
     }
   }
 
@@ -1195,6 +1769,18 @@
     elements.fileList = sel('#fileList');
     elements.recruiterNotes = sel('#recruiterNotes');
     elements.saveHistory = sel('#saveHistory');
+    elements.workflowStepPrepare = sel('#workflowStepPrepare');
+    elements.workflowStepPrepareText = sel('#workflowStepPrepareText');
+    elements.workflowStepMatch = sel('#workflowStepMatch');
+    elements.workflowStepMatchText = sel('#workflowStepMatchText');
+    elements.preparedStateChip = sel('#preparedStateChip');
+    elements.preparedEvidenceShell = sel('#preparedEvidenceShell');
+    elements.preparedEvidenceMeta = sel('#preparedEvidenceMeta');
+    elements.preparedEvidenceSummary = sel('#preparedEvidenceSummary');
+    elements.preparedTextList = sel('#preparedTextList');
+    elements.preparedImageList = sel('#preparedImageList');
+    elements.preparedLimitedList = sel('#preparedLimitedList');
+    elements.preparedFailedList = sel('#preparedFailedList');
     elements.analysisStatus = sel('#analysisStatus');
     elements.progressText = sel('#progressText');
     elements.progressFill = sel('#progressFill');
@@ -1202,6 +1788,9 @@
     elements.progressStageDetail = sel('#progressStageDetail');
     elements.stageList = sel('#stageList');
     elements.analyseButton = sel('#analyseButton');
+    elements.prepareEvidenceButton = sel('#prepareEvidenceButton');
+    elements.runMatchButton = sel('#runMatchButton');
+    elements.retryMatchButton = sel('#retryMatchButton');
     elements.warningShell = sel('#warningShell');
     elements.warningNote = sel('#warningNote');
     elements.warningActions = sel('#warningActions');
@@ -1214,6 +1803,9 @@
     elements.resultsEmptyState = sel('#resultsEmptyState');
     elements.resultsContent = sel('#resultsContent');
     elements.resultsSummaryStrip = sel('#resultsSummaryStrip');
+    elements.copyCandidateSummaryButton = sel('#copyCandidateSummaryButton');
+    elements.copyTopMatchButton = sel('#copyTopMatchButton');
+    elements.copyFollowUpsButton = sel('#copyFollowUpsButton');
     elements.overallRecommendation = sel('#overallRecommendation');
     elements.candidateNarrative = sel('#candidateNarrative');
     elements.candidateSummaryGrid = sel('#candidateSummaryGrid');
@@ -1230,16 +1822,34 @@
     elements.pickFilesButton.addEventListener('click', () => elements.fileInput.click());
     elements.clearFilesButton.addEventListener('click', clearFiles);
     elements.fileInput.addEventListener('change', (event) => queueFiles(event.target.files));
-    elements.analyseButton.addEventListener('click', analyse);
+    elements.recruiterNotes.addEventListener('input', () => persistSessionSnapshot());
+    if (elements.prepareEvidenceButton) {
+      elements.prepareEvidenceButton.addEventListener('click', prepareEvidence);
+    }
+    if (elements.runMatchButton) {
+      elements.runMatchButton.addEventListener('click', () => runMatch(false));
+    }
+    if (elements.retryMatchButton) {
+      elements.retryMatchButton.addEventListener('click', () => runMatch(true));
+    }
     if (elements.retryAnalysisButton) {
-      elements.retryAnalysisButton.addEventListener('click', analyse);
+      elements.retryAnalysisButton.addEventListener('click', () => {
+        if (state.preparedRun?.ready_for_match) {
+          runMatch(!!state.preparedRun?.error_message);
+        } else {
+          prepareEvidence();
+        }
+      });
     }
     if (elements.removeProblemFilesButton) {
       elements.removeProblemFilesButton.addEventListener('click', () => {
         if (!state.problemFileKeys.size) return;
+        const removed = state.files.filter((file) => state.problemFileKeys.has(fileKey(file)));
         state.files = state.files.filter((file) => !state.problemFileKeys.has(fileKey(file)));
+        removed.forEach((file) => { void removeQueuedFileFromStore(file); });
         state.problemFileKeys = new Set();
         state.fileDiagnostics = new Map();
+        resetPreparedState();
         renderFileQueue();
         renderWarningActions(false);
         state.helpers.toast.ok('Problematic files removed from the queue.', 2800);
@@ -1247,6 +1857,21 @@
     }
     if (elements.clearProblemFilesButton) {
       elements.clearProblemFilesButton.addEventListener('click', clearFiles);
+    }
+    if (elements.copyCandidateSummaryButton) {
+      elements.copyCandidateSummaryButton.addEventListener('click', () => {
+        copyTextToClipboard(buildCandidateSummaryCopy(), 'Candidate summary copied.');
+      });
+    }
+    if (elements.copyTopMatchButton) {
+      elements.copyTopMatchButton.addEventListener('click', () => {
+        copyTextToClipboard(buildTopMatchCopy(), 'Top match summary copied.');
+      });
+    }
+    if (elements.copyFollowUpsButton) {
+      elements.copyFollowUpsButton.addEventListener('click', () => {
+        copyTextToClipboard(buildFollowUpsCopy(), 'Follow-up questions copied.');
+      });
     }
     bindDropZone();
   }
@@ -1261,11 +1886,37 @@
       state.helpers = helpers;
       collectElements(helpers.sel);
       bindEvents();
+      await restoreSessionState();
       renderFileQueue();
-      renderEmptyResults();
+      if (state.preparedRun) {
+        renderPreparedEvidence(state.preparedRun);
+      } else {
+        renderPreparedEvidence(null);
+      }
+      if (state.latestResultPayload) {
+        renderResult(state.latestResultPayload, state.latestResultMeta || {});
+      } else {
+        renderEmptyResults();
+      }
+      if (state.runDiagnostics) {
+        renderRunDiagnostics(state.runDiagnostics);
+      }
       renderStageList(-1, false, -1);
-      setProgress('Ready to analyse', 'Upload one or more files, add optional recruiter context, then run the matcher.', -1, false, -1, 0);
+      setProgress(
+        state.preparedRun?.ready_for_match
+          ? 'Prepared evidence ready'
+          : 'Ready to prepare evidence',
+        state.preparedRun?.ready_for_match
+          ? 'A saved prepared evidence set is available. You can run or retry the recruiter match without uploading again.'
+          : 'Upload one or more files, add optional recruiter context, then prepare a reusable evidence record.',
+        -1,
+        false,
+        -1,
+        0
+      );
       renderWarningActions(false);
+      updateMatchActionState();
+      syncCopyActionState();
 
       try {
         const who = await helpers.identity('admin');
@@ -1283,6 +1934,9 @@
       await loadHistory();
       elements.jobsChip.textContent = 'Live jobs source ready';
       elements.jobsChip.className = 'chip ok';
+      if (state.files.length) {
+        state.helpers.toast.ok(`${pluralise(state.files.length, 'queued file')} restored for this session.`, 2600);
+      }
     });
   }
 

@@ -6,10 +6,15 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'admin', 'candidate-matc
 const requiredMarkers = [
   'id="dropZone"',
   'id="fileInput"',
-  'id="analyseButton"',
+  'id="prepareEvidenceButton"',
+  'id="runMatchButton"',
+  'id="workflowStepPrepare"',
+  'id="workflowStepMatch"',
   'id="progressFill"',
   'id="resultsShell"',
+  'id="copyCandidateSummaryButton"',
   'id="historyList"',
+  'id="preparedEvidenceShell"',
   'id="runDiagnosticsList"',
   'id="retryAnalysisButton"'
 ];

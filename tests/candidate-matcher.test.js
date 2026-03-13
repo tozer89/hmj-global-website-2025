@@ -3,8 +3,10 @@ const assert = require('node:assert/strict');
 
 const core = require('../lib/candidate-matcher-core.js');
 const {
+  createCandidatePrepareBaseHandler,
   createCandidateHistoryListBaseHandler,
   createCandidateMatchBaseHandler,
+  createCandidateRunMatchBaseHandler,
 } = require('../lib/admin-candidate-match-function.js');
 
 test('prepareCandidateFiles marks unsupported extensions without crashing the run', () => {
@@ -141,6 +143,102 @@ test('extractCandidateDocuments keeps image evidence without crashing the run', 
   assert.equal(result.documents[0].status, 'image_only');
   assert.equal(result.imageEvidence.length, 1);
   assert.equal(result.combinedText, '');
+});
+
+test('extractCandidateDocuments handles a readable PDF plus image evidence in one run', async () => {
+  const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 64 >>
+stream
+BT
+/F1 12 Tf
+72 100 Td
+(Planner CV evidence) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000063 00000 n 
+0000000122 00000 n 
+0000000248 00000 n 
+0000000362 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+432
+%%EOF`;
+  const imageBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+
+  const result = await core.extractCandidateDocuments([
+    {
+      id: 'doc-4',
+      name: 'cv.pdf',
+      extension: 'pdf',
+      contentType: 'application/pdf',
+      size: Buffer.byteLength(pdf),
+      status: 'ready',
+      buffer: Buffer.from(pdf, 'utf8'),
+      storageKey: '',
+      extractedText: '',
+      extractedTextLength: 0,
+      error: '',
+    },
+    {
+      id: 'doc-5',
+      name: 'certificate.png',
+      extension: 'png',
+      fileKind: 'image',
+      extractionMode: 'image_only',
+      parserPath: 'image-evidence',
+      contentType: 'image/png',
+      size: imageBuffer.byteLength,
+      status: 'ready',
+      buffer: imageBuffer,
+      storageKey: '',
+      extractedText: '',
+      extractedTextLength: 0,
+      error: '',
+    }
+  ]);
+
+  assert.equal(result.successCount, 1);
+  assert.equal(result.imageEvidence.length, 1);
+  assert.match(result.combinedText, /Planner CV evidence/);
+});
+
+test('buildPreparedEvidenceSummary infers a likely candidate name from extracted text when possible', () => {
+  const summary = core.buildPreparedEvidenceSummary({
+    documents: [{
+      id: 'doc-1',
+      name: 'candidate.pdf',
+      extension: 'pdf',
+      contentType: 'application/pdf',
+      size: 1200,
+      status: 'ok',
+      extractedTextLength: 140,
+      error: '',
+      storageKey: '',
+    }],
+    combinedText: 'Alex Murphy\nSenior Planner\nPrimavera P6\nData centre projects',
+  });
+
+  assert.equal(summary.inferred_candidate_name, 'Alex Murphy');
+  assert.equal(summary.ready_for_match, true);
 });
 
 test('fetchPublishedLiveJobs keeps only published roles with live status', async () => {
@@ -300,6 +398,238 @@ test('candidate match handler returns a happy-path payload with mocked dependenc
   assert.equal(payload.saved_to_history, true);
 });
 
+test('candidate prepare handler stores prepared evidence and returns a review payload', async () => {
+  const originals = {
+    prepareCandidateFiles: core.prepareCandidateFiles,
+    extractCandidateDocuments: core.extractCandidateDocuments,
+    maybeStoreUploads: core.maybeStoreUploads,
+    savePreparedRun: core.savePreparedRun,
+    getMatchRun: core.getMatchRun,
+  };
+
+  core.prepareCandidateFiles = () => [{
+    id: 'file-1',
+    name: 'candidate.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: 1234,
+    status: 'ready',
+    buffer: Buffer.from('pdf'),
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+    storageKey: '',
+  }];
+  core.extractCandidateDocuments = async (documents) => ({
+    documents: [{
+      ...documents[0],
+      status: 'ok',
+      extractedText: 'Candidate evidence text',
+      extractedTextLength: 23,
+      storageKey: 'candidate-matcher/run/file.pdf',
+    }],
+    successful: [{
+      ...documents[0],
+      status: 'ok',
+      extractedText: 'Candidate evidence text',
+      extractedTextLength: 23,
+      storageKey: 'candidate-matcher/run/file.pdf',
+    }],
+    failed: [],
+    imageEvidence: [],
+    successCount: 1,
+    failureCount: 0,
+    combinedText: 'Candidate evidence text',
+  });
+  core.maybeStoreUploads = async () => ({ stored: true, bucket: 'candidate-matcher-uploads', warnings: [] });
+  core.savePreparedRun = async () => ({ saved: true, enabled: true, record: { id: 'prepared-1' } });
+  core.getMatchRun = async () => ({
+    id: 'prepared-1',
+    created_at: '2026-03-13T12:00:00Z',
+    updated_at: '2026-03-13T12:00:00Z',
+    recruiter_notes: 'Prioritise planning roles.',
+    status: 'pending',
+    ready_for_match: true,
+    has_result: false,
+    prepared_evidence: {
+      ready_for_match: true,
+      files_attempted: 1,
+      files_text_read: 1,
+      image_evidence_count: 0,
+      limited_count: 0,
+      unsupported_count: 0,
+      failed_count: 0,
+      preview_text: 'Candidate evidence text',
+      text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+      image_evidence_files: [],
+      limited_files: [],
+      unsupported_files: [],
+      failed_files: [],
+      documents: [{ name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' }],
+    },
+    file_names: ['candidate.pdf'],
+    files: [],
+    raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
+  });
+
+  const handler = createCandidatePrepareBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      files: [{ name: 'candidate.pdf', data: 'ignored' }],
+      recruiterNotes: 'Prioritise planning roles.',
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.prepared_run.id, 'prepared-1');
+  assert.equal(payload.prepared_run.ready_for_match, true);
+  assert.equal(payload.extraction.success_count, 1);
+});
+
+test('candidate run match handler reuses prepared evidence without files in the request', async () => {
+  const originals = {
+    getMatchRun: core.getMatchRun,
+    buildCandidatePayloadFromPreparedRun: core.buildCandidatePayloadFromPreparedRun,
+    fetchPublishedLiveJobs: core.fetchPublishedLiveJobs,
+    callOpenAIForMatch: core.callOpenAIForMatch,
+    updatePreparedRunWithMatch: core.updatePreparedRunWithMatch,
+  };
+
+  core.getMatchRun = async () => ({
+    id: 'prepared-2',
+    created_at: '2026-03-13T12:00:00Z',
+    updated_at: '2026-03-13T12:10:00Z',
+    recruiter_notes: 'Reuse saved evidence.',
+    status: 'pending',
+    ready_for_match: true,
+    has_result: false,
+    prepared_evidence: {
+      ready_for_match: true,
+      files_attempted: 2,
+      files_text_read: 1,
+      image_evidence_count: 1,
+      limited_count: 0,
+      unsupported_count: 0,
+      failed_count: 0,
+      preview_text: 'Candidate evidence text',
+      text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '1 KB', contentType: 'application/pdf' }],
+      image_evidence_files: [{ name: 'certificate.png', status: 'image_only', sizeLabel: '4 B', contentType: 'image/png' }],
+      limited_files: [],
+      unsupported_files: [],
+      failed_files: [],
+      documents: [
+        { name: 'candidate.pdf', status: 'ok', size: 1234, contentType: 'application/pdf' },
+        { name: 'certificate.png', status: 'image_only', size: 4, contentType: 'image/png' },
+      ],
+    },
+    file_names: ['candidate.pdf', 'certificate.png'],
+    files: [{ storage_bucket: 'candidate-matcher-uploads' }],
+    raw_result_json: { preparation: { combined_candidate_text: 'Candidate evidence text' } },
+  });
+  core.buildCandidatePayloadFromPreparedRun = () => ({
+    recruiter_notes: 'Reuse saved evidence.',
+    extraction_summary: [{ name: 'candidate.pdf', status: 'ok' }],
+    candidate_text: 'Candidate evidence text',
+    candidate_text_truncated: false,
+    image_evidence: [{ name: 'certificate.png', file_kind: 'image', note: 'Supporting image evidence included but not text-extracted in V1.' }],
+  });
+  core.fetchPublishedLiveJobs = async () => [{ job_id: 'job-1', title: 'Planner', published: true, status: 'live' }];
+  core.callOpenAIForMatch = async () => ({
+    model: 'gpt-5-mini',
+    raw: {},
+    result: {
+      candidate_summary: {
+        name: 'Alex Example',
+        current_or_recent_title: 'Planner',
+        seniority_level: 'Senior',
+        primary_discipline: 'Project Controls',
+        sectors: ['Data Centres'],
+        locations: ['London'],
+        key_skills: ['Primavera P6'],
+        key_qualifications: ['SMSTS'],
+        summary: 'Strong planner.',
+      },
+      top_matches: [{
+        job_id: 'job-1',
+        job_title: 'Planner',
+        score: 91,
+        recommendation: 'shortlist',
+        why_match: 'Direct planning experience.',
+        matched_skills: ['Primavera P6'],
+        matched_qualifications: ['SMSTS'],
+        transferable_experience: [],
+        gaps: [],
+        follow_up_questions: [],
+        uncertainty_notes: '',
+      }],
+      other_matches: [],
+      overall_recommendation: 'Shortlist.',
+      general_follow_up_questions: [],
+      no_strong_match_reason: '',
+    }
+  });
+  core.updatePreparedRunWithMatch = async () => ({ id: 'prepared-2' });
+
+  let getCount = 0;
+  const baseRun = await core.getMatchRun();
+  core.getMatchRun = async () => {
+    getCount += 1;
+    return getCount > 1
+      ? {
+        ...baseRun,
+        has_result: true,
+        status: 'completed',
+        best_match_job_title: 'Planner',
+        best_match_score: 91,
+        overall_recommendation: 'Shortlist.',
+        raw_result_json: {
+          preparation: { combined_candidate_text: 'Candidate evidence text' },
+          result: {
+            candidate_summary: { name: 'Alex Example' },
+            top_matches: [{ job_id: 'job-1', job_title: 'Planner', score: 91, recommendation: 'shortlist', why_match: 'Direct planning experience.', matched_skills: [], matched_qualifications: [], transferable_experience: [], gaps: [], follow_up_questions: [], uncertainty_notes: '' }],
+            other_matches: [],
+            overall_recommendation: 'Shortlist.',
+            general_follow_up_questions: [],
+            no_strong_match_reason: '',
+          }
+        },
+      }
+      : baseRun;
+  };
+
+  const handler = createCandidateRunMatchBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      preparedRunId: 'prepared-2',
+      recruiterNotes: 'Reuse saved evidence.',
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.prepared_run.id, 'prepared-2');
+  assert.equal(payload.result.top_matches[0].job_id, 'job-1');
+});
+
 test('candidate match handler returns per-file extraction diagnostics when no file is readable', async () => {
   const originals = {
     prepareCandidateFiles: core.prepareCandidateFiles,
@@ -416,11 +746,11 @@ test('candidate match handler returns stage metadata when OpenAI times out', asy
   }];
   core.maybeStoreUploads = async () => ({ stored: false, bucket: '', warnings: [] });
   core.callOpenAIForMatch = async () => {
-    throw core.coded(504, 'OpenAI candidate matching timed out after 18000ms.', 'openai_timeout', {
+    throw core.coded(504, 'OpenAI candidate matching timed out after 60000ms.', 'openai_timeout', {
       details: {
         stage: 'openai',
         stage_label: 'Run recruiter matching',
-        timeout_ms: 18000,
+        timeout_ms: 60000,
       }
     });
   };
@@ -448,6 +778,7 @@ test('candidate match handler returns stage metadata when OpenAI times out', asy
   assert.equal(payload.code, 'openai_timeout');
   assert.equal(payload.details.stage, 'openai');
   assert.equal(payload.details.stage_label, 'Run recruiter matching');
+  assert.equal(payload.details.timeout_ms, 60000);
   assert.equal(Array.isArray(payload.details.timings), true);
 });
 
