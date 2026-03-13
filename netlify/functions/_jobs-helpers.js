@@ -337,6 +337,7 @@ function tagsToString(tags) {
 }
 
 function toJob(row = {}) {
+  row = row && typeof row === 'object' ? row : {};
   const sectionSource = row.section || row.sectionLabel;
   const sectionInfo = resolveSection(sectionSource);
   const payType = inferPayType(row);
@@ -381,6 +382,19 @@ function toJob(row = {}) {
   };
 }
 
+function isPublishedLiveJob(row = {}) {
+  const job = toJob(row);
+  return job.published === true && asString(job.status).toLowerCase() === 'live';
+}
+
+function buildPublicJobDetailPath(row = {}) {
+  const job = toJob(row);
+  if (!job.id || !isPublishedLiveJob(job)) return '';
+  const params = new URLSearchParams();
+  params.set('id', job.id);
+  return `/jobs/spec.html?${params.toString()}`;
+}
+
 function toPublicJob(row = {}) {
   const job = toJob(row);
   return {
@@ -415,6 +429,7 @@ function toPublicJob(row = {}) {
     sortOrder: job.sortOrder,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
+    publicDetailPath: buildPublicJobDetailPath(job),
   };
 }
 
@@ -517,4 +532,6 @@ module.exports = {
   findStaticJob,
   isSchemaError,
   isMissingTableError,
+  isPublishedLiveJob,
+  buildPublicJobDetailPath,
 };

@@ -3,7 +3,8 @@ const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, toPublicJob, findStaticJob, slugify, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
+const { toJob, toPublicJob, findStaticJob, slugify, isSchemaError, isMissingTableError, isPublishedLiveJob, buildPublicJobDetailPath } = require('./_jobs-helpers.js');
+const { createShareAccessToken, buildTokenizedJobDetailPath } = require('./_job-detail-tokens.js');
 
 function adjustRecordForSchema(record, err) {
   const message = (err?.message || '').toLowerCase();
@@ -59,6 +60,33 @@ function originFromEvent(event) {
   const proto = event?.headers?.['x-forwarded-proto'] || event?.headers?.['X-Forwarded-Proto'] || 'https';
   const host = event?.headers?.host || event?.headers?.Host || '';
   return `${proto}://${host}`.replace(/:\/\/\//, '://');
+}
+
+function buildFallbackShareLink({ origin, job, expiresAt }) {
+  const jobId = job?.id || '';
+  const safeOrigin = origin.replace(/\/$/, '');
+
+  if (jobId) {
+    const token = createShareAccessToken({ jobId, expiresAt });
+    if (token) {
+      return {
+        url: `${safeOrigin}${buildTokenizedJobDetailPath({ jobId, token })}`,
+        expiresAt: expiresAt || null,
+        mode: 'secure_token',
+      };
+    }
+  }
+
+  const publicDetailPath = buildPublicJobDetailPath(job);
+  if (publicDetailPath && isPublishedLiveJob(job)) {
+    return {
+      url: `${safeOrigin}${publicDetailPath}`,
+      expiresAt: null,
+      mode: 'public_detail',
+    };
+  }
+
+  return null;
 }
 
 const baseHandler = async (event, context) => {
@@ -184,28 +212,55 @@ const baseHandler = async (event, context) => {
         schemaAdjusted = true;
       }
 
-      const fallbackKey = sharedJob.id || slug;
-      const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(fallbackKey)}`;
+      const fallbackLink = buildFallbackShareLink({
+        origin,
+        job: sharedJob,
+        expiresAt: expires ? expires.toISOString() : null,
+      });
+      if (!fallbackLink) {
+        return {
+          statusCode: 503,
+          body: JSON.stringify({
+            error: 'Unable to create a secure fallback share link for this job.',
+            code: 'fallback_share_unavailable',
+          }),
+        };
+      }
       return {
         statusCode: 200,
         body: JSON.stringify({
-          slug: fallbackKey,
-          url: fallbackUrl,
-          expires_at: null,
+          slug: sharedJob.id || slug,
+          url: fallbackLink.url,
+          expires_at: fallbackLink.expiresAt,
           fallback: true,
+          fallbackMode: fallbackLink.mode,
           schema: true,
         }),
       };
     }
 
-    const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(sharedJob.id || slugify(sharedJob.title || 'role'))}`;
+    const fallbackLink = buildFallbackShareLink({
+      origin,
+      job: sharedJob,
+      expiresAt: expires ? expires.toISOString() : null,
+    });
+    if (!fallbackLink) {
+      return {
+        statusCode: 503,
+        body: JSON.stringify({
+          error: 'Unable to create a secure share link while the live jobs service is unavailable.',
+          code: 'fallback_share_unavailable',
+        }),
+      };
+    }
     return {
       statusCode: 200,
       body: JSON.stringify({
         slug: sharedJob.id || slug,
-        url: fallbackUrl,
-        expires_at: null,
+        url: fallbackLink.url,
+        expires_at: fallbackLink.expiresAt,
         fallback: true,
+        fallbackMode: fallbackLink.mode,
         reason: supabaseErr?.code || 'supabase_unavailable',
         schema: isSchemaError(supabaseErr) || undefined,
       }),

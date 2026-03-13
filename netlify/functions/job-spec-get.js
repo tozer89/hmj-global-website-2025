@@ -1,12 +1,24 @@
 // netlify/functions/job-spec-get.js
 const { getSupabase } = require('./_supabase.js');
-const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
+const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError, isPublishedLiveJob } = require('./_jobs-helpers.js');
+const { verifyShareAccessToken } = require('./_job-detail-tokens.js');
+
+function parseBody(body) {
+  if (!body) return {};
+  try {
+    return JSON.parse(body);
+  } catch (_) {
+    return {};
+  }
+}
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
-  const body = JSON.parse(event.body || '{}');
+  const body = parseBody(event.body);
   const slug = params.slug || body.slug || null;
   const jobIdParam = params.id || params.job || body.id || body.job || null;
+  const accessToken = params.token || body.token || null;
+  const hasShareAccessToken = verifyShareAccessToken(accessToken, jobIdParam);
 
   let supabase = null;
   try {
@@ -34,30 +46,41 @@ exports.handler = async (event) => {
     };
   }
 
-  async function fetchJobById(id) {
+  async function fetchJobById(id, options = {}) {
+    const allowRestrictedShare = options.allowRestrictedShare === true;
     if (!id) return null;
+    const guard = (job) => {
+      if (!job) return null;
+      if (allowRestrictedShare || isPublishedLiveJob(job)) {
+        return toPublicJob(job);
+      }
+      return null;
+    };
     if (!supabase) {
-      return findStaticJob(id);
+      return guard(findStaticJob(id));
     }
     const { data, error } = await supabase.from('jobs').select('*').eq('id', id).maybeSingle();
     if (error) {
       if (isSchemaError(error) || isMissingTableError(error, 'jobs')) {
-        return findStaticJob(id);
+        return guard(findStaticJob(id));
       }
       throw error;
     }
     if (!data) return null;
-    return toPublicJob(data);
+    return guard(data);
   }
 
   try {
     if (!slug && jobIdParam) {
-      const result = await fetchJobById(jobIdParam);
+      const result = await fetchJobById(jobIdParam, { allowRestrictedShare: hasShareAccessToken });
       if (!result) {
         const fallback = findStaticJob(jobIdParam);
-        return respondFallback(fallback);
+        const tokenFallback = hasShareAccessToken && fallback ? toPublicJob(fallback) : null;
+        return respondFallback(tokenFallback);
       }
-      if (!supabase) return respondFallback(result);
+      if (!supabase) {
+        return respondFallback(result, { publicDetail: !hasShareAccessToken });
+      }
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -67,6 +90,7 @@ exports.handler = async (event) => {
           job: result,
           expires_at: null,
           created_at: result.updatedAt || result.createdAt || null,
+          publicDetail: !hasShareAccessToken,
         }),
       };
     }
@@ -77,7 +101,8 @@ exports.handler = async (event) => {
 
     if (!supabase) {
       const fallback = findStaticJob(slug) || findStaticJob(jobIdParam);
-      return respondFallback(fallback);
+      const publicFallback = fallback && isPublishedLiveJob(fallback) ? toPublicJob(fallback) : null;
+      return respondFallback(publicFallback);
     }
 
     const nowIso = new Date().toISOString();
@@ -90,7 +115,7 @@ exports.handler = async (event) => {
 
       if (error) {
         if (isSchemaError(error) || isMissingTableError(error, 'job_specs')) {
-          const fallback = await fetchJobById(jobIdParam || slug);
+          const fallback = await fetchJobById(jobIdParam || slug, { allowRestrictedShare: hasShareAccessToken });
           if (fallback) {
             return respondFallback(fallback, { schema: true });
           }
@@ -99,7 +124,7 @@ exports.handler = async (event) => {
       }
       if (!data) {
         if (jobIdParam) {
-          const fallback = await fetchJobById(jobIdParam);
+          const fallback = await fetchJobById(jobIdParam, { allowRestrictedShare: hasShareAccessToken });
           if (fallback) {
             return {
               statusCode: 200,
@@ -116,7 +141,7 @@ exports.handler = async (event) => {
           }
         }
         const staticJob = findStaticJob(slug);
-        return respondFallback(staticJob);
+        return respondFallback(staticJob ? toPublicJob(staticJob) : null);
       }
 
       const expiresColumn = data.expires_at ?? data.expiresAt ?? null;
@@ -144,9 +169,13 @@ exports.handler = async (event) => {
       const missingTable = isMissingTableError(err, 'job_specs');
       const schemaMismatch = isSchemaError(err);
       if (!missingTable && !schemaMismatch) throw err;
-      const fallback = await fetchJobById(slug || jobIdParam);
+      const fallback = await fetchJobById(slug || jobIdParam, { allowRestrictedShare: hasShareAccessToken });
       if (!fallback) {
-        return respondFallback(findStaticJob(slug || jobIdParam), { schema: schemaMismatch || missingTable || undefined });
+        const staticFallback = findStaticJob(slug || jobIdParam);
+        const publicFallback = (staticFallback && (hasShareAccessToken || isPublishedLiveJob(staticFallback)))
+          ? toPublicJob(staticFallback)
+          : null;
+        return respondFallback(publicFallback, { schema: schemaMismatch || missingTable || undefined });
       }
       return {
         statusCode: 200,

@@ -804,7 +804,7 @@
           <img src="../images/logo.png" alt="HMJ Global logo"/>
           <span class="brand__label">
             <strong>HMJ Global</strong>
-            <span>Shareable job specification</span>
+            <span>Public role overview</span>
           </span>
         </a>
         <div class="topbar__actions">
@@ -854,7 +854,7 @@
             <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
           </div>
 
-          <p class="hero__note">HMJ Global keeps this role flow direct and professional, so candidates can move from job share page to application form with the right context attached.</p>
+          <p class="hero__note">HMJ Global keeps this role flow direct and professional, so candidates can move from the role detail page to the application form with the right context attached.</p>
         </div>
 
         <aside class="panel hero__side">
@@ -916,7 +916,7 @@
               <p id="applyPanelSummary" class="apply-panel__summary"></p>
               <ul class="apply-panel__checks">
                 <li>Your application opens with this role already attached.</li>
-                <li>HMJ receives the job reference and share context with the submission.</li>
+                <li>HMJ receives the job reference and page context with the submission.</li>
                 <li>You can still return to the live jobs list if you want to compare roles.</li>
               </ul>
               <div class="action-column">
@@ -927,7 +927,7 @@
             </section>
 
             <section class="panel system-panel">
-              <p class="section-kicker">Share details</p>
+              <p class="section-kicker">Page details</p>
               <div class="system-grid">
                 <div class="system-item">
                   <span>Share code</span>
@@ -987,6 +987,7 @@
       const payloadParam = params.get('payload');
       const slug = params.get('slug');
       const jobId = params.get('id') || params.get('job');
+      const accessToken = params.get('token');
 
       const loading = document.getElementById('loading');
       const errorBox = document.getElementById('error');
@@ -1345,6 +1346,7 @@
       }
 
       function buildAvailability(meta) {
+        if (meta.publicDetail) return 'Live role page';
         if (meta.local) return 'Local preview';
         if (meta.snapshot) return 'Snapshot preview';
         if (meta.expires_at) return `Expires ${formatDate(meta.expires_at)}`;
@@ -1353,6 +1355,7 @@
       }
 
       function buildTopBadge(meta) {
+        if (meta.publicDetail) return 'Live role detail';
         if (meta.local) return 'Local preview';
         if (meta.snapshot) return 'Snapshot preview';
         if (meta.fallback) return meta.schema ? 'Schema fallback' : 'Static fallback';
@@ -1360,13 +1363,14 @@
       }
 
       function buildApplyUrl(job, meta, details) {
+        const source = meta.publicDetail ? 'job-public-detail' : (meta.local ? 'job-share-local' : 'job-share');
         if (applicationContextApi?.buildApplicationUrl) {
           return applicationContextApi.buildApplicationUrl({
             origin: location.origin,
             currentUrl: location.href,
             rawApplyUrl: job.applyUrl || job.apply_url || '',
             shareCode: meta.slug || localSlug || '',
-            source: meta.local ? 'job-share-local' : 'job-share',
+            source,
             job: {
               id: meta.jobId || job.id,
               title: job.title,
@@ -1398,7 +1402,7 @@
         if (meta.slug || localSlug) {
           fallback.searchParams.set('job_share_code', meta.slug || localSlug);
         }
-        fallback.searchParams.set('job_source', meta.local ? 'job-share-local' : 'job-share');
+        fallback.searchParams.set('job_source', source);
         fallback.searchParams.set('job_spec_url', location.href);
         return `${fallback.pathname}${fallback.search}`;
       }
@@ -1536,6 +1540,7 @@
         reqSection.style.display = reqItems.length ? '' : 'none';
 
         const metaParts = [];
+        if (meta.publicDetail) metaParts.push('Public role page');
         if (meta.snapshot) metaParts.push('Snapshot preview');
         if (meta.local) metaParts.push('Local preview');
         if (meta.slug && !meta.local) metaParts.push(`Share code ${meta.slug}`);
@@ -1626,7 +1631,7 @@
       }
 
       if (!slug && !jobId) {
-        showError('Missing share link. Please contact HMJ Global for a fresh link.');
+        showError('Missing role link. Please return to the HMJ jobs board and open the role again.');
         return;
       }
 
@@ -1634,6 +1639,7 @@
         const qs = new URLSearchParams();
         if (slug) qs.set('slug', slug);
         if (jobId) qs.set('id', jobId);
+        if (accessToken) qs.set('token', accessToken);
         const res = await fetch(`/.netlify/functions/job-spec-get?${qs.toString()}`, { cache: 'no-store' });
         if (!res.ok) {
           const msg = await res.json().catch(() => ({}));

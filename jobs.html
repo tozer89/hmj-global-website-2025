@@ -90,6 +90,12 @@
     .job{background:linear-gradient(180deg,rgba(58,102,179,.06),transparent 55%),#fff; border:1px solid var(--cardBorder); border-radius:18px; padding:18px 18px 20px; box-shadow:0 8px 22px rgba(0,0,0,.08); transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease, outline .12s ease; outline:0 solid transparent;}
     .job:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.14);border-color:rgba(58,102,179,.35)}
     .job:focus-within{outline:3px solid rgba(58,102,179,.25)}
+    .job--has-detail{border-color:rgba(58,102,179,.22)}
+    .job-card-link{display:block;color:inherit;text-decoration:none;border-radius:14px;padding:4px;margin:-4px -4px 8px;transition:background .2s ease,box-shadow .2s ease}
+    .job-card-link--static{cursor:default}
+    .job--has-detail .job-card-link{cursor:pointer}
+    .job--has-detail .job-card-link:hover{background:rgba(58,102,179,.06);box-shadow:inset 0 0 0 1px rgba(58,102,179,.12)}
+    .job--has-detail .job-card-link:focus-visible{outline:3px solid rgba(58,102,179,.22);outline-offset:2px;background:rgba(58,102,179,.08)}
     .job h3{margin:.1rem 0 .3rem;color:var(--ink)}
     .job-topline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
     .status{display:inline-block;padding:7px 12px;font-size:.82rem;border-radius:999px;font-weight:800;margin-bottom:0;border:1px solid rgba(0,0,0,.08)}
@@ -104,6 +110,8 @@
     .job-meta-pill strong{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
     .job-tag-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
     .job-row-label{display:inline-flex;align-items:center;padding:6px 0;font-size:.75rem;font-weight:800;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+    .job-detail-cue{display:inline-flex;align-items:center;gap:8px;padding:6px 0 2px;color:#2f4ea2;font-size:.84rem;font-weight:900;letter-spacing:.01em}
+    .job-detail-cue::after{content:'↗';font-size:.96rem}
     .tag{display:inline-block;padding:6px 10px;font-size:.75rem;border-radius:999px;margin-left:0;background:rgba(58,102,179,.12);color:#3A66B3;font-weight:800}
     .tag-benefit{background:rgba(31,126,57,.12);color:#1f7e39}
     .job .actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -115,6 +123,7 @@
     .job-primary-actions .btn-primary:hover,
     .job-details .btn-primary:hover{background:#2f579a;color:#fff}
     .job-secondary-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+    .job-secondary-actions .job-details-link{text-decoration:none;text-align:center}
     .btn-tertiary{background:#f3f6ff;color:var(--ink);border:1px solid rgba(58,102,179,.25);padding:10px 16px;border-radius:12px;font-weight:800;cursor:pointer;transition:background .2s ease,transform .1s ease,box-shadow .2s ease}
     .btn-tertiary:hover{background:#e9f0ff;transform:translateY(-1px);box-shadow:0 6px 14px rgba(58,102,179,.15)}
     .btn-ghost{background:#fff;color:var(--accent);border:1px dashed rgba(58,102,179,.35)}
@@ -152,17 +161,6 @@
     .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0f1322;color:#eaf0ff;border:1px solid rgba(95,134,255,.5);padding:10px 14px;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:9999}
     .toast.show{opacity:1}
 
-    /* ===== CTA bottom ===== */
-    .jobs-cta{margin:26px auto 60px; max-width:1100px; padding:24px 20px;
-      background:radial-gradient(600px 200px at 10% -30%, rgba(58,102,179,.18), transparent 60%), radial-gradient(600px 200px at 90% 130%, rgba(58,102,179,.18), transparent 60%), #0f1322;
-      color:#eaf0ff; border:1px solid rgba(255,255,255,.12); border-radius:16px; box-shadow:0 18px 40px rgba(0,0,0,.35);}
-    .jobs-cta h3{margin:0 0 8px}
-    .jobs-cta p{margin:0 0 12px;color:#cfd7ff}
-    .jobs-cta .cta-actions{display:flex;gap:10px;flex-wrap:wrap}
-    .jobs-cta a{display:inline-block;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.22);text-decoration:none;color:#fff;font-weight:800}
-    .jobs-cta a.btn-light{background:#1d2747}
-    .jobs-cta a.btn-outline:hover{background:rgba(255,255,255,.08)}
-
     /* ===== Scroll to top ===== */
     .scroll-top{position:fixed; right:18px; bottom:18px; width:44px; height:44px; border-radius:12px; background:#0f1322; color:#eaf0ff; border:1px solid rgba(95,134,255,.5); display:grid; place-items:center; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease, box-shadow .2s ease, border-color .2s ease; z-index:999; box-shadow:0 0 0 rgba(95,134,255,0)}
     .scroll-top.show{opacity:1; pointer-events:auto}
@@ -192,7 +190,6 @@
       .job-secondary-actions button,
       .job-secondary-actions a,
       .empty-actions .btn{width:100%}
-      .jobs-cta{margin:20px 12px 52px;padding:22px 18px}
       .jobs-alert{margin:14px 12px 0}
     }
   </style>
@@ -329,18 +326,6 @@
     <div id="noResults" class="no-results no-results-card" style="display:none"></div>
   </section>
 
-  <!-- ===== CTA block ===== -->
-  <section class="jobs-cta reveal">
-    <div class="wrap">
-      <h3>Didn’t see a role that fits?</h3>
-      <p>We hire for new data centre, pharma and power projects weekly. Register your profile and we’ll notify you first.</p>
-      <div class="cta-actions">
-        <a class="btn-light" href="candidates.html#candForm">Send CV / Register</a>
-        <a class="btn-outline" href="contact.html">Contact Us</a>
-      </div>
-    </div>
-  </section>
-
   <!-- ===== Scroll to Top ===== -->
   <button class="scroll-top" id="scrollTopBtn" aria-label="Scroll to top" title="Back to top">↑</button>
 
@@ -448,12 +433,6 @@
         if (shareBtn && shareBtn.dataset.bound !== '1') {
           shareBtn.dataset.bound = '1';
           shareBtn.addEventListener('click', () => handleShare(job));
-        }
-
-        const detailsBtn = job.querySelector('[data-toggle-details]');
-        if (detailsBtn && detailsBtn.dataset.bound !== '1') {
-          detailsBtn.dataset.bound = '1';
-          detailsBtn.addEventListener('click', () => toggleDetails(detailsBtn));
         }
 
         job.querySelectorAll('a[href^="contact.html"]').forEach((link) => {
@@ -778,6 +757,7 @@
       out.hourlyMin = toAmount(out.hourlyMin ?? out.hourly_min);
       out.hourlyMax = toAmount(out.hourlyMax ?? out.hourly_max);
       out.applyUrl = (out.applyUrl || out.apply_url || '').toString().trim();
+      out.publicDetailPath = (out.publicDetailPath || '').toString().trim();
       out.keywords = out.keywords || out.tags.join(', ');
       out.payText = out.payText || buildPayText(out);
       return out;
@@ -961,12 +941,12 @@
       const statusClass = job.status === 'closed' ? 'closed' : job.status === 'interviewing' ? 'interviewing' : 'live';
       const applyUrl = resolveApplyUrl(job);
       const contactUrl = resolveContactUrl(job);
+      const publicDetailUrl = (job.publicDetailPath || '').trim();
+      const hasPublicDetails = !!publicDetailUrl;
       const tagsList = Array.isArray(job.tags) ? job.tags : [];
       const tags = tagsList.length ? tagsList.slice(0, 4).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('') : '';
       const benefitsList = Array.isArray(job.benefits) ? job.benefits : [];
       const benefits = benefitsList.length ? benefitsList.map((benefit) => `<span class="tag tag-benefit">${escapeHtml(benefit)}</span>`).join('') : '';
-      const respList = (job.responsibilities || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-      const reqList = (job.requirements || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
       const summary = truncateText(job.overview || `${job.title} across ${job.locationText}.`, 170);
       const payText = job.payText || buildPayText(job);
       if (!job.anchorId) {
@@ -974,10 +954,19 @@
       }
       const anchorId = job.anchorId;
       const dataId = job.id || job.slug || job.slug_id || job.slugId || anchorId;
+      const detailLabel = `Open ${job.title || 'this role'} details in a new tab`;
+      const leadTag = hasPublicDetails ? 'a' : 'div';
+      const leadAttrs = hasPublicDetails
+        ? ` href="${escapeAttr(publicDetailUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(detailLabel)}"`
+        : '';
+      const detailAction = hasPublicDetails
+        ? `<a class="btn-tertiary job-details-link" href="${escapeAttr(publicDetailUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(detailLabel)}">Show details</a>`
+        : '';
       return `
-      <div id="${anchorId}" class="job reveal"
+      <div id="${anchorId}" class="job reveal${hasPublicDetails ? ' job--has-detail' : ''}"
            data-id="${escapeAttr(dataId)}"
            data-anchor="${escapeAttr(anchorId)}"
+           data-detail-url="${escapeAttr(publicDetailUrl)}"
            data-status="${escapeAttr(job.status)}"
            data-location="${escapeAttr(job.locationCode)}"
            data-location-label="${escapeAttr(job.locationText)}"
@@ -987,6 +976,7 @@
            data-title="${escapeAttr(job.title)}"
            data-tags="${escapeAttr(tagsList.map((t) => t.toLowerCase()).join(','))}"
            data-keywords="${escapeAttr(`${job.title} ${job.locationText} ${job.discipline} ${job.customer || ''} ${payText} ${(job.keywords || '')} ${benefitsList.join(' ')}`.toLowerCase())}">
+        <${leadTag} class="job-card-link${hasPublicDetails ? '' : ' job-card-link--static'}"${leadAttrs}>
         <div class="job-topline">
           <span class="status ${statusClass}">${getStatusLabel(job.status)}</span>
           <span class="job-current">${getStatusCue(job.status)}</span>
@@ -1002,27 +992,16 @@
         </div>
         ${tags ? `<div class="job-tag-row">${tags}</div>` : ''}
         ${benefits ? `<div class="job-tag-row"><span class="job-row-label">Benefits</span>${benefits}</div>` : ''}
+        ${hasPublicDetails ? '<span class="job-detail-cue">Show full role brief</span>' : ''}
+        </${leadTag}>
         <div class="job-primary-actions">
           <a class="btn btn-primary" href="${escapeAttr(applyUrl)}">${job.status === 'closed' ? 'Register interest' : 'Apply now'}</a>
           <a class="btn-tertiary btn-ghost" href="${escapeAttr(contactUrl)}">Speak to HMJ</a>
         </div>
         <div class="actions job-secondary-actions">
-          <button class="btn-tertiary" type="button" data-toggle-details aria-expanded="false" aria-controls="${escapeAttr(`${anchorId}-details`)}">View details</button>
+          ${detailAction}
           <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
           <button class="share-btn" type="button" data-share>Share</button>
-        </div>
-        <div id="${escapeAttr(`${anchorId}-details`)}" class="job-details">
-          ${job.overview ? `<h4>Overview</h4><p>${escapeHtml(job.overview)}</p>` : ''}
-          ${job.customer ? `<h4>Customer</h4><p>${escapeHtml(job.customer)}</p>` : ''}
-          ${payText ? `<h4>Pay</h4><p>${escapeHtml(payText)}</p>` : ''}
-          ${benefits ? `<h4>Benefits</h4><div class="job-tag-row">${benefits}</div>` : ''}
-          ${respList ? `<h4>Key Responsibilities</h4><ul>${respList}</ul>` : ''}
-          ${reqList ? `<h4>Requirements</h4><ul>${reqList}</ul>` : ''}
-          <p class="job-trust">Need more context on rotation, scope or team fit? HMJ can talk you through the role before you apply.</p>
-          <div class="apply-row">
-            <a class="btn btn-primary" href="${escapeAttr(applyUrl)}">${job.status === 'closed' ? 'Register interest' : 'Apply for this role'}</a>
-            <a class="btn-tertiary btn-ghost" href="${escapeAttr(contactUrl)}">Ask about this role</a>
-          </div>
         </div>
       </div>`;
     }
@@ -1461,9 +1440,10 @@
     function handleShare(job){
       const title=job.dataset.title||job.querySelector('h3')?.textContent?.trim()||'HMJ-Global role';
       const loc=job.dataset.locationLabel||'';
+      const detailUrl=job.dataset.detailUrl ? new URL(job.dataset.detailUrl, location.origin).href : '';
       const anchor=job.dataset.anchor||job.id||job.dataset.id||'';
-      const url=`${location.origin}${location.pathname}${location.search}${anchor ? `#${anchor}` : ''}`;
-      const text=`${title} at HMJ-Global\n${loc ? 'Location: '+loc+'\n' : ''}Apply or learn more: ${url}`;
+      const url=detailUrl||`${location.origin}${location.pathname}${location.search}${anchor ? `#${anchor}` : ''}`;
+      const text=`${title} at HMJ-Global\n${loc ? 'Location: '+loc+'\n' : ''}${detailUrl ? 'View full role details' : 'Apply or learn more'}: ${url}`;
       if(navigator.share){ navigator.share({title,text,url}).catch(()=>{}); }
       else{
         const full=`${title}\n${text}\n— HMJ-Global • https://www.hmj-global.com`;
@@ -1471,17 +1451,6 @@
         else{ const ta=document.createElement('textarea'); ta.value=full; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); showToast(); }catch(e){ showToast('Copy failed'); } document.body.removeChild(ta); }
       }
     }
-    /* ---------- Expandable Details ---------- */
-    function toggleDetails(btn){
-      const detailsId = btn.getAttribute('aria-controls') || '';
-      const details = detailsId ? document.getElementById(detailsId) : btn.parentElement.nextElementSibling;
-      if (!details) return;
-      details.classList.toggle('open');
-      const open = details.classList.contains('open');
-      btn.textContent=open?'Hide details':'View details';
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-    window.toggleDetails = toggleDetails;
   })();
   </script>
 <script>

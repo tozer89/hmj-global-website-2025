@@ -1767,10 +1767,24 @@
           });
           const fallback = !!res?.fallback;
           const schemaMismatch = !!res?.schema;
+          const fallbackMode = res?.fallbackMode || '';
           if (fallback) {
-            shareMeta.textContent = schemaMismatch
-              ? 'Schema mismatch detected — serving static share link'
-              : 'Direct job link · No expiry (static fallback)';
+            const fallbackParts = [];
+            if (fallbackMode === 'secure_token') {
+              fallbackParts.push(schemaMismatch ? 'Schema fallback' : 'Secure fallback share link');
+              if (res?.expires_at) {
+                fallbackParts.push(`Expires ${formatShareDate(res.expires_at)}`);
+              }
+            } else if (fallbackMode === 'public_detail') {
+              fallbackParts.push('Public detail link');
+              fallbackParts.push('Live published role only');
+            } else {
+              fallbackParts.push(schemaMismatch ? 'Schema fallback link' : 'Direct job link');
+              if (!res?.expires_at) {
+                fallbackParts.push('No expiry');
+              }
+            }
+            shareMeta.textContent = fallbackParts.join(' · ');
           } else {
             shareMeta.textContent = `Slug ${res.slug} · Expires ${res.expires_at || 'never'}`;
           }
@@ -1783,12 +1797,25 @@
           if (btnRefreshShare) btnRefreshShare.style.display = 'none';
           toast(
             fallback
-              ? (schemaMismatch ? 'Share link ready (schema fallback)' : 'Share link created (static fallback)')
+              ? fallbackMode === 'secure_token'
+                ? (schemaMismatch ? 'Share link ready (secure schema fallback)' : 'Share link created (secure fallback)')
+                : fallbackMode === 'public_detail'
+                  ? 'Public detail link ready'
+                  : (schemaMismatch ? 'Share link ready (schema fallback)' : 'Share link created (static fallback)')
               : 'Share link created',
             'ok',
             2000
           );
-          setLastAction(fallback ? 'Fallback share link ready' : 'Live share link created', fallback ? 'warn' : 'ok');
+          setLastAction(
+            fallback
+              ? fallbackMode === 'secure_token'
+                ? 'Secure fallback share link ready'
+                : fallbackMode === 'public_detail'
+                  ? 'Public detail link ready'
+                  : 'Fallback share link ready'
+              : 'Live share link created',
+            fallback ? 'warn' : 'ok'
+          );
         } catch (e) {
           setLastAction('Share link failed', 'error');
           toast('Share failed: ' + (e.message || e), 'error', 4200);

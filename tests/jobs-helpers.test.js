@@ -13,6 +13,8 @@ const {
   resolveSection,
   loadStaticJobs,
   isMissingTableError,
+  isPublishedLiveJob,
+  buildPublicJobDetailPath,
 } = require('../netlify/functions/_jobs-helpers.js');
 
 test('toJob normalises database row fields and derives tags/section meta', () => {
@@ -131,6 +133,8 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
   const job = toPublicJob({
     id: 'role-3',
     title: 'Planner',
+    status: 'live',
+    published: true,
     client_name: 'Internal Client',
     customer: 'Hyperscale data centre client',
     benefits: ['Accommodation'],
@@ -145,6 +149,7 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
   assert.deepEqual(job.benefits, ['Accommodation']);
   assert.equal(job.payType, 'hourly_range');
   assert.equal(job.payText, '£28 - £35 per hour');
+  assert.equal(job.publicDetailPath, '/jobs/spec.html?id=role-3');
 });
 
 test('cleanArray supports newline, comma, and bullet-separated strings', () => {
@@ -161,6 +166,14 @@ test('slugify and resolveSection provide stable keys', () => {
   const custom = resolveSection('Critical Infrastructure');
   assert.equal(custom.label, 'Critical Infrastructure');
   assert.equal(custom.key, 'critical-infrastructure');
+});
+
+test('published live helper only exposes stable public detail paths for live jobs', () => {
+  assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'live', published: true }), true);
+  assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'interviewing', published: true }), false);
+  assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'live', published: false }), false);
+  assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'live', published: true }), '/jobs/spec.html?id=role-1');
+  assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'closed', published: true }), '');
 });
 
 test('buildPayText handles competitive and salary range formats', () => {
