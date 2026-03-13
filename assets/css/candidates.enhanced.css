@@ -43,7 +43,9 @@
 @media (min-width: 992px) {
   #previewSection .c-preview {
     position: sticky;
-    top: 96px;
+    top: 112px;
+    max-height: calc(100vh - 128px);
+    overflow: auto;
   }
 }
 
@@ -364,12 +366,12 @@
 }
 
 .c-jobs {
-  padding: 32px 20px;
-  background: #fff;
+  padding: clamp(44px, 7vw, 72px) 20px;
+  background: transparent;
 }
 
 .c-jobs__wrap {
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -384,10 +386,17 @@
 
 .c-jobs__list {
   display: grid;
-  gap: 16px;
+  gap: 18px;
+  align-items: stretch;
 }
 
 @media (min-width: 768px) {
+  .c-jobs__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
   .c-jobs__list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -395,13 +404,14 @@
 
 .c-jobs__card {
   border: 1px solid rgba(15, 27, 63, 0.12);
-  border-radius: var(--radius-lg);
-  padding: 18px;
+  border-radius: 24px;
+  padding: 20px;
   background: linear-gradient(180deg, rgba(63, 102, 199, 0.08), transparent 65%), #fff;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 160px;
+  box-shadow: var(--shadow);
 }
 
 .c-jobs__card h3 {

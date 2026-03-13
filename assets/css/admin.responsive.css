@@ -1,9 +1,19 @@
+:root {
+  --hmj-admin-shell-max: 1420px;
+  --hmj-admin-panel-radius: 22px;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   overflow-x: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(63, 102, 199, 0.07), transparent 30%),
+    linear-gradient(180deg, rgba(63, 102, 199, 0.03), transparent 24%),
+    var(--bg, transparent);
+  color: var(--ink, inherit);
 }
 
 img,
@@ -80,6 +90,108 @@ main,
 .drawer,
 .editor {
   min-width: 0;
+}
+
+.wrap,
+main {
+  width: min(100%, calc(100% - 40px));
+  max-width: var(--hmj-admin-shell-max);
+  margin-inline: auto;
+}
+
+.top,
+header {
+  backdrop-filter: blur(14px);
+}
+
+.panel,
+.card,
+.summary-card,
+.metric,
+.metric-card,
+.notice-card,
+.hero-card,
+.control-card,
+.warning-card,
+.status-card,
+.match-card,
+.table-card,
+.status-shell {
+  border-radius: var(--hmj-admin-panel-radius);
+}
+
+.btn {
+  min-height: 42px;
+  border-radius: 14px;
+}
+
+.btn.small,
+.btn.tiny {
+  min-height: 38px;
+  border-radius: 12px;
+}
+
+input,
+select,
+textarea {
+  border-radius: 14px;
+}
+
+.row,
+.bar,
+.toolbar,
+.filters,
+.filters-row,
+.section-head,
+.summary-head,
+.status-row,
+.hero-main,
+.hero-actions,
+.toggle-line,
+.range-controls,
+.actions,
+.progress-meta,
+.narrative-head,
+.history-top,
+.note-card header,
+.drawer-head,
+.drawer-foot,
+.editor__head,
+.editor__foot,
+.notice-shell__head,
+.warning-actions,
+.small-btns {
+  column-gap: 12px;
+  row-gap: 10px;
+}
+
+.hero,
+.workspace,
+.grid-main,
+.layout,
+.summary-grid,
+.summary-splits,
+.results-summary-strip,
+.info-strip,
+.metric-grid,
+.notice-grid,
+.board,
+.table-card,
+.form-grid,
+.grid,
+.control-grid,
+.intake-layout,
+.result-grid,
+.match-grid,
+.evidence-grid,
+.profile {
+  gap: clamp(14px, 2vw, 20px);
+}
+
+.sidebar,
+.qv,
+.brief-sidebar {
+  align-self: start;
 }
 
 input,
@@ -165,6 +277,51 @@ button {
   }
 }
 
+@media (max-width: 1280px) {
+  .workspace,
+  .layout,
+  .grid-main,
+  .hero,
+  .toggle-panel,
+  .image-panel,
+  .intake-layout,
+  .control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar,
+  .qv,
+  .brief-sidebar {
+    position: static;
+    top: auto;
+  }
+
+  .status-detail,
+  .hero-meta,
+  .results-summary-strip,
+  .info-strip,
+  .metric-grid,
+  .summary-splits,
+  .two-step-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .action-cluster {
+    justify-items: stretch;
+  }
+
+  .action-cluster .btn,
+  .control-note {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .control-note {
+    max-width: none;
+  }
+}
+
 @media (max-width: 1180px) {
   .workspace,
   .layout,
@@ -236,6 +393,11 @@ button {
     padding-right: 14px;
   }
 
+  .wrap,
+  main {
+    width: min(100%, calc(100% - 28px));
+  }
+
   .form-grid,
   .grid,
   .hero-meta,
@@ -254,6 +416,11 @@ button {
   .notice-card,
   .file-card,
   .match-head {
+    grid-template-columns: 1fr;
+  }
+
+  .status-detail,
+  .two-step-grid {
     grid-template-columns: 1fr;
   }
 
