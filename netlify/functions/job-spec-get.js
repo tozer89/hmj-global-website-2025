@@ -1,6 +1,6 @@
 // netlify/functions/job-spec-get.js
 const { getSupabase } = require('./_supabase.js');
-const { toJob, findStaticJob, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
+const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
@@ -47,7 +47,7 @@ exports.handler = async (event) => {
       throw error;
     }
     if (!data) return null;
-    return toJob(data);
+    return toPublicJob(data);
   }
 
   try {
@@ -125,7 +125,7 @@ exports.handler = async (event) => {
       }
 
       const storedPayload = data.payload ?? data.job_payload ?? data.job ?? null;
-      const job = storedPayload ? toJob(storedPayload) : null;
+      const job = storedPayload ? toPublicJob(storedPayload) : null;
       const expiresAt = expiresColumn;
       const jobId = data.job_id ?? data.job ?? data.jobId ?? (job ? job.id : null);
       const title = data.title ?? job?.title ?? jobId ?? slug;

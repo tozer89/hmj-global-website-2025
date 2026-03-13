@@ -1,6 +1,6 @@
 // netlify/functions/jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
-const { toJob, isSchemaError } = require('./_jobs-helpers.js');
+const { toPublicJob, isSchemaError } = require('./_jobs-helpers.js');
 
 const JOB_SELECT = '*';
 
@@ -51,7 +51,7 @@ exports.handler = async (event) => {
     if (error) throw error;
 
     const jobs = Array.isArray(data)
-      ? data.map(toJob).filter((job) => job && job.published !== false)
+      ? data.map(toPublicJob).filter((job) => job && job.published !== false)
       : [];
     return {
       statusCode: 200,

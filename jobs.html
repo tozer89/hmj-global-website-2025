@@ -98,11 +98,14 @@
     .status.closed{background:rgba(220,53,69,.14);color:var(--stop);border-color:rgba(220,53,69,.38)}
     .job-current{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;background:#f3f6ff;border:1px solid rgba(58,102,179,.22);color:#31446f;font-size:.8rem;font-weight:800}
     .job-summary{margin:0 0 14px;color:#44526c;font-weight:600}
-    .job-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
+    .job-customer{margin:0 0 14px;color:#31446f;font-weight:700}
+    .job-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 14px}
     .job-meta-pill{display:grid;gap:3px;padding:11px 12px;border-radius:14px;background:#f8faff;border:1px solid rgba(58,102,179,.12);color:var(--ink);font-weight:700}
     .job-meta-pill strong{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
     .job-tag-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+    .job-row-label{display:inline-flex;align-items:center;padding:6px 0;font-size:.75rem;font-weight:800;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
     .tag{display:inline-block;padding:6px 10px;font-size:.75rem;border-radius:999px;margin-left:0;background:rgba(58,102,179,.12);color:#3A66B3;font-weight:800}
+    .tag-benefit{background:rgba(31,126,57,.12);color:#1f7e39}
     .job .actions{display:flex;gap:8px;flex-wrap:wrap}
     .job-primary-actions{margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
     .job-primary-actions .btn,
@@ -648,6 +651,102 @@
       if (activeCountEl) activeCountEl.textContent = '0';
     }
 
+    function toAmount(value) {
+      if (value === null || value === undefined || value === '') return null;
+      const parsed = Number(String(value).replace(/,/g, '').trim());
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function normaliseCurrency(value, fallback = '') {
+      const raw = (value || '').toString().trim().toUpperCase();
+      if (!raw) return fallback;
+      if (raw === '£') return 'GBP';
+      if (raw === '€') return 'EUR';
+      if (raw === '$') return 'USD';
+      return raw;
+    }
+
+    function normalisePayType(value) {
+      const raw = (value || '').toString().trim().toLowerCase();
+      if (!raw || raw === 'unspecified' || raw === 'not_specified') return '';
+      return ['day_rate', 'salary_range', 'hourly_range', 'competitive', 'negotiable'].includes(raw) ? raw : '';
+    }
+
+    function inferPayType(job = {}) {
+      const explicit = normalisePayType(job.payType || job.pay_type);
+      if (explicit) return explicit;
+      if (toAmount(job.dayRateMin ?? job.day_rate_min) !== null || toAmount(job.dayRateMax ?? job.day_rate_max) !== null) {
+        return 'day_rate';
+      }
+      if (toAmount(job.salaryMin ?? job.salary_min) !== null || toAmount(job.salaryMax ?? job.salary_max) !== null) {
+        return 'salary_range';
+      }
+      if (toAmount(job.hourlyMin ?? job.hourly_min) !== null || toAmount(job.hourlyMax ?? job.hourly_max) !== null) {
+        return 'hourly_range';
+      }
+      return '';
+    }
+
+    function formatMoney(value, currency, options = {}) {
+      const amount = toAmount(value);
+      if (amount === null) return '';
+      const currencyCode = normaliseCurrency(currency, 'GBP');
+      const minFractionDigits = Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0;
+      const maxFractionDigits = Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0;
+      try {
+        return new Intl.NumberFormat('en-GB', {
+          style: 'currency',
+          currency: currencyCode,
+          minimumFractionDigits: minFractionDigits,
+          maximumFractionDigits: maxFractionDigits,
+        }).format(amount);
+      } catch (err) {
+        return `${currencyCode} ${amount.toLocaleString('en-GB', {
+          minimumFractionDigits: minFractionDigits,
+          maximumFractionDigits: maxFractionDigits,
+        })}`;
+      }
+    }
+
+    function formatPayRange(min, max, currency, suffix, options = {}) {
+      const lower = toAmount(min);
+      const upper = toAmount(max);
+      if (lower === null && upper === null) return '';
+      const moneyOptions = {
+        minFractionDigits: Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0,
+        maxFractionDigits: Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0,
+      };
+      const lowerText = lower === null ? '' : formatMoney(lower, currency, moneyOptions);
+      const upperText = upper === null ? '' : formatMoney(upper, currency, moneyOptions);
+      if (lower !== null && upper !== null) {
+        if (lower === upper) return `${lowerText} ${suffix}`.trim();
+        return `${lowerText} - ${upperText} ${suffix}`.trim();
+      }
+      if (lower !== null) return `From ${lowerText} ${suffix}`.trim();
+      return `Up to ${upperText} ${suffix}`.trim();
+    }
+
+    function buildPayText(job = {}) {
+      const payType = inferPayType(job);
+      const currency = normaliseCurrency(job.currency, 'GBP');
+      if (payType === 'day_rate') {
+        return formatPayRange(job.dayRateMin ?? job.day_rate_min, job.dayRateMax ?? job.day_rate_max, currency, 'per day', {
+          maxFractionDigits: 2,
+        });
+      }
+      if (payType === 'salary_range') {
+        return formatPayRange(job.salaryMin ?? job.salary_min, job.salaryMax ?? job.salary_max, currency, 'per year');
+      }
+      if (payType === 'hourly_range') {
+        return formatPayRange(job.hourlyMin ?? job.hourly_min, job.hourlyMax ?? job.hourly_max, currency, 'per hour', {
+          maxFractionDigits: 2,
+        });
+      }
+      if (payType === 'competitive') return 'Competitive';
+      if (payType === 'negotiable') return 'Negotiable';
+      return '';
+    }
+
     function normaliseJob(job = {}) {
       const out = { ...job };
       out.status = (out.status || 'live').toLowerCase();
@@ -663,8 +762,24 @@
         out.tags = raw.map((t) => t.trim()).filter(Boolean);
       }
       out.tags = Array.isArray(out.tags) ? out.tags.map((t) => t.trim()).filter(Boolean) : [];
+      out.benefits = Array.isArray(out.benefits)
+        ? out.benefits.map((item) => String(item || '').trim()).filter(Boolean)
+        : String(out.benefits || '')
+          .split(/\r?\n|\u2022|,/)
+          .map((item) => item.replace(/^[-*•\s]+/, '').trim())
+          .filter(Boolean);
+      out.customer = (out.customer || '').toString().trim();
+      out.payType = inferPayType(out);
+      out.currency = normaliseCurrency(out.currency);
+      out.dayRateMin = toAmount(out.dayRateMin ?? out.day_rate_min);
+      out.dayRateMax = toAmount(out.dayRateMax ?? out.day_rate_max);
+      out.salaryMin = toAmount(out.salaryMin ?? out.salary_min);
+      out.salaryMax = toAmount(out.salaryMax ?? out.salary_max);
+      out.hourlyMin = toAmount(out.hourlyMin ?? out.hourly_min);
+      out.hourlyMax = toAmount(out.hourlyMax ?? out.hourly_max);
       out.applyUrl = (out.applyUrl || out.apply_url || '').toString().trim();
       out.keywords = out.keywords || out.tags.join(', ');
+      out.payText = out.payText || buildPayText(out);
       return out;
     }
 
@@ -848,9 +963,12 @@
       const contactUrl = resolveContactUrl(job);
       const tagsList = Array.isArray(job.tags) ? job.tags : [];
       const tags = tagsList.length ? tagsList.slice(0, 4).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('') : '';
+      const benefitsList = Array.isArray(job.benefits) ? job.benefits : [];
+      const benefits = benefitsList.length ? benefitsList.map((benefit) => `<span class="tag tag-benefit">${escapeHtml(benefit)}</span>`).join('') : '';
       const respList = (job.responsibilities || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
       const reqList = (job.requirements || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
       const summary = truncateText(job.overview || `${job.title} across ${job.locationText}.`, 170);
+      const payText = job.payText || buildPayText(job);
       if (!job.anchorId) {
         job.anchorId = createAnchorId(job, 0, fallbackAnchorIds);
       }
@@ -868,19 +986,22 @@
            data-section="${escapeAttr(job.sectionKey)}"
            data-title="${escapeAttr(job.title)}"
            data-tags="${escapeAttr(tagsList.map((t) => t.toLowerCase()).join(','))}"
-           data-keywords="${escapeAttr(`${job.title} ${job.locationText} ${job.discipline} ${job.keywords || ''}`.toLowerCase())}">
+           data-keywords="${escapeAttr(`${job.title} ${job.locationText} ${job.discipline} ${job.customer || ''} ${payText} ${(job.keywords || '')} ${benefitsList.join(' ')}`.toLowerCase())}">
         <div class="job-topline">
           <span class="status ${statusClass}">${getStatusLabel(job.status)}</span>
           <span class="job-current">${getStatusCue(job.status)}</span>
         </div>
         <h3>${escapeHtml(job.title)}</h3>
         <p class="job-summary">${escapeHtml(summary)}</p>
+        ${job.customer ? `<p class="job-customer"><strong>Customer:</strong> ${escapeHtml(job.customer)}</p>` : ''}
         <div class="job-meta">
           <div class="job-meta-pill"><strong>Location</strong><span>${escapeHtml(job.locationText)}</span></div>
           <div class="job-meta-pill"><strong>Employment</strong><span>${escapeHtml(toTitle(job.type))}</span></div>
           <div class="job-meta-pill"><strong>Discipline</strong><span>${escapeHtml(job.discipline)}</span></div>
+          ${payText ? `<div class="job-meta-pill"><strong>Pay</strong><span>${escapeHtml(payText)}</span></div>` : ''}
         </div>
         ${tags ? `<div class="job-tag-row">${tags}</div>` : ''}
+        ${benefits ? `<div class="job-tag-row"><span class="job-row-label">Benefits</span>${benefits}</div>` : ''}
         <div class="job-primary-actions">
           <a class="btn btn-primary" href="${escapeAttr(applyUrl)}">${job.status === 'closed' ? 'Register interest' : 'Apply now'}</a>
           <a class="btn-tertiary btn-ghost" href="${escapeAttr(contactUrl)}">Speak to HMJ</a>
@@ -892,6 +1013,9 @@
         </div>
         <div id="${escapeAttr(`${anchorId}-details`)}" class="job-details">
           ${job.overview ? `<h4>Overview</h4><p>${escapeHtml(job.overview)}</p>` : ''}
+          ${job.customer ? `<h4>Customer</h4><p>${escapeHtml(job.customer)}</p>` : ''}
+          ${payText ? `<h4>Pay</h4><p>${escapeHtml(payText)}</p>` : ''}
+          ${benefits ? `<h4>Benefits</h4><div class="job-tag-row">${benefits}</div>` : ''}
           ${respList ? `<h4>Key Responsibilities</h4><ul>${respList}</ul>` : ''}
           ${reqList ? `<h4>Requirements</h4><ul>${reqList}</ul>` : ''}
           <p class="job-trust">Need more context on rotation, scope or team fit? HMJ can talk you through the role before you apply.</p>

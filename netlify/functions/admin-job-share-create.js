@@ -3,7 +3,7 @@ const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
-const { toJob, findStaticJob, slugify, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
+const { toJob, toPublicJob, findStaticJob, slugify, isSchemaError, isMissingTableError } = require('./_jobs-helpers.js');
 
 function adjustRecordForSchema(record, err) {
   const message = (err?.message || '').toLowerCase();
@@ -123,7 +123,8 @@ const baseHandler = async (event, context) => {
       return { statusCode: 404, body: JSON.stringify({ error: 'Job not found', id: fallbackId }) };
     }
 
-    const slug = supabase ? buildSlug(job.id) : (job.id || slugify(job.title || 'job'));
+    const sharedJob = toPublicJob(job);
+    const slug = supabase ? buildSlug(sharedJob.id) : (sharedJob.id || slugify(sharedJob.title || 'job'));
     const expires = supabase && Number.isFinite(expiresInDays) && expiresInDays > 0
       ? new Date(Date.now() + expiresInDays * 86400000)
       : null;
@@ -131,9 +132,9 @@ const baseHandler = async (event, context) => {
     if (supabase) {
       const baseRecord = {
         slug,
-        job_id: job.id,
-        title: job.title,
-        payload: job,
+        job_id: sharedJob.id,
+        title: sharedJob.title,
+        payload: sharedJob,
         notes: notes ? String(notes) : null,
         expires_at: expires ? expires.toISOString() : null,
       };
@@ -151,7 +152,7 @@ const baseHandler = async (event, context) => {
           const inserted = data || {};
           const params = new URLSearchParams();
           params.set('slug', inserted.slug || slug);
-          if (job.id) params.set('id', job.id);
+          if (sharedJob.id) params.set('id', sharedJob.id);
           const url = `${origin}/jobs/spec.html?${params.toString()}`;
           return {
             statusCode: 200,
@@ -183,7 +184,7 @@ const baseHandler = async (event, context) => {
         schemaAdjusted = true;
       }
 
-      const fallbackKey = job.id || slug;
+      const fallbackKey = sharedJob.id || slug;
       const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(fallbackKey)}`;
       return {
         statusCode: 200,
@@ -197,11 +198,11 @@ const baseHandler = async (event, context) => {
       };
     }
 
-    const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(job.id || slugify(job.title || 'role'))}`;
+    const fallbackUrl = `${origin}/jobs/spec.html?id=${encodeURIComponent(sharedJob.id || slugify(sharedJob.title || 'role'))}`;
     return {
       statusCode: 200,
       body: JSON.stringify({
-        slug: job.id || slug,
+        slug: sharedJob.id || slug,
         url: fallbackUrl,
         expires_at: null,
         fallback: true,

@@ -342,11 +342,20 @@
       <div class="meta">
         <span id="location"></span>
         <span id="employment"></span>
+        <span id="pay" style="display:none"></span>
       </div>
       <div class="tags" id="tags"></div>
     </header>
     <section>
       <p id="overview"></p>
+    </section>
+    <section id="customerSection" style="display:none">
+      <h2>Customer</h2>
+      <p id="customer"></p>
+    </section>
+    <section id="benefitsSection" style="display:none">
+      <h2>Benefits</h2>
+      <div class="tags" id="benefits"></div>
     </section>
     <section id="responsibilities" style="display:none">
       <h2>Key Responsibilities</h2>
@@ -519,6 +528,98 @@
         }
       }
 
+      function toAmount(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const parsed = Number(String(value).replace(/,/g, '').trim());
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function normaliseCurrency(value, fallback = '') {
+        const raw = (value || '').toString().trim().toUpperCase();
+        if (!raw) return fallback;
+        if (raw === '£') return 'GBP';
+        if (raw === '€') return 'EUR';
+        if (raw === '$') return 'USD';
+        return raw;
+      }
+
+      function inferPayType(job = {}) {
+        const explicit = (job.payType || job.pay_type || '').toString().trim().toLowerCase();
+        if (['day_rate', 'salary_range', 'hourly_range', 'competitive', 'negotiable'].includes(explicit)) {
+          return explicit;
+        }
+        if (toAmount(job.dayRateMin ?? job.day_rate_min) !== null || toAmount(job.dayRateMax ?? job.day_rate_max) !== null) {
+          return 'day_rate';
+        }
+        if (toAmount(job.salaryMin ?? job.salary_min) !== null || toAmount(job.salaryMax ?? job.salary_max) !== null) {
+          return 'salary_range';
+        }
+        if (toAmount(job.hourlyMin ?? job.hourly_min) !== null || toAmount(job.hourlyMax ?? job.hourly_max) !== null) {
+          return 'hourly_range';
+        }
+        return '';
+      }
+
+      function formatMoney(value, currency, options = {}) {
+        const amount = toAmount(value);
+        if (amount === null) return '';
+        const currencyCode = normaliseCurrency(currency, 'GBP');
+        const minFractionDigits = Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0;
+        const maxFractionDigits = Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0;
+        try {
+          return new Intl.NumberFormat('en-GB', {
+            style: 'currency',
+            currency: currencyCode,
+            minimumFractionDigits: minFractionDigits,
+            maximumFractionDigits: maxFractionDigits,
+          }).format(amount);
+        } catch (err) {
+          return `${currencyCode} ${amount.toLocaleString('en-GB', {
+            minimumFractionDigits: minFractionDigits,
+            maximumFractionDigits: maxFractionDigits,
+          })}`;
+        }
+      }
+
+      function formatPayRange(min, max, currency, suffix, options = {}) {
+        const lower = toAmount(min);
+        const upper = toAmount(max);
+        if (lower === null && upper === null) return '';
+        const moneyOptions = {
+          minFractionDigits: Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0,
+          maxFractionDigits: Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0,
+        };
+        const lowerText = lower === null ? '' : formatMoney(lower, currency, moneyOptions);
+        const upperText = upper === null ? '' : formatMoney(upper, currency, moneyOptions);
+        if (lower !== null && upper !== null) {
+          if (lower === upper) return `${lowerText} ${suffix}`.trim();
+          return `${lowerText} - ${upperText} ${suffix}`.trim();
+        }
+        if (lower !== null) return `From ${lowerText} ${suffix}`.trim();
+        return `Up to ${upperText} ${suffix}`.trim();
+      }
+
+      function buildPayText(job = {}) {
+        const payType = inferPayType(job);
+        const currency = normaliseCurrency(job.currency, 'GBP');
+        if (payType === 'day_rate') {
+          return formatPayRange(job.dayRateMin ?? job.day_rate_min, job.dayRateMax ?? job.day_rate_max, currency, 'per day', {
+            maxFractionDigits: 2,
+          });
+        }
+        if (payType === 'salary_range') {
+          return formatPayRange(job.salaryMin ?? job.salary_min, job.salaryMax ?? job.salary_max, currency, 'per year');
+        }
+        if (payType === 'hourly_range') {
+          return formatPayRange(job.hourlyMin ?? job.hourly_min, job.hourlyMax ?? job.hourly_max, currency, 'per hour', {
+            maxFractionDigits: 2,
+          });
+        }
+        if (payType === 'competitive') return 'Competitive';
+        if (payType === 'negotiable') return 'Negotiable';
+        return '';
+      }
+
       if (payloadParam) {
         const payload = decodeSharePayload(payloadParam);
         if (payload && payload.job) {
@@ -604,6 +705,15 @@
         const locationText = job.locationText || 'Flexible';
         document.getElementById('location').textContent = locationText;
         document.getElementById('employment').textContent = job.type ? job.type.toUpperCase() : '';
+        const payText = job.payText || buildPayText(job);
+        const payEl = document.getElementById('pay');
+        if (payText) {
+          payEl.textContent = payText;
+          payEl.style.display = '';
+        } else {
+          payEl.textContent = '';
+          payEl.style.display = 'none';
+        }
         const tags = Array.isArray(job.tags) ? job.tags : [];
         const tagHost = document.getElementById('tags');
         if (tags.length) {
@@ -614,6 +724,21 @@
           tagHost.style.display = 'none';
         }
         document.getElementById('overview').textContent = job.overview || '';
+        const customerText = (job.customer || '').toString().trim();
+        const customerSection = document.getElementById('customerSection');
+        const customerEl = document.getElementById('customer');
+        customerEl.textContent = customerText;
+        customerSection.style.display = customerText ? '' : 'none';
+        const benefits = Array.isArray(job.benefits) ? job.benefits : [];
+        const benefitsSection = document.getElementById('benefitsSection');
+        const benefitsEl = document.getElementById('benefits');
+        if (benefits.length) {
+          benefitsEl.innerHTML = benefits.map(item => `<span>${item}</span>`).join('');
+          benefitsSection.style.display = '';
+        } else {
+          benefitsEl.innerHTML = '';
+          benefitsSection.style.display = 'none';
+        }
         const respSection = document.getElementById('responsibilities');
         const respList = document.getElementById('respList');
         respList.innerHTML = (job.responsibilities || []).map(item => `<li>${item}</li>`).join('');

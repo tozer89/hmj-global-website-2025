@@ -109,9 +109,11 @@
     .drawer h3{margin:0;font-size:18px}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
     .field{display:grid;gap:6px}
+    .field.is-hidden{display:none}
     .field label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
     .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink);font-weight:600;font-size:14px}
     .field textarea{min-height:110px;resize:vertical}
+    .field-note{margin:0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5;text-transform:none;letter-spacing:0}
     .switch{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--highlight)}
     .switch input{width:18px;height:18px}
     .tag-editor{display:flex;flex-wrap:wrap;gap:8px;background:#f4f6ff;border:1px solid rgba(47,78,162,.18);border-radius:12px;padding:10px}
@@ -263,15 +265,74 @@
           <div class="field"><label for="edSection">Category heading</label><input id="edSection" list="sectionOptions" placeholder="e.g. Data Centre Delivery"/></div>
           <div class="field"><label for="edDiscipline">Discipline</label><input id="edDiscipline"/></div>
           <div class="field"><label for="edType">Employment type</label><select id="edType"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="fixed-term">Fixed term</option></select></div>
+          <div class="field">
+            <label for="edCustomer">Customer</label>
+            <input id="edCustomer" placeholder="Shown publicly if populated"/>
+            <p class="field-note">Public. This appears on the jobs page and shared spec if entered.</p>
+          </div>
+          <div class="field">
+            <label for="edClientName">Client name</label>
+            <input id="edClientName" placeholder="Internal client reference"/>
+            <p class="field-note">Internal only. Never shown on public job cards or share/spec pages.</p>
+          </div>
+          <div class="field">
+            <label for="edPayType">Pay display</label>
+            <select id="edPayType">
+              <option value="">Not specified</option>
+              <option value="day_rate">Day rate</option>
+              <option value="salary_range">Salary range</option>
+              <option value="hourly_range">Hourly range</option>
+              <option value="competitive">Competitive</option>
+              <option value="negotiable">Negotiable</option>
+            </select>
+          </div>
           <div class="field"><label for="edLocationText">Location (display)</label><input id="edLocationText"/></div>
           <div class="field"><label for="edLocationCode">Location code</label><input id="edLocationCode" placeholder="slug for filters"/></div>
           <div class="field"><label for="edApply">Apply URL</label><input id="edApply" placeholder="Defaults to contact form"/></div>
           <div class="field"><label for="edSortOrder">Sort weight</label><input id="edSortOrder" type="number" step="1" min="0"/></div>
         </div>
 
+        <div class="grid" id="payFieldGrid">
+          <div class="field pay-field is-hidden" data-pay-types="day_rate salary_range hourly_range">
+            <label for="edCurrency">Currency code</label>
+            <input id="edCurrency" placeholder="GBP"/>
+            <p class="field-note">Optional. Defaults to GBP when a pay range is shown.</p>
+          </div>
+          <div class="field pay-field is-hidden" data-pay-types="day_rate">
+            <label for="edDayRateMin">Day rate min</label>
+            <input id="edDayRateMin" type="number" min="0" step="0.01" placeholder="450"/>
+          </div>
+          <div class="field pay-field is-hidden" data-pay-types="day_rate">
+            <label for="edDayRateMax">Day rate max</label>
+            <input id="edDayRateMax" type="number" min="0" step="0.01" placeholder="550"/>
+          </div>
+          <div class="field pay-field is-hidden" data-pay-types="salary_range">
+            <label for="edSalaryMin">Salary min</label>
+            <input id="edSalaryMin" type="number" min="0" step="1" placeholder="65000"/>
+          </div>
+          <div class="field pay-field is-hidden" data-pay-types="salary_range">
+            <label for="edSalaryMax">Salary max</label>
+            <input id="edSalaryMax" type="number" min="0" step="1" placeholder="80000"/>
+          </div>
+          <div class="field pay-field is-hidden" data-pay-types="hourly_range">
+            <label for="edHourlyMin">Hourly min</label>
+            <input id="edHourlyMin" type="number" min="0" step="0.01" placeholder="28"/>
+          </div>
+          <div class="field pay-field is-hidden" data-pay-types="hourly_range">
+            <label for="edHourlyMax">Hourly max</label>
+            <input id="edHourlyMax" type="number" min="0" step="0.01" placeholder="35"/>
+          </div>
+        </div>
+
         <div class="field">
           <label>Tags</label>
           <div class="tag-editor" id="tagEditor"><input id="tagInput" placeholder="Type tag and press Enter"/></div>
+        </div>
+
+        <div class="field">
+          <label>Benefits</label>
+          <div class="tag-editor" id="benefitsEditor"><input id="benefitInput" placeholder="Type benefit and press Enter"/></div>
+          <p class="field-note">Public. Benefits are shown on public job cards and the shared job spec when present.</p>
         </div>
 
         <div class="field"><label for="edOverview">Card overview</label><textarea id="edOverview" placeholder="Short intro shown on jobs page"></textarea></div>
@@ -322,6 +383,7 @@
         dragging: null,
         editing: null,
         editingTags: [],
+        editingBenefits: [],
         shareLink: null,
         diagnostics: false,
         readOnly: false,
@@ -362,6 +424,9 @@
       const btnRefreshShare = sel('#btnRefreshShare');
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
+      const benefitsEditor = sel('#benefitsEditor');
+      const benefitInput = sel('#benefitInput');
+      const payFields = Array.from(document.querySelectorAll('.pay-field'));
       const readOnlyNotice = sel('#readOnlyNotice');
       const readOnlyTitle = sel('#readOnlyTitle');
       const readOnlyBody = sel('#readOnlyBody');
@@ -615,6 +680,16 @@
         section: sel('#edSection'),
         discipline: sel('#edDiscipline'),
         type: sel('#edType'),
+        customer: sel('#edCustomer'),
+        clientName: sel('#edClientName'),
+        payType: sel('#edPayType'),
+        currency: sel('#edCurrency'),
+        dayRateMin: sel('#edDayRateMin'),
+        dayRateMax: sel('#edDayRateMax'),
+        salaryMin: sel('#edSalaryMin'),
+        salaryMax: sel('#edSalaryMax'),
+        hourlyMin: sel('#edHourlyMin'),
+        hourlyMax: sel('#edHourlyMax'),
         locationText: sel('#edLocationText'),
         locationCode: sel('#edLocationCode'),
         overview: sel('#edOverview'),
@@ -652,6 +727,114 @@
           .filter(Boolean);
       }
 
+      function toAmount(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const parsed = Number(String(value).replace(/,/g, '').trim());
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function normaliseCurrency(value, fallback = '') {
+        const raw = (value || '').toString().trim().toUpperCase();
+        if (!raw) return fallback;
+        if (raw === '£') return 'GBP';
+        if (raw === '€') return 'EUR';
+        if (raw === '$') return 'USD';
+        return raw;
+      }
+
+      function normalisePayType(value) {
+        const raw = (value || '').toString().trim().toLowerCase();
+        if (!raw || raw === 'unspecified' || raw === 'not_specified') return '';
+        return ['day_rate', 'salary_range', 'hourly_range', 'competitive', 'negotiable'].includes(raw) ? raw : '';
+      }
+
+      function inferPayType(row = {}) {
+        const explicit = normalisePayType(row.payType || row.pay_type);
+        if (explicit) return explicit;
+        if (toAmount(row.dayRateMin ?? row.day_rate_min) !== null || toAmount(row.dayRateMax ?? row.day_rate_max) !== null) {
+          return 'day_rate';
+        }
+        if (toAmount(row.salaryMin ?? row.salary_min) !== null || toAmount(row.salaryMax ?? row.salary_max) !== null) {
+          return 'salary_range';
+        }
+        if (toAmount(row.hourlyMin ?? row.hourly_min) !== null || toAmount(row.hourlyMax ?? row.hourly_max) !== null) {
+          return 'hourly_range';
+        }
+        return '';
+      }
+
+      function formatMoney(value, currency, options = {}) {
+        const amount = toAmount(value);
+        if (amount === null) return '';
+        const currencyCode = normaliseCurrency(currency, 'GBP');
+        const minFractionDigits = Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0;
+        const maxFractionDigits = Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0;
+        try {
+          return new Intl.NumberFormat('en-GB', {
+            style: 'currency',
+            currency: currencyCode,
+            minimumFractionDigits: minFractionDigits,
+            maximumFractionDigits: maxFractionDigits,
+          }).format(amount);
+        } catch (err) {
+          return `${currencyCode} ${amount.toLocaleString('en-GB', {
+            minimumFractionDigits: minFractionDigits,
+            maximumFractionDigits: maxFractionDigits,
+          })}`;
+        }
+      }
+
+      function formatPayRange(min, max, currency, suffix, options = {}) {
+        const lower = toAmount(min);
+        const upper = toAmount(max);
+        if (lower === null && upper === null) return '';
+        const moneyOptions = {
+          minFractionDigits: Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0,
+          maxFractionDigits: Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0,
+        };
+        const lowerText = lower === null ? '' : formatMoney(lower, currency, moneyOptions);
+        const upperText = upper === null ? '' : formatMoney(upper, currency, moneyOptions);
+        if (lower !== null && upper !== null) {
+          if (lower === upper) return `${lowerText} ${suffix}`.trim();
+          return `${lowerText} - ${upperText} ${suffix}`.trim();
+        }
+        if (lower !== null) return `From ${lowerText} ${suffix}`.trim();
+        return `Up to ${upperText} ${suffix}`.trim();
+      }
+
+      function buildPayText(row = {}) {
+        const payType = inferPayType(row);
+        const currency = normaliseCurrency(row.currency, 'GBP');
+        if (payType === 'day_rate') {
+          return formatPayRange(row.dayRateMin ?? row.day_rate_min, row.dayRateMax ?? row.day_rate_max, currency, 'per day', {
+            maxFractionDigits: 2,
+          });
+        }
+        if (payType === 'salary_range') {
+          return formatPayRange(row.salaryMin ?? row.salary_min, row.salaryMax ?? row.salary_max, currency, 'per year');
+        }
+        if (payType === 'hourly_range') {
+          return formatPayRange(row.hourlyMin ?? row.hourly_min, row.hourlyMax ?? row.hourly_max, currency, 'per hour', {
+            maxFractionDigits: 2,
+          });
+        }
+        if (payType === 'competitive') return 'Competitive';
+        if (payType === 'negotiable') return 'Negotiable';
+        return '';
+      }
+
+      function updatePayFieldVisibility() {
+        const payType = normalisePayType(form.payType?.value);
+        payFields.forEach((field) => {
+          const supported = (field.dataset.payTypes || '')
+            .split(/\s+/)
+            .map((value) => value.trim())
+            .filter(Boolean);
+          const visible = !!payType && supported.includes(payType);
+          field.classList.toggle('is-hidden', !visible);
+        });
+      }
+
       function normalizeJob(row = {}) {
         const sectionLabel = (row.sectionLabel || row.section || 'General').toString().trim() || 'General';
         const publishedRaw = row.published ?? row.isPublished;
@@ -664,6 +847,7 @@
           published = !!publishedRaw;
         }
 
+        const payType = inferPayType(row);
         const normalized = {
           id: (row.id || row.slug || '').toString().trim(),
           title: (row.title || row.name || '').toString().trim(),
@@ -673,6 +857,16 @@
           sectionKey: slugify(sectionLabel) || 'general',
           discipline: (row.discipline || '').toString().trim(),
           type: (row.type || 'permanent').toString().trim().toLowerCase() || 'permanent',
+          customer: (row.customer || '').toString().trim(),
+          clientName: (row.clientName || row.client_name || '').toString().trim(),
+          payType,
+          currency: normaliseCurrency(row.currency),
+          dayRateMin: toAmount(row.dayRateMin ?? row.day_rate_min),
+          dayRateMax: toAmount(row.dayRateMax ?? row.day_rate_max),
+          salaryMin: toAmount(row.salaryMin ?? row.salary_min),
+          salaryMax: toAmount(row.salaryMax ?? row.salary_max),
+          hourlyMin: toAmount(row.hourlyMin ?? row.hourly_min),
+          hourlyMax: toAmount(row.hourlyMax ?? row.hourly_max),
           locationText: (row.locationText || row.location_text || '').toString().trim(),
           locationCode: (row.locationCode || row.location_code || '').toString().trim(),
           overview: (row.overview || '').toString().trim(),
@@ -685,6 +879,7 @@
             : Number.isFinite(row.sort_order)
               ? Number(row.sort_order)
               : null,
+          benefits: toList(row.benefits),
           tags: Array.isArray(row.tags) && row.tags.length
             ? row.tags.map((tag) => String(tag || '').trim()).filter(Boolean)
             : toList(row.tags || row.keywords),
@@ -692,6 +887,7 @@
           createdAt: row.createdAt || row.created_at || null,
           updatedAt: row.updatedAt || row.updated_at || null,
         };
+        normalized.payText = buildPayText(normalized);
         if (!normalized.id) {
           normalized.id = `job-${Math.random().toString(36).slice(2, 10)}`;
         }
@@ -709,6 +905,17 @@
           sectionLabel: normalized.sectionLabel,
           discipline: normalized.discipline,
           type: normalized.type,
+          customer: normalized.customer,
+          benefits: Array.isArray(normalized.benefits) ? normalized.benefits : [],
+          pay_type: normalized.payType || null,
+          day_rate_min: normalized.dayRateMin,
+          day_rate_max: normalized.dayRateMax,
+          salary_min: normalized.salaryMin,
+          salary_max: normalized.salaryMax,
+          hourly_min: normalized.hourlyMin,
+          hourly_max: normalized.hourlyMax,
+          currency: normalized.currency || null,
+          payText: normalized.payText || '',
           location_text: normalized.locationText,
           location_code: normalized.locationCode,
           overview: normalized.overview,
@@ -795,6 +1002,19 @@
           sectionLabel: normalized.sectionLabel,
           discipline: normalized.discipline,
           type: normalized.type,
+          customer: normalized.customer,
+          benefits: Array.isArray(normalized.benefits)
+            ? normalized.benefits.map((item) => String(item || '').trim()).filter(Boolean)
+            : [],
+          payType: normalized.payType,
+          dayRateMin: normalized.dayRateMin,
+          dayRateMax: normalized.dayRateMax,
+          salaryMin: normalized.salaryMin,
+          salaryMax: normalized.salaryMax,
+          hourlyMin: normalized.hourlyMin,
+          hourlyMax: normalized.hourlyMax,
+          currency: normalized.currency || '',
+          payText: normalized.payText || '',
           locationText: normalized.locationText,
           locationCode: normalized.locationCode,
           overview: normalized.overview,
@@ -964,8 +1184,21 @@
           }
         }
         if (q) {
-          const hay = [job.title, job.overview, job.locationText, job.locationCode, job.discipline, job.sectionLabel, job.applyUrl, job.keywords]
+          const hay = [
+            job.title,
+            job.overview,
+            job.locationText,
+            job.locationCode,
+            job.discipline,
+            job.sectionLabel,
+            job.applyUrl,
+            job.keywords,
+            job.customer,
+            job.clientName,
+            job.payText,
+          ]
             .concat(job.tags || [])
+            .concat(job.benefits || [])
             .join(' ')
             .toLowerCase();
           if (!hay.includes(q)) return false;
@@ -1163,13 +1396,20 @@
           card.removeAttribute('draggable');
         }
         card.dataset.id = job.id;
+        const footerBits = [job.type || ''];
+        if (job.payText) footerBits.push(job.payText);
+        if (Array.isArray(job.benefits) && job.benefits.length) {
+          footerBits.push(`${job.benefits.length} benefit${job.benefits.length === 1 ? '' : 's'}`);
+        }
         card.innerHTML = `
           <h4>${job.title || 'Untitled'} ${job.published ? '' : '<span class="badge">Draft</span>'}</h4>
           <span class="badge ${statusBadgeClass(job.status)}">${(job.status || '').toUpperCase()}</span>
           <div class="muted">${job.locationText || 'Location TBC'}</div>
+          ${job.customer ? `<div class="muted">Customer: ${job.customer}</div>` : ''}
+          ${job.clientName ? `<div class="muted">Internal client: ${job.clientName}</div>` : ''}
           ${(job.tags || []).length ? `<div class="tags">${job.tags.map((t) => `<span>${t}</span>`).join('')}</div>` : ''}
           <footer>
-            <span>${job.type || ''}</span>
+            <span>${footerBits.filter(Boolean).join(' · ')}</span>
             <button type="button">Edit</button>
           </footer>
         `;
@@ -1223,24 +1463,36 @@
         });
       }
 
-      function renderTagTokens() {
-        if (!tagEditor) return;
-        const tokens = tagEditor.querySelectorAll('.token');
-        tokens.forEach((t) => t.remove());
-        state.editingTags.forEach((tag, idx) => {
+      function renderTokenEditor(host, input, values, onRemove) {
+        if (!host || !input) return;
+        host.querySelectorAll('.token').forEach((token) => token.remove());
+        values.forEach((value, idx) => {
           const token = document.createElement('span');
           token.className = 'token';
-          token.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">×</button>`;
+          token.innerHTML = `${value}<button type="button" aria-label="Remove ${value}">×</button>`;
           const removeBtn = token.querySelector('button');
           if (removeBtn) {
             removeBtn.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
             removeBtn.onclick = () => {
               if (state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering) return;
-              state.editingTags.splice(idx, 1);
-              renderTagTokens();
+              onRemove(idx);
             };
           }
-          tagEditor.insertBefore(token, tagInput);
+          host.insertBefore(token, input);
+        });
+      }
+
+      function renderTagTokens() {
+        renderTokenEditor(tagEditor, tagInput, state.editingTags, (idx) => {
+          state.editingTags.splice(idx, 1);
+          renderTagTokens();
+        });
+      }
+
+      function renderBenefitTokens() {
+        renderTokenEditor(benefitsEditor, benefitInput, state.editingBenefits, (idx) => {
+          state.editingBenefits.splice(idx, 1);
+          renderBenefitTokens();
         });
       }
 
@@ -1256,6 +1508,7 @@
         setTimeout(() => {
           state.editing = null;
           state.editingTags = [];
+          state.editingBenefits = [];
           shareBox.style.display = 'none';
           shareUrl.value = '';
           shareMeta.textContent = '';
@@ -1269,6 +1522,7 @@
               ? 'This console is in read-only mode, so share links stay local to this browser for 30 days.'
               : 'Generate a standalone advert page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
           }
+          updatePayFieldVisibility();
           updateControlState();
         }, 150);
       }
@@ -1280,6 +1534,16 @@
         form.section.value = job?.sectionLabel || job?.section || '';
         form.discipline.value = job?.discipline || '';
         form.type.value = (job?.type || 'permanent').toLowerCase();
+        form.customer.value = job?.customer || '';
+        form.clientName.value = job?.clientName || '';
+        form.payType.value = job?.payType || '';
+        form.currency.value = job?.currency || '';
+        form.dayRateMin.value = job?.dayRateMin ?? '';
+        form.dayRateMax.value = job?.dayRateMax ?? '';
+        form.salaryMin.value = job?.salaryMin ?? '';
+        form.salaryMax.value = job?.salaryMax ?? '';
+        form.hourlyMin.value = job?.hourlyMin ?? '';
+        form.hourlyMax.value = job?.hourlyMax ?? '';
         form.locationText.value = job?.locationText || '';
         form.locationCode.value = job?.locationCode || '';
         form.overview.value = job?.overview || '';
@@ -1289,7 +1553,10 @@
         form.published.checked = !!job?.published;
         form.sortOrder.value = Number.isFinite(job?.sortOrder) ? job.sortOrder : '';
         state.editingTags = Array.isArray(job?.tags) ? [...job.tags] : [];
+        state.editingBenefits = Array.isArray(job?.benefits) ? [...job.benefits] : [];
         renderTagTokens();
+        renderBenefitTokens();
+        updatePayFieldVisibility();
       }
 
       function openEditor(job) {
@@ -1329,6 +1596,16 @@
           section: form.section.value.trim(),
           discipline: form.discipline.value.trim(),
           type: form.type.value,
+          customer: form.customer.value.trim(),
+          clientName: form.clientName.value.trim(),
+          payType: form.payType.value,
+          currency: form.currency.value.trim(),
+          dayRateMin: form.dayRateMin.value,
+          dayRateMax: form.dayRateMax.value,
+          salaryMin: form.salaryMin.value,
+          salaryMax: form.salaryMax.value,
+          hourlyMin: form.hourlyMin.value,
+          hourlyMax: form.hourlyMax.value,
           locationText: form.locationText.value.trim(),
           locationCode: form.locationCode.value.trim(),
           overview: form.overview.value.trim(),
@@ -1338,6 +1615,7 @@
           published: form.published.checked,
           sortOrder: form.sortOrder.value ? Number(form.sortOrder.value) : undefined,
           tags: [...state.editingTags],
+          benefits: [...state.editingBenefits],
         };
       }
 
@@ -1708,6 +1986,24 @@
           renderTagTokens();
         }
       });
+
+      benefitInput.addEventListener('keydown', (e) => {
+        if (state.readOnly) { e.preventDefault(); toast('Jobs are read-only until the live jobs system is available.', 'warn', 3200); return; }
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          const value = benefitInput.value.trim();
+          if (value && !state.editingBenefits.includes(value)) {
+            state.editingBenefits.push(value);
+            renderBenefitTokens();
+          }
+          benefitInput.value = '';
+        } else if (e.key === 'Backspace' && !benefitInput.value && state.editingBenefits.length) {
+          state.editingBenefits.pop();
+          renderBenefitTokens();
+        }
+      });
+
+      form.payType?.addEventListener('change', updatePayFieldVisibility);
 
       btnDiag.onclick = async () => {
         state.diagnostics = !state.diagnostics;

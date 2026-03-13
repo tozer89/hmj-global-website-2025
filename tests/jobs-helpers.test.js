@@ -5,7 +5,9 @@ const path = require('node:path');
 
 const {
   toJob,
+  toPublicJob,
   toDbPayload,
+  buildPayText,
   cleanArray,
   slugify,
   resolveSection,
@@ -27,6 +29,13 @@ test('toJob normalises database row fields and derives tags/section meta', () =>
     responsibilities: ['Deliver', '  Test  '],
     requirements: null,
     keywords: 'power, hv',
+    client_name: ' Confidential Client ',
+    customer: ' Main contractor ',
+    benefits: [' Travel allowance ', ' Bonus '],
+    pay_type: 'day_rate',
+    day_rate_min: 450,
+    day_rate_max: 550,
+    currency: ' eur ',
     apply_url: 'https://example.com',
     published: 1,
     sort_order: 10,
@@ -52,6 +61,14 @@ test('toJob normalises database row fields and derives tags/section meta', () =>
   assert.equal(job.createdAt, '2025-01-01T00:00:00Z');
   assert.equal(job.updatedAt, '2025-01-02T00:00:00Z');
   assert.deepEqual(job.tags, ['power', 'hv']);
+  assert.equal(job.clientName, 'Confidential Client');
+  assert.equal(job.customer, 'Main contractor');
+  assert.deepEqual(job.benefits, ['Travel allowance', 'Bonus']);
+  assert.equal(job.payType, 'day_rate');
+  assert.equal(job.dayRateMin, 450);
+  assert.equal(job.dayRateMax, 550);
+  assert.equal(job.currency, 'EUR');
+  assert.equal(job.payText, '€450 - €550 per day');
 });
 
 test('toDbPayload trims values, converts arrays, and flattens tags to keywords string', () => {
@@ -68,6 +85,13 @@ test('toDbPayload trims values, converts arrays, and flattens tags to keywords s
     responsibilities: [' Plan ', ' Execute ', ''],
     requirements: ' - PMP\n - Experience ',
     tags: ['PM', 'HV'],
+    benefits: ['Bonus', ' Pension '],
+    customer: 'End client: Confidential',
+    clientName: 'Stealth operator',
+    payType: 'salary_range',
+    salaryMin: '65000',
+    salaryMax: 80000,
+    currency: 'GBP',
     applyUrl: 'https://apply',
     published: false,
     sortOrder: 5,
@@ -86,10 +110,41 @@ test('toDbPayload trims values, converts arrays, and flattens tags to keywords s
     responsibilities: ['Plan', 'Execute'],
     requirements: ['PMP', 'Experience'],
     keywords: 'PM, HV',
+    benefits: ['Bonus', 'Pension'],
+    client_name: 'Stealth operator',
+    customer: 'End client: Confidential',
+    pay_type: 'salary_range',
+    day_rate_min: null,
+    day_rate_max: null,
+    salary_min: 65000,
+    salary_max: 80000,
+    hourly_min: null,
+    hourly_max: null,
+    currency: 'GBP',
     apply_url: 'https://apply',
     published: false,
     sort_order: 5,
   });
+});
+
+test('toPublicJob strips internal-only fields while preserving public pay and customer data', () => {
+  const job = toPublicJob({
+    id: 'role-3',
+    title: 'Planner',
+    client_name: 'Internal Client',
+    customer: 'Hyperscale data centre client',
+    benefits: ['Accommodation'],
+    pay_type: 'hourly_range',
+    hourly_min: 28,
+    hourly_max: 35,
+    currency: 'GBP',
+  });
+
+  assert.equal(job.clientName, undefined);
+  assert.equal(job.customer, 'Hyperscale data centre client');
+  assert.deepEqual(job.benefits, ['Accommodation']);
+  assert.equal(job.payType, 'hourly_range');
+  assert.equal(job.payText, '£28 - £35 per hour');
 });
 
 test('cleanArray supports newline, comma, and bullet-separated strings', () => {
@@ -106,6 +161,14 @@ test('slugify and resolveSection provide stable keys', () => {
   const custom = resolveSection('Critical Infrastructure');
   assert.equal(custom.label, 'Critical Infrastructure');
   assert.equal(custom.key, 'critical-infrastructure');
+});
+
+test('buildPayText handles competitive and salary range formats', () => {
+  assert.equal(buildPayText({ pay_type: 'competitive' }), 'Competitive');
+  assert.equal(
+    buildPayText({ pay_type: 'salary_range', salary_min: 65000, salary_max: 80000, currency: 'GBP' }),
+    '£65,000 - £80,000 per year'
+  );
 });
 
 test('loadStaticJobs still exposes a legacy static seed for deferred secondary paths', () => {

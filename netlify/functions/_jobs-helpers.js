@@ -22,6 +22,14 @@ const SECTION_PRESETS = new Map([
   ['ict-commissioning', 'ICT & Commissioning'],
 ]);
 
+const PAY_TYPE_SET = new Set([
+  'day_rate',
+  'salary_range',
+  'hourly_range',
+  'competitive',
+  'negotiable',
+]);
+
 function readJsonSafe(filePath) {
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -211,6 +219,107 @@ function asString(value) {
   return String(value).trim();
 }
 
+function asNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const parsed = Number(String(value).replace(/,/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normaliseCurrency(value, fallback = '') {
+  const raw = asString(value).toUpperCase();
+  if (!raw) return fallback;
+  if (raw === '£') return 'GBP';
+  if (raw === '€') return 'EUR';
+  if (raw === '$') return 'USD';
+  return raw;
+}
+
+function normalisePayType(value) {
+  const raw = asString(value).toLowerCase();
+  if (!raw || raw === 'unspecified' || raw === 'not_specified') return '';
+  return PAY_TYPE_SET.has(raw) ? raw : '';
+}
+
+function inferPayType(row = {}) {
+  const explicit = normalisePayType(row.pay_type || row.payType);
+  if (explicit) return explicit;
+  if (asNumber(row.day_rate_min || row.dayRateMin) !== null || asNumber(row.day_rate_max || row.dayRateMax) !== null) {
+    return 'day_rate';
+  }
+  if (asNumber(row.salary_min || row.salaryMin) !== null || asNumber(row.salary_max || row.salaryMax) !== null) {
+    return 'salary_range';
+  }
+  if (asNumber(row.hourly_min || row.hourlyMin) !== null || asNumber(row.hourly_max || row.hourlyMax) !== null) {
+    return 'hourly_range';
+  }
+  return '';
+}
+
+function formatMoney(value, currency, options = {}) {
+  const amount = asNumber(value);
+  if (amount === null) return '';
+  const currencyCode = normaliseCurrency(currency, 'GBP');
+  const minFractionDigits = Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0;
+  const maxFractionDigits = Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0;
+  try {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: minFractionDigits,
+      maximumFractionDigits: maxFractionDigits,
+    }).format(amount);
+  } catch (err) {
+    return `${currencyCode} ${amount.toLocaleString('en-GB', {
+      minimumFractionDigits: minFractionDigits,
+      maximumFractionDigits: maxFractionDigits,
+    })}`;
+  }
+}
+
+function formatPayRange(min, max, currency, suffix, options = {}) {
+  const lower = asNumber(min);
+  const upper = asNumber(max);
+  if (lower === null && upper === null) return '';
+
+  const moneyOptions = {
+    minFractionDigits: Number.isFinite(options.minFractionDigits) ? Number(options.minFractionDigits) : 0,
+    maxFractionDigits: Number.isFinite(options.maxFractionDigits) ? Number(options.maxFractionDigits) : 0,
+  };
+
+  const lowerText = lower === null ? '' : formatMoney(lower, currency, moneyOptions);
+  const upperText = upper === null ? '' : formatMoney(upper, currency, moneyOptions);
+
+  if (lower !== null && upper !== null) {
+    if (lower === upper) return `${lowerText} ${suffix}`.trim();
+    return `${lowerText} - ${upperText} ${suffix}`.trim();
+  }
+  if (lower !== null) return `From ${lowerText} ${suffix}`.trim();
+  return `Up to ${upperText} ${suffix}`.trim();
+}
+
+function buildPayText(row = {}) {
+  const payType = inferPayType(row);
+  const currency = normaliseCurrency(row.currency, 'GBP');
+
+  if (payType === 'day_rate') {
+    return formatPayRange(row.day_rate_min || row.dayRateMin, row.day_rate_max || row.dayRateMax, currency, 'per day', {
+      maxFractionDigits: 2,
+    });
+  }
+  if (payType === 'salary_range') {
+    return formatPayRange(row.salary_min || row.salaryMin, row.salary_max || row.salaryMax, currency, 'per year');
+  }
+  if (payType === 'hourly_range') {
+    return formatPayRange(row.hourly_min || row.hourlyMin, row.hourly_max || row.hourlyMax, currency, 'per hour', {
+      maxFractionDigits: 2,
+    });
+  }
+  if (payType === 'competitive') return 'Competitive';
+  if (payType === 'negotiable') return 'Negotiable';
+  return '';
+}
+
 function parseTags(row = {}) {
   if (Array.isArray(row.tags)) {
     return row.tags.map((v) => asString(v)).filter(Boolean);
@@ -228,12 +337,15 @@ function tagsToString(tags) {
 }
 
 function toJob(row = {}) {
-  const sectionInfo = resolveSection(row.section);
+  const sectionSource = row.section || row.sectionLabel;
+  const sectionInfo = resolveSection(sectionSource);
+  const payType = inferPayType(row);
+  const currency = normaliseCurrency(row.currency);
   return {
     id: asString(row.id),
     title: asString(row.title),
     status: asString(row.status) || 'live',
-    section: asString(row.section) || sectionInfo.label,
+    section: asString(sectionSource) || sectionInfo.label,
     sectionLabel: sectionInfo.label,
     sectionKey: sectionInfo.key,
     discipline: asString(row.discipline),
@@ -245,6 +357,18 @@ function toJob(row = {}) {
     requirements: cleanArray(row.requirements),
     keywords: asString(row.keywords),
     tags: parseTags(row),
+    clientName: asString(row.client_name || row.clientName),
+    customer: asString(row.customer),
+    benefits: cleanArray(row.benefits),
+    payType,
+    dayRateMin: asNumber(row.day_rate_min || row.dayRateMin),
+    dayRateMax: asNumber(row.day_rate_max || row.dayRateMax),
+    salaryMin: asNumber(row.salary_min || row.salaryMin),
+    salaryMax: asNumber(row.salary_max || row.salaryMax),
+    hourlyMin: asNumber(row.hourly_min || row.hourlyMin),
+    hourlyMax: asNumber(row.hourly_max || row.hourlyMax),
+    currency,
+    payText: buildPayText({ ...row, pay_type: payType, currency }),
     applyUrl: asString(row.apply_url || row.applyUrl),
     published: !!row.published,
     sortOrder: Number.isFinite(row.sort_order)
@@ -257,11 +381,50 @@ function toJob(row = {}) {
   };
 }
 
+function toPublicJob(row = {}) {
+  const job = toJob(row);
+  return {
+    id: job.id,
+    title: job.title,
+    status: job.status,
+    section: job.section,
+    sectionLabel: job.sectionLabel,
+    sectionKey: job.sectionKey,
+    discipline: job.discipline,
+    type: job.type,
+    locationText: job.locationText,
+    locationCode: job.locationCode,
+    overview: job.overview,
+    responsibilities: job.responsibilities,
+    requirements: job.requirements,
+    keywords: job.keywords,
+    tags: job.tags,
+    customer: job.customer,
+    benefits: job.benefits,
+    payType: job.payType,
+    dayRateMin: job.dayRateMin,
+    dayRateMax: job.dayRateMax,
+    salaryMin: job.salaryMin,
+    salaryMax: job.salaryMax,
+    hourlyMin: job.hourlyMin,
+    hourlyMax: job.hourlyMax,
+    currency: job.currency,
+    payText: job.payText,
+    applyUrl: job.applyUrl,
+    published: job.published,
+    sortOrder: job.sortOrder,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+  };
+}
+
 function toDbPayload(job = {}) {
   const j = toJob(job);
   const sectionSource = job.sectionLabel || job.section || job.sectionKey || j.sectionLabel;
   const tags = Array.isArray(job.tags) ? job.tags : j.tags;
-  return {
+  const payType = normalisePayType(job.payType || job.pay_type || j.payType);
+  const currency = normaliseCurrency(job.currency || j.currency);
+  const payload = {
     id: asString(j.id),
     title: asString(j.title),
     status: asString(j.status) || 'live',
@@ -274,6 +437,17 @@ function toDbPayload(job = {}) {
     responsibilities: cleanArray(job.responsibilities || job.responsibilitiesText || j.responsibilities),
     requirements: cleanArray(job.requirements || job.requirementsText || j.requirements),
     keywords: tagsToString(job.keywords || tags || j.keywords),
+    benefits: cleanArray(job.benefits || j.benefits),
+    client_name: asString(job.clientName || job.client_name || j.clientName) || null,
+    customer: asString(job.customer || j.customer) || null,
+    pay_type: payType || null,
+    day_rate_min: null,
+    day_rate_max: null,
+    salary_min: null,
+    salary_max: null,
+    hourly_min: null,
+    hourly_max: null,
+    currency: (payType === 'day_rate' || /_range$/.test(payType)) ? (currency || null) : null,
     apply_url: asString(j.applyUrl),
     published: !!job.published,
     sort_order: Number.isFinite(job.sortOrder)
@@ -284,6 +458,19 @@ function toDbPayload(job = {}) {
           ? Number(j.sortOrder)
           : null,
   };
+
+  if (payType === 'day_rate') {
+    payload.day_rate_min = asNumber(job.dayRateMin ?? job.day_rate_min ?? j.dayRateMin);
+    payload.day_rate_max = asNumber(job.dayRateMax ?? job.day_rate_max ?? j.dayRateMax);
+  } else if (payType === 'salary_range') {
+    payload.salary_min = asNumber(job.salaryMin ?? job.salary_min ?? j.salaryMin);
+    payload.salary_max = asNumber(job.salaryMax ?? job.salary_max ?? j.salaryMax);
+  } else if (payType === 'hourly_range') {
+    payload.hourly_min = asNumber(job.hourlyMin ?? job.hourly_min ?? j.hourlyMin);
+    payload.hourly_max = asNumber(job.hourlyMax ?? job.hourly_max ?? j.hourlyMax);
+  }
+
+  return payload;
 }
 
 function loadStaticJobs() {
@@ -319,8 +506,10 @@ function findStaticJob(identifier) {
 
 module.exports = {
   toJob,
+  toPublicJob,
   toDbPayload,
   cleanArray,
+  buildPayText,
   slugify,
   resolveSection,
   loadStaticJobs,
