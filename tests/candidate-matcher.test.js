@@ -300,6 +300,11 @@ test('fetchPublishedLiveJobs keeps only published roles with live status', async
   assert.deepEqual(jobs.map((job) => job.job_id), ['job-1']);
 });
 
+test('candidate matcher schema is internally consistent before use', () => {
+  assert.equal(core.MATCH_RESULT_SCHEMA_NAME, 'candidate_match_result');
+  assert.deepEqual(core.validateStructuredOutputSchema(core.MATCH_RESULT_SCHEMA), []);
+});
+
 test('parseOpenAIMatchResponse recovers wrapped matcher JSON safely', () => {
   const payload = {
     id: 'resp_123',
@@ -323,6 +328,26 @@ test('parseOpenAIMatchResponse recovers wrapped matcher JSON safely', () => {
   assert.equal(parsed.result.top_matches[0].job_id, 'job-1');
   assert.equal(parsed.diagnostics.parser_strategy, 'code_fence');
   assert.equal(parsed.diagnostics.wrapper_key, 'result');
+});
+
+test('parseOpenAIMatchResponse returns a canonical schema-valid matcher result', () => {
+  const payload = {
+    id: 'resp_schema_ok',
+    status: 'completed',
+    output: [{
+      status: 'completed',
+      content: [{ type: 'output_text', text: JSON.stringify(buildValidMatcherResult()) }],
+    }],
+  };
+
+  const parsed = core.parseOpenAIMatchResponse(payload, {
+    model: 'gpt-5.4',
+    maxOutputTokens: 3200,
+    repairMode: false,
+  });
+
+  assert.deepEqual(core.validateMatcherResultAgainstSchema(parsed.result), []);
+  assert.equal(parsed.result.top_matches[0].uncertainty_notes, '');
 });
 
 test('parseOpenAIMatchResponse reports incomplete structured output clearly', () => {
@@ -367,6 +392,36 @@ test('parseOpenAIMatchResponse reports truncated JSON clearly', () => {
     assert.equal(error.details.parse_stage, 'json_parse');
     return true;
   });
+});
+
+test('callOpenAIForMatch validates the matcher schema before sending a request', async () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = 'test-key';
+  const originalRequired = [...core.MATCH_RESULT_SCHEMA.$defs.match.required];
+  core.MATCH_RESULT_SCHEMA.$defs.match.required = originalRequired.filter((key) => key !== 'uncertainty_notes');
+  let fetchCalled = false;
+
+  try {
+    await assert.rejects(() => core.callOpenAIForMatch({
+      candidate: { candidate_text: 'Candidate text' },
+      live_jobs: [{ job_id: 'job-1', title: 'HV Commissioning Engineer' }],
+    }, {
+      timeoutMs: 2000,
+      fetchImpl: async () => {
+        fetchCalled = true;
+        throw new Error('fetch should not be called when the schema is invalid');
+      },
+    }), (error) => {
+      assert.equal(error.code, 'openai_schema_definition_invalid');
+      assert.match((error.details.validation_errors || []).join('\n'), /uncertainty_notes/);
+      return true;
+    });
+    assert.equal(fetchCalled, false);
+  } finally {
+    core.MATCH_RESULT_SCHEMA.$defs.match.required = originalRequired;
+    if (originalApiKey == null) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalApiKey;
+  }
 });
 
 test('callOpenAIForMatch retries once after incomplete structured output', async () => {
@@ -430,6 +485,25 @@ test('callOpenAIForMatch retries once after incomplete structured output', async
     if (originalMaxTokens == null) delete process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS;
     else process.env.OPENAI_CANDIDATE_MATCH_MAX_OUTPUT_TOKENS = originalMaxTokens;
   }
+});
+
+test('summariseMatcherFailure keeps recruiter copy friendly while preserving technical schema detail', () => {
+  const failure = core.summariseMatcherFailure(core.coded(
+    500,
+    'Local matcher schema validation failed before calling OpenAI.',
+    'openai_schema_definition_invalid',
+    {
+      details: {
+        stage: 'openai',
+        parse_stage: 'schema_definition',
+        validation_errors: ['#/$defs/match.required is missing "uncertainty_notes".'],
+      }
+    }
+  ));
+
+  assert.match(failure.userMessage, /misconfigured/i);
+  assert.match(failure.technicalMessage, /uncertainty_notes/);
+  assert.match(failure.technicalMessage, /openai_schema_definition_invalid/);
 });
 
 test('candidate match handler returns a happy-path payload with mocked dependencies', async () => {
@@ -1232,6 +1306,7 @@ test('saveMatchRun writes live-schema aligned run and file records', async () =>
   assert.equal(savedRunPayload.best_match_job_title, 'HV Commissioning Engineer');
   assert.equal(savedRunPayload.status, 'completed');
   assert.ok(!('uploaded_file_names' in savedRunPayload));
+  assert.deepEqual(core.validateMatcherResultAgainstSchema(savedRunPayload.raw_result_json.result), []);
   assert.equal(Array.isArray(savedFilePayload), true);
   assert.equal(savedFilePayload.length, 2);
   assert.equal(savedFilePayload[0].match_run_id, 'f0f0f0f0-1111-2222-3333-444444444444');

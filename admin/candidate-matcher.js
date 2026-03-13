@@ -973,7 +973,7 @@
       },
       { label: 'Current job id', value: job.id, note: 'Use this when checking logs for a specific async run.' },
       { label: 'Started / queued', value: formatDateTime(startedAt), note: `Elapsed: ${elapsedSince(startedAt)}` },
-      { label: 'Last update', value: formatDateTime(lastUpdate), note: run?.best_match_job_title ? `Best role: ${run.best_match_job_title}` : (job.last_error || 'No result saved yet.') },
+      { label: 'Last update', value: formatDateTime(lastUpdate), note: run?.best_match_job_title ? `Best role: ${run.best_match_job_title}` : (run?.error_message || job.last_error || 'No result saved yet.') },
     ].map((item) => `
       <div class="ops-item">
         <strong>${escapeHtml(item.label)}</strong>
@@ -1683,7 +1683,7 @@
       stopMatchPolling();
       renderWarnings([{
         file: 'Background match',
-        message: job?.last_error || response.prepared_run?.error_message || 'The async recruiter match failed.',
+        message: response.prepared_run?.error_message || job?.last_error || 'The async recruiter match failed.',
         status: 'failed',
       }]);
       renderWarningActions(true);
@@ -1693,7 +1693,7 @@
         warning_count: 1,
         failed_stage: 'Background recruiter analysis',
       }));
-      setProgress('Background match failed', job?.last_error || response.prepared_run?.error_message || 'The queued recruiter match did not complete.', 5, false, 5, 88);
+      setProgress('Background match failed', response.prepared_run?.error_message || job?.last_error || 'The queued recruiter match did not complete.', 5, false, 5, 88);
       elements.jobsChip.textContent = 'Background match failed';
       elements.jobsChip.className = 'chip bad';
       await loadHistory();
