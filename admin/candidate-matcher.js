@@ -922,6 +922,27 @@
     persistSessionSnapshot();
   }
 
+  function buildRunDiagnosticsFromPreparedRun(run, extra) {
+    const prepared = run?.prepared_evidence || {};
+    const skipped = (prepared.limited_count || 0)
+      + (prepared.unsupported_count || 0)
+      + (prepared.failed_count || 0);
+    const overrides = extra && typeof extra === 'object' ? extra : {};
+    const warningCount = Number.isFinite(Number(overrides.warning_count))
+      ? Number(overrides.warning_count)
+      : skipped;
+
+    return {
+      started_at: overrides.started_at || run?.match_job?.started_at || run?.match_job?.queued_at || run?.updated_at || run?.created_at || '',
+      total_elapsed_ms: Number.isFinite(Number(overrides.total_elapsed_ms)) ? Number(overrides.total_elapsed_ms) : 0,
+      files_attempted: Number(prepared.files_attempted) || 0,
+      files_text_read: Number(prepared.files_text_read) || 0,
+      files_skipped: skipped,
+      warning_count: warningCount,
+      failed_stage: overrides.failed_stage || '',
+    };
+  }
+
   function renderJobStatus(run) {
     if (!elements.jobStatusList) return;
     const job = currentMatchJob(run);
@@ -996,6 +1017,7 @@
     const ready = !!prepared?.ready_for_match;
     const hasResult = !!prepared?.has_result;
     const hasFailure = !!prepared?.error_message && !hasResult;
+    const inProgress = isMatchJobActive(prepared);
     if (elements.preparedStateChip) {
       if (!prepared) {
         elements.preparedStateChip.textContent = 'No prepared evidence';
@@ -1077,6 +1099,9 @@
     );
     elements.preparedFailedList.innerHTML = renderEvidenceDocumentList(prepared.failed_files, 'No extraction failures in this prepared evidence set.');
     renderJobStatus(run);
+    if (!state.runDiagnostics || (!Number(state.runDiagnostics.files_attempted) && Number(prepared.files_attempted) > 0)) {
+      renderRunDiagnostics(buildRunDiagnosticsFromPreparedRun(run));
+    }
     persistSessionSnapshot();
     updateMatchActionState();
   }
@@ -1621,6 +1646,12 @@
 
     const job = response.prepared_run?.match_job || null;
     const status = String(job?.status || '').toLowerCase();
+    const baseDiagnostics = buildRunDiagnosticsFromPreparedRun(response.prepared_run, {
+      started_at: job?.started_at || job?.queued_at || response.prepared_run?.updated_at || '',
+      total_elapsed_ms: 0,
+      warning_count: safeArray(response.warnings).length,
+      failed_stage: status === 'failed' ? 'Background recruiter analysis' : '',
+    });
     if (status === 'completed' && response.result) {
       stopMatchPolling();
       renderWarnings(response.warnings || []);
@@ -1632,17 +1663,12 @@
         warningCount: safeArray(response.warnings).length,
         historyNote: 'Background recruiter analysis complete',
       });
-      renderRunDiagnostics(response.run_diagnostics || state.runDiagnostics || {
+      renderRunDiagnostics(response.run_diagnostics || buildRunDiagnosticsFromPreparedRun(response.prepared_run, {
         started_at: job.completed_at || response.prepared_run?.updated_at || '',
         total_elapsed_ms: 0,
-        files_attempted: response.prepared_run?.prepared_evidence?.files_attempted || 0,
-        files_text_read: response.prepared_run?.prepared_evidence?.files_text_read || 0,
-        files_skipped: (response.prepared_run?.prepared_evidence?.limited_count || 0)
-          + (response.prepared_run?.prepared_evidence?.unsupported_count || 0)
-          + (response.prepared_run?.prepared_evidence?.failed_count || 0),
         warning_count: safeArray(response.warnings).length,
         failed_stage: '',
-      });
+      }));
       setProgress('Results ready', 'Background recruiter analysis completed. Review the saved ranked result below.', 6, true, -1, 100);
       elements.jobsChip.textContent = 'Background match complete';
       elements.jobsChip.className = 'chip ok';
@@ -1661,17 +1687,12 @@
         status: 'failed',
       }]);
       renderWarningActions(true);
-      renderRunDiagnostics({
+      renderRunDiagnostics(buildRunDiagnosticsFromPreparedRun(response.prepared_run, {
         started_at: job.failed_at || response.prepared_run?.updated_at || '',
         total_elapsed_ms: 0,
-        files_attempted: response.prepared_run?.prepared_evidence?.files_attempted || 0,
-        files_text_read: response.prepared_run?.prepared_evidence?.files_text_read || 0,
-        files_skipped: (response.prepared_run?.prepared_evidence?.limited_count || 0)
-          + (response.prepared_run?.prepared_evidence?.unsupported_count || 0)
-          + (response.prepared_run?.prepared_evidence?.failed_count || 0),
         warning_count: 1,
         failed_stage: 'Background recruiter analysis',
-      });
+      }));
       setProgress('Background match failed', job?.last_error || response.prepared_run?.error_message || 'The queued recruiter match did not complete.', 5, false, 5, 88);
       elements.jobsChip.textContent = 'Background match failed';
       elements.jobsChip.className = 'chip bad';
@@ -1679,6 +1700,7 @@
       return response;
     }
 
+    renderRunDiagnostics(baseDiagnostics);
     if (status === 'running') {
       setStageDetail(5, 'Background recruiter analysis is currently running.', 'working');
       setProgress('Running recruiter match', 'Prepared evidence is saved. The AI recruiter analysis is running in the background.', 5, false, -1, 84);
@@ -1888,17 +1910,12 @@
       renderPreparedEvidence(response.prepared_run || state.preparedRun);
       renderWarnings([]);
       renderWarningActions(false);
-      renderRunDiagnostics(response.run_diagnostics || {
+      renderRunDiagnostics(response.run_diagnostics || buildRunDiagnosticsFromPreparedRun(response.prepared_run, {
         started_at: response.prepared_run?.match_job?.queued_at || new Date().toISOString(),
         total_elapsed_ms: 0,
-        files_attempted: response.prepared_run?.prepared_evidence?.files_attempted || 0,
-        files_text_read: response.prepared_run?.prepared_evidence?.files_text_read || 0,
-        files_skipped: (response.prepared_run?.prepared_evidence?.limited_count || 0)
-          + (response.prepared_run?.prepared_evidence?.unsupported_count || 0)
-          + (response.prepared_run?.prepared_evidence?.failed_count || 0),
         warning_count: 0,
         failed_stage: '',
-      });
+      }));
       setStageDetail(4, 'Prepared evidence loaded and the background match has been queued.', 'done');
       setStageDetail(5, 'Background recruiter analysis will update automatically when complete.', 'working');
       setProgress(
