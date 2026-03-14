@@ -239,8 +239,9 @@ body:not(.public-page):not(.clients-body) .status-shell {
 }
 
 .jobs-page .filters {
-  top: var(--hmj-public-sticky-top);
-  z-index: 60;
+  position: relative;
+  top: auto;
+  z-index: 1;
 }
 
 .jobs-page .filters-results,
