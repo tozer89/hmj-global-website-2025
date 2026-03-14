@@ -99,8 +99,8 @@
 }
 
 .hmj-chatbot__panel {
-  width: min(368px, calc(100vw - 24px));
-  max-height: min(72vh, 580px);
+  width: min(404px, calc(100vw - 20px));
+  max-height: min(78vh, 640px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   border-radius: 22px;
@@ -198,8 +198,8 @@
 
 .hmj-chatbot__messages {
   display: grid;
-  gap: 12px;
-  padding: 14px 14px 12px;
+  gap: 11px;
+  padding: 14px 14px 14px;
   overflow: auto;
   min-height: 0;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.72));
@@ -260,20 +260,20 @@
 .hmj-chatbot__suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .hmj-chatbot__message-link,
 .hmj-chatbot__suggestion {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 7px 11px;
+  min-height: 30px;
+  padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid rgba(58, 102, 179, 0.18);
   background: rgba(255, 255, 255, 0.88);
   color: var(--hmj-chatbot-accent-strong);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
@@ -325,17 +325,17 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0 14px 12px;
+  padding: 0 14px 10px;
 }
 
 .hmj-chatbot__action {
   border: 1px solid rgba(58, 102, 179, 0.18);
   border-radius: 999px;
   min-height: 34px;
-  padding: 8px 12px;
+  padding: 8px 11px;
   background: #fff;
   color: var(--hmj-chatbot-accent-strong);
-  font-size: 0.82rem;
+  font-size: 0.79rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.16s ease, background 0.18s ease, box-shadow 0.18s ease;
@@ -449,7 +449,7 @@
 
   .hmj-chatbot__panel {
     width: 100%;
-    max-height: min(68vh, 520px);
+    max-height: min(76vh, 620px);
   }
 
   .hmj-chatbot__launcher {

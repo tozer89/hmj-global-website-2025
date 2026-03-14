@@ -658,6 +658,7 @@
         const key = event.key.toLowerCase();
         const map = {
           c: '/admin/clients.html',
+          f: '/admin/credit-limit-forecaster.html',
           m: '/admin/candidate-matcher.html',
           n: '/admin/candidates.html',
           a: '/admin/assignments.html',
@@ -698,6 +699,7 @@
     const shortcuts = [
       ['⌘K / Ctrl+K', 'Open command palette'],
       ['g c', 'Go to Clients'],
+      ['g f', 'Go to Credit Limit Forecaster'],
       ['g m', 'Go to Candidate Matcher'],
       ['g n', 'Go to Candidates'],
       ['g a', 'Go to Assignments'],

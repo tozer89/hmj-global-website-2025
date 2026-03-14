@@ -9,6 +9,8 @@
   const EVENT_ENDPOINT = '/.netlify/functions/chatbot-event';
   const SESSION_KEY = 'hmj.chatbot.session.v1';
   const MAX_STORED_MESSAGES = 18;
+  const MAX_CONVERSATION_ACTIONS = 2;
+  const MAX_WELCOME_ACTIONS = 4;
 
   const DEFAULT_CONFIG = {
     enabled: true,
@@ -118,15 +120,19 @@
   }
 
   function normaliseResourceLinks(links) {
-    return (Array.isArray(links) ? links : [])
-      .map((link, index) => ({
+    const unique = [];
+    (Array.isArray(links) ? links : []).forEach((link, index) => {
+      const safe = {
         id: trimString(link?.id, 80) || `link_${index + 1}`,
         label: trimString(link?.label, 120),
         href: trimString(link?.href, 280),
         kind: trimString(link?.kind, 40),
-      }))
-      .filter((link) => link.label && link.href)
-      .slice(0, 4);
+      };
+      if (!safe.label || !safe.href) return;
+      if (unique.some((entry) => entry.id === safe.id || entry.href === safe.href)) return;
+      unique.push(safe);
+    });
+    return unique.slice(0, 2);
   }
 
   function normaliseSuggestedPrompts(prompts) {
@@ -135,7 +141,7 @@
       const safe = trimString(prompt, 180);
       if (safe && !unique.includes(safe)) unique.push(safe);
     });
-    return unique.slice(0, 4);
+    return unique.slice(0, 2);
   }
 
   function normaliseMessage(message) {
@@ -547,32 +553,49 @@
     const byId = new Map(allActions.map((action) => [action.id, action]));
     const nonWelcomeMessages = state.messages.filter((message) => !message.isWelcome && message.role === 'assistant');
     const latestAssistant = nonWelcomeMessages[nonWelcomeMessages.length - 1];
+    const dedupeIds = (list, limit) => {
+      const unique = [];
+      (Array.isArray(list) ? list : []).forEach((id) => {
+        const safe = trimString(id, 80);
+        if (!safe || unique.includes(safe)) return;
+        unique.push(safe);
+      });
+      return unique.slice(0, limit);
+    };
+    const inConversation = state.messages.some((message) => message.role === 'user');
     let actionIds = [];
 
     if (latestAssistant) {
-      actionIds = []
-        .concat(Array.isArray(latestAssistant.ctaIds) ? latestAssistant.ctaIds : [])
-        .concat(Array.isArray(latestAssistant.quickReplyIds) ? latestAssistant.quickReplyIds : []);
+      actionIds = dedupeIds(
+        []
+          .concat(Array.isArray(latestAssistant.ctaIds) ? latestAssistant.ctaIds : [])
+          .concat(Array.isArray(latestAssistant.quickReplyIds) ? latestAssistant.quickReplyIds : []),
+        inConversation ? MAX_CONVERSATION_ACTIONS : MAX_WELCOME_ACTIONS,
+      );
     }
 
     if (!actionIds.length) {
-      const placement = state.messages.some((message) => message.role === 'user')
+      const placement = inConversation
         ? ['conversation', 'both']
         : ['welcome', 'both'];
-      actionIds = allActions
-        .filter((action) => placement.includes(action.placement))
-        .map((action) => action.id);
+      actionIds = dedupeIds(
+        allActions
+          .filter((action) => placement.includes(action.placement))
+          .map((action) => action.id),
+        inConversation ? MAX_CONVERSATION_ACTIONS : MAX_WELCOME_ACTIONS,
+      );
     }
 
     return actionIds
       .map((id) => byId.get(id))
       .filter(Boolean)
-      .slice(0, 5);
+      .slice(0, inConversation ? MAX_CONVERSATION_ACTIONS : MAX_WELCOME_ACTIONS);
   }
 
   function renderMessages() {
     const host = state.elements.messages;
     host.innerHTML = '';
+    const latestAssistant = state.messages.slice().reverse().find((message) => message.role === 'assistant' && !message.isWelcome);
 
     state.messages.forEach((message) => {
       const wrap = createElement('div', 'hmj-chatbot__message');
@@ -586,7 +609,9 @@
       const meta = createElement('div', 'hmj-chatbot__meta', message.role === 'assistant' ? 'HMJ assistant' : 'You');
       wrap.appendChild(bubble);
 
-      if (message.role === 'assistant' && Array.isArray(message.resourceLinks) && message.resourceLinks.length) {
+      const isLatestAssistant = !!latestAssistant && latestAssistant.id === message.id;
+
+      if (isLatestAssistant && Array.isArray(message.resourceLinks) && message.resourceLinks.length) {
         const links = createElement('div', 'hmj-chatbot__message-links');
         message.resourceLinks.forEach((link) => {
           const anchor = createElement('a', 'hmj-chatbot__message-link', link.label);
@@ -609,7 +634,7 @@
         wrap.appendChild(links);
       }
 
-      if (message.role === 'assistant' && Array.isArray(message.suggestedPrompts) && message.suggestedPrompts.length) {
+      if (isLatestAssistant && Array.isArray(message.suggestedPrompts) && message.suggestedPrompts.length) {
         const prompts = createElement('div', 'hmj-chatbot__suggestions');
         message.suggestedPrompts.forEach((prompt) => {
           const button = createElement('button', 'hmj-chatbot__suggestion', prompt);

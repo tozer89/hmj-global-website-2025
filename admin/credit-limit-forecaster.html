@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Credit Limit Forecaster | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="/lib/credit-limit-forecast.js?v=1"></script>
+  <link rel="stylesheet" href="/assets/css/admin.credit-limit-forecaster.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=1"/>
+  <script defer src="/admin/credit-limit-forecaster.js?v=1"></script>
+</head>
+<body>
+  <div class="clf-top">
+    <div class="clf-row">
+      <div class="clf-brand">
+        <strong>HMJ Global Admin</strong>
+        <span>Finance planning workspace</span>
+      </div>
+      <span class="clf-pill">Finance</span>
+      <div class="clf-spacer"></div>
+      <a class="clf-btn clf-btn-ghost" href="/admin/crm.html">CRM</a>
+      <a class="clf-btn clf-btn-ghost" href="/admin/">Dashboard</a>
+      <a class="clf-btn clf-btn-ghost" href="/">Website</a>
+      <button class="clf-btn clf-btn-ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="clf-wrap clf-gate" id="gate" style="display:none">
+    <section class="clf-panel">
+      <div class="clf-panel-inner">
+        <p class="clf-kicker">Admin only</p>
+        <h2>Secure HMJ access required</h2>
+        <p class="clf-muted why">Checking your session…</p>
+        <div class="clf-toolbar">
+          <button class="clf-btn clf-btn-primary" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="clf-btn clf-btn-ghost" href="/admin/">Back to dashboard</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="clf-wrap" id="app" style="display:none">
+    <section class="clf-panel">
+      <div class="clf-panel-inner clf-intro">
+        <div class="clf-intro-copy">
+          <div>
+            <p class="clf-kicker">Live admin module</p>
+            <h1>Credit Limit Forecaster</h1>
+          </div>
+          <p class="clf-muted">Model weekly invoicing, receipts, and contractor growth against a client’s insured credit limit. Compare scenarios, surface the first breach point, and export a finance-ready forecast without leaving the HMJ admin portal.</p>
+          <div class="clf-helper-line">
+            <span class="clf-status-badge" id="pageStatusBadge" data-status="within_limit">Within Limit</span>
+            <span class="clf-chip" id="userMetaChip">Loading user…</span>
+            <span class="clf-chip" id="summarySourceChip" data-tone="ok">Local summary</span>
+          </div>
+        </div>
+        <div class="clf-intro-actions">
+          <div class="clf-intro-highlight">
+            <p class="clf-kicker">Core outputs</p>
+            <div class="clf-metric-strip">
+              <div class="clf-metric-pill">
+                <strong id="heroPeakBalance">£0</strong>
+                <span>Peak projected balance</span>
+              </div>
+              <div class="clf-metric-pill">
+                <strong id="heroCapacity">0</strong>
+                <span>Additional contractors allowed</span>
+              </div>
+            </div>
+            <p class="clf-inline-note">Use the assumptions rail to model client funding terms, invoicing cadence, contractor capacity, and known receipts. Results update live once the first calculation has run.</p>
+          </div>
+          <div class="clf-action-grid">
+            <button class="clf-btn clf-btn-primary" type="button" id="btnCalculate">Calculate forecast</button>
+            <button class="clf-btn clf-btn-secondary" type="button" id="btnRefreshSummary">Refresh GPT summary</button>
+            <button class="clf-btn clf-btn-ghost" type="button" id="btnPrint">Print / Save PDF</button>
+            <button class="clf-btn clf-btn-ghost" type="button" id="btnExportCsv">Export CSV</button>
+            <button class="clf-btn clf-btn-ghost" type="button" id="btnExportXlsx">Export XLSX</button>
+            <button class="clf-btn clf-btn-secondary" type="button" id="btnLoadScenario">Load scenario</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="clf-workspace">
+      <aside class="clf-sidebar clf-sticky">
+        <section class="clf-panel">
+          <div class="clf-panel-inner clf-scenario-bar">
+            <div class="clf-section-head">
+              <div>
+                <p class="clf-kicker">Scenario workspace</p>
+                <h2>Base, proposed &amp; stretch</h2>
+              </div>
+              <div class="clf-toolbar">
+                <button class="clf-btn clf-btn-secondary" type="button" id="btnDuplicateScenario">Duplicate</button>
+                <button class="clf-btn clf-btn-secondary" type="button" id="btnSaveScenario">Save</button>
+                <button class="clf-btn clf-btn-danger" type="button" id="btnResetScenario">Reset</button>
+              </div>
+            </div>
+            <div class="clf-tabs" id="scenarioTabs" aria-label="Scenario tabs"></div>
+          </div>
+        </section>
+
+        <section class="clf-panel">
+          <div class="clf-panel-inner clf-assumption-shell">
+            <div class="clf-section-head">
+              <div>
+                <p class="clf-kicker">Assumptions</p>
+                <h2>Funding inputs</h2>
+              </div>
+              <div class="clf-toolbar clf-no-print">
+                <button class="clf-btn clf-btn-secondary" type="button" id="btnExpandAll">Expand all</button>
+                <button class="clf-btn clf-btn-secondary" type="button" id="btnCollapseAll">Collapse all</button>
+              </div>
+            </div>
+
+            <form id="forecastForm" autocomplete="off">
+              <details class="clf-assumption-group" open>
+                <summary>
+                  <div>
+                    <strong>Client Basics</strong>
+                    <span>Account identity, limit, currency, VAT, and forecast horizon.</span>
+                  </div>
+                  <button class="clf-icon-btn" type="button" tabindex="-1">+</button>
+                </summary>
+                <div class="clf-assumption-body">
+                  <div class="clf-form-grid">
+                    <label class="clf-field clf-field-full">
+                      <span class="clf-label">Client name</span>
+                      <input id="clientName" list="clientNames" type="text" placeholder="Client account"/>
+                    </label>
+                    <label class="clf-field clf-field-full">
+                      <span class="clf-label">Scenario name</span>
+                      <input id="scenarioName" type="text" placeholder="Base case"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Currency</span>
+                      <select id="currency">
+                        <option value="GBP">GBP</option>
+                        <option value="EUR">EUR</option>
+                      </select>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Credit limit</span>
+                      <input id="creditLimit" type="number" min="0" step="0.01" inputmode="decimal"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Current outstanding balance</span>
+                      <input id="currentOutstandingBalance" type="number" min="0" step="0.01" inputmode="decimal"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Forecast start date</span>
+                      <input id="forecastStartDate" type="date"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Forecast horizon (weeks)</span>
+                      <input id="forecastHorizonWeeks" type="number" min="4" max="52" step="1"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Risk threshold %</span>
+                      <input id="riskThresholdPercent" type="number" min="50" max="100" step="1"/>
+                    </label>
+                  </div>
+                  <div class="clf-toggle-row">
+                    <label class="clf-toggle">
+                      <input id="vatApplicable" type="checkbox"/>
+                      <span>VAT applicable</span>
+                    </label>
+                    <label class="clf-field" style="min-width:180px">
+                      <span class="clf-label">VAT rate %</span>
+                      <input id="vatRate" type="number" min="0" max="100" step="0.1"/>
+                    </label>
+                  </div>
+                </div>
+              </details>
+
+              <details class="clf-assumption-group" open>
+                <summary>
+                  <div>
+                    <strong>Payment Terms</strong>
+                    <span>Receipt timing logic and payment lag.</span>
+                  </div>
+                  <button class="clf-icon-btn" type="button" tabindex="-1">+</button>
+                </summary>
+                <div class="clf-assumption-body">
+                  <div class="clf-form-grid">
+                    <label class="clf-field clf-field-full">
+                      <span class="clf-label">Terms structure</span>
+                      <select id="paymentTermsType">
+                        <option value="30_eom">30 days end of month</option>
+                        <option value="30_from_invoice">30 days from invoice date</option>
+                        <option value="14_net">14 days net</option>
+                        <option value="custom_net">Custom net days</option>
+                      </select>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Custom net days</span>
+                      <input id="customNetDays" type="number" min="0" max="180" step="1"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Receipt lag override (days)</span>
+                      <input id="receiptLagDays" type="number" min="0" max="60" step="1"/>
+                    </label>
+                  </div>
+                  <p class="clf-inline-note">Receipt dates are mapped deterministically from the invoice date so the forecast remains explainable week by week.</p>
+                </div>
+              </details>
+
+              <details class="clf-assumption-group" open>
+                <summary>
+                  <div>
+                    <strong>Weekly Invoice &amp; Contractor Growth</strong>
+                    <span>Switch between direct invoice assumptions, contractor build-up, or a combined model.</span>
+                  </div>
+                  <button class="clf-icon-btn" type="button" tabindex="-1">+</button>
+                </summary>
+                <div class="clf-assumption-body">
+                  <div class="clf-form-grid">
+                    <label class="clf-field clf-field-full">
+                      <span class="clf-label">Primary growth driver</span>
+                      <select id="growthMode">
+                        <option value="contractor">Contractor-based</option>
+                        <option value="direct">Direct weekly invoice value</option>
+                        <option value="combined">Combined model</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="clf-form-grid clf-form-grid-3">
+                    <label class="clf-field">
+                      <span class="clf-label">Base weekly net invoice</span>
+                      <input id="directBaseWeeklyNet" type="number" min="0" step="0.01"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Base weekly gross invoice</span>
+                      <input id="directBaseWeeklyGross" type="number" min="0" step="0.01"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Scenario weekly net invoice</span>
+                      <input id="directScenarioWeeklyNet" type="number" min="0" step="0.01"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Scenario weekly gross invoice</span>
+                      <input id="directScenarioWeeklyGross" type="number" min="0" step="0.01"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Current contractors</span>
+                      <input id="currentContractors" type="number" min="0" step="1"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Additional contractors to test</span>
+                      <input id="additionalContractors" type="number" min="0" step="1"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Weekly pay per contractor</span>
+                      <input id="weeklyPayPerContractor" type="number" min="0" step="0.01"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Hourly wage</span>
+                      <input id="hourlyWage" type="number" min="0" step="0.01"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Expected weekly hours</span>
+                      <input id="weeklyHours" type="number" min="0" step="0.1"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Margin / uplift %</span>
+                      <input id="marginPercent" type="number" step="0.1"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Net invoice per contractor</span>
+                      <input id="perContractorNetInvoice" type="number" min="0" step="0.01"/>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Gross invoice per contractor</span>
+                      <input id="perContractorGrossInvoice" type="number" min="0" step="0.01"/>
+                    </label>
+                  </div>
+                  <div id="growthPreview" class="clf-mini-grid" aria-live="polite"></div>
+                </div>
+              </details>
+
+              <details class="clf-assumption-group" open>
+                <summary>
+                  <div>
+                    <strong>Invoicing Calendar</strong>
+                    <span>Invoice weekday logic, cadence, and optional event-count overrides.</span>
+                  </div>
+                  <button class="clf-icon-btn" type="button" tabindex="-1">+</button>
+                </summary>
+                <div class="clf-assumption-body">
+                  <div class="clf-form-grid">
+                    <label class="clf-field">
+                      <span class="clf-label">Invoice cadence</span>
+                      <select id="invoiceCadence">
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly (last selected weekday)</option>
+                      </select>
+                    </label>
+                    <label class="clf-field">
+                      <span class="clf-label">Invoice weekday</span>
+                      <select id="invoiceWeekday">
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="clf-toggle-row">
+                    <label class="clf-toggle">
+                      <input id="autoCountDates" type="checkbox"/>
+                      <span>Count invoice events automatically</span>
+                    </label>
+                  </div>
+                  <div id="invoiceDatePreview" class="clf-date-list"></div>
+                  <div id="invoiceOverrideHost" class="clf-list"></div>
+                </div>
+              </details>
+
+              <details class="clf-assumption-group" open>
+                <summary>
+                  <div>
+                    <strong>Receipt Assumptions</strong>
+                    <span>Known expected receipts and weekly adjustments on top of term-driven cashflow.</span>
+                  </div>
+                  <button class="clf-icon-btn" type="button" tabindex="-1">+</button>
+                </summary>
+                <div class="clf-assumption-body">
+                  <div class="clf-toolbar">
+                    <button class="clf-btn clf-btn-secondary" type="button" id="btnAddReceiptLine">Add receipt line</button>
+                  </div>
+                  <div id="receiptLinesHost" class="clf-list"></div>
+                  <div id="receiptAdjustmentsHost" class="clf-list"></div>
+                </div>
+              </details>
+
+              <details class="clf-assumption-group">
+                <summary>
+                  <div>
+                    <strong>Scenario Notes</strong>
+                    <span>Internal handover notes or rationale for saved scenarios.</span>
+                  </div>
+                  <button class="clf-icon-btn" type="button" tabindex="-1">+</button>
+                </summary>
+                <div class="clf-assumption-body">
+                  <label class="clf-field">
+                    <span class="clf-label">Notes</span>
+                    <textarea id="notes" placeholder="Optional internal note for this scenario"></textarea>
+                  </label>
+                </div>
+              </details>
+            </form>
+          </div>
+        </section>
+      </aside>
+
+      <main class="clf-results">
+        <section class="clf-panel">
+          <div class="clf-panel-inner">
+            <div class="clf-section-head">
+              <div>
+                <p class="clf-kicker">Results workspace</p>
+                <h2 id="resultsHeading">Scenario output</h2>
+                <p class="clf-muted" id="resultsMeta">Weekly projected balances, breach timing, and contractor capacity sensitivity.</p>
+              </div>
+              <div class="clf-toolbar">
+                <label class="clf-field clf-compare-select">
+                  <span class="clf-label">Compare against</span>
+                  <select id="compareScenarioSelect"></select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="kpiGrid" class="clf-kpi-grid" aria-live="polite"></section>
+
+        <section class="clf-dual-grid">
+          <article class="clf-card" data-emphasis="summary">
+            <div class="clf-card-head">
+              <div>
+                <p class="clf-kicker">Commercial summary</p>
+                <h3>Result narrative</h3>
+              </div>
+              <div class="clf-loader" id="summaryLoader" style="display:none">Refreshing summary</div>
+            </div>
+            <div class="clf-summary-text" id="gptSummaryText"></div>
+          </article>
+
+          <article class="clf-card" data-emphasis="compare">
+            <div class="clf-card-head">
+              <div>
+                <p class="clf-kicker">Assumption snapshot</p>
+                <h3>Planning context</h3>
+              </div>
+            </div>
+            <div id="assumptionSnapshot" class="clf-list"></div>
+          </article>
+        </section>
+
+        <section class="clf-chart-grid">
+          <article class="clf-card clf-chart-shell">
+            <div class="clf-card-head">
+              <div>
+                <p class="clf-kicker">Trajectory</p>
+                <h3>Balance vs insured limit</h3>
+              </div>
+              <div class="clf-chart-legend">
+                <span class="clf-legend-item"><span class="clf-legend-dot" data-kind="active"></span>Active scenario</span>
+                <span class="clf-legend-item"><span class="clf-legend-dot" data-kind="compare"></span>Comparison scenario</span>
+                <span class="clf-legend-item"><span class="clf-legend-dot" data-kind="limit"></span>Insured limit</span>
+              </div>
+            </div>
+            <div id="trajectoryChart" class="clf-chart" role="img" aria-label="Balance trajectory chart"></div>
+          </article>
+
+          <article class="clf-card clf-chart-shell">
+            <div class="clf-card-head">
+              <div>
+                <p class="clf-kicker">Headroom</p>
+                <h3>Weekly remaining capacity</h3>
+              </div>
+            </div>
+            <div id="headroomChart" class="clf-chart" role="img" aria-label="Headroom chart"></div>
+            <div id="compareSummary" class="clf-compare-grid"></div>
+          </article>
+        </section>
+
+        <section class="clf-panel">
+          <div class="clf-panel-inner">
+            <div class="clf-card-head">
+              <div>
+                <p class="clf-kicker">Sensitivity</p>
+                <h3>Safe capacity logic</h3>
+              </div>
+            </div>
+            <div id="sensitivityHost" class="clf-sensitivity-list"></div>
+          </div>
+        </section>
+
+        <section class="clf-panel">
+          <div class="clf-panel-inner">
+            <div class="clf-card-head">
+              <div>
+                <p class="clf-kicker">Detailed forecast</p>
+                <h3>Weekly opening, invoicing, receipts, and closing balance</h3>
+              </div>
+            </div>
+            <div id="forecastTableHost" class="clf-table-wrap"></div>
+          </div>
+        </section>
+
+        <section class="clf-panel">
+          <div class="clf-panel-inner">
+            <div class="clf-card-head">
+              <div>
+                <p class="clf-kicker">Receipt timing</p>
+                <h3>Invoice and expected receipt schedule</h3>
+              </div>
+            </div>
+            <div id="cashTimingHost" class="clf-table-wrap"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="savedScenarioDialog" class="clf-dialog">
+    <div class="clf-dialog-shell">
+      <div class="clf-dialog-head">
+        <div>
+          <p class="clf-kicker">Scenario library</p>
+          <h3>Saved forecasts</h3>
+          <p class="clf-muted">Load a previous forecast into the current tab or duplicate it into the workspace.</p>
+        </div>
+        <button class="clf-btn clf-btn-ghost" type="button" id="btnCloseScenarioDialog">Close</button>
+      </div>
+      <div class="clf-dialog-body">
+        <div id="savedScenarioList" class="clf-list"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <datalist id="clientNames"></datalist>
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

@@ -19,6 +19,7 @@ create table if not exists public.chatbot_conversations (
   latest_route text,
   latest_page_title text,
   page_category text,
+  ip_address text,
   ip_hash text,
   user_agent text,
   initial_intent text,
@@ -30,6 +31,24 @@ create table if not exists public.chatbot_conversations (
   last_message_preview text,
   metadata jsonb not null default '{}'::jsonb
 );
+
+alter table if exists public.chatbot_conversations add column if not exists created_at timestamptz not null default now();
+alter table if exists public.chatbot_conversations add column if not exists updated_at timestamptz not null default now();
+alter table if exists public.chatbot_conversations add column if not exists first_route text;
+alter table if exists public.chatbot_conversations add column if not exists latest_route text;
+alter table if exists public.chatbot_conversations add column if not exists latest_page_title text;
+alter table if exists public.chatbot_conversations add column if not exists page_category text;
+alter table if exists public.chatbot_conversations add column if not exists ip_address text;
+alter table if exists public.chatbot_conversations add column if not exists ip_hash text;
+alter table if exists public.chatbot_conversations add column if not exists user_agent text;
+alter table if exists public.chatbot_conversations add column if not exists initial_intent text;
+alter table if exists public.chatbot_conversations add column if not exists latest_intent text;
+alter table if exists public.chatbot_conversations add column if not exists message_count integer not null default 0;
+alter table if exists public.chatbot_conversations add column if not exists assistant_message_count integer not null default 0;
+alter table if exists public.chatbot_conversations add column if not exists handoff_count integer not null default 0;
+alter table if exists public.chatbot_conversations add column if not exists last_handoff_reason text;
+alter table if exists public.chatbot_conversations add column if not exists last_message_preview text;
+alter table if exists public.chatbot_conversations add column if not exists metadata jsonb not null default '{}'::jsonb;
 
 create table if not exists public.chatbot_messages (
   id uuid primary key default gen_random_uuid(),
@@ -51,6 +70,20 @@ create table if not exists public.chatbot_messages (
   metadata jsonb not null default '{}'::jsonb
 );
 
+alter table if exists public.chatbot_messages add column if not exists created_at timestamptz not null default now();
+alter table if exists public.chatbot_messages add column if not exists intent text;
+alter table if exists public.chatbot_messages add column if not exists cta_ids jsonb not null default '[]'::jsonb;
+alter table if exists public.chatbot_messages add column if not exists quick_reply_ids jsonb not null default '[]'::jsonb;
+alter table if exists public.chatbot_messages add column if not exists handoff boolean not null default false;
+alter table if exists public.chatbot_messages add column if not exists handoff_reason text;
+alter table if exists public.chatbot_messages add column if not exists fallback boolean not null default false;
+alter table if exists public.chatbot_messages add column if not exists model text;
+alter table if exists public.chatbot_messages add column if not exists response_id text;
+alter table if exists public.chatbot_messages add column if not exists route text;
+alter table if exists public.chatbot_messages add column if not exists page_title text;
+alter table if exists public.chatbot_messages add column if not exists page_category text;
+alter table if exists public.chatbot_messages add column if not exists metadata jsonb not null default '{}'::jsonb;
+
 create table if not exists public.chatbot_events (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -67,11 +100,29 @@ create table if not exists public.chatbot_events (
   metadata jsonb not null default '{}'::jsonb
 );
 
+alter table if exists public.chatbot_events add column if not exists created_at timestamptz not null default now();
+alter table if exists public.chatbot_events add column if not exists session_id text;
+alter table if exists public.chatbot_events add column if not exists conversation_id text;
+alter table if exists public.chatbot_events add column if not exists route text;
+alter table if exists public.chatbot_events add column if not exists page_category text;
+alter table if exists public.chatbot_events add column if not exists intent text;
+alter table if exists public.chatbot_events add column if not exists visitor_type text;
+alter table if exists public.chatbot_events add column if not exists outcome text;
+alter table if exists public.chatbot_events add column if not exists cta_id text;
+alter table if exists public.chatbot_events add column if not exists fallback boolean not null default false;
+alter table if exists public.chatbot_events add column if not exists metadata jsonb not null default '{}'::jsonb;
+
 create index if not exists chatbot_conversations_updated_idx
   on public.chatbot_conversations (updated_at desc);
 
 create index if not exists chatbot_conversations_route_idx
   on public.chatbot_conversations (latest_route);
+
+create index if not exists chatbot_conversations_intent_idx
+  on public.chatbot_conversations (latest_intent);
+
+create index if not exists chatbot_conversations_ip_hash_idx
+  on public.chatbot_conversations (ip_hash);
 
 create index if not exists chatbot_messages_conversation_idx
   on public.chatbot_messages (conversation_id, created_at asc);
@@ -107,22 +158,39 @@ alter table public.chatbot_conversations enable row level security;
 alter table public.chatbot_messages enable row level security;
 alter table public.chatbot_events enable row level security;
 
-insert into public.admin_settings (key, value)
-values (
-  'chatbot_settings',
-  '{
-    "enabled": true,
-    "visibility": {
-      "routeMode": "all_public",
-      "includePatterns": [],
-      "excludePatterns": ["/admin", "/timesheets"]
-    }
-  }'::jsonb
-)
-on conflict (key) do nothing;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'admin_settings'
+  ) then
+    insert into public.admin_settings (key, value)
+    values (
+      'chatbot_settings',
+      '{
+        "enabled": true,
+        "visibility": {
+          "routeMode": "all_public",
+          "includePatterns": [],
+          "excludePatterns": ["/admin", "/timesheets"]
+        }
+      }'::jsonb
+    )
+    on conflict (key) do nothing;
+  end if;
+end
+$$;
 
 comment on table public.chatbot_conversations is
   'Session-level records for the HMJ website chatbot. Written server-side by Netlify Functions and surfaced in the admin module.';
+
+comment on column public.chatbot_conversations.ip_address is
+  'Raw visitor IP address captured by the serverless function. This is personal data and should only be retained if your privacy policy and legal basis cover it.';
+
+comment on column public.chatbot_conversations.ip_hash is
+  'SHA-256 hash of the visitor IP address for safer grouping and reporting without relying on raw IP values.';
 
 comment on table public.chatbot_messages is
   'Message-level transcript rows for the HMJ website chatbot. Stores both visitor and assistant messages for admin review.';
