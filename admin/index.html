@@ -41,10 +41,10 @@
     .section-head .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
     .section-head p:last-child{margin:0;max-width:54ch}
 
-    .hero-shell{display:grid;gap:18px;grid-template-columns:minmax(0,1.32fr) minmax(320px,.98fr);align-items:start}
+    .hero-shell{display:grid;gap:18px;grid-template-columns:minmax(0,1.18fr) minmax(300px,.9fr) minmax(300px,.9fr);align-items:start}
     .hero-copy{display:grid;gap:16px}
     .hero-copy__intro{margin:0;max-width:60ch}
-    .shortlink-panel{display:grid;gap:14px;padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.16);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 18px 36px rgba(15,27,63,.08)}
+    .shortlink-panel{display:grid;gap:14px;padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.16);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 18px 36px rgba(15,27,63,.08);height:100%;align-content:start}
     .shortlink-panel .btn:not(.outline){background:linear-gradient(180deg,#3657b3,#29489e);color:#fff;border-color:rgba(41,72,158,.48);box-shadow:0 12px 24px rgba(47,78,162,.16)}
     .shortlink-panel .btn:not(.outline):hover{border-color:rgba(41,72,158,.62)}
     .shortlink-panel__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
@@ -68,7 +68,7 @@
     .shortlink-result__row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
     .shortlink-history__head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
     .shortlink-history__head h4{margin:0;font-size:16px}
-    .shortlink-list{display:grid;gap:10px}
+    .shortlink-list{display:grid;gap:10px;max-height:548px;overflow:auto;padding-right:4px}
     .shortlink-item{display:grid;gap:10px;padding:12px 14px;border-radius:14px;border:1px solid rgba(47,78,162,.12);background:rgba(255,255,255,.88)}
     .shortlink-item__top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
     .shortlink-item__title{font-weight:800;line-height:1.25}
@@ -114,6 +114,11 @@
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.25);box-shadow:0 16px 30px rgba(15,27,63,.18);font-weight:700}
 
+    @media (max-width:1120px){
+      .hero-shell{grid-template-columns:minmax(0,1fr) minmax(300px,1fr)}
+      .hero-copy{grid-column:1 / -1}
+    }
+
     @media (max-width:720px){
       .section-head{align-items:flex-start}
       .card{min-height:unset}
@@ -153,7 +158,7 @@
           <div class="auth-bullet-grid" aria-label="Portal overview">
             <article class="auth-bullet">
               <strong>Who should sign in here</strong>
-              <p class="muted">HMJ internal team members using an approved work account for jobs, CRM, payroll, reports, and operations.</p>
+              <p class="muted">HMJ internal team members using an approved work account for jobs, payroll, reports, and operations.</p>
             </article>
             <article class="auth-bullet">
               <strong>What this portal is for</strong>
@@ -233,6 +238,8 @@
   </div>
 
   <div class="wrap" id="app" style="display:none">
+    <section id="notesBoard" class="panel notes-board" hidden></section>
+
     <section class="panel hero" aria-labelledby="welcomeHeading">
       <div class="hero-shell">
         <div class="hero-copy">
@@ -264,7 +271,7 @@
           </div>
         </div>
 
-        <aside class="shortlink-panel" aria-labelledby="shortLinkHeading">
+        <aside class="shortlink-panel shortlink-panel--builder" aria-labelledby="shortLinkHeading">
           <div class="shortlink-panel__head">
             <div>
               <p class="eyebrow">Admin utility</p>
@@ -272,7 +279,7 @@
             </div>
             <span class="shortlink-badge">Internal create only</span>
           </div>
-          <p class="muted shortlink-panel__intro">Generate clean HMJ links at <strong>/go/:slug</strong> for jobs, forms, and polished outbound sharing.</p>
+          <p class="muted shortlink-panel__intro">Create clean HMJ links at <strong>/go/:slug</strong> for jobs, forms, specs, and polished outbound sharing.</p>
 
           <form id="shortLinkForm" class="shortlink-form" novalidate>
             <div class="shortlink-fields">
@@ -306,19 +313,22 @@
             <div class="shortlink-result__row">
               <input id="shortLinkOutput" type="text" readonly aria-label="Generated HMJ short link"/>
               <button type="button" class="btn outline small" id="btnCopyShortLink">Copy</button>
-              <a class="btn small" id="shortLinkOpen" href="#" target="_blank" rel="noopener">Open</a>
+              <a class="btn small" id="shortLinkOpen" target="_blank" rel="noopener" hidden aria-hidden="true">Open</a>
             </div>
             <p class="utility-note" id="shortLinkMeta"></p>
           </section>
+        </aside>
 
-          <section class="shortlink-history" aria-labelledby="shortLinkHistoryHeading">
-            <div class="shortlink-history__head">
-              <div>
-                <p class="eyebrow">Recent links</p>
-                <h4 id="shortLinkHistoryHeading">Reuse recent HMJ links</h4>
-              </div>
-              <button type="button" class="btn outline small" id="btnRefreshShortLinks">Refresh</button>
+        <aside class="shortlink-panel shortlink-panel--history" aria-labelledby="shortLinkHistoryHeading">
+          <div class="shortlink-panel__head">
+            <div>
+              <p class="eyebrow">Recent links</p>
+              <h3 id="shortLinkHistoryHeading">Reuse recent HMJ links</h3>
             </div>
+            <button type="button" class="btn outline small" id="btnRefreshShortLinks">Refresh</button>
+          </div>
+          <p class="muted shortlink-panel__intro">Open, reuse, or copy the latest branded links without scrolling through a long utility stack.</p>
+          <section class="shortlink-history" aria-labelledby="shortLinkHistoryHeading">
             <div class="shortlink-list" id="shortLinkList" aria-live="polite"></div>
           </section>
         </aside>
@@ -331,18 +341,13 @@
           <p class="eyebrow">Quick access</p>
           <h3 id="quickAccessHeading">Admin Summary</h3>
         </div>
-        <p class="muted">Jump straight into the core admin areas or return to the public site without digging through the full dashboard.</p>
+        <p class="muted">Jump straight into the core admin areas without digging through the full dashboard.</p>
       </div>
       <nav class="quick-grid" aria-label="Quick admin links">
         <a class="quick-link" href="/admin/jobs.html" aria-label="Open Jobs quick access">
           <span class="quick-link__eyebrow">Live module</span>
           <strong>Jobs</strong>
           <span>Manage live roles, specs, and vacancy publishing.</span>
-        </a>
-        <a class="quick-link" href="/admin/crm.html" aria-label="Open CRM quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>CRM</strong>
-          <span>Open clients, candidates, assignments, payroll, and reports.</span>
         </a>
         <a class="quick-link" href="/admin/credit-limit-forecaster.html" aria-label="Open Credit Limit Forecaster quick access">
           <span class="quick-link__eyebrow">Live module</span>
@@ -369,85 +374,63 @@
           <strong>Website Assistant</strong>
           <span>Control the live website chatbot, quick replies, GPT instructions, and stored visitor conversations.</span>
         </a>
-        <a class="quick-link" href="/" aria-label="Back to HMJ website">
-          <span class="quick-link__eyebrow">Safe link</span>
-          <strong>Back to Site</strong>
-          <span>Return to the public HMJ website homepage.</span>
-        </a>
       </nav>
     </section>
 
     <section class="panel module-shell" id="future-modules" aria-labelledby="futureModulesHeading">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Workspace modules</p>
-          <h3 id="futureModulesHeading">Admin Modules</h3>
+          <p class="eyebrow">Operations workspaces</p>
+          <h3 id="futureModulesHeading">More Admin Areas</h3>
         </div>
-        <p class="muted">Live HMJ modules sit alongside reserved expansion slots so the admin landing page can grow in a controlled way.</p>
+        <p class="muted">Use these direct workspace links for day-to-day client, candidate, assignment, payroll, and reporting work without going through a generic CRM landing page.</p>
       </div>
       <section class="module-grid grid" aria-label="Admin modules" data-tile-order>
-        <a class="card card--primary" id="placeholder-1" href="/admin/noticeboard.html" data-status="Live" aria-labelledby="placeholder1Title" aria-describedby="placeholder1Desc">
-          <span class="card-mark" aria-hidden="true">NB</span>
-          <div class="card-copy">
-            <h3 id="placeholder1Title">Noticeboard</h3>
-            <p id="placeholder1Desc">Manage public company updates for the About Us page with scheduling, featured stories, and image-led publishing.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-2" href="/admin/chatbot.html" data-status="Live" aria-labelledby="placeholder2Title" aria-describedby="placeholder2Desc">
-          <span class="card-mark" aria-hidden="true">AI</span>
-          <div class="card-copy">
-            <h3 id="placeholder2Title">Website Assistant</h3>
-            <p id="placeholder2Desc">Manage the live site chatbot, response guidance, CTA routing, and stored visitor conversation records.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-3" href="/admin/credit-limit-forecaster.html" data-status="Live" aria-labelledby="placeholder3Title" aria-describedby="placeholder3Desc">
+        <a class="card card--primary" id="placeholder-1" href="/admin/clients.html" data-status="Live" aria-labelledby="placeholder1Title" aria-describedby="placeholder1Desc">
           <span class="card-mark" aria-hidden="true">CL</span>
           <div class="card-copy">
-            <h3 id="placeholder3Title">Credit Limit Forecaster</h3>
-            <p id="placeholder3Desc">Model weekly invoicing, receipts, and contractor growth against a client’s insured limit with scenario comparison and export-ready forecasts.</p>
+            <h3 id="placeholder1Title">Clients</h3>
+            <p id="placeholder1Desc">Open the live client console for contact records, billing details, assignment visibility, and account-level admin updates.</p>
           </div>
         </a>
-        <a class="card card--primary" id="placeholder-4" href="/admin/analytics.html" data-status="Live" aria-labelledby="placeholder4Title" aria-describedby="placeholder4Desc">
-          <span class="card-mark" aria-hidden="true">WA</span>
+        <a class="card card--primary" id="placeholder-2" href="/admin/candidates.html" data-status="Live" aria-labelledby="placeholder2Title" aria-describedby="placeholder2Desc">
+          <span class="card-mark" aria-hidden="true">CA</span>
           <div class="card-copy">
-            <h3 id="placeholder4Title">Website Analytics</h3>
-            <p id="placeholder4Desc">Assess live visitor traffic, top pages, time on page, entry and exit behaviour, CTA engagement, and recent activity from one internal workspace.</p>
+            <h3 id="placeholder2Title">Candidates</h3>
+            <p id="placeholder2Desc">Review candidate records, notes, pipeline detail, and related internal hiring activity in one workspace.</p>
           </div>
         </a>
-        <a class="card card--placeholder" id="placeholder-5" href="#placeholder-5" data-status="Coming Soon" data-static-badge="true" aria-labelledby="placeholder5Title" aria-describedby="placeholder5Desc">
-          <span class="card-mark" aria-hidden="true">P5</span>
+        <a class="card card--primary" id="placeholder-3" href="/admin/assignments.html" data-status="Live" aria-labelledby="placeholder3Title" aria-describedby="placeholder3Desc">
+          <span class="card-mark" aria-hidden="true">AS</span>
           <div class="card-copy">
-            <h3 id="placeholder5Title">Placeholder 5</h3>
-            <p id="placeholder5Desc">Future module placeholder for a later admin control.</p>
+            <h3 id="placeholder3Title">Assignments</h3>
+            <p id="placeholder3Desc">Manage active placements, assignment terms, status tracking, and linked commercial records.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-4" href="/admin/payroll.html" data-status="Live" aria-labelledby="placeholder4Title" aria-describedby="placeholder4Desc">
+          <span class="card-mark" aria-hidden="true">PY</span>
+          <div class="card-copy">
+            <h3 id="placeholder4Title">Payroll</h3>
+            <p id="placeholder4Desc">Open the payroll console for reconciliation, week numbering, timesheet-linked margin checks, and payroll admin tasks.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-5" href="/admin/reports.html" data-status="Live" aria-labelledby="placeholder5Title" aria-describedby="placeholder5Desc">
+          <span class="card-mark" aria-hidden="true">RP</span>
+          <div class="card-copy">
+            <h3 id="placeholder5Title">Reports</h3>
+            <p id="placeholder5Desc">Go straight to reporting, week configuration, reconciliation tools, and cross-module operational checks.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-6" href="/admin/settings.html" data-status="Live" aria-labelledby="placeholder6Title" aria-describedby="placeholder6Desc">
+          <span class="card-mark" aria-hidden="true">ST</span>
+          <div class="card-copy">
+            <h3 id="placeholder6Title">Settings</h3>
+            <p id="placeholder6Desc">Open platform tools, recent activity, deploy health, and useful admin and public website links from one settings workspace.</p>
           </div>
         </a>
       </section>
-      <p class="section-note muted" id="settings-placeholder">The Website Assistant module now provides an admin-managed settings workflow for the live public chatbot, including prompt controls, routing, and conversation history.</p>
+      <p class="section-note muted" id="settings-placeholder">The quick access strip above covers the headline modules. This section now avoids duplicates, while Settings holds the platform tools and recent activity that no longer need to dominate the dashboard.</p>
     </section>
-
-    <section id="activityFeed" class="panel activity" hidden></section>
-
-    <section class="panel" id="netlifyTools">
-      <h3 style="margin:0 0 8px">Netlify tools</h3>
-      <p class="muted" style="margin:0 0 12px">Run a health check on the deployed functions or jump to the Netlify deploy dashboard.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn outline" id="btnHealth">Run Supabase health check</button>
-        <a class="btn" href="https://app.netlify.com/sites/hmjg/deploys" target="_blank" rel="noopener">Open Netlify deploys</a>
-      </div>
-      <pre id="healthResult" style="display:none;margin-top:14px"></pre>
-      <div class="health-chips" aria-live="polite" hidden>
-        <span class="chip" data-target="api">API: <span class="value">—</span></span>
-        <span class="chip" data-target="db">DB: <span class="value">—</span></span>
-        <span class="chip" data-target="storage">Storage: <span class="value">—</span></span>
-      </div>
-      <div class="logs-row" hidden>
-        <a class="btn ghost small" data-log="api" target="_blank" rel="noopener">Open API logs</a>
-        <a class="btn ghost small" data-log="db" target="_blank" rel="noopener">Open DB logs</a>
-        <a class="btn ghost small" data-log="storage" target="_blank" rel="noopener">Open Storage logs</a>
-      </div>
-    </section>
-
-    <section id="notesBoard" class="panel notes-board" hidden></section>
   </div>
 
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
@@ -480,29 +463,6 @@
         toast('Unable to load user details', 'warn', 2600);
       }
 
-      const btnHealth = sel('#btnHealth');
-      const healthResult = sel('#healthResult');
-      if (btnHealth) {
-        btnHealth.onclick = async () => {
-          if (healthResult) {
-            healthResult.style.display = 'block';
-            healthResult.textContent = 'Checking Netlify function…';
-          }
-          try {
-            const res = await fetch('/.netlify/functions/supa-health', { credentials: 'include' });
-            const txt = await res.text();
-            let display = txt;
-            try { display = JSON.stringify(JSON.parse(txt), null, 2); } catch {}
-            if (healthResult) healthResult.textContent = display || 'OK';
-            (window.hmjToast || toast)('Health check complete', 'info', 2000);
-            window.dispatchEvent(new CustomEvent('hmj:admin:health', { detail: { ok: true, raw: txt, at: Date.now() } }));
-          } catch (err) {
-            if (healthResult) healthResult.textContent = 'Error: ' + (err.message || err);
-            (window.hmjToast || toast)('Health check failed', 'error', 3200);
-            window.dispatchEvent(new CustomEvent('hmj:admin:health', { detail: { ok: false, error: err, at: Date.now() } }));
-          }
-        };
-      }
     });
   })();
   </script>

@@ -504,14 +504,63 @@ html[data-theme="dark"] .hero-meta {
 
 .notes-board {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+  background: linear-gradient(180deg, rgba(63,102,199,.08), rgba(255,255,255,.98));
+  overflow: hidden;
 }
 
 .notes-board header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notes-board__title {
+  display: grid;
+  gap: 6px;
+}
+
+.notes-board__title h3 {
+  margin: 0;
+}
+
+.notes-board__title p {
+  margin: 0;
+  max-width: 70ch;
+}
+
+.notes-board__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.notes-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(63,102,199,.16);
+  background: rgba(63,102,199,.08);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.notes-status-chip[data-tone="ok"] {
+  background: rgba(19,135,84,.12);
+  border-color: rgba(19,135,84,.24);
+  color: var(--ok);
+}
+
+.notes-status-chip[data-tone="warn"] {
+  background: rgba(183,129,3,.14);
+  border-color: rgba(183,129,3,.22);
+  color: var(--warn);
 }
 
 .notes-board form {
@@ -521,13 +570,15 @@ html[data-theme="dark"] .hero-meta {
 
 .notes-board textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 64px;
+  max-height: 120px;
   border-radius: 12px;
   border: 1px solid var(--border);
   padding: 12px;
   font-family: inherit;
   background: rgba(63,102,199,.04);
   color: inherit;
+  resize: vertical;
 }
 
 .notes-board input[type="text"],
@@ -569,15 +620,18 @@ html[data-theme="dark"] .hero-meta {
 .notes-list {
   display: grid;
   gap: 12px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .note-card {
   border: 1px solid rgba(63,102,199,.16);
   border-radius: 14px;
-  padding: 14px;
+  padding: 12px;
   background: rgba(63,102,199,.05);
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .note-card[data-pinned="true"] {
@@ -697,18 +751,6 @@ html[data-theme="dark"] .hero-meta {
 
 @media (min-width: 1100px) {
   #app {
-    grid-template-columns: 2fr 1fr;
-    grid-auto-flow: row;
-  }
-  #app > .grid,
-  #app > #kpis,
-  #app > .hero,
-  #app > #notesBoard,
-  #app > #netlifyTools {
-    grid-column: 1 / 2;
-  }
-  #activityFeed {
-    grid-row: span 4;
-    grid-column: 2 / 3;
+    grid-template-columns: 1fr;
   }
 }

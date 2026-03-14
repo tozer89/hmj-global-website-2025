@@ -118,7 +118,16 @@
       ].filter(Boolean);
       els.outputMeta.textContent = metaParts.join(' · ');
     }
-    if (els.open) els.open.href = item.shortUrl || '#';
+    if (els.open) {
+      const hasUrl = !!item.shortUrl;
+      els.open.hidden = !hasUrl;
+      els.open.setAttribute('aria-hidden', hasUrl ? 'false' : 'true');
+      if (hasUrl) {
+        els.open.href = item.shortUrl;
+      } else {
+        els.open.removeAttribute('href');
+      }
+    }
   }
 
   async function copyText(value, input) {
@@ -216,13 +225,15 @@
         })
       );
 
-      const open = document.createElement('a');
-      open.className = 'btn small';
-      open.href = item.shortUrl || '#';
-      open.target = '_blank';
-      open.rel = 'noopener';
-      open.textContent = 'Open';
-      actions.append(open);
+      if (item.shortUrl) {
+        const open = document.createElement('a');
+        open.className = 'btn small';
+        open.href = item.shortUrl;
+        open.target = '_blank';
+        open.rel = 'noopener';
+        open.textContent = 'Open';
+        actions.append(open);
+      }
 
       card.append(top, url, actions);
       els.list.appendChild(card);

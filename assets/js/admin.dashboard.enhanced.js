@@ -9,6 +9,7 @@
     notes: 'hmj.admin.notes:v2',
     view: 'hmj.admin.view:v1'
   };
+  const NOTES_SETTING_KEY = 'dashboard_team_notes';
 
   const defaultView = {
     showKpis: true,
@@ -21,6 +22,11 @@
     who: null,
     activity: [],
     notes: [],
+    notesMeta: {
+      source: 'local',
+      status: 'Loading notes…',
+      tone: 'warn'
+    },
     view: { ...defaultView },
     paletteOpen: false,
     paletteNodes: [],
@@ -665,6 +671,7 @@
           l: '/admin/analytics.html',
           j: '/admin/jobs.html',
           p: '/admin/payroll.html',
+          s: '/admin/settings.html',
           t: '/admin/timesheets.html',
           r: '/admin/reports.html'
         };
@@ -706,6 +713,7 @@
       ['g a', 'Go to Assignments'],
       ['g j', 'Go to Jobs'],
       ['g p', 'Go to Payroll'],
+      ['g s', 'Go to Settings'],
       ['g t', 'Go to Timesheets'],
       ['g r', 'Go to Reports'],
       ['?', 'Show this help'],
@@ -808,22 +816,138 @@
     }
   }
 
+  function normaliseNotes(notes) {
+    if (!Array.isArray(notes)) return [];
+    return notes
+      .map((note, index) => ({
+        id: typeof note?.id === 'string' && note.id ? note.id : `n_${now()}_${index}`,
+        text: typeof note?.text === 'string' ? note.text.trim() : '',
+        tag: typeof note?.tag === 'string' ? note.tag.trim().replace(/^#/, '').toLowerCase() : '',
+        pinned: !!note?.pinned,
+        ts: Number.isFinite(Number(note?.ts)) ? Number(note.ts) : now(),
+        author: typeof note?.author === 'string' ? note.author.trim() : ''
+      }))
+      .filter((note) => note.text);
+  }
+
+  function updateNotesMeta(patch) {
+    state.notesMeta = { ...state.notesMeta, ...(patch || {}) };
+    const chip = document.getElementById('notesStatusChip');
+    if (chip) {
+      chip.textContent = state.notesMeta.status || 'Notes ready';
+      chip.dataset.tone = state.notesMeta.tone || 'warn';
+    }
+    const countChip = document.getElementById('notesCountChip');
+    if (countChip) {
+      const count = state.notes.length;
+      countChip.textContent = `${count} ${count === 1 ? 'note' : 'notes'}`;
+    }
+  }
+
+  function readLocalNotes() {
+    const stored = readStore(stores.notes, { notes: [] });
+    return normaliseNotes(stored?.notes);
+  }
+
+  async function loadNotes() {
+    state.notes = readLocalNotes();
+    updateNotesMeta({
+      source: 'local',
+      status: state.notes.length ? 'Checking shared notes…' : 'Ready for team notes',
+      tone: 'warn'
+    });
+    renderNotes();
+
+    if (!state.helpers?.api) return;
+
+    try {
+      const response = await state.helpers.api('admin-settings-get', 'POST', { keys: [NOTES_SETTING_KEY] });
+      const remoteNotes = normaliseNotes(response?.settings?.[NOTES_SETTING_KEY]);
+      const sharedAvailable = typeof response?.source === 'string' && response.source.startsWith('supabase');
+      const shouldSeedShared = sharedAvailable && !remoteNotes.length && state.notes.length;
+      if (remoteNotes.length) {
+        state.notes = remoteNotes;
+        writeStore(stores.notes, { notes: state.notes });
+      } else if (shouldSeedShared) {
+        state.helpers.api('admin-settings-save', 'POST', { [NOTES_SETTING_KEY]: state.notes }).catch((err) => {
+          console.warn('[HMJ]', 'shared notes seed failed', err);
+        });
+      }
+      updateNotesMeta({
+        source: sharedAvailable ? 'shared' : 'local',
+        status: sharedAvailable ? 'Shared across admin' : 'Local fallback only',
+        tone: sharedAvailable ? 'ok' : 'warn'
+      });
+      renderNotes();
+    } catch (err) {
+      console.warn('[HMJ]', 'shared notes load failed', err);
+      updateNotesMeta({
+        source: 'local',
+        status: 'Local notes only',
+        tone: 'warn'
+      });
+    }
+  }
+
+  function saveNotes() {
+    state.notes = normaliseNotes(state.notes).slice(0, 200);
+    writeStore(stores.notes, { notes: state.notes });
+    updateNotesMeta({
+      status: state.notesMeta.source === 'shared' ? 'Shared across admin' : 'Local notes saved',
+      tone: state.notesMeta.source === 'shared' ? 'ok' : 'warn'
+    });
+    if (!state.helpers?.api) return;
+    state.helpers.api('admin-settings-save', 'POST', { [NOTES_SETTING_KEY]: state.notes })
+      .then(() => {
+        updateNotesMeta({
+          source: 'shared',
+          status: 'Shared across admin',
+          tone: 'ok'
+        });
+      })
+      .catch((err) => {
+        console.warn('[HMJ]', 'shared notes save failed', err);
+        updateNotesMeta({
+          source: 'local',
+          status: 'Saved locally only',
+          tone: 'warn'
+        });
+      });
+  }
+
   function initNotesBoard() {
     const host = document.getElementById('notesBoard');
     if (!host) return;
-    loadNotes();
     host.innerHTML = '';
     const header = createEl('header');
-    header.appendChild(createEl('h3', { text: 'Team Notes (local only)' }));
+    const title = createEl('div', { className: 'notes-board__title' });
+    title.appendChild(createEl('h3', { text: 'Team Notes' }));
+    title.appendChild(createEl('p', {
+      className: 'muted',
+      text: 'Keep the important internal handover points visible at the top of admin. Notes stay compact here and become shared when the admin settings store is available.'
+    }));
+    header.appendChild(title);
+    const statusRow = createEl('div', { className: 'notes-board__status' });
+    statusRow.appendChild(createEl('span', {
+      className: 'notes-status-chip',
+      attrs: { id: 'notesStatusChip', 'data-tone': 'warn' },
+      text: 'Loading notes…'
+    }));
+    statusRow.appendChild(createEl('span', {
+      className: 'notes-status-chip',
+      attrs: { id: 'notesCountChip' },
+      text: '0 notes'
+    }));
     const exportBtn = createEl('button', { className: 'btn ghost small', text: 'Export', attrs: { type: 'button' } });
     const importBtn = createEl('button', { className: 'btn ghost small', text: 'Import', attrs: { type: 'button' } });
     const toolbar = createEl('div', { className: 'notes-toolbar' });
     toolbar.appendChild(exportBtn);
     toolbar.appendChild(importBtn);
-    header.appendChild(toolbar);
+    statusRow.appendChild(toolbar);
+    header.appendChild(statusRow);
     host.appendChild(header);
     const form = createEl('form');
-    const textarea = createEl('textarea', { attrs: { name: 'noteText', placeholder: 'Add a note for the team…' } });
+    const textarea = createEl('textarea', { attrs: { name: 'noteText', placeholder: 'Add a note that every admin user should see at the top of the dashboard…' } });
     const metaRow = createEl('div', { className: 'notes-toolbar' });
     const tagInput = createEl('input', { attrs: { type: 'text', name: 'noteTag', placeholder: '#tag (optional)', 'aria-label': 'Note tag' } });
     const saveBtn = createEl('button', { className: 'btn ghost small', text: 'Save note', attrs: { type: 'submit' } });
@@ -845,6 +969,7 @@
     const list = createEl('div', { className: 'notes-list', attrs: { id: 'notesList' } });
     host.appendChild(list);
     host.hidden = false;
+    updateNotesMeta({ status: 'Loading notes…', tone: 'warn' });
 
     form.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -890,7 +1015,7 @@
           try {
             const data = JSON.parse(reader.result);
             if (Array.isArray(data?.notes)) {
-              state.notes = data.notes.slice(0, 200);
+              state.notes = normaliseNotes(data.notes).slice(0, 200);
               saveNotes();
               renderNotes();
               hmjToast('Notes imported', 'info');
@@ -922,15 +1047,7 @@
     });
 
     renderNotes();
-  }
-
-  function loadNotes() {
-    const stored = readStore(stores.notes, { notes: [] });
-    state.notes = Array.isArray(stored?.notes) ? stored.notes : [];
-  }
-
-  function saveNotes() {
-    writeStore(stores.notes, { notes: state.notes });
+    loadNotes();
   }
 
   function renderNotes() {
@@ -971,8 +1088,9 @@
       notes = notes.filter((n) => n.text.toLowerCase().includes(search));
     }
     notes.sort((a, b) => (b.pinned === a.pinned) ? b.ts - a.ts : (b.pinned ? 1 : -1));
+    updateNotesMeta();
     if (!notes.length) {
-      list.appendChild(createEl('p', { className: 'notes-empty', text: 'No notes yet. Add one above!' }));
+      list.appendChild(createEl('p', { className: 'notes-empty', text: 'No notes yet. Add a team note above to keep the next login clearer.' }));
       return;
     }
     notes.forEach((note) => {
