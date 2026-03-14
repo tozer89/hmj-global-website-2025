@@ -12,23 +12,23 @@
       title: 'Finish setting your password',
       intro: 'You opened an HMJ invite link. Continue below to create your password and activate admin access.',
       steps: [
-        ['Open the secure setup dialog', 'Use Continue email link to launch the secure Netlify password setup flow.'],
+        ['Open the secure setup dialog', 'Use Continue secure email link to launch the secure password setup flow.'],
         ['Create a new password', 'Choose a strong password for your HMJ work account and complete the confirmation step.'],
         ['Return to admin', 'You will be brought back into HMJ admin as soon as the secure setup completes.']
       ],
-      continueLabel: 'Continue password setup',
-      recoveryHint: 'If this invite has expired or has already been used, contact the system administrator for a fresh invite.'
+      continueLabel: 'Continue secure email link',
+      recoveryHint: 'If this invite has expired or has already been used, contact HMJ access support for a fresh invite.'
     },
     recovery: {
       badge: 'Password reset link detected',
       title: 'Reset your password',
       intro: 'This HMJ access link is ready to reset your password. Continue below to open the secure reset dialog.',
       steps: [
-        ['Open the reset dialog', 'Use Continue email link to finish the password reset flow on this page.'],
-        ['Choose a new password', 'Create your new password in the secure Netlify Identity dialog.'],
+        ['Open the reset dialog', 'Use Continue secure email link to finish the password reset flow on this page.'],
+        ['Choose a new password', 'Create your new password in the secure password dialog.'],
         ['Sign straight back in', 'After the password reset succeeds you will be returned to HMJ admin.']
       ],
-      continueLabel: 'Continue password reset',
+      continueLabel: 'Continue secure email link',
       recoveryHint: 'If the link has expired, send yourself a fresh reset email using the form below.'
     },
     confirmation: {
@@ -36,48 +36,48 @@
       title: 'Confirm your HMJ access',
       intro: 'We detected a confirmation link for this account. Continue below to finish sign-in and return to HMJ admin.',
       steps: [
-        ['Open the secure confirmation dialog', 'Use Continue email link to let Netlify Identity finish the confirmation step.'],
+        ['Open the secure confirmation dialog', 'Use Continue secure email link to finish the confirmation step.'],
         ['Review the account prompt', 'If you are asked to sign in or set a password, follow the secure dialog on screen.'],
         ['Return to admin', 'Once the confirmation succeeds, HMJ admin will reload with your active session.']
       ],
-      continueLabel: 'Continue confirmation',
-      recoveryHint: 'If the confirmation no longer works, send a password reset instead or ask for a fresh invite.'
+      continueLabel: 'Continue secure email link',
+      recoveryHint: 'If the confirmation no longer works, send a password reset instead or contact HMJ access support.'
     },
     'email-change': {
       badge: 'Email change link detected',
       title: 'Confirm your email change',
       intro: 'This link is ready to confirm an account email change. Continue below to open the secure confirmation dialog.',
       steps: [
-        ['Open the secure dialog', 'Use Continue email link to let Netlify Identity finish the confirmation.'],
+        ['Open the secure dialog', 'Use Continue secure email link to finish the confirmation.'],
         ['Complete the verification', 'Follow the prompt on screen and review any confirmation details.'],
         ['Return to admin', 'After the change is accepted you can continue into HMJ admin with the updated account details.']
       ],
-      continueLabel: 'Continue email change',
-      recoveryHint: 'If the link has expired, contact the system administrator so they can review the account change.'
+      continueLabel: 'Continue secure email link',
+      recoveryHint: 'If the link has expired, contact HMJ access support so the account change can be reviewed.'
     },
     session: {
       badge: 'Secure session detected',
       title: 'Finish signing in',
-      intro: 'We detected a secure account callback on this page. Continue below to let HMJ finish your sign-in safely.',
+      intro: 'We detected a secure sign-in link on this page. Continue below to let HMJ finish your access safely.',
       steps: [
-        ['Open the secure dialog', 'Use Continue email link to let Netlify Identity finish the current callback.'],
+        ['Open the secure dialog', 'Use Continue secure email link to finish the current sign-in step.'],
         ['Review any prompts', 'Follow the secure on-screen prompt if extra confirmation is required.'],
-        ['Continue to admin', 'Once the callback completes, HMJ admin will refresh automatically.']
+        ['Continue to admin', 'Once the sign-in step completes, HMJ admin will refresh automatically.']
       ],
-      continueLabel: 'Continue secure sign-in',
-      recoveryHint: 'If this session callback fails, reload the page or send yourself a new reset email.'
+      continueLabel: 'Continue secure email link',
+      recoveryHint: 'If this secure sign-in step fails, reload the page or send yourself a new reset email.'
     },
     default: {
       badge: 'Secure HMJ access',
-      title: 'Access guidance',
-      intro: 'Use your HMJ work email to sign in, reset your password, or finish a setup link without leaving the admin access page.',
+      title: 'Secure access guidance',
+      intro: 'Use your HMJ work email to sign in, reset your password, or complete an access email on this page.',
       steps: [
         ['Sign in with your HMJ email', 'Open the secure sign-in dialog and enter the work email tied to your HMJ admin account.'],
         ['Reset a forgotten password', 'Use the password reset form if you need a fresh reset email sent to your inbox.'],
-        ['Need a first-time setup?', 'Open the original invite on this page, or contact the system administrator if the invite has expired.']
+        ['Need a first-time setup?', 'Open the latest invite on this page, or contact HMJ access support if it has expired.']
       ],
-      continueLabel: 'Continue email link',
-      recoveryHint: 'Use your HMJ work email. If you never created a password and no longer have the invite email, contact the system administrator for a fresh invite.'
+      continueLabel: 'Continue secure email link',
+      recoveryHint: 'Use your HMJ work email. If you never created a password and no longer have the invite email, contact HMJ access support.'
     }
   };
 
@@ -193,16 +193,16 @@
     const lower = text.toLowerCase();
     if (!text) return 'We could not complete that request. Please try again.';
     if (lower.includes('expired') || lower.includes('already been used') || lower.includes('already used')) {
-      return 'This email link has expired or has already been used. Send yourself a new password reset or contact the system administrator for a fresh invite.';
+      return 'This email link has expired or has already been used. Send yourself a new password reset or contact HMJ access support for a fresh invite.';
     }
     if (lower.includes('invalid') || lower.includes('not valid') || lower.includes('missing')) {
       return 'This email link is no longer valid. Open the newest email you received, or request a new password reset.';
     }
     if (lower.includes('network') || lower.includes('fetch')) {
-      return 'HMJ could not reach the identity service just now. Check your connection and try again.';
+      return 'HMJ could not reach the secure sign-in service just now. Check your connection and try again.';
     }
     if (lower.includes('not found') || lower.includes('no user')) {
-      return 'That account could not be matched. Check the work email you entered or contact the system administrator.';
+      return 'That account could not be matched. Check the work email you entered or contact HMJ access support.';
     }
     return text;
   }
@@ -275,7 +275,7 @@
   async function openIdentityDialog(state, mode) {
     const identity = await resolveIdentity(6000);
     if (!identity || typeof identity.open !== 'function') {
-      toneMessage('Secure sign-in is still loading on this host. Refresh and try again.', 'error');
+      toneMessage('Secure sign-in is still loading in this browser. Refresh and try again.', 'error');
       return false;
     }
 
@@ -309,7 +309,7 @@
     const identity = await resolveIdentity(6000);
     const client = identity?.gotrue;
     if (!client || typeof client.requestPasswordRecovery !== 'function') {
-      toneMessage('Password recovery is not ready yet on this host. Refresh and try again.', 'error');
+      toneMessage('Password recovery is not ready yet in this browser. Refresh and try again.', 'error');
       return;
     }
 
@@ -327,9 +327,9 @@
         steps: [
           ['Open the newest email', 'Use the latest HMJ password email so you do not hit an older expired link.'],
           ['Finish the secure reset here', 'Open the link on this page and continue with the secure password reset dialog.'],
-          ['Still no access?', 'If no email arrives or the link has expired, contact the system administrator for account help.']
+          ['Still no access?', 'If no email arrives or the link has expired, contact HMJ access support for account help.']
         ],
-        continueLabel: state.hasTokenPayload ? currentCopy(state).continueLabel : 'Continue email link',
+        continueLabel: state.hasTokenPayload ? currentCopy(state).continueLabel : 'Continue secure email link',
         recoveryHint: 'For security, HMJ shows the same confirmation message whether or not the email address exists.'
       });
     } catch (error) {
@@ -367,7 +367,7 @@
     continueButton?.addEventListener('click', async (event) => {
       event.preventDefault();
       if (!state.hasTokenPayload) {
-        toneMessage('Open the original invite or password email on this page, then select Continue email link. If the link has expired, send yourself a fresh reset email instead.', 'info');
+        toneMessage('Open the latest invite or password email on this page, then select Continue secure email link. If the link has expired, send yourself a fresh reset email instead.', 'info');
         return;
       }
       await openIdentityDialog(state, 'token');
@@ -387,7 +387,7 @@
         await openIdentityDialog(state, 'token');
         return;
       }
-      toneMessage('Use the original invite or setup email on this page to create your password. If that email has expired, contact the system administrator for a fresh invite.', 'info');
+      toneMessage('Use the latest invite or setup email on this page to create your password. If that email has expired, contact HMJ access support for a fresh invite.', 'info');
     });
 
     recoveryForm?.addEventListener('submit', async (event) => {
@@ -408,7 +408,7 @@
     if (intro) {
       intro.textContent = state.hasTokenPayload
         ? copy.intro
-        : 'Use your HMJ work email. If you opened an invite or reset email, this page will guide you through the next step.';
+        : 'Use your HMJ work email. If you opened an invite or password email, this page will guide you through the next step.';
     }
   }
 

@@ -28,3 +28,14 @@ test('public mobile menu buttons use consistent three-line markup', () => {
     assert.equal(spans.length, 3, `${page} burger should render exactly three icon bars`);
   });
 });
+
+test('public nav removes accounting and retains the admin entry item', () => {
+  PUBLIC_PAGES.forEach((page) => {
+    const html = fs.readFileSync(path.join(process.cwd(), page), 'utf8');
+
+    assert.doesNotMatch(html, />\s*Accounting\s*</i, `${page} should not render the Accounting nav item`);
+    assert.match(html, /id="nav-admin"/i, `${page} should retain the admin nav item`);
+    assert.match(html, /class="[^"]*\bnav-admin-link\b[^"]*"/i, `${page} admin nav item should include the shared admin styling class`);
+    assert.match(html, /id="nav-admin"[^>]*>\s*Admin\s*</i, `${page} admin nav item should use the Admin label`);
+  });
+});

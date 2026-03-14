@@ -202,68 +202,188 @@
   };
 
   const initTeam = () => {
-    const cards = Array.from(document.querySelectorAll('[data-team-card]'));
-    if (!cards.length) return;
+    const section = document.getElementById('aboutTeam');
+    const grid = document.getElementById('aboutTeamGrid') || section?.querySelector('[data-team-grid]');
+    const emptyState = document.getElementById('aboutTeamEmpty');
+    if (!section || !grid) return;
 
-    const closeAll = () => {
-      cards.forEach((card) => setOpen(card, false));
+    const escapeHtml = (value) => String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const deriveFirstName = (fullName) => {
+      const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+      return parts[0] || 'HMJ';
     };
 
-    const setOpen = (card, open) => {
-      if (!card) return;
-      card.classList.toggle('is-active', open);
-      const toggle = card.querySelector('[data-team-toggle]');
-      const reveal = card.querySelector('.about-team__reveal');
-      if (toggle) {
-        toggle.setAttribute('aria-expanded', String(open));
+    const renderMemberParagraphs = (member) => {
+      const parts = [member?.shortCaption, member?.fullBio]
+        .map((item) => String(item || '').trim())
+        .filter((item, index, list) => item && list.indexOf(item) === index);
+
+      if (!parts.length) {
+        return '<p>More profile detail will appear here soon.</p>';
       }
-      if (reveal) {
-        reveal.setAttribute('aria-hidden', String(!open));
-      }
+
+      return parts
+        .map((item) => `<p>${escapeHtml(item)}</p>`)
+        .join('');
     };
 
-    cards.forEach((card) => {
-      const toggle = card.querySelector('[data-team-toggle]');
-      const reveal = card.querySelector('.about-team__reveal');
-      if (reveal && !reveal.hasAttribute('aria-hidden')) {
-        reveal.setAttribute('aria-hidden', 'true');
+    const mediaMarkup = (member) => {
+      if (member?.imageUrl) {
+        return `<img src="${escapeHtml(member.imageUrl)}" alt="${escapeHtml(member.imageAltText || member.fullName || 'HMJ team member')}" loading="lazy" data-team-image />`;
       }
+      return '<div class="about-team__media-placeholder">HMJ Team</div>';
+    };
 
-      const toggleCard = (explicit) => {
-        const open = typeof explicit === 'boolean' ? explicit : !card.classList.contains('is-active');
-        setOpen(card, open);
+    const linkedInMarkup = (member) => {
+      if (!member?.linkedinUrl) return '';
+      const label = `${member.fullName || 'HMJ team member'} on LinkedIn`;
+      return `
+        <div class="about-team__links">
+          <a class="about-team__link" href="${escapeHtml(member.linkedinUrl)}" target="_blank" rel="noopener" aria-label="${escapeHtml(label)}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm.02 5.75H2V21h3V9.25zm5.75 0H8V21h3v-6.2c0-1.65.62-2.77 2.17-2.77 1.18 0 1.84.8 1.84 2.77V21h3v-6.95C18 10.59 16.48 9 14.36 9c-1.68 0-2.83.87-3.36 1.8h-.05z"/></svg>
+          </a>
+          <button type="button" class="about-team__copy" data-copy-link="${escapeHtml(member.linkedinUrl)}">Copy profile link</button>
+        </div>
+      `;
+    };
+
+    const bindCardInteractions = () => {
+      const cards = Array.from(grid.querySelectorAll('[data-team-card]'));
+      if (!cards.length) return;
+
+      const setOpen = (card, open) => {
+        if (!card) return;
+        card.classList.toggle('is-active', open);
+        const toggle = card.querySelector('[data-team-toggle]');
+        const reveal = card.querySelector('.about-team__reveal');
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', String(open));
+        }
+        if (reveal) {
+          reveal.setAttribute('aria-hidden', String(!open));
+        }
       };
 
-      if (toggle) {
-        toggle.addEventListener('click', () => toggleCard());
-      }
-
-      card.addEventListener('keydown', (event) => {
-        if (event.defaultPrevented) return;
-        if ((event.key === 'Enter' || event.key === ' ') && event.target === card) {
-          event.preventDefault();
-          toggleCard();
-        } else if (event.key === 'Escape') {
-          toggleCard(false);
-          if (toggle) toggle.focus();
+      cards.forEach((card) => {
+        if (card.dataset.teamBound === 'true') return;
+        card.dataset.teamBound = 'true';
+        const toggle = card.querySelector('[data-team-toggle]');
+        const reveal = card.querySelector('.about-team__reveal');
+        if (reveal && !reveal.hasAttribute('aria-hidden')) {
+          reveal.setAttribute('aria-hidden', 'true');
         }
-      });
-    });
 
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        closeAll();
+        const toggleCard = (explicit) => {
+          const open = typeof explicit === 'boolean' ? explicit : !card.classList.contains('is-active');
+          setOpen(card, open);
+        };
+
+        if (toggle) {
+          toggle.addEventListener('click', () => toggleCard());
+        }
+
+        card.addEventListener('keydown', (event) => {
+          if (event.defaultPrevented) return;
+          if ((event.key === 'Enter' || event.key === ' ') && event.target === card) {
+            event.preventDefault();
+            toggleCard();
+          } else if (event.key === 'Escape') {
+            toggleCard(false);
+            if (toggle) toggle.focus();
+          }
+        });
+      });
+
+      if (!document.documentElement.dataset.teamEscapeBound) {
+        document.documentElement.dataset.teamEscapeBound = 'true';
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            cards.forEach((card) => setOpen(card, false));
+          }
+        });
       }
-    });
 
-    const copyButtons = document.querySelectorAll('[data-copy-link]');
-    copyButtons.forEach((button) => {
-      button.addEventListener('click', async () => {
-        const url = button.getAttribute('data-copy-link');
-        const success = await copyText(url);
-        showToast(success ? 'Copied profile link' : 'Link copy unavailable');
+      const copyButtons = grid.querySelectorAll('[data-copy-link]');
+      copyButtons.forEach((button) => {
+        if (button.dataset.teamCopyBound === 'true') return;
+        button.dataset.teamCopyBound = 'true';
+        button.addEventListener('click', async () => {
+          const url = button.getAttribute('data-copy-link');
+          const success = await copyText(url);
+          showToast(success ? 'Copied profile link' : 'Link copy unavailable');
+        });
       });
-    });
+
+      const images = grid.querySelectorAll('[data-team-image]');
+      images.forEach((image) => {
+        if (image.dataset.teamImageBound === 'true') return;
+        image.dataset.teamImageBound = 'true';
+        image.addEventListener('error', () => {
+          const media = image.closest('.about-team__media');
+          if (!media) return;
+          media.innerHTML = '<div class="about-team__media-placeholder">HMJ Team</div>';
+        }, { once: true });
+      });
+    };
+
+    const renderMembers = (members) => {
+      const list = Array.isArray(members) ? members : [];
+      if (!list.length) {
+        grid.innerHTML = '';
+        grid.hidden = true;
+        if (emptyState) emptyState.hidden = false;
+        return;
+      }
+
+      grid.hidden = false;
+      if (emptyState) emptyState.hidden = true;
+      grid.innerHTML = list.map((member, index) => {
+        const slug = String(member?.slug || `team-member-${index + 1}`).replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
+        const titleId = `team-${slug}-title`;
+        const revealId = `team-${slug}-reveal`;
+        const firstName = deriveFirstName(member?.firstName || member?.fullName);
+        return `
+          <article class="about-team__card" data-team-card tabindex="0" aria-labelledby="${escapeHtml(titleId)}">
+            <figure class="about-team__media">
+              ${mediaMarkup(member)}
+            </figure>
+            <div class="about-team__content">
+              <h3 id="${escapeHtml(titleId)}">${escapeHtml(member?.fullName || 'HMJ team member')}</h3>
+              <p class="about-team__role">${escapeHtml(member?.roleTitle || 'Team role')}</p>
+              <button type="button" class="about-team__toggle" data-team-toggle aria-expanded="false" aria-controls="${escapeHtml(revealId)}">More about ${escapeHtml(firstName)}</button>
+            </div>
+            <div class="about-team__reveal" id="${escapeHtml(revealId)}" aria-hidden="true">
+              ${renderMemberParagraphs(member)}
+              ${linkedInMarkup(member)}
+            </div>
+          </article>
+        `;
+      }).join('');
+      bindCardInteractions();
+    };
+
+    fetch('/.netlify/functions/team-list', {
+      headers: { Accept: 'application/json' }
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Team request failed (${response.status})`);
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        renderMembers(payload?.members);
+      })
+      .catch((error) => {
+        console.warn('[about] team unavailable', error);
+        renderMembers([]);
+      });
   };
 
   const initValues = () => {

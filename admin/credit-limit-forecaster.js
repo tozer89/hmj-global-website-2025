@@ -119,6 +119,7 @@
       'resultsMeta',
       'kpiGrid',
       'resultsNoticeHost',
+      'operationalGuidanceHost',
       'gptSummaryText',
       'summaryLoader',
       'assumptionSnapshot',
@@ -379,6 +380,10 @@
     return Engine.formatDecimalCurrency(Number(amount) || 0, currency || activeCurrency());
   }
 
+  function roundMoney(value) {
+    return Math.round((Number(value) || 0) * 100) / 100;
+  }
+
   function toneForStatus(status) {
     if (status === 'over_limit') return 'danger';
     if (status === 'at_risk') return 'warn';
@@ -421,13 +426,143 @@
     const reconciliation = StatementImport.buildReconciliationSummary(statement, openingBalance);
     return (statement.fileName || 'Imported statement')
       + ' • '
+      + statementParseMethodLabel(statement)
+      + ' • '
       + statement.includedRowCount
       + ' included row'
       + (statement.includedRowCount === 1 ? '' : 's')
       + ' • '
-      + formatMoney(statement.importedTotal, currency)
+      + formatMoney(reconciliation.reconciliationTotal, currency)
       + ' • '
       + reconciliationModeLabel(reconciliation.reconciliationMode);
+  }
+
+  function statementParseMethodLabel(statement) {
+    if (!statement) return 'Statement import';
+    const method = String(statement.parseMethod || '').trim();
+    const extraction = statement.extraction || {};
+    if (method === 'ai_assisted_json') return 'AI-assisted PDF extraction';
+    if ((statement.sourceType === 'csv' || statement.sourceType === 'xlsx') && method === 'table_headers') return 'Spreadsheet import';
+    if (method === 'heuristic_lines') return 'PDF heuristic recovery';
+    if (extraction.strategy === 'ocr_pdf_text') return 'PDF OCR text';
+    if (statement.sourceType === 'pdf') return 'PDF text extraction';
+    return 'Statement import';
+  }
+
+  function stepStateLabel(state) {
+    switch (state) {
+      case 'complete':
+        return 'Complete';
+      case 'warning':
+        return 'Needs attention';
+      case 'current':
+        return 'Current';
+      default:
+        return 'Next';
+    }
+  }
+
+  function inferredOperationalCapacity(assumptions) {
+    const raw = Engine.cloneJson(ensureScenarioArrays(assumptions));
+    if (normaliseGrowthMode(raw.growthMode) === 'direct') {
+      raw.contractor = raw.contractor || {};
+      raw.contractor.additionalContractors = 0;
+    }
+    return Engine.analyseCapacity(raw);
+  }
+
+  function buildOperationalDeltaForecast(active, deltaContractors, inferredCapacity) {
+    const unitGross = Number(inferredCapacity && inferredCapacity.unitGross) || 0;
+    const unitNet = Number(inferredCapacity && inferredCapacity.unitNet) || 0;
+    if (unitGross <= 0 || unitNet <= 0) return null;
+
+    const raw = Engine.cloneJson(ensureScenarioArrays(active.assumptions));
+    const mode = normaliseGrowthMode(raw.growthMode);
+
+    if (mode === 'direct') {
+      const payload = buildCalculationPayload(raw);
+      const nextGross = Math.max(0, Number(payload.direct && payload.direct.scenarioWeeklyGross) + (deltaContractors * unitGross));
+      const nextNet = Math.max(0, Number(payload.direct && payload.direct.scenarioWeeklyNet) + (deltaContractors * unitNet));
+      return Engine.buildForecast(payload, {
+        baseWeeklyNet: Number(payload.direct && payload.direct.baseWeeklyNet) || 0,
+        baseWeeklyGross: Number(payload.direct && payload.direct.baseWeeklyGross) || 0,
+        scenarioWeeklyNet: nextNet,
+        scenarioWeeklyGross: nextGross,
+      });
+    }
+
+    const currentAdditional = Number(raw.contractor && raw.contractor.additionalContractors) || 0;
+    const currentWorkforce = Number(raw.contractor && raw.contractor.currentContractors) || 0;
+    const nextAdditional = currentAdditional + deltaContractors;
+    if (nextAdditional >= 0) {
+      raw.contractor.additionalContractors = nextAdditional;
+    } else {
+      raw.contractor.additionalContractors = 0;
+      raw.contractor.currentContractors = Math.max(0, currentWorkforce + nextAdditional);
+    }
+    return Engine.buildForecast(buildCalculationPayload(raw));
+  }
+
+  function buildOperationalGuidance(active) {
+    if (!active || !active.result) return null;
+    const result = active.result;
+    const currency = active.assumptions.currency;
+    const creditLimit = Number(result.metrics.creditLimit) || 0;
+    const peakOverLimit = Number(result.metrics.peakOverLimit != null
+      ? result.metrics.peakOverLimit
+      : Math.max(0, (result.metrics.forecastPeakBalance || 0) - creditLimit)) || 0;
+    const inferredCapacity = inferredOperationalCapacity(active.assumptions);
+    const perContractorGross = Number(inferredCapacity && inferredCapacity.unitGross) || 0;
+    const plusOneForecast = buildOperationalDeltaForecast(active, 1, inferredCapacity);
+    const minusOneForecast = buildOperationalDeltaForecast(active, -1, inferredCapacity);
+    const plusOneImpact = plusOneForecast
+      ? Math.max(0, roundMoney(plusOneForecast.metrics.forecastPeakBalance - result.metrics.forecastPeakBalance))
+      : 0;
+    const minusOneRelief = minusOneForecast
+      ? Math.max(0, roundMoney(result.metrics.forecastPeakBalance - minusOneForecast.metrics.forecastPeakBalance))
+      : 0;
+    const contractorEquivalentBasis = minusOneRelief > 0 ? minusOneRelief : plusOneImpact;
+    const contractorEquivalentExcess = peakOverLimit > 0 && contractorEquivalentBasis > 0
+      ? Math.round((peakOverLimit / contractorEquivalentBasis) * 10) / 10
+      : null;
+    const currentScenarioGross = Number(result.derived && result.derived.totalScenarioGross) || 0;
+    const weeklyReductionToSafe = result.capacity && result.capacity.maxSafeWeeklyGrossIncrease != null
+      ? Math.max(0, roundMoney(currentScenarioGross - result.capacity.maxSafeWeeklyGrossIncrease))
+      : 0;
+    const firstBreach = result.metrics.firstBreach;
+    const peakWeekLabel = result.metrics.peakWeekNumber
+      ? ('Week ' + result.metrics.peakWeekNumber)
+      : 'Peak week';
+
+    let lead = 'This scenario remains within the insured limit on the current assumptions.';
+    if (result.overallStatus === 'over_limit') {
+      lead = 'This scenario peaks '
+        + formatMoney(peakOverLimit, currency)
+        + ' over limit in '
+        + peakWeekLabel
+        + '.';
+    } else if (result.overallStatus === 'at_risk') {
+      lead = 'This scenario stays inside limit but enters the risk zone, with headroom tightening to '
+        + formatMoney(result.metrics.minimumHeadroom, currency)
+        + '.';
+    }
+
+    return {
+      lead: lead,
+      peakOverLimit: peakOverLimit,
+      peakWeekLabel: peakWeekLabel,
+      firstBreachLabel: firstBreach ? ('Week ' + firstBreach.weekNumber + ' • ' + Engine.formatLongDate(firstBreach.breachDate || firstBreach.weekCommencing)) : 'None forecast',
+      perContractorGross: perContractorGross,
+      contractorEquivalentExcess: contractorEquivalentExcess,
+      contractorEquivalentBasis: contractorEquivalentBasis,
+      plusOneImpact: plusOneImpact,
+      minusOneRelief: minusOneRelief,
+      weeklyReductionToSafe: weeklyReductionToSafe,
+      inferredCapacityAvailable: !!(inferredCapacity && inferredCapacity.available),
+      contractorsToRemove: Number(result.capacity && result.capacity.contractorsToRemove) || 0,
+      additionalAllowed: result.capacity && result.capacity.available ? Number(result.capacity.maxAdditionalContractorsAllowed) || 0 : null,
+      mode: normaliseGrowthMode(active.assumptions.growthMode),
+    };
   }
 
   function hasDirectInputs(assumptions) {
@@ -515,6 +650,12 @@
     if (assumptions.openingBalance
       && assumptions.openingBalance.importedStatement
       && Number(assumptions.openingBalance.importedStatement.overdueCollectionDays) !== Number(Engine.DEFAULT_ASSUMPTIONS.openingBalance.importedStatement.overdueCollectionDays)) count += 1;
+    if (assumptions.openingBalance
+      && assumptions.openingBalance.importedStatement
+      && Array.isArray(assumptions.openingBalance.importedStatement.adjustmentLines)
+      && assumptions.openingBalance.importedStatement.adjustmentLines.some(function (line) {
+        return line && line.include !== false && (Number(line.amount) !== 0 || String(line.note || '').trim() || String(line.date || '').trim());
+      })) count += 1;
     if (Array.isArray(assumptions.receiptWeekAdjustments)
       && assumptions.receiptWeekAdjustments.some(function (entry) { return Number(entry && entry.amount) !== 0; })) count += 1;
     if (String(assumptions.notes || '').trim()) count += 1;
@@ -560,8 +701,10 @@
       return 'Even runoff across ' + weeks + ' week' + (weeks === 1 ? '' : 's');
     }
     if (mode === 'import_statement') {
+      const adjustmentCount = imported && Number(imported.adjustmentIncludedCount || 0);
       return imported
-        ? ('Imported statement • ' + imported.includedRowCount + ' row' + (imported.includedRowCount === 1 ? '' : 's'))
+        ? ('Imported statement • ' + imported.includedRowCount + ' row' + (imported.includedRowCount === 1 ? '' : 's')
+          + (adjustmentCount ? (' • ' + adjustmentCount + ' adjustment line' + (adjustmentCount === 1 ? '' : 's')) : ''))
         : 'Imported statement';
     }
     return openingBalanceModeLabel(mode);
@@ -595,6 +738,8 @@
       importedStatement: importedStatement,
       importedStatementRowCount: importedStatement ? importedStatement.includedRowCount : 0,
       importedStatementTotal: importedStatement ? importedStatement.importedTotal : 0,
+      importedStatementAdjustmentCount: importedStatement ? Number(importedStatement.adjustmentIncludedCount || 0) : 0,
+      importedStatementAdjustmentTotal: importedStatement ? Number(importedStatement.adjustmentTotal || 0) : 0,
       importedStatementConfidence: importedStatement ? importedStatement.confidence : '',
       importedStatementReconciliationMode: importedStatement ? importedStatement.reconciliationMode : '',
       manualReceiptCount: manualReceiptCount,
@@ -672,6 +817,9 @@
       }
       if (summary.importedStatement.creditNoteCount) {
         warnings.push(summary.importedStatement.creditNoteCount + ' credit note or negative-balance row' + (summary.importedStatement.creditNoteCount === 1 ? '' : 's') + ' will stay in the imported opening total but will not be treated as future cash receipts.');
+      }
+      if (summary.importedStatement.parseMethod === 'ai_assisted_json') {
+        warnings.push('AI-assisted extraction was used for this statement. Review the imported rows before sharing the forecast externally.');
       }
     }
     if (summary.raw.paymentTerms.receiptLagDays > 0) {
@@ -1033,6 +1181,17 @@
     };
   }
 
+  function defaultStatementAdjustmentLine(scenario) {
+    const assumptions = scenario && scenario.assumptions ? scenario.assumptions : Engine.DEFAULT_ASSUMPTIONS;
+    return {
+      id: uid('import-adjustment'),
+      include: true,
+      date: assumptions.forecastStartDate || Engine.DEFAULT_ASSUMPTIONS.forecastStartDate,
+      amount: 0,
+      note: '',
+    };
+  }
+
   function statementTaskForScenario(scenarioId) {
     return state.statementImportTask.scenarioId === scenarioId ? state.statementImportTask : null;
   }
@@ -1127,10 +1286,24 @@
         scenario.id,
         false,
         response.ok ? 'ready' : 'review',
-        response.ok ? 'Ready for review' : 'Needs review'
+        response.aiAssistUsed
+          ? 'AI-assisted review ready'
+          : (response.ok ? 'Ready for review' : 'Needs review')
       );
       renderWorkspace();
-      state.helpers.toast.ok(response.ok ? 'Statement ready for review.' : 'Statement imported with warnings. Review before confirming.', 2400);
+      const reconciliation = response.statement
+        ? StatementImport.buildReconciliationSummary(response.statement, scenario.assumptions.currentOutstandingBalance)
+        : null;
+      state.helpers.toast.ok(
+        response.aiAssistUsed
+          ? 'AI-assisted statement extraction is ready for review.'
+          : (response.ok
+            ? (reconciliation && reconciliation.matches
+              ? 'Statement ready for review and tied to the opening balance.'
+              : 'Statement ready for review. Check the opening-balance reconciliation before confirming.')
+            : 'Statement imported with warnings. Review before confirming.'),
+        2400
+      );
     } catch (error) {
       if (token !== state.statementImportTask.token) return;
       setStatementTask(scenario.id, false, 'failed', 'Import failed');
@@ -1165,7 +1338,16 @@
     renderWorkspace();
     scheduleSummaryRefresh(false);
     persistWorkspace();
-    state.helpers.toast.ok('Imported statement is now driving the opening-balance receipts.', 2600);
+    const reconciliation = StatementImport.buildReconciliationSummary(
+      active.assumptions.openingBalance.importedStatement,
+      active.assumptions.currentOutstandingBalance
+    );
+    state.helpers.toast.ok(
+      reconciliation.matches
+        ? 'Imported statement is now driving the opening-balance receipts.'
+        : 'Imported statement is live. Reconciliation is still different from the entered opening balance.',
+      2600
+    );
   }
 
   function clearImportedStatementData() {
@@ -1183,6 +1365,7 @@
   function renderSetupGuide(active) {
     if (!els.setupGuideHost) return;
     const summary = buildScenarioSummary(active.assumptions, active.result);
+    const validation = buildValidationState(active);
     const draft = getStatementDraft(active.id);
     const accountReady = String(els.creditLimit && els.creditLimit.value || '').trim() !== ''
       && String(els.currentOutstandingBalance && els.currentOutstandingBalance.value || '').trim() !== ''
@@ -1190,25 +1373,45 @@
     const openingReady = summary.raw.openingBalance.receiptMode !== 'import_statement'
       ? true
       : !!summary.importedStatement;
+    const termsReady = summary.raw.paymentTerms.type !== 'custom_net'
+      ? true
+      : Number(summary.raw.paymentTerms.customNetDays) > 0;
     const growthReady = !summary.zeroGrowth;
     let nextCopy = 'Next: calculate forecast';
     if (!accountReady) nextCopy = 'Next: complete the account setup';
+    else if (!termsReady) nextCopy = 'Next: confirm the payment terms';
     else if (summary.raw.openingBalance.receiptMode === 'import_statement' && !summary.importedStatement && draft) nextCopy = 'Next: review imported statement rows';
     else if (summary.raw.openingBalance.receiptMode === 'import_statement' && !summary.importedStatement) nextCopy = 'Next: upload a debtor statement';
     else if (!growthReady) nextCopy = 'Next: choose how to model growth';
 
     const chips = [
-      { label: 'Account setup', state: accountReady ? 'complete' : 'current' },
-      { label: 'Opening receipts', state: openingReady ? 'complete' : (summary.raw.openingBalance.receiptMode === 'import_statement' ? 'current' : 'pending') },
-      { label: 'Growth method', state: growthReady ? 'complete' : 'current' },
-      { label: 'Calculate', state: accountReady && openingReady && growthReady ? 'current' : 'pending' },
+      { step: '1', label: 'Account setup', state: accountReady ? 'complete' : 'current' },
+      { step: '2', label: 'Terms & tax', state: termsReady ? 'complete' : 'warning' },
+      {
+        step: '3',
+        label: 'Growth model',
+        state: growthReady ? 'complete' : 'current',
+      },
+      {
+        step: '4',
+        label: 'Opening receipts',
+        state: openingReady ? 'complete' : 'warning',
+      },
+      { step: '5', label: 'Review & calculate', state: validation.canCalculate ? 'current' : 'pending' },
     ];
+    document.querySelectorAll('.clf-step-card[data-step]').forEach(function (card) {
+      const step = card.getAttribute('data-step');
+      const item = chips.find(function (chip) { return chip.step === step; });
+      if (!item) return;
+      card.dataset.stepState = item.state;
+    });
 
     els.setupGuideHost.innerHTML = '<div class="clf-setup-guide">'
       + '<div class="clf-chip-list">'
       + chips.map(function (chip) {
         return '<span class="clf-chip clf-guide-chip" data-guide-state="' + escapeAttr(chip.state) + '">'
           + escapeHtml(chip.label)
+          + '<small>' + escapeHtml(stepStateLabel(chip.state)) + '</small>'
           + '</span>';
       }).join('')
       + '</div>'
@@ -1242,6 +1445,7 @@
     const reconciliation = working
       ? StatementImport.buildReconciliationSummary(working, active.assumptions.currentOutstandingBalance)
       : null;
+    const adjustmentRows = working && Array.isArray(working.adjustmentLines) ? working.adjustmentLines : [];
     const headers = draft && draft.rawTable ? draft.rawTable.headers : [];
     const mappingRows = draft && draft.rawTable
       ? [
@@ -1255,6 +1459,9 @@
       : [];
     const reviewRows = working && Array.isArray(working.rows) ? working.rows : [];
     const advancedVisible = state.inputDensity === 'advanced';
+    const importMethod = working ? statementParseMethodLabel(working) : '';
+    const usingAiAssist = working && working.parseMethod === 'ai_assisted_json';
+    const uploadButtonLabel = working ? 'Upload another statement' : 'Upload statement';
 
     const uploadCard = [
       '<article class="clf-import-card clf-upload-card" data-dropzone="statement-upload">',
@@ -1263,7 +1470,7 @@
       '</div>',
       '<p class="clf-inline-note">Upload a debtor statement or ledger export so the opening balance can be scheduled using actual invoice due dates.</p>',
       '<div class="clf-toolbar clf-no-print">',
-      '<button class="clf-btn clf-btn-primary" type="button" data-statement-action="browse">Upload statement</button>',
+      '<button class="clf-btn clf-btn-primary" type="button" data-statement-action="browse">' + escapeHtml(uploadButtonLabel) + '</button>',
       '<button class="clf-btn clf-btn-ghost" type="button" data-statement-action="switch-manual">Add manual receipt instead</button>',
       working ? '<button class="clf-btn clf-btn-secondary" type="button" data-statement-action="clear">Clear imported statement</button>' : '',
       '</div>',
@@ -1271,6 +1478,29 @@
       task ? '<div class="clf-import-status"><span class="clf-chip" data-tone="' + escapeAttr(task.busy ? 'warn' : (task.stage === 'failed' ? 'danger' : 'ok')) + '">' + escapeHtml(task.message || 'Working') + '</span><span>' + escapeHtml(task.stage === 'reading' ? 'Reading file' : task.stage === 'extracting' ? 'Matching columns' : task.message || '') + '</span></div>' : '',
       '</article>',
     ].join('');
+
+    let uploadCheckCard = '';
+    if (working && reconciliation) {
+      const checkTone = reconciliation.matches ? 'ok' : 'warn';
+      uploadCheckCard = '<article class="clf-import-card"><div class="clf-card-head"><div><p class="clf-kicker">Upload check</p><h3>'
+        + (reconciliation.matches ? 'Statement upload ties to opening balance' : 'Statement upload needs reconciliation')
+        + '</h3></div><span class="clf-chip" data-tone="' + escapeAttr(checkTone) + '">'
+        + escapeHtml(reconciliation.matches ? 'Matched' : 'Needs check')
+        + '</span></div>'
+        + '<div class="clf-mini-grid">'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(working.sourceType ? working.sourceType.toUpperCase() : 'FILE') + '</strong><span>Uploaded file type</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(String(working.includedRowCount || 0)) + '</strong><span>Included imported rows</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.reconciliationTotal || 0, active.assumptions.currency)) + '</strong><span>Opening-book total in forecast</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(active.assumptions.currentOutstandingBalance || 0, active.assumptions.currency)) + '</strong><span>Entered opening balance</span></div>'
+        + '</div>'
+        + '<div class="clf-alert" data-tone="' + escapeAttr(checkTone) + '"><strong>'
+        + escapeHtml(reconciliation.matches ? 'Upload passed the opening-balance check.' : 'The uploaded schedule does not yet tie to the entered opening balance.')
+        + '</strong><span>'
+        + escapeHtml(reconciliation.matches
+          ? 'The included rows and any adjustment lines reconcile to the opening balance you entered.'
+          : 'Review the include ticks below or add a dated adjustment line for anything missing from the file.')
+        + '</span></div></article>';
+    }
 
     let summaryCard = '';
     if (working) {
@@ -1284,9 +1514,15 @@
         + '<div class="clf-mini-grid">'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(String(working.includedRowCount || 0)) + '</strong><span>Included rows</span></div>'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(working.importedTotal || 0, active.assumptions.currency)) + '</strong><span>Imported opening total</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(working.adjustmentTotal || 0, active.assumptions.currency)) + '</strong><span>Adjustment lines total</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney((working.reconciliationTotal != null ? working.reconciliationTotal : ((working.importedTotal || 0) + (working.adjustmentTotal || 0))), active.assumptions.currency)) + '</strong><span>Reconciled opening total</span></div>'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(working.detectedCurrency || active.assumptions.currency) + '</strong><span>Matched currency</span></div>'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(String(working.overdueRowCount || 0)) + '</strong><span>Overdue rows</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(importMethod) + '</strong><span>Parsing method</span></div>'
         + '</div>'
+        + (usingAiAssist
+          ? '<div class="clf-alert" data-tone="info"><strong>AI-assisted extraction</strong><span>The PDF needed AI-assisted extraction after the standard parser showed weak confidence. Review and confirm the rows before sharing the forecast.</span></div>'
+          : '')
         + (warnings.length
           ? '<div class="clf-alert-stack">' + warnings.map(function (warning) {
             return '<div class="clf-alert" data-tone="warn"><strong>Check import</strong><span>' + escapeHtml(warning) + '</span></div>';
@@ -1314,16 +1550,36 @@
 
     let reconciliationCard = '';
     if (working && reconciliation) {
+      const adjustmentTable = adjustmentRows.length
+        ? '<div class="clf-table-wrap clf-import-table-wrap"><table class="clf-inline-table clf-import-table"><thead><tr><th>Include</th><th>Receipt date</th><th>Amount</th><th>Note</th><th>Remove</th></tr></thead><tbody>'
+          + adjustmentRows.map(function (line, index) {
+            return '<tr>'
+              + '<td><input type="checkbox" data-import-adjustment-index="' + index + '" data-import-adjustment-key="include"' + (line.include !== false ? ' checked' : '') + '/></td>'
+              + '<td><input type="date" data-import-adjustment-index="' + index + '" data-import-adjustment-key="date" value="' + escapeAttr(line.date || active.assumptions.forecastStartDate || '') + '"/></td>'
+              + '<td><input type="number" step="0.01" data-import-adjustment-index="' + index + '" data-import-adjustment-key="amount" value="' + escapeAttr(line.amount || 0) + '"/></td>'
+              + '<td><input type="text" data-import-adjustment-index="' + index + '" data-import-adjustment-key="note" value="' + escapeAttr(line.note || '') + '" placeholder="Missing invoice, timing adjustment, or note"/><div class="clf-muted-small">' + escapeHtml(line.warningText || 'Optional opening-book adjustment') + '</div></td>'
+              + '<td><button class="clf-btn clf-btn-ghost clf-btn-small" type="button" data-statement-action="remove-adjustment" data-adjustment-index="' + index + '">Remove</button></td>'
+              + '</tr>';
+          }).join('')
+          + '</tbody></table></div>'
+        : '<div class="clf-empty">No dated adjustment lines have been added. Use this only if the uploaded statement still does not tie to the entered opening balance.</div>';
       reconciliationCard = '<article class="clf-import-card"><div class="clf-card-head"><div><p class="clf-kicker">Reconciliation</p><h3>Compare imported total with opening balance</h3></div></div>'
+        + '<p class="clf-inline-note">Untick rows in the review table if needed, then add a dated adjustment line below for anything missing from the file.</p>'
         + '<div class="clf-mini-grid">'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.enteredOpeningBalance, active.assumptions.currency)) + '</strong><span>Entered opening balance</span></div>'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.importedTotal, active.assumptions.currency)) + '</strong><span>Imported statement total</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.adjustmentTotal || 0, active.assumptions.currency)) + '</strong><span>Adjustment lines total</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.reconciliationTotal || 0, active.assumptions.currency)) + '</strong><span>Reconciled opening total</span></div>'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.variance, active.assumptions.currency)) + '</strong><span>Variance</span></div>'
         + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.effectiveOpeningBalance, active.assumptions.currency)) + '</strong><span>Forecast opening balance</span></div>'
         + '</div>'
-        + (!reconciliation.matches
-          ? '<div class="clf-alert" data-tone="warn"><strong>Totals do not reconcile</strong><span>Choose whether the forecast should keep the entered opening balance, use the imported total, or scale the imported schedule to match the opening balance.</span></div>'
-          : '')
+        + '<div class="clf-alert" data-tone="' + escapeAttr(reconciliation.matches ? 'ok' : 'warn') + '"><strong>'
+        + escapeHtml(reconciliation.matches ? 'Opening balance ties after included rows and adjustments.' : 'Totals do not reconcile yet.')
+        + '</strong><span>'
+        + escapeHtml(reconciliation.matches
+          ? 'You can confirm this import as-is or still change the treatment below.'
+          : 'Choose whether the forecast should keep the entered opening balance, use the reconciled imported total, or scale the imported schedule to match the opening balance.')
+        + '</span></div>'
         + '<div class="clf-form-grid' + (advancedVisible ? ' clf-form-grid-3' : '') + '">'
         + '<label class="clf-field clf-field-full"><span class="clf-label">Reconciliation treatment</span><select data-import-reconciliation-mode="1">'
         + Object.keys(Engine.OPENING_BALANCE_RECONCILIATION_LABELS).map(function (key) {
@@ -1334,7 +1590,10 @@
         + (advancedVisible
           ? '<label class="clf-field"><span class="clf-label">Overdue collection delay (days)</span><input type="number" min="0" max="60" step="1" data-import-overdue-days="1" value="' + escapeAttr(working.overdueCollectionDays || 7) + '"/></label>'
           : '')
-        + '</div></article>';
+        + '</div>'
+        + '<div class="clf-card-head"><div><p class="clf-kicker">Adjustment lines</p><h3>Dated opening-book adjustments</h3></div><button class="clf-btn clf-btn-secondary" type="button" data-statement-action="add-adjustment">Add adjustment line</button></div>'
+        + adjustmentTable
+        + '</article>';
     }
 
     let reviewCard = '';
@@ -1361,7 +1620,7 @@
         + '</tbody></table></div></article>';
     }
 
-    els.openingBalanceImportHost.innerHTML = [uploadCard, summaryCard, mappingCard, reconciliationCard, reviewCard].join('');
+    els.openingBalanceImportHost.innerHTML = [uploadCard, uploadCheckCard, summaryCard, mappingCard, reconciliationCard, reviewCard].join('');
     els.openingBalanceImportHost.style.display = '';
   }
 
@@ -1632,6 +1891,74 @@
     els.resultsNoticeHost.style.display = notices.length ? '' : 'none';
   }
 
+  function renderOperationalGuidance(active) {
+    if (!els.operationalGuidanceHost) return;
+    const guidance = buildOperationalGuidance(active);
+    if (!guidance) {
+      els.operationalGuidanceHost.innerHTML = '';
+      return;
+    }
+
+    const currency = active.assumptions.currency;
+    const cards = [
+      {
+        label: guidance.peakOverLimit > 0 ? 'Peak over limit' : 'Peak headroom view',
+        value: guidance.peakOverLimit > 0 ? formatMoney(guidance.peakOverLimit, currency) : formatMoney(active.result.metrics.minimumHeadroom, currency),
+        meta: guidance.peakOverLimit > 0 ? guidance.peakWeekLabel : 'Lowest headroom',
+      },
+      {
+        label: 'First breach',
+        value: guidance.firstBreachLabel,
+        meta: guidance.peakOverLimit > 0 ? 'Earliest week over limit' : 'No breach forecast',
+      },
+      {
+        label: 'Typical contractor impact',
+        value: guidance.perContractorGross > 0 ? formatMoneyPrecise(guidance.perContractorGross, currency) : 'Not inferred',
+        meta: guidance.perContractorGross > 0 ? 'Gross weekly value per contractor' : 'Add contractor value assumptions to estimate equivalents',
+      },
+      {
+        label: 'Contractor-equivalent excess',
+        value: guidance.contractorEquivalentExcess != null ? String(guidance.contractorEquivalentExcess) : 'Not inferred',
+        meta: guidance.contractorEquivalentExcess != null ? 'Based on modelled peak exposure per contractor' : 'No per-contractor basis available',
+      },
+      {
+        label: '+1 contractor effect',
+        value: guidance.plusOneImpact > 0 ? formatMoney(guidance.plusOneImpact, currency) : 'Not modelled',
+        meta: guidance.plusOneImpact > 0 ? 'Extra peak exposure' : 'No contractor-equivalent uplift available',
+      },
+      {
+        label: guidance.peakOverLimit > 0 ? '-1 contractor relief' : 'Safe contractors allowed',
+        value: guidance.peakOverLimit > 0
+          ? (guidance.minusOneRelief > 0 ? formatMoney(guidance.minusOneRelief, currency) : 'Not modelled')
+          : (guidance.additionalAllowed != null ? String(guidance.additionalAllowed) : 'Not modelled'),
+        meta: guidance.peakOverLimit > 0
+          ? (guidance.minusOneRelief > 0 ? 'Peak reduction from one contractor-equivalent' : 'No contractor-equivalent estimate available')
+          : 'Current safe headcount buffer',
+      },
+    ];
+
+    const actionChips = [];
+    if (guidance.peakOverLimit > 0 && guidance.contractorsToRemove > 0) {
+      actionChips.push('<span class="clf-chip" data-tone="danger">Reduce by approx ' + guidance.contractorsToRemove + ' contractor' + (guidance.contractorsToRemove === 1 ? '' : 's') + '</span>');
+    }
+    if (guidance.weeklyReductionToSafe > 0) {
+      actionChips.push('<span class="clf-chip" data-tone="' + escapeAttr(guidance.peakOverLimit > 0 ? 'danger' : 'warn') + '">Lower weekly uplift by about ' + escapeHtml(formatMoney(guidance.weeklyReductionToSafe, currency)) + '</span>');
+    }
+    if (guidance.peakOverLimit === 0 && guidance.additionalAllowed != null) {
+      actionChips.push('<span class="clf-chip" data-tone="ok">Current profile still supports ' + guidance.additionalAllowed + ' more contractor' + (guidance.additionalAllowed === 1 ? '' : 's') + '</span>');
+    }
+
+    els.operationalGuidanceHost.innerHTML = '<div class="clf-operational-stack">'
+      + '<div class="clf-alert" data-tone="' + escapeAttr(active.result.overallStatus === 'over_limit' ? 'danger' : (active.result.overallStatus === 'at_risk' ? 'warn' : 'info')) + '"><strong>Operational view</strong><span>' + escapeHtml(guidance.lead) + '</span></div>'
+      + '<div class="clf-mini-grid clf-operational-grid">'
+      + cards.map(function (card) {
+        return '<div class="clf-mini-card"><strong>' + escapeHtml(card.value) + '</strong><span>' + escapeHtml(card.label) + '</span><small>' + escapeHtml(card.meta) + '</small></div>';
+      }).join('')
+      + '</div>'
+      + (actionChips.length ? '<div class="clf-chip-row">' + actionChips.join('') + '</div>' : '')
+      + '</div>';
+  }
+
   function linePath(points) {
     return points.map(function (point, index) {
       return (index === 0 ? 'M' : 'L') + point[0].toFixed(2) + ' ' + point[1].toFixed(2);
@@ -1811,23 +2138,23 @@
     const rows = active.result.weeks.map(function (row) {
       const invoiceDates = row.invoiceDateLabels.length ? row.invoiceDateLabels.join(', ') : '—';
       return '<tr data-status="' + escapeAttr(row.status) + '">'
-        + '<td><div class="clf-cell-stack"><strong>Week ' + row.weekNumber + '</strong><small>' + escapeHtml(Engine.formatLongDate(row.weekCommencing)) + '</small></div></td>'
-        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(invoiceDates) + '</strong><small>' + row.invoiceCount + ' event(s)</small></div></td>'
-        + '<td>' + escapeHtml(formatMoney(row.openingBalance, currency)) + '</td>'
-        + '<td>' + escapeHtml(formatMoney(row.baseInvoiceIncrease, currency)) + '</td>'
-        + '<td>' + escapeHtml(formatMoney(row.scenarioInvoiceIncrease, currency)) + '</td>'
-        + '<td>' + escapeHtml(formatMoney(row.openingBalanceReceipts, currency)) + '</td>'
-        + '<td>' + escapeHtml(formatMoney(row.forecastInvoiceReceipts, currency)) + '</td>'
-        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(formatMoney(row.totalReceipts, currency)) + '</strong><small>Weekly adjustments ' + escapeHtml(formatMoney(row.receiptAdjustments, currency)) + '</small></div></td>'
-        + '<td>' + escapeHtml(formatMoney(row.closingBalance, currency)) + '</td>'
-        + '<td>' + escapeHtml(formatMoney(row.headroom, currency)) + '</td>'
-        + '<td><span class="clf-table-badge" data-status="' + escapeAttr(row.status) + '">' + escapeHtml(row.statusLabel) + '</span></td>'
-        + '<td>' + escapeHtml(row.breachDate ? Engine.formatLongDate(row.breachDate) : '—') + '</td>'
+        + '<td class="clf-col-week"><div class="clf-cell-stack"><strong>Week ' + row.weekNumber + '</strong><small>' + escapeHtml(Engine.formatLongDate(row.weekCommencing)) + '</small></div></td>'
+        + '<td class="clf-col-dates"><div class="clf-cell-stack"><strong>' + escapeHtml(invoiceDates) + '</strong><small>' + row.invoiceCount + ' event' + (row.invoiceCount === 1 ? '' : 's') + '</small></div></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(row.openingBalance, currency)) + '</span></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(row.baseInvoiceIncrease, currency)) + '</span></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(row.scenarioInvoiceIncrease, currency)) + '</span></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(row.openingBalanceReceipts, currency)) + '</span></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(row.forecastInvoiceReceipts, currency)) + '</span></td>'
+        + '<td class="clf-col-num"><div class="clf-cell-stack"><strong class="clf-num">' + escapeHtml(formatMoney(row.totalReceipts, currency)) + '</strong><small>Adjustments ' + escapeHtml(formatMoney(row.receiptAdjustments, currency)) + '</small></div></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(row.closingBalance, currency)) + '</span></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(row.headroom, currency)) + '</span></td>'
+        + '<td class="clf-col-status"><span class="clf-table-badge" data-status="' + escapeAttr(row.status) + '">' + escapeHtml(row.statusLabel) + '</span></td>'
+        + '<td class="clf-col-breach"><span class="clf-nowrap">' + escapeHtml(row.breachDate ? Engine.formatLongDate(row.breachDate) : '—') + '</span></td>'
         + '</tr>';
     }).join('');
     els.forecastTableHost.innerHTML = [
-      '<table class="clf-table">',
-      '<thead><tr><th>Week</th><th>Invoice date(s)</th><th>Opening balance</th><th>Base invoice increase</th><th>Scenario invoice increase</th><th>Opening-balance receipts</th><th>Forecast-invoice receipts</th><th>Total receipts</th><th>Closing balance</th><th>Headroom</th><th>Status</th><th>First breach marker</th></tr></thead>',
+      '<table class="clf-table clf-forecast-table">',
+      '<thead><tr><th class="clf-col-week">Week</th><th class="clf-col-dates">Invoice dates</th><th class="clf-col-num" title="Opening balance">Opening</th><th class="clf-col-num" title="Base invoice increase">Base invoiced</th><th class="clf-col-num" title="Scenario invoice increase">Scenario uplift</th><th class="clf-col-num" title="Receipts from the opening balance">Opening receipts</th><th class="clf-col-num" title="Receipts from forecast-generated invoices">Forecast receipts</th><th class="clf-col-num" title="Total receipts including weekly adjustments">Total receipts</th><th class="clf-col-num" title="Closing balance">Closing</th><th class="clf-col-num">Headroom</th><th class="clf-col-status">Status</th><th class="clf-col-breach" title="First breach marker">Breach date</th></tr></thead>',
       '<tbody>',
       rows,
       '</tbody></table>',
@@ -1838,11 +2165,11 @@
     const currency = active.assumptions.currency;
     const invoiceRows = active.result.invoiceSchedule.map(function (entry) {
       return '<tr>'
-        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(entry.invoiceDateLabel) + '</strong><small>Week ' + (entry.weekIndex + 1) + '</small></div></td>'
-        + '<td>' + escapeHtml(entry.dueDateLabel) + '</td>'
-        + '<td>' + escapeHtml(formatMoney(entry.totalGross, currency)) + '</td>'
-        + '<td>' + escapeHtml('Forecast-generated invoice • ' + entry.termLabel) + '</td>'
-        + '<td>' + escapeHtml(entry.receiptWeekIndex >= 0 ? ('Week ' + (entry.receiptWeekIndex + 1)) : 'Beyond horizon') + '</td>'
+        + '<td class="clf-col-dates"><div class="clf-cell-stack"><strong>' + escapeHtml(entry.invoiceDateLabel) + '</strong><small>Week ' + (entry.weekIndex + 1) + '</small></div></td>'
+        + '<td class="clf-col-dates"><span class="clf-nowrap">' + escapeHtml(entry.dueDateLabel) + '</span></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(entry.totalGross, currency)) + '</span></td>'
+        + '<td class="clf-col-source">' + escapeHtml('Forecast-generated invoice • ' + entry.termLabel) + '</td>'
+        + '<td class="clf-col-breach"><span class="clf-nowrap">' + escapeHtml(entry.receiptWeekIndex >= 0 ? ('Week ' + (entry.receiptWeekIndex + 1)) : 'Beyond horizon') + '</span></td>'
         + '</tr>';
     });
     const openingBalanceRows = active.result.openingBalanceSchedule.map(function (entry) {
@@ -1853,11 +2180,11 @@
         ? ('Imported statement' + (entry.invoiceRef ? (' • ' + entry.invoiceRef) : ''))
         : (entry.note || entry.sourceLabel);
       return '<tr>'
-        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(sourceDateLabel) + '</strong><small>' + escapeHtml(entry.sourceLabel) + '</small></div></td>'
-        + '<td>' + escapeHtml(entry.dueDateLabel) + '</td>'
-        + '<td>' + escapeHtml(formatMoney(entry.amount, currency)) + '</td>'
-        + '<td>' + escapeHtml(sourceText) + '</td>'
-        + '<td>' + escapeHtml(entry.receiptWeekIndex >= 0 ? ('Week ' + (entry.receiptWeekIndex + 1)) : 'Beyond horizon') + '</td>'
+        + '<td class="clf-col-dates"><div class="clf-cell-stack"><strong>' + escapeHtml(sourceDateLabel) + '</strong><small>' + escapeHtml(entry.sourceLabel) + '</small></div></td>'
+        + '<td class="clf-col-dates"><span class="clf-nowrap">' + escapeHtml(entry.dueDateLabel) + '</span></td>'
+        + '<td class="clf-col-num"><span class="clf-num">' + escapeHtml(formatMoney(entry.amount, currency)) + '</span></td>'
+        + '<td class="clf-col-source">' + escapeHtml(sourceText) + '</td>'
+        + '<td class="clf-col-breach"><span class="clf-nowrap">' + escapeHtml(entry.receiptWeekIndex >= 0 ? ('Week ' + (entry.receiptWeekIndex + 1)) : 'Beyond horizon') + '</span></td>'
         + '</tr>';
     });
     const rows = openingBalanceRows.concat(invoiceRows);
@@ -1866,8 +2193,8 @@
       return;
     }
     els.cashTimingHost.innerHTML = [
-      '<table class="clf-table">',
-      '<thead><tr><th>Invoice / receipt date</th><th>Expected receipt date</th><th>Gross amount</th><th>Source</th><th>Receipt week</th></tr></thead>',
+      '<table class="clf-table clf-receipt-table">',
+      '<thead><tr><th class="clf-col-dates">Event date</th><th class="clf-col-dates">Expected receipt</th><th class="clf-col-num">Gross</th><th class="clf-col-source">Source</th><th class="clf-col-breach">Receipt week</th></tr></thead>',
       '<tbody>',
       rows.join(''),
       '</tbody></table>',
@@ -1902,6 +2229,7 @@
     renderHero(active);
     renderKpis(active);
     renderResultNotices(active);
+    renderOperationalGuidance(active);
     renderSummary(active);
     renderAssumptionSnapshot(active);
     renderCharts(active, compare);
@@ -2463,6 +2791,30 @@
       return;
     }
 
+    if (target.hasAttribute('data-import-adjustment-index')) {
+      const active = getActiveScenario();
+      if (!active) return;
+      const index = Number(target.getAttribute('data-import-adjustment-index'));
+      const key = target.getAttribute('data-import-adjustment-key');
+      if (!Number.isInteger(index) || !key) return;
+      const draft = getStatementDraft(active.id);
+      const applyLineChange = function (source) {
+        source.adjustmentLines = Array.isArray(source.adjustmentLines) ? source.adjustmentLines : [];
+        const line = source.adjustmentLines[index];
+        if (!line) return source;
+        line[key] = key === 'include'
+          ? !!target.checked
+          : (key === 'amount' ? Number(target.value) || 0 : String(target.value || '').trim());
+        return source;
+      };
+      if (draft) {
+        updateDraftImportState(applyLineChange);
+        return;
+      }
+      updateConfirmedImportedStatement(applyLineChange);
+      return;
+    }
+
     scheduleRecalc(120);
   }
 
@@ -2507,6 +2859,33 @@
           els.openingBalanceReceiptMode.value = 'manual';
           updateOpeningBalanceUi();
           scheduleRecalc(40);
+        } else if (action === 'add-adjustment') {
+          const addLine = function (source) {
+            source.adjustmentLines = Array.isArray(source.adjustmentLines) ? source.adjustmentLines : [];
+            source.adjustmentLines.push(defaultStatementAdjustmentLine(active));
+            return source;
+          };
+          if (getStatementDraft(active && active.id)) {
+            updateDraftImportState(addLine);
+          } else {
+            updateConfirmedImportedStatement(addLine);
+          }
+          return;
+        } else if (action === 'remove-adjustment') {
+          const index = Number(statementAction.getAttribute('data-adjustment-index'));
+          if (Number.isInteger(index) && index >= 0) {
+            const removeLine = function (source) {
+              source.adjustmentLines = Array.isArray(source.adjustmentLines) ? source.adjustmentLines : [];
+              source.adjustmentLines.splice(index, 1);
+              return source;
+            };
+            if (getStatementDraft(active && active.id)) {
+              updateDraftImportState(removeLine);
+            } else {
+              updateConfirmedImportedStatement(removeLine);
+            }
+          }
+          return;
         }
         if (active) {
           renderWorkspace();

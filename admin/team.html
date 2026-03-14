@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Team | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="/admin/team.js?v=1"></script>
+
+  <style>
+    :root{
+      --bg:#eef2fb;
+      --panel:#ffffff;
+      --panel-soft:#f7f9ff;
+      --border:#d9e1f4;
+      --highlight:#2f4ea2;
+      --accent:#3f66c7;
+      --ink:#0f1b3f;
+      --muted:#6072a2;
+      --ok:#138754;
+      --warn:#a96b00;
+      --danger:#b42318;
+      --shadow:0 20px 44px rgba(15,27,63,.12);
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(circle at top left,rgba(63,102,199,.12),transparent 36%),var(--bg);color:var(--ink);font:15px/1.6 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit;text-decoration:none}
+    button,input,select,textarea{font:inherit}
+
+    .top{position:sticky;top:0;z-index:120;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 12px 28px rgba(15,27,63,.22)}
+    .row{max-width:1400px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em}
+    .sp{flex:1}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+
+    .btn{appearance:none;border:1px solid rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.05));color:var(--ink);padding:10px 15px;border-radius:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(47,78,162,.16);border-color:rgba(47,78,162,.36)}
+    .btn.primary{background:linear-gradient(180deg,#3657b3,#29489e);border-color:rgba(255,255,255,.28);color:#fff}
+    .btn.ghost{background:#fff;color:var(--highlight);border-color:rgba(47,78,162,.18)}
+    .btn.soft{background:var(--panel-soft);color:var(--highlight)}
+    .btn.danger{background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08));color:var(--danger);border-color:rgba(180,35,24,.24)}
+    .btn.small{padding:8px 12px;border-radius:10px;font-size:13px}
+    .btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-shadow:none}
+
+    .wrap{max-width:1400px;margin:28px auto;padding:0 20px;display:grid;gap:18px}
+    .panel{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:20px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+    .muted{color:var(--muted)}
+    .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+    .hero{display:grid;gap:18px;grid-template-columns:minmax(0,1.4fr) minmax(280px,.95fr);align-items:start}
+    .hero h1{margin:4px 0 0;font-size:32px;line-height:1.08}
+    .hero p{margin:0}
+    .hero-card{padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(47,78,162,.08),rgba(255,255,255,.92));border:1px solid rgba(47,78,162,.12);display:grid;gap:14px}
+    .hero-chips,.metric-grid,.filters-row,.member-card__meta,.member-card__actions,.editor-actions,.preview-team-card__meta,.image-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .chip,.status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;border:1px solid rgba(47,78,162,.16);background:var(--panel-soft);font-size:12px;font-weight:800;letter-spacing:.04em}
+    .chip strong{color:var(--ink)}
+    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .metric{padding:16px;border-radius:18px;background:var(--panel-soft);border:1px solid rgba(47,78,162,.1);display:grid;gap:6px}
+    .metric span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .metric strong{font-size:28px;line-height:1}
+    .metric small{color:var(--muted)}
+
+    .filters-panel,.content-shell{display:grid;gap:14px}
+    .content-shell__head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+    .content-shell__head h2{margin:0;font-size:22px;line-height:1.15}
+    .filters-row{align-items:center}
+    .search{display:flex;align-items:center;gap:10px;flex:1;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid rgba(47,78,162,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
+    .search input{width:100%;border:0;background:transparent;color:var(--ink);padding:0}
+    .search input:focus{outline:none}
+    .filters-row select{min-width:180px;padding:10px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.16);background:#fff;color:var(--ink);font-weight:700}
+
+    .notice-banner,.empty-state{padding:24px;border-radius:18px;border:1px dashed rgba(47,78,162,.24);background:rgba(255,255,255,.76);display:grid;gap:8px}
+    .notice-banner{display:none}
+    .notice-banner[data-tone="warn"]{display:grid;background:rgba(255,247,232,.92);border-style:solid;border-color:rgba(169,107,0,.24)}
+    .notice-banner[data-tone="info"]{display:grid;background:rgba(238,242,255,.92);border-style:solid;border-color:rgba(47,78,162,.16)}
+    .empty-state strong,.notice-banner strong{font-size:18px}
+
+    .member-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    .member-card{display:grid;grid-template-columns:98px minmax(0,1fr);gap:16px;padding:16px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,255,.98));border:1px solid rgba(47,78,162,.14);box-shadow:0 16px 32px rgba(15,27,63,.08)}
+    .member-card__media{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(135deg,rgba(47,78,162,.22),rgba(63,102,199,.08));min-height:126px}
+    .member-card__media img{width:100%;height:100%;object-fit:cover;display:block}
+    .member-card__placeholder{position:absolute;inset:0;display:grid;place-items:center;padding:14px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.65)}
+    .member-card__body{display:grid;gap:10px;min-width:0}
+    .member-card__header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .member-card__header h3{margin:0;font-size:20px;line-height:1.18}
+    .member-card__role,.member-card__summary{margin:0}
+    .member-card__role{color:var(--highlight);font-weight:700}
+    .member-card__summary{color:var(--muted)}
+    .member-card__meta{font-size:12px;color:var(--muted)}
+    .member-card__actions{margin-top:auto}
+    .member-card__actions .btn{flex:1}
+
+    .status-pill--published{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.22);color:var(--ok)}
+    .status-pill--draft{background:rgba(93,111,158,.12);border-color:rgba(93,111,158,.2);color:var(--muted)}
+    .status-pill--archived{background:rgba(180,35,24,.1);border-color:rgba(180,35,24,.16);color:var(--danger)}
+
+    .editor{position:fixed;top:0;right:0;bottom:0;width:min(780px,96vw);transform:translateX(100%);transition:transform .22s ease;z-index:220;background:#f7f9ff;border-left:1px solid var(--border);box-shadow:-24px 0 60px rgba(15,27,63,.22);display:grid;grid-template-rows:auto 1fr auto}
+    .editor.is-open{transform:translateX(0)}
+    .editor__head,.editor__foot{padding:18px 22px;background:#fff;border-bottom:1px solid var(--border)}
+    .editor__head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+    .editor__head h2{margin:4px 0 0;font-size:24px;line-height:1.08}
+    .editor__body{padding:20px 22px;overflow:auto;display:grid;gap:18px}
+    .editor__foot{border-top:1px solid var(--border);border-bottom:0}
+    .editor__meta{display:grid;gap:8px}
+    .editor__status{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .field,.section-card{display:grid;gap:7px}
+    .field label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.16);background:#fff;color:var(--ink)}
+    .field textarea{min-height:140px;resize:vertical}
+    .field--wide,.section-card{grid-column:1 / -1}
+    .field-note{margin:0;color:var(--muted);font-size:12px}
+    .checkline{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--highlight)}
+    .checkline input{width:18px;height:18px}
+
+    .image-panel{display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px;padding:16px;border-radius:18px;background:#fff;border:1px solid rgba(47,78,162,.12)}
+    .image-frame{border-radius:16px;overflow:hidden;min-height:180px;background:linear-gradient(135deg,rgba(47,78,162,.18),rgba(63,102,199,.06));display:grid;place-items:center;position:relative}
+    .image-frame img{width:100%;height:100%;object-fit:cover;display:none}
+    .image-frame.has-image img{display:block}
+    .image-placeholder{padding:14px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.6)}
+    .image-frame.has-image .image-placeholder{display:none}
+
+    .preview-team-card{display:grid;gap:14px;padding:18px;border-radius:28px;background:rgba(255,255,255,.98);border:1px solid rgba(47,78,162,.18);box-shadow:0 18px 40px rgba(15,27,63,.12);color:var(--ink);max-width:360px}
+    .preview-team-card__media{border-radius:20px;overflow:hidden;aspect-ratio:4/5;background:linear-gradient(135deg,rgba(47,78,162,.18),rgba(63,102,199,.08));display:grid;place-items:center}
+    .preview-team-card__media img{width:100%;height:100%;object-fit:cover;display:block}
+    .preview-team-card__media span{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.62)}
+    .preview-team-card__title{margin:0;font-size:24px;line-height:1.1}
+    .preview-team-card__role,.preview-team-card__summary,.preview-team-card__bio{margin:0}
+    .preview-team-card__role{color:var(--muted);font-weight:700}
+    .preview-team-card__summary,.preview-team-card__bio{color:var(--ink);line-height:1.6}
+    .preview-team-card__toggle{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid rgba(63,102,199,.32);background:#fff;color:var(--highlight);font-weight:800;align-self:start}
+    .preview-team-card__meta{font-size:12px;color:var(--muted)}
+    .preview-team-card__link{display:inline-flex;align-items:center;gap:8px;color:var(--highlight);font-weight:800}
+
+    #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.22);box-shadow:0 18px 32px rgba(15,27,63,.2);font-weight:800}
+
+    @media (max-width:1100px){
+      .hero,.image-panel{grid-template-columns:1fr}
+      .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+
+    @media (max-width:780px){
+      .wrap{padding:0 14px}
+      .row{padding:12px 14px;flex-wrap:wrap}
+      .member-card{grid-template-columns:1fr}
+      .member-card__media{min-height:220px}
+      .form-grid{grid-template-columns:1fr}
+      .editor{width:100vw}
+      .metric-grid{grid-template-columns:1fr}
+      .filters-row{flex-direction:column;align-items:stretch}
+      .filters-row select{min-width:0;width:100%}
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+</head>
+<body>
+  <div class="top"><div class="row">
+    <div class="brand">HMJ Global Admin</div>
+    <span class="pill">Team</span>
+    <div class="sp"></div>
+    <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
+    <a class="btn ghost" href="/">← Website</a>
+    <button class="btn ghost" type="button" data-admin-logout>Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn ghost" type="button" data-admin-login>Log in</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel hero" aria-labelledby="teamHeading">
+      <div>
+        <p class="eyebrow">About page content</p>
+        <h1 id="teamHeading">Team</h1>
+        <p class="muted" id="welcomeMeta">Loading user…</p>
+        <p class="muted">Manage the live About Us leadership cards, their publishing state, imagery, ordering, and the supporting detail shown behind each profile.</p>
+      </div>
+      <aside class="hero-card" aria-live="polite">
+        <p class="eyebrow">Public presentation</p>
+        <div class="hero-chips">
+          <span class="chip"><strong id="heroVisibilityLabel">About team cards</strong></span>
+          <span class="chip">Published members only</span>
+          <span class="chip">Live card preview</span>
+        </div>
+        <p class="muted" id="heroSummary">Loading team module status…</p>
+      </aside>
+    </section>
+
+    <section class="metric-grid" aria-label="Team overview">
+      <article class="panel metric">
+        <span>Published</span>
+        <strong id="metricPublished">0</strong>
+        <small>Visible on About Us</small>
+      </article>
+      <article class="panel metric">
+        <span>Drafts</span>
+        <strong id="metricDraft">0</strong>
+        <small>Hidden but editable</small>
+      </article>
+      <article class="panel metric">
+        <span>Archived</span>
+        <strong id="metricArchived">0</strong>
+        <small>Removed from the live page</small>
+      </article>
+      <article class="panel metric">
+        <span>With image</span>
+        <strong id="metricImage">0</strong>
+        <small>Cards ready for visual treatment</small>
+      </article>
+    </section>
+
+    <section class="panel filters-panel" aria-labelledby="manageHeading">
+      <div class="content-shell__head">
+        <div>
+          <p class="eyebrow">Management</p>
+          <h2 id="manageHeading">Existing team members</h2>
+        </div>
+        <div class="filters-row">
+          <button class="btn soft small" id="refreshBtn" type="button">Refresh</button>
+          <button class="btn primary small" id="newMemberBtn" type="button">＋ Add member</button>
+        </div>
+      </div>
+      <div class="filters-row">
+        <label class="search" for="searchInput">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4d67b0" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="searchInput" type="search" autocomplete="off" placeholder="Search name, title, or summary"/>
+        </label>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option value="published">Published</option>
+          <option value="draft">Drafts</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
+      <p class="muted" id="resultMeta">Loading team members…</p>
+    </section>
+
+    <section class="notice-banner panel" id="teamBanner" hidden>
+      <strong id="teamBannerTitle">Team setup required</strong>
+      <p class="muted" id="teamBannerBody">The team data source is not ready yet.</p>
+    </section>
+
+    <section class="panel content-shell" aria-labelledby="teamListHeading">
+      <div class="content-shell__head">
+        <div>
+          <p class="eyebrow">Content board</p>
+          <h2 id="teamListHeading">Profiles</h2>
+        </div>
+        <span class="chip" id="boardSourceChip">Loading source…</span>
+      </div>
+      <div class="member-grid" id="memberGrid" aria-live="polite"></div>
+      <div class="empty-state" id="emptyState" hidden>
+        <strong>No team members yet</strong>
+        <p class="muted" id="emptyStateCopy">Add the first team member to populate the About Us team section.</p>
+      </div>
+    </section>
+  </div>
+
+  <aside class="editor" id="editor" aria-hidden="true">
+    <div class="editor__head">
+      <div class="editor__meta">
+        <p class="eyebrow">Team editor</p>
+        <h2 id="editorTitle">New team member</h2>
+        <div class="editor__status">
+          <span class="status-pill status-pill--draft" id="editorStatusPill">Draft</span>
+          <span class="muted" id="editorMeta">New record</span>
+        </div>
+      </div>
+      <button class="btn ghost small" id="closeEditorBtn" type="button">Close</button>
+    </div>
+    <div class="editor__body">
+      <form id="teamForm" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="fieldFullName">Full name</label>
+            <input id="fieldFullName" maxlength="120" placeholder="Jane Smith"/>
+          </div>
+          <div class="field">
+            <label for="fieldSlug">Slug</label>
+            <input id="fieldSlug" maxlength="80" placeholder="auto-generated from the name"/>
+          </div>
+          <div class="field">
+            <label for="fieldRoleTitle">Role title</label>
+            <input id="fieldRoleTitle" maxlength="140" placeholder="Operations Director"/>
+          </div>
+          <div class="field">
+            <label for="fieldDisplayOrder">Display order</label>
+            <input id="fieldDisplayOrder" type="number" min="0" step="1" value="100"/>
+            <p class="field-note">Lower numbers appear earlier on the public About page.</p>
+          </div>
+          <div class="field field--wide">
+            <label for="fieldShortCaption">Short summary</label>
+            <textarea id="fieldShortCaption" rows="4" placeholder="Short supporting caption for the public card and reveal state"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="fieldFullBio">Expanded profile text</label>
+            <textarea id="fieldFullBio" rows="7" placeholder="Longer supporting profile text shown when someone opens the team card"></textarea>
+          </div>
+          <div class="field">
+            <label for="fieldLinkedinUrl">LinkedIn URL</label>
+            <input id="fieldLinkedinUrl" placeholder="https://www.linkedin.com/in/example"/>
+          </div>
+          <div class="field">
+            <label class="checkline" for="fieldPublished">
+              <input id="fieldPublished" type="checkbox"/>
+              Published on the About page
+            </label>
+            <p class="field-note">Publishing requires a name, role title, and short summary.</p>
+          </div>
+        </div>
+
+        <section class="section-card">
+          <div class="image-panel">
+            <div class="image-frame" id="imageFrame">
+              <img id="imagePreview" alt=""/>
+              <div class="image-placeholder">No image uploaded</div>
+            </div>
+            <div class="section-card">
+              <div>
+                <p class="eyebrow">Profile image</p>
+                <h3 style="margin:4px 0 0;font-size:22px;line-height:1.15">Card visual</h3>
+              </div>
+              <p class="muted" id="imageMeta">JPG, PNG, WebP, or AVIF up to 6MB. Portrait crops work best for the public cards.</p>
+              <div class="image-actions">
+                <button class="btn soft small" id="uploadImageBtn" type="button">Upload image</button>
+                <button class="btn ghost small" id="removeImageBtn" type="button">Remove image</button>
+              </div>
+              <div class="field">
+                <label for="fieldImageAlt">Image alt text</label>
+                <input id="fieldImageAlt" maxlength="140" placeholder="Describe the uploaded portrait for accessibility"/>
+              </div>
+              <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden/>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div>
+            <p class="eyebrow">Public preview</p>
+            <h3 style="margin:4px 0 0;font-size:22px;line-height:1.15">How this card will appear on About Us</h3>
+            <p class="muted" id="publishHint">Draft members stay admin-only until published.</p>
+          </div>
+          <article class="preview-team-card" id="previewCard"></article>
+        </section>
+      </form>
+    </div>
+    <div class="editor__foot">
+      <div class="editor-actions">
+        <button class="btn danger" id="archiveMemberBtn" type="button">Archive</button>
+        <button class="btn soft" id="duplicateMemberBtn" type="button">Duplicate</button>
+        <button class="btn soft" id="unpublishMemberBtn" type="button">Unpublish</button>
+        <button class="btn primary" id="publishMemberBtn" type="button">Save &amp; publish</button>
+        <button class="btn ghost" id="saveMemberBtn" type="button">Save changes</button>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

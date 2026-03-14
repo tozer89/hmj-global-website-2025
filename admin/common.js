@@ -662,7 +662,7 @@
     } catch (err) {
       Debug.warn('identity dialog open failed', err);
     }
-    toast.err('Sign-in is still loading on this host. Refresh and try again.', 5200);
+    toast.err('Sign-in is still loading in this browser. Refresh and try again.', 5200);
     return false;
   }
 
@@ -680,7 +680,7 @@
     } catch (err) {
       Debug.warn('identity logout failed', err);
     }
-    toast.err('Sign-out is still loading on this host. Refresh and try again.', 5200);
+    toast.err('Sign-out is still loading in this browser. Refresh and try again.', 5200);
     return false;
   }
 
@@ -1278,7 +1278,7 @@
       } else {
         const reason = !enriched.sessionVerified ? 'missing session' : 'no admin role';
         if (!enriched.sessionVerified) {
-          toast.err('No verified admin session available on this host. Sign in again on this host.', 5200);
+          toast.err('No verified admin session is available in this browser. Sign in again here.', 5200);
           if (tokenError) Debug.warn('Token retrieval failed', tokenError);
         }
         toast.err(`Gate blocked: ${reason}`, 5200);
@@ -1375,11 +1375,10 @@
     const why = gateNode ? $('.why', gateNode) : null;
 
     if (snapshot?.sessionVerified) {
-      const roles = Array.isArray(snapshot.roles) && snapshot.roles.length ? snapshot.roles.join(', ') : 'none';
       const identityEmail = snapshot.email || snapshot.identityEmail || 'this account';
       if (heading) heading.textContent = 'Admin access required';
       if (why) {
-        why.textContent = `You are signed in as ${identityEmail}, but HMJ admin access is not available for this account on this host yet. Current roles: ${roles}.`;
+        why.textContent = `You are signed in as ${identityEmail}, but this account is not authorised for HMJ admin on this browser.`;
       }
       toast.warn('Sign-in completed, but HMJ admin access could not be confirmed for this account.', 5200);
       return snapshot;
@@ -1387,9 +1386,9 @@
 
     if (heading) heading.textContent = 'HMJ admin sign-in';
     if (why) {
-      why.textContent = 'The secure sign-in completed, but the session did not finish hydrating on this host. Refresh once if the dashboard does not open, or sign in again on this host.';
+      why.textContent = 'Secure sign-in completed, but the session did not finish loading on this browser. Refresh once if the dashboard does not open, or sign in again here.';
     }
-    toast.warn('Secure sign-in completed, but the admin session is still syncing on this host.', 5600);
+    toast.warn('Secure sign-in completed, but the admin session is still syncing in this browser.', 5600);
     return snapshot;
   }
 
@@ -1515,14 +1514,13 @@
     if (why) {
       if (!who.sessionVerified) {
         why.textContent = targetPath
-          ? `Sign in with your HMJ staff email to continue to ${targetLabel}.`
-          : 'Sign in with your HMJ staff email to access HMJ admin on this site.';
+          ? `Sign in with your HMJ work email to continue to ${targetLabel}.`
+          : 'Sign in with your HMJ work email to access HMJ admin on this site.';
       } else if (adminOnly) {
-        const roles = Array.isArray(who.roles) && who.roles.length ? who.roles.join(', ') : 'none';
         const identityEmail = who.email || who.identityEmail || 'this account';
         why.textContent = targetPath
-          ? `You are signed in as ${identityEmail}, but this account does not have HMJ admin access to open ${targetLabel}. Current roles: ${roles}. Use Sign out above if you need to switch accounts.`
-          : `You are signed in as ${identityEmail}, but this account does not have HMJ admin access on this site. Current roles: ${roles}. Use Sign out above if you need to switch accounts.`;
+          ? `You are signed in as ${identityEmail}, but this account is not authorised to open ${targetLabel}. Use Sign out above if you need to switch accounts.`
+          : `You are signed in as ${identityEmail}, but this account is not authorised for HMJ admin on this site. Use Sign out above if you need to switch accounts.`;
       } else {
         why.textContent = 'Access limited for your role.';
       }
@@ -1689,7 +1687,7 @@
         const heading = g ? $('strong, h1, h2', g) : null;
         const why = g ? $('.why', g) : null;
         if (heading) heading.textContent = 'HMJ admin sign-in';
-        if (why) why.textContent = 'Admin failed to finish loading cleanly. You can still sign in again on this host, or refresh and try again.';
+        if (why) why.textContent = 'HMJ admin did not finish loading cleanly. You can still sign in again here, or refresh and try again.';
       } catch {}
     }
   };

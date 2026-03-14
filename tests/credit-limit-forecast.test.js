@@ -296,6 +296,34 @@ test('opening-balance case 8: imported statement receipts remain separate from f
   );
 });
 
+test('opening-balance case 9: imported statement adjustment lines land as dated opening-book receipts', () => {
+  const scenario = buildScenario({
+    currentOutstandingBalance: 90000,
+    openingBalance: {
+      receiptMode: 'import_statement',
+      importedStatement: {
+        status: 'confirmed',
+        sourceType: 'csv',
+        fileName: 'debtor.csv',
+        reconciliationMode: 'keep_manual_opening_balance',
+        rows: [
+          { invoiceRef: 'INV-4001', dueDate: '2026-01-09', outstandingAmount: 30000, currency: 'GBP' },
+        ],
+        adjustmentLines: [
+          { date: '2026-01-23', amount: 12000, note: 'Missing statement line' },
+        ],
+      },
+    },
+  });
+
+  const forecast = buildForecast(scenario);
+
+  assert.equal(forecast.weeks[0].openingBalanceReceipts, 30000);
+  assert.equal(forecast.weeks[2].openingBalanceReceipts, 12000);
+  assert.equal(forecast.openingBalanceSchedule[1].source, 'opening_balance_import_adjustment');
+  assert.equal(forecast.metrics.openingBalanceVariance, -48000);
+});
+
 test('case 2: near-limit scenario breaches after several weeks with breach metadata', () => {
   const scenario = buildScenario({
     creditLimit: 132000,
@@ -313,11 +341,14 @@ test('case 2: near-limit scenario breaches after several weeks with breach metad
 
   const forecast = buildForecast(scenario);
   const capacity = analyseCapacity(scenario);
+  const summary = generateFallbackSummary(forecast, scenario, capacity);
 
   assert.equal(forecast.overallStatus, 'over_limit');
   assert.ok(forecast.firstBreach);
   assert.ok(forecast.firstBreach.weekNumber >= 2);
+  assert.ok(forecast.metrics.peakOverLimit > 0);
   assert.ok(capacity.maxAdditionalContractorsAllowed < scenario.contractor.additionalContractors);
+  assert.match(summary, /over limit/i);
 });
 
 test('case 3: already over limit shows over-limit status and contractor removals when receipts are modelled', () => {
@@ -345,6 +376,47 @@ test('case 3: already over limit shows over-limit status and contractor removals
 
   assert.equal(forecast.overallStatus, 'over_limit');
   assert.ok(capacity.contractorsToRemove >= 1);
+});
+
+test('case 3b: contractor removal estimate is based on the live tested scenario, not just the baseline book', () => {
+  const scenario = buildScenario({
+    currency: 'EUR',
+    creditLimit: 350000,
+    currentOutstandingBalance: 295000,
+    forecastStartDate: '2026-03-14',
+    forecastHorizonWeeks: 12,
+    paymentTerms: {
+      type: '30_eom',
+      customNetDays: 21,
+      receiptLagDays: 0,
+    },
+    openingBalance: {
+      receiptMode: 'term_profile',
+      runoffWeeks: 6,
+    },
+    contractor: {
+      currentContractors: 22,
+      additionalContractors: 4,
+      weeklyPayPerContractor: 950,
+      marginPercent: 28,
+    },
+  });
+
+  const capacity = analyseCapacity(scenario);
+  assert.equal(capacity.contractorsToRemove, 14);
+  assert.equal(capacity.contractorEquivalentExcess, 13.44);
+
+  const deRiskedScenario = buildScenario({
+    ...scenario,
+    contractor: {
+      ...scenario.contractor,
+      currentContractors: 12,
+      additionalContractors: 0,
+    },
+  });
+  const deRiskedForecast = buildForecast(deRiskedScenario);
+
+  assert.notEqual(deRiskedForecast.overallStatus, 'over_limit');
 });
 
 test('case 4: VAT off reduces projected exposure', () => {

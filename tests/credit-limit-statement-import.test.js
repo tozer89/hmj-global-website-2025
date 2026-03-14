@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const JSZip = require('jszip');
 
 const {
+  buildAiAssistedDraft,
+  materialiseImportedStatement,
   parseCsvText,
   parsePdfText,
   parseXlsxBuffer,
@@ -150,4 +152,54 @@ test('statement import case 5: reconciliation summary shows variance clearly', (
   assert.equal(reconciliation.enteredOpeningBalance, 90000);
   assert.equal(reconciliation.variance, -14000);
   assert.equal(reconciliation.matches, false);
+});
+
+test('statement import case 6: AI-assisted rows materialise into a reviewable draft', () => {
+  const draft = buildAiAssistedDraft([
+    {
+      invoice_reference: 'INV-5001',
+      invoice_date: '2026-01-08',
+      due_date: '',
+      outstanding_amount: 12500,
+      currency: '',
+      credit_note: false,
+      note: 'Due date unclear on statement',
+      confidence: 'medium',
+    },
+  ], {
+    fileName: 'weak-statement.pdf',
+    scenarioCurrency: 'GBP',
+    forecastStartDate: '2026-01-05',
+    paymentTerms: { type: '14_net', customNetDays: 21, receiptLagDays: 0 },
+  });
+
+  assert.equal(draft.parseMethod, 'ai_assisted_json');
+  assert.equal(draft.includedRowCount, 1);
+  assert.equal(draft.rows[0].invoiceRef, 'INV-5001');
+  assert.equal(draft.rows[0].dueDate, '2026-01-22');
+  assert.match(draft.warnings.join(' '), /AI-assisted extraction/i);
+});
+
+test('statement import case 7: dated adjustment lines are included in reconciliation totals', () => {
+  const draft = materialiseImportedStatement({
+    rows: [
+      { invoiceRef: 'INV-7001', dueDate: '2026-01-16', outstandingAmount: 76000, currency: 'GBP' },
+    ],
+    adjustmentLines: [
+      { date: '2026-01-23', amount: 14000, note: 'Unlisted ledger item' },
+    ],
+    reconciliationMode: 'keep_manual_opening_balance',
+  }, {
+    scenarioCurrency: 'GBP',
+    forecastStartDate: '2026-01-05',
+    paymentTerms: { type: '14_net', customNetDays: 21, receiptLagDays: 0 },
+  });
+
+  const reconciliation = buildReconciliationSummary(draft, 90000);
+
+  assert.equal(draft.adjustmentTotal, 14000);
+  assert.equal(draft.reconciliationTotal, 90000);
+  assert.equal(reconciliation.matches, true);
+  assert.equal(reconciliation.adjustmentTotal, 14000);
+  assert.equal(reconciliation.reconciliationTotal, 90000);
 });

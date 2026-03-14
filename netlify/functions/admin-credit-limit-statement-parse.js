@@ -6,9 +6,58 @@ const matcherCore = require('../../lib/candidate-matcher-core.js');
 const statementImport = require('../../lib/credit-limit-statement-import.js');
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const AI_STATEMENT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['rows', 'warnings', 'summary'],
+  properties: {
+    rows: {
+      type: 'array',
+      maxItems: 240,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [
+          'invoice_reference',
+          'invoice_date',
+          'due_date',
+          'outstanding_amount',
+          'currency',
+          'credit_note',
+          'note',
+          'confidence',
+        ],
+        properties: {
+          invoice_reference: { type: 'string' },
+          invoice_date: { type: 'string' },
+          due_date: { type: 'string' },
+          outstanding_amount: { type: 'number' },
+          currency: { type: 'string' },
+          credit_note: { type: 'boolean' },
+          note: { type: 'string' },
+          confidence: {
+            type: 'string',
+            enum: ['high', 'medium', 'low', ''],
+          },
+        },
+      },
+    },
+    warnings: {
+      type: 'array',
+      maxItems: 12,
+      items: { type: 'string' },
+    },
+    summary: { type: 'string' },
+  },
+};
+const fetchImpl = typeof fetch === 'function'
+  ? fetch.bind(globalThis)
+  : (...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args));
 
-function trimString(value) {
-  return typeof value === 'string' ? value.trim() : String(value == null ? '' : value).trim();
+function trimString(value, maxLength) {
+  const text = typeof value === 'string' ? value.trim() : String(value == null ? '' : value).trim();
+  if (!text) return '';
+  return maxLength && maxLength > 0 ? text.slice(0, maxLength) : text;
 }
 
 function safeJsonParse(text) {
@@ -40,7 +89,176 @@ function buildOptions(body) {
   };
 }
 
-async function parseFile(file, options) {
+function extractOutputText(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  if (trimString(payload.output_text)) return trimString(payload.output_text);
+
+  const output = Array.isArray(payload.output) ? payload.output : [];
+  for (let index = 0; index < output.length; index += 1) {
+    const item = output[index];
+    const content = Array.isArray(item && item.content) ? item.content : [];
+    for (let contentIndex = 0; contentIndex < content.length; contentIndex += 1) {
+      const part = content[contentIndex];
+      const text = trimString(part && (part.text || part.output_text || part.summary));
+      if (text) return text;
+    }
+  }
+
+  return '';
+}
+
+function hasAiAssistConfigured() {
+  const apiKey = trimString(process.env.OPENAI_API_KEY);
+  return !!apiKey && !/^YOUR_OPENAI_API_KEY$/i.test(apiKey);
+}
+
+async function callOpenAIStatementAssist(extractedText, options, overrides) {
+  const apiKey = trimString(process.env.OPENAI_API_KEY);
+  if (!apiKey || /^YOUR_OPENAI_API_KEY$/i.test(apiKey)) {
+    return {
+      ok: false,
+      error: 'openai_key_missing',
+    };
+  }
+
+  const requestFetch = overrides && typeof overrides.fetchImpl === 'function'
+    ? overrides.fetchImpl
+    : fetchImpl;
+  const model = trimString(process.env.OPENAI_CREDIT_LIMIT_STATEMENT_MODEL, 80) || 'gpt-4.1-mini';
+  const sourceText = trimString(extractedText).slice(0, 32000);
+  if (!sourceText) {
+    return {
+      ok: false,
+      error: 'pdf_statement_text_unavailable',
+    };
+  }
+
+  const prompt = [
+    'Extract open invoice rows from this debtor statement text.',
+    'Return only rows that appear to be invoices or credit notes with an outstanding/open balance.',
+    'Use the statement text only. Do not invent rows.',
+    'If due date is missing, leave it blank.',
+    'If invoice date is missing, leave it blank.',
+    'If currency is not stated on a row, infer it only when the statement clearly shows one currency throughout; otherwise leave it blank.',
+    'Use negative outstanding_amount for credit notes.',
+    'The output must match the provided JSON schema exactly.',
+    '',
+    'Scenario context:',
+    JSON.stringify({
+      scenarioCurrency: trimString(options.scenarioCurrency) || 'GBP',
+      forecastStartDate: trimString(options.forecastStartDate),
+      paymentTerms: options.paymentTerms || {},
+      fileName: trimString(options.fileName),
+    }, null, 2),
+    '',
+    'Statement text:',
+    sourceText,
+  ].join('\n');
+
+  const requestBody = {
+    model: model,
+    max_output_tokens: 2200,
+    input: [
+      {
+        role: 'system',
+        content: [
+          {
+            type: 'input_text',
+            text: 'You are HMJ Global\'s internal finance data extraction assistant. Return only schema-compliant JSON and keep uncertain fields blank rather than guessing.',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text: prompt,
+          },
+        ],
+      },
+    ],
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'credit_limit_statement_rows',
+        schema: AI_STATEMENT_SCHEMA,
+        strict: true,
+      },
+    },
+  };
+
+  try {
+    const response = await requestFetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: trimString(payload && (payload.error && payload.error.message || payload.message), 240) || `openai_http_${response.status}`,
+      };
+    }
+
+    const parsed = safeJsonParse(extractOutputText(payload));
+    const rows = Array.isArray(parsed && parsed.rows) ? parsed.rows : [];
+    if (!rows.length) {
+      return {
+        ok: false,
+        error: 'openai_statement_empty',
+      };
+    }
+
+    const draft = statementImport.buildAiAssistedDraft(rows.map(function (row) {
+      return {
+        invoice_reference: trimString(row.invoice_reference),
+        invoice_date: trimString(row.invoice_date),
+        due_date: trimString(row.due_date),
+        outstanding_amount: Number(row.outstanding_amount) || 0,
+        currency: trimString(row.currency),
+        credit_note: !!row.credit_note,
+        note: trimString(row.note),
+        confidence: trimString(row.confidence),
+      };
+    }), Object.assign({}, options, {
+      parseMethod: 'ai_assisted_json',
+      warnings: (Array.isArray(parsed && parsed.warnings) ? parsed.warnings : []).concat([
+        'AI-assisted extraction was used because the standard PDF parser had low confidence. Review every row before confirming.',
+      ]),
+      extraction: Object.assign({}, options.extraction || {}, {
+        aiAssist: true,
+        aiModel: model,
+        aiSummary: trimString(parsed && parsed.summary, 240),
+      }),
+    }));
+
+    return {
+      ok: draft.includedRowCount > 0,
+      statement: draft,
+      model: model,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: trimString(error && error.message, 240) || 'openai_statement_failed',
+    };
+  }
+}
+
+function shouldUseAiAssist(draft, extraction) {
+  const confidence = trimString(draft && draft.confidence);
+  const includedRowCount = Number(draft && draft.includedRowCount) || 0;
+  if (!includedRowCount) return true;
+  if (confidence === 'low') return true;
+  return extraction && trimString(extraction.strategy) === 'ocr_pdf_text' && confidence !== 'high';
+}
+
+async function parseFile(file, options, overrides) {
   const content = decodeBase64(file?.data);
   if (!content || !content.length) {
     return {
@@ -107,7 +325,10 @@ async function parseFile(file, options) {
   }
 
   try {
-    const extraction = await matcherCore.extractPdfText({
+    const extractPdfText = overrides && typeof overrides.extractPdfText === 'function'
+      ? overrides.extractPdfText
+      : matcherCore.extractPdfText;
+    const extraction = await extractPdfText({
       name: trimString(file?.name) || 'statement.pdf',
       buffer: content,
       extension: 'pdf',
@@ -123,6 +344,24 @@ async function parseFile(file, options) {
         ocrQuality: trimString(extraction?.ocr?.quality),
       },
     }));
+    const aiAssistAvailable = hasAiAssistConfigured();
+    if (shouldUseAiAssist(draft, draft.extraction) && aiAssistAvailable) {
+      const ai = await callOpenAIStatementAssist(extraction?.text || extraction?.rawText || '', parseOptions, overrides);
+      if (ai.ok && ai.statement) {
+        return {
+          ok: true,
+          statement: ai.statement,
+          warnings: ai.statement.warnings || [],
+          sourceType: sourceType,
+          aiAssistAvailable: true,
+          aiAssistUsed: true,
+          fallbackOptions: ['Review imported rows before confirming', 'Upload Excel/CSV instead'],
+        };
+      }
+      draft.warnings = (draft.warnings || []).concat([
+        'AI-assisted extraction was unavailable for this PDF, so the best standard parse has been left in place for review.',
+      ]);
+    }
     if (!draft.includedRowCount) {
       return {
         ok: false,
@@ -131,7 +370,10 @@ async function parseFile(file, options) {
         warnings: draft.warnings.concat([
           'This PDF could not be read confidently. Review the candidate rows below, or upload Excel/CSV for a cleaner import.',
         ]),
-        fallbackOptions: ['Upload Excel/CSV instead', 'Continue with manual opening-balance receipts'],
+        aiAssistAvailable: aiAssistAvailable,
+        fallbackOptions: aiAssistAvailable
+          ? ['AI-assisted extraction was not able to produce a reliable schedule', 'Upload Excel/CSV instead', 'Continue with manual opening-balance receipts']
+          : ['Upload Excel/CSV instead', 'Continue with manual opening-balance receipts'],
       };
     }
     return {
@@ -139,8 +381,12 @@ async function parseFile(file, options) {
       statement: draft,
       warnings: draft.warnings || [],
       sourceType: sourceType,
+      aiAssistAvailable: aiAssistAvailable,
+      aiAssistUsed: false,
       fallbackOptions: draft.confidence === 'low'
-        ? ['Review imported rows before confirming', 'Upload Excel/CSV instead']
+        ? (aiAssistAvailable
+          ? ['Review imported rows before confirming', 'AI-assisted extraction is available if this PDF still looks weak', 'Upload Excel/CSV instead']
+          : ['Review imported rows before confirming', 'Upload Excel/CSV instead'])
         : [],
     };
   } catch (error) {
@@ -182,3 +428,8 @@ const baseHandler = async (event, context) => {
 };
 
 exports.handler = withAdminCors(baseHandler);
+exports._private = {
+  parseFile,
+  callOpenAIStatementAssist,
+  shouldUseAiAssist,
+};
