@@ -15,6 +15,23 @@ function normaliseContext(context = {}) {
   };
 }
 
+function normaliseSessionProfile(profile = {}) {
+  return {
+    visitorType: String(profile.visitorType || '').slice(0, 40),
+    currentIntent: String(profile.currentIntent || '').slice(0, 80),
+    topics: Array.isArray(profile.topics)
+      ? profile.topics.map((entry) => String(entry || '').slice(0, 80)).filter(Boolean).slice(0, 6)
+      : [],
+    locations: Array.isArray(profile.locations)
+      ? profile.locations.map((entry) => String(entry || '').slice(0, 80)).filter(Boolean).slice(0, 4)
+      : [],
+    lastOutcome: String(profile.lastOutcome || '').slice(0, 80),
+    lastCtaIds: Array.isArray(profile.lastCtaIds)
+      ? profile.lastCtaIds.map((entry) => String(entry || '').slice(0, 80)).filter(Boolean).slice(0, 5)
+      : [],
+  };
+}
+
 const baseHandler = async (event, context) => {
   await getContext(event, context, { requireAdmin: true });
 
@@ -42,6 +59,7 @@ const baseHandler = async (event, context) => {
   const resolved = resolveChatbotSettings(payload?.settings || stored?.settings?.[CHATBOT_SETTINGS_KEY]);
   const actionCatalog = buildActionCatalog(resolved);
   const previewContext = normaliseContext(payload?.context);
+  const sessionProfile = normaliseSessionProfile(payload?.sessionProfile);
 
   try {
     const response = await callOpenAIForChat({
@@ -49,6 +67,7 @@ const baseHandler = async (event, context) => {
       message,
       history: Array.isArray(payload?.history) ? payload.history : [],
       context: previewContext,
+      sessionProfile,
       userTag: buildUserTag('admin-preview', previewContext.route),
       includePromptPreview: true,
     });
@@ -60,17 +79,28 @@ const baseHandler = async (event, context) => {
         ok: true,
         reply: response.reply,
         intent: response.intent,
+        visitorType: response.visitorType,
         ctaIds: response.ctaIds,
         quickReplyIds: response.quickReplyIds,
         shouldHandoff: response.shouldHandoff,
         handoffReason: response.handoffReason,
+        followUpQuestion: response.followUpQuestion,
+        answerConfidence: response.answerConfidence,
+        outcome: response.outcome,
+        resourceLinks: response.resourceLinks,
+        suggestedPrompts: response.suggestedPrompts,
+        sessionProfile: response.sessionProfile,
         model: response.model,
-        promptPreview: response.promptPreview || buildPromptPreview(resolved, { ...previewContext, previewMessage: message }),
+        promptPreview: response.promptPreview || buildPromptPreview(resolved, { ...previewContext, previewMessage: message, sessionProfile }),
         actionCatalog,
       }),
     };
   } catch (error) {
-    const fallback = buildFallbackReply(resolved, actionCatalog, 'general_question');
+    const fallback = buildFallbackReply(resolved, actionCatalog, 'general_company_question', '', {
+      message,
+      context: previewContext,
+      sessionProfile,
+    });
     return {
       statusCode: Number(error?.statusCode || 500),
       headers: { 'content-type': 'application/json' },
@@ -79,7 +109,7 @@ const baseHandler = async (event, context) => {
         error: error?.code || 'preview_failed',
         message: error?.message || 'preview_failed',
         fallback,
-        promptPreview: buildPromptPreview(resolved, { ...previewContext, previewMessage: message }),
+        promptPreview: buildPromptPreview(resolved, { ...previewContext, previewMessage: message, sessionProfile }),
         actionCatalog,
       }),
     };

@@ -747,10 +747,14 @@
     const actionsWrap = Array.from(row.children).find((child) => child.classList?.contains('hmj-admin-top-actions'));
     const backdropId = row.dataset.hmjMobileMenuBackdropId || '';
     const backdrop = backdropId ? document.getElementById(backdropId) : null;
+    const compact = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 900px)').matches : false;
 
     row.classList.toggle('hmj-admin-mobile-nav-open', !!open);
     if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (actionsWrap) actionsWrap.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (actionsWrap) {
+      actionsWrap.setAttribute('aria-hidden', open ? 'false' : 'true');
+      if ('inert' in actionsWrap) actionsWrap.inert = compact && !open;
+    }
     if (backdrop) {
       backdrop.hidden = !open;
       backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
@@ -842,6 +846,9 @@
       trigger.setAttribute('aria-controls', actionsWrap.id);
       trigger.setAttribute('aria-expanded', row.classList.contains('hmj-admin-mobile-nav-open') ? 'true' : 'false');
       actionsWrap.setAttribute('aria-hidden', row.classList.contains('hmj-admin-mobile-nav-open') ? 'false' : 'true');
+      if ('inert' in actionsWrap) actionsWrap.inert = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(max-width: 900px)').matches && !row.classList.contains('hmj-admin-mobile-nav-open')
+        : false;
 
       if (row.dataset.hmjMobileMenuBound === '1') return;
       row.dataset.hmjMobileMenuBound = '1';

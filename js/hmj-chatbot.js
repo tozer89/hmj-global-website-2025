@@ -6,6 +6,7 @@
 
   const CONFIG_ENDPOINT = '/.netlify/functions/chatbot-config';
   const CHAT_ENDPOINT = '/.netlify/functions/chatbot-chat';
+  const EVENT_ENDPOINT = '/.netlify/functions/chatbot-event';
   const SESSION_KEY = 'hmj.chatbot.session.v1';
   const MAX_STORED_MESSAGES = 18;
 
@@ -60,6 +61,8 @@
     context: null,
     config: null,
     sessionId: '',
+    conversationId: '',
+    sessionProfile: {},
     messages: [],
     open: false,
     loading: false,
@@ -72,6 +75,7 @@
     statusTone: 'info',
     autoHideTimer: 0,
     autoOpenTimer: 0,
+    trackedShownKeys: new Set(),
     elements: {},
   };
 
@@ -95,6 +99,62 @@
     return `${prefix}_${Date.now().toString(36)}_${random}`;
   }
 
+  function normaliseSessionProfile(profile) {
+    const safe = profile && typeof profile === 'object' ? profile : {};
+    return {
+      visitorType: trimString(safe.visitorType, 40),
+      currentIntent: trimString(safe.currentIntent, 80),
+      topics: Array.isArray(safe.topics)
+        ? safe.topics.map((entry) => trimString(entry, 80)).filter(Boolean).slice(0, 6)
+        : [],
+      locations: Array.isArray(safe.locations)
+        ? safe.locations.map((entry) => trimString(entry, 80)).filter(Boolean).slice(0, 4)
+        : [],
+      lastOutcome: trimString(safe.lastOutcome, 80),
+      lastCtaIds: Array.isArray(safe.lastCtaIds)
+        ? safe.lastCtaIds.map((entry) => trimString(entry, 80)).filter(Boolean).slice(0, 5)
+        : [],
+    };
+  }
+
+  function normaliseResourceLinks(links) {
+    return (Array.isArray(links) ? links : [])
+      .map((link, index) => ({
+        id: trimString(link?.id, 80) || `link_${index + 1}`,
+        label: trimString(link?.label, 120),
+        href: trimString(link?.href, 280),
+        kind: trimString(link?.kind, 40),
+      }))
+      .filter((link) => link.label && link.href)
+      .slice(0, 4);
+  }
+
+  function normaliseSuggestedPrompts(prompts) {
+    const unique = [];
+    (Array.isArray(prompts) ? prompts : []).forEach((prompt) => {
+      const safe = trimString(prompt, 180);
+      if (safe && !unique.includes(safe)) unique.push(safe);
+    });
+    return unique.slice(0, 4);
+  }
+
+  function normaliseMessage(message) {
+    return {
+      id: message.id || makeId(message.role || 'msg'),
+      role: message.role || 'assistant',
+      text: trimString(message.text, 2400),
+      createdAt: message.createdAt || new Date().toISOString(),
+      ctaIds: Array.isArray(message.ctaIds) ? message.ctaIds.map((entry) => trimString(entry, 80)).filter(Boolean).slice(0, 5) : [],
+      quickReplyIds: Array.isArray(message.quickReplyIds) ? message.quickReplyIds.map((entry) => trimString(entry, 80)).filter(Boolean).slice(0, 5) : [],
+      resourceLinks: normaliseResourceLinks(message.resourceLinks),
+      suggestedPrompts: normaliseSuggestedPrompts(message.suggestedPrompts),
+      followUpQuestion: trimString(message.followUpQuestion, 220),
+      visitorType: trimString(message.visitorType, 40),
+      outcome: trimString(message.outcome, 80),
+      isWelcome: !!message.isWelcome,
+    };
+  }
+
   function getStoredSession() {
     try {
       const parsed = safeJsonParse(window.sessionStorage.getItem(SESSION_KEY));
@@ -108,6 +168,8 @@
     try {
       const payload = {
         sessionId: state.sessionId,
+        conversationId: state.conversationId,
+        sessionProfile: state.sessionProfile,
         messages: state.messages.slice(-MAX_STORED_MESSAGES).map((message) => ({
           id: message.id,
           role: message.role,
@@ -115,6 +177,11 @@
           createdAt: message.createdAt,
           ctaIds: Array.isArray(message.ctaIds) ? message.ctaIds : [],
           quickReplyIds: Array.isArray(message.quickReplyIds) ? message.quickReplyIds : [],
+          resourceLinks: Array.isArray(message.resourceLinks) ? message.resourceLinks : [],
+          suggestedPrompts: Array.isArray(message.suggestedPrompts) ? message.suggestedPrompts : [],
+          followUpQuestion: message.followUpQuestion || '',
+          visitorType: message.visitorType || '',
+          outcome: message.outcome || '',
           isWelcome: !!message.isWelcome,
         })),
         hasAutoOpened: !!state.hasAutoOpened,
@@ -129,7 +196,21 @@
   function hydrateSession() {
     const stored = getStoredSession();
     state.sessionId = trimString(stored?.sessionId, 120) || (window.crypto?.randomUUID ? window.crypto.randomUUID() : makeId('chat'));
-    state.messages = Array.isArray(stored?.messages) ? stored.messages.slice(-MAX_STORED_MESSAGES) : [];
+    state.conversationId = trimString(stored?.conversationId, 120);
+    state.sessionProfile = normaliseSessionProfile(stored?.sessionProfile);
+    state.messages = Array.isArray(stored?.messages)
+      ? stored.messages.slice(-MAX_STORED_MESSAGES).map((message) => normaliseMessage(message))
+      : [];
+    if (!state.sessionProfile.visitorType) {
+      const lastAssistant = state.messages.slice().reverse().find((message) => message.role === 'assistant' && !message.isWelcome);
+      if (lastAssistant) {
+        state.sessionProfile = normaliseSessionProfile({
+          visitorType: lastAssistant.visitorType,
+          lastOutcome: lastAssistant.outcome,
+          lastCtaIds: lastAssistant.ctaIds,
+        });
+      }
+    }
     state.hasAutoOpened = !!stored?.hasAutoOpened;
     state.manualDismissed = !!stored?.manualDismissed;
     state.engaged = !!stored?.engaged;
@@ -162,6 +243,16 @@
     };
   }
 
+  function getComposerPlaceholder() {
+    if (state.sessionProfile.visitorType === 'candidate') {
+      return 'Ask about roles, locations, applications, or registering...';
+    }
+    if (state.sessionProfile.visitorType === 'client') {
+      return 'Ask about hiring support, sectors, or the quickest contact route...';
+    }
+    return 'Ask about jobs, applying, registration, or contacting HMJ...';
+  }
+
   function escapePattern(value) {
     return value.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
   }
@@ -191,6 +282,48 @@
     }
 
     return true;
+  }
+
+  function trackEvent(eventType, extra = {}, options = {}) {
+    if (!eventType) return;
+    const payload = {
+      eventType,
+      sessionId: state.sessionId,
+      conversationId: state.conversationId,
+      context: state.context,
+      visitorType: state.sessionProfile.visitorType || '',
+      outcome: state.sessionProfile.lastOutcome || '',
+      intent: state.sessionProfile.currentIntent || '',
+      ...extra,
+    };
+
+    try {
+      const body = JSON.stringify(payload);
+      if (options.preferBeacon && typeof navigator.sendBeacon === 'function') {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon(EVENT_ENDPOINT, blob);
+        return;
+      }
+      fetch(EVENT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'same-origin',
+        keepalive: options.keepalive !== false,
+        body,
+      }).catch(() => {});
+    } catch {}
+  }
+
+  function trackShownAction(ctaId, metadata) {
+    const safeId = trimString(ctaId, 80);
+    if (!safeId) return;
+    const key = `${safeId}:${trimString(metadata?.source, 40)}:${state.messages.length}`;
+    if (state.trackedShownKeys.has(key)) return;
+    state.trackedShownKeys.add(key);
+    trackEvent('cta_shown', {
+      ctaId: safeId,
+      metadata: metadata && typeof metadata === 'object' ? metadata : {},
+    });
   }
 
   async function loadConfig() {
@@ -298,7 +431,7 @@
     const composerShell = createElement('div', 'hmj-chatbot__composer-shell');
     const input = createElement('textarea', 'hmj-chatbot__input');
     input.rows = 1;
-    input.placeholder = 'Ask about jobs, applying, registration, or contacting HMJ...';
+    input.placeholder = getComposerPlaceholder();
     input.maxLength = 1200;
     const send = createElement('button', 'hmj-chatbot__send');
     send.type = 'button';
@@ -378,7 +511,19 @@
     }
     persistSession();
     render();
-    window.setTimeout(() => state.elements.input?.focus(), 60);
+    trackEvent('widget_open', {
+      metadata: {
+        source: manual ? 'manual' : 'auto',
+      },
+    }, { preferBeacon: true });
+    getConversationActions().forEach((action) => {
+      trackShownAction(action.id, {
+        source: state.messages.some((message) => message.role === 'user') ? 'conversation_actions' : 'welcome_actions',
+      });
+    });
+    if (manual) {
+      window.setTimeout(() => state.elements.input?.focus(), 60);
+    }
   }
 
   function minimisePanel(manual) {
@@ -392,15 +537,7 @@
   }
 
   function addMessage(message) {
-    state.messages.push({
-      id: message.id || makeId(message.role || 'msg'),
-      role: message.role || 'assistant',
-      text: trimString(message.text, 2400),
-      createdAt: message.createdAt || new Date().toISOString(),
-      ctaIds: Array.isArray(message.ctaIds) ? message.ctaIds : [],
-      quickReplyIds: Array.isArray(message.quickReplyIds) ? message.quickReplyIds : [],
-      isWelcome: !!message.isWelcome,
-    });
+    state.messages.push(normaliseMessage(message));
     state.messages = state.messages.slice(-MAX_STORED_MESSAGES);
     persistSession();
   }
@@ -440,9 +577,58 @@
     state.messages.forEach((message) => {
       const wrap = createElement('div', 'hmj-chatbot__message');
       wrap.dataset.role = message.role;
-      const bubble = createElement('div', 'hmj-chatbot__bubble', message.text);
+      const bubble = createElement('div', 'hmj-chatbot__bubble');
+      const bubbleText = createElement('div', 'hmj-chatbot__bubble-text', message.text);
+      bubble.appendChild(bubbleText);
+      if (message.role === 'assistant' && message.followUpQuestion) {
+        bubble.appendChild(createElement('p', 'hmj-chatbot__followup', message.followUpQuestion));
+      }
       const meta = createElement('div', 'hmj-chatbot__meta', message.role === 'assistant' ? 'HMJ assistant' : 'You');
       wrap.appendChild(bubble);
+
+      if (message.role === 'assistant' && Array.isArray(message.resourceLinks) && message.resourceLinks.length) {
+        const links = createElement('div', 'hmj-chatbot__message-links');
+        message.resourceLinks.forEach((link) => {
+          const anchor = createElement('a', 'hmj-chatbot__message-link', link.label);
+          anchor.href = link.href;
+          anchor.target = '_self';
+          anchor.rel = 'noopener';
+          anchor.addEventListener('click', () => {
+            trackEvent('cta_click', {
+              ctaId: link.id,
+              metadata: {
+                source: 'assistant_resource_link',
+                label: link.label,
+                href: link.href,
+                kind: link.kind,
+              },
+            }, { preferBeacon: true });
+          });
+          links.appendChild(anchor);
+        });
+        wrap.appendChild(links);
+      }
+
+      if (message.role === 'assistant' && Array.isArray(message.suggestedPrompts) && message.suggestedPrompts.length) {
+        const prompts = createElement('div', 'hmj-chatbot__suggestions');
+        message.suggestedPrompts.forEach((prompt) => {
+          const button = createElement('button', 'hmj-chatbot__suggestion', prompt);
+          button.type = 'button';
+          button.addEventListener('click', () => {
+            trackEvent('suggested_prompt_click', {
+              ctaId: 'suggested_prompt',
+              metadata: {
+                source: 'assistant_suggested_prompt',
+                prompt,
+              },
+            });
+            submitMessage(prompt);
+          });
+          prompts.appendChild(button);
+        });
+        wrap.appendChild(prompts);
+      }
+
       wrap.appendChild(meta);
       host.appendChild(wrap);
     });
@@ -490,7 +676,12 @@
     root.dataset.unread = state.unread ? 'true' : 'false';
     state.elements.launcher.setAttribute('aria-expanded', state.open ? 'true' : 'false');
     state.elements.launcherLabel.textContent = state.config.launcher.showLabel ? state.config.launcher.label : state.config.launcher.compactLabel;
-    state.elements.launcherMeta.textContent = 'HMJ website assistant';
+    state.elements.launcherMeta.textContent = state.sessionProfile.visitorType === 'candidate'
+      ? 'Jobs, applications & registration'
+      : state.sessionProfile.visitorType === 'client'
+        ? 'Hiring support & contact'
+        : 'HMJ website assistant';
+    state.elements.input.placeholder = getComposerPlaceholder();
     state.elements.input.disabled = state.loading;
     state.elements.send.disabled = state.loading;
     renderMessages();
@@ -540,6 +731,7 @@
           message: text,
           history,
           context: state.context,
+          sessionProfile: state.sessionProfile,
         }),
       });
       const payload = await response.json();
@@ -548,15 +740,38 @@
         throw new Error(payload?.message || payload?.error || 'assistant_unavailable');
       }
 
+      state.conversationId = trimString(reply.conversationId || payload?.conversationId, 120) || state.conversationId;
+      state.sessionProfile = normaliseSessionProfile(reply.sessionProfile || {
+        visitorType: reply.visitorType,
+        currentIntent: reply.intent,
+        lastOutcome: reply.outcome,
+        lastCtaIds: reply.ctaIds,
+      });
       addMessage({
         role: 'assistant',
         text: reply.reply,
         ctaIds: reply.ctaIds || [],
         quickReplyIds: reply.quickReplyIds || [],
+        resourceLinks: reply.resourceLinks || [],
+        suggestedPrompts: reply.suggestedPrompts || [],
+        followUpQuestion: reply.followUpQuestion || '',
+        visitorType: reply.visitorType || '',
+        outcome: reply.outcome || '',
+      });
+      (Array.isArray(reply.ctaIds) ? reply.ctaIds : []).forEach((ctaId) => {
+        trackShownAction(ctaId, { source: 'assistant_cta_ids' });
+      });
+      (Array.isArray(reply.resourceLinks) ? reply.resourceLinks : []).forEach((link) => {
+        trackShownAction(link.id || link.href, {
+          source: 'assistant_resource_link',
+          label: link.label,
+          href: link.href,
+          kind: link.kind,
+        });
       });
       state.statusText = payload?.ok
         ? ''
-        : 'The live assistant is temporarily unavailable, but the fallback guidance is still available.';
+        : 'I’m using backup guidance just now, but I can still point you to the right HMJ route.';
       state.statusTone = payload?.ok ? 'info' : 'error';
       if (!state.open) state.unread = true;
     } catch (error) {
@@ -565,7 +780,7 @@
         text: 'I’m having trouble right now. You can still browse jobs, register as a candidate, or contact HMJ directly using the options below.',
         ctaIds: ['find_jobs', 'register_candidate', 'contact_hmj'],
       });
-      state.statusText = 'The assistant could not reach the server just now.';
+      state.statusText = 'I’m having trouble connecting just now, but the main HMJ routes are still available below.';
       state.statusTone = 'error';
     } finally {
       state.loading = false;
@@ -577,6 +792,14 @@
   function handleAction(action) {
     if (!action) return;
     markEngaged();
+    trackEvent('cta_click', {
+      ctaId: action.id,
+      metadata: {
+        source: action.actionMode === 'navigate' ? 'action_button_navigate' : 'action_button_prompt',
+        href: action.href || '',
+        prompt: action.prompt || '',
+      },
+    }, { preferBeacon: action.actionMode === 'navigate' });
     if (action.actionMode === 'navigate' && action.href) {
       window.location.href = action.href;
       return;
@@ -594,9 +817,7 @@
 
     state.autoOpenTimer = window.setTimeout(() => {
       state.hasAutoOpened = true;
-      state.open = true;
-      persistSession();
-      render();
+      openPanel(false);
       state.autoHideTimer = window.setTimeout(() => {
         if (!state.engaged) {
           state.open = false;

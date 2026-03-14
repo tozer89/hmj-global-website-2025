@@ -1,0 +1,149 @@
+{
+  "company": {
+    "name": "HMJ Global",
+    "tagline": "People-first teams powering hyperscale data centres and pharma manufacturing.",
+    "summary": "HMJ Global is a specialist recruitment partner supporting mission-critical delivery across data centres, critical infrastructure and pharmaceutical manufacturing projects.",
+    "services": [
+      "Recruitment for CSA, MEP, commissioning, project controls, commercial and operations teams",
+      "Cross-border mobilisation support across the UK and Europe",
+      "Compliance, onboarding, payroll and contractor care",
+      "Structured hiring support for operationally sensitive projects"
+    ],
+    "sectors": [
+      "Hyperscale data centres",
+      "Critical infrastructure",
+      "Substations and power",
+      "Pharmaceutical manufacturing and cleanrooms",
+      "Commissioning and project controls"
+    ],
+    "regions": [
+      "UK",
+      "Ireland",
+      "Benelux",
+      "Nordics",
+      "DACH",
+      "Wider European programme locations"
+    ],
+    "candidateSupport": [
+      "Typical first opportunities within 48 hours",
+      "Weekly contractor payroll",
+      "Interview preparation and role context before each stage",
+      "Cross-border mobility and onboarding support",
+      "Clearer commercial and site detail before mobilisation"
+    ],
+    "clientSupport": [
+      "Requirement review within one business day",
+      "Support shaping briefs, package scope and mobilisation detail",
+      "Compliance, payroll and onboarding support built into delivery",
+      "Structured recruitment support for CSA, MEP, commissioning and project controls packages"
+    ],
+    "contact": {
+      "phone": "0800 861 1230",
+      "email": "info@HMJ-Global.com"
+    },
+    "legal": "HMJ-Global is a trading name of HMJ-Global Ltd, registered in England and Wales, company number 16029938."
+  },
+  "pages": {
+    "home": {
+      "summary": "The homepage positions HMJ as a people-first recruitment partner for hyperscale data centres and pharma manufacturing, with joined-up recruitment, contractor care and finance control.",
+      "bestFor": [
+        "general company questions",
+        "candidate discovery",
+        "client discovery"
+      ]
+    },
+    "about": {
+      "summary": "The About page explains HMJ's mission-critical recruitment model, European mobilisation experience, leadership team and structured operating approach.",
+      "highlights": [
+        "Data centre and pharma delivery focus",
+        "UK and EU mobilisation support",
+        "48 hours to first shortlist",
+        "Weekly contractor payroll"
+      ]
+    },
+    "candidates": {
+      "summary": "The Candidates page focuses on registration, CV submission, live jobs, weekly pay, cross-border support and a cleaner route from CV to site start.",
+      "highlights": [
+        "Upload CV or register profile",
+        "Browse live jobs",
+        "48 hours to first opportunities",
+        "Weekly payroll and EU mobility support"
+      ]
+    },
+    "clients": {
+      "summary": "The Clients page explains HMJ's hiring support for operationally sensitive projects and encourages visitors to share a requirement, request a proposal or speak to HMJ client services.",
+      "highlights": [
+        "Client services review each requirement within one business day",
+        "Support for CSA, MEP, commissioning and project controls",
+        "Compliance, payroll and onboarding built into delivery",
+        "Structured brief and mobilisation support"
+      ]
+    },
+    "contact": {
+      "summary": "The Contact and Apply page is the main route for candidate applications, CV submission and general enquiries to the HMJ recruitment team.",
+      "highlights": [
+        "Secure CV upload and contact capture",
+        "Role context attached when available",
+        "Fast follow-up from HMJ"
+      ]
+    },
+    "jobs": {
+      "summary": "The Jobs page presents live roles across data centre builds, commissioning, pharma cleanrooms and critical infrastructure, with clear sector fit, employment type and project signals.",
+      "highlights": [
+        "Live jobs board",
+        "Register CV for similar starts if a role is not quite right",
+        "Direct contact route when a brief needs discussion"
+      ]
+    }
+  },
+  "faqs": [
+    {
+      "id": "what_hmj_does",
+      "question": "What does HMJ Global do?",
+      "answer": "HMJ Global is a specialist recruitment partner supporting data centre, critical infrastructure and pharmaceutical manufacturing projects across the UK and Europe, with recruitment, mobilisation, compliance, payroll and contractor care built into the delivery model.",
+      "keywords": [
+        "what does hmj do",
+        "what do you do",
+        "about hmj",
+        "company",
+        "services"
+      ]
+    },
+    {
+      "id": "candidate_registration",
+      "question": "How do I register with HMJ?",
+      "answer": "The quickest route is the candidate registration page where visitors can upload a CV or submit their profile, or they can apply directly through the contact/apply route if they already have a role in mind.",
+      "keywords": [
+        "register",
+        "registration",
+        "send cv",
+        "upload cv",
+        "candidate"
+      ]
+    },
+    {
+      "id": "client_support",
+      "question": "Can HMJ help us hire staff?",
+      "answer": "Yes. HMJ supports clients with recruitment for operationally sensitive projects across data centres, commissioning, project controls, CSA, MEP and related disciplines, and the clients page is the best route to share a requirement or request a proposal.",
+      "keywords": [
+        "hire",
+        "hiring",
+        "need staff",
+        "client",
+        "recruitment support"
+      ]
+    },
+    {
+      "id": "sectors",
+      "question": "Which sectors does HMJ recruit for?",
+      "answer": "HMJ focuses on hyperscale data centres, critical infrastructure, substations and power, commissioning, project controls, and pharmaceutical manufacturing and cleanroom environments.",
+      "keywords": [
+        "sectors",
+        "industries",
+        "data centre",
+        "pharma",
+        "commissioning"
+      ]
+    }
+  ]
+}

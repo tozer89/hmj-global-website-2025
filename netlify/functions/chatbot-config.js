@@ -18,7 +18,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { settings, source, supabase, error } = await fetchSettings(event, [CHATBOT_SETTINGS_KEY]);
+    const { settings } = await fetchSettings(event, [CHATBOT_SETTINGS_KEY]);
     const resolved = resolveChatbotSettings(settings?.[CHATBOT_SETTINGS_KEY]);
 
     return {
@@ -27,9 +27,6 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         ok: true,
         config: toPublicChatbotSettings(resolved),
-        source,
-        supabase,
-        error: error || null,
       }),
     };
   } catch (error) {

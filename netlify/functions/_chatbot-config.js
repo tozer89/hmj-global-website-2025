@@ -62,10 +62,16 @@ const DEFAULT_CHATBOT_SETTINGS = {
     writingStyle: 'concise_guided',
     formality: 'professional',
     warmth: 'friendly',
+    directness: 'straightforward',
     proactivity: 'balanced',
     ctaCadence: 'balanced',
     replyLength: 'short',
     recruitmentFocus: 'balanced',
+    conversionStrength: 'balanced',
+    askFollowUpQuestion: 'balanced',
+    fallbackStyle: 'reassuring_action',
+    bannedPhrases: [],
+    maxReplySentences: 3,
     ukEnglish: true,
     customInstructions: '',
   },
@@ -83,6 +89,8 @@ const DEFAULT_CHATBOT_SETTINGS = {
     routingInstructions: 'Use only approved HMJ routes and CTA ids supplied by the application. Do not invent URLs or offers.',
     safetyConstraints: 'Do not invent roles, rates, sponsorship, legal advice, financial advice, or business details that are not provided. When unsure, route to a human or contact form.',
     pageAwareInstructions: 'Use the current page context briefly when it helps, but do not overstate what is known from the page.',
+    answerStructure: 'Default to: direct answer, short supporting detail, recommended next step, and one follow-up question only when it helps move the conversation forward.',
+    offTopicHandling: 'If a question is unrelated to HMJ Global, jobs, candidates, clients, hiring or contact routes, politely redirect the visitor back to HMJ-related help.',
   },
   dataPolicy: {
     includeRoute: true,
@@ -94,6 +102,9 @@ const DEFAULT_CHATBOT_SETTINGS = {
     classifyIntent: true,
     injectCtaCatalog: true,
     injectBusinessContext: true,
+    injectWebsiteContext: true,
+    injectJobsContext: true,
+    maxGroundingJobs: 3,
   },
   handoff: {
     candidateRegistrationUrl: '/candidates.html#candForm',
@@ -337,10 +348,16 @@ function normaliseTone(tone = {}) {
     writingStyle: resolveEnum(tone.writingStyle, ['concise_guided', 'conversational', 'direct', 'consultative'], fallback.writingStyle),
     formality: resolveEnum(tone.formality, ['professional', 'neutral', 'relaxed'], fallback.formality),
     warmth: resolveEnum(tone.warmth, ['friendly', 'balanced', 'matter_of_fact'], fallback.warmth),
+    directness: resolveEnum(tone.directness, ['soft', 'balanced', 'straightforward'], fallback.directness),
     proactivity: resolveEnum(tone.proactivity, ['low', 'balanced', 'high'], fallback.proactivity),
     ctaCadence: resolveEnum(tone.ctaCadence, ['light', 'balanced', 'frequent'], fallback.ctaCadence),
     replyLength: resolveEnum(tone.replyLength, ['short', 'medium'], fallback.replyLength),
     recruitmentFocus: resolveEnum(tone.recruitmentFocus, ['balanced', 'candidate_first', 'client_first', 'support_first'], fallback.recruitmentFocus),
+    conversionStrength: resolveEnum(tone.conversionStrength, ['soft', 'balanced', 'strong'], fallback.conversionStrength),
+    askFollowUpQuestion: resolveEnum(tone.askFollowUpQuestion, ['rarely', 'balanced', 'often'], fallback.askFollowUpQuestion),
+    fallbackStyle: resolveEnum(tone.fallbackStyle, ['reassuring_action', 'brief_redirect', 'warm_handoff'], fallback.fallbackStyle),
+    bannedPhrases: dedupeStrings(tone.bannedPhrases, 16),
+    maxReplySentences: asNumber(tone.maxReplySentences, fallback.maxReplySentences, 1, 6),
     ukEnglish: asBoolean(tone.ukEnglish, fallback.ukEnglish),
     customInstructions: trimString(tone.customInstructions, 1200),
   };
@@ -366,6 +383,8 @@ function normalisePrompts(prompts = {}) {
     routingInstructions: trimString(prompts.routingInstructions, 1400) || fallback.routingInstructions,
     safetyConstraints: trimString(prompts.safetyConstraints, 1400) || fallback.safetyConstraints,
     pageAwareInstructions: trimString(prompts.pageAwareInstructions, 1400) || fallback.pageAwareInstructions,
+    answerStructure: trimString(prompts.answerStructure, 1400) || fallback.answerStructure,
+    offTopicHandling: trimString(prompts.offTopicHandling, 1400) || fallback.offTopicHandling,
   };
 }
 
@@ -381,6 +400,9 @@ function normaliseDataPolicy(dataPolicy = {}) {
     classifyIntent: asBoolean(dataPolicy.classifyIntent, fallback.classifyIntent),
     injectCtaCatalog: asBoolean(dataPolicy.injectCtaCatalog, fallback.injectCtaCatalog),
     injectBusinessContext: asBoolean(dataPolicy.injectBusinessContext, fallback.injectBusinessContext),
+    injectWebsiteContext: asBoolean(dataPolicy.injectWebsiteContext, fallback.injectWebsiteContext),
+    injectJobsContext: asBoolean(dataPolicy.injectJobsContext, fallback.injectJobsContext),
+    maxGroundingJobs: asNumber(dataPolicy.maxGroundingJobs, fallback.maxGroundingJobs, 1, 5),
   };
 }
 

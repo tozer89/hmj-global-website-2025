@@ -9,6 +9,30 @@
     ...LIMITED_EXTENSIONS,
     ...IMAGE_EXTENSIONS,
   ]);
+  const PDF_MIME_TYPES = new Set([
+    'application/pdf',
+    'application/x-pdf',
+    'application/acrobat',
+    'applications/vnd.pdf',
+    'text/pdf',
+    'text/x-pdf',
+  ]);
+  const DOCX_MIME_TYPES = new Set([
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ]);
+  const DOC_MIME_TYPES = new Set([
+    'application/msword',
+    'application/vnd.ms-word',
+  ]);
+  const JPEG_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/jpg',
+    'image/pjpeg',
+  ]);
+  const PNG_MIME_TYPES = new Set([
+    'image/png',
+    'image/x-png',
+  ]);
   const PROGRESS_STAGES = [
     {
       key: 'prepare_intake',
@@ -72,6 +96,19 @@
     loading_live_jobs: 4,
     live_jobs_loaded: 4,
     jobs_fetch: 4,
+    upload_received: 1,
+    validating_upload: 1,
+    detecting_file_type: 2,
+    pdf_native_extract_started: 2,
+    pdf_native_extract_completed: 2,
+    pdf_text_quality_check: 2,
+    pdf_ocr_fallback_started: 2,
+    pdf_rendering_pages: 2,
+    pdf_ocr_running: 2,
+    pdf_ocr_completed: 2,
+    selecting_best_text: 2,
+    building_prepared_evidence: 3,
+    prepared_evidence_saved: 3,
     openai_request_started: 5,
     openai_thinking: 5,
     openai_response_received: 5,
@@ -83,7 +120,7 @@
     completed: 6,
     render: 6,
   };
-  const CLIENT_REQUEST_TIMEOUT_MS = 65000;
+  const CLIENT_REQUEST_TIMEOUT_MS = 125000;
   const MATCH_STATUS_POLL_MS = 2500;
   const SESSION_STATE_KEY = 'hmj-candidate-matcher-session';
   const SESSION_ID_KEY = 'hmj-candidate-matcher-session-id';
@@ -100,6 +137,7 @@
     latestResultPayload: null,
     latestResultMeta: null,
     matchPollTimer: 0,
+    preparePollTimer: 0,
     busy: false,
     progressIndex: -1,
     progressFailureIndex: -1,
@@ -136,11 +174,11 @@
 
   function inferExtensionFromMime(contentType) {
     const mime = normaliseContentType(contentType);
-    if (mime === 'application/pdf') return 'pdf';
-    if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
-    if (mime === 'application/msword') return 'doc';
-    if (mime === 'image/jpeg' || mime === 'image/jpg') return 'jpg';
-    if (mime === 'image/png') return 'png';
+    if (PDF_MIME_TYPES.has(mime)) return 'pdf';
+    if (DOCX_MIME_TYPES.has(mime)) return 'docx';
+    if (DOC_MIME_TYPES.has(mime)) return 'doc';
+    if (JPEG_MIME_TYPES.has(mime)) return 'jpg';
+    if (PNG_MIME_TYPES.has(mime)) return 'png';
     return '';
   }
 
@@ -259,6 +297,10 @@
     return run && typeof run === 'object' ? (run.match_job || null) : null;
   }
 
+  function currentPrepareJob(run) {
+    return run && typeof run === 'object' ? (run.prepare_job || null) : null;
+  }
+
   function matchJobStatusLabel(status) {
     const key = String(status || '').toLowerCase();
     if (key === 'queued') return 'Queued';
@@ -284,6 +326,124 @@
     if (key === 'completed') return 'Match complete';
     if (key === 'failed') return 'Match failed';
     return fallbackLabel || 'Waiting for progress update';
+  }
+
+  function prepareJobStageLabel(stage, fallbackLabel) {
+    const key = String(stage || '').toLowerCase();
+    if (key === 'upload_received') return 'Upload received';
+    if (key === 'validating_upload') return 'Validating file';
+    if (key === 'detecting_file_type') return 'Detecting file type';
+    if (key === 'pdf_native_extract_started') return 'Extracting text from PDF';
+    if (key === 'pdf_native_extract_completed') return 'Native PDF extraction complete';
+    if (key === 'pdf_text_quality_check') return 'Checking extracted text quality';
+    if (key === 'pdf_ocr_fallback_started') return 'Native PDF text too weak, switching to OCR';
+    if (key === 'pdf_rendering_pages') return 'Rendering PDF pages for OCR';
+    if (key === 'pdf_ocr_running') return 'Running OCR on PDF pages';
+    if (key === 'pdf_ocr_completed') return 'OCR text received';
+    if (key === 'selecting_best_text') return 'Choosing best extracted text';
+    if (key === 'building_prepared_evidence') return 'Building candidate evidence';
+    if (key === 'prepared_evidence_saved') return 'Prepared evidence saved';
+    if (key === 'failed') return 'Evidence preparation failed';
+    return fallbackLabel || 'Preparing candidate evidence';
+  }
+
+  function buildProgressStateFromPrepareJob(run) {
+    const job = currentPrepareJob(run);
+    const status = String(job?.status || '').toLowerCase();
+    const stage = String(job?.stage || '').toLowerCase();
+    const stageLabel = prepareJobStageLabel(stage, job?.stage_label);
+    const details = job?.details || {};
+
+    if (status === 'failed') {
+      return {
+        activeIndex: stageIndexForKey(stage || 'extraction'),
+        failedIndex: stageIndexForKey(stage || 'extraction'),
+        percent: progressPercentForStage(stageIndexForKey(stage || 'extraction'), true),
+        statusText: 'Evidence preparation failed',
+        detailText: job?.last_error || run?.error_message || 'Candidate evidence preparation did not complete.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (status === 'completed') {
+      return {
+        activeIndex: 3,
+        failedIndex: -1,
+        percent: 100,
+        statusText: 'Prepared evidence saved',
+        detailText: 'Candidate evidence has been extracted and saved for recruiter matching.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (!stage) return null;
+
+    if (stage === 'upload_received' || stage === 'validating_upload') {
+      return {
+        activeIndex: 1,
+        failedIndex: -1,
+        percent: 18,
+        statusText: 'Validating file upload',
+        detailText: 'The secure matcher function has received the upload and is validating the request.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (stage === 'detecting_file_type') {
+      return {
+        activeIndex: 2,
+        failedIndex: -1,
+        percent: 28,
+        statusText: 'Detecting file type',
+        detailText: 'Identifying the correct parser strategy for the uploaded documents.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    if ([
+      'pdf_native_extract_started',
+      'pdf_native_extract_completed',
+      'pdf_text_quality_check',
+      'pdf_ocr_fallback_started',
+      'pdf_rendering_pages',
+      'pdf_ocr_running',
+      'pdf_ocr_completed',
+      'selecting_best_text',
+    ].includes(stage)) {
+      const ocrPages = Number(details?.pages_rendered) || Number(details?.ocr_pages_processed) || 0;
+      const detailText = stage === 'pdf_ocr_fallback_started'
+        ? 'Native PDF extraction was too weak, so OCR fallback has started automatically.'
+        : stage === 'pdf_rendering_pages'
+          ? 'Rendering PDF pages into images for OCR fallback.'
+          : stage === 'pdf_ocr_running'
+            ? `Running OCR on ${ocrPages || 'the rendered'} PDF page${ocrPages === 1 ? '' : 's'}.`
+            : stage === 'pdf_ocr_completed'
+              ? 'OCR text was received and is being assessed.'
+              : 'Extracting and assessing PDF text for candidate preparation.';
+      return {
+        activeIndex: 2,
+        failedIndex: -1,
+        percent: stage === 'pdf_ocr_completed' || stage === 'selecting_best_text' ? 58 : 46,
+        statusText: stageLabel,
+        detailText,
+        stageDetail: stageLabel,
+      };
+    }
+
+    if (stage === 'building_prepared_evidence' || stage === 'prepared_evidence_saved') {
+      return {
+        activeIndex: 3,
+        failedIndex: -1,
+        percent: stage === 'prepared_evidence_saved' ? 100 : 84,
+        statusText: stage === 'prepared_evidence_saved' ? 'Prepared evidence saved' : 'Building candidate evidence',
+        detailText: stage === 'prepared_evidence_saved'
+          ? 'Candidate evidence has been saved privately and can now be matched without re-uploading.'
+          : 'Assembling the extracted text and diagnostics into the prepared evidence record.',
+        stageDetail: stageLabel,
+      };
+    }
+
+    return null;
   }
 
   function buildProgressStateFromJob(run) {
@@ -423,6 +583,11 @@
   function isMatchJobActive(run) {
     const status = String(currentMatchJob(run)?.status || '').toLowerCase();
     return status === 'queued' || status === 'running';
+  }
+
+  function isPrepareJobActive(run) {
+    const status = String(currentPrepareJob(run)?.status || '').toLowerCase();
+    return status === 'running';
   }
 
   function createSessionId() {
@@ -645,6 +810,8 @@
     const timingByStage = buildTimingLookup(timings);
     const diagnostics = response?.run_diagnostics || error?.run_diagnostics || {};
     const extraction = response?.extraction || {};
+    const extractionDocuments = safeArray(extraction.documents);
+    const ocrCount = extractionDocuments.filter((document) => String(document?.selectedTextSource || '').toLowerCase() === 'ocr_pdf_text').length;
     const liveJobsCount = Number(response?.live_jobs_count) || 0;
 
     setStageDetail(0, 'Queue validated in browser before submission.', 'done');
@@ -655,6 +822,7 @@
       response
         ? `${Number(extraction.success_count) || 0} file${Number(extraction.success_count) === 1 ? '' : 's'} text-read`
         : '',
+      ocrCount ? `${ocrCount} PDF${ocrCount === 1 ? '' : 's'} recovered via OCR` : '',
       Number(extraction.image_evidence_count) ? `${Number(extraction.image_evidence_count)} image evidence file${Number(extraction.image_evidence_count) === 1 ? '' : 's'}` : '',
       extractionTiming ? formatDuration(extractionTiming.duration_ms) : '',
     ].filter(Boolean).join(' • ');
@@ -1096,26 +1264,56 @@
       : skipped;
 
     return {
-      started_at: overrides.started_at || run?.match_job?.started_at || run?.match_job?.queued_at || run?.updated_at || run?.created_at || '',
+      started_at: overrides.started_at || run?.match_job?.started_at || run?.match_job?.queued_at || run?.prepare_job?.stage_updated_at || run?.updated_at || run?.created_at || '',
       total_elapsed_ms: Number.isFinite(Number(overrides.total_elapsed_ms)) ? Number(overrides.total_elapsed_ms) : 0,
       files_attempted: Number(prepared.files_attempted) || 0,
       files_text_read: Number(prepared.files_text_read) || 0,
       files_skipped: skipped,
       warning_count: warningCount,
-      failed_stage: overrides.failed_stage || run?.match_job?.stage_label || '',
+      failed_stage: overrides.failed_stage || run?.match_job?.stage_label || run?.prepare_job?.stage_label || '',
     };
   }
 
   function renderJobStatus(run) {
     if (!elements.jobStatusList) return;
     const job = currentMatchJob(run);
-    if (!job || !job.id) {
+    const prepareJob = currentPrepareJob(run);
+    if ((!job || !job.id) && !prepareJob?.stage) {
       elements.jobStatusList.innerHTML = `
         <div class="ops-item">
           <strong>No active match job</strong>
           <p>Prepared evidence can be queued for background recruiter analysis when you are ready.</p>
         </div>
       `;
+      return;
+    }
+
+    if ((!job || !job.id) && prepareJob?.stage) {
+      const prepareStatus = String(prepareJob.status || '').toLowerCase();
+      const prepareStageLabel = prepareJobStageLabel(prepareJob.stage, prepareJob.stage_label);
+      elements.jobStatusList.innerHTML = [
+        {
+          label: 'Current prepare state',
+          value: matchJobStatusLabel(prepareStatus),
+          note: prepareStatus === 'failed'
+            ? 'The latest evidence preparation run failed and can be retried.'
+            : prepareStatus === 'completed'
+              ? 'Prepared evidence was saved successfully.'
+              : 'The secure extraction pipeline is currently preparing candidate evidence.',
+        },
+        {
+          label: 'Current sub-stage',
+          value: prepareStageLabel,
+          note: prepareJob.stage_updated_at ? `Updated ${elapsedSince(prepareJob.stage_updated_at)} ago.` : 'Live progress from the server-side extraction flow.',
+        },
+        { label: 'Last update', value: formatDateTime(prepareJob.stage_updated_at || run?.updated_at), note: run?.error_message || prepareJob.last_error || 'No recruiter match has been queued yet.' },
+      ].map((item) => `
+        <div class="ops-item">
+          <strong>${escapeHtml(item.label)}</strong>
+          <p>${escapeHtml(item.value || '—')}</p>
+          <p class="muted">${escapeHtml(item.note || '')}</p>
+        </div>
+      `).join('');
       return;
     }
 
@@ -1159,6 +1357,13 @@
     }
   }
 
+  function stopPreparePolling() {
+    if (state.preparePollTimer) {
+      window.clearTimeout(state.preparePollTimer);
+      state.preparePollTimer = 0;
+    }
+  }
+
   function renderEvidenceDocumentList(items, fallback) {
     const documents = safeArray(items);
     if (!documents.length) {
@@ -1176,6 +1381,7 @@
           <span class="file-pill ${escapeHtml(String(document.status || document.extraction_status || '').toLowerCase())}">${escapeHtml(extractionStatusLabel(document.status || document.extraction_status || 'queued'))}</span>
         </div>
         <div class="file-meta-line">${escapeHtml(document.sizeLabel || formatSize(document.size || document.file_size_bytes || 0))} • ${escapeHtml(document.contentType || document.mime_type || document.extension || 'File')}</div>
+        ${document.selectedTextSource ? `<div class="file-meta-line">Text source: ${escapeHtml(String(document.selectedTextSource).replace(/_/g, ' '))}</div>` : ''}
         ${document.error || document.extraction_error ? `<div class="file-meta-line">${escapeHtml(document.error || document.extraction_error)}</div>` : ''}
       </article>
     `).join('');
@@ -1187,6 +1393,7 @@
     const hasResult = !!prepared?.has_result;
     const hasFailure = !!prepared?.error_message && !hasResult;
     const inProgress = isMatchJobActive(prepared);
+    const prepareInProgress = isPrepareJobActive(prepared);
     if (elements.preparedStateChip) {
       if (!prepared) {
         elements.preparedStateChip.textContent = 'No prepared evidence';
@@ -1200,12 +1407,15 @@
       }
     }
     if (elements.runMatchButton) {
-      elements.runMatchButton.hidden = !ready || hasFailure || inProgress;
-      elements.runMatchButton.disabled = state.busy || !ready || inProgress;
+      elements.runMatchButton.hidden = !ready || hasFailure || inProgress || prepareInProgress;
+      elements.runMatchButton.disabled = state.busy || !ready || inProgress || prepareInProgress;
     }
     if (elements.retryMatchButton) {
-      elements.retryMatchButton.hidden = !ready || !hasFailure || inProgress;
-      elements.retryMatchButton.disabled = state.busy || !ready || inProgress;
+      elements.retryMatchButton.hidden = !ready || !hasFailure || inProgress || prepareInProgress;
+      elements.retryMatchButton.disabled = state.busy || !ready || inProgress || prepareInProgress;
+    }
+    if (elements.prepareEvidenceButton) {
+      elements.prepareEvidenceButton.disabled = state.busy || prepareInProgress;
     }
     updateWorkflowState();
   }
@@ -1803,6 +2013,63 @@
     persistSessionSnapshot();
   }
 
+  async function refreshPreparedEvidenceStatus(preparedRunId) {
+    const response = await state.helpers.api('admin-candidate-match-status', 'POST', {
+      preparedRunId,
+    });
+
+    if (response.prepared_run) {
+      renderPreparedEvidence(response.prepared_run);
+      renderJobStatus(response.prepared_run);
+    }
+
+    const prepareState = buildProgressStateFromPrepareJob(response.prepared_run);
+    if (prepareState) {
+      const activeIndex = Number.isFinite(prepareState.activeIndex) ? prepareState.activeIndex : 2;
+      if (prepareState.stageDetail) {
+        setStageDetail(activeIndex, prepareState.stageDetail, prepareState.failedIndex >= 0 ? 'failed' : 'working');
+      }
+      setProgress(
+        prepareState.statusText,
+        prepareState.detailText,
+        activeIndex,
+        prepareState.failedIndex < 0 && String(response.prepared_run?.prepare_job?.status || '').toLowerCase() === 'completed',
+        Number.isFinite(prepareState.failedIndex) ? prepareState.failedIndex : -1,
+        Number.isFinite(prepareState.percent) ? prepareState.percent : progressPercentForStage(activeIndex, false)
+      );
+      renderRunDiagnostics(buildRunDiagnosticsFromPreparedRun(response.prepared_run, {
+        started_at: response.prepared_run?.prepare_job?.stage_updated_at || response.prepared_run?.updated_at || '',
+        total_elapsed_ms: 0,
+        warning_count: safeArray(response.warnings).length,
+        failed_stage: String(response.prepared_run?.prepare_job?.status || '').toLowerCase() === 'failed'
+          ? (response.prepared_run?.prepare_job?.stage_label || 'Evidence preparation')
+          : '',
+      }));
+    }
+
+    return response;
+  }
+
+  function schedulePreparePolling(preparedRunId) {
+    stopPreparePolling();
+    if (!preparedRunId) return;
+    const poll = async () => {
+      try {
+        state.preparePollTimer = 0;
+        const response = await refreshPreparedEvidenceStatus(preparedRunId);
+        const status = String(response?.prepared_run?.prepare_job?.status || '').toLowerCase();
+        if (status === 'running') {
+          state.preparePollTimer = window.setTimeout(poll, MATCH_STATUS_POLL_MS);
+        } else {
+          stopPreparePolling();
+        }
+      } catch {
+        stopPreparePolling();
+      }
+    };
+    state.preparePollTimer = window.setTimeout(poll, 400);
+  }
+
   async function refreshQueuedMatch(preparedRunId, options) {
     const response = await state.helpers.api('admin-candidate-match-status', 'POST', {
       preparedRunId,
@@ -1981,9 +2248,11 @@
     }
 
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const runId = createSessionId();
     state.activeRequestId = requestId;
     setBusy(true);
     startProgress();
+    stopPreparePolling();
     state.fileDiagnostics = new Map();
     state.problemFileKeys = new Set();
     renderFileQueue();
@@ -2005,12 +2274,15 @@
       setStageDetail(1, `${pluralise(files.length, 'file')} transmitted to the secure matcher function.`, 'done');
       setStageDetail(2, 'Server extraction is running for the prepared evidence set.', 'working');
       setProgress('Extracting candidate evidence', PROGRESS_STAGES[2].message, 2, false, -1, 34);
+      schedulePreparePolling(runId);
 
       const response = await callMatcherApi('admin-candidate-prepare', {
+        runId,
         files,
         recruiterNotes: elements.recruiterNotes.value,
       });
       if (state.activeRequestId !== requestId) return;
+      stopPreparePolling();
 
       deriveStageDetailsFromRun({
         analysis_meta: { timings: [] },
@@ -2041,6 +2313,22 @@
       state.helpers.toast.ok('Candidate evidence prepared and saved privately.', 3200);
       await loadHistory();
     } catch (error) {
+      if (error?.details?.stage === 'server_wait') {
+        setStageDetail(2, 'Server-side extraction is still running. Progress will continue updating from the prepared evidence status.', 'working');
+        setProgress(
+          'Still preparing candidate evidence',
+          'The server is still processing the uploaded files. Live prepare status will continue updating automatically.',
+          2,
+          false,
+          -1,
+          52
+        );
+        elements.jobsChip.textContent = 'Preparing evidence';
+        elements.jobsChip.className = 'chip warn';
+        state.helpers.toast.warn('Evidence preparation is still running on the server. This page will keep polling for progress.', 3600);
+        return;
+      }
+      stopPreparePolling();
       handleMatcherFailure(error, requestId, {
         statusText: 'Evidence preparation failed',
         warningLabel: 'Prepare evidence',
@@ -2070,6 +2358,7 @@
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     state.activeRequestId = requestId;
     setBusy(true);
+    stopPreparePolling();
     resetProgressState();
     setStageDetail(3, 'Prepared evidence already saved. Reusing it for this match run.', 'done');
     setStageDetail(4, 'Loading prepared evidence and current live roles.', 'working');

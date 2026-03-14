@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const core = require('../lib/candidate-matcher-core.js');
+const { PRINT_TO_PDF_BASE64 } = require('./fixtures/print-to-pdf.fixture.js');
 const {
   createCandidateMatchStatusBaseHandler,
   createCandidatePrepareBaseHandler,
@@ -51,6 +52,38 @@ function assertStageSequence(actualStages, expectedStages) {
     assert.notEqual(nextIndex, -1, `Expected stage "${expected}" in sequence ${JSON.stringify(actualStages)}`);
     cursor = nextIndex;
   }
+}
+
+function buildBlankPdfBuffer() {
+  const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 0 >>
+stream
+
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000010 00000 n 
+0000000063 00000 n 
+0000000122 00000 n 
+0000000209 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+258
+%%EOF`;
+  return Buffer.from(pdf, 'utf8');
 }
 
 test('prepareCandidateFiles marks unsupported extensions without crashing the run', () => {
@@ -138,6 +171,247 @@ startxref
   assert.equal(result.failureCount, 0);
   assert.equal(result.documents[0].status, 'ok');
   assert.match(result.combinedText, /Readable HMJ PDF text/);
+});
+
+test('prepareCandidateFiles routes octet-stream uppercase PDFs into the PDF parser path', () => {
+  const pdfBuffer = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF', 'utf8');
+  const files = core.prepareCandidateFiles([{
+    name: 'Candidate Resume.PDF',
+    contentType: 'application/octet-stream',
+    size: pdfBuffer.byteLength,
+    data: pdfBuffer.toString('base64'),
+  }]);
+
+  assert.equal(files.length, 1);
+  assert.equal(files[0].extension, 'pdf');
+  assert.equal(files[0].fileKind, 'pdf');
+  assert.equal(files[0].parserPath, 'pdf');
+  assert.equal(files[0].detectionSource, 'filename_extension');
+  assert.equal(files[0].extractionDiagnostics.pdfMagicDetected, true);
+});
+
+test('prepareCandidateFiles can recover a PDF from magic bytes when metadata is weak', () => {
+  const pdfBuffer = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF', 'utf8');
+  const files = core.prepareCandidateFiles([{
+    name: 'candidate-upload',
+    contentType: 'application/octet-stream',
+    size: pdfBuffer.byteLength,
+    data: pdfBuffer.toString('base64'),
+  }]);
+
+  assert.equal(files.length, 1);
+  assert.equal(files[0].extension, 'pdf');
+  assert.equal(files[0].fileKind, 'pdf');
+  assert.equal(files[0].detectionSource, 'pdf_magic_bytes');
+});
+
+test('extractCandidateDocuments reads text from a realistic print-to-PDF fixture', async () => {
+  const buffer = Buffer.from(PRINT_TO_PDF_BASE64, 'base64');
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-real-pdf',
+    name: 'candidate-exported.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    browserContentType: 'application/pdf',
+    size: buffer.byteLength,
+    status: 'ready',
+    buffer,
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }]);
+
+  assert.equal(result.successCount, 1);
+  assert.equal(result.documents[0].status, 'ok');
+  assert.match(result.documents[0].extractedText, /Jane Candidate/);
+  assert.equal(result.documents[0].failureCode, '');
+  assert.equal(result.documents[0].textUsable, true);
+  assert.equal(result.documents[0].candidateTextIncluded, true);
+  assert.equal(result.documents[0].matcherTextIncluded, true);
+  assert.equal(result.documents[0].extractionDiagnostics.parser, 'pdf-parse');
+  assert.equal(result.documents[0].extractionDiagnostics.textUsable, true);
+});
+
+test('extractCandidateDocuments rejects blank or image-like PDFs with a specific failure code', async () => {
+  const buffer = buildBlankPdfBuffer();
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-blank-pdf',
+    name: 'scan.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: buffer.byteLength,
+    status: 'ready',
+    buffer,
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }], {
+    enablePdfOcr: false,
+  });
+
+  assert.equal(result.successCount, 0);
+  assert.equal(result.documents[0].status, 'failed');
+  assert.equal(result.documents[0].failureCode, 'pdf_parsed_but_artifacts_only');
+  assert.match(result.documents[0].error, /page markers|artifacts/i);
+  assert.equal(result.documents[0].textUsable, false);
+});
+
+test('extractCandidateDocuments reports corrupt PDFs with a specific failure code', async () => {
+  const buffer = Buffer.from('%PDF-1.4\nthis is not a valid pdf body', 'utf8');
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-corrupt-pdf',
+    name: 'broken.pdf',
+    extension: 'pdf',
+    contentType: 'application/pdf',
+    size: buffer.byteLength,
+    status: 'ready',
+    buffer,
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }], {
+    enablePdfOcr: false,
+  });
+
+  assert.equal(result.successCount, 0);
+  assert.equal(result.documents[0].status, 'failed');
+  assert.equal(result.documents[0].failureCode, 'pdf_parse_failed');
+  assert.match(result.documents[0].error, /corrupted|unsupported/i);
+});
+
+test('extractCandidateDocuments falls back to OCR for weak PDFs and stores the OCR text source', async () => {
+  const originalKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = 'test-ocr-key';
+  const buffer = buildBlankPdfBuffer();
+  const stages = [];
+  try {
+    const result = await core.extractCandidateDocuments([{
+      id: 'doc-ocr-pdf',
+      name: 'scan.pdf',
+      extension: 'pdf',
+      contentType: 'application/pdf',
+      size: buffer.byteLength,
+      status: 'ready',
+      buffer,
+      storageKey: '',
+      extractedText: '',
+      extractedTextLength: 0,
+      error: '',
+    }], {
+      ocrFetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          id: 'resp-ocr-1',
+          status: 'completed',
+          output_text: 'Jane Candidate\nElectrical Project Manager\nLondon\nSkills\nCommissioning\nDelivery\n',
+        }),
+      }),
+      onStage: async (event) => {
+        stages.push(event.stage);
+      },
+    });
+
+    assert.equal(result.successCount, 1);
+    assert.equal(result.documents[0].status, 'ok');
+    assert.equal(result.documents[0].selectedTextSource, 'ocr_pdf_text');
+    assert.equal(result.documents[0].extractionDiagnostics.ocrTriggered, true);
+    assert.equal(result.documents[0].extractionDiagnostics.selectedTextSource, 'ocr_pdf_text');
+    assert.match(result.documents[0].extractedText, /Jane Candidate/);
+    assert.deepEqual(stages.slice(0, 7), [
+      'detecting_file_type',
+      'pdf_native_extract_started',
+      'pdf_native_extract_completed',
+      'pdf_text_quality_check',
+      'pdf_ocr_fallback_started',
+      'pdf_rendering_pages',
+      'pdf_ocr_running',
+    ]);
+    assert.equal(stages.includes('pdf_ocr_completed'), true);
+    assert.equal(stages.includes('selecting_best_text'), true);
+  } finally {
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalKey;
+  }
+});
+
+test('extractCandidateDocuments reports a specific OCR failure when fallback OCR cannot run', async () => {
+  const originalKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = 'test-ocr-key';
+  const buffer = buildBlankPdfBuffer();
+  try {
+    const result = await core.extractCandidateDocuments([{
+      id: 'doc-ocr-fail',
+      name: 'scan.pdf',
+      extension: 'pdf',
+      contentType: 'application/pdf',
+      size: buffer.byteLength,
+      status: 'ready',
+      buffer,
+      storageKey: '',
+      extractedText: '',
+      extractedTextLength: 0,
+      error: '',
+    }], {
+      ocrFetchImpl: async () => ({
+        ok: false,
+        status: 502,
+        text: async () => JSON.stringify({
+          error: { message: 'OCR service unavailable.' },
+        }),
+      }),
+    });
+
+    assert.equal(result.successCount, 0);
+    assert.equal(result.documents[0].status, 'failed');
+    assert.equal(result.documents[0].failureCode, 'pdf_ocr_failed');
+    assert.match(result.documents[0].error, /OCR/i);
+  } finally {
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalKey;
+  }
+});
+
+test('extractCandidateDocuments reports no readable text when native extraction and OCR both fail to recover content', async () => {
+  const originalKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = 'test-ocr-key';
+  const buffer = buildBlankPdfBuffer();
+  try {
+    const result = await core.extractCandidateDocuments([{
+      id: 'doc-ocr-empty',
+      name: 'scan.pdf',
+      extension: 'pdf',
+      contentType: 'application/pdf',
+      size: buffer.byteLength,
+      status: 'ready',
+      buffer,
+      storageKey: '',
+      extractedText: '',
+      extractedTextLength: 0,
+      error: '',
+    }], {
+      ocrFetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          id: 'resp-ocr-empty',
+          status: 'completed',
+          output_text: '<NO_READABLE_TEXT>',
+        }),
+      }),
+    });
+
+    assert.equal(result.successCount, 0);
+    assert.equal(result.documents[0].status, 'failed');
+    assert.equal(result.documents[0].failureCode, 'pdf_no_readable_text_after_all_methods');
+    assert.match(result.documents[0].error, /native extraction and OCR fallback/i);
+  } finally {
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalKey;
+  }
 });
 
 test('extractCandidateDocuments reads text from a readable DOCX buffer', async () => {
@@ -741,8 +1015,10 @@ test('candidate prepare handler stores prepared evidence and returns a review pa
     prepareCandidateFiles: core.prepareCandidateFiles,
     extractCandidateDocuments: core.extractCandidateDocuments,
     maybeStoreUploads: core.maybeStoreUploads,
+    createPreparedRunPlaceholder: core.createPreparedRunPlaceholder,
     savePreparedRun: core.savePreparedRun,
     getMatchRun: core.getMatchRun,
+    updatePreparedRunPreparationState: core.updatePreparedRunPreparationState,
   };
 
   core.prepareCandidateFiles = () => [{
@@ -780,7 +1056,9 @@ test('candidate prepare handler stores prepared evidence and returns a review pa
     combinedText: 'Candidate evidence text',
   });
   core.maybeStoreUploads = async () => ({ stored: true, bucket: 'candidate-matcher-uploads', warnings: [] });
+  core.createPreparedRunPlaceholder = async () => ({ id: 'prepared-1' });
   core.savePreparedRun = async () => ({ saved: true, enabled: true, record: { id: 'prepared-1' } });
+  core.updatePreparedRunPreparationState = async () => ({ id: 'prepared-1' });
   core.getMatchRun = async () => ({
     id: 'prepared-1',
     created_at: '2026-03-13T12:00:00Z',
@@ -832,6 +1110,90 @@ test('candidate prepare handler stores prepared evidence and returns a review pa
   assert.equal(payload.prepared_run.id, 'prepared-1');
   assert.equal(payload.prepared_run.ready_for_match, true);
   assert.equal(payload.extraction.success_count, 1);
+});
+
+test('candidate prepare handler carries realistic PDF text into prepared evidence', async () => {
+  const originals = {
+    maybeStoreUploads: core.maybeStoreUploads,
+    createPreparedRunPlaceholder: core.createPreparedRunPlaceholder,
+    savePreparedRun: core.savePreparedRun,
+    getMatchRun: core.getMatchRun,
+    updatePreparedRunPreparationState: core.updatePreparedRunPreparationState,
+  };
+
+  const buffer = Buffer.from(PRINT_TO_PDF_BASE64, 'base64');
+  let savedCombinedText = '';
+  let savedDocuments = [];
+
+  core.maybeStoreUploads = async ({ documents }) => {
+    documents.forEach((document, index) => {
+      document.storageKey = `candidate-matcher/run-${index + 1}.pdf`;
+    });
+    return { stored: true, bucket: 'candidate-matcher-uploads', warnings: [] };
+  };
+  core.createPreparedRunPlaceholder = async () => ({ id: 'prepared-real-pdf' });
+  core.savePreparedRun = async ({ extraction, documents }) => {
+    savedCombinedText = extraction.combinedText;
+    savedDocuments = documents;
+    return { saved: true, enabled: true, record: { id: 'prepared-real-pdf' } };
+  };
+  core.updatePreparedRunPreparationState = async () => ({ id: 'prepared-real-pdf' });
+  core.getMatchRun = async () => ({
+    id: 'prepared-real-pdf',
+    created_at: '2026-03-13T12:00:00Z',
+    updated_at: '2026-03-13T12:00:00Z',
+    recruiter_notes: 'Check electrical project roles.',
+    status: 'pending',
+    ready_for_match: true,
+    has_result: false,
+    prepared_evidence: {
+      ready_for_match: true,
+      files_attempted: 1,
+      files_text_read: 1,
+      image_evidence_count: 0,
+      limited_count: 0,
+      unsupported_count: 0,
+      failed_count: 0,
+      preview_text: 'Jane Candidate Electrical Project Manager',
+      text_files: [{ name: 'candidate.pdf', status: 'ok', sizeLabel: '13 KB', contentType: 'application/pdf' }],
+      image_evidence_files: [],
+      limited_files: [],
+      unsupported_files: [],
+      failed_files: [],
+      documents: [{ name: 'candidate.pdf', status: 'ok', size: buffer.byteLength, contentType: 'application/pdf' }],
+    },
+    file_names: ['candidate.pdf'],
+    files: [],
+    raw_result_json: { preparation: { combined_candidate_text: 'Jane Candidate Electrical Project Manager' } },
+  });
+
+  const handler = createCandidatePrepareBaseHandler({
+    getContextImpl: async () => ({
+      supabase: {},
+      user: { email: 'recruiter@hmjglobal.test' },
+    })
+  });
+
+  const response = await handler({
+    body: JSON.stringify({
+      files: [{
+        name: 'candidate.pdf',
+        contentType: 'application/pdf',
+        size: buffer.byteLength,
+        data: buffer.toString('base64'),
+      }],
+      recruiterNotes: 'Check electrical project roles.',
+    })
+  }, {});
+
+  Object.assign(core, originals);
+
+  assert.equal(response.statusCode, 200);
+  assert.match(savedCombinedText, /Jane Candidate/);
+  assert.match(savedCombinedText, /Electrical Project Manager/);
+  assert.equal(savedDocuments[0].status, 'ok');
+  assert.equal(savedDocuments[0].textUsable, true);
+  assert.equal(savedDocuments[0].candidateTextIncluded, true);
 });
 
 test('candidate run match handler queues background work without re-uploading files', async () => {

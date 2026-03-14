@@ -2,8 +2,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { callOpenAIForChat, buildFallbackReply } = require('../netlify/functions/_chatbot-core.js');
+const { classifyVisitorIntent } = require('../netlify/functions/_chatbot-grounding.js');
 const chatbotConfigFunction = require('../netlify/functions/chatbot-config.js');
 const chatbotChatFunction = require('../netlify/functions/chatbot-chat.js');
+const chatbotChatMirror = require('../admin-v2/functions/chatbot-chat.js');
+const chatbotConfigMirror = require('../admin-v2/functions/chatbot-config.js');
+const chatbotPreviewMirror = require('../admin-v2/functions/admin-chatbot-preview.js');
+const chatbotConversationsMirror = require('../admin-v2/functions/admin-chatbot-conversations.js');
+const chatbotEventMirror = require('../admin-v2/functions/chatbot-event.js');
+const chatbotAnalyticsMirror = require('../admin-v2/functions/admin-chatbot-analytics.js');
 
 test('callOpenAIForChat returns structured reply with approved CTA ids', async () => {
   const originalApiKey = process.env.OPENAI_API_KEY;
@@ -23,11 +30,15 @@ test('callOpenAIForChat returns structured reply with approved CTA ids', async (
             type: 'output_text',
             text: JSON.stringify({
               reply: 'The quickest next step is to browse the live HMJ jobs board or register your profile.',
-              intent: 'job_search',
+              intent: 'candidate_job_search',
+              visitor_type: 'candidate',
               cta_ids: ['find_jobs', 'register_candidate'],
               quick_reply_ids: ['contact_hmj'],
               should_handoff: false,
               handoff_reason: '',
+              follow_up_question: 'Would you like me to point you to the live jobs page or the registration form?',
+              answer_confidence: 'high',
+              outcome: 'browse_jobs',
             }),
           }],
         }],
@@ -50,10 +61,77 @@ test('callOpenAIForChat returns structured reply with approved CTA ids', async (
 
     assert.equal(requestBody.model, 'gpt-5-mini');
     assert.equal(requestBody.max_output_tokens, 280);
-    assert.equal(response.intent, 'job_search');
+    assert.equal(response.intent, 'candidate_job_search');
+    assert.equal(response.visitorType, 'candidate');
     assert.deepEqual(response.ctaIds, ['find_jobs', 'register_candidate']);
     assert.deepEqual(response.quickReplyIds, ['contact_hmj']);
+    assert.equal(response.outcome, 'browse_jobs');
+    assert.equal(response.answerConfidence, 'high');
+    assert.match(response.followUpQuestion, /jobs page/i);
+    assert.equal(Array.isArray(response.resourceLinks), true);
+    assert.equal(Array.isArray(response.suggestedPrompts), true);
     assert.match(response.reply, /jobs board/i);
+  } finally {
+    if (originalApiKey == null) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalApiKey;
+  }
+});
+
+test('callOpenAIForChat serialises assistant history using output_text for the Responses API', async () => {
+  const originalApiKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = 'test-key';
+
+  let requestBody = null;
+  const fetchImpl = async (_url, options) => {
+    requestBody = JSON.parse(options.body);
+    return {
+      ok: true,
+      text: async () => JSON.stringify({
+        id: 'resp_test_2',
+        status: 'completed',
+        output: [{
+          status: 'completed',
+          content: [{
+            type: 'output_text',
+            text: JSON.stringify({
+              reply: 'The quickest next step is to share the requirement through the HMJ client route.',
+              intent: 'client_hiring_enquiry',
+              visitor_type: 'client',
+              cta_ids: ['hiring_staff'],
+              quick_reply_ids: ['contact_hmj'],
+              should_handoff: false,
+              handoff_reason: '',
+              follow_up_question: 'What roles are you looking to fill?',
+              answer_confidence: 'high',
+              outcome: 'client_enquiry',
+            }),
+          }],
+        }],
+      }),
+    };
+  };
+
+  try {
+    await callOpenAIForChat({
+      message: 'We need help hiring on a project in Germany.',
+      history: [
+        { role: 'user', text: 'I am looking for electrical work in Frankfurt.' },
+        { role: 'assistant', text: 'I can point you to the live Frankfurt roles.' },
+      ],
+      context: {
+        route: '/jobs',
+        pageCategory: 'jobs',
+        pageTitle: 'Jobs | HMJ Global',
+      },
+      fetchImpl,
+    });
+
+    assert.equal(requestBody.input[0].role, 'user');
+    assert.equal(requestBody.input[0].content[0].type, 'input_text');
+    assert.equal(requestBody.input[1].role, 'assistant');
+    assert.equal(requestBody.input[1].content[0].type, 'output_text');
+    assert.equal(requestBody.input[2].role, 'user');
+    assert.equal(requestBody.input[2].content[0].type, 'input_text');
   } finally {
     if (originalApiKey == null) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = originalApiKey;
@@ -95,7 +173,10 @@ test('chatbot-chat returns graceful fallback when the OpenAI key is missing', as
     const payload = JSON.parse(response.body);
     assert.equal(payload.ok, false);
     assert.equal(payload.error, 'openai_key_missing');
-    assert.match(payload.fallback.reply, /jobs board/i);
+    assert.match(payload.fallback.reply, /(jobs board|relevant hmj role)/i);
+    assert.equal(payload.fallback.intent, 'candidate_job_search');
+    assert.equal(Array.isArray(payload.fallback.resourceLinks), true);
+    assert.equal(Array.isArray(payload.fallback.suggestedPrompts), true);
   } finally {
     if (originalApiKey == null) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = originalApiKey;
@@ -110,8 +191,31 @@ test('buildFallbackReply prioritises the right CTA set for candidate registratio
   ];
   const reply = buildFallbackReply({
     handoff: { handoffMessage: 'Contact HMJ directly.' },
+    tone: { fallbackStyle: 'reassuring_action', askFollowUpQuestion: 'balanced', maxReplySentences: 3 },
+    dataPolicy: { injectWebsiteContext: true, injectJobsContext: true, maxGroundingJobs: 2 },
   }, actionCatalog, 'candidate_registration');
 
   assert.equal(reply.intent, 'candidate_registration');
   assert.deepEqual(reply.ctaIds, ['register_candidate', 'find_jobs']);
+  assert.equal(reply.outcome, 'register_candidate');
+  assert.equal(Array.isArray(reply.suggestedPrompts), true);
+});
+
+test('admin-v2 function entrypoints mirror the chatbot handlers used by preview and branch deploys', () => {
+  assert.equal(chatbotChatMirror.handler, chatbotChatFunction.handler);
+  assert.equal(chatbotConfigMirror.handler, chatbotConfigFunction.handler);
+  assert.equal(typeof chatbotPreviewMirror.handler, 'function');
+  assert.equal(typeof chatbotConversationsMirror.handler, 'function');
+  assert.equal(typeof chatbotEventMirror.handler, 'function');
+  assert.equal(typeof chatbotAnalyticsMirror.handler, 'function');
+});
+
+test('intent classifier keeps representative prompts on the right HMJ journey', () => {
+  assert.equal(classifyVisitorIntent('I’m looking for electrical work in Frankfurt'), 'candidate_job_search');
+  assert.equal(classifyVisitorIntent('Do you recruit for data centre roles?'), 'general_company_question');
+  assert.equal(classifyVisitorIntent('We need help hiring on a project in Germany'), 'client_hiring_enquiry');
+  assert.equal(classifyVisitorIntent('How do I register with HMJ Global?'), 'candidate_registration');
+  assert.equal(classifyVisitorIntent('What does HMJ Global do?'), 'general_company_question');
+  assert.equal(classifyVisitorIntent('Can you help me find staff?'), 'client_hiring_enquiry');
+  assert.equal(classifyVisitorIntent('What is the weather in Paris this weekend?'), 'off_topic');
 });

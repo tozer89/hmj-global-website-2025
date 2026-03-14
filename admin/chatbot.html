@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
-  <script defer src="/admin/chatbot.js?v=1"></script>
+  <script defer src="/admin/chatbot.js?v=2"></script>
 
   <style>
     :root{
@@ -110,6 +110,16 @@
     .prompt-preview pre{white-space:pre-wrap;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;color:var(--muted);max-height:320px;overflow:auto}
 
     .conversation-layout{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(0,1.2fr);gap:18px}
+    .analytics-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .analytics-card{padding:16px;border-radius:18px;background:var(--panel-soft);border:1px solid rgba(47,78,162,.1);display:grid;gap:6px}
+    .analytics-card span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .analytics-card strong{font-size:28px;line-height:1}
+    .analytics-card small{color:var(--muted)}
+    .analytics-lists{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .analytics-block{padding:16px;border-radius:18px;background:var(--panel-soft);border:1px solid rgba(47,78,162,.1);display:grid;gap:12px}
+    .analytics-block h3{margin:0;font-size:16px}
+    .analytics-tags{display:flex;flex-wrap:wrap;gap:10px}
+    .analytics-empty{color:var(--muted);font-size:14px}
     .conversation-list{display:grid;gap:10px;max-height:720px;overflow:auto}
     .conversation-card{padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.12);background:#fff;display:grid;gap:8px;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease}
     .conversation-card:hover,.conversation-card.is-active{transform:translateY(-1px);box-shadow:0 14px 26px rgba(15,27,63,.1);border-color:rgba(47,78,162,.26)}
@@ -137,7 +147,8 @@
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.22);box-shadow:0 18px 32px rgba(15,27,63,.2);font-weight:800}
 
     @media (max-width:1160px){
-      .hero,.preview-grid,.conversation-layout,.settings-grid{grid-template-columns:1fr}
+      .hero,.preview-grid,.conversation-layout,.settings-grid,.analytics-lists{grid-template-columns:1fr}
+      .analytics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       .metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
 
@@ -145,7 +156,7 @@
       .wrap{padding:0 14px}
       .row{padding:12px 14px}
       .field-grid,.priority-grid,.check-grid{grid-template-columns:1fr}
-      .metrics-grid{grid-template-columns:1fr}
+      .metrics-grid,.analytics-grid{grid-template-columns:1fr}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=1" />
@@ -218,6 +229,58 @@
         <strong id="metricHandoffs">0</strong>
         <small id="metricHandoffsLabel">Sessions routed to a human path</small>
       </article>
+    </section>
+
+    <section class="panel" aria-labelledby="analyticsHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Observability</p>
+          <h2 id="analyticsHeading">Assistant analytics</h2>
+        </div>
+        <div class="section-actions">
+          <span class="chip" id="analyticsSourceChip">Loading analytics…</span>
+        </div>
+      </div>
+      <p class="muted" id="analyticsBody">Tracking widget opens, first messages, routing outcomes, CTA interactions, and fallback usage so the assistant can be tuned over time.</p>
+      <div class="analytics-grid" style="margin-top:14px">
+        <article class="analytics-card">
+          <span>Widget opens</span>
+          <strong id="metricWidgetOpens">0</strong>
+          <small>How often visitors open or see the assistant</small>
+        </article>
+        <article class="analytics-card">
+          <span>First messages</span>
+          <strong id="metricFirstMessages">0</strong>
+          <small>Sessions where a visitor engaged</small>
+        </article>
+        <article class="analytics-card">
+          <span>Useful routes</span>
+          <strong id="metricUsefulRoutes">0</strong>
+          <small>Conversations ending in jobs, registration, enquiry, or contact</small>
+        </article>
+        <article class="analytics-card">
+          <span>Fallback responses</span>
+          <strong id="metricFallbackResponses">0</strong>
+          <small>How often the assistant used its resilient fallback path</small>
+        </article>
+      </div>
+      <div class="analytics-lists" style="margin-top:14px">
+        <section class="analytics-block">
+          <h3>Top intents</h3>
+          <div class="analytics-tags" id="analyticsIntentList"></div>
+          <p class="analytics-empty" id="analyticsIntentEmpty">No intent analytics yet.</p>
+        </section>
+        <section class="analytics-block">
+          <h3>Top outcomes</h3>
+          <div class="analytics-tags" id="analyticsOutcomeList"></div>
+          <p class="analytics-empty" id="analyticsOutcomeEmpty">No outcome analytics yet.</p>
+        </section>
+        <section class="analytics-block">
+          <h3>Top CTAs</h3>
+          <div class="analytics-tags" id="analyticsCtaList"></div>
+          <p class="analytics-empty" id="analyticsCtaEmpty">No CTA analytics yet.</p>
+        </section>
+      </div>
     </section>
 
     <section class="settings-grid" aria-label="Assistant settings">
@@ -335,6 +398,14 @@
             </select>
           </div>
           <div class="field">
+            <label for="directness">Directness</label>
+            <select id="directness">
+              <option value="soft">Soft</option>
+              <option value="balanced">Balanced</option>
+              <option value="straightforward">Straightforward</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="proactivity">Proactivity</label>
             <select id="proactivity">
               <option value="low">Low</option>
@@ -358,6 +429,14 @@
             </select>
           </div>
           <div class="field">
+            <label for="conversionStrength">Conversion strength</label>
+            <select id="conversionStrength">
+              <option value="soft">Soft</option>
+              <option value="balanced">Balanced</option>
+              <option value="strong">Strong</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="recruitmentFocus">Commercial focus</label>
             <select id="recruitmentFocus">
               <option value="balanced">Balanced</option>
@@ -366,9 +445,34 @@
               <option value="support_first">Support-first</option>
             </select>
           </div>
+          <div class="field">
+            <label for="askFollowUpQuestion">Follow-up question style</label>
+            <select id="askFollowUpQuestion">
+              <option value="rarely">Rarely</option>
+              <option value="balanced">Balanced</option>
+              <option value="often">Often</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fallbackStyle">Fallback style</label>
+            <select id="fallbackStyle">
+              <option value="reassuring_action">Reassuring with action</option>
+              <option value="brief_redirect">Brief redirect</option>
+              <option value="warm_handoff">Warm handoff</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="maxReplySentences">Maximum reply sentences</label>
+            <input id="maxReplySentences" type="number" min="1" max="6" step="1">
+          </div>
           <div class="field field--wide">
             <label for="customInstructions">Custom behaviour instructions</label>
             <textarea id="customInstructions"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="bannedPhrases">Banned phrases / wording guardrails</label>
+            <textarea id="bannedPhrases" placeholder="One phrase per line"></textarea>
+            <p class="field-note">Use this to stop repeated filler or wording you do not want the assistant to use.</p>
           </div>
           <label class="checkline" style="grid-column:1/-1"><input id="ukEnglish" type="checkbox"> Prefer UK spelling and phrasing</label>
         </div>
@@ -499,11 +603,17 @@
           <label class="check-card"><span class="checkline"><input id="classifyIntent" type="checkbox"> Classify intent before responding</span></label>
           <label class="check-card"><span class="checkline"><input id="injectCtaCatalog" type="checkbox"> Inject approved CTA catalog</span></label>
           <label class="check-card"><span class="checkline"><input id="injectBusinessContext" type="checkbox"> Inject business context</span></label>
+          <label class="check-card"><span class="checkline"><input id="injectWebsiteContext" type="checkbox"> Inject grounded website context</span></label>
+          <label class="check-card"><span class="checkline"><input id="injectJobsContext" type="checkbox"> Inject live jobs context</span></label>
         </div>
         <div class="field-grid" style="margin-top:14px">
           <div class="field">
             <label for="maxHistoryMessages">Max history messages</label>
             <input id="maxHistoryMessages" type="number" min="1" max="12">
+          </div>
+          <div class="field">
+            <label for="maxGroundingJobs">Max grounded jobs</label>
+            <input id="maxGroundingJobs" type="number" min="1" max="5">
           </div>
           <label class="checkline" style="align-self:end"><input id="collectLeadInChat" type="checkbox"> Collect lead details in chat (reserved)</label>
         </div>
@@ -541,6 +651,14 @@
           <div class="field field--wide">
             <label for="promptPageAwareInstructions">Page-aware instructions</label>
             <textarea id="promptPageAwareInstructions"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="promptAnswerStructure">Answer structure</label>
+            <textarea id="promptAnswerStructure"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="promptOffTopicHandling">Off-topic handling</label>
+            <textarea id="promptOffTopicHandling"></textarea>
           </div>
         </div>
       </section>

@@ -51,6 +51,22 @@ create table if not exists public.chatbot_messages (
   metadata jsonb not null default '{}'::jsonb
 );
 
+create table if not exists public.chatbot_events (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  session_id text,
+  conversation_id text,
+  event_type text not null,
+  route text,
+  page_category text,
+  intent text,
+  visitor_type text,
+  outcome text,
+  cta_id text,
+  fallback boolean not null default false,
+  metadata jsonb not null default '{}'::jsonb
+);
+
 create index if not exists chatbot_conversations_updated_idx
   on public.chatbot_conversations (updated_at desc);
 
@@ -62,6 +78,15 @@ create index if not exists chatbot_messages_conversation_idx
 
 create index if not exists chatbot_messages_role_idx
   on public.chatbot_messages (role, created_at desc);
+
+create index if not exists chatbot_events_created_idx
+  on public.chatbot_events (created_at desc);
+
+create index if not exists chatbot_events_type_idx
+  on public.chatbot_events (event_type, created_at desc);
+
+create index if not exists chatbot_events_session_idx
+  on public.chatbot_events (session_id, created_at desc);
 
 do $$
 begin
@@ -80,6 +105,7 @@ $$;
 
 alter table public.chatbot_conversations enable row level security;
 alter table public.chatbot_messages enable row level security;
+alter table public.chatbot_events enable row level security;
 
 insert into public.admin_settings (key, value)
 values (
@@ -100,3 +126,6 @@ comment on table public.chatbot_conversations is
 
 comment on table public.chatbot_messages is
   'Message-level transcript rows for the HMJ website chatbot. Stores both visitor and assistant messages for admin review.';
+
+comment on table public.chatbot_events is
+  'Lightweight event records for the HMJ website chatbot, used for opens, CTA interactions, routing signals, and fallback monitoring.';

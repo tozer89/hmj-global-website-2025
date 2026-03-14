@@ -20,9 +20,11 @@
     settings: null,
     conversations: [],
     detail: null,
+    analytics: null,
     currentConversationId: '',
     dirty: false,
     conversationSetupRequired: false,
+    analyticsSetupRequired: false,
   };
 
   const els = {};
@@ -39,15 +41,16 @@
       'metricEnabled', 'metricEnabledLabel', 'metricQuickReplies', 'metricQuickRepliesLabel', 'metricConversations', 'metricConversationsLabel', 'metricHandoffs', 'metricHandoffsLabel',
       'enabled', 'autoOpen', 'showLabel', 'autoOpenDelayMs', 'autoHideDelayMs', 'launcherPosition', 'launcherLabel', 'launcherCompactLabel', 'launcherBadge',
       'welcomeTitle', 'welcomeBody', 'emptyStatePrompt',
-      'tonePreset', 'writingStyle', 'formality', 'warmth', 'proactivity', 'ctaCadence', 'replyLength', 'recruitmentFocus', 'customInstructions', 'ukEnglish',
+      'tonePreset', 'writingStyle', 'formality', 'warmth', 'directness', 'proactivity', 'ctaCadence', 'replyLength', 'conversionStrength', 'recruitmentFocus', 'askFollowUpQuestion', 'fallbackStyle', 'maxReplySentences', 'customInstructions', 'bannedPhrases', 'ukEnglish',
       'goalCandidateRegistration', 'goalRoleApplication', 'goalClientEnquiry', 'goalContactForm', 'goalHumanHandoff',
       'routeMode', 'includePatterns', 'excludePatterns', 'pageTargetHome', 'pageTargetAbout', 'pageTargetJobs', 'pageTargetJobDetail', 'pageTargetCandidates', 'pageTargetClients', 'pageTargetContact', 'pageTargetOtherPublic',
       'candidateRegistrationUrl', 'jobsUrl', 'applicationUrl', 'clientEnquiryUrl', 'contactUrl', 'handoffMessage', 'supportEmail', 'supportPhone', 'whatsappUrl',
-      'includeRoute', 'includePageTitle', 'includeMetaDescription', 'includePageCategory', 'includeConversationHistory', 'classifyIntent', 'injectCtaCatalog', 'injectBusinessContext', 'maxHistoryMessages', 'collectLeadInChat',
-      'promptBaseRole', 'promptAdditionalContext', 'promptBusinessGoals', 'promptRoutingInstructions', 'promptSafetyConstraints', 'promptPageAwareInstructions',
+      'includeRoute', 'includePageTitle', 'includeMetaDescription', 'includePageCategory', 'includeConversationHistory', 'classifyIntent', 'injectCtaCatalog', 'injectBusinessContext', 'injectWebsiteContext', 'injectJobsContext', 'maxHistoryMessages', 'maxGroundingJobs', 'collectLeadInChat',
+      'promptBaseRole', 'promptAdditionalContext', 'promptBusinessGoals', 'promptRoutingInstructions', 'promptSafetyConstraints', 'promptPageAwareInstructions', 'promptAnswerStructure', 'promptOffTopicHandling',
       'quickRepliesList', 'addQuickReplyBtn',
       'model', 'fallbackModel', 'temperature', 'maxOutputTokens', 'requestTimeoutMs', 'debugLogging',
       'previewBadge', 'previewTitle', 'previewBody', 'previewBubble', 'previewActions', 'previewRoute', 'previewCategory', 'previewTitleInput', 'previewMetaDescription', 'testMessage', 'runPreviewTestBtn', 'refreshPreviewBtn', 'testReplyOutput', 'promptPreviewOutput',
+      'analyticsSourceChip', 'analyticsBody', 'metricWidgetOpens', 'metricFirstMessages', 'metricUsefulRoutes', 'metricFallbackResponses', 'analyticsIntentList', 'analyticsIntentEmpty', 'analyticsOutcomeList', 'analyticsOutcomeEmpty', 'analyticsCtaList', 'analyticsCtaEmpty',
       'conversationSearch', 'refreshConversationsBtn', 'conversationList', 'conversationEmpty', 'transcriptHeading', 'transcriptSummary', 'transcriptMeta', 'transcriptMessages', 'transcriptEmpty',
     ].forEach((id) => { els[id] = byId(id); });
   }
@@ -132,11 +135,17 @@
     setFieldValue('writingStyle', settings.tone.writingStyle);
     setFieldValue('formality', settings.tone.formality);
     setFieldValue('warmth', settings.tone.warmth);
+    setFieldValue('directness', settings.tone.directness);
     setFieldValue('proactivity', settings.tone.proactivity);
     setFieldValue('ctaCadence', settings.tone.ctaCadence);
     setFieldValue('replyLength', settings.tone.replyLength);
+    setFieldValue('conversionStrength', settings.tone.conversionStrength);
     setFieldValue('recruitmentFocus', settings.tone.recruitmentFocus);
+    setFieldValue('askFollowUpQuestion', settings.tone.askFollowUpQuestion);
+    setFieldValue('fallbackStyle', settings.tone.fallbackStyle);
+    setFieldValue('maxReplySentences', settings.tone.maxReplySentences);
     setFieldValue('customInstructions', settings.tone.customInstructions);
+    setFieldValue('bannedPhrases', (settings.tone.bannedPhrases || []).join('\n'));
     setFieldValue('ukEnglish', settings.tone.ukEnglish);
 
     setFieldValue('goalCandidateRegistration', settings.goals.candidate_registration);
@@ -176,7 +185,10 @@
     setFieldValue('classifyIntent', settings.dataPolicy.classifyIntent);
     setFieldValue('injectCtaCatalog', settings.dataPolicy.injectCtaCatalog);
     setFieldValue('injectBusinessContext', settings.dataPolicy.injectBusinessContext);
+    setFieldValue('injectWebsiteContext', settings.dataPolicy.injectWebsiteContext);
+    setFieldValue('injectJobsContext', settings.dataPolicy.injectJobsContext);
     setFieldValue('maxHistoryMessages', settings.dataPolicy.maxHistoryMessages);
+    setFieldValue('maxGroundingJobs', settings.dataPolicy.maxGroundingJobs);
 
     setFieldValue('promptBaseRole', settings.prompts.baseRole);
     setFieldValue('promptAdditionalContext', settings.prompts.additionalContext);
@@ -184,6 +196,8 @@
     setFieldValue('promptRoutingInstructions', settings.prompts.routingInstructions);
     setFieldValue('promptSafetyConstraints', settings.prompts.safetyConstraints);
     setFieldValue('promptPageAwareInstructions', settings.prompts.pageAwareInstructions);
+    setFieldValue('promptAnswerStructure', settings.prompts.answerStructure);
+    setFieldValue('promptOffTopicHandling', settings.prompts.offTopicHandling);
 
     setFieldValue('model', settings.advanced.model);
     setFieldValue('fallbackModel', settings.advanced.fallbackModel);
@@ -259,10 +273,16 @@
         writingStyle: getStringValue('writingStyle'),
         formality: getStringValue('formality'),
         warmth: getStringValue('warmth'),
+        directness: getStringValue('directness'),
         proactivity: getStringValue('proactivity'),
         ctaCadence: getStringValue('ctaCadence'),
         replyLength: getStringValue('replyLength'),
+        conversionStrength: getStringValue('conversionStrength'),
         recruitmentFocus: getStringValue('recruitmentFocus'),
+        askFollowUpQuestion: getStringValue('askFollowUpQuestion'),
+        fallbackStyle: getStringValue('fallbackStyle'),
+        maxReplySentences: getNumberValue('maxReplySentences', 3),
+        bannedPhrases: splitLines(els.bannedPhrases.value),
         ukEnglish: getCheckboxValue('ukEnglish'),
         customInstructions: getStringValue('customInstructions'),
       },
@@ -280,6 +300,8 @@
         routingInstructions: getStringValue('promptRoutingInstructions'),
         safetyConstraints: getStringValue('promptSafetyConstraints'),
         pageAwareInstructions: getStringValue('promptPageAwareInstructions'),
+        answerStructure: getStringValue('promptAnswerStructure'),
+        offTopicHandling: getStringValue('promptOffTopicHandling'),
       },
       dataPolicy: {
         includeRoute: getCheckboxValue('includeRoute'),
@@ -291,6 +313,9 @@
         classifyIntent: getCheckboxValue('classifyIntent'),
         injectCtaCatalog: getCheckboxValue('injectCtaCatalog'),
         injectBusinessContext: getCheckboxValue('injectBusinessContext'),
+        injectWebsiteContext: getCheckboxValue('injectWebsiteContext'),
+        injectJobsContext: getCheckboxValue('injectJobsContext'),
+        maxGroundingJobs: getNumberValue('maxGroundingJobs', 3),
       },
       handoff: {
         candidateRegistrationUrl: getStringValue('candidateRegistrationUrl'),
@@ -461,10 +486,12 @@
     els.heroEnabledChip.dataset.tone = settings.enabled ? 'ok' : 'warn';
     els.heroRouteChip.textContent = settings.visibility.routeMode === 'selected' ? 'Selected routes only' : 'All public routes';
     els.heroRouteChip.dataset.tone = 'info';
-    els.heroStorageChip.textContent = state.conversationSetupRequired ? 'History storage needs SQL' : 'History storage ready';
-    els.heroStorageChip.dataset.tone = state.conversationSetupRequired ? 'warn' : 'ok';
+    els.heroStorageChip.textContent = (state.conversationSetupRequired || state.analyticsSetupRequired)
+      ? 'History & analytics need SQL'
+      : 'History & analytics ready';
+    els.heroStorageChip.dataset.tone = (state.conversationSetupRequired || state.analyticsSetupRequired) ? 'warn' : 'ok';
     els.heroSummary.textContent = settings.enabled
-      ? 'The live site widget can auto-open once, collapse after inactivity, and use these admin-managed settings immediately after save.'
+      ? 'The live site widget can auto-open once, collapse after inactivity, stay grounded in HMJ content, and use these admin-managed settings immediately after save.'
       : 'The widget is currently disabled for public visitors, but you can still edit copy, prompt logic, and preview behaviour here.';
     els.metricEnabled.textContent = settings.enabled ? 'On' : 'Off';
     els.metricEnabledLabel.textContent = settings.enabled ? 'Public widget enabled' : 'Public widget disabled';
@@ -478,6 +505,38 @@
     els.metricConversationsLabel.textContent = state.conversationSetupRequired
       ? 'Run the SQL setup to enable storage'
       : 'Stored visitor sessions';
+  }
+
+  function renderAnalyticsTags(host, empty, items, suffix = '') {
+    const safeItems = Array.isArray(items) ? items : [];
+    host.innerHTML = safeItems.map((item) => (
+      `<span class="chip">${escapeHtml(item.label || 'Unknown')}${suffix}${Number(item.count || 0)}</span>`
+    )).join('');
+    empty.hidden = safeItems.length > 0;
+  }
+
+  function updateAnalyticsSummary() {
+    const summary = state.analytics?.summary || {};
+    els.metricWidgetOpens.textContent = String(summary.widgetOpens || 0);
+    els.metricFirstMessages.textContent = String(summary.firstMessages || 0);
+    els.metricUsefulRoutes.textContent = String(summary.usefulRoutes || 0);
+    els.metricFallbackResponses.textContent = String(summary.fallbackResponses || 0);
+    els.analyticsSourceChip.textContent = state.analyticsSetupRequired
+      ? 'SQL setup needed'
+      : state.analytics?.source === 'supabase'
+        ? 'Live analytics'
+        : 'Analytics unavailable';
+    els.analyticsSourceChip.dataset.tone = state.analyticsSetupRequired
+      ? 'warn'
+      : state.analytics?.source === 'supabase'
+        ? 'ok'
+        : 'info';
+    els.analyticsBody.textContent = state.analyticsSetupRequired
+      ? 'Run the chatbot SQL setup to store opens, CTA activity, routing outcomes, and fallback behaviour for reporting.'
+      : 'Tracking widget opens, first messages, routing outcomes, CTA interactions, and fallback usage so the assistant can be tuned over time.';
+    renderAnalyticsTags(els.analyticsIntentList, els.analyticsIntentEmpty, summary.topIntents, ' · ');
+    renderAnalyticsTags(els.analyticsOutcomeList, els.analyticsOutcomeEmpty, summary.topOutcomes, ' · ');
+    renderAnalyticsTags(els.analyticsCtaList, els.analyticsCtaEmpty, summary.topCtas, ' · ');
   }
 
   async function loadSettings() {
@@ -512,14 +571,42 @@
         message: getStringValue('testMessage') || 'I am looking for work and need help.',
         context,
       });
-      els.testReplyOutput.textContent = response.reply || 'No reply returned.';
+      els.testReplyOutput.textContent = [
+        response.reply || 'No reply returned.',
+        '',
+        `Intent: ${response.intent || 'n/a'}`,
+        `Visitor type: ${response.visitorType || 'n/a'}`,
+        `Outcome: ${response.outcome || 'n/a'}`,
+        `Confidence: ${response.answerConfidence || 'n/a'}`,
+        response.followUpQuestion ? `Follow-up: ${response.followUpQuestion}` : '',
+        Array.isArray(response.suggestedPrompts) && response.suggestedPrompts.length
+          ? `Suggested prompts: ${response.suggestedPrompts.join(' | ')}`
+          : '',
+        Array.isArray(response.resourceLinks) && response.resourceLinks.length
+          ? `Links: ${response.resourceLinks.map((link) => `${link.label} -> ${link.href}`).join(' | ')}`
+          : '',
+      ].filter(Boolean).join('\n');
       els.promptPreviewOutput.textContent = response.promptPreview || 'No prompt preview returned.';
       state.helpers.toast('Preview reply generated', 'info', 1800);
     } catch (error) {
-      els.testReplyOutput.textContent = error?.details?.fallback?.reply || error.message || 'Preview failed.';
+      const fallback = error?.details?.fallback;
+      els.testReplyOutput.textContent = [
+        fallback?.reply || error.message || 'Preview failed.',
+        fallback?.intent ? `Intent: ${fallback.intent}` : '',
+        fallback?.visitorType ? `Visitor type: ${fallback.visitorType}` : '',
+        fallback?.outcome ? `Outcome: ${fallback.outcome}` : '',
+      ].filter(Boolean).join('\n');
       els.promptPreviewOutput.textContent = error?.details?.promptPreview || 'Preview prompt unavailable.';
       state.helpers.toast('Preview failed: ' + (error.message || error), 'warn', 2800);
     }
+  }
+
+  async function loadAnalytics() {
+    const response = await state.helpers.api('admin-chatbot-analytics', 'POST', { limit: 1200 });
+    state.analytics = response;
+    state.analyticsSetupRequired = !!response.setupRequired;
+    updateAnalyticsSummary();
+    updateHero();
   }
 
   function renderConversationList() {
@@ -556,12 +643,17 @@
       return;
     }
 
+    const metadata = detail.conversation.metadata && typeof detail.conversation.metadata === 'object'
+      ? detail.conversation.metadata
+      : {};
     els.transcriptEmpty.hidden = true;
     els.transcriptHeading.textContent = detail.conversation.latest_page_title || detail.conversation.latest_route || 'Website visitor';
     els.transcriptSummary.textContent = `${detail.conversation.latest_route || 'Unknown route'} · ${Number(detail.conversation.message_count || 0)} messages · latest intent: ${detail.conversation.latest_intent || 'n/a'}`;
     els.transcriptMeta.innerHTML = `
       <span class="chip">${escapeHtml(detail.conversation.page_category || 'unknown')}</span>
       <span class="chip"${Number(detail.conversation.handoff_count || 0) ? ' data-tone="ok"' : ''}>${Number(detail.conversation.handoff_count || 0)} handoff</span>
+      ${metadata.visitor_type ? `<span class="chip" data-tone="info">${escapeHtml(metadata.visitor_type)}</span>` : ''}
+      ${metadata.outcome ? `<span class="chip" data-tone="ok">${escapeHtml(metadata.outcome)}</span>` : ''}
       <span class="chip">${escapeHtml(detail.conversation.session_id || 'no session id')}</span>
     `;
 
@@ -581,12 +673,12 @@
     state.conversations = Array.isArray(response.conversations) ? response.conversations : [];
     state.conversationSetupRequired = !!response.setupRequired;
 
-    if (state.conversationSetupRequired) {
+    if (state.conversationSetupRequired || state.analyticsSetupRequired) {
       els.storageBanner.hidden = false;
       els.storageBanner.style.display = 'grid';
       els.storageBanner.dataset.tone = 'warn';
-      els.storageBannerTitle.textContent = 'Conversation history storage still needs SQL setup';
-      els.storageBannerBody.textContent = 'Apply the Supabase SQL for the chatbot module, then refresh this page to start viewing stored visitor transcripts.';
+      els.storageBannerTitle.textContent = 'Chatbot storage still needs SQL setup';
+      els.storageBannerBody.textContent = 'Apply the Supabase SQL for the chatbot module, then refresh this page to start viewing stored visitor transcripts and analytics.';
     } else {
       els.storageBanner.hidden = true;
       els.storageBanner.style.display = 'none';
@@ -627,6 +719,8 @@
     els.reloadSettingsBtn.addEventListener('click', async () => {
       try {
         await loadSettings();
+        await loadAnalytics();
+        await loadConversations();
         state.helpers.toast('Reloaded stored assistant settings', 'info', 2000);
       } catch (error) {
         state.helpers.toast('Reload failed: ' + (error.message || error), 'error', 3200);
@@ -636,7 +730,10 @@
     els.testAssistantBtn.addEventListener('click', () => runPreviewTest());
     els.runPreviewTestBtn.addEventListener('click', () => runPreviewTest());
     els.refreshPreviewBtn.addEventListener('click', () => refreshPreviewCard());
-    els.refreshConversationsBtn.addEventListener('click', () => loadConversations());
+    els.refreshConversationsBtn.addEventListener('click', async () => {
+      await loadAnalytics();
+      await loadConversations();
+    });
     els.conversationSearch.addEventListener('input', () => loadConversations());
   }
 
@@ -649,7 +746,7 @@
     bindActions();
 
     loadSettings()
-      .then(() => loadConversations())
+      .then(() => Promise.all([loadAnalytics(), loadConversations()]))
       .catch((error) => {
         helpers.toast('Unable to load website assistant settings: ' + (error.message || error), 'error', 3600);
       });

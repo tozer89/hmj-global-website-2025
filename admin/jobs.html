@@ -137,6 +137,64 @@
     .board.busy{opacity:.7;pointer-events:none;transition:opacity .18s ease}
     .drawer[data-busy="true"] .drawer-foot,
     .drawer[data-busy="true"] .drawer-head{opacity:.92}
+    .field--wide{grid-column:1 / -1}
+    .jobs-drawer{background:linear-gradient(180deg,#f8f9ff,#eef3ff)}
+    .jobs-drawer .drawer-head{position:sticky;top:0;z-index:3;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:flex-start}
+    .drawer-head__main{display:grid;gap:6px;min-width:0}
+    .drawer-head__eyebrow{margin:0;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+    .drawer-head__title{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+    .drawer-head__meta{font-size:13px;line-height:1.45}
+    .drawer-head__actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+    .switch--publish{padding:8px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.16);background:#f4f6ff}
+    .editor-status-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid rgba(47,78,162,.2);background:#f8faff;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+    .editor-status-pill::before{content:'';width:8px;height:8px;border-radius:999px;background:currentColor;opacity:.7}
+    .editor-status-pill[data-tone="ok"],.editor-status-pill[data-tone="live"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.26);color:var(--ok)}
+    .editor-status-pill[data-tone="warn"]{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.34);color:#8a5a00}
+    .editor-status-pill[data-tone="error"]{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.28);color:var(--danger)}
+    .editor-form{display:grid;gap:14px}
+    .editor-jumpnav{position:sticky;top:-18px;z-index:2;display:flex;gap:8px;overflow:auto;padding:4px 0 8px;margin:-4px 0 0;background:linear-gradient(180deg,#f8f9ff 70%,rgba(248,249,255,0))}
+    .editor-jumpnav::-webkit-scrollbar{display:none}
+    .editor-jump{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.16);background:rgba(255,255,255,.92);color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.04em;white-space:nowrap;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .editor-jump:hover,.editor-jump.active{transform:translateY(-1px);border-color:rgba(47,78,162,.42);box-shadow:0 14px 24px rgba(15,27,63,.12);background:#fff}
+    .editor-section{border:1px solid rgba(47,78,162,.16);border-radius:18px;background:#fff;box-shadow:0 16px 32px rgba(15,27,63,.08);overflow:hidden}
+    .editor-section + .editor-section{margin-top:0}
+    .editor-section[open]{box-shadow:0 20px 38px rgba(15,27,63,.1)}
+    .editor-section__summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;background:linear-gradient(180deg,rgba(47,78,162,.06),rgba(255,255,255,.94));cursor:pointer}
+    .editor-section__summary::-webkit-details-marker{display:none}
+    .editor-section__summary::after{content:'▾';font-size:14px;font-weight:900;color:var(--muted);transition:transform .18s ease}
+    .editor-section[open] .editor-section__summary::after{transform:rotate(180deg)}
+    .editor-section__summary-copy{display:grid;gap:4px;min-width:0}
+    .editor-section__summary-copy strong{font-size:15px;line-height:1.2}
+    .editor-section__summary-copy small{font-size:12px;line-height:1.45;color:var(--muted)}
+    .editor-section__meta{display:inline-flex;justify-content:flex-end;min-width:0;color:var(--muted);font-size:12px;font-weight:700;line-height:1.4;text-align:right}
+    .editor-section__body{display:grid;gap:16px;padding:0 18px 18px}
+    .drawer-foot__note{font-size:12px;line-height:1.4;color:var(--muted);max-width:30ch}
+    .drawer-foot__actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-left:auto}
+    .jobs-drawer .drawer-foot{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}
+    .jobs-drawer .drawer-foot .btn{min-width:138px}
+
+    @media(max-width:820px){
+      .jobs-drawer{top:auto;left:0;right:0;bottom:0;width:100vw;max-width:100vw;height:min(92dvh,100%);border-left:0;border-top:1px solid var(--border);border-radius:24px 24px 0 0;box-shadow:0 -24px 56px rgba(15,27,63,.26);transform:translateY(102%)}
+      .jobs-drawer.open{transform:translateY(0)}
+      .jobs-drawer .drawer-head{padding:16px 16px 14px;border-radius:24px 24px 0 0;grid-template-columns:1fr}
+      .jobs-drawer .drawer-body{padding:14px 16px 18px;gap:14px}
+      .jobs-drawer .drawer-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+      .editor-jumpnav{top:-14px;padding:4px 0 10px}
+      .jobs-drawer .grid{gap:12px}
+      .field textarea{min-height:96px}
+    }
+
+    @media(max-width:560px){
+      .drawer-head__actions{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+      .switch--publish{min-width:0}
+      .editor-section__summary{align-items:flex-start;padding:15px 16px}
+      .editor-section__meta{justify-content:flex-start;text-align:left}
+      .editor-section__body{padding:0 16px 16px}
+      .jobs-drawer .drawer-foot{align-items:stretch}
+      .drawer-foot__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;margin-left:0}
+      .jobs-drawer .drawer-foot .btn{width:100%;min-width:0}
+      .drawer-foot__note{max-width:none}
+    }
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid rgba(47,78,162,.25);box-shadow:0 18px 34px rgba(15,27,63,.2);font-weight:700}
@@ -257,101 +315,174 @@
     <section class="board" id="boardColumns" aria-live="polite"></section>
   </div>
 
-  <aside class="drawer" id="drawer" aria-hidden="true">
+  <aside class="drawer jobs-drawer" id="drawer" aria-hidden="true">
     <div class="drawer-head">
-      <div style="flex:1">
-        <h3 id="drawerTitle">Job editor</h3>
-        <div class="muted" id="drawerMeta"></div>
+      <div class="drawer-head__main">
+        <p class="drawer-head__eyebrow">Jobs editor</p>
+        <div class="drawer-head__title">
+          <h3 id="drawerTitle">Job editor</h3>
+          <span class="editor-status-pill" id="editorStatusPill" data-tone="neutral">Draft</span>
+        </div>
+        <div class="muted drawer-head__meta" id="drawerMeta"></div>
       </div>
-      <label class="switch"><input type="checkbox" id="edPublished"/> Published</label>
-      <button class="btn ghost small" id="btnClose">✕ Close</button>
+      <div class="drawer-head__actions">
+        <label class="switch switch--publish"><input type="checkbox" id="edPublished"/> Published</label>
+        <button class="btn ghost small" id="btnClose">Close</button>
+      </div>
     </div>
     <div class="drawer-body">
-      <form id="jobForm" autocomplete="off">
-        <div class="grid">
-          <div class="field"><label for="edId">Job slug / ID</label><input id="edId" placeholder="auto"/></div>
-          <div class="field"><label for="edTitle">Title</label><input id="edTitle" required/></div>
-          <div class="field"><label for="edStatus">Status</label><select id="edStatus"><option value="live">Live</option><option value="interviewing">Interviewing</option><option value="closed">Closed</option></select></div>
-          <div class="field"><label for="edSection">Category heading</label><input id="edSection" list="sectionOptions" placeholder="e.g. Data Centre Delivery"/></div>
-          <div class="field"><label for="edDiscipline">Discipline</label><input id="edDiscipline"/></div>
-          <div class="field"><label for="edType">Employment type</label><select id="edType"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="fixed-term">Fixed term</option></select></div>
-          <div class="field">
-            <label for="edCustomer">Customer</label>
-            <input id="edCustomer" placeholder="Shown publicly if populated"/>
-            <p class="field-note">Public. This appears on the jobs page and shared spec if entered.</p>
+      <div class="editor-jumpnav" id="editorJumpNav" aria-label="Job editor sections">
+        <button class="editor-jump active" type="button" data-editor-jump="basics">Basic info</button>
+        <button class="editor-jump" type="button" data-editor-jump="placement">Location &amp; client</button>
+        <button class="editor-jump" type="button" data-editor-jump="pay">Pay</button>
+        <button class="editor-jump" type="button" data-editor-jump="content">Content</button>
+        <button class="editor-jump" type="button" data-editor-jump="visibility">Visibility</button>
+        <button class="editor-jump" type="button" data-editor-jump="sharing">Sharing</button>
+      </div>
+      <form id="jobForm" autocomplete="off" class="editor-form">
+        <details class="editor-section" data-editor-section="basics" open>
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Basic info</strong>
+              <small>Core title, status, category, and ordering.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryBasics">Draft · Untitled role</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="grid">
+              <div class="field"><label for="edId">Job slug / ID</label><input id="edId" placeholder="auto"/></div>
+              <div class="field field--wide"><label for="edTitle">Title</label><input id="edTitle" required/></div>
+              <div class="field"><label for="edStatus">Status</label><select id="edStatus"><option value="live">Live</option><option value="interviewing">Interviewing</option><option value="closed">Closed</option></select></div>
+              <div class="field"><label for="edSection">Category heading</label><input id="edSection" list="sectionOptions" placeholder="e.g. Data Centre Delivery"/></div>
+              <div class="field"><label for="edDiscipline">Discipline</label><input id="edDiscipline"/></div>
+              <div class="field"><label for="edType">Employment type</label><select id="edType"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="fixed-term">Fixed term</option></select></div>
+              <div class="field"><label for="edSortOrder">Sort weight</label><input id="edSortOrder" type="number" step="1" min="0"/></div>
+            </div>
           </div>
-          <div class="field">
-            <label for="edClientName">Client name</label>
-            <input id="edClientName" placeholder="Internal client reference"/>
-            <p class="field-note">Internal only. Never shown on public job cards or share/spec pages.</p>
-          </div>
-          <div class="field">
-            <label for="edPayType">Pay display</label>
-            <select id="edPayType">
-              <option value="">Not specified</option>
-              <option value="day_rate">Day rate</option>
-              <option value="salary_range">Salary range</option>
-              <option value="hourly_range">Hourly range</option>
-              <option value="competitive">Competitive</option>
-              <option value="negotiable">Negotiable</option>
-            </select>
-          </div>
-          <div class="field"><label for="edLocationText">Location (display)</label><input id="edLocationText"/></div>
-          <div class="field"><label for="edLocationCode">Location code</label><input id="edLocationCode" placeholder="slug for filters"/></div>
-          <div class="field"><label for="edApply">Apply URL</label><input id="edApply" placeholder="Defaults to contact form"/></div>
-          <div class="field"><label for="edSortOrder">Sort weight</label><input id="edSortOrder" type="number" step="1" min="0"/></div>
-        </div>
+        </details>
 
-        <div class="grid" id="payFieldGrid">
-          <div class="field pay-field is-hidden" data-pay-types="day_rate salary_range hourly_range">
-            <label for="edCurrency">Currency code</label>
-            <input id="edCurrency" placeholder="GBP"/>
-            <p class="field-note">Optional. Defaults to GBP when a pay range is shown.</p>
+        <details class="editor-section" data-editor-section="placement">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Location &amp; client</strong>
+              <small>Public location details plus internal client context.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryPlacement">Location pending</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="grid">
+              <div class="field">
+                <label for="edCustomer">Customer</label>
+                <input id="edCustomer" placeholder="Shown publicly if populated"/>
+                <p class="field-note">Public. This appears on the jobs page and shared spec if entered.</p>
+              </div>
+              <div class="field">
+                <label for="edClientName">Client name</label>
+                <input id="edClientName" placeholder="Internal client reference"/>
+                <p class="field-note">Internal only. Never shown on public job cards or share/spec pages.</p>
+              </div>
+              <div class="field"><label for="edLocationText">Location (display)</label><input id="edLocationText"/></div>
+              <div class="field"><label for="edLocationCode">Location code</label><input id="edLocationCode" placeholder="slug for filters"/></div>
+              <div class="field field--wide"><label for="edApply">Apply URL</label><input id="edApply" placeholder="Defaults to contact form"/></div>
+            </div>
           </div>
-          <div class="field pay-field is-hidden" data-pay-types="day_rate">
-            <label for="edDayRateMin">Day rate min</label>
-            <input id="edDayRateMin" type="number" min="0" step="0.01" placeholder="450"/>
-          </div>
-          <div class="field pay-field is-hidden" data-pay-types="day_rate">
-            <label for="edDayRateMax">Day rate max</label>
-            <input id="edDayRateMax" type="number" min="0" step="0.01" placeholder="550"/>
-          </div>
-          <div class="field pay-field is-hidden" data-pay-types="salary_range">
-            <label for="edSalaryMin">Salary min</label>
-            <input id="edSalaryMin" type="number" min="0" step="1" placeholder="65000"/>
-          </div>
-          <div class="field pay-field is-hidden" data-pay-types="salary_range">
-            <label for="edSalaryMax">Salary max</label>
-            <input id="edSalaryMax" type="number" min="0" step="1" placeholder="80000"/>
-          </div>
-          <div class="field pay-field is-hidden" data-pay-types="hourly_range">
-            <label for="edHourlyMin">Hourly min</label>
-            <input id="edHourlyMin" type="number" min="0" step="0.01" placeholder="28"/>
-          </div>
-          <div class="field pay-field is-hidden" data-pay-types="hourly_range">
-            <label for="edHourlyMax">Hourly max</label>
-            <input id="edHourlyMax" type="number" min="0" step="0.01" placeholder="35"/>
-          </div>
-        </div>
+        </details>
 
-        <div class="field">
-          <label>Tags</label>
-          <div class="tag-editor" id="tagEditor"><input id="tagInput" placeholder="Type tag and press Enter"/></div>
-        </div>
+        <details class="editor-section" data-editor-section="pay">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Pay</strong>
+              <small>Choose how package details should appear publicly.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryPay">Package not specified</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="grid">
+              <div class="field">
+                <label for="edPayType">Pay display</label>
+                <select id="edPayType">
+                  <option value="">Not specified</option>
+                  <option value="day_rate">Day rate</option>
+                  <option value="salary_range">Salary range</option>
+                  <option value="hourly_range">Hourly range</option>
+                  <option value="competitive">Competitive</option>
+                  <option value="negotiable">Negotiable</option>
+                </select>
+              </div>
+            </div>
 
-        <div class="field">
-          <label>Benefits</label>
-          <div class="tag-editor" id="benefitsEditor"><input id="benefitInput" placeholder="Type benefit and press Enter"/></div>
-          <p class="field-note">Public. Benefits are shown on public job cards and the shared job spec when present.</p>
-        </div>
+            <div class="grid" id="payFieldGrid">
+              <div class="field pay-field is-hidden" data-pay-types="day_rate salary_range hourly_range">
+                <label for="edCurrency">Currency code</label>
+                <input id="edCurrency" placeholder="GBP"/>
+                <p class="field-note">Optional. Defaults to GBP when a pay range is shown.</p>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="day_rate">
+                <label for="edDayRateMin">Day rate min</label>
+                <input id="edDayRateMin" type="number" min="0" step="0.01" placeholder="450"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="day_rate">
+                <label for="edDayRateMax">Day rate max</label>
+                <input id="edDayRateMax" type="number" min="0" step="0.01" placeholder="550"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="salary_range">
+                <label for="edSalaryMin">Salary min</label>
+                <input id="edSalaryMin" type="number" min="0" step="1" placeholder="65000"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="salary_range">
+                <label for="edSalaryMax">Salary max</label>
+                <input id="edSalaryMax" type="number" min="0" step="1" placeholder="80000"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="hourly_range">
+                <label for="edHourlyMin">Hourly min</label>
+                <input id="edHourlyMin" type="number" min="0" step="0.01" placeholder="28"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="hourly_range">
+                <label for="edHourlyMax">Hourly max</label>
+                <input id="edHourlyMax" type="number" min="0" step="0.01" placeholder="35"/>
+              </div>
+            </div>
+          </div>
+        </details>
 
-        <div class="field"><label for="edOverview">Card overview</label><textarea id="edOverview" placeholder="Short intro shown on jobs page"></textarea></div>
+        <details class="editor-section" data-editor-section="content">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Content</strong>
+              <small>Skills, benefits, overview copy, and role detail.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryContent">Add overview, skills, and requirements</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="field">
+              <label>Tags</label>
+              <div class="tag-editor" id="tagEditor"><input id="tagInput" placeholder="Type tag and press Enter"/></div>
+            </div>
 
-        <div class="grid">
-          <div class="field"><label for="edResponsibilities">Responsibilities (one per line)</label><textarea id="edResponsibilities"></textarea></div>
-          <div class="field"><label for="edRequirements">Requirements (one per line)</label><textarea id="edRequirements"></textarea></div>
-        </div>
+            <div class="field">
+              <label>Benefits</label>
+              <div class="tag-editor" id="benefitsEditor"><input id="benefitInput" placeholder="Type benefit and press Enter"/></div>
+              <p class="field-note">Public. Benefits are shown on public job cards and the shared job spec when present.</p>
+            </div>
 
+            <div class="field"><label for="edOverview">Card overview</label><textarea id="edOverview" placeholder="Short intro shown on jobs page"></textarea></div>
+
+            <div class="grid">
+              <div class="field"><label for="edResponsibilities">Responsibilities (one per line)</label><textarea id="edResponsibilities"></textarea></div>
+              <div class="field"><label for="edRequirements">Requirements (one per line)</label><textarea id="edRequirements"></textarea></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-section" data-editor-section="visibility">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Visibility</strong>
+              <small>Control what appears on the public role page.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryVisibility">Public sections ready</span>
+          </summary>
+          <div class="editor-section__body">
         <section class="public-visibility">
           <div class="public-visibility__head">
             <strong>Public role page visibility</strong>
@@ -408,27 +539,43 @@
             </label>
           </div>
         </section>
+          </div>
+        </details>
       </form>
 
-      <div class="share-box">
-        <div>
-          <strong>Shareable spec</strong>
-          <p class="muted" id="shareDescription">Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.</p>
-        </div>
-        <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
-        <div id="shareResult" style="display:none">
-          <code id="shareMeta"></code>
-          <input id="shareUrl" readonly/>
-          <div class="share-actions">
-            <button class="btn ghost small" id="btnCopyShare" data-readonly="soft">Copy link</button>
-            <button class="btn ghost small" id="btnRefreshShare" data-readonly="soft" style="display:none">Refresh link</button>
+      <details class="editor-section" data-editor-section="sharing">
+        <summary class="editor-section__summary">
+          <span class="editor-section__summary-copy">
+            <strong>Sharing</strong>
+            <small>Generate and manage the public/shareable spec link.</small>
+          </span>
+          <span class="editor-section__meta" id="editorSummarySharing">Save the job when you are ready to share it</span>
+        </summary>
+        <div class="editor-section__body">
+          <div class="share-box">
+            <div>
+              <strong>Shareable spec</strong>
+              <p class="muted" id="shareDescription">Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.</p>
+            </div>
+            <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
+            <div id="shareResult" style="display:none">
+              <code id="shareMeta"></code>
+              <input id="shareUrl" readonly/>
+              <div class="share-actions">
+                <button class="btn ghost small" id="btnCopyShare" data-readonly="soft">Copy link</button>
+                <button class="btn ghost small" id="btnRefreshShare" data-readonly="soft" style="display:none">Refresh link</button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
     </div>
     <div class="drawer-foot">
-      <button class="btn ghost" id="btnDelete" data-readonly="true">Delete</button>
-      <button class="btn primary" id="btnSave" data-readonly="true">Save job</button>
+      <div class="drawer-foot__note" id="drawerFootNote">Delete is permanent. Save updates the live jobs board whenever the connection is available.</div>
+      <div class="drawer-foot__actions">
+        <button class="btn ghost" id="btnDelete" data-readonly="true">Delete</button>
+        <button class="btn primary" id="btnSave" data-readonly="true">Save job</button>
+      </div>
     </div>
   </aside>
 
@@ -484,6 +631,8 @@
       const drawer = sel('#drawer');
       const drawerTitle = sel('#drawerTitle');
       const drawerMeta = sel('#drawerMeta');
+      const drawerFootNote = sel('#drawerFootNote');
+      const editorStatusPill = sel('#editorStatusPill');
       const shareBox = sel('#shareResult');
       const shareMeta = sel('#shareMeta');
       const shareUrl = sel('#shareUrl');
@@ -518,7 +667,21 @@
       const btnDelete = sel('#btnDelete');
       const btnShare = sel('#btnShare');
       const btnCopyShare = sel('#btnCopyShare');
+      const editorSections = Array.from(document.querySelectorAll('[data-editor-section]'));
+      const editorJumpButtons = Array.from(document.querySelectorAll('[data-editor-jump]'));
+      const editorSectionSummaries = {
+        basics: sel('#editorSummaryBasics'),
+        placement: sel('#editorSummaryPlacement'),
+        pay: sel('#editorSummaryPay'),
+        content: sel('#editorSummaryContent'),
+        visibility: sel('#editorSummaryVisibility'),
+        sharing: sel('#editorSummarySharing'),
+      };
       const editorFields = Array.from(document.querySelectorAll('#jobForm input, #jobForm select, #jobForm textarea, #edPublished'));
+      const editorCompactMedia = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(max-width: 820px)')
+        : { matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} };
+      let syncingEditorSections = false;
 
       function friendlySourceLabel(source) {
         const value = String(source || '').toLowerCase();
@@ -526,6 +689,147 @@
         if (value === 'supabase') return 'Supabase live jobs';
         if (value === 'unavailable') return 'Live jobs service unavailable';
         return source;
+      }
+
+      function toTitleCase(value) {
+        return String(value || '')
+          .replace(/[_-]+/g, ' ')
+          .replace(/\b\w/g, (char) => char.toUpperCase())
+          .trim();
+      }
+
+      function getStatusLabel(value) {
+        const normalized = String(value || 'draft').trim().toLowerCase();
+        if (normalized === 'live') return 'Live';
+        if (normalized === 'closed') return 'Closed';
+        if (normalized === 'interviewing') return 'Interviewing';
+        return toTitleCase(normalized) || 'Draft';
+      }
+
+      function getEditorStatusTone(status, published) {
+        if (!published) return 'neutral';
+        if (status === 'live') return 'live';
+        if (status === 'closed') return 'error';
+        return 'warn';
+      }
+
+      function isCompactEditor() {
+        return !!editorCompactMedia?.matches;
+      }
+
+      function setActiveEditorJump(key) {
+        editorJumpButtons.forEach((button) => {
+          button.classList.toggle('active', button.dataset.editorJump === key);
+        });
+      }
+
+      function getEditorSection(key) {
+        return editorSections.find((section) => section.dataset.editorSection === key) || null;
+      }
+
+      function syncEditorSections(activeKey) {
+        if (!editorSections.length) return;
+        const nextKey = activeKey
+          || editorSections.find((section) => section.open)?.dataset.editorSection
+          || editorSections[0]?.dataset.editorSection
+          || 'basics';
+        syncingEditorSections = true;
+        if (isCompactEditor()) {
+          editorSections.forEach((section) => {
+            section.open = section.dataset.editorSection === nextKey;
+          });
+        } else {
+          editorSections.forEach((section) => {
+            section.open = true;
+          });
+        }
+        setActiveEditorJump(nextKey);
+        window.setTimeout(() => {
+          syncingEditorSections = false;
+        }, 0);
+      }
+
+      function jumpToEditorSection(key, options = {}) {
+        const section = getEditorSection(key);
+        if (!section) return;
+        syncEditorSections(key);
+        if (options.scroll !== false && typeof section.scrollIntoView === 'function') {
+          section.scrollIntoView({ block: 'start', behavior: options.instant ? 'auto' : 'smooth' });
+        }
+      }
+
+      function updateEditorSummaries() {
+        const title = form.title?.value.trim() || '';
+        const status = String(form.status?.value || 'live').toLowerCase();
+        const statusLabel = getStatusLabel(status);
+        const section = form.section?.value.trim() || '';
+        const location = form.locationText?.value.trim() || '';
+        const customer = form.customer?.value.trim() || '';
+        const clientName = form.clientName?.value.trim() || '';
+        const applyUrl = form.apply?.value.trim() || '';
+        const payText = buildPayText(readForm());
+        const overview = form.overview?.value.trim() || '';
+        const responsibilities = toList(form.responsibilities?.value);
+        const requirements = toList(form.requirements?.value);
+        const tagsCount = state.editingTags.length;
+        const benefitsCount = state.editingBenefits.length;
+        const publicPageConfig = readPublicPageConfigFromForm();
+        const visibleCount = Object.values(publicPageConfig).filter(Boolean).length;
+        const published = !!form.published?.checked;
+
+        if (editorSectionSummaries.basics) {
+          const statusSummary = published ? statusLabel : `${statusLabel} draft`;
+          editorSectionSummaries.basics.textContent = [
+            statusSummary,
+            title || 'Untitled role',
+            section || '',
+          ].filter(Boolean).join(' · ');
+        }
+
+        if (editorSectionSummaries.placement) {
+          editorSectionSummaries.placement.textContent = [
+            location || 'Location pending',
+            customer || clientName || '',
+            applyUrl ? 'Apply link set' : '',
+          ].filter(Boolean).join(' · ');
+        }
+
+        if (editorSectionSummaries.pay) {
+          editorSectionSummaries.pay.textContent = payText || 'Package not specified';
+        }
+
+        if (editorSectionSummaries.content) {
+          const contentParts = [];
+          if (overview) contentParts.push('Overview ready');
+          if (tagsCount) contentParts.push(`${tagsCount} tag${tagsCount === 1 ? '' : 's'}`);
+          if (benefitsCount) contentParts.push(`${benefitsCount} benefit${benefitsCount === 1 ? '' : 's'}`);
+          if (responsibilities.length) contentParts.push(`${responsibilities.length} responsibilities`);
+          if (requirements.length) contentParts.push(`${requirements.length} requirements`);
+          editorSectionSummaries.content.textContent = contentParts.join(' · ') || 'Add overview, skills, and requirements';
+        }
+
+        if (editorSectionSummaries.visibility) {
+          editorSectionSummaries.visibility.textContent = `${visibleCount} public item${visibleCount === 1 ? '' : 's'} enabled`;
+        }
+
+        if (editorSectionSummaries.sharing) {
+          let sharingSummary = 'Save the job when you are ready to share it';
+          if (shareUrl?.value) {
+            sharingSummary = shareBox?.dataset?.local === '1' ? 'Local preview link ready' : 'Share link ready';
+          } else if (state.readOnly) {
+            sharingSummary = 'Generate a local preview link';
+          } else if (state.editing?.__seed) {
+            sharingSummary = 'Save imported job before sharing';
+          } else if (state.editing?.id || form.id?.value.trim()) {
+            sharingSummary = 'Generate share link when you are ready';
+          }
+          editorSectionSummaries.sharing.textContent = sharingSummary;
+        }
+
+        if (editorStatusPill) {
+          editorStatusPill.textContent = published ? statusLabel : 'Draft';
+          editorStatusPill.dataset.tone = getEditorStatusTone(status, published);
+        }
       }
 
       function setChip(el, text, tone = 'neutral') {
@@ -659,6 +963,11 @@
         }
         if (btnClose) {
           btnClose.disabled = state.saving || state.deleting;
+        }
+        if (drawerFootNote) {
+          drawerFootNote.textContent = state.readOnly
+            ? 'Read-only mode. Review content and create local preview links here, but live edits are disabled until the jobs system is available.'
+            : 'Delete is permanent. Save updates the live jobs board whenever the connection is available.';
         }
         if (tagInput) {
           tagInput.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering;
@@ -1632,6 +1941,7 @@
           state.editingTags.splice(idx, 1);
           renderTagTokens();
         });
+        updateEditorSummaries();
       }
 
       function renderBenefitTokens() {
@@ -1639,9 +1949,12 @@
           state.editingBenefits.splice(idx, 1);
           renderBenefitTokens();
         });
+        updateEditorSummaries();
       }
 
       function openDrawer() {
+        syncEditorSections('basics');
+        updateEditorSummaries();
         drawer.classList.add('open');
         drawer.setAttribute('aria-hidden', 'false');
         updateControlState();
@@ -1668,6 +1981,8 @@
               : 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
           }
           updatePayFieldVisibility();
+          syncEditorSections('basics');
+          updateEditorSummaries();
           updateControlState();
         }, 150);
       }
@@ -1703,6 +2018,7 @@
         renderTagTokens();
         renderBenefitTokens();
         updatePayFieldVisibility();
+        updateEditorSummaries();
       }
 
       function openEditor(job) {
@@ -1731,6 +2047,8 @@
               ? 'This job still comes from the legacy static site. Save it once to Supabase before creating a live share link.'
               : 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
         }
+        syncEditorSections('basics');
+        updateEditorSummaries();
         openDrawer();
       }
 
@@ -1910,6 +2228,7 @@
           toast(reused ? 'Share link ready (local cache)' : 'Share link created (local cache)', 'info', 2400);
           setLastAction(reused ? 'Local preview link ready' : 'Local preview link created', 'ok');
           state.sharing = false;
+          updateEditorSummaries();
           updateControlState();
           updateStatusPanel();
           return;
@@ -1988,11 +2307,13 @@
               : 'Live share link created',
             fallback ? 'warn' : 'ok'
           );
+          updateEditorSummaries();
         } catch (e) {
           setLastAction('Share link failed', 'error');
           toast('Share failed: ' + (e.message || e), 'error', 4200);
         } finally {
           state.sharing = false;
+          updateEditorSummaries();
           updateControlState();
           updateStatusPanel();
         }
@@ -2025,6 +2346,7 @@
         if (btnRefreshShare) btnRefreshShare.style.display = '';
         toast('Local share refreshed', 'ok', 2000);
         setLastAction('Local preview link refreshed', 'ok');
+        updateEditorSummaries();
         updateStatusPanel();
       }
 
@@ -2170,6 +2492,41 @@
         updateSectionSelect();
       };
 
+      editorJumpButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          jumpToEditorSection(button.dataset.editorJump || 'basics');
+        });
+      });
+
+      editorSections.forEach((section) => {
+        section.addEventListener('toggle', () => {
+          if (syncingEditorSections) return;
+          const key = section.dataset.editorSection || 'basics';
+          if (isCompactEditor()) {
+            if (section.open) {
+              syncEditorSections(key);
+            } else {
+              const fallback = editorSections.find((item) => item !== section)?.dataset.editorSection || 'basics';
+              syncEditorSections(fallback);
+            }
+            return;
+          }
+          setActiveEditorJump(key);
+        });
+      });
+
+      editorFields.forEach((field) => {
+        if (!field) return;
+        field.addEventListener('input', updateEditorSummaries);
+        field.addEventListener('change', updateEditorSummaries);
+      });
+
+      if (editorCompactMedia?.addEventListener) {
+        editorCompactMedia.addEventListener('change', () => syncEditorSections('basics'));
+      } else if (editorCompactMedia?.addListener) {
+        editorCompactMedia.addListener(() => syncEditorSections('basics'));
+      }
+
       tagInput.addEventListener('keydown', (e) => {
         if (state.readOnly) { e.preventDefault(); toast('Jobs are read-only until the live jobs system is available.', 'warn', 3200); return; }
         if (e.key === 'Enter' || e.key === ',') {
@@ -2202,7 +2559,10 @@
         }
       });
 
-      form.payType?.addEventListener('change', updatePayFieldVisibility);
+      form.payType?.addEventListener('change', () => {
+        updatePayFieldVisibility();
+        updateEditorSummaries();
+      });
 
       btnDiag.onclick = async () => {
         state.diagnostics = !state.diagnostics;
