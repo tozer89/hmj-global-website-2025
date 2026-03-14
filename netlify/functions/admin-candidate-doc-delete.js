@@ -1,6 +1,7 @@
 // netlify/functions/admin-candidate-doc-delete.js
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
+const { CANDIDATE_DOCS_BUCKET } = require('./_candidate-docs.js');
 
 const baseHandler = async (event, context) => {
   try {
@@ -22,7 +23,7 @@ const baseHandler = async (event, context) => {
     }
 
     if (data.storage_key) {
-      const removeRes = await supabase.storage.from('candidate-docs').remove([data.storage_key]);
+      const removeRes = await supabase.storage.from(CANDIDATE_DOCS_BUCKET).remove([data.storage_key]);
       if (removeRes.error) throw removeRes.error;
     }
 

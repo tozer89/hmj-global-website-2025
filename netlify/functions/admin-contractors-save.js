@@ -2,10 +2,11 @@
 const { withAdminCors } = require('./_http.js');
 const { supabase } = require('./_supabase.js');
 const { getContext, coded } = require('./_auth.js');
+const { recordAudit } = require('./_audit.js');
 
 const baseHandler = async (event, context) => {
   try {
-    const { user, roles } = await getContext(event, context, { requireAdmin: true });
+    const { user } = await getContext(event, context, { requireAdmin: true });
     const payload = JSON.parse(event.body || '{}');
 
     if (!payload.name || !payload.email) throw coded(400, 'name and email required');
@@ -30,10 +31,12 @@ const baseHandler = async (event, context) => {
     }
     if (res.error) throw coded(500, res.error.message);
 
-    // audit
-    await supabase.from('audit_log').insert({
-      actor_email: user.email, actor_roles: roles, action: payload.id ? 'update' : 'create',
-      entity: 'contractor', entity_id: res.data.id, payload: row
+    await recordAudit({
+      actor: user,
+      action: payload.id ? 'update' : 'create',
+      targetType: 'contractor',
+      targetId: res.data.id,
+      meta: row,
     });
 
     return { statusCode: 200, body: JSON.stringify(res.data) };

@@ -2,6 +2,14 @@
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
+const { presentCandidateDocuments } = require('./_candidate-docs.js');
+
+function buildLegacyDocs(record) {
+  return [
+    record?.rtw_url ? { id: `${record.id || 'candidate'}-legacy-rtw`, kind: 'Right to work', url: record.rtw_url } : null,
+    record?.contract_url ? { id: `${record.id || 'candidate'}-legacy-contract`, kind: 'Contract', url: record.contract_url } : null,
+  ].filter(Boolean);
+}
 
 const baseHandler = async (event, context) => {
   let body = {};
@@ -73,6 +81,25 @@ const baseHandler = async (event, context) => {
 
     const full = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim();
     const record = { ...toCandidate(data), full_name: full || data.full_name || null, source: 'supabase', readOnly: false };
+    let storedDocs = [];
+
+    try {
+      const { data: docRows, error: docsError } = await supabase
+        .from('candidate_documents')
+        .select('id,candidate_id,label,filename,url,storage_key,created_at,meta')
+        .eq('candidate_id', id)
+        .order('created_at', { ascending: false });
+
+      if (docsError) {
+        console.warn('[candidates] document lookup failed (%s)', docsError.message || docsError);
+      } else {
+        storedDocs = await presentCandidateDocuments(supabase, docRows || []);
+      }
+    } catch (docsError) {
+      console.warn('[candidates] document decoration failed (%s)', docsError?.message || docsError);
+    }
+
+    record.docs = storedDocs.concat(buildLegacyDocs(record));
 
     return { statusCode: 200, body: JSON.stringify(record) };
   } catch (e) {

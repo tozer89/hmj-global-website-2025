@@ -3,6 +3,7 @@ const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getContext } = require('./_auth.js');
 const { slugify } = require('./_jobs-helpers.js');
+const { CANDIDATE_DOCS_BUCKET, presentCandidateDocument } = require('./_candidate-docs.js');
 
 function ensureBuffer(base64) {
   try {
@@ -30,14 +31,12 @@ const baseHandler = async (event, context) => {
     const ext = (name.includes('.') ? name.split('.').pop() : 'dat') || 'dat';
     const key = `candidate-${candidateId}/${Date.now()}-${randomUUID().slice(0, 8)}-${safeName}.${ext}`;
 
-    const storage = supabase.storage.from('candidate-docs');
+    const storage = supabase.storage.from(CANDIDATE_DOCS_BUCKET);
     const uploadRes = await storage.upload(key, buffer, {
       contentType: contentType || 'application/octet-stream',
       upsert: false,
     });
     if (uploadRes.error) throw uploadRes.error;
-
-    const publicUrl = storage.getPublicUrl(key)?.data?.publicUrl || null;
 
     const { data: record, error } = await supabase
       .from('candidate_documents')
@@ -46,14 +45,23 @@ const baseHandler = async (event, context) => {
         label: label || name,
         filename: name,
         storage_key: key,
-        url: publicUrl,
+        url: null,
+        meta: {
+          access_mode: 'signed_url',
+          content_type: contentType || 'application/octet-stream',
+          size_bytes: buffer.length,
+          uploaded_by_email: user?.email || null,
+          uploaded_by_id: user?.id || user?.sub || null,
+        },
       })
-      .select('id,label,filename,url,storage_key,created_at')
+      .select('id,candidate_id,label,filename,url,storage_key,created_at,meta')
       .single();
 
     if (error) throw error;
 
-    return { statusCode: 200, body: JSON.stringify({ document: record }) };
+    const document = await presentCandidateDocument(supabase, record);
+
+    return { statusCode: 200, body: JSON.stringify({ document }) };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Upload failed' }) };

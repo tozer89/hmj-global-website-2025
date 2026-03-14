@@ -303,7 +303,7 @@ insert into storage.buckets (
 values (
   'candidate-docs',
   'candidate-docs',
-  true,
+  false,
   10485760,
   array[
     'application/pdf',
@@ -362,7 +362,7 @@ create index if not exists candidate_documents_candidate_created_idx
   on public.candidate_documents (candidate_id, created_at desc);
 
 comment on table public.candidate_documents is
-  'Candidate document metadata used by the HMJ admin UI. Current code expects publicly retrievable URLs from the candidate-docs bucket.';
+  'Candidate document metadata used by the HMJ admin UI. Files should remain in a private Supabase bucket and be exposed to admins via signed URLs or server-controlled access only.';
 
 -- -----------------------------------------------------------------------------
 -- Noticeboard
@@ -579,6 +579,25 @@ alter table if exists public.job_specs
   add column if not exists expires_at timestamptz;
 alter table if exists public.job_specs
   add column if not exists created_at timestamptz;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'job_specs'
+      and column_name = 'job_payload'
+  ) then
+    execute '
+      update public.job_specs
+      set payload = coalesce(payload, job_payload)
+      where payload is null
+        and job_payload is not null
+    ';
+  end if;
+end
+$$;
 
 update public.job_specs
 set
@@ -905,11 +924,23 @@ $$;
 comment on table public.chatbot_conversations is
   'Session-level records for the HMJ website chatbot. Written server-side by Netlify Functions and surfaced in the admin module.';
 
+update public.chatbot_conversations
+set
+  ip_hash = coalesce(
+    nullif(ip_hash, ''),
+    case
+      when nullif(ip_address, '') is null then null
+      else encode(digest(ip_address, 'sha256'), 'hex')
+    end
+  ),
+  ip_address = null
+where nullif(ip_address, '') is not null;
+
 comment on column public.chatbot_conversations.ip_address is
-  'Raw visitor IP captured by the current chatbot storage function. If you want analytics-style hash-only storage, that requires a follow-up code change as well as SQL.';
+  'Deprecated legacy column. New chatbot writes should keep this null and rely on ip_hash instead.';
 
 comment on column public.chatbot_conversations.ip_hash is
-  'SHA-256 hash of the visitor IP address for safer grouping and reporting.';
+  'SHA-256 hash of the visitor IP address for safer grouping and reporting without relying on raw IP storage.';
 
 comment on table public.chatbot_messages is
   'Message-level transcript rows for the HMJ website chatbot.';

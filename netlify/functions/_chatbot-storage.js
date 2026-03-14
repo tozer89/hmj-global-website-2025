@@ -48,6 +48,7 @@ function mergeMetadata(baseValue, extraValue) {
 
 function buildConversationRow(existing, sessionId, context, ipAddress, userAgent, userIntent, assistantReply) {
   const metadata = normaliseMetadata(context);
+  const ipHash = hashValue(ipAddress) || existing?.ip_hash || null;
   const derivedMetadata = mergeMetadata(existing?.metadata, {
     visitor_type: trimString(assistantReply?.visitorType, 40) || null,
     outcome: trimString(assistantReply?.outcome, 80) || null,
@@ -66,8 +67,9 @@ function buildConversationRow(existing, sessionId, context, ipAddress, userAgent
       latest_route: metadata.route || null,
       latest_page_title: metadata.page_title || null,
       page_category: metadata.page_category || null,
-      ip_address: trimString(ipAddress, 120) || null,
-      ip_hash: hashValue(ipAddress) || null,
+      ip_address: null,
+      // Privacy boundary: keep only the one-way hash in new writes.
+      ip_hash: ipHash,
       user_agent: trimString(userAgent, 240) || null,
       initial_intent: trimString(userIntent, 80) || null,
       latest_intent: trimString(assistantReply?.intent || userIntent, 80) || null,
@@ -84,7 +86,8 @@ function buildConversationRow(existing, sessionId, context, ipAddress, userAgent
     latest_route: metadata.route || existing.latest_route || null,
     latest_page_title: metadata.page_title || existing.latest_page_title || null,
     page_category: metadata.page_category || existing.page_category || null,
-    ip_address: trimString(ipAddress, 120) || existing.ip_address || null,
+    ip_address: null,
+    ip_hash: ipHash,
     latest_intent: trimString(assistantReply?.intent || userIntent, 80) || existing.latest_intent || null,
     message_count: nextMessageCount,
     assistant_message_count: nextAssistantCount,

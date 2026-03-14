@@ -164,7 +164,7 @@
                   <div>
                     <p class="clf-kicker">Step 2</p>
                     <h3>Terms and tax</h3>
-                    <p class="clf-inline-note">These settings control how invoices turn into receipts. If VAT is off, gross and net are treated as the same.</p>
+                    <p class="clf-inline-note">These settings control how invoices turn into receipts. Opening-balance receipts reduce receivables already on the ledger; forecast-invoice receipts come from invoices created inside this forecast.</p>
                   </div>
                 </div>
                 <div class="clf-form-grid">
@@ -185,6 +185,19 @@
                     <span class="clf-label">Forecast horizon (weeks)</span>
                     <input id="forecastHorizonWeeks" type="number" min="4" max="52" step="1"/>
                   </label>
+                  <label class="clf-field clf-field-full">
+                    <span class="clf-label">Opening-balance receipts</span>
+                    <select id="openingBalanceReceiptMode">
+                      <option value="term_profile">Follow payment-term profile</option>
+                      <option value="even_runoff">Even runoff across weeks</option>
+                      <option value="manual">Manual opening-balance receipts</option>
+                      <option value="no_receipts">No opening-balance receipts</option>
+                    </select>
+                  </label>
+                  <label class="clf-field" id="openingBalanceRunoffField" hidden>
+                    <span class="clf-label">Runoff weeks</span>
+                    <input id="openingBalanceRunoffWeeks" type="number" min="1" max="52" step="1"/>
+                  </label>
                 </div>
                 <div class="clf-toggle-row">
                   <label class="clf-toggle">
@@ -196,6 +209,7 @@
                     <input id="vatRate" type="number" min="0" max="100" step="0.1"/>
                   </label>
                 </div>
+                <div id="openingBalancePreview" class="clf-list" aria-live="polite"></div>
                 <div class="clf-chip-row clf-no-print">
                   <button class="clf-chip-btn" type="button" data-preset="terms-30-eom">30 days EOM</button>
                   <button class="clf-chip-btn" type="button" data-preset="terms-30-invoice">30 days invoice date</button>
@@ -381,14 +395,15 @@
                 <details class="clf-assumption-group clf-advanced-group">
                   <summary>
                     <div>
-                      <strong>Manual receipts and weekly overrides</strong>
-                      <span>Manual receipts override default timing where entered.</span>
+                      <strong>Opening-balance receipts and weekly overrides</strong>
+                      <span>Use manual dates only when you know expected collections from the opening receivables book.</span>
                     </div>
                     <button class="clf-icon-btn" type="button" tabindex="-1">+</button>
                   </summary>
                   <div class="clf-assumption-body">
+                    <p class="clf-inline-note">Manual opening-balance receipts are only active when the opening-balance mode above is set to Manual. Weekly adjustments remain available as a separate override layer.</p>
                     <div class="clf-toolbar">
-                      <button class="clf-btn clf-btn-secondary" type="button" id="btnAddReceiptLine">Add receipt line</button>
+                      <button class="clf-btn clf-btn-secondary" type="button" id="btnAddReceiptLine">Add opening-balance receipt</button>
                     </div>
                     <div id="receiptLinesHost" class="clf-list"></div>
                     <div id="receiptAdjustmentsHost" class="clf-list"></div>

@@ -825,7 +825,14 @@
   function renderDocs(candidate) {
     if (!candidate.docs || !candidate.docs.length) return '<div class="muted">No documents uploaded.</div>';
     return `<div class="doc-list">${candidate.docs
-      .map((doc) => `<div class="doc-row"><span>${doc.kind || doc.name || 'Document'}</span><a href="${doc.url}" target="_blank" rel="noopener">Open</a></div>`)
+      .map((doc) => {
+        const href = doc.url || doc.access_url || '';
+        const label = doc.kind || doc.label || doc.filename || doc.name || 'Document';
+        const action = href
+          ? `<a href="${href}" target="_blank" rel="noopener">Open</a>`
+          : '<span class="muted">Unavailable</span>';
+        return `<div class="doc-row"><span>${label}</span>${action}</div>`;
+      })
       .join('')}</div>`;
   }
 
@@ -1341,4 +1348,3 @@
     ready();
   }
 })();
-

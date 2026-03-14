@@ -186,11 +186,23 @@ $$;
 comment on table public.chatbot_conversations is
   'Session-level records for the HMJ website chatbot. Written server-side by Netlify Functions and surfaced in the admin module.';
 
+update public.chatbot_conversations
+set
+  ip_hash = coalesce(
+    nullif(ip_hash, ''),
+    case
+      when nullif(ip_address, '') is null then null
+      else encode(digest(ip_address, 'sha256'), 'hex')
+    end
+  ),
+  ip_address = null
+where nullif(ip_address, '') is not null;
+
 comment on column public.chatbot_conversations.ip_address is
-  'Raw visitor IP address captured by the serverless function. This is personal data and should only be retained if your privacy policy and legal basis cover it.';
+  'Deprecated legacy column. New chatbot writes should keep this null and rely on ip_hash instead.';
 
 comment on column public.chatbot_conversations.ip_hash is
-  'SHA-256 hash of the visitor IP address for safer grouping and reporting without relying on raw IP values.';
+  'SHA-256 hash of the visitor IP address for safer grouping and reporting without relying on raw IP storage.';
 
 comment on table public.chatbot_messages is
   'Message-level transcript rows for the HMJ website chatbot. Stores both visitor and assistant messages for admin review.';

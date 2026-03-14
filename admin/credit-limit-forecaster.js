@@ -67,6 +67,9 @@
       'currentOutstandingBalance',
       'forecastStartDate',
       'forecastHorizonWeeks',
+      'openingBalanceReceiptMode',
+      'openingBalanceRunoffWeeks',
+      'openingBalancePreview',
       'riskThresholdPercent',
       'vatApplicable',
       'vatRate',
@@ -332,6 +335,10 @@
     return normaliseGrowthMode(mode) === 'direct' ? 'Direct weekly uplift' : 'Contractor mode';
   }
 
+  function openingBalanceModeLabel(mode) {
+    return Engine.OPENING_BALANCE_MODE_LABELS[mode] || Engine.OPENING_BALANCE_MODE_LABELS.term_profile;
+  }
+
   function hasDirectInputs(assumptions) {
     const direct = assumptions && assumptions.direct ? assumptions.direct : {};
     return [
@@ -407,7 +414,8 @@
     if (assumptions.invoice && assumptions.invoice.autoCountDates === false) count += 1;
     if (Array.isArray(assumptions.invoice && assumptions.invoice.manualEventCounts)
       && assumptions.invoice.manualEventCounts.some(function (value) { return value != null; })) count += 1;
-    if (Array.isArray(assumptions.receiptLines) && assumptions.receiptLines.length) count += 1;
+    if (assumptions.openingBalance && assumptions.openingBalance.receiptMode === 'manual'
+      && Array.isArray(assumptions.receiptLines) && assumptions.receiptLines.length) count += 1;
     if (Array.isArray(assumptions.receiptWeekAdjustments)
       && assumptions.receiptWeekAdjustments.some(function (entry) { return Number(entry && entry.amount) !== 0; })) count += 1;
     if (String(assumptions.notes || '').trim()) count += 1;
@@ -438,6 +446,22 @@
     return 'No uplift entered';
   }
 
+  function openingBalanceModeSummary(assumptions) {
+    const openingBalance = assumptions && assumptions.openingBalance ? assumptions.openingBalance : Engine.DEFAULT_ASSUMPTIONS.openingBalance;
+    const mode = openingBalance.receiptMode || Engine.DEFAULT_ASSUMPTIONS.openingBalance.receiptMode;
+    if (mode === 'manual') {
+      const count = Array.isArray(assumptions && assumptions.receiptLines) ? assumptions.receiptLines.length : 0;
+      return count
+        ? ('Manual opening-balance receipts • ' + count + ' line' + (count === 1 ? '' : 's'))
+        : 'Manual opening-balance receipts';
+    }
+    if (mode === 'even_runoff') {
+      const weeks = Number(openingBalance.runoffWeeks) || Engine.DEFAULT_ASSUMPTIONS.openingBalance.runoffWeeks;
+      return 'Even runoff across ' + weeks + ' week' + (weeks === 1 ? '' : 's');
+    }
+    return openingBalanceModeLabel(mode);
+  }
+
   function buildScenarioSummary(assumptions, result) {
     const raw = ensureScenarioArrays(assumptions);
     const payload = buildCalculationPayload(raw);
@@ -457,6 +481,9 @@
       activeGrowthSource: activeGrowthSource,
       termLabel: Engine.TERM_LABELS[raw.paymentTerms.type] || raw.paymentTerms.type,
       vatLabel: raw.vatApplicable ? ('VAT on at ' + raw.vatRate + '%') : 'VAT off',
+      openingBalanceMode: raw.openingBalance.receiptMode,
+      openingBalanceModeLabel: openingBalanceModeLabel(raw.openingBalance.receiptMode),
+      openingBalanceSummary: openingBalanceModeSummary(raw),
       manualReceiptCount: manualReceiptCount,
       weeklyAdjustmentCount: weeklyAdjustments,
       advancedOverrideCount: advancedOverrideCount,
@@ -469,6 +496,7 @@
       totalScenarioGross: derived.totalScenarioGross,
       capacityUnitGross: derived.capacityUnitGross,
       zeroGrowth: derived.totalBaseGross === 0 && derived.totalScenarioGross === 0,
+      noOpeningBalanceReceipts: Number(raw.currentOutstandingBalance) > 0 && raw.openingBalance.receiptMode === 'no_receipts',
       raw: raw,
       payload: payload,
       derived: derived,
@@ -491,6 +519,9 @@
     if (summary.raw.paymentTerms.type === 'custom_net' && !String(els.customNetDays && els.customNetDays.value || '').trim()) {
       blocking.push('Enter the custom net days for the selected payment terms.');
     }
+    if (summary.raw.openingBalance.receiptMode === 'even_runoff' && Number(summary.raw.openingBalance.runoffWeeks) <= 0) {
+      blocking.push('Enter the number of weeks for the opening-balance runoff assumption.');
+    }
     if (summary.activeMode === 'contractor') {
       const hasHeadcount = Number(summary.raw.contractor.currentContractors) > 0 || Number(summary.raw.contractor.additionalContractors) > 0;
       const hasValue = summary.capacityUnitGross > 0;
@@ -499,7 +530,15 @@
       }
     }
     if (summary.zeroGrowth) {
-      warnings.push('No weekly growth input is currently active, so balances remain flat unless receipts are entered manually.');
+      warnings.push('No weekly growth input is currently active, so balances remain flat unless opening-balance collections or manual receipt adjustments reduce the ledger.');
+    }
+    if (summary.noOpeningBalanceReceipts) {
+      warnings.push('No receipt schedule has been applied to the opening balance, so the starting receivables will remain in place unless opening-balance collections are added manually or estimated.');
+    }
+    if (summary.raw.openingBalance.receiptMode === 'manual'
+      && Number(summary.raw.currentOutstandingBalance) > 0
+      && summary.manualReceiptCount === 0) {
+      warnings.push('Manual opening-balance mode is selected, but no dated opening-balance receipts have been entered yet.');
     }
     if (summary.raw.paymentTerms.receiptLagDays > 0) {
       warnings.push('Receipt lag override is active, so receipt timing will differ from the default payment-term schedule.');
@@ -529,6 +568,9 @@
     assumptions.paymentTerms.type = els.paymentTermsType.value || '30_eom';
     assumptions.paymentTerms.customNetDays = Number(els.customNetDays.value) || 0;
     assumptions.paymentTerms.receiptLagDays = Number(els.receiptLagDays.value) || 0;
+    assumptions.openingBalance = assumptions.openingBalance || {};
+    assumptions.openingBalance.receiptMode = els.openingBalanceReceiptMode.value || Engine.DEFAULT_ASSUMPTIONS.openingBalance.receiptMode;
+    assumptions.openingBalance.runoffWeeks = Number(els.openingBalanceRunoffWeeks.value) || Engine.DEFAULT_ASSUMPTIONS.openingBalance.runoffWeeks;
     assumptions.growthMode = normaliseGrowthMode(els.growthMode.value || 'contractor');
     assumptions.direct = assumptions.direct || {};
     assumptions.direct.baseWeeklyNet = Number(els.directBaseWeeklyNet.value) || 0;
@@ -568,6 +610,8 @@
     els.paymentTermsType.value = scenario.paymentTerms.type || '30_eom';
     els.customNetDays.value = scenario.paymentTerms.customNetDays || 0;
     els.receiptLagDays.value = scenario.paymentTerms.receiptLagDays || 0;
+    els.openingBalanceReceiptMode.value = (scenario.openingBalance && scenario.openingBalance.receiptMode) || Engine.DEFAULT_ASSUMPTIONS.openingBalance.receiptMode;
+    els.openingBalanceRunoffWeeks.value = (scenario.openingBalance && scenario.openingBalance.runoffWeeks) || Engine.DEFAULT_ASSUMPTIONS.openingBalance.runoffWeeks;
     els.growthMode.value = normaliseGrowthMode(scenario.growthMode || 'contractor');
     els.directBaseWeeklyNet.value = scenario.direct.baseWeeklyNet || 0;
     els.directBaseWeeklyGross.value = scenario.direct.baseWeeklyGross || 0;
@@ -586,6 +630,7 @@
     els.autoCountDates.checked = scenario.invoice.autoCountDates !== false;
     els.notes.value = scenario.notes || '';
     updatePaymentTermsUi();
+    updateOpeningBalanceUi();
     updateVatUi();
     applyGrowthModeUi(els.growthMode.value);
     state.isApplyingForm = false;
@@ -710,6 +755,22 @@
     els.customNetDays.disabled = !isCustom;
   }
 
+  function updateOpeningBalanceUi() {
+    const mode = els.openingBalanceReceiptMode.value || Engine.DEFAULT_ASSUMPTIONS.openingBalance.receiptMode;
+    const runoffField = document.getElementById('openingBalanceRunoffField');
+    const isRunoff = mode === 'even_runoff';
+    if (runoffField) {
+      runoffField.hidden = !isRunoff;
+      runoffField.classList.toggle('is-disabled', !isRunoff);
+    }
+    if (els.openingBalanceRunoffWeeks) {
+      els.openingBalanceRunoffWeeks.disabled = !isRunoff;
+    }
+    if (els.btnAddReceiptLine) {
+      els.btnAddReceiptLine.disabled = mode !== 'manual';
+    }
+  }
+
   function updateVatUi() {
     const vatOn = !!els.vatApplicable.checked;
     els.vatRate.disabled = !vatOn;
@@ -794,6 +855,31 @@
     }).join('');
   }
 
+  function renderOpeningBalancePreview(active) {
+    const summary = buildScenarioSummary(active.assumptions, active.result);
+    const openingBalance = summary.raw.openingBalance;
+    const currency = summary.raw.currency;
+    let helper = '';
+    if (openingBalance.receiptMode === 'manual') {
+      helper = summary.manualReceiptCount
+        ? (summary.manualReceiptCount + ' dated opening-balance receipt line' + (summary.manualReceiptCount === 1 ? '' : 's') + ' will reduce the starting ledger.')
+        : 'Add dated opening-balance receipts in Advanced if you know the expected collections.';
+    } else if (openingBalance.receiptMode === 'even_runoff') {
+      helper = 'The opening balance will be spread evenly across the next '
+        + openingBalance.runoffWeeks + ' week' + (openingBalance.runoffWeeks === 1 ? '' : 's') + '.';
+    } else if (openingBalance.receiptMode === 'term_profile') {
+      helper = 'The engine estimates collections from the opening ledger using the selected payment terms and invoicing cadence, without pretending to know exact aged-debtor dates.';
+    } else {
+      helper = 'Stress-test mode keeps the opening receivables in place unless manual adjustments are entered elsewhere.';
+    }
+    els.openingBalancePreview.innerHTML = '<div class="clf-list-card"><strong>'
+      + escapeHtml(summary.openingBalanceSummary)
+      + '</strong><span>'
+      + escapeHtml(helper)
+      + '</span></div>';
+    updateOpeningBalanceUi();
+  }
+
   function renderInvoiceDatePreview(active) {
     const payload = buildCalculationPayload(active.assumptions);
     const invoicePlan = Engine.buildInvoicePlan(payload, Engine.generateWeeks(payload));
@@ -838,8 +924,18 @@
   }
 
   function renderReceiptLines(active) {
+    const isManualMode = active.assumptions.openingBalance && active.assumptions.openingBalance.receiptMode === 'manual';
+    if (!isManualMode) {
+      const storedCount = Array.isArray(active.assumptions.receiptLines) ? active.assumptions.receiptLines.length : 0;
+      els.receiptLinesHost.innerHTML = '<div class="clf-empty">'
+        + escapeHtml(storedCount
+          ? ('Manual opening-balance receipts are stored but inactive. Switch the opening-balance mode to Manual to use the ' + storedCount + ' saved line' + (storedCount === 1 ? '' : 's') + '.')
+          : 'Switch the opening-balance mode to Manual if you want to enter dated receipts against the opening ledger.')
+        + '</div>';
+      return;
+    }
     if (!active.assumptions.receiptLines.length) {
-      els.receiptLinesHost.innerHTML = '<div class="clf-empty">No manual receipt lines added yet. Add known expected payments here to reduce the projected balance in the relevant week.</div>';
+      els.receiptLinesHost.innerHTML = '<div class="clf-empty">No manual opening-balance receipts added yet. Add known expected payments here to reduce the starting receivables book in the relevant week.</div>';
       return;
     }
     els.receiptLinesHost.innerHTML = active.assumptions.receiptLines.map(function (line, index) {
@@ -856,7 +952,7 @@
         '</label>',
         '<label class="clf-field">',
         '<span class="clf-label">Note</span>',
-        '<input type="text" data-receipt-index="' + index + '" data-receipt-key="note" value="' + escapeAttr(line.note) + '" placeholder="Expected receipt note"/>',
+        '<input type="text" data-receipt-index="' + index + '" data-receipt-key="note" value="' + escapeAttr(line.note) + '" placeholder="Opening-balance receipt note"/>',
         '</label>',
         '</div>',
         '<div class="clf-toolbar"><button class="clf-btn clf-btn-danger" type="button" data-remove-receipt-index="' + index + '">Remove line</button></div>',
@@ -891,9 +987,11 @@
     if (!active) return;
     setInputDensity(state.inputDensity);
     updatePaymentTermsUi();
+    updateOpeningBalanceUi();
     updateVatUi();
     applyGrowthModeUi(active.assumptions.growthMode);
     renderValidation(active);
+    renderOpeningBalancePreview(active);
     renderGrowthPreview(active);
     renderInvoiceDatePreview(active);
     renderInvoiceOverrideTable(active);
@@ -954,6 +1052,10 @@
         value: summary.vatLabel,
       },
       {
+        title: 'Opening balance treatment',
+        value: summary.openingBalanceSummary,
+      },
+      {
         title: 'Payment terms',
         value: summary.termLabel + (assumptions.paymentTerms.receiptLagDays ? (' • lag ' + assumptions.paymentTerms.receiptLagDays + ' day(s)') : ''),
       },
@@ -962,8 +1064,9 @@
         value: summary.advancedOverridesActive ? ('Yes • ' + summary.advancedOverrideCount + ' active') : 'No advanced overrides active',
       },
       {
-        title: 'Manual receipts in play',
-        value: String(summary.manualReceiptCount + summary.weeklyAdjustmentCount),
+        title: 'Receipt overrides in play',
+        value: summary.manualReceiptCount + ' opening-balance line' + (summary.manualReceiptCount === 1 ? '' : 's')
+          + ' • ' + summary.weeklyAdjustmentCount + ' weekly adjustment' + (summary.weeklyAdjustmentCount === 1 ? '' : 's'),
       },
       {
         title: 'Comparison scenario',
@@ -983,7 +1086,15 @@
     const validation = buildValidationState(active.assumptions);
     const notices = [];
     if (validation.summary.zeroGrowth) {
-      notices.push('<div class="clf-alert" data-tone="warn"><strong>Flat forecast profile</strong><span>No weekly growth input is currently active, so balances stay flat unless receipts are entered manually.</span></div>');
+      notices.push('<div class="clf-alert" data-tone="warn"><strong>Flat forecast profile</strong><span>No weekly growth input is currently active, so balances stay flat unless opening-balance collections or manual receipt adjustments reduce the ledger.</span></div>');
+    }
+    if (validation.summary.noOpeningBalanceReceipts) {
+      notices.push('<div class="clf-alert" data-tone="warn"><strong>Opening balance has no receipt schedule</strong><span>No receipt schedule has been applied to the opening balance, so the starting receivables will remain in place unless opening-balance collections are added manually or estimated.</span></div>');
+    }
+    if (validation.summary.raw.openingBalance.receiptMode === 'manual'
+      && Number(validation.summary.raw.currentOutstandingBalance) > 0
+      && validation.summary.manualReceiptCount === 0) {
+      notices.push('<div class="clf-alert" data-tone="info"><strong>Manual opening-balance mode is empty</strong><span>Add dated opening-balance receipts in Advanced if you want the opening ledger to run off during the forecast.</span></div>');
     }
     if (active.result && active.result.metrics.creditLimit > 0) {
       const ratio = active.result.metrics.minimumHeadroom / active.result.metrics.creditLimit;
@@ -1178,7 +1289,9 @@
         + '<td>' + escapeHtml(formatMoney(row.openingBalance, currency)) + '</td>'
         + '<td>' + escapeHtml(formatMoney(row.baseInvoiceIncrease, currency)) + '</td>'
         + '<td>' + escapeHtml(formatMoney(row.scenarioInvoiceIncrease, currency)) + '</td>'
-        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(formatMoney(row.receipts, currency)) + '</strong><small>Manual ' + escapeHtml(formatMoney(row.manualReceipts, currency)) + '</small></div></td>'
+        + '<td>' + escapeHtml(formatMoney(row.openingBalanceReceipts, currency)) + '</td>'
+        + '<td>' + escapeHtml(formatMoney(row.forecastInvoiceReceipts, currency)) + '</td>'
+        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(formatMoney(row.totalReceipts, currency)) + '</strong><small>Weekly adjustments ' + escapeHtml(formatMoney(row.receiptAdjustments, currency)) + '</small></div></td>'
         + '<td>' + escapeHtml(formatMoney(row.closingBalance, currency)) + '</td>'
         + '<td>' + escapeHtml(formatMoney(row.headroom, currency)) + '</td>'
         + '<td><span class="clf-table-badge" data-status="' + escapeAttr(row.status) + '">' + escapeHtml(row.statusLabel) + '</span></td>'
@@ -1187,7 +1300,7 @@
     }).join('');
     els.forecastTableHost.innerHTML = [
       '<table class="clf-table">',
-      '<thead><tr><th>Week</th><th>Invoice date(s)</th><th>Opening balance</th><th>Base invoice increase</th><th>Scenario invoice increase</th><th>Receipts</th><th>Closing balance</th><th>Headroom</th><th>Status</th><th>First breach marker</th></tr></thead>',
+      '<thead><tr><th>Week</th><th>Invoice date(s)</th><th>Opening balance</th><th>Base invoice increase</th><th>Scenario invoice increase</th><th>Opening-balance receipts</th><th>Forecast-invoice receipts</th><th>Total receipts</th><th>Closing balance</th><th>Headroom</th><th>Status</th><th>First breach marker</th></tr></thead>',
       '<tbody>',
       rows,
       '</tbody></table>',
@@ -1201,20 +1314,23 @@
         + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(entry.invoiceDateLabel) + '</strong><small>Week ' + (entry.weekIndex + 1) + '</small></div></td>'
         + '<td>' + escapeHtml(entry.dueDateLabel) + '</td>'
         + '<td>' + escapeHtml(formatMoney(entry.totalGross, currency)) + '</td>'
-        + '<td>' + escapeHtml(entry.termLabel) + '</td>'
+        + '<td>' + escapeHtml('Forecast-generated invoice • ' + entry.termLabel) + '</td>'
         + '<td>' + escapeHtml(entry.receiptWeekIndex >= 0 ? ('Week ' + (entry.receiptWeekIndex + 1)) : 'Beyond horizon') + '</td>'
         + '</tr>';
     });
-    const manualRows = active.assumptions.receiptLines.map(function (line) {
+    const openingBalanceRows = active.result.openingBalanceSchedule.map(function (entry) {
+      const sourceDateLabel = entry.source === 'opening_balance_term_profile'
+        ? (entry.dateLabel + ' assumed invoice')
+        : entry.dateLabel;
       return '<tr>'
-        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(Engine.formatLongDate(line.date)) + '</strong><small>Manual receipt</small></div></td>'
-        + '<td>Manual input</td>'
-        + '<td>' + escapeHtml(formatMoney(line.amount, currency)) + '</td>'
-        + '<td>' + escapeHtml(line.note || 'Known receipt') + '</td>'
-        + '<td>' + escapeHtml('Mapped by date') + '</td>'
+        + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(sourceDateLabel) + '</strong><small>' + escapeHtml(entry.sourceLabel) + '</small></div></td>'
+        + '<td>' + escapeHtml(entry.dueDateLabel) + '</td>'
+        + '<td>' + escapeHtml(formatMoney(entry.amount, currency)) + '</td>'
+        + '<td>' + escapeHtml(entry.note || entry.sourceLabel) + '</td>'
+        + '<td>' + escapeHtml(entry.receiptWeekIndex >= 0 ? ('Week ' + (entry.receiptWeekIndex + 1)) : 'Beyond horizon') + '</td>'
         + '</tr>';
     });
-    const rows = invoiceRows.concat(manualRows);
+    const rows = openingBalanceRows.concat(invoiceRows);
     if (!rows.length) {
       els.cashTimingHost.innerHTML = '<div class="clf-empty">No future invoice or receipt events are currently scheduled inside the forecast window.</div>';
       return;
@@ -1443,7 +1559,10 @@
       'Opening Balance',
       'Base Invoice Increase',
       'Scenario Invoice Increase',
-      'Receipts',
+      'Opening Balance Receipts',
+      'Forecast Invoice Receipts',
+      'Receipt Adjustments',
+      'Total Receipts',
       'Closing Balance',
       'Headroom',
       'Status',
@@ -1461,7 +1580,10 @@
         row.openingBalance,
         row.baseInvoiceIncrease,
         row.scenarioInvoiceIncrease,
-        row.receipts,
+        row.openingBalanceReceipts,
+        row.forecastInvoiceReceipts,
+        row.receiptAdjustments,
+        row.totalReceipts,
         row.closingBalance,
         row.headroom,
         csvEscape(row.statusLabel),
@@ -1485,7 +1607,10 @@
         + '<td>' + escapeHtml(String(row.openingBalance)) + '</td>'
         + '<td>' + escapeHtml(String(row.baseInvoiceIncrease)) + '</td>'
         + '<td>' + escapeHtml(String(row.scenarioInvoiceIncrease)) + '</td>'
-        + '<td>' + escapeHtml(String(row.receipts)) + '</td>'
+        + '<td>' + escapeHtml(String(row.openingBalanceReceipts)) + '</td>'
+        + '<td>' + escapeHtml(String(row.forecastInvoiceReceipts)) + '</td>'
+        + '<td>' + escapeHtml(String(row.receiptAdjustments)) + '</td>'
+        + '<td>' + escapeHtml(String(row.totalReceipts)) + '</td>'
         + '<td>' + escapeHtml(String(row.closingBalance)) + '</td>'
         + '<td>' + escapeHtml(String(row.headroom)) + '</td>'
         + '<td>' + escapeHtml(row.statusLabel) + '</td>'
@@ -1501,7 +1626,7 @@
       '<tr><th>Current outstanding balance</th><td>' + escapeHtml(String(assumptions.currentOutstandingBalance)) + '</td></tr>',
       '</tbody></table>',
       '<br/>',
-      '<table><thead><tr><th>Week</th><th>Week Commencing</th><th>Week Ending</th><th>Invoice Dates</th><th>Invoice Count</th><th>Opening Balance</th><th>Base Invoice Increase</th><th>Scenario Invoice Increase</th><th>Receipts</th><th>Closing Balance</th><th>Headroom</th><th>Status</th></tr></thead><tbody>',
+      '<table><thead><tr><th>Week</th><th>Week Commencing</th><th>Week Ending</th><th>Invoice Dates</th><th>Invoice Count</th><th>Opening Balance</th><th>Base Invoice Increase</th><th>Scenario Invoice Increase</th><th>Opening Balance Receipts</th><th>Forecast Invoice Receipts</th><th>Receipt Adjustments</th><th>Total Receipts</th><th>Closing Balance</th><th>Headroom</th><th>Status</th></tr></thead><tbody>',
       rows,
       '</tbody></table>',
       '</body></html>',
@@ -1597,6 +1722,8 @@
       case 'hmj-standard':
         els.paymentTermsType.value = '30_eom';
         els.forecastHorizonWeeks.value = 20;
+        els.openingBalanceReceiptMode.value = 'term_profile';
+        els.openingBalanceRunoffWeeks.value = Engine.DEFAULT_ASSUMPTIONS.openingBalance.runoffWeeks;
         els.vatApplicable.checked = true;
         els.vatRate.value = 20;
         els.invoiceCadence.value = 'weekly';
@@ -1626,6 +1753,7 @@
         return;
     }
     updatePaymentTermsUi();
+    updateOpeningBalanceUi();
     updateVatUi();
     applyGrowthModeUi(els.growthMode.value);
     scheduleRecalc(40);
