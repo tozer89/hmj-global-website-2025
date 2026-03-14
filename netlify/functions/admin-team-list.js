@@ -2,6 +2,7 @@ const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const {
+  TEAM_BUCKET,
   TEAM_TABLE,
   getTeamSeedMembers,
   sortTeamCollection,
@@ -25,6 +26,31 @@ function buildReadOnlyPayload(source, error = '', schema = false) {
     schema,
     supabase: supabaseStatus(),
   };
+}
+
+async function resolveBucketSetup(supabase) {
+  try {
+    const { data, error } = await supabase.storage.listBuckets();
+    if (error) {
+      return {
+        ready: false,
+        message: error.message || 'Unable to inspect Team image storage.',
+      };
+    }
+
+    const ready = Array.isArray(data) && data.some((bucket) => bucket?.id === TEAM_BUCKET);
+    return {
+      ready,
+      message: ready
+        ? ''
+        : `The Team table is live, but the "${TEAM_BUCKET}" storage bucket is still missing. Image upload and replacement will fail until the full SQL setup is applied.`,
+    };
+  } catch (error) {
+    return {
+      ready: false,
+      message: error?.message || 'Unable to inspect Team image storage.',
+    };
+  }
 }
 
 const baseHandler = async (event, context) => {
@@ -53,6 +79,7 @@ const baseHandler = async (event, context) => {
     if (error) throw error;
 
     const members = sortTeamCollection((Array.isArray(data) ? data : []).map(toTeamMember));
+    const bucketSetup = await resolveBucketSetup(supabase);
 
     return {
       statusCode: 200,
@@ -62,7 +89,8 @@ const baseHandler = async (event, context) => {
         members,
         readOnly: false,
         source: 'supabase',
-        schema: false,
+        schema: !bucketSetup.ready,
+        error: bucketSetup.message,
         supabase: supabaseStatus(),
       }),
     };
@@ -77,7 +105,7 @@ const baseHandler = async (event, context) => {
           ? buildReadOnlyPayload(
             schemaIssue ? 'setup-required' : 'fallback-error',
             schemaIssue
-              ? 'Team storage has not been created on this environment yet.'
+              ? `The "${TEAM_TABLE}" table is missing on this environment, so Team is running in seeded preview mode until the SQL setup script is applied.`
               : (error?.message || 'Team data unavailable'),
             schemaIssue
           )

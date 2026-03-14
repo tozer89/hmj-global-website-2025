@@ -1,6 +1,7 @@
 'use strict';
 
 const CHATBOT_SETTINGS_KEY = 'chatbot_settings';
+const DEFAULT_ASSISTANT_BADGE = 'Henley, HMJ Assistant';
 
 const PAGE_TARGET_KEYS = [
   'home',
@@ -50,7 +51,7 @@ const DEFAULT_CHATBOT_SETTINGS = {
     showLabel: true,
     label: 'Need help?',
     compactLabel: 'Chat',
-    badge: 'HMJ Assistant',
+    badge: DEFAULT_ASSISTANT_BADGE,
   },
   welcome: {
     title: 'Hi — need help finding a role or getting in touch?',
@@ -170,7 +171,7 @@ const DEFAULT_CHATBOT_SETTINGS = {
     {
       id: 'ask_question',
       label: 'Ask a question',
-      description: 'Get a quick answer from the HMJ assistant.',
+      description: 'Get a quick answer from Henley, the HMJ assistant.',
       placement: 'welcome',
       style: 'ghost',
       actionMode: 'send_prompt',
@@ -320,6 +321,10 @@ function normaliseVisibility(visibility = {}) {
 
 function normaliseLauncher(launcher = {}) {
   const fallback = DEFAULT_CHATBOT_SETTINGS.launcher;
+  const rawBadge = trimString(launcher.badge, 32);
+  const badge = rawBadge === 'HMJ Assistant'
+    ? DEFAULT_ASSISTANT_BADGE
+    : (rawBadge || fallback.badge);
   return {
     autoOpen: asBoolean(launcher.autoOpen, fallback.autoOpen),
     autoOpenDelayMs: asNumber(launcher.autoOpenDelayMs, fallback.autoOpenDelayMs, 0, 10000),
@@ -328,7 +333,7 @@ function normaliseLauncher(launcher = {}) {
     showLabel: asBoolean(launcher.showLabel, fallback.showLabel),
     label: trimString(launcher.label, 42) || fallback.label,
     compactLabel: trimString(launcher.compactLabel, 18) || fallback.compactLabel,
-    badge: trimString(launcher.badge, 32) || fallback.badge,
+    badge,
   };
 }
 

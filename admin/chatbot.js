@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  const DEFAULT_ASSISTANT_BADGE = 'Henley, HMJ Assistant';
+
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
   const QUICK_REPLY_TARGETS = [
@@ -471,7 +473,7 @@
 
   function refreshPreviewCard() {
     const settings = readSettingsFromForm();
-    els.previewBadge.textContent = settings.launcher.badge || 'HMJ Assistant';
+    els.previewBadge.textContent = settings.launcher.badge || DEFAULT_ASSISTANT_BADGE;
     els.previewTitle.textContent = settings.welcome.title || 'Welcome title';
     els.previewBody.textContent = settings.welcome.body || 'Welcome support copy';
     els.previewBubble.textContent = [settings.welcome.title, settings.welcome.body].filter(Boolean).join(' ') || 'Welcome message preview';

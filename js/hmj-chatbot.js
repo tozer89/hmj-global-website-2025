@@ -11,6 +11,8 @@
   const MAX_STORED_MESSAGES = 18;
   const MAX_CONVERSATION_ACTIONS = 2;
   const MAX_WELCOME_ACTIONS = 4;
+  const DEFAULT_ASSISTANT_BADGE = 'Henley, HMJ Assistant';
+  const LEGACY_ASSISTANT_BADGE = 'HMJ Assistant';
 
   const DEFAULT_CONFIG = {
     enabled: true,
@@ -37,7 +39,7 @@
       showLabel: true,
       label: 'Need help?',
       compactLabel: 'Chat',
-      badge: 'HMJ Assistant',
+      badge: DEFAULT_ASSISTANT_BADGE,
     },
     welcome: {
       title: 'Hi — need help finding a role or getting in touch?',
@@ -159,6 +161,16 @@
       outcome: trimString(message.outcome, 80),
       isWelcome: !!message.isWelcome,
     };
+  }
+
+  function getAssistantBadge() {
+    const badge = trimString(state.config?.launcher?.badge, 32) || DEFAULT_ASSISTANT_BADGE;
+    return badge === LEGACY_ASSISTANT_BADGE ? DEFAULT_ASSISTANT_BADGE : badge;
+  }
+
+  function getAssistantName() {
+    const primary = getAssistantBadge().split(',')[0];
+    return trimString(primary, 24) || 'Henley';
   }
 
   function getStoredSession() {
@@ -406,7 +418,7 @@
 
     const header = createElement('header', 'hmj-chatbot__header');
     const headerCopy = createElement('div', 'hmj-chatbot__header-copy');
-    const badge = createElement('span', 'hmj-chatbot__badge', state.config.launcher.badge || 'HMJ Assistant');
+    const badge = createElement('span', 'hmj-chatbot__badge', getAssistantBadge());
     const title = createElement('p', 'hmj-chatbot__title', state.config.welcome.title);
     const subtitle = createElement('p', 'hmj-chatbot__subtitle', state.config.welcome.emptyStatePrompt);
     headerCopy.appendChild(badge);
@@ -606,7 +618,7 @@
       if (message.role === 'assistant' && message.followUpQuestion) {
         bubble.appendChild(createElement('p', 'hmj-chatbot__followup', message.followUpQuestion));
       }
-      const meta = createElement('div', 'hmj-chatbot__meta', message.role === 'assistant' ? 'HMJ assistant' : 'You');
+      const meta = createElement('div', 'hmj-chatbot__meta', message.role === 'assistant' ? getAssistantName() : 'You');
       wrap.appendChild(bubble);
 
       const isLatestAssistant = !!latestAssistant && latestAssistant.id === message.id;

@@ -59,10 +59,18 @@
             <span class="clf-status-badge" id="pageStatusBadge" data-status="within_limit">Within Limit</span>
             <span class="clf-chip" id="userMetaChip">Loading user…</span>
             <span class="clf-chip" id="summarySourceChip" data-tone="ok">Local summary</span>
+            <span class="clf-chip" id="wizardStateChip" data-tone="neutral">Direct form</span>
           </div>
           <div class="clf-helper-banner">
             <strong>Recommended for most users</strong>
             <span>Use Basic mode for quick insured-limit checks. Open Advanced only if you need to model specific receipts, invoice timing, or comparison overlays.</span>
+          </div>
+          <div class="clf-wizard-launch">
+            <button class="clf-btn clf-btn-primary" type="button" id="btnUseWizard">Use wizard</button>
+            <div class="clf-wizard-launch-copy">
+              <strong>Guided setup for a quick credit-limit answer</strong>
+              <span>Answer a short sequence of questions and the live form will be populated for you.</span>
+            </div>
           </div>
         </div>
         <div class="clf-intro-actions">
@@ -603,8 +611,27 @@
     </div>
   </dialog>
 
+  <dialog id="wizardDialog" class="clf-dialog clf-dialog-wide">
+    <div class="clf-dialog-shell clf-wizard-shell">
+      <div class="clf-dialog-head clf-wizard-head">
+        <div>
+          <p class="clf-kicker">Guided setup</p>
+          <h3 id="wizardTitle">Set up this forecast with the wizard</h3>
+          <p class="clf-muted" id="wizardSubtitle">Answer the essentials in plain English and the live forecaster will be filled in automatically.</p>
+        </div>
+        <button class="clf-btn clf-btn-ghost" type="button" id="btnCloseWizard">Close</button>
+      </div>
+      <div class="clf-dialog-body clf-wizard-body">
+        <div class="clf-wizard-progress" id="wizardProgressHost" aria-live="polite"></div>
+        <div class="clf-wizard-step" id="wizardStepHost" aria-live="polite"></div>
+      </div>
+      <div class="clf-wizard-foot" id="wizardActionsHost"></div>
+    </div>
+  </dialog>
+
   <datalist id="clientNames"></datalist>
   <input id="statementUploadInput" type="file" accept=".pdf,.csv,.xlsx,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden/>
+  <input id="wizardStatementUploadInput" type="file" accept=".pdf,.csv,.xlsx,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden/>
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>

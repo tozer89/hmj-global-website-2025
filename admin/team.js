@@ -33,7 +33,7 @@
       'welcomeMeta', 'heroSummary', 'heroVisibilityLabel',
       'metricPublished', 'metricDraft', 'metricArchived', 'metricImage',
       'searchInput', 'statusFilter', 'refreshBtn', 'newMemberBtn',
-      'resultMeta', 'memberGrid', 'emptyState', 'emptyStateCopy',
+      'resultMeta', 'memberGrid', 'emptyState', 'emptyStateTitle', 'emptyStateCopy',
       'teamBanner', 'teamBannerTitle', 'teamBannerBody', 'boardSourceChip',
       'editor', 'editorTitle', 'editorStatusPill', 'editorMeta', 'closeEditorBtn',
       'teamForm', 'fieldFullName', 'fieldSlug', 'fieldRoleTitle', 'fieldDisplayOrder',
@@ -142,6 +142,7 @@
       linkedinUrl: '',
       displayOrder: 100,
       isPublished: false,
+      publishedAt: '',
       archivedAt: '',
       status: 'draft',
       ...seed,
@@ -195,6 +196,15 @@
     });
   }
 
+  function getReorderContext(id) {
+    const ordered = sortMembers(state.members).filter((member) => !member.archivedAt);
+    const index = ordered.findIndex((member) => member.id === id);
+    return {
+      hasPrevious: index > 0,
+      hasNext: index !== -1 && index < ordered.length - 1,
+    };
+  }
+
   function renderOverview() {
     const counts = countByStatus();
     els.metricPublished.textContent = String(counts.published);
@@ -202,32 +212,50 @@
     els.metricArchived.textContent = String(counts.archived);
     els.metricImage.textContent = String(counts.withImage);
     els.heroVisibilityLabel.textContent = counts.published ? 'About team cards live' : 'No published members';
+    els.newMemberBtn.disabled = !!state.readOnly;
 
-    els.heroSummary.textContent = state.readOnly
-      ? (state.setupRequired
-        ? 'The Team module is ready, but this environment still needs the SQL and storage setup before edits can be saved.'
-        : 'The Team module is currently in safe preview mode because the live data source is unavailable.')
-      : (counts.published
+    if (state.setupRequired && !state.readOnly) {
+      els.heroSummary.textContent = state.error
+        || 'Team content is live, but image storage setup is still incomplete, so uploads and portrait replacements remain blocked.';
+    } else if (state.readOnly && state.setupRequired) {
+      els.heroSummary.textContent = 'This environment is still running the Team module in seeded preview mode until the Supabase SQL and storage setup are applied.';
+    } else if (state.readOnly) {
+      els.heroSummary.textContent = 'The Team module is currently in safe preview mode because the live data source is unavailable.';
+    } else {
+      els.heroSummary.textContent = counts.published
         ? 'Published members flow straight to the public About page and unpublished or archived profiles stay hidden.'
-        : 'No members are currently published, so the About page team section will stay empty until you publish one.');
+        : 'No members are currently published, so the About page team section will stay empty until you publish one.';
+    }
 
-    els.boardSourceChip.textContent = state.setupRequired
-      ? 'Setup required'
-      : (state.source === 'supabase' ? 'Live source' : 'Fallback preview');
+    if (state.setupRequired && !state.readOnly) {
+      els.boardSourceChip.textContent = 'Live source (setup incomplete)';
+    } else {
+      els.boardSourceChip.textContent = state.setupRequired
+        ? 'Setup required'
+        : (state.source === 'supabase' ? 'Live source' : 'Fallback preview');
+    }
 
     const bannerVisible = !!state.error || !!state.setupRequired || !!state.readOnly;
     els.teamBanner.hidden = !bannerVisible;
     if (bannerVisible) {
-      els.teamBanner.style.display = 'grid';
       els.teamBanner.dataset.tone = state.setupRequired ? 'warn' : 'info';
-      els.teamBannerTitle.textContent = state.setupRequired
-        ? 'Team setup still needs to be applied'
-        : (state.readOnly ? 'Team module is currently read-only' : 'Team information');
-      els.teamBannerBody.textContent = state.setupRequired
-        ? 'Run the Team SQL and storage setup before testing create, edit, publish, or image upload flows in this environment.'
-        : (state.error || 'The page has loaded in a safe read-only mode.');
+      if (state.setupRequired && state.readOnly) {
+        els.teamBannerTitle.textContent = 'Team setup still needs to be applied';
+        els.teamBannerBody.textContent = state.error
+          || 'Run the Team SQL script in Supabase to create the team_members table and team-images bucket. Until then this page stays in seeded preview mode.';
+      } else if (state.setupRequired) {
+        els.teamBannerTitle.textContent = 'Team setup is incomplete';
+        els.teamBannerBody.textContent = state.error
+          || 'The Team table is live, but the team-images bucket is still missing, so uploads and image replacement are disabled until the full SQL is applied.';
+      } else if (state.readOnly) {
+        els.teamBannerTitle.textContent = 'Team module is currently read-only';
+        els.teamBannerBody.textContent = state.error || 'The page has loaded in a safe read-only mode.';
+      } else {
+        els.teamBannerTitle.textContent = 'Team information';
+        els.teamBannerBody.textContent = state.error || 'The page has loaded successfully.';
+      }
     } else {
-      els.teamBanner.style.display = 'none';
+      delete els.teamBanner.dataset.tone;
     }
   }
 
@@ -236,30 +264,41 @@
     els.emptyState.hidden = filtered.length > 0;
     els.memberGrid.hidden = filtered.length === 0;
     if (!filtered.length) {
-      els.emptyStateCopy.textContent = hasFilters
-        ? 'No team members match the current search or status filter.'
-        : 'Add the first team member to populate the About Us team section.';
+      if (hasFilters) {
+        els.emptyStateTitle.textContent = 'No matching team members';
+        els.emptyStateCopy.textContent = 'No team members match the current search or status filter.';
+      } else if (state.setupRequired && state.readOnly) {
+        els.emptyStateTitle.textContent = 'Team setup required';
+        els.emptyStateCopy.textContent = state.error
+          || 'Apply the Team Supabase SQL to move this module out of preview mode and enable live content management.';
+      } else if (state.readOnly) {
+        els.emptyStateTitle.textContent = 'Team preview unavailable';
+        els.emptyStateCopy.textContent = 'The Team module could not load live data in this environment, so editing is temporarily disabled.';
+      } else {
+        els.emptyStateTitle.textContent = 'No team members yet';
+        els.emptyStateCopy.textContent = 'Add the first team member to populate the About Us team section.';
+      }
     }
   }
 
   function renderMemberCard(member, index, collection) {
     const status = computeStatus(member);
-    const previous = collection[index - 1] || null;
-    const next = collection[index + 1] || null;
-    const quickLabel = status === 'published'
-      ? 'Unpublish'
-      : (status === 'archived' ? 'Restore' : 'Publish');
-    const quickAction = status === 'published'
-      ? 'unpublish'
-      : (status === 'archived' ? 'restore' : 'publish');
+    const reorder = getReorderContext(member.id);
+    const readOnlyAttr = state.readOnly ? 'disabled' : '';
+    const quickLabel = status === 'published' ? 'Unpublish' : 'Publish';
+    const quickAction = status === 'published' ? 'unpublish' : 'publish';
+    const quickDisabled = state.readOnly || status === 'archived' ? 'disabled' : '';
     const imageMarkup = member.imageUrl
       ? `<img src="${escapeHtml(member.imageUrl)}" alt="${escapeHtml(member.imageAltText || member.fullName || 'Team member')}"/>`
       : '<div class="member-card__placeholder">No image</div>';
     const metaBits = [
       `<span>Order ${escapeHtml(member.displayOrder)}</span>`,
+      status === 'published' && member.publishedAt
+        ? `<span>Live since ${escapeHtml(formatDateTime(member.publishedAt))}</span>`
+        : '',
       `<span>Updated ${escapeHtml(formatDateTime(member.updatedAt || member.createdAt || nowIso()))}</span>`,
       member.linkedinUrl ? '<span>LinkedIn linked</span>' : '<span>No LinkedIn link</span>',
-    ];
+    ].filter(Boolean);
 
     return `
       <article class="member-card">
@@ -275,12 +314,16 @@
           <p class="member-card__summary">${escapeHtml(member.shortCaption || 'Add a short summary to shape the public card reveal state.')}</p>
           <div class="member-card__meta">${metaBits.join('')}</div>
           <div class="member-card__actions">
-            <button class="btn soft small" type="button" data-action="edit" data-id="${escapeHtml(member.id)}">Edit</button>
-            <button class="btn ghost small" type="button" data-action="duplicate" data-id="${escapeHtml(member.id)}">Duplicate</button>
-            <button class="btn soft small" type="button" data-action="${escapeHtml(quickAction)}" data-id="${escapeHtml(member.id)}">${escapeHtml(quickLabel)}</button>
-            <button class="btn soft small" type="button" data-action="move-up" data-id="${escapeHtml(member.id)}" ${previous ? '' : 'disabled'}>Up</button>
-            <button class="btn soft small" type="button" data-action="move-down" data-id="${escapeHtml(member.id)}" ${next ? '' : 'disabled'}>Down</button>
-            <button class="btn danger small" type="button" data-action="${status === 'archived' ? 'restore' : 'archive'}" data-id="${escapeHtml(member.id)}">${status === 'archived' ? 'Restore' : 'Archive'}</button>
+            <div class="member-card__action-row">
+              <button class="btn soft small" type="button" data-action="edit" data-id="${escapeHtml(member.id)}" ${readOnlyAttr}>Edit</button>
+              <button class="btn ghost small" type="button" data-action="duplicate" data-id="${escapeHtml(member.id)}" ${readOnlyAttr}>Duplicate</button>
+              <button class="btn soft small" type="button" data-action="${escapeHtml(quickAction)}" data-id="${escapeHtml(member.id)}" ${quickDisabled}>${escapeHtml(status === 'archived' ? 'Archived' : quickLabel)}</button>
+            </div>
+            <div class="member-card__action-row member-card__action-row--secondary">
+              <button class="btn soft small" type="button" data-action="move-up" data-id="${escapeHtml(member.id)}" ${state.readOnly || status === 'archived' || !reorder.hasPrevious ? 'disabled' : ''}>Move up</button>
+              <button class="btn soft small" type="button" data-action="move-down" data-id="${escapeHtml(member.id)}" ${state.readOnly || status === 'archived' || !reorder.hasNext ? 'disabled' : ''}>Move down</button>
+              <button class="${status === 'archived' ? 'btn soft small' : 'btn danger small'}" type="button" data-action="${status === 'archived' ? 'restore' : 'archive'}" data-id="${escapeHtml(member.id)}" ${readOnlyAttr}>${status === 'archived' ? 'Restore' : 'Archive'}</button>
+            </div>
           </div>
         </div>
       </article>
@@ -290,9 +333,18 @@
   function renderMemberList() {
     const filtered = applyFilters();
     const total = state.members.length;
-    els.resultMeta.textContent = total
-      ? `Showing ${filtered.length} of ${total} team member${total === 1 ? '' : 's'}.`
-      : 'No team members loaded yet.';
+    if (total) {
+      const sourceNote = state.setupRequired && !state.readOnly
+        ? ' Image uploads are disabled until storage setup is finished.'
+        : (state.readOnly
+          ? ' This board is currently in preview mode.'
+          : '');
+      els.resultMeta.textContent = `Showing ${filtered.length} of ${total} team member${total === 1 ? '' : 's'}.${sourceNote}`;
+    } else {
+      els.resultMeta.textContent = state.setupRequired && state.readOnly
+        ? 'Team is in setup preview mode until the Supabase script is applied.'
+        : 'No team members loaded yet.';
+    }
     renderEmptyState(filtered);
     if (!filtered.length) {
       els.memberGrid.innerHTML = '';
@@ -330,16 +382,21 @@
   function updateImagePreview() {
     const draft = state.editor?.draft;
     if (!draft) return;
+    const storageBlocked = state.setupRequired && !state.readOnly;
     if (draft.imageUrl) {
       els.imageFrame.classList.add('has-image');
       els.imagePreview.src = draft.imageUrl;
       els.imagePreview.alt = draft.imageAltText || draft.fullName || 'Team member image';
-      els.imageMeta.textContent = 'Image uploaded and ready for the public About page.';
+      els.imageMeta.textContent = storageBlocked
+        ? 'This image is shown in preview, but uploads and replacements are disabled until the Team storage setup is completed.'
+        : 'Image uploaded and ready for the public About page.';
     } else {
       els.imageFrame.classList.remove('has-image');
       els.imagePreview.removeAttribute('src');
       els.imagePreview.alt = '';
-      els.imageMeta.textContent = 'JPG, PNG, WebP, or AVIF up to 6MB. Portrait crops work best for the public cards.';
+      els.imageMeta.textContent = storageBlocked
+        ? 'Image uploads are disabled until the team-images bucket has been created in Supabase.'
+        : 'JPG, PNG, WebP, or AVIF up to 6MB. Portrait crops work best for the public cards.';
     }
   }
 
@@ -428,16 +485,19 @@
       'fieldShortCaption', 'fieldFullBio', 'fieldLinkedinUrl', 'fieldPublished',
       'fieldImageAlt', 'uploadImageBtn', 'removeImageBtn', 'saveMemberBtn',
       'publishMemberBtn', 'unpublishMemberBtn', 'archiveMemberBtn', 'duplicateMemberBtn'
-    ].forEach((id) => {
+        ].forEach((id) => {
       els[id].disabled = !!state.readOnly;
     });
 
+    els.fieldPublished.disabled = !!state.readOnly || status === 'archived';
     els.publishMemberBtn.disabled = !!state.readOnly;
     els.unpublishMemberBtn.disabled = !!state.readOnly || status !== 'published';
     els.duplicateMemberBtn.disabled = !!state.readOnly || !draft.id;
     els.archiveMemberBtn.disabled = !!state.readOnly || (!draft.id && status !== 'archived');
     els.archiveMemberBtn.textContent = status === 'archived' ? 'Restore' : 'Archive';
     els.archiveMemberBtn.className = status === 'archived' ? 'btn soft' : 'btn danger';
+    els.uploadImageBtn.disabled = !!state.readOnly || !!(state.setupRequired && !state.readOnly);
+    els.removeImageBtn.disabled = !!state.readOnly || !!(state.setupRequired && !state.readOnly) || !draft.imageUrl;
 
     updateImagePreview();
     renderPreviewCard();
@@ -469,6 +529,7 @@
         id: '',
         createdAt: '',
         updatedAt: '',
+        publishedAt: '',
         slug: '',
         fullName: seed.fullName ? `${seed.fullName} (Copy)` : '',
         imageStorageKey: '',
@@ -730,7 +791,11 @@
       renderMemberList();
     });
     els.refreshBtn.addEventListener('click', () => loadMembers({ force: true }));
-    els.newMemberBtn.addEventListener('click', () => openEditor(null));
+    els.newMemberBtn.addEventListener('click', () => {
+      if (!state.readOnly) {
+        openEditor(null);
+      }
+    });
     els.closeEditorBtn.addEventListener('click', () => closeEditor({ cleanupTransient: true }));
     els.uploadImageBtn.addEventListener('click', () => {
       if (!state.readOnly) {

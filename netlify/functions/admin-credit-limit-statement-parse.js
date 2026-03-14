@@ -85,6 +85,7 @@ function buildOptions(body) {
     scenarioCurrency: trimString(body?.scenarioCurrency) || 'GBP',
     forecastStartDate: trimString(body?.forecastStartDate),
     paymentTerms: body?.paymentTerms && typeof body.paymentTerms === 'object' ? body.paymentTerms : {},
+    preferAiAssist: body?.preferAiAssist === true,
     extraction: null,
   };
 }
@@ -345,7 +346,23 @@ async function parseFile(file, options, overrides) {
       },
     }));
     const aiAssistAvailable = hasAiAssistConfigured();
-    if (shouldUseAiAssist(draft, draft.extraction) && aiAssistAvailable) {
+    if (parseOptions.preferAiAssist && aiAssistAvailable) {
+      const aiPreferred = await callOpenAIStatementAssist(extraction?.text || extraction?.rawText || '', parseOptions, overrides);
+      if (aiPreferred.ok && aiPreferred.statement) {
+        return {
+          ok: true,
+          statement: aiPreferred.statement,
+          warnings: aiPreferred.statement.warnings || [],
+          sourceType: sourceType,
+          aiAssistAvailable: true,
+          aiAssistUsed: true,
+          fallbackOptions: ['Review imported rows before confirming', 'Upload Excel/CSV instead'],
+        };
+      }
+      draft.warnings = (draft.warnings || []).concat([
+        'AI-assisted extraction could not improve this PDF, so the best standard parse has been left in place for review.',
+      ]);
+    } else if (shouldUseAiAssist(draft, draft.extraction) && aiAssistAvailable) {
       const ai = await callOpenAIStatementAssist(extraction?.text || extraction?.rawText || '', parseOptions, overrides);
       if (ai.ok && ai.statement) {
         return {

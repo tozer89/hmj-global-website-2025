@@ -127,6 +127,10 @@ function toDbPayload(input = {}, { now = new Date(), user } = {}) {
   const fullBio = asString(input.full_bio || input.fullBio);
   const archivedAt = toIsoTimestamp(input.archived_at || input.archivedAt);
   const isPublished = archivedAt ? false : asBoolean(input.is_published ?? input.isPublished);
+  const existingPublishedAt = toIsoTimestamp(input.published_at || input.publishedAt);
+  const publishedAt = isPublished
+    ? (existingPublishedAt || toIsoTimestamp(now))
+    : existingPublishedAt;
   const imageUrl = asNullableString(input.image_url || input.imageUrl);
   const imageAltText = asNullableString(input.image_alt_text || input.imageAltText)
     || (imageUrl ? getDefaultImageAlt(fullName) : null);
@@ -153,6 +157,7 @@ function toDbPayload(input = {}, { now = new Date(), user } = {}) {
     email,
     display_order: Math.max(0, asInteger(input.display_order ?? input.displayOrder, DEFAULT_DISPLAY_ORDER)),
     is_published: isPublished,
+    published_at: publishedAt,
     archived_at: archivedAt,
     updated_at: toIsoTimestamp(now),
     updated_by_email: asNullableString(user?.email || input.updated_by_email || input.updatedByEmail),
@@ -179,6 +184,7 @@ function toTeamMember(row = {}, options = {}) {
     email: asNullableString(row.email),
     displayOrder: Math.max(0, asInteger(row.display_order ?? row.displayOrder, DEFAULT_DISPLAY_ORDER)),
     isPublished: asBoolean(row.is_published ?? row.isPublished),
+    publishedAt: toIsoTimestamp(row.published_at || row.publishedAt),
     archivedAt: toIsoTimestamp(row.archived_at || row.archivedAt),
     createdBy: asNullableString(row.created_by || row.createdBy),
     createdByEmail: asNullableString(row.created_by_email || row.createdByEmail),
@@ -200,6 +206,7 @@ function toTeamMember(row = {}, options = {}) {
       imageAltText: member.imageAltText || getDefaultImageAlt(member.fullName),
       linkedinUrl: member.linkedinUrl,
       displayOrder: member.displayOrder,
+      publishedAt: member.publishedAt,
     };
   }
 

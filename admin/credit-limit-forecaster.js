@@ -38,6 +38,7 @@
       message: '',
       token: 0,
     },
+    wizard: null,
   };
 
   const els = {};
@@ -51,8 +52,10 @@
       'pageStatusBadge',
       'userMetaChip',
       'summarySourceChip',
+      'wizardStateChip',
       'heroPeakBalance',
       'heroCapacity',
+      'btnUseWizard',
       'btnBasicMode',
       'btnAdvancedMode',
       'btnCalculate',
@@ -131,6 +134,14 @@
       'cashTimingHost',
       'savedScenarioDialog',
       'savedScenarioList',
+      'wizardDialog',
+      'wizardTitle',
+      'wizardSubtitle',
+      'wizardProgressHost',
+      'wizardStepHost',
+      'wizardActionsHost',
+      'btnCloseWizard',
+      'wizardStatementUploadInput',
       'clientNames',
     ].forEach(function (id) {
       els[id] = $(id);
@@ -187,6 +198,7 @@
       assumptions: ensureScenarioArrays(merged),
       result: null,
       summary: null,
+      wizardMeta: null,
       updatedAt: nowIso(),
     };
   }
@@ -272,6 +284,12 @@
           assumptions: ensureScenarioArrays(scenario.assumptions),
           result: null,
           summary: scenario.summary || null,
+          wizardMeta: scenario.wizardMeta && typeof scenario.wizardMeta === 'object'
+            ? {
+                mode: scenario.wizardMeta.mode === 'advanced' ? 'advanced' : 'basic',
+                completedAt: String(scenario.wizardMeta.completedAt || ''),
+              }
+            : null,
           updatedAt: scenario.updatedAt || nowIso(),
         };
       })
@@ -303,6 +321,7 @@
           id: scenario.id,
           assumptions: scenario.assumptions,
           summary: scenario.summary,
+          wizardMeta: scenario.wizardMeta || null,
           updatedAt: scenario.updatedAt,
         };
       }),
@@ -1172,13 +1191,19 @@
     updateOpeningBalanceUi();
   }
 
-  function buildStatementOptions(scenario) {
-    const assumptions = scenario && scenario.assumptions ? scenario.assumptions : Engine.DEFAULT_ASSUMPTIONS;
+  function buildStatementOptionsFromAssumptions(assumptions) {
+    const source = assumptions && typeof assumptions === 'object' ? assumptions : Engine.DEFAULT_ASSUMPTIONS;
     return {
-      scenarioCurrency: assumptions.currency,
-      paymentTerms: assumptions.paymentTerms,
-      forecastStartDate: assumptions.forecastStartDate,
+      scenarioCurrency: source.currency,
+      paymentTerms: source.paymentTerms,
+      forecastStartDate: source.forecastStartDate,
     };
+  }
+
+  function buildStatementOptions(scenario) {
+    return buildStatementOptionsFromAssumptions(
+      scenario && scenario.assumptions ? scenario.assumptions : Engine.DEFAULT_ASSUMPTIONS
+    );
   }
 
   function defaultStatementAdjustmentLine(scenario) {
@@ -1241,6 +1266,21 @@
     });
   }
 
+  async function requestStatementImport(file, assumptions, options) {
+    if (!file) {
+      throw new Error('statement_file_required');
+    }
+    const data = await readFileAsBase64(file);
+    return state.helpers.api('admin-credit-limit-statement-parse', 'POST', Object.assign({
+      file: {
+        name: file.name,
+        contentType: file.type || '',
+        size: file.size,
+        data: data,
+      },
+    }, buildStatementOptionsFromAssumptions(assumptions), options || {}));
+  }
+
   async function importOpeningBalanceStatement(file, scenario) {
     if (!file || !scenario) return;
     const token = ++state.statementImportTask.token;
@@ -1248,22 +1288,11 @@
     renderWorkspace();
 
     try {
-      const data = await readFileAsBase64(file);
       if (token !== state.statementImportTask.token) return;
       setStatementTask(scenario.id, true, 'extracting', 'Extracting statement rows');
       renderWorkspace();
 
-      const response = await state.helpers.api('admin-credit-limit-statement-parse', 'POST', {
-        file: {
-          name: file.name,
-          contentType: file.type || '',
-          size: file.size,
-          data: data,
-        },
-        scenarioCurrency: scenario.assumptions.currency,
-        forecastStartDate: scenario.assumptions.forecastStartDate,
-        paymentTerms: scenario.assumptions.paymentTerms,
-      });
+      const response = await requestStatementImport(file, scenario.assumptions);
 
       if (token !== state.statementImportTask.token) return;
 
@@ -1360,6 +1389,1097 @@
     renderWorkspace();
     scheduleSummaryRefresh(false);
     persistWorkspace();
+  }
+
+  function openDialogElement(dialog) {
+    if (!dialog) return;
+    if (typeof dialog.showModal === 'function') {
+      if (!dialog.open) dialog.showModal();
+    } else {
+      dialog.setAttribute('open', 'open');
+    }
+  }
+
+  function closeDialogElement(dialog) {
+    if (!dialog) return;
+    if (typeof dialog.close === 'function') {
+      if (dialog.open) dialog.close();
+    } else {
+      dialog.removeAttribute('open');
+    }
+  }
+
+  function inferWizardMode(scenario) {
+    return scenario && scenario.wizardMeta && scenario.wizardMeta.mode === 'advanced' ? 'advanced' : 'basic';
+  }
+
+  function inferWizardContractorInputMode(assumptions) {
+    const contractor = assumptions && assumptions.contractor ? assumptions.contractor : {};
+    if (Number(contractor.perContractorGrossInvoice) > 0 || Number(contractor.perContractorNetInvoice) > 0) {
+      return 'gross';
+    }
+    if (Number(contractor.hourlyWage) > 0) {
+      return 'hourly';
+    }
+    return 'pay';
+  }
+
+  function inferWizardDirectBasis(assumptions) {
+    const direct = assumptions && assumptions.direct ? assumptions.direct : {};
+    if (Number(direct.scenarioWeeklyGross) > 0 || Number(direct.baseWeeklyGross) > 0) {
+      return 'gross';
+    }
+    return 'net';
+  }
+
+  function createWizardTask() {
+    return {
+      busy: false,
+      stage: '',
+      message: '',
+      token: 0,
+    };
+  }
+
+  function createWizardState(scenario) {
+    const assumptions = cloneScenarioAssumptions(scenario && scenario.assumptions ? scenario.assumptions : Engine.DEFAULT_ASSUMPTIONS);
+    const confirmed = activeImportedStatement(assumptions);
+    return {
+      open: true,
+      step: 'welcome',
+      mode: inferWizardMode(scenario),
+      assumptions: assumptions,
+      invoiceCadenceChoice: assumptions.invoice && assumptions.invoice.cadence === 'monthly' ? 'monthly' : 'weekly',
+      contractorInputMode: inferWizardContractorInputMode(assumptions),
+      directBasis: inferWizardDirectBasis(assumptions),
+      statementDraft: confirmed
+        ? StatementImport.materialiseImportedStatement(confirmed, buildStatementOptionsFromAssumptions(assumptions))
+        : null,
+      statementReviewed: !!confirmed,
+      task: createWizardTask(),
+      parseFailure: null,
+      lastUploadedFile: null,
+      lastUploadedFileName: confirmed ? confirmed.fileName : '',
+    };
+  }
+
+  function getWizard() {
+    return state.wizard && state.wizard.open ? state.wizard : null;
+  }
+
+  function wizardStepDefinitions(wizard) {
+    const steps = [
+      { id: 'welcome', label: 'Mode' },
+      { id: 'basics', label: 'Account setup' },
+      { id: 'opening', label: 'Opening receipts' },
+    ];
+    if (wizard && wizard.assumptions && wizard.assumptions.openingBalance && wizard.assumptions.openingBalance.receiptMode === 'import_statement') {
+      steps.push({ id: 'statement-upload', label: 'Upload statement' });
+      if (wizard.statementDraft && Number(wizard.statementDraft.includedRowCount) > 0) {
+        steps.push({ id: 'statement-review', label: 'Review import' });
+      }
+    }
+    steps.push(
+      { id: 'terms', label: 'Terms & tax' },
+      { id: 'invoice', label: 'Invoice pattern' },
+      { id: 'growth', label: 'Growth model' },
+      { id: 'receipts', label: 'Receipt check' },
+      { id: 'review', label: 'Review & run' }
+    );
+    return steps;
+  }
+
+  function ensureWizardStep() {
+    const wizard = getWizard();
+    if (!wizard) return [];
+    const steps = wizardStepDefinitions(wizard);
+    if (!steps.some(function (step) { return step.id === wizard.step; })) {
+      if (steps.some(function (step) { return step.id === 'opening'; })) {
+        wizard.step = 'opening';
+      } else {
+        wizard.step = steps[0] ? steps[0].id : 'welcome';
+      }
+    }
+    return steps;
+  }
+
+  function wizardCurrentStepMeta() {
+    const wizard = getWizard();
+    const steps = ensureWizardStep();
+    const index = steps.findIndex(function (step) { return step.id === (wizard && wizard.step); });
+    return {
+      steps: steps,
+      index: index < 0 ? 0 : index,
+      total: steps.length,
+      current: steps[index < 0 ? 0 : index] || { id: 'welcome', label: 'Mode' },
+      next: steps[index + 1] || null,
+      previous: index > 0 ? steps[index - 1] : null,
+    };
+  }
+
+  function wizardValueMultiplier(assumptions) {
+    return assumptions && assumptions.vatApplicable ? 1 + (Number(assumptions.vatRate) || 0) / 100 : 1;
+  }
+
+  function setNestedValue(target, path, value) {
+    const parts = String(path || '').split('.');
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      if (!cursor[parts[index]] || typeof cursor[parts[index]] !== 'object') {
+        cursor[parts[index]] = {};
+      }
+      cursor = cursor[parts[index]];
+    }
+    cursor[parts[parts.length - 1]] = value;
+  }
+
+  function updateWizardAssumptions(mutator) {
+    const wizard = getWizard();
+    if (!wizard) return;
+    mutator(wizard.assumptions);
+    wizard.assumptions = ensureScenarioArrays(wizard.assumptions);
+  }
+
+  function refreshWizardStatementDraft() {
+    const wizard = getWizard();
+    if (!wizard || !wizard.statementDraft) return;
+    wizard.statementDraft = StatementImport.materialiseImportedStatement(
+      wizard.statementDraft,
+      buildStatementOptionsFromAssumptions(wizard.assumptions)
+    );
+  }
+
+  function updateWizardStatementDraft(mutator) {
+    const wizard = getWizard();
+    if (!wizard || !wizard.statementDraft) return;
+    wizard.statementDraft = StatementImport.materialiseImportedStatement(
+      mutator(Engine.cloneJson(wizard.statementDraft)),
+      buildStatementOptionsFromAssumptions(wizard.assumptions)
+    );
+  }
+
+  function setWizardTask(busy, stage, message, tokenOverride) {
+    const wizard = getWizard();
+    if (!wizard) return 0;
+    wizard.task = {
+      busy: !!busy,
+      stage: stage || '',
+      message: message || '',
+      token: typeof tokenOverride === 'number'
+        ? tokenOverride
+        : (busy ? wizard.task.token + 1 : wizard.task.token),
+    };
+    return wizard.task.token;
+  }
+
+  function currentWizardAmountValue(wizard) {
+    if (!wizard) return 0;
+    if (wizard.directBasis === 'gross') {
+      return Number(wizard.assumptions.direct && wizard.assumptions.direct.scenarioWeeklyGross) || 0;
+    }
+    return Number(wizard.assumptions.direct && wizard.assumptions.direct.scenarioWeeklyNet) || 0;
+  }
+
+  function applyWizardDirectScenarioValue(amount) {
+    const wizard = getWizard();
+    if (!wizard) return;
+    const value = Math.max(0, Number(amount) || 0);
+    const multiplier = wizardValueMultiplier(wizard.assumptions);
+    updateWizardAssumptions(function (assumptions) {
+      assumptions.direct.baseWeeklyNet = 0;
+      assumptions.direct.baseWeeklyGross = 0;
+      if (wizard.directBasis === 'gross') {
+        assumptions.direct.scenarioWeeklyGross = value;
+        assumptions.direct.scenarioWeeklyNet = roundMoney(multiplier > 0 ? value / multiplier : value);
+      } else {
+        assumptions.direct.scenarioWeeklyNet = value;
+        assumptions.direct.scenarioWeeklyGross = roundMoney(value * multiplier);
+      }
+    });
+  }
+
+  function applyWizardContractorInputMode(mode) {
+    const wizard = getWizard();
+    if (!wizard) return;
+    wizard.contractorInputMode = mode === 'gross' || mode === 'hourly' ? mode : 'pay';
+    updateWizardAssumptions(function (assumptions) {
+      const contractor = assumptions.contractor;
+      if (wizard.contractorInputMode === 'pay') {
+        contractor.hourlyWage = 0;
+        contractor.perContractorGrossInvoice = 0;
+        contractor.perContractorNetInvoice = 0;
+      } else if (wizard.contractorInputMode === 'hourly') {
+        contractor.weeklyPayPerContractor = 0;
+        contractor.perContractorGrossInvoice = 0;
+        contractor.perContractorNetInvoice = 0;
+      } else {
+        contractor.weeklyPayPerContractor = 0;
+        contractor.hourlyWage = 0;
+      }
+    });
+  }
+
+  function applyWizardDirectBasis(basis) {
+    const wizard = getWizard();
+    if (!wizard) return;
+    const nextBasis = basis === 'gross' ? 'gross' : 'net';
+    const currentGross = Number(wizard.assumptions.direct && wizard.assumptions.direct.scenarioWeeklyGross) || 0;
+    const currentNet = Number(wizard.assumptions.direct && wizard.assumptions.direct.scenarioWeeklyNet) || 0;
+    wizard.directBasis = nextBasis;
+    applyWizardDirectScenarioValue(nextBasis === 'gross' ? currentGross : currentNet);
+  }
+
+  function wizardStepIssues(stepId, wizard) {
+    const issues = { blocking: [], warnings: [] };
+    if (!wizard) return issues;
+    const assumptions = wizard.assumptions;
+    const receiptMode = assumptions.openingBalance.receiptMode;
+    const growthMode = normaliseGrowthMode(assumptions.growthMode);
+    const derived = Engine.deriveRunRateComponents(buildCalculationPayload(assumptions));
+    const statement = wizard.statementDraft;
+
+    switch (stepId) {
+      case 'basics':
+        if (!String(assumptions.clientName || '').trim()) {
+          issues.blocking.push('Enter the client name so the forecast can be saved and reused clearly.');
+        }
+        if (Number(assumptions.creditLimit) <= 0) {
+          issues.blocking.push('Enter the insured credit limit before continuing.');
+        }
+        break;
+      case 'opening':
+        if (receiptMode === 'even_runoff' && Number(assumptions.openingBalance.runoffWeeks) <= 0) {
+          issues.blocking.push('Enter how many weeks the opening balance should run off across.');
+        }
+        if (receiptMode === 'no_receipts' && Number(assumptions.currentOutstandingBalance) > 0) {
+          issues.warnings.push('No opening-balance receipts will be scheduled, so this route gives a harsher stress-test view.');
+        }
+        break;
+      case 'statement-upload':
+        if (!statement || Number(statement.includedRowCount) <= 0) {
+          issues.blocking.push('Upload a debtor statement, or switch to another opening-balance receipt method.');
+        }
+        break;
+      case 'statement-review':
+        if (!statement || Number(statement.includedRowCount) <= 0) {
+          issues.blocking.push('There are no imported rows ready to review yet.');
+        }
+        break;
+      case 'terms':
+        if (assumptions.paymentTerms.type === 'custom_net' && Number(assumptions.paymentTerms.customNetDays) <= 0) {
+          issues.blocking.push('Enter the custom net days for this client.');
+        }
+        if (assumptions.vatApplicable && Number(assumptions.vatRate) <= 0) {
+          issues.blocking.push('Enter the VAT rate, or switch VAT off if it does not apply.');
+        }
+        break;
+      case 'growth':
+        if (growthMode === 'contractor') {
+          if (derived.capacityUnitGross <= 0) {
+            issues.blocking.push('Enter the contractor value basis so the wizard can model each extra contractor.');
+          }
+          if (Number(assumptions.contractor.additionalContractors) < 0) {
+            issues.blocking.push('Additional contractors cannot be negative in the wizard flow.');
+          }
+        } else if (Number(derived.totalScenarioGross) <= 0) {
+          issues.blocking.push('Enter the weekly uplift amount you want to test.');
+        }
+        break;
+      case 'receipts':
+        if (receiptMode === 'manual' && (!Array.isArray(assumptions.receiptLines) || !assumptions.receiptLines.length)) {
+          issues.warnings.push('Manual opening-balance mode is selected, but no dated opening-balance receipts have been added yet.');
+        }
+        if (receiptMode === 'import_statement' && statement) {
+          const reconciliation = StatementImport.buildReconciliationSummary(statement, assumptions.currentOutstandingBalance);
+          if (!reconciliation.matches) {
+            issues.warnings.push('The imported statement total does not match the opening balance yet. Choose the reconciliation handling before you run the forecast.');
+          }
+        }
+        break;
+      case 'review':
+        if (receiptMode === 'import_statement') {
+          if (!statement || Number(statement.includedRowCount) <= 0) {
+            issues.blocking.push('Import statement mode is selected, but no imported rows have been confirmed.');
+          }
+        }
+        if (growthMode === 'contractor' && derived.capacityUnitGross <= 0) {
+          issues.blocking.push('The current contractor-value setup does not produce a usable weekly value yet.');
+        }
+        if (growthMode === 'direct' && Number(derived.totalScenarioGross) <= 0) {
+          issues.blocking.push('The direct weekly uplift is still blank.');
+        }
+        if (receiptMode === 'no_receipts' && Number(assumptions.currentOutstandingBalance) > 0) {
+          issues.warnings.push('This setup keeps the opening receivables static, so the result is a deliberate stress-test view.');
+        }
+        break;
+      default:
+        break;
+    }
+
+    return issues;
+  }
+
+  function wizardGlobalIssues(wizard) {
+    return wizardStepDefinitions(wizard)
+      .filter(function (step) { return step.id !== 'welcome'; })
+      .reduce(function (memo, step) {
+        const issues = wizardStepIssues(step.id, wizard);
+        memo.blocking = memo.blocking.concat(issues.blocking);
+        memo.warnings = memo.warnings.concat(issues.warnings);
+        return memo;
+      }, { blocking: [], warnings: [] });
+  }
+
+  function wizardReliability(wizard) {
+    const statement = wizard && wizard.statementDraft;
+    const receiptMode = wizard && wizard.assumptions && wizard.assumptions.openingBalance
+      ? wizard.assumptions.openingBalance.receiptMode
+      : 'term_profile';
+    const issues = wizardGlobalIssues(wizard);
+    if (issues.blocking.length) {
+      return {
+        tone: 'danger',
+        label: 'Needs review',
+        note: 'Some essentials are still missing before the wizard can hand back a dependable result.',
+      };
+    }
+    if (receiptMode === 'import_statement' && statement) {
+      if (statement.confidence === 'high' && wizard.statementReviewed) {
+        return {
+          tone: 'ok',
+          label: 'High confidence',
+          note: 'Imported statement rows have been reviewed and the timing assumptions are complete.',
+        };
+      }
+      return {
+        tone: 'warn',
+        label: 'Medium confidence',
+        note: 'Imported statement rows are available, but keep a close eye on the review grid and reconciliation before sharing the result.',
+      };
+    }
+    if (receiptMode === 'manual' || receiptMode === 'even_runoff' || receiptMode === 'term_profile') {
+      return {
+        tone: 'warn',
+        label: 'Medium confidence',
+        note: 'The setup is usable, but the opening-balance receipt schedule is still based on assumptions rather than a ledger import.',
+      };
+    }
+    return {
+      tone: 'danger',
+      label: 'Needs review',
+      note: 'No opening-balance receipt plan is active, so the result will reflect a harsher stress-test position.',
+    };
+  }
+
+  function wizardDisplayValue(path, fallback) {
+    const wizard = getWizard();
+    if (!wizard) return fallback == null ? '' : fallback;
+    const parts = String(path || '').split('.');
+    let cursor = wizard.assumptions;
+    for (let index = 0; index < parts.length; index += 1) {
+      cursor = cursor && cursor[parts[index]];
+    }
+    return cursor == null ? (fallback == null ? '' : fallback) : cursor;
+  }
+
+  function wizardAlertMarkup(issues) {
+    const cards = [];
+    issues.blocking.forEach(function (message) {
+      cards.push('<div class="clf-alert" data-tone="danger"><strong>Complete this step</strong><span>' + escapeHtml(message) + '</span></div>');
+    });
+    issues.warnings.forEach(function (message) {
+      cards.push('<div class="clf-alert" data-tone="warn"><strong>Check this before you run</strong><span>' + escapeHtml(message) + '</span></div>');
+    });
+    return cards.join('');
+  }
+
+  function wizardStepTitle(stepId) {
+    switch (stepId) {
+      case 'welcome': return 'Set up this forecast with the wizard';
+      case 'basics': return 'Client and currency basics';
+      case 'opening': return 'Treat the opening balance';
+      case 'statement-upload': return 'Upload a debtor statement';
+      case 'statement-review': return 'Review imported statement rows';
+      case 'terms': return 'Payment terms and VAT';
+      case 'invoice': return 'Normal invoicing pattern';
+      case 'growth': return 'Choose the growth test';
+      case 'receipts': return 'Check expected payments and receipts';
+      case 'review': return 'Review before the forecast runs';
+      default: return 'Wizard';
+    }
+  }
+
+  function wizardStepSubtitle(stepId, wizard) {
+    switch (stepId) {
+      case 'welcome':
+        return 'Choose the quickest path for this forecast. You can still edit the live form afterwards.';
+      case 'basics':
+        return 'These figures are the starting point for the insured-limit check.';
+      case 'opening':
+        return wizard && wizard.mode === 'advanced'
+          ? 'Choose how expected cash collections from the opening receivables should be handled.'
+          : 'Pick the simplest way to treat receipts against the starting receivables.';
+      case 'statement-upload':
+        return 'Upload a PDF, XLSX, or CSV statement so the opening balance can be scheduled using actual invoice due dates.';
+      case 'statement-review':
+        return 'Check the rows, tick what should be included, and reconcile them to the opening balance.';
+      case 'terms':
+        return 'These settings control when invoices are expected to turn into cash receipts.';
+      case 'invoice':
+        return 'Keep this light. Choose the closest invoicing rhythm and only open advanced timing later if needed.';
+      case 'growth':
+        return 'Choose one modelling method only. The inactive path stays out of the live calculation.';
+      case 'receipts':
+        return 'Confirm the opening-balance receipt plan before the forecast is generated.';
+      case 'review':
+        return 'This is the final sense-check before the wizard updates the live forecast.';
+      default:
+        return '';
+    }
+  }
+
+  function wizardReceiptModeChoice(mode, title, text, active) {
+    return '<button class="clf-wizard-choice' + (active ? ' is-active' : '') + '" type="button" data-wizard-opening-mode="' + escapeAttr(mode) + '">'
+      + '<strong>' + escapeHtml(title) + '</strong><span>' + escapeHtml(text) + '</span></button>';
+  }
+
+  function wizardChoiceButton(type, value, title, text, active) {
+    return '<button class="clf-wizard-choice' + (active ? ' is-active' : '') + '" type="button" data-wizard-choice-type="' + escapeAttr(type) + '" data-wizard-choice-value="' + escapeAttr(value) + '">'
+      + '<strong>' + escapeHtml(title) + '</strong><span>' + escapeHtml(text) + '</span></button>';
+  }
+
+  function renderWizardWelcome(wizard) {
+    return '<article class="clf-wizard-content-card">'
+      + '<div class="clf-wizard-choice-grid">'
+      + wizardChoiceButton('mode', 'basic', 'Basic', 'Use this for a quick answer on whether more people can be added safely. Best for standard weekly checks.', wizard.mode !== 'advanced')
+      + wizardChoiceButton('mode', 'advanced', 'Advanced', 'Use this when you need statement imports, custom receipt timing, receipt overrides, or tighter control.', wizard.mode === 'advanced')
+      + '</div>'
+      + '<div class="clf-wizard-inline-note"><strong>What happens next</strong><span>The wizard will ask only the essentials, populate the live forecaster for you, and then run the report automatically when you finish.</span></div>'
+      + '</article>';
+  }
+
+  function renderWizardBasics(wizard) {
+    return '<article class="clf-wizard-content-card">'
+      + '<div class="clf-wizard-grid">'
+      + '<label class="clf-field clf-field-full"><span class="clf-label">Client name</span><input type="text" data-wizard-field="clientName" value="' + escapeAttr(wizardDisplayValue('clientName')) + '" placeholder="Client account"/></label>'
+      + '<label class="clf-field clf-field-full"><span class="clf-label">Scenario name</span><input type="text" data-wizard-field="scenarioName" value="' + escapeAttr(wizardDisplayValue('scenarioName')) + '" placeholder="Base case"/></label>'
+      + '<label class="clf-field"><span class="clf-label">Currency</span><select data-wizard-field="currency"><option value="GBP"' + (wizardDisplayValue('currency', 'GBP') === 'GBP' ? ' selected' : '') + '>GBP</option><option value="EUR"' + (wizardDisplayValue('currency', 'GBP') === 'EUR' ? ' selected' : '') + '>EUR</option></select></label>'
+      + '<label class="clf-field"><span class="clf-label">Credit limit</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="creditLimit" value="' + escapeAttr(String(wizardDisplayValue('creditLimit', 0))) + '"/></label>'
+      + '<label class="clf-field"><span class="clf-label">Current opening balance</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="currentOutstandingBalance" value="' + escapeAttr(String(wizardDisplayValue('currentOutstandingBalance', 0))) + '"/></label>'
+      + '<label class="clf-field"><span class="clf-label">Forecast horizon (weeks)</span><input type="number" min="4" max="52" step="1" inputmode="numeric" data-wizard-field="forecastHorizonWeeks" value="' + escapeAttr(String(wizardDisplayValue('forecastHorizonWeeks', 20))) + '"/></label>'
+      + '</div>'
+      + '</article>';
+  }
+
+  function renderWizardOpeningStep(wizard) {
+    const mode = wizard.assumptions.openingBalance.receiptMode;
+    const rows = [];
+    rows.push('<article class="clf-wizard-content-card">');
+    rows.push('<div class="clf-wizard-choice-grid">');
+    rows.push(wizardReceiptModeChoice('import_statement', 'Upload statement', 'Best if you have a PDF, Excel, or CSV debtor statement or open invoice ledger.', mode === 'import_statement'));
+    rows.push(wizardReceiptModeChoice('manual', 'Enter expected receipts manually', 'Best if you already know a few payment dates and values.', mode === 'manual'));
+    rows.push(wizardReceiptModeChoice('even_runoff', 'Spread opening balance across future weeks', 'Use a simple runoff estimate when exact payment dates are unknown.', mode === 'even_runoff'));
+    rows.push(wizardReceiptModeChoice('no_receipts', 'No opening-balance receipts yet', 'Use a harsher stress-test view only.', mode === 'no_receipts'));
+    if (wizard.mode === 'advanced') {
+      rows.push(wizardReceiptModeChoice('term_profile', 'Follow payment-term profile', 'Estimate runoff from the opening ledger using the selected payment terms and invoicing pattern.', mode === 'term_profile'));
+    }
+    rows.push('</div>');
+    if (mode === 'even_runoff') {
+      rows.push('<div class="clf-wizard-grid"><label class="clf-field"><span class="clf-label">Runoff weeks</span><input type="number" min="1" max="26" step="1" inputmode="numeric" data-wizard-field="openingBalance.runoffWeeks" value="' + escapeAttr(String(wizardDisplayValue('openingBalance.runoffWeeks', 6))) + '"/></label></div>');
+    }
+    if (mode === 'import_statement') {
+      rows.push('<div class="clf-wizard-inline-note"><strong>Recommended path</strong><span>Upload the statement next. The wizard will review the rows before they are used in the forecast.</span></div>');
+    } else if (mode === 'manual') {
+      rows.push('<div class="clf-wizard-inline-note"><strong>Manual route</strong><span>You can add dated opening-balance receipts in the next receipt check step.</span></div>');
+    } else if (mode === 'term_profile') {
+      rows.push('<div class="clf-wizard-inline-note"><strong>Approximation</strong><span>This uses the selected terms and invoice cadence to estimate runoff from the opening ledger without pretending to know exact aged-debtor dates.</span></div>');
+    } else if (mode === 'no_receipts') {
+      rows.push('<div class="clf-wizard-inline-note"><strong>Stress-test view</strong><span>The starting receivables will remain in place unless you add manual receipts later.</span></div>');
+    }
+    rows.push('</article>');
+    return rows.join('');
+  }
+
+  function renderWizardImportProgress(task) {
+    const stages = [
+      { id: 'uploading', label: 'Uploading statement' },
+      { id: 'reading', label: 'Reading content' },
+      { id: 'extracting', label: 'Extracting invoice rows' },
+      { id: 'ai_assist', label: 'Trying backup extraction' },
+      { id: 'review', label: 'Preparing review' },
+    ];
+    return '<div class="clf-list">'
+      + stages.map(function (stage, index) {
+        const isCurrent = task.stage === stage.id;
+        const isComplete = task.stage && (stages.findIndex(function (entry) { return entry.id === task.stage; }) > index);
+        return '<div class="clf-list-card"><strong>' + escapeHtml(stage.label) + '</strong><span>'
+          + escapeHtml(isCurrent ? (task.message || 'Working…') : (isComplete ? 'Complete' : 'Waiting'))
+          + '</span></div>';
+      }).join('')
+      + '</div>';
+  }
+
+  function renderWizardStatementUpload(wizard) {
+    const failure = wizard.parseFailure;
+    const statement = wizard.statementDraft;
+    const summary = statement
+      ? statementSummary(statement, wizard.assumptions.currentOutstandingBalance, wizard.assumptions.currency)
+      : 'No statement imported yet';
+    const rows = [];
+    rows.push('<article class="clf-wizard-content-card">');
+    rows.push('<article class="clf-import-card clf-upload-card" data-dropzone="wizard-statement-upload">');
+    rows.push('<div class="clf-card-head"><div><p class="clf-kicker">Upload statement</p><h3>PDF, XLSX, or CSV</h3></div>');
+    if (statement) {
+      rows.push('<span class="clf-chip" data-tone="' + escapeAttr(statementConfidenceTone(statement.confidence)) + '">' + escapeHtml(statementConfidenceLabel(statement.confidence)) + '</span>');
+    }
+    rows.push('</div>');
+    rows.push('<p class="clf-inline-note">Upload a debtor statement or open invoice report so the wizard can estimate when the opening balance is likely to be paid.</p>');
+    rows.push('<div class="clf-toolbar clf-no-print"><button class="clf-btn clf-btn-primary" type="button" data-wizard-action="browse-upload">Upload statement</button>');
+    if (wizard.lastUploadedFileName) {
+      rows.push('<span class="clf-chip" data-tone="neutral">' + escapeHtml(wizard.lastUploadedFileName) + '</span>');
+    }
+    rows.push('</div>');
+    rows.push('<p class="clf-muted-small">Supported files: PDF, XLSX, CSV.</p>');
+    rows.push('</article>');
+    if (wizard.task.busy) {
+      rows.push('<div class="clf-wizard-inline-note"><strong>' + escapeHtml(wizard.task.message || 'Preparing your receipt schedule…') + '</strong><span>The wizard is reading the file and building a reviewable opening-balance schedule.</span></div>');
+      rows.push(renderWizardImportProgress(wizard.task));
+    }
+    if (failure) {
+      rows.push('<div class="clf-alert" data-tone="warn"><strong>We could not read this statement confidently</strong><span>'
+        + escapeHtml((failure.warnings && failure.warnings[0]) || 'You can keep going with another receipt method, or try a cleaner spreadsheet export.')
+        + '</span></div>');
+      rows.push('<div class="clf-toolbar">');
+      if (failure.aiAssistAvailable && !failure.aiAssistUsed && wizard.lastUploadedFile) {
+        rows.push('<button class="clf-btn clf-btn-secondary" type="button" data-wizard-action="try-ai-import">Try AI-assisted extraction</button>');
+      }
+      rows.push('<button class="clf-btn clf-btn-ghost" type="button" data-wizard-fallback="manual">Enter receipts manually</button>');
+      rows.push('<button class="clf-btn clf-btn-ghost" type="button" data-wizard-fallback="runoff">Spread opening balance</button>');
+      rows.push('<button class="clf-btn clf-btn-ghost" type="button" data-wizard-fallback="no_receipts">Continue without statement import</button>');
+      rows.push('</div>');
+      if (Array.isArray(failure.fallbackOptions) && failure.fallbackOptions.length) {
+        rows.push('<div class="clf-wizard-pill-row">' + failure.fallbackOptions.map(function (item) {
+          return '<span class="clf-wizard-pill">' + escapeHtml(item) + '</span>';
+        }).join('') + '</div>');
+      }
+    }
+    if (statement && Number(statement.includedRowCount) > 0) {
+      rows.push('<div class="clf-wizard-inline-note"><strong>Ready for review</strong><span>' + escapeHtml(summary) + '</span></div>');
+    }
+    rows.push('</article>');
+    return rows.join('');
+  }
+
+  function renderWizardStatementReview(wizard) {
+    const statement = wizard.statementDraft;
+    if (!statement) {
+      return '<article class="clf-wizard-content-card"><div class="clf-wizard-empty">Upload a statement first so the wizard has rows to review.</div></article>';
+    }
+    const reconciliation = StatementImport.buildReconciliationSummary(statement, wizard.assumptions.currentOutstandingBalance);
+    const mappingRows = statement.rawTable && Array.isArray(statement.rawTable.headers)
+      ? [
+          ['invoiceRef', 'Invoice ref'],
+          ['invoiceDate', 'Invoice date'],
+          ['dueDate', 'Due date'],
+          ['outstandingAmount', 'Outstanding amount'],
+          ['currency', 'Currency'],
+          ['status', 'Status'],
+        ]
+      : [];
+    return '<article class="clf-wizard-content-card">'
+      + '<div class="clf-wizard-review-grid">'
+      + '<div class="clf-mini-card"><strong>' + escapeHtml(String(statement.includedRowCount || 0)) + '</strong><span>Included rows</span></div>'
+      + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.reconciliationTotal || 0, wizard.assumptions.currency)) + '</strong><span>Imported opening-book total</span></div>'
+      + '<div class="clf-mini-card"><strong>' + escapeHtml(statementParseMethodLabel(statement)) + '</strong><span>Parsing method</span></div>'
+      + '</div>'
+      + wizardAlertMarkup({
+        blocking: [],
+        warnings: (statement.warnings || []).slice(0, 4).concat(reconciliation.matches ? [] : ['Imported total differs from the entered opening balance.'])
+      })
+      + (mappingRows.length
+        ? '<div class="clf-wizard-grid">'
+          + mappingRows.map(function (entry) {
+            const field = entry[0];
+            const label = entry[1];
+            const current = statement.mapping && statement.mapping[field] ? statement.mapping[field] : '';
+            return '<label class="clf-field"><span class="clf-label">' + escapeHtml(label) + '</span><select data-wizard-import-map-field="' + escapeAttr(field) + '">'
+              + '<option value="">Not mapped</option>'
+              + statement.rawTable.headers.map(function (header) {
+                return '<option value="' + escapeAttr(header) + '"' + (header === current ? ' selected' : '') + '>' + escapeHtml(header) + '</option>';
+              }).join('')
+              + '</select></label>';
+          }).join('')
+          + '</div>'
+        : '')
+      + '<div class="clf-wizard-table-wrap"><table class="clf-wizard-table"><thead><tr><th>Include</th><th>Invoice ref</th><th>Invoice date</th><th>Due date</th><th>Outstanding amount</th><th>Currency</th><th>Warnings / note</th></tr></thead><tbody>'
+      + statement.rows.map(function (row, index) {
+        const note = row.note || (Array.isArray(row.warnings) && row.warnings[0]) || '';
+        return '<tr>'
+          + '<td><input type="checkbox" data-wizard-import-row-index="' + index + '" data-wizard-import-key="include"' + (row.include !== false ? ' checked' : '') + '/></td>'
+          + '<td><input type="text" data-wizard-import-row-index="' + index + '" data-wizard-import-key="invoiceRef" value="' + escapeAttr(row.invoiceRef || '') + '"/></td>'
+          + '<td data-cell="date"><input type="date" data-wizard-import-row-index="' + index + '" data-wizard-import-key="invoiceDate" value="' + escapeAttr(row.invoiceDate || '') + '"/></td>'
+          + '<td data-cell="date"><input type="date" data-wizard-import-row-index="' + index + '" data-wizard-import-key="dueDate" value="' + escapeAttr(row.dueDate || '') + '"/></td>'
+          + '<td data-cell="amount"><input type="number" min="-999999999" step="0.01" data-wizard-import-row-index="' + index + '" data-wizard-import-key="outstandingAmount" value="' + escapeAttr(String(row.outstandingAmount || 0)) + '"/></td>'
+          + '<td><input type="text" maxlength="3" data-wizard-import-row-index="' + index + '" data-wizard-import-key="currency" value="' + escapeAttr(row.currency || '') + '"/></td>'
+          + '<td><input type="text" data-wizard-import-row-index="' + index + '" data-wizard-import-key="note" value="' + escapeAttr(note) + '"/></td>'
+          + '</tr>';
+      }).join('')
+      + '</tbody></table></div>'
+      + '<div class="clf-wizard-reconcile-grid">'
+      + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(wizard.assumptions.currentOutstandingBalance || 0, wizard.assumptions.currency)) + '</strong><span>Entered opening balance</span></div>'
+      + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.importedTotal || 0, wizard.assumptions.currency)) + '</strong><span>Imported rows total</span></div>'
+      + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.adjustmentTotal || 0, wizard.assumptions.currency)) + '</strong><span>Adjustment lines</span></div>'
+      + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.variance || 0, wizard.assumptions.currency)) + '</strong><span>Variance</span></div>'
+      + '</div>'
+      + '<div class="clf-wizard-grid">'
+      + '<label class="clf-field"><span class="clf-label">Reconciliation handling</span><select data-wizard-import-setting="reconciliationMode">'
+      + ['keep_manual_opening_balance', 'use_imported_total', 'scale_to_opening_balance'].map(function (mode) {
+        return '<option value="' + escapeAttr(mode) + '"' + (statement.reconciliationMode === mode ? ' selected' : '') + '>' + escapeHtml(reconciliationModeLabel(mode)) + '</option>';
+      }).join('')
+      + '</select></label>'
+      + '<label class="clf-field"><span class="clf-label">Overdue collection delay (days)</span><input type="number" min="0" max="60" step="1" data-wizard-import-setting="overdueCollectionDays" value="' + escapeAttr(String(statement.overdueCollectionDays || 0)) + '"/></label>'
+      + '</div>'
+      + '<div class="clf-card-head"><div><p class="clf-kicker">Adjustment lines</p><h3>Reconcile anything missing from the upload</h3></div><button class="clf-btn clf-btn-secondary" type="button" data-wizard-action="add-import-adjustment">Add adjustment line</button></div>'
+      + '<div class="clf-wizard-table-wrap"><table class="clf-wizard-table"><thead><tr><th>Include</th><th>Date</th><th>Amount</th><th>Note</th><th>Action</th></tr></thead><tbody>'
+      + ((statement.adjustmentLines || []).length
+        ? statement.adjustmentLines.map(function (line, index) {
+          return '<tr>'
+            + '<td><input type="checkbox" data-wizard-adjustment-index="' + index + '" data-wizard-adjustment-key="include"' + (line.include !== false ? ' checked' : '') + '/></td>'
+            + '<td data-cell="date"><input type="date" data-wizard-adjustment-index="' + index + '" data-wizard-adjustment-key="date" value="' + escapeAttr(line.date || '') + '"/></td>'
+            + '<td data-cell="amount"><input type="number" min="-999999999" step="0.01" data-wizard-adjustment-index="' + index + '" data-wizard-adjustment-key="amount" value="' + escapeAttr(String(line.amount || 0)) + '"/></td>'
+            + '<td><input type="text" data-wizard-adjustment-index="' + index + '" data-wizard-adjustment-key="note" value="' + escapeAttr(line.note || '') + '"/></td>'
+            + '<td><button class="clf-btn clf-btn-ghost" type="button" data-wizard-action="remove-import-adjustment" data-adjustment-index="' + index + '">Remove</button></td>'
+            + '</tr>';
+        }).join('')
+        : '<tr><td colspan="5"><div class="clf-wizard-empty">No adjustment lines yet. Add one only if the upload does not fully represent the opening balance.</div></td></tr>')
+      + '</tbody></table></div>'
+      + '</article>';
+  }
+
+  function renderWizardTerms(wizard) {
+    const termsType = wizard.assumptions.paymentTerms.type;
+    return '<article class="clf-wizard-content-card">'
+      + '<div class="clf-wizard-choice-grid">'
+      + wizardChoiceButton('terms', '30_eom', '30 days end of month', 'Common HMJ funding/credit-control view when invoices collect after month end.', termsType === '30_eom')
+      + wizardChoiceButton('terms', '30_from_invoice', '30 days from invoice date', 'Each invoice is collected 30 days after its own invoice date.', termsType === '30_from_invoice')
+      + wizardChoiceButton('terms', '14_net', '14 day net', 'Use when the client typically pays within two weeks.', termsType === '14_net')
+      + wizardChoiceButton('terms', 'custom_net', 'Custom days', 'Enter a client-specific net-day assumption.', termsType === 'custom_net')
+      + '</div>'
+      + '<div class="clf-wizard-grid">'
+      + '<label class="clf-field"><span class="clf-label">VAT applies</span><select data-wizard-field="vatApplicable" data-wizard-value-type="boolean"><option value="true"' + (wizard.assumptions.vatApplicable ? ' selected' : '') + '>Yes</option><option value="false"' + (!wizard.assumptions.vatApplicable ? ' selected' : '') + '>No</option></select></label>'
+      + '<label class="clf-field"><span class="clf-label">VAT rate (%)</span><input type="number" min="0" max="100" step="0.01" inputmode="decimal" data-wizard-field="vatRate" value="' + escapeAttr(String(wizard.assumptions.vatRate || 0)) + '"' + (wizard.assumptions.vatApplicable ? '' : ' disabled') + '/></label>'
+      + (termsType === 'custom_net'
+        ? '<label class="clf-field"><span class="clf-label">Custom net days</span><input type="number" min="1" max="180" step="1" inputmode="numeric" data-wizard-field="paymentTerms.customNetDays" value="' + escapeAttr(String(wizard.assumptions.paymentTerms.customNetDays || 0)) + '"/></label>'
+        : '')
+      + '<label class="clf-field"><span class="clf-label">Receipt lag buffer (days)</span><input type="number" min="0" max="60" step="1" inputmode="numeric" data-wizard-field="paymentTerms.receiptLagDays" value="' + escapeAttr(String(wizard.assumptions.paymentTerms.receiptLagDays || 0)) + '"/></label>'
+      + '</div>'
+      + '<div class="clf-wizard-inline-note"><strong>How this affects receipts</strong><span>If VAT is off, gross equals net. Any receipt lag buffer pushes both imported and forecast-generated receipts later.</span></div>'
+      + '</article>';
+  }
+
+  function renderWizardInvoicePattern(wizard) {
+    const cadence = wizard.invoiceCadenceChoice || wizard.assumptions.invoice.cadence;
+    const choices = [
+      wizardChoiceButton('cadence', 'weekly', 'Weekly', 'Best for normal weekly contractor invoicing.', cadence === 'weekly'),
+      wizardChoiceButton('cadence', 'monthly', 'Monthly', 'Use when invoices are grouped into one monthly event.', cadence === 'monthly'),
+    ];
+    if (wizard.mode === 'advanced') {
+      choices.push(wizardChoiceButton('cadence', 'custom', 'Custom', 'Use the wizard to get close, then finish the timing detail in the advanced form.', cadence === 'custom'));
+    }
+    return '<article class="clf-wizard-content-card">'
+      + '<div class="clf-wizard-choice-grid">' + choices.join('') + '</div>'
+      + '<div class="clf-wizard-grid">'
+      + '<label class="clf-field"><span class="clf-label">Invoice weekday</span><select data-wizard-field="invoice.invoiceWeekday">'
+      + [0, 1, 2, 3, 4, 5, 6].map(function (value) {
+        return '<option value="' + value + '"' + (Number(wizard.assumptions.invoice.invoiceWeekday) === value ? ' selected' : '') + '>' + escapeHtml(Engine.weekdayLabel(value)) + '</option>';
+      }).join('')
+      + '</select></label>'
+      + '<label class="clf-field"><span class="clf-label">Count invoice dates automatically</span><select data-wizard-field="invoice.autoCountDates" data-wizard-value-type="boolean"><option value="true"' + (wizard.assumptions.invoice.autoCountDates !== false ? ' selected' : '') + '>Yes</option><option value="false"' + (wizard.assumptions.invoice.autoCountDates === false ? ' selected' : '') + '>No</option></select></label>'
+      + '</div>'
+      + (cadence === 'custom'
+        ? '<div class="clf-wizard-inline-note"><strong>Advanced timing will stay available afterwards</strong><span>The wizard will get you started, then leave the advanced invoice-date controls visible in the live form for final tuning.</span></div>'
+        : '')
+      + '</article>';
+  }
+
+  function renderWizardGrowth(wizard) {
+    const growthMode = normaliseGrowthMode(wizard.assumptions.growthMode);
+    const contractor = wizard.assumptions.contractor;
+    const directValue = currentWizardAmountValue(wizard);
+    const multiplier = wizardValueMultiplier(wizard.assumptions);
+    return '<article class="clf-wizard-content-card">'
+      + '<div class="clf-wizard-choice-grid">'
+      + wizardChoiceButton('growth-mode', 'contractor', 'Extra contractors', 'Use this to test how many more contractor slots can be added safely.', growthMode === 'contractor')
+      + wizardChoiceButton('growth-mode', 'direct', 'Direct weekly invoice uplift', 'Use this when you know the weekly invoice increase but not the headcount build-up.', growthMode === 'direct')
+      + '</div>'
+      + (growthMode === 'contractor'
+        ? '<div class="clf-wizard-grid">'
+          + '<label class="clf-field"><span class="clf-label">Current workforce</span><input type="number" min="0" step="1" inputmode="numeric" data-wizard-field="contractor.currentContractors" value="' + escapeAttr(String(contractor.currentContractors || 0)) + '"/></label>'
+          + '<label class="clf-field"><span class="clf-label">Additional contractors to test</span><input type="number" min="0" step="1" inputmode="numeric" data-wizard-field="contractor.additionalContractors" value="' + escapeAttr(String(contractor.additionalContractors || 0)) + '"/></label>'
+          + '<div class="clf-field clf-field-full"><span class="clf-label">Per-contractor value basis</span><div class="clf-toolbar">'
+          + '<button class="clf-btn' + (wizard.contractorInputMode === 'pay' ? ' clf-btn-primary' : ' clf-btn-ghost') + '" type="button" data-wizard-action="set-contractor-mode" data-value="pay">Weekly pay</button>'
+          + '<button class="clf-btn' + (wizard.contractorInputMode === 'gross' ? ' clf-btn-primary' : ' clf-btn-ghost') + '" type="button" data-wizard-action="set-contractor-mode" data-value="gross">Gross value</button>'
+          + '<button class="clf-btn' + (wizard.contractorInputMode === 'hourly' ? ' clf-btn-primary' : ' clf-btn-ghost') + '" type="button" data-wizard-action="set-contractor-mode" data-value="hourly">Hourly rate</button>'
+          + '</div></div>'
+          + (wizard.contractorInputMode === 'gross'
+            ? '<label class="clf-field"><span class="clf-label">Gross value per contractor</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="contractor.perContractorGrossInvoice" value="' + escapeAttr(String(contractor.perContractorGrossInvoice || 0)) + '"/></label>'
+              + '<div class="clf-wizard-inline-note"><strong>Gross basis</strong><span>'
+              + escapeHtml(wizard.assumptions.vatApplicable ? ('Net per contractor will be derived using VAT at ' + wizard.assumptions.vatRate + '%.') : 'VAT is off, so gross equals net.')
+              + '</span></div>'
+            : (wizard.contractorInputMode === 'hourly'
+              ? '<label class="clf-field"><span class="clf-label">Hourly wage</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="contractor.hourlyWage" value="' + escapeAttr(String(contractor.hourlyWage || 0)) + '"/></label>'
+                + '<label class="clf-field"><span class="clf-label">Weekly hours</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="contractor.weeklyHours" value="' + escapeAttr(String(contractor.weeklyHours || 40)) + '"/></label>'
+                + '<label class="clf-field"><span class="clf-label">Margin / uplift %</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="contractor.marginPercent" value="' + escapeAttr(String(contractor.marginPercent || 0)) + '"/></label>'
+              : '<label class="clf-field"><span class="clf-label">Weekly pay per contractor</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="contractor.weeklyPayPerContractor" value="' + escapeAttr(String(contractor.weeklyPayPerContractor || 0)) + '"/></label>'
+                + '<label class="clf-field"><span class="clf-label">Margin / uplift %</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-field="contractor.marginPercent" value="' + escapeAttr(String(contractor.marginPercent || 0)) + '"/></label>'))
+          + '</div>'
+        : '<div class="clf-wizard-grid">'
+          + '<div class="clf-field clf-field-full"><span class="clf-label">Weekly uplift basis</span><div class="clf-toolbar">'
+          + '<button class="clf-btn' + (wizard.directBasis === 'gross' ? ' clf-btn-primary' : ' clf-btn-ghost') + '" type="button" data-wizard-action="set-direct-basis" data-value="gross">Gross</button>'
+          + '<button class="clf-btn' + (wizard.directBasis === 'net' ? ' clf-btn-primary' : ' clf-btn-ghost') + '" type="button" data-wizard-action="set-direct-basis" data-value="net">Net</button>'
+          + '</div></div>'
+          + '<label class="clf-field"><span class="clf-label">Weekly invoice increase (' + escapeHtml(wizard.directBasis.toUpperCase()) + ')</span><input type="number" min="0" step="0.01" inputmode="decimal" data-wizard-action="set-direct-value" value="' + escapeAttr(String(directValue || 0)) + '"/></label>'
+          + '<div class="clf-wizard-inline-note"><strong>Auto-calculated counterpart</strong><span>'
+          + escapeHtml(wizard.directBasis === 'gross'
+            ? ('Net weekly uplift will be held at ' + formatMoneyPrecise(multiplier > 0 ? directValue / multiplier : directValue, wizard.assumptions.currency) + '.')
+            : ('Gross weekly uplift will be held at ' + formatMoneyPrecise(directValue * multiplier, wizard.assumptions.currency) + '.'))
+          + '</span></div>'
+          + '</div>')
+      + '</article>';
+  }
+
+  function renderWizardReceipts(wizard) {
+    const mode = wizard.assumptions.openingBalance.receiptMode;
+    const statement = wizard.statementDraft;
+    if (mode === 'import_statement' && statement) {
+      return '<article class="clf-wizard-content-card">'
+        + '<div class="clf-wizard-summary-grid">'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(String(statement.includedRowCount || 0)) + '</strong><span>Imported rows</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(String(statement.overdueRowCount || 0)) + '</strong><span>Overdue items</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(statement.reconciliationTotal || 0, wizard.assumptions.currency)) + '</strong><span>Opening-book total</span></div>'
+        + '</div>'
+        + '<div class="clf-wizard-inline-note"><strong>Imported statement in use</strong><span>The opening-balance receipt schedule will follow the reviewed invoice rows, due dates, overdue handling, and reconciliation choice shown here.</span></div>'
+        + '</article>';
+    }
+    if (mode === 'manual') {
+      return '<article class="clf-wizard-content-card">'
+        + '<div class="clf-card-head"><div><p class="clf-kicker">Manual opening-balance receipts</p><h3>Expected payment lines</h3></div><button class="clf-btn clf-btn-secondary" type="button" data-wizard-action="add-manual-receipt">Add receipt line</button></div>'
+        + '<div class="clf-wizard-table-wrap"><table class="clf-wizard-table"><thead><tr><th>Date</th><th>Amount</th><th>Note</th><th>Action</th></tr></thead><tbody>'
+        + ((wizard.assumptions.receiptLines || []).length
+          ? wizard.assumptions.receiptLines.map(function (line, index) {
+            return '<tr>'
+              + '<td data-cell="date"><input type="date" data-wizard-receipt-index="' + index + '" data-wizard-receipt-key="date" value="' + escapeAttr(line.date || '') + '"/></td>'
+              + '<td data-cell="amount"><input type="number" min="-999999999" step="0.01" data-wizard-receipt-index="' + index + '" data-wizard-receipt-key="amount" value="' + escapeAttr(String(line.amount || 0)) + '"/></td>'
+              + '<td><input type="text" data-wizard-receipt-index="' + index + '" data-wizard-receipt-key="note" value="' + escapeAttr(line.note || '') + '"/></td>'
+              + '<td><button class="clf-btn clf-btn-ghost" type="button" data-wizard-action="remove-manual-receipt" data-receipt-index="' + index + '">Remove</button></td>'
+              + '</tr>';
+          }).join('')
+          : '<tr><td colspan="4"><div class="clf-wizard-empty">No manual receipt lines yet. Add the dates you expect this opening balance to be collected.</div></td></tr>')
+        + '</tbody></table></div>'
+        + '</article>';
+    }
+    if (mode === 'even_runoff') {
+      return '<article class="clf-wizard-content-card"><div class="clf-wizard-inline-note"><strong>Even runoff selected</strong><span>The opening balance will be spread evenly across the next '
+        + escapeHtml(String(wizard.assumptions.openingBalance.runoffWeeks || 0))
+        + ' week' + (Number(wizard.assumptions.openingBalance.runoffWeeks) === 1 ? '' : 's') + '.</span></div></article>';
+    }
+    if (mode === 'term_profile') {
+      return '<article class="clf-wizard-content-card"><div class="clf-wizard-inline-note"><strong>Payment-term profile selected</strong><span>The engine will estimate runoff from the opening ledger using the selected terms and invoicing cadence.</span></div></article>';
+    }
+    return '<article class="clf-wizard-content-card"><div class="clf-wizard-inline-note"><strong>No opening-balance receipts selected</strong><span>The opening receivables will remain in place unless you reopen the wizard or edit the live form later.</span></div></article>';
+  }
+
+  function renderWizardReview(wizard) {
+    const assumptions = wizard.assumptions;
+    const growthMode = normaliseGrowthMode(assumptions.growthMode);
+    const statement = wizard.statementDraft;
+    const reliability = wizardReliability(wizard);
+    const derived = Engine.deriveRunRateComponents(buildCalculationPayload(assumptions));
+    const summaryRows = [
+      { label: 'Client', value: assumptions.clientName || 'Not set' },
+      { label: 'Currency', value: assumptions.currency },
+      { label: 'Credit limit', value: formatMoney(assumptions.creditLimit || 0, assumptions.currency) },
+      { label: 'Opening balance', value: formatMoney(assumptions.currentOutstandingBalance || 0, assumptions.currency) },
+      { label: 'Opening-balance receipt mode', value: openingBalanceModeLabel(assumptions.openingBalance.receiptMode) },
+      { label: 'Statement import status', value: statement && Number(statement.includedRowCount) > 0 ? (String(statement.includedRowCount) + ' reviewed row' + (statement.includedRowCount === 1 ? '' : 's')) : 'No statement imported' },
+      { label: 'Payment terms', value: Engine.TERM_LABELS[assumptions.paymentTerms.type] || assumptions.paymentTerms.type },
+      { label: 'Invoice pattern', value: ((wizard.invoiceCadenceChoice === 'custom') ? 'Custom (advanced follow-up)' : assumptions.invoice.cadence === 'monthly' ? 'Monthly' : 'Weekly') + ' • ' + Engine.weekdayLabel(assumptions.invoice.invoiceWeekday) },
+      { label: 'Growth method', value: modeLabel(growthMode) },
+      { label: growthMode === 'contractor' ? 'Workforce / contractor value' : 'Weekly uplift', value: growthMode === 'contractor'
+        ? ((assumptions.contractor.currentContractors || 0) + ' current • +' + (assumptions.contractor.additionalContractors || 0) + ' test • ' + formatMoney(derived.capacityUnitGross || 0, assumptions.currency) + ' per contractor')
+        : (formatMoney(derived.totalScenarioGross || 0, assumptions.currency) + ' gross uplift') },
+      { label: 'Advanced items active', value: countAdvancedOverrides(assumptions) > 0 ? 'Yes' : 'No' },
+    ];
+    return '<article class="clf-wizard-content-card">'
+      + '<div class="clf-card-head"><div><p class="clf-kicker">Reliability</p><h3>' + escapeHtml(reliability.label) + '</h3></div><span class="clf-chip" data-tone="' + escapeAttr(reliability.tone) + '">' + escapeHtml(reliability.label) + '</span></div>'
+      + '<p class="clf-inline-note">' + escapeHtml(reliability.note) + '</p>'
+      + '<div class="clf-wizard-summary-grid">'
+      + summaryRows.map(function (item) {
+        return '<div class="clf-mini-card"><strong>' + escapeHtml(item.value) + '</strong><span>' + escapeHtml(item.label) + '</span></div>';
+      }).join('')
+      + '</div>'
+      + '</article>';
+  }
+
+  function renderWizardStepContent(stepId, wizard) {
+    switch (stepId) {
+      case 'welcome': return renderWizardWelcome(wizard);
+      case 'basics': return renderWizardBasics(wizard);
+      case 'opening': return renderWizardOpeningStep(wizard);
+      case 'statement-upload': return renderWizardStatementUpload(wizard);
+      case 'statement-review': return renderWizardStatementReview(wizard);
+      case 'terms': return renderWizardTerms(wizard);
+      case 'invoice': return renderWizardInvoicePattern(wizard);
+      case 'growth': return renderWizardGrowth(wizard);
+      case 'receipts': return renderWizardReceipts(wizard);
+      case 'review': return renderWizardReview(wizard);
+      default: return '';
+    }
+  }
+
+  function renderWizardProgressPanel(wizard, meta, currentIssues) {
+    const fill = meta.total > 1 ? (((meta.index + 1) / meta.total) * 100) : 100;
+    const nextCopy = meta.next ? ('Next: ' + meta.next.label) : 'Next: update forecast';
+    return '<aside class="clf-wizard-progress-card">'
+      + '<p class="clf-kicker">Wizard progress</p>'
+      + '<h3>' + escapeHtml(meta.current.label) + '</h3>'
+      + '<div class="clf-wizard-progress-bar"><div class="clf-wizard-progress-fill" style="width:' + fill + '%"></div></div>'
+      + '<div class="clf-wizard-step-list">'
+      + meta.steps.map(function (step, index) {
+        let stateName = 'upcoming';
+        if (index < meta.index) stateName = 'complete';
+        if (index === meta.index) stateName = currentIssues.blocking.length ? 'warning' : 'current';
+        return '<div class="clf-wizard-step-chip" data-state="' + escapeAttr(stateName) + '"><strong>' + escapeHtml(step.label) + '</strong><small>' + escapeHtml(index === meta.index ? stepStateLabel(stateName === 'warning' ? 'warning' : 'current') : (index < meta.index ? 'Complete' : 'Next')) + '</small></div>';
+      }).join('')
+      + '</div>'
+      + '<div class="clf-wizard-inline-note"><strong>' + escapeHtml(nextCopy) + '</strong><span>'
+      + escapeHtml(meta.current.id === 'welcome'
+        ? 'Choose Basic or Advanced to start.'
+        : 'The wizard will keep the live form editable after it updates the forecast.')
+      + '</span></div>'
+      + '</aside>'
+      + '<aside class="clf-wizard-helper-card"><p class="clf-kicker">How this works</p><strong>Quick steps</strong><ol><li>Enter the opening balance and credit limit.</li><li>Choose how growth is modelled.</li><li>Import a statement or choose a receipt method.</li><li>Complete the wizard and review the result.</li></ol></aside>';
+  }
+
+  function wizardPrimaryActionLabel(stepId, wizard) {
+    if (stepId === 'statement-review') return 'Use imported statement';
+    if (stepId === 'review') return 'Complete wizard';
+    if (stepId === 'statement-upload' && wizard && wizard.statementDraft) return 'Review imported rows';
+    return 'Continue';
+  }
+
+  function renderWizardActions(wizard, meta, currentIssues) {
+    if (!els.wizardActionsHost) return;
+    const reliability = wizardReliability(wizard);
+    const isFirst = meta.index === 0;
+    const primaryDisabled = currentIssues.blocking.length > 0;
+    els.wizardActionsHost.innerHTML = '<div class="clf-wizard-foot-meta">'
+      + '<span class="clf-chip" data-tone="' + escapeAttr(reliability.tone) + '">' + escapeHtml(reliability.label) + '</span>'
+      + '<span>Step ' + escapeHtml(String(meta.index + 1)) + ' of ' + escapeHtml(String(meta.total)) + '</span>'
+      + '<span>' + escapeHtml(wizard.mode === 'advanced' ? 'Advanced mode' : 'Basic mode') + '</span>'
+      + '</div>'
+      + '<div class="clf-wizard-foot-actions">'
+      + (!isFirst ? '<button class="clf-btn clf-btn-ghost" type="button" data-wizard-action="back">Back</button>' : '')
+      + '<button class="clf-btn clf-btn-secondary" type="button" data-wizard-action="close">Close</button>'
+      + '<button class="clf-btn clf-btn-primary" type="button" data-wizard-action="next"' + (primaryDisabled ? ' disabled' : '') + '>'
+      + escapeHtml(wizardPrimaryActionLabel(meta.current.id, wizard))
+      + '</button>'
+      + '</div>';
+  }
+
+  function renderWizardStatus(active) {
+    if (!els.wizardStateChip || !els.btnUseWizard) return;
+    const meta = active && active.wizardMeta ? active.wizardMeta : null;
+    if (meta) {
+      els.wizardStateChip.textContent = 'Populated by wizard • ' + (meta.mode === 'advanced' ? 'Advanced' : 'Basic');
+      els.wizardStateChip.dataset.tone = 'ok';
+      els.btnUseWizard.textContent = 'Run wizard again';
+    } else {
+      els.wizardStateChip.textContent = 'Direct form';
+      els.wizardStateChip.dataset.tone = 'neutral';
+      els.btnUseWizard.textContent = 'Use wizard';
+    }
+  }
+
+  function renderWizard() {
+    const wizard = getWizard();
+    if (!els.wizardDialog || !els.wizardProgressHost || !els.wizardStepHost) return;
+    if (!wizard) {
+      closeDialogElement(els.wizardDialog);
+      return;
+    }
+    const meta = wizardCurrentStepMeta();
+    const currentIssues = wizardStepIssues(meta.current.id, wizard);
+    if (els.wizardTitle) {
+      els.wizardTitle.textContent = wizardStepTitle(meta.current.id);
+    }
+    if (els.wizardSubtitle) {
+      els.wizardSubtitle.textContent = wizardStepSubtitle(meta.current.id, wizard);
+    }
+    els.wizardProgressHost.innerHTML = renderWizardProgressPanel(wizard, meta, currentIssues);
+    els.wizardStepHost.innerHTML = wizardAlertMarkup(currentIssues) + renderWizardStepContent(meta.current.id, wizard);
+    renderWizardActions(wizard, meta, currentIssues);
+    openDialogElement(els.wizardDialog);
+  }
+
+  function openWizard() {
+    updateActiveScenarioFromForm();
+    const active = getActiveScenario();
+    if (!active) return;
+    state.wizard = createWizardState(active);
+    renderWizard();
+  }
+
+  function closeWizard() {
+    state.wizard = null;
+    if (els.wizardActionsHost) {
+      els.wizardActionsHost.innerHTML = '';
+    }
+    if (els.wizardProgressHost) {
+      els.wizardProgressHost.innerHTML = '';
+    }
+    if (els.wizardStepHost) {
+      els.wizardStepHost.innerHTML = '';
+    }
+    closeDialogElement(els.wizardDialog);
+    renderWorkspace();
+  }
+
+  function goWizard(direction) {
+    const wizard = getWizard();
+    if (!wizard) return;
+    const meta = wizardCurrentStepMeta();
+    const nextIndex = Math.max(0, Math.min(meta.total - 1, meta.index + direction));
+    const nextStep = meta.steps[nextIndex];
+    if (nextStep) {
+      wizard.step = nextStep.id;
+      renderWizard();
+    }
+  }
+
+  async function importStatementIntoWizard(file, preferAiAssist) {
+    const wizard = getWizard();
+    if (!wizard || !file) return;
+    const token = setWizardTask(true, preferAiAssist ? 'ai_assist' : 'uploading', preferAiAssist ? 'Trying backup extraction…' : 'Uploading statement…');
+    wizard.lastUploadedFile = file;
+    wizard.lastUploadedFileName = file.name || '';
+    wizard.parseFailure = null;
+    renderWizard();
+
+    try {
+      setWizardTask(true, 'reading', 'Reading file…', token);
+      renderWizard();
+      setWizardTask(true, preferAiAssist ? 'ai_assist' : 'extracting', preferAiAssist ? 'Trying backup extraction…' : 'Extracting invoice rows…', token);
+      renderWizard();
+      const response = await requestStatementImport(file, wizard.assumptions, {
+        preferAiAssist: !!preferAiAssist,
+      });
+      if (!getWizard() || getWizard().task.token !== token) return;
+
+      if (response.statement) {
+        wizard.statementDraft = StatementImport.materialiseImportedStatement(response.statement, buildStatementOptionsFromAssumptions(wizard.assumptions));
+        wizard.statementReviewed = false;
+      } else {
+        wizard.statementDraft = null;
+        wizard.statementReviewed = false;
+      }
+      wizard.parseFailure = response.ok
+        ? null
+        : {
+            warnings: Array.isArray(response.warnings) ? response.warnings : [],
+            fallbackOptions: Array.isArray(response.fallbackOptions) ? response.fallbackOptions : [],
+            aiAssistAvailable: !!response.aiAssistAvailable,
+            aiAssistUsed: !!response.aiAssistUsed,
+          };
+      wizard.task = {
+        busy: false,
+        stage: response.ok ? 'review' : 'extracting',
+        message: response.ok
+          ? (response.aiAssistUsed ? 'AI-assisted review ready' : 'Ready for review')
+          : 'Import needs review',
+        token: token,
+      };
+
+      if (wizard.statementDraft && Number(wizard.statementDraft.includedRowCount) > 0) {
+        wizard.step = 'statement-review';
+      }
+      renderWizard();
+      state.helpers.toast.ok(
+        response.ok
+          ? (response.aiAssistUsed ? 'AI-assisted statement extraction is ready for review.' : 'Statement ready for review.')
+          : 'Statement import needs review before it can be used.',
+        2400
+      );
+    } catch (error) {
+      if (!getWizard() || getWizard().task.token !== token) return;
+      wizard.task = {
+        busy: false,
+        stage: 'extracting',
+        message: 'Import failed',
+        token: token,
+      };
+      wizard.parseFailure = {
+        warnings: [error && error.message ? error.message : 'Statement import failed.'],
+        fallbackOptions: ['Upload Excel/CSV instead', 'Continue with manual opening-balance receipts'],
+        aiAssistAvailable: false,
+        aiAssistUsed: false,
+      };
+      renderWizard();
+      state.helpers.toast.warn(error && error.message ? error.message : 'Statement import failed.', 3600);
+    }
+  }
+
+  function completeWizard() {
+    const wizard = getWizard();
+    const active = getActiveScenario();
+    if (!wizard || !active) return;
+    const issues = wizardGlobalIssues(wizard);
+    if (issues.blocking.length) {
+      renderWizard();
+      state.helpers.toast.warn('Complete the required wizard steps before updating the forecast.', 2600);
+      return;
+    }
+
+    const assumptions = cloneScenarioAssumptions(wizard.assumptions);
+    if (wizard.assumptions.openingBalance.receiptMode === 'import_statement' && wizard.statementDraft) {
+      assumptions.openingBalance.importedStatement = StatementImport.prepareConfirmedStatement(
+        wizard.statementDraft,
+        buildStatementOptionsFromAssumptions(assumptions)
+      );
+    }
+
+    active.assumptions = ensureScenarioArrays(assumptions);
+    active.summary = null;
+    active.wizardMeta = {
+      mode: wizard.mode === 'advanced' ? 'advanced' : 'basic',
+      completedAt: nowIso(),
+    };
+    active.updatedAt = nowIso();
+    clearStatementDraft(active.id);
+    setInputDensity(active.wizardMeta.mode === 'advanced' || wizard.invoiceCadenceChoice === 'custom' ? 'advanced' : 'basic');
+    applyAssumptionsToForm(active.assumptions);
+    calculateWorkspace();
+    renderWorkspace();
+    persistWorkspace();
+    scheduleSummaryRefresh(true);
+    closeWizard();
+    if (els.resultsHeading && typeof els.resultsHeading.scrollIntoView === 'function') {
+      els.resultsHeading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      els.resultsHeading.setAttribute('tabindex', '-1');
+      if (typeof els.resultsHeading.focus === 'function') {
+        els.resultsHeading.focus({ preventScroll: true });
+      }
+    }
+    if (els.kpiGrid) {
+      els.kpiGrid.classList.remove('clf-wizard-highlight');
+      window.setTimeout(function () {
+        els.kpiGrid.classList.add('clf-wizard-highlight');
+        window.setTimeout(function () {
+          els.kpiGrid.classList.remove('clf-wizard-highlight');
+        }, 1600);
+      }, 10);
+    }
+    state.helpers.toast.ok('Wizard complete — forecast updated.', 2200);
   }
 
   function renderSetupGuide(active) {
@@ -2243,6 +3363,8 @@
     renderCompareSelect();
     renderAssumptionUi();
     renderResults();
+    renderWizardStatus(getActiveScenario());
+    renderWizard();
     const active = getActiveScenario();
     if (active && active.result) {
       if (active.summary && active.summary.source === 'openai') {
@@ -2280,6 +3402,7 @@
       assumptions: assumptions,
       result: null,
       summary: null,
+      wizardMeta: active.wizardMeta ? Engine.cloneJson(active.wizardMeta) : null,
       updatedAt: nowIso(),
     };
     state.scenarios.push(duplicate);
@@ -2299,6 +3422,7 @@
       forecastStartDate: Engine.formatDate(new Date()),
     }));
     active.summary = null;
+    active.wizardMeta = null;
     active.updatedAt = nowIso();
     clearStatementDraft(active.id);
     calculateWorkspace();
@@ -2320,6 +3444,7 @@
       overallStatus: active.result ? active.result.overallStatus : 'within_limit',
       peakBalance: active.result ? active.result.metrics.forecastPeakBalance : 0,
       clientName: active.assumptions.clientName || '',
+      wizardMeta: active.wizardMeta ? Engine.cloneJson(active.wizardMeta) : null,
     };
     state.savedLibrary.unshift(snapshot);
     if (state.savedLibrary.length > 30) state.savedLibrary.length = 30;
@@ -2359,6 +3484,7 @@
         assumptions: assumptions,
         result: null,
         summary: null,
+        wizardMeta: saved.wizardMeta ? Engine.cloneJson(saved.wizardMeta) : null,
         updatedAt: nowIso(),
       };
       state.scenarios.push(scenario);
@@ -2370,6 +3496,7 @@
       if (!active) return;
       active.assumptions = assumptions;
       active.summary = null;
+      active.wizardMeta = saved.wizardMeta ? Engine.cloneJson(saved.wizardMeta) : null;
       active.updatedAt = nowIso();
       clearStatementDraft(active.id);
       applyAssumptionsToForm(active.assumptions);
@@ -2818,6 +3945,276 @@
     scheduleRecalc(120);
   }
 
+  function handleWizardFieldEvent(event) {
+    const wizard = getWizard();
+    if (!wizard) return;
+    const target = event.target;
+    if (!target) return;
+    let shouldRender = event.type === 'change';
+
+    if (target.hasAttribute('data-wizard-field')) {
+      const path = target.getAttribute('data-wizard-field');
+      const valueType = target.getAttribute('data-wizard-value-type');
+      let value;
+      if (valueType === 'boolean') {
+        value = target.value === 'true';
+      } else if (target.type === 'checkbox') {
+        value = !!target.checked;
+      } else if (target.type === 'number') {
+        value = Number(target.value) || 0;
+      } else {
+        value = String(target.value || '').trim();
+      }
+
+      updateWizardAssumptions(function (assumptions) {
+        if (path === 'contractor.perContractorGrossInvoice') {
+          const multiplier = wizardValueMultiplier(assumptions);
+          assumptions.contractor.perContractorGrossInvoice = Math.max(0, Number(value) || 0);
+          assumptions.contractor.perContractorNetInvoice = roundMoney(multiplier > 0 ? assumptions.contractor.perContractorGrossInvoice / multiplier : assumptions.contractor.perContractorGrossInvoice);
+          return;
+        }
+        setNestedValue(assumptions, path, value);
+      });
+
+      if (path === 'currency' || path.indexOf('paymentTerms.') === 0 || path === 'currentOutstandingBalance' || path === 'forecastStartDate') {
+        refreshWizardStatementDraft();
+        shouldRender = true;
+      }
+      if (path === 'vatApplicable' || path === 'vatRate') {
+        if (!wizard.assumptions.vatApplicable) {
+          wizard.assumptions.vatRate = wizard.assumptions.vatRate || Engine.DEFAULT_ASSUMPTIONS.vatRate;
+        }
+        if (wizard.directBasis) {
+          applyWizardDirectScenarioValue(currentWizardAmountValue(wizard));
+        }
+        if (wizard.contractorInputMode === 'gross') {
+          const multiplier = wizardValueMultiplier(wizard.assumptions);
+          wizard.assumptions.contractor.perContractorNetInvoice = roundMoney(multiplier > 0
+            ? (Number(wizard.assumptions.contractor.perContractorGrossInvoice) || 0) / multiplier
+            : (Number(wizard.assumptions.contractor.perContractorGrossInvoice) || 0));
+        }
+        shouldRender = true;
+      }
+    }
+
+    if (target.getAttribute('data-wizard-action') === 'set-direct-value') {
+      applyWizardDirectScenarioValue(target.value);
+    }
+
+    if (target.hasAttribute('data-wizard-import-map-field')) {
+      updateWizardStatementDraft(function (draft) {
+        draft.mapping = draft.mapping || {};
+        draft.mapping[target.getAttribute('data-wizard-import-map-field')] = target.value || '';
+        return draft;
+      });
+      shouldRender = true;
+    }
+
+    if (target.hasAttribute('data-wizard-import-row-index')) {
+      const index = Number(target.getAttribute('data-wizard-import-row-index'));
+      const key = target.getAttribute('data-wizard-import-key');
+      updateWizardStatementDraft(function (draft) {
+        if (draft.rawTable) {
+          draft.rows = Engine.cloneJson(draft.rows || []);
+          delete draft.rawTable;
+        }
+        const row = draft.rows[index];
+        if (!row) return draft;
+        row[key] = key === 'include'
+          ? !!target.checked
+          : (key === 'outstandingAmount' ? Number(target.value) || 0 : String(target.value || '').trim());
+        return draft;
+      });
+      shouldRender = event.type === 'change' || target.type === 'checkbox';
+    }
+
+    if (target.hasAttribute('data-wizard-import-setting')) {
+      const key = target.getAttribute('data-wizard-import-setting');
+      updateWizardStatementDraft(function (draft) {
+        draft[key] = key === 'overdueCollectionDays'
+          ? Number(target.value) || 0
+          : String(target.value || '').trim();
+        return draft;
+      });
+      shouldRender = true;
+    }
+
+    if (target.hasAttribute('data-wizard-adjustment-index')) {
+      const index = Number(target.getAttribute('data-wizard-adjustment-index'));
+      const key = target.getAttribute('data-wizard-adjustment-key');
+      updateWizardStatementDraft(function (draft) {
+        draft.adjustmentLines = Array.isArray(draft.adjustmentLines) ? draft.adjustmentLines : [];
+        const line = draft.adjustmentLines[index];
+        if (!line) return draft;
+        line[key] = key === 'include'
+          ? !!target.checked
+          : (key === 'amount' ? Number(target.value) || 0 : String(target.value || '').trim());
+        return draft;
+      });
+      shouldRender = event.type === 'change' || target.type === 'checkbox';
+    }
+
+    if (target.hasAttribute('data-wizard-receipt-index')) {
+      const index = Number(target.getAttribute('data-wizard-receipt-index'));
+      const key = target.getAttribute('data-wizard-receipt-key');
+      updateWizardAssumptions(function (assumptions) {
+        assumptions.receiptLines = Array.isArray(assumptions.receiptLines) ? assumptions.receiptLines : [];
+        const line = assumptions.receiptLines[index];
+        if (!line) return;
+        line[key] = key === 'amount' ? Number(target.value) || 0 : String(target.value || '').trim();
+      });
+    }
+
+    if (shouldRender) {
+      renderWizard();
+    }
+  }
+
+  function handleWizardClick(event) {
+    const wizard = getWizard();
+    if (!wizard) return;
+    const target = event.target;
+    if (!target) return;
+
+    const closeTrigger = target.closest('#btnCloseWizard, [data-wizard-action="close"]');
+    if (closeTrigger) {
+      closeWizard();
+      return;
+    }
+
+    const choice = target.closest('[data-wizard-choice-type]');
+    if (choice) {
+      const type = choice.getAttribute('data-wizard-choice-type');
+      const value = choice.getAttribute('data-wizard-choice-value');
+      if (type === 'mode') {
+        wizard.mode = value === 'advanced' ? 'advanced' : 'basic';
+        wizard.step = 'basics';
+      } else if (type === 'terms') {
+        wizard.assumptions.paymentTerms.type = value || '30_eom';
+      } else if (type === 'cadence') {
+        wizard.invoiceCadenceChoice = value || 'weekly';
+        wizard.assumptions.invoice.cadence = value === 'monthly' ? 'monthly' : 'weekly';
+        if (value === 'custom') {
+          wizard.assumptions.invoice.autoCountDates = false;
+        }
+      } else if (type === 'growth-mode') {
+        wizard.assumptions.growthMode = normaliseGrowthMode(value);
+      }
+      renderWizard();
+      return;
+    }
+
+    const openingChoice = target.closest('[data-wizard-opening-mode]');
+    if (openingChoice) {
+      wizard.assumptions.openingBalance.receiptMode = openingChoice.getAttribute('data-wizard-opening-mode') || 'term_profile';
+      renderWizard();
+      return;
+    }
+
+    const action = target.closest('[data-wizard-action]');
+    if (action) {
+      const actionName = action.getAttribute('data-wizard-action');
+      if (actionName === 'back') {
+        goWizard(-1);
+        return;
+      }
+      if (actionName === 'next') {
+        const meta = wizardCurrentStepMeta();
+        if (meta.current.id === 'statement-review') {
+          wizard.statementReviewed = true;
+        }
+        if (meta.current.id === 'review') {
+          completeWizard();
+          return;
+        }
+        goWizard(1);
+        return;
+      }
+      if (actionName === 'browse-upload') {
+        if (els.wizardStatementUploadInput) {
+          els.wizardStatementUploadInput.click();
+        }
+        return;
+      }
+      if (actionName === 'try-ai-import') {
+        if (wizard.lastUploadedFile) {
+          importStatementIntoWizard(wizard.lastUploadedFile, true);
+        }
+        return;
+      }
+      if (actionName === 'set-contractor-mode') {
+        applyWizardContractorInputMode(action.getAttribute('data-value'));
+        renderWizard();
+        return;
+      }
+      if (actionName === 'set-direct-basis') {
+        applyWizardDirectBasis(action.getAttribute('data-value'));
+        renderWizard();
+        return;
+      }
+      if (actionName === 'add-manual-receipt') {
+        updateWizardAssumptions(function (assumptions) {
+          assumptions.receiptLines = Array.isArray(assumptions.receiptLines) ? assumptions.receiptLines : [];
+          assumptions.receiptLines.push({
+            id: uid('wizard-receipt'),
+            date: assumptions.forecastStartDate,
+            amount: 0,
+            note: '',
+          });
+        });
+        renderWizard();
+        return;
+      }
+      if (actionName === 'remove-manual-receipt') {
+        const index = Number(action.getAttribute('data-receipt-index'));
+        updateWizardAssumptions(function (assumptions) {
+          assumptions.receiptLines.splice(index, 1);
+        });
+        renderWizard();
+        return;
+      }
+      if (actionName === 'add-import-adjustment') {
+        updateWizardStatementDraft(function (draft) {
+          draft.adjustmentLines = Array.isArray(draft.adjustmentLines) ? draft.adjustmentLines : [];
+          draft.adjustmentLines.push({
+            id: uid('wizard-adjustment'),
+            include: true,
+            date: wizard.assumptions.forecastStartDate,
+            amount: 0,
+            note: '',
+          });
+          return draft;
+        });
+        renderWizard();
+        return;
+      }
+      if (actionName === 'remove-import-adjustment') {
+        const index = Number(action.getAttribute('data-adjustment-index'));
+        updateWizardStatementDraft(function (draft) {
+          draft.adjustmentLines.splice(index, 1);
+          return draft;
+        });
+        renderWizard();
+        return;
+      }
+    }
+
+    const fallback = target.closest('[data-wizard-fallback]');
+    if (fallback) {
+      const mode = fallback.getAttribute('data-wizard-fallback');
+      if (mode === 'manual') {
+        wizard.assumptions.openingBalance.receiptMode = 'manual';
+      } else if (mode === 'runoff') {
+        wizard.assumptions.openingBalance.receiptMode = 'even_runoff';
+        wizard.assumptions.openingBalance.runoffWeeks = wizard.assumptions.openingBalance.runoffWeeks || Engine.DEFAULT_ASSUMPTIONS.openingBalance.runoffWeeks;
+      } else {
+        wizard.assumptions.openingBalance.receiptMode = 'no_receipts';
+      }
+      wizard.step = 'terms';
+      renderWizard();
+    }
+  }
+
   function bindStaticActions() {
     els.forecastForm.addEventListener('input', handleFormEvent);
     els.forecastForm.addEventListener('change', handleFormEvent);
@@ -2893,6 +4290,31 @@
       }
     });
 
+    if (els.btnUseWizard) {
+      els.btnUseWizard.addEventListener('click', openWizard);
+    }
+    if (els.btnCloseWizard) {
+      els.btnCloseWizard.addEventListener('click', closeWizard);
+    }
+    if (els.wizardDialog) {
+      els.wizardDialog.addEventListener('click', handleWizardClick);
+      els.wizardDialog.addEventListener('input', handleWizardFieldEvent);
+      els.wizardDialog.addEventListener('change', handleWizardFieldEvent);
+      els.wizardDialog.addEventListener('cancel', function (event) {
+        event.preventDefault();
+        closeWizard();
+      });
+    }
+    if (els.wizardStatementUploadInput) {
+      els.wizardStatementUploadInput.addEventListener('change', function () {
+        const file = els.wizardStatementUploadInput.files && els.wizardStatementUploadInput.files[0];
+        if (file && getWizard()) {
+          importStatementIntoWizard(file, false);
+        }
+        els.wizardStatementUploadInput.value = '';
+      });
+    }
+
     if (els.statementUploadInput) {
       els.statementUploadInput.addEventListener('change', function () {
         const file = els.statementUploadInput.files && els.statementUploadInput.files[0];
@@ -2929,6 +4351,33 @@
         const active = getActiveScenario();
         if (file && active) {
           importOpeningBalanceStatement(file, active);
+        }
+      });
+    }
+
+    if (els.wizardStepHost) {
+      ['dragenter', 'dragover'].forEach(function (type) {
+        els.wizardStepHost.addEventListener(type, function (event) {
+          const zone = event.target.closest('[data-dropzone="wizard-statement-upload"]');
+          if (!zone) return;
+          event.preventDefault();
+          zone.classList.add('is-dragging');
+        });
+      });
+      ['dragleave', 'dragend', 'drop'].forEach(function (type) {
+        els.wizardStepHost.addEventListener(type, function (event) {
+          const zone = event.target.closest('[data-dropzone="wizard-statement-upload"]');
+          if (!zone) return;
+          if (type === 'drop') event.preventDefault();
+          zone.classList.remove('is-dragging');
+        });
+      });
+      els.wizardStepHost.addEventListener('drop', function (event) {
+        const zone = event.target.closest('[data-dropzone="wizard-statement-upload"]');
+        if (!zone) return;
+        const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+        if (file && getWizard()) {
+          importStatementIntoWizard(file, false);
         }
       });
     }

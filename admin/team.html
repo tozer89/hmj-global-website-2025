@@ -40,7 +40,7 @@
     .sp{flex:1}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 
-    .btn{appearance:none;border:1px solid rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.05));color:var(--ink);padding:10px 15px;border-radius:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease}
+    .btn{appearance:none;border:1px solid rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.05));color:var(--ink);padding:10px 15px;border-radius:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease;display:inline-flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap}
     .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(47,78,162,.16);border-color:rgba(47,78,162,.36)}
     .btn.primary{background:linear-gradient(180deg,#3657b3,#29489e);border-color:rgba(255,255,255,.28);color:#fff}
     .btn.ghost{background:#fff;color:var(--highlight);border-color:rgba(47,78,162,.18)}
@@ -49,25 +49,25 @@
     .btn.small{padding:8px 12px;border-radius:10px;font-size:13px}
     .btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-shadow:none}
 
-    .wrap{max-width:1400px;margin:28px auto;padding:0 20px;display:grid;gap:18px}
-    .panel{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:20px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+    .wrap{max-width:1400px;margin:24px auto 40px;padding:0 20px;display:grid;gap:16px}
+    .panel{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:20px;padding:18px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
     .muted{color:var(--muted)}
     .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
-    .hero{display:grid;gap:18px;grid-template-columns:minmax(0,1.4fr) minmax(280px,.95fr);align-items:start}
+    .hero{display:grid;gap:18px;grid-template-columns:minmax(0,1.35fr) minmax(320px,.95fr);align-items:start}
     .hero h1{margin:4px 0 0;font-size:32px;line-height:1.08}
     .hero p{margin:0}
     .hero-card{padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(47,78,162,.08),rgba(255,255,255,.92));border:1px solid rgba(47,78,162,.12);display:grid;gap:14px}
-    .hero-chips,.metric-grid,.filters-row,.member-card__meta,.member-card__actions,.editor-actions,.preview-team-card__meta,.image-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .hero-chips,.metric-grid,.filters-row,.member-card__meta,.preview-team-card__meta,.image-actions{display:flex;flex-wrap:wrap;gap:10px}
     .chip,.status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;border:1px solid rgba(47,78,162,.16);background:var(--panel-soft);font-size:12px;font-weight:800;letter-spacing:.04em}
     .chip strong{color:var(--ink)}
-    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
     .metric{padding:16px;border-radius:18px;background:var(--panel-soft);border:1px solid rgba(47,78,162,.1);display:grid;gap:6px}
     .metric span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
     .metric strong{font-size:28px;line-height:1}
     .metric small{color:var(--muted)}
 
     .filters-panel,.content-shell{display:grid;gap:14px}
-    .content-shell__head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+    .content-shell__head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
     .content-shell__head h2{margin:0;font-size:22px;line-height:1.15}
     .filters-row{align-items:center}
     .search{display:flex;align-items:center;gap:10px;flex:1;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid rgba(47,78,162,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
@@ -77,24 +77,29 @@
 
     .notice-banner,.empty-state{padding:24px;border-radius:18px;border:1px dashed rgba(47,78,162,.24);background:rgba(255,255,255,.76);display:grid;gap:8px}
     .notice-banner{display:none}
+    .notice-banner[hidden],.empty-state[hidden],.member-grid[hidden]{display:none !important}
     .notice-banner[data-tone="warn"]{display:grid;background:rgba(255,247,232,.92);border-style:solid;border-color:rgba(169,107,0,.24)}
     .notice-banner[data-tone="info"]{display:grid;background:rgba(238,242,255,.92);border-style:solid;border-color:rgba(47,78,162,.16)}
     .empty-state strong,.notice-banner strong{font-size:18px}
 
-    .member-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
-    .member-card{display:grid;grid-template-columns:98px minmax(0,1fr);gap:16px;padding:16px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,255,.98));border:1px solid rgba(47,78,162,.14);box-shadow:0 16px 32px rgba(15,27,63,.08)}
-    .member-card__media{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(135deg,rgba(47,78,162,.22),rgba(63,102,199,.08));min-height:126px}
+    .member-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:18px;align-items:start}
+    .member-card{display:grid;grid-template-columns:112px minmax(0,1fr);gap:16px;padding:18px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,255,.98));border:1px solid rgba(47,78,162,.14);box-shadow:0 16px 32px rgba(15,27,63,.08);align-items:start}
+    .member-card__media{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(135deg,rgba(47,78,162,.22),rgba(63,102,199,.08));aspect-ratio:3/4;align-self:start}
     .member-card__media img{width:100%;height:100%;object-fit:cover;display:block}
     .member-card__placeholder{position:absolute;inset:0;display:grid;place-items:center;padding:14px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.65)}
     .member-card__body{display:grid;gap:10px;min-width:0}
-    .member-card__header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .member-card__header h3{margin:0;font-size:20px;line-height:1.18}
+    .member-card__header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+    .member-card__header > div{min-width:0}
+    .member-card__header h3{margin:0;font-size:20px;line-height:1.18;word-break:break-word}
     .member-card__role,.member-card__summary{margin:0}
     .member-card__role{color:var(--highlight);font-weight:700}
-    .member-card__summary{color:var(--muted)}
+    .member-card__summary{color:var(--muted);line-height:1.55}
     .member-card__meta{font-size:12px;color:var(--muted)}
-    .member-card__actions{margin-top:auto}
-    .member-card__actions .btn{flex:1}
+    .member-card__meta span{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:var(--panel-soft);border:1px solid rgba(47,78,162,.08)}
+    .member-card__actions{display:grid;gap:8px;margin-top:auto}
+    .member-card__action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .member-card__action-row--secondary{grid-template-columns:92px 92px minmax(0,1fr)}
+    .member-card__actions .btn{width:100%;min-width:0}
 
     .status-pill--published{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.22);color:var(--ok)}
     .status-pill--draft{background:rgba(93,111,158,.12);border-color:rgba(93,111,158,.2);color:var(--muted)}
@@ -118,15 +123,18 @@
     .field-note{margin:0;color:var(--muted);font-size:12px}
     .checkline{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--highlight)}
     .checkline input{width:18px;height:18px}
+    .section-card--surface{padding:18px;border-radius:18px;background:rgba(255,255,255,.82);border:1px solid rgba(47,78,162,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
+    .section-card__header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:2px}
+    .section-card__header > *{margin:0}
 
-    .image-panel{display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px;padding:16px;border-radius:18px;background:#fff;border:1px solid rgba(47,78,162,.12)}
+    .image-panel{display:grid;grid-template-columns:minmax(180px,220px) minmax(0,1fr);gap:16px;padding:16px;border-radius:18px;background:#fff;border:1px solid rgba(47,78,162,.12)}
     .image-frame{border-radius:16px;overflow:hidden;min-height:180px;background:linear-gradient(135deg,rgba(47,78,162,.18),rgba(63,102,199,.06));display:grid;place-items:center;position:relative}
     .image-frame img{width:100%;height:100%;object-fit:cover;display:none}
     .image-frame.has-image img{display:block}
     .image-placeholder{padding:14px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.6)}
     .image-frame.has-image .image-placeholder{display:none}
 
-    .preview-team-card{display:grid;gap:14px;padding:18px;border-radius:28px;background:rgba(255,255,255,.98);border:1px solid rgba(47,78,162,.18);box-shadow:0 18px 40px rgba(15,27,63,.12);color:var(--ink);max-width:360px}
+    .preview-team-card{display:grid;gap:14px;padding:18px;border-radius:28px;background:rgba(255,255,255,.98);border:1px solid rgba(47,78,162,.18);box-shadow:0 18px 40px rgba(15,27,63,.12);color:var(--ink);max-width:420px}
     .preview-team-card__media{border-radius:20px;overflow:hidden;aspect-ratio:4/5;background:linear-gradient(135deg,rgba(47,78,162,.18),rgba(63,102,199,.08));display:grid;place-items:center}
     .preview-team-card__media img{width:100%;height:100%;object-fit:cover;display:block}
     .preview-team-card__media span{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(15,27,63,.62)}
@@ -138,24 +146,43 @@
     .preview-team-card__meta{font-size:12px;color:var(--muted)}
     .preview-team-card__link{display:inline-flex;align-items:center;gap:8px;color:var(--highlight);font-weight:800}
 
+    .editor-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .editor-actions__group{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .editor-actions__group--primary{margin-left:auto}
+
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.22);box-shadow:0 18px 32px rgba(15,27,63,.2);font-weight:800}
 
     @media (max-width:1100px){
       .hero,.image-panel{grid-template-columns:1fr}
-      .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .member-grid{grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr))}
+    }
+
+    @media (max-width:900px){
+      .member-card{grid-template-columns:96px minmax(0,1fr)}
+      .member-card__action-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .member-card__action-row--secondary{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .section-card__header{display:grid}
     }
 
     @media (max-width:780px){
       .wrap{padding:0 14px}
       .row{padding:12px 14px;flex-wrap:wrap}
-      .member-card{grid-template-columns:1fr}
-      .member-card__media{min-height:220px}
       .form-grid{grid-template-columns:1fr}
       .editor{width:100vw}
       .metric-grid{grid-template-columns:1fr}
       .filters-row{flex-direction:column;align-items:stretch}
       .filters-row select{min-width:0;width:100%}
+      .editor-actions__group--primary{margin-left:0}
+    }
+
+    @media (max-width:620px){
+      .member-card{grid-template-columns:1fr}
+      .member-card__media{aspect-ratio:16/11}
+      .member-card__action-row,
+      .member-card__action-row--secondary{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .member-card__action-row .btn:last-child,
+      .member-card__action-row--secondary .btn:last-child{grid-column:1 / -1}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
@@ -261,7 +288,7 @@
       </div>
       <div class="member-grid" id="memberGrid" aria-live="polite"></div>
       <div class="empty-state" id="emptyState" hidden>
-        <strong>No team members yet</strong>
+        <strong id="emptyStateTitle">No team members yet</strong>
         <p class="muted" id="emptyStateCopy">Add the first team member to populate the About Us team section.</p>
       </div>
     </section>
@@ -281,46 +308,55 @@
     </div>
     <div class="editor__body">
       <form id="teamForm" novalidate>
-        <div class="form-grid">
-          <div class="field">
-            <label for="fieldFullName">Full name</label>
-            <input id="fieldFullName" maxlength="120" placeholder="Jane Smith"/>
+        <section class="section-card section-card--surface">
+          <div class="section-card__header">
+            <div>
+              <p class="eyebrow">Profile details</p>
+              <h3 style="margin:4px 0 0;font-size:22px;line-height:1.15">Core card content</h3>
+            </div>
+            <p class="muted">These fields drive the public About Us team cards and the expanded profile reveal state.</p>
           </div>
-          <div class="field">
-            <label for="fieldSlug">Slug</label>
-            <input id="fieldSlug" maxlength="80" placeholder="auto-generated from the name"/>
+          <div class="form-grid">
+            <div class="field">
+              <label for="fieldFullName">Full name</label>
+              <input id="fieldFullName" maxlength="120" placeholder="Jane Smith"/>
+            </div>
+            <div class="field">
+              <label for="fieldSlug">Slug</label>
+              <input id="fieldSlug" maxlength="80" placeholder="auto-generated from the name"/>
+            </div>
+            <div class="field">
+              <label for="fieldRoleTitle">Role title</label>
+              <input id="fieldRoleTitle" maxlength="140" placeholder="Operations Director"/>
+            </div>
+            <div class="field">
+              <label for="fieldDisplayOrder">Display order</label>
+              <input id="fieldDisplayOrder" type="number" min="0" step="1" value="100"/>
+              <p class="field-note">Lower numbers appear earlier on the public About page.</p>
+            </div>
+            <div class="field field--wide">
+              <label for="fieldShortCaption">Short summary</label>
+              <textarea id="fieldShortCaption" rows="4" placeholder="Short supporting caption for the public card and reveal state"></textarea>
+            </div>
+            <div class="field field--wide">
+              <label for="fieldFullBio">Expanded profile text</label>
+              <textarea id="fieldFullBio" rows="7" placeholder="Longer supporting profile text shown when someone opens the team card"></textarea>
+            </div>
+            <div class="field">
+              <label for="fieldLinkedinUrl">LinkedIn URL</label>
+              <input id="fieldLinkedinUrl" placeholder="https://www.linkedin.com/in/example"/>
+            </div>
+            <div class="field">
+              <label class="checkline" for="fieldPublished">
+                <input id="fieldPublished" type="checkbox"/>
+                Published on the About page
+              </label>
+              <p class="field-note">Publishing requires a name, role title, and short summary.</p>
+            </div>
           </div>
-          <div class="field">
-            <label for="fieldRoleTitle">Role title</label>
-            <input id="fieldRoleTitle" maxlength="140" placeholder="Operations Director"/>
-          </div>
-          <div class="field">
-            <label for="fieldDisplayOrder">Display order</label>
-            <input id="fieldDisplayOrder" type="number" min="0" step="1" value="100"/>
-            <p class="field-note">Lower numbers appear earlier on the public About page.</p>
-          </div>
-          <div class="field field--wide">
-            <label for="fieldShortCaption">Short summary</label>
-            <textarea id="fieldShortCaption" rows="4" placeholder="Short supporting caption for the public card and reveal state"></textarea>
-          </div>
-          <div class="field field--wide">
-            <label for="fieldFullBio">Expanded profile text</label>
-            <textarea id="fieldFullBio" rows="7" placeholder="Longer supporting profile text shown when someone opens the team card"></textarea>
-          </div>
-          <div class="field">
-            <label for="fieldLinkedinUrl">LinkedIn URL</label>
-            <input id="fieldLinkedinUrl" placeholder="https://www.linkedin.com/in/example"/>
-          </div>
-          <div class="field">
-            <label class="checkline" for="fieldPublished">
-              <input id="fieldPublished" type="checkbox"/>
-              Published on the About page
-            </label>
-            <p class="field-note">Publishing requires a name, role title, and short summary.</p>
-          </div>
-        </div>
+        </section>
 
-        <section class="section-card">
+        <section class="section-card section-card--surface">
           <div class="image-panel">
             <div class="image-frame" id="imageFrame">
               <img id="imagePreview" alt=""/>
@@ -345,7 +381,7 @@
           </div>
         </section>
 
-        <section class="section-card">
+        <section class="section-card section-card--surface">
           <div>
             <p class="eyebrow">Public preview</p>
             <h3 style="margin:4px 0 0;font-size:22px;line-height:1.15">How this card will appear on About Us</h3>
@@ -357,11 +393,15 @@
     </div>
     <div class="editor__foot">
       <div class="editor-actions">
-        <button class="btn danger" id="archiveMemberBtn" type="button">Archive</button>
-        <button class="btn soft" id="duplicateMemberBtn" type="button">Duplicate</button>
-        <button class="btn soft" id="unpublishMemberBtn" type="button">Unpublish</button>
-        <button class="btn primary" id="publishMemberBtn" type="button">Save &amp; publish</button>
-        <button class="btn ghost" id="saveMemberBtn" type="button">Save changes</button>
+        <div class="editor-actions__group editor-actions__group--secondary">
+          <button class="btn danger" id="archiveMemberBtn" type="button">Archive</button>
+          <button class="btn soft" id="duplicateMemberBtn" type="button">Duplicate</button>
+          <button class="btn soft" id="unpublishMemberBtn" type="button">Unpublish</button>
+        </div>
+        <div class="editor-actions__group editor-actions__group--primary">
+          <button class="btn ghost" id="saveMemberBtn" type="button">Save changes</button>
+          <button class="btn primary" id="publishMemberBtn" type="button">Save &amp; publish</button>
+        </div>
       </div>
     </div>
   </aside>
