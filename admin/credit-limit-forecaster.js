@@ -1789,6 +1789,9 @@
     if (target.id === 'paymentTermsType') {
       updatePaymentTermsUi();
     }
+    if (target.id === 'openingBalanceReceiptMode') {
+      updateOpeningBalanceUi();
+    }
     if (target.id === 'vatApplicable') {
       updateVatUi();
     }
