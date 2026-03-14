@@ -2,8 +2,13 @@
   'use strict';
 
   const Engine = window.HMJCreditLimitForecast;
+  const StatementImport = window.HMJCreditLimitStatementImport;
   if (!Engine) {
     console.error('[HMJ Credit Limit Forecaster] Forecast engine not loaded.');
+    return;
+  }
+  if (!StatementImport) {
+    console.error('[HMJ Credit Limit Forecaster] Statement import helper not loaded.');
     return;
   }
 
@@ -25,6 +30,14 @@
     summaryTimer: null,
     summaryToken: 0,
     user: null,
+    statementDrafts: {},
+    statementImportTask: {
+      scenarioId: '',
+      busy: false,
+      stage: '',
+      message: '',
+      token: 0,
+    },
   };
 
   const els = {};
@@ -58,6 +71,7 @@
       'scenarioTabs',
       'forecastForm',
       'validationHost',
+      'setupGuideHost',
       'activeDriverLabel',
       'advancedPanel',
       'clientName',
@@ -70,6 +84,8 @@
       'openingBalanceReceiptMode',
       'openingBalanceRunoffWeeks',
       'openingBalancePreview',
+      'openingBalanceImportHost',
+      'statementUploadInput',
       'riskThresholdPercent',
       'vatApplicable',
       'vatRate',
@@ -308,6 +324,48 @@
     return getScenarioById(state.compareScenarioId);
   }
 
+  function getStatementDraft(scenarioId) {
+    const key = String(scenarioId || '');
+    return key ? state.statementDrafts[key] || null : null;
+  }
+
+  function setStatementDraft(scenarioId, draft) {
+    const key = String(scenarioId || '');
+    if (!key) return;
+    if (!draft) {
+      delete state.statementDrafts[key];
+      return;
+    }
+    state.statementDrafts[key] = StatementImport.materialiseImportedStatement(draft, {
+      scenarioCurrency: getScenarioById(key) && getScenarioById(key).assumptions
+        ? getScenarioById(key).assumptions.currency
+        : 'GBP',
+      paymentTerms: getScenarioById(key) && getScenarioById(key).assumptions
+        ? getScenarioById(key).assumptions.paymentTerms
+        : Engine.DEFAULT_ASSUMPTIONS.paymentTerms,
+      forecastStartDate: getScenarioById(key) && getScenarioById(key).assumptions
+        ? getScenarioById(key).assumptions.forecastStartDate
+        : Engine.DEFAULT_ASSUMPTIONS.forecastStartDate,
+    });
+  }
+
+  function clearStatementDraft(scenarioId) {
+    const key = String(scenarioId || '');
+    if (!key) return;
+    delete state.statementDrafts[key];
+  }
+
+  function activeImportedStatement(assumptions) {
+    return assumptions
+      && assumptions.openingBalance
+      && assumptions.openingBalance.importedStatement
+      && assumptions.openingBalance.importedStatement.status === 'confirmed'
+      && Array.isArray(assumptions.openingBalance.importedStatement.rows)
+      && assumptions.openingBalance.importedStatement.rows.length
+      ? assumptions.openingBalance.importedStatement
+      : null;
+  }
+
   function activeCurrency() {
     const active = getActiveScenario();
     return active ? active.assumptions.currency : 'GBP';
@@ -337,6 +395,39 @@
 
   function openingBalanceModeLabel(mode) {
     return Engine.OPENING_BALANCE_MODE_LABELS[mode] || Engine.OPENING_BALANCE_MODE_LABELS.term_profile;
+  }
+
+  function reconciliationModeLabel(mode) {
+    return Engine.OPENING_BALANCE_RECONCILIATION_LABELS[mode]
+      || Engine.OPENING_BALANCE_RECONCILIATION_LABELS.keep_manual_opening_balance;
+  }
+
+  function statementConfidenceLabel(level) {
+    if (level === 'high') return 'High confidence';
+    if (level === 'medium') return 'Needs review';
+    if (level === 'low') return 'Low confidence';
+    return 'Draft';
+  }
+
+  function statementConfidenceTone(level) {
+    if (level === 'high') return 'ok';
+    if (level === 'medium') return 'warn';
+    if (level === 'low') return 'danger';
+    return 'neutral';
+  }
+
+  function statementSummary(statement, openingBalance, currency) {
+    if (!statement) return 'No imported statement confirmed';
+    const reconciliation = StatementImport.buildReconciliationSummary(statement, openingBalance);
+    return (statement.fileName || 'Imported statement')
+      + ' • '
+      + statement.includedRowCount
+      + ' included row'
+      + (statement.includedRowCount === 1 ? '' : 's')
+      + ' • '
+      + formatMoney(statement.importedTotal, currency)
+      + ' • '
+      + reconciliationModeLabel(reconciliation.reconciliationMode);
   }
 
   function hasDirectInputs(assumptions) {
@@ -416,6 +507,14 @@
       && assumptions.invoice.manualEventCounts.some(function (value) { return value != null; })) count += 1;
     if (assumptions.openingBalance && assumptions.openingBalance.receiptMode === 'manual'
       && Array.isArray(assumptions.receiptLines) && assumptions.receiptLines.length) count += 1;
+    if (assumptions.openingBalance
+      && assumptions.openingBalance.receiptMode === 'import_statement'
+      && assumptions.openingBalance.importedStatement
+      && assumptions.openingBalance.importedStatement.status === 'confirmed'
+      && assumptions.openingBalance.importedStatement.reconciliationMode !== 'keep_manual_opening_balance') count += 1;
+    if (assumptions.openingBalance
+      && assumptions.openingBalance.importedStatement
+      && Number(assumptions.openingBalance.importedStatement.overdueCollectionDays) !== Number(Engine.DEFAULT_ASSUMPTIONS.openingBalance.importedStatement.overdueCollectionDays)) count += 1;
     if (Array.isArray(assumptions.receiptWeekAdjustments)
       && assumptions.receiptWeekAdjustments.some(function (entry) { return Number(entry && entry.amount) !== 0; })) count += 1;
     if (String(assumptions.notes || '').trim()) count += 1;
@@ -449,6 +548,7 @@
   function openingBalanceModeSummary(assumptions) {
     const openingBalance = assumptions && assumptions.openingBalance ? assumptions.openingBalance : Engine.DEFAULT_ASSUMPTIONS.openingBalance;
     const mode = openingBalance.receiptMode || Engine.DEFAULT_ASSUMPTIONS.openingBalance.receiptMode;
+    const imported = activeImportedStatement(assumptions);
     if (mode === 'manual') {
       const count = Array.isArray(assumptions && assumptions.receiptLines) ? assumptions.receiptLines.length : 0;
       return count
@@ -458,6 +558,11 @@
     if (mode === 'even_runoff') {
       const weeks = Number(openingBalance.runoffWeeks) || Engine.DEFAULT_ASSUMPTIONS.openingBalance.runoffWeeks;
       return 'Even runoff across ' + weeks + ' week' + (weeks === 1 ? '' : 's');
+    }
+    if (mode === 'import_statement') {
+      return imported
+        ? ('Imported statement • ' + imported.includedRowCount + ' row' + (imported.includedRowCount === 1 ? '' : 's'))
+        : 'Imported statement';
     }
     return openingBalanceModeLabel(mode);
   }
@@ -475,6 +580,7 @@
     const activeGrowthSource = activeMode === 'contractor'
       ? contractorValueSource(raw)
       : directValueSource(raw);
+    const importedStatement = activeImportedStatement(raw);
     return {
       activeMode: activeMode,
       activeModeLabel: modeLabel(activeMode),
@@ -484,6 +590,13 @@
       openingBalanceMode: raw.openingBalance.receiptMode,
       openingBalanceModeLabel: openingBalanceModeLabel(raw.openingBalance.receiptMode),
       openingBalanceSummary: openingBalanceModeSummary(raw),
+      openingBalanceManualReceiptCount: manualReceiptCount,
+      activeOpeningBalanceManualReceiptCount: raw.openingBalance.receiptMode === 'manual' ? manualReceiptCount : 0,
+      importedStatement: importedStatement,
+      importedStatementRowCount: importedStatement ? importedStatement.includedRowCount : 0,
+      importedStatementTotal: importedStatement ? importedStatement.importedTotal : 0,
+      importedStatementConfidence: importedStatement ? importedStatement.confidence : '',
+      importedStatementReconciliationMode: importedStatement ? importedStatement.reconciliationMode : '',
       manualReceiptCount: manualReceiptCount,
       weeklyAdjustmentCount: weeklyAdjustments,
       advancedOverrideCount: advancedOverrideCount,
@@ -503,8 +616,10 @@
     };
   }
 
-  function buildValidationState(assumptions) {
-    const summary = buildScenarioSummary(assumptions);
+  function buildValidationState(target) {
+    const scenario = target && target.assumptions ? target : { id: '', assumptions: target };
+    const summary = buildScenarioSummary(scenario.assumptions);
+    const statementDraft = getStatementDraft(scenario.id);
     const blocking = [];
     const warnings = [];
 
@@ -521,6 +636,13 @@
     }
     if (summary.raw.openingBalance.receiptMode === 'even_runoff' && Number(summary.raw.openingBalance.runoffWeeks) <= 0) {
       blocking.push('Enter the number of weeks for the opening-balance runoff assumption.');
+    }
+    if (summary.raw.openingBalance.receiptMode === 'import_statement') {
+      if (!summary.importedStatement && !statementDraft) {
+        blocking.push('Upload a debtor statement and confirm the imported rows before calculating in Import statement mode.');
+      } else if (statementDraft && !summary.importedStatement) {
+        blocking.push('Review the imported statement rows and click Use imported statement before calculating.');
+      }
     }
     if (summary.activeMode === 'contractor') {
       const hasHeadcount = Number(summary.raw.contractor.currentContractors) > 0 || Number(summary.raw.contractor.additionalContractors) > 0;
@@ -539,6 +661,18 @@
       && Number(summary.raw.currentOutstandingBalance) > 0
       && summary.manualReceiptCount === 0) {
       warnings.push('Manual opening-balance mode is selected, but no dated opening-balance receipts have been entered yet.');
+    }
+    if (summary.raw.openingBalance.receiptMode === 'import_statement' && summary.importedStatement) {
+      const reconciliation = StatementImport.buildReconciliationSummary(
+        summary.importedStatement,
+        summary.raw.currentOutstandingBalance
+      );
+      if (!reconciliation.matches) {
+        warnings.push('Imported statement total does not match the entered opening balance. Check the reconciliation choice before sharing the result.');
+      }
+      if (summary.importedStatement.creditNoteCount) {
+        warnings.push(summary.importedStatement.creditNoteCount + ' credit note or negative-balance row' + (summary.importedStatement.creditNoteCount === 1 ? '' : 's') + ' will stay in the imported opening total but will not be treated as future cash receipts.');
+      }
     }
     if (summary.raw.paymentTerms.receiptLagDays > 0) {
       warnings.push('Receipt lag override is active, so receipt timing will differ from the default payment-term schedule.');
@@ -640,6 +774,9 @@
     const active = getActiveScenario();
     if (!active) return;
     active.assumptions = readAssumptionsFromForm(active.assumptions);
+    if (getStatementDraft(active.id)) {
+      setStatementDraft(active.id, getStatementDraft(active.id));
+    }
     active.updatedAt = nowIso();
   }
 
@@ -672,7 +809,7 @@
     state.recalcTimer = window.setTimeout(function () {
       updateActiveScenarioFromForm();
       const active = getActiveScenario();
-      const validation = active ? buildValidationState(active.assumptions) : { canCalculate: true };
+      const validation = active ? buildValidationState(active) : { canCalculate: true };
       if (validation.canCalculate) {
         calculateWorkspace();
       } else {
@@ -769,6 +906,9 @@
     if (els.btnAddReceiptLine) {
       els.btnAddReceiptLine.disabled = mode !== 'manual';
     }
+    if (els.openingBalanceImportHost) {
+      els.openingBalanceImportHost.style.display = mode === 'import_statement' ? '' : 'none';
+    }
   }
 
   function updateVatUi() {
@@ -807,7 +947,7 @@
   }
 
   function renderValidation(active) {
-    const validation = buildValidationState(active.assumptions);
+    const validation = buildValidationState(active);
     const cards = [];
     validation.blocking.forEach(function (message) {
       cards.push('<div class="clf-alert" data-tone="danger"><strong>Complete this before calculating</strong><span>'
@@ -858,7 +998,7 @@
   function renderOpeningBalancePreview(active) {
     const summary = buildScenarioSummary(active.assumptions, active.result);
     const openingBalance = summary.raw.openingBalance;
-    const currency = summary.raw.currency;
+    const imported = activeImportedStatement(summary.raw);
     let helper = '';
     if (openingBalance.receiptMode === 'manual') {
       helper = summary.manualReceiptCount
@@ -869,6 +1009,10 @@
         + openingBalance.runoffWeeks + ' week' + (openingBalance.runoffWeeks === 1 ? '' : 's') + '.';
     } else if (openingBalance.receiptMode === 'term_profile') {
       helper = 'The engine estimates collections from the opening ledger using the selected payment terms and invoicing cadence, without pretending to know exact aged-debtor dates.';
+    } else if (openingBalance.receiptMode === 'import_statement') {
+      helper = imported
+        ? ('Imported rows are scheduling opening-book receipts using due dates, overdue handling, and the selected reconciliation method.')
+        : 'Upload a debtor statement to turn the opening balance into a due-date-led receipt schedule.';
     } else {
       helper = 'Stress-test mode keeps the opening receivables in place unless manual adjustments are entered elsewhere.';
     }
@@ -878,6 +1022,347 @@
       + escapeHtml(helper)
       + '</span></div>';
     updateOpeningBalanceUi();
+  }
+
+  function buildStatementOptions(scenario) {
+    const assumptions = scenario && scenario.assumptions ? scenario.assumptions : Engine.DEFAULT_ASSUMPTIONS;
+    return {
+      scenarioCurrency: assumptions.currency,
+      paymentTerms: assumptions.paymentTerms,
+      forecastStartDate: assumptions.forecastStartDate,
+    };
+  }
+
+  function statementTaskForScenario(scenarioId) {
+    return state.statementImportTask.scenarioId === scenarioId ? state.statementImportTask : null;
+  }
+
+  function setStatementTask(scenarioId, busy, stage, message) {
+    state.statementImportTask = {
+      scenarioId: scenarioId || '',
+      busy: !!busy,
+      stage: stage || '',
+      message: message || '',
+      token: state.statementImportTask.token,
+    };
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer || new ArrayBuffer(0));
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      const chunk = bytes.subarray(index, index + chunkSize);
+      let piece = '';
+      for (let cursor = 0; cursor < chunk.length; cursor += 1) {
+        piece += String.fromCharCode(chunk[cursor]);
+      }
+      binary += piece;
+    }
+    return window.btoa(binary);
+  }
+
+  function readFileAsBase64(file) {
+    if (file && typeof file.arrayBuffer === 'function') {
+      return file.arrayBuffer().then(function (buffer) {
+        return arrayBufferToBase64(new Uint8Array(buffer));
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onerror = function () { reject(new Error('statement_read_failed')); };
+      reader.onload = function () {
+        if (reader.result instanceof ArrayBuffer) {
+          resolve(arrayBufferToBase64(new Uint8Array(reader.result)));
+          return;
+        }
+        reject(new Error('statement_read_failed'));
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async function importOpeningBalanceStatement(file, scenario) {
+    if (!file || !scenario) return;
+    const token = ++state.statementImportTask.token;
+    setStatementTask(scenario.id, true, 'reading', 'Reading file');
+    renderWorkspace();
+
+    try {
+      const data = await readFileAsBase64(file);
+      if (token !== state.statementImportTask.token) return;
+      setStatementTask(scenario.id, true, 'extracting', 'Extracting statement rows');
+      renderWorkspace();
+
+      const response = await state.helpers.api('admin-credit-limit-statement-parse', 'POST', {
+        file: {
+          name: file.name,
+          contentType: file.type || '',
+          size: file.size,
+          data: data,
+        },
+        scenarioCurrency: scenario.assumptions.currency,
+        forecastStartDate: scenario.assumptions.forecastStartDate,
+        paymentTerms: scenario.assumptions.paymentTerms,
+      });
+
+      if (token !== state.statementImportTask.token) return;
+
+      if (response.statement) {
+        setStatementDraft(scenario.id, Object.assign({}, response.statement, {
+          fileName: response.statement.fileName || file.name,
+          fileSize: response.statement.fileSize || file.size,
+          importedAt: new Date().toISOString(),
+        }));
+      }
+
+      if (!response.ok && !response.statement) {
+        setStatementTask(scenario.id, false, 'failed', 'Import needs another file');
+        renderWorkspace();
+        state.helpers.toast.warn((response.warnings && response.warnings[0]) || 'The statement could not be parsed confidently.', 4200);
+        return;
+      }
+
+      setStatementTask(
+        scenario.id,
+        false,
+        response.ok ? 'ready' : 'review',
+        response.ok ? 'Ready for review' : 'Needs review'
+      );
+      renderWorkspace();
+      state.helpers.toast.ok(response.ok ? 'Statement ready for review.' : 'Statement imported with warnings. Review before confirming.', 2400);
+    } catch (error) {
+      if (token !== state.statementImportTask.token) return;
+      setStatementTask(scenario.id, false, 'failed', 'Import failed');
+      renderWorkspace();
+      state.helpers.toast.warn(error && error.message ? error.message : 'Statement import failed.', 4200);
+    }
+  }
+
+  function updateConfirmedImportedStatement(mutator) {
+    const active = getActiveScenario();
+    if (!active) return;
+    const current = activeImportedStatement(active.assumptions);
+    if (!current) return;
+    const next = StatementImport.prepareConfirmedStatement(mutator(Engine.cloneJson(current)), buildStatementOptions(active));
+    active.assumptions.openingBalance.importedStatement = next;
+    active.updatedAt = nowIso();
+    calculateWorkspace();
+    renderWorkspace();
+    scheduleSummaryRefresh(false);
+    persistWorkspace();
+  }
+
+  function confirmStatementDraft() {
+    const active = getActiveScenario();
+    const draft = active ? getStatementDraft(active.id) : null;
+    if (!active || !draft) return;
+    active.assumptions.openingBalance = active.assumptions.openingBalance || {};
+    active.assumptions.openingBalance.importedStatement = StatementImport.prepareConfirmedStatement(draft, buildStatementOptions(active));
+    active.updatedAt = nowIso();
+    clearStatementDraft(active.id);
+    calculateWorkspace();
+    renderWorkspace();
+    scheduleSummaryRefresh(false);
+    persistWorkspace();
+    state.helpers.toast.ok('Imported statement is now driving the opening-balance receipts.', 2600);
+  }
+
+  function clearImportedStatementData() {
+    const active = getActiveScenario();
+    if (!active) return;
+    clearStatementDraft(active.id);
+    active.assumptions.openingBalance.importedStatement = Engine.cloneJson(Engine.DEFAULT_ASSUMPTIONS.openingBalance.importedStatement);
+    active.updatedAt = nowIso();
+    calculateWorkspace();
+    renderWorkspace();
+    scheduleSummaryRefresh(false);
+    persistWorkspace();
+  }
+
+  function renderSetupGuide(active) {
+    if (!els.setupGuideHost) return;
+    const summary = buildScenarioSummary(active.assumptions, active.result);
+    const draft = getStatementDraft(active.id);
+    const accountReady = String(els.creditLimit && els.creditLimit.value || '').trim() !== ''
+      && String(els.currentOutstandingBalance && els.currentOutstandingBalance.value || '').trim() !== ''
+      && Number(summary.raw.creditLimit) > 0;
+    const openingReady = summary.raw.openingBalance.receiptMode !== 'import_statement'
+      ? true
+      : !!summary.importedStatement;
+    const growthReady = !summary.zeroGrowth;
+    let nextCopy = 'Next: calculate forecast';
+    if (!accountReady) nextCopy = 'Next: complete the account setup';
+    else if (summary.raw.openingBalance.receiptMode === 'import_statement' && !summary.importedStatement && draft) nextCopy = 'Next: review imported statement rows';
+    else if (summary.raw.openingBalance.receiptMode === 'import_statement' && !summary.importedStatement) nextCopy = 'Next: upload a debtor statement';
+    else if (!growthReady) nextCopy = 'Next: choose how to model growth';
+
+    const chips = [
+      { label: 'Account setup', state: accountReady ? 'complete' : 'current' },
+      { label: 'Opening receipts', state: openingReady ? 'complete' : (summary.raw.openingBalance.receiptMode === 'import_statement' ? 'current' : 'pending') },
+      { label: 'Growth method', state: growthReady ? 'complete' : 'current' },
+      { label: 'Calculate', state: accountReady && openingReady && growthReady ? 'current' : 'pending' },
+    ];
+
+    els.setupGuideHost.innerHTML = '<div class="clf-setup-guide">'
+      + '<div class="clf-chip-list">'
+      + chips.map(function (chip) {
+        return '<span class="clf-chip clf-guide-chip" data-guide-state="' + escapeAttr(chip.state) + '">'
+          + escapeHtml(chip.label)
+          + '</span>';
+      }).join('')
+      + '</div>'
+      + '<div class="clf-guide-note"><strong>' + escapeHtml(nextCopy) + '</strong><span>Quick steps: set the opening balance, choose how to model growth, import a statement if needed, then calculate and review the breach timing.</span></div>'
+      + '</div>';
+  }
+
+  function renderOpeningBalanceImport(active) {
+    if (!els.openingBalanceImportHost) return;
+    const summary = buildScenarioSummary(active.assumptions, active.result);
+    const mode = summary.raw.openingBalance.receiptMode;
+    const draft = getStatementDraft(active.id);
+    const confirmed = activeImportedStatement(active.assumptions);
+    const task = statementTaskForScenario(active.id);
+
+    if (mode !== 'import_statement') {
+      if (draft || confirmed) {
+        const stored = confirmed || draft;
+        els.openingBalanceImportHost.innerHTML = '<div class="clf-empty">An imported statement is stored for this scenario, but it is inactive until Opening-balance receipts is set to Import statement. '
+          + escapeHtml(statementSummary(stored, active.assumptions.currentOutstandingBalance, active.assumptions.currency))
+          + '</div>';
+      } else {
+        els.openingBalanceImportHost.innerHTML = '';
+      }
+      els.openingBalanceImportHost.style.display = draft || confirmed ? '' : 'none';
+      return;
+    }
+
+    const working = draft || confirmed;
+    const warnings = working && Array.isArray(working.warnings) ? working.warnings.slice(0, 4) : [];
+    const reconciliation = working
+      ? StatementImport.buildReconciliationSummary(working, active.assumptions.currentOutstandingBalance)
+      : null;
+    const headers = draft && draft.rawTable ? draft.rawTable.headers : [];
+    const mappingRows = draft && draft.rawTable
+      ? [
+        ['invoiceRef', 'Invoice ref'],
+        ['invoiceDate', 'Invoice date'],
+        ['dueDate', 'Due date'],
+        ['outstandingAmount', 'Outstanding amount'],
+        ['currency', 'Currency'],
+        ['status', 'Status'],
+      ]
+      : [];
+    const reviewRows = working && Array.isArray(working.rows) ? working.rows : [];
+    const advancedVisible = state.inputDensity === 'advanced';
+
+    const uploadCard = [
+      '<article class="clf-import-card clf-upload-card" data-dropzone="statement-upload">',
+      '<div class="clf-card-head"><div><p class="clf-kicker">Import statement</p><h3>Upload debtor statement</h3></div>',
+      working ? '<span class="clf-chip" data-tone="' + escapeAttr(statementConfidenceTone(working.confidence)) + '">' + escapeHtml(statementConfidenceLabel(working.confidence)) + '</span>' : '',
+      '</div>',
+      '<p class="clf-inline-note">Upload a debtor statement or ledger export so the opening balance can be scheduled using actual invoice due dates.</p>',
+      '<div class="clf-toolbar clf-no-print">',
+      '<button class="clf-btn clf-btn-primary" type="button" data-statement-action="browse">Upload statement</button>',
+      '<button class="clf-btn clf-btn-ghost" type="button" data-statement-action="switch-manual">Add manual receipt instead</button>',
+      working ? '<button class="clf-btn clf-btn-secondary" type="button" data-statement-action="clear">Clear imported statement</button>' : '',
+      '</div>',
+      '<p class="clf-muted-small">Accepted file types: PDF, XLSX, CSV.</p>',
+      task ? '<div class="clf-import-status"><span class="clf-chip" data-tone="' + escapeAttr(task.busy ? 'warn' : (task.stage === 'failed' ? 'danger' : 'ok')) + '">' + escapeHtml(task.message || 'Working') + '</span><span>' + escapeHtml(task.stage === 'reading' ? 'Reading file' : task.stage === 'extracting' ? 'Matching columns' : task.message || '') + '</span></div>' : '',
+      '</article>',
+    ].join('');
+
+    let summaryCard = '';
+    if (working) {
+      summaryCard = '<article class="clf-import-card"><div class="clf-card-head"><div><p class="clf-kicker">Imported opening book</p><h3>'
+        + escapeHtml(working.fileName || 'Statement schedule')
+        + '</h3></div><span class="clf-chip" data-tone="'
+        + escapeAttr(statementConfidenceTone(working.confidence))
+        + '">'
+        + escapeHtml(statementConfidenceLabel(working.confidence))
+        + '</span></div>'
+        + '<div class="clf-mini-grid">'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(String(working.includedRowCount || 0)) + '</strong><span>Included rows</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(working.importedTotal || 0, active.assumptions.currency)) + '</strong><span>Imported opening total</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(working.detectedCurrency || active.assumptions.currency) + '</strong><span>Matched currency</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(String(working.overdueRowCount || 0)) + '</strong><span>Overdue rows</span></div>'
+        + '</div>'
+        + (warnings.length
+          ? '<div class="clf-alert-stack">' + warnings.map(function (warning) {
+            return '<div class="clf-alert" data-tone="warn"><strong>Check import</strong><span>' + escapeHtml(warning) + '</span></div>';
+          }).join('') + '</div>'
+          : '')
+        + '</article>';
+    }
+
+    let mappingCard = '';
+    if (draft && draft.rawTable && headers.length) {
+      mappingCard = '<article class="clf-import-card"><div class="clf-card-head"><div><p class="clf-kicker">Column mapping</p><h3>Review detected columns</h3></div></div>'
+        + '<p class="clf-inline-note">If due date is missing, invoice date plus the selected payment terms will be used where possible.</p>'
+        + '<div class="clf-form-grid clf-form-grid-3">'
+        + mappingRows.map(function (item) {
+          return '<label class="clf-field"><span class="clf-label">' + escapeHtml(item[1]) + '</span><select data-import-map-field="' + escapeAttr(item[0]) + '">'
+            + '<option value="">Not mapped</option>'
+            + headers.map(function (header) {
+              const selected = draft.mapping && draft.mapping[item[0]] === header ? ' selected' : '';
+              return '<option value="' + escapeAttr(header) + '"' + selected + '>' + escapeHtml(header) + '</option>';
+            }).join('')
+            + '</select></label>';
+        }).join('')
+        + '</div></article>';
+    }
+
+    let reconciliationCard = '';
+    if (working && reconciliation) {
+      reconciliationCard = '<article class="clf-import-card"><div class="clf-card-head"><div><p class="clf-kicker">Reconciliation</p><h3>Compare imported total with opening balance</h3></div></div>'
+        + '<div class="clf-mini-grid">'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.enteredOpeningBalance, active.assumptions.currency)) + '</strong><span>Entered opening balance</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.importedTotal, active.assumptions.currency)) + '</strong><span>Imported statement total</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.variance, active.assumptions.currency)) + '</strong><span>Variance</span></div>'
+        + '<div class="clf-mini-card"><strong>' + escapeHtml(formatMoney(reconciliation.effectiveOpeningBalance, active.assumptions.currency)) + '</strong><span>Forecast opening balance</span></div>'
+        + '</div>'
+        + (!reconciliation.matches
+          ? '<div class="clf-alert" data-tone="warn"><strong>Totals do not reconcile</strong><span>Choose whether the forecast should keep the entered opening balance, use the imported total, or scale the imported schedule to match the opening balance.</span></div>'
+          : '')
+        + '<div class="clf-form-grid' + (advancedVisible ? ' clf-form-grid-3' : '') + '">'
+        + '<label class="clf-field clf-field-full"><span class="clf-label">Reconciliation treatment</span><select data-import-reconciliation-mode="1">'
+        + Object.keys(Engine.OPENING_BALANCE_RECONCILIATION_LABELS).map(function (key) {
+          const selected = working.reconciliationMode === key ? ' selected' : '';
+          return '<option value="' + escapeAttr(key) + '"' + selected + '>' + escapeHtml(reconciliationModeLabel(key)) + '</option>';
+        }).join('')
+        + '</select></label>'
+        + (advancedVisible
+          ? '<label class="clf-field"><span class="clf-label">Overdue collection delay (days)</span><input type="number" min="0" max="60" step="1" data-import-overdue-days="1" value="' + escapeAttr(working.overdueCollectionDays || 7) + '"/></label>'
+          : '')
+        + '</div></article>';
+    }
+
+    let reviewCard = '';
+    if (working && reviewRows.length) {
+      reviewCard = '<article class="clf-import-card"><div class="clf-card-head"><div><p class="clf-kicker">Review imported rows</p><h3>'
+        + escapeHtml(draft ? 'Review imported rows' : 'Imported schedule in use')
+        + '</h3></div>'
+        + (draft
+          ? '<button class="clf-btn clf-btn-primary" type="button" data-statement-action="confirm">Use imported statement</button>'
+          : '<span class="clf-chip" data-tone="ok">Imported statement live</span>')
+        + '</div>'
+        + '<div class="clf-table-wrap clf-import-table-wrap"><table class="clf-inline-table clf-import-table"><thead><tr><th>Include</th><th>Invoice ref</th><th>Invoice date</th><th>Due date</th><th>Outstanding amount</th><th>Currency</th><th>Note / warning</th></tr></thead><tbody>'
+        + reviewRows.map(function (row, index) {
+          return '<tr>'
+            + '<td><input type="checkbox" data-import-row-index="' + index + '" data-import-key="include"' + (row.include !== false ? ' checked' : '') + '/></td>'
+            + '<td><input type="text" data-import-row-index="' + index + '" data-import-key="invoiceRef" value="' + escapeAttr(row.invoiceRef || '') + '"/></td>'
+            + '<td><input type="date" data-import-row-index="' + index + '" data-import-key="invoiceDate" value="' + escapeAttr(row.invoiceDate || '') + '"/></td>'
+            + '<td><input type="date" data-import-row-index="' + index + '" data-import-key="dueDate" value="' + escapeAttr(row.dueDate || '') + '"/></td>'
+            + '<td><input type="number" step="0.01" data-import-row-index="' + index + '" data-import-key="outstandingAmount" value="' + escapeAttr(row.outstandingAmount || 0) + '"/></td>'
+            + '<td><select data-import-row-index="' + index + '" data-import-key="currency"><option value="GBP"' + (row.currency === 'GBP' ? ' selected' : '') + '>GBP</option><option value="EUR"' + (row.currency === 'EUR' ? ' selected' : '') + '>EUR</option></select></td>'
+            + '<td><input type="text" data-import-row-index="' + index + '" data-import-key="note" value="' + escapeAttr(row.note || '') + '" placeholder="' + escapeAttr(row.warningText || 'Optional note') + '"/><div class="clf-muted-small">' + escapeHtml(row.warningText || 'No warnings') + '</div></td>'
+            + '</tr>';
+        }).join('')
+        + '</tbody></table></div></article>';
+    }
+
+    els.openingBalanceImportHost.innerHTML = [uploadCard, summaryCard, mappingCard, reconciliationCard, reviewCard].join('');
+    els.openingBalanceImportHost.style.display = '';
   }
 
   function renderInvoiceDatePreview(active) {
@@ -990,8 +1475,10 @@
     updateOpeningBalanceUi();
     updateVatUi();
     applyGrowthModeUi(active.assumptions.growthMode);
+    renderSetupGuide(active);
     renderValidation(active);
     renderOpeningBalancePreview(active);
+    renderOpeningBalanceImport(active);
     renderGrowthPreview(active);
     renderInvoiceDatePreview(active);
     renderInvoiceOverrideTable(active);
@@ -1004,15 +1491,21 @@
     const capacity = result.capacity;
     const firstBreach = result.metrics.firstBreach;
     const currency = active.assumptions.currency;
+    const growthMode = normaliseGrowthMode(active.assumptions.growthMode);
+    const contractorCapacityLabel = capacity.available ? String(capacity.maxAdditionalContractorsAllowed) : (growthMode === 'direct' ? 'Not modelled' : '—');
+    const contractorRemovalLabel = capacity.available ? String(capacity.contractorsToRemove || 0) : (growthMode === 'direct' ? 'Not modelled' : '—');
+    const safeWeeklyIncreaseLabel = capacity.maxSafeWeeklyGrossIncrease != null
+      ? formatMoney(capacity.maxSafeWeeklyGrossIncrease, currency)
+      : '—';
     const cards = [
       { label: 'Credit limit', value: formatMoney(result.metrics.creditLimit, currency), meta: 'Insured limit', tone: 'ok' },
       { label: 'Current balance', value: formatMoney(result.metrics.currentBalance, currency), meta: 'Opening receivables', tone: toneForStatus(result.overallStatus) },
       { label: 'Peak balance', value: formatMoney(result.metrics.forecastPeakBalance, currency), meta: 'Highest projected close', tone: toneForStatus(result.overallStatus) },
       { label: 'Minimum headroom', value: formatMoney(result.metrics.minimumHeadroom, currency), meta: 'Lowest remaining capacity', tone: toneForStatus(result.overallStatus) },
       { label: 'First breach', value: firstBreach ? ('Week ' + firstBreach.weekNumber) : 'None', meta: firstBreach ? Engine.formatLongDate(firstBreach.breachDate || firstBreach.weekCommencing) : 'No breach forecast', tone: firstBreach ? 'danger' : 'ok' },
-      { label: 'Additional contractors allowed', value: capacity.available ? String(capacity.maxAdditionalContractorsAllowed) : '—', meta: 'Safe extra contractors', tone: capacity.available && capacity.maxAdditionalContractorsAllowed > 0 ? 'ok' : toneForStatus(result.overallStatus) },
-      { label: 'Contractors to remove', value: capacity.available ? String(capacity.contractorsToRemove || 0) : '—', meta: capacity.available && capacity.contractorsToRemove ? 'Required to de-risk' : 'None implied', tone: capacity.available && capacity.contractorsToRemove ? 'danger' : 'ok' },
-      { label: 'Max safe weekly increase', value: capacity.available ? formatMoney(capacity.maxSafeWeeklyGrossIncrease, currency) : '—', meta: 'Gross weekly uplift', tone: toneForStatus(result.overallStatus) },
+      { label: 'Additional contractors allowed', value: contractorCapacityLabel, meta: growthMode === 'direct' ? 'Direct uplift scenario' : 'Safe extra contractors', tone: capacity.available && capacity.maxAdditionalContractorsAllowed > 0 ? 'ok' : toneForStatus(result.overallStatus) },
+      { label: 'Contractors to remove', value: contractorRemovalLabel, meta: growthMode === 'direct' ? 'Headcount not being modelled' : (capacity.available && capacity.contractorsToRemove ? 'Required to de-risk' : 'None implied'), tone: capacity.available && capacity.contractorsToRemove ? 'danger' : 'ok' },
+      { label: 'Max safe weekly increase', value: safeWeeklyIncreaseLabel, meta: growthMode === 'direct' ? 'Safe gross uplift' : 'Gross weekly uplift', tone: toneForStatus(result.overallStatus) },
       { label: 'Status', value: result.overallStatusLabel, meta: Engine.TERM_LABELS[active.assumptions.paymentTerms.type] || active.assumptions.paymentTerms.type.replace(/_/g, ' '), tone: toneForStatus(result.overallStatus) },
     ];
     els.kpiGrid.innerHTML = cards.map(function (card) {
@@ -1056,6 +1549,12 @@
         value: summary.openingBalanceSummary,
       },
       {
+        title: 'Opening-book source',
+        value: summary.raw.openingBalance.receiptMode === 'import_statement' && summary.importedStatement
+          ? statementSummary(summary.importedStatement, assumptions.currentOutstandingBalance, assumptions.currency)
+          : openingBalanceModeLabel(summary.raw.openingBalance.receiptMode),
+      },
+      {
         title: 'Payment terms',
         value: summary.termLabel + (assumptions.paymentTerms.receiptLagDays ? (' • lag ' + assumptions.paymentTerms.receiptLagDays + ' day(s)') : ''),
       },
@@ -1065,7 +1564,9 @@
       },
       {
         title: 'Receipt overrides in play',
-        value: summary.manualReceiptCount + ' opening-balance line' + (summary.manualReceiptCount === 1 ? '' : 's')
+        value: (summary.raw.openingBalance.receiptMode === 'import_statement'
+          ? (summary.importedStatementRowCount + ' imported row' + (summary.importedStatementRowCount === 1 ? '' : 's'))
+          : (summary.activeOpeningBalanceManualReceiptCount + ' opening-balance line' + (summary.activeOpeningBalanceManualReceiptCount === 1 ? '' : 's')))
           + ' • ' + summary.weeklyAdjustmentCount + ' weekly adjustment' + (summary.weeklyAdjustmentCount === 1 ? '' : 's'),
       },
       {
@@ -1077,13 +1578,22 @@
         value: summary.invoiceCadenceLabel + ' on ' + summary.invoiceWeekdayLabel + (invoiceDates ? (' • ' + invoiceDates + ' projected dates') : ''),
       },
     ];
+    if (summary.importedStatement) {
+      const reconciliation = StatementImport.buildReconciliationSummary(summary.importedStatement, assumptions.currentOutstandingBalance);
+      rows.splice(5, 0, {
+        title: 'Opening balance reconciliation',
+        value: reconciliation.matches
+          ? 'Imported total matches the opening balance'
+          : ('Variance ' + formatMoney(reconciliation.variance, assumptions.currency) + ' • ' + reconciliationModeLabel(reconciliation.reconciliationMode)),
+      });
+    }
     els.assumptionSnapshot.innerHTML = rows.map(function (row) {
       return '<div class="clf-list-card"><strong>' + escapeHtml(row.title) + '</strong><span>' + escapeHtml(row.value) + '</span></div>';
     }).join('');
   }
 
   function renderResultNotices(active) {
-    const validation = buildValidationState(active.assumptions);
+    const validation = buildValidationState(active);
     const notices = [];
     if (validation.summary.zeroGrowth) {
       notices.push('<div class="clf-alert" data-tone="warn"><strong>Flat forecast profile</strong><span>No weekly growth input is currently active, so balances stay flat unless opening-balance collections or manual receipt adjustments reduce the ledger.</span></div>');
@@ -1095,6 +1605,20 @@
       && Number(validation.summary.raw.currentOutstandingBalance) > 0
       && validation.summary.manualReceiptCount === 0) {
       notices.push('<div class="clf-alert" data-tone="info"><strong>Manual opening-balance mode is empty</strong><span>Add dated opening-balance receipts in Advanced if you want the opening ledger to run off during the forecast.</span></div>');
+    }
+    if (validation.summary.raw.openingBalance.receiptMode === 'import_statement' && validation.summary.importedStatement) {
+      const reconciliation = StatementImport.buildReconciliationSummary(
+        validation.summary.importedStatement,
+        validation.summary.raw.currentOutstandingBalance
+      );
+      if (!reconciliation.matches) {
+        notices.push('<div class="clf-alert" data-tone="warn"><strong>Imported statement does not reconcile</strong><span>Imported statement total differs from the entered opening balance. The forecast is currently using '
+          + escapeHtml(reconciliationModeLabel(reconciliation.reconciliationMode).toLowerCase())
+          + '.</span></div>');
+      }
+      notices.push('<div class="clf-alert" data-tone="info"><strong>Opening-balance receipt source</strong><span>'
+        + escapeHtml(validation.summary.importedStatement.includedRowCount + ' imported row' + (validation.summary.importedStatement.includedRowCount === 1 ? '' : 's'))
+        + ' are driving the opening-book receipt schedule separately from forecast-generated invoice receipts.</span></div>');
     }
     if (active.result && active.result.metrics.creditLimit > 0) {
       const ratio = active.result.metrics.minimumHeadroom / active.result.metrics.creditLimit;
@@ -1262,7 +1786,10 @@
       const mode = normaliseGrowthMode(active.assumptions.growthMode);
       els.sensitivityHost.innerHTML = '<div class="clf-empty">'
         + escapeHtml(mode === 'direct'
-          ? 'Contractor capacity is not being modelled in direct uplift mode. Switch to contractor mode if you want a safe headcount answer.'
+          ? ('Contractor capacity is not being modelled in direct uplift mode. Switch to contractor mode if you want a safe headcount answer.'
+            + (capacity.maxSafeWeeklyGrossIncrease != null
+              ? (' The current assumptions support roughly ' + formatMoney(capacity.maxSafeWeeklyGrossIncrease, active.assumptions.currency) + ' of gross weekly uplift before breaching the limit.')
+              : ''))
           : 'Add contractor value assumptions to unlock safe-capacity calculations.')
         + '</div>';
       return;
@@ -1322,11 +1849,14 @@
       const sourceDateLabel = entry.source === 'opening_balance_term_profile'
         ? (entry.dateLabel + ' assumed invoice')
         : entry.dateLabel;
+      const sourceText = entry.source === 'opening_balance_imported_statement'
+        ? ('Imported statement' + (entry.invoiceRef ? (' • ' + entry.invoiceRef) : ''))
+        : (entry.note || entry.sourceLabel);
       return '<tr>'
         + '<td><div class="clf-cell-stack"><strong>' + escapeHtml(sourceDateLabel) + '</strong><small>' + escapeHtml(entry.sourceLabel) + '</small></div></td>'
         + '<td>' + escapeHtml(entry.dueDateLabel) + '</td>'
         + '<td>' + escapeHtml(formatMoney(entry.amount, currency)) + '</td>'
-        + '<td>' + escapeHtml(entry.note || entry.sourceLabel) + '</td>'
+        + '<td>' + escapeHtml(sourceText) + '</td>'
         + '<td>' + escapeHtml(entry.receiptWeekIndex >= 0 ? ('Week ' + (entry.receiptWeekIndex + 1)) : 'Beyond horizon') + '</td>'
         + '</tr>';
     });
@@ -1442,6 +1972,7 @@
     }));
     active.summary = null;
     active.updatedAt = nowIso();
+    clearStatementDraft(active.id);
     calculateWorkspace();
     applyAssumptionsToForm(active.assumptions);
     renderWorkspace();
@@ -1503,6 +2034,7 @@
         updatedAt: nowIso(),
       };
       state.scenarios.push(scenario);
+      clearStatementDraft(scenario.id);
       state.activeScenarioId = scenario.id;
       applyAssumptionsToForm(scenario.assumptions);
     } else {
@@ -1511,6 +2043,7 @@
       active.assumptions = assumptions;
       active.summary = null;
       active.updatedAt = nowIso();
+      clearStatementDraft(active.id);
       applyAssumptionsToForm(active.assumptions);
     }
     calculateWorkspace();
@@ -1781,6 +2314,15 @@
     return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
   }
 
+  function updateDraftImportState(mutator) {
+    const active = getActiveScenario();
+    const draft = active ? getStatementDraft(active.id) : null;
+    if (!active || !draft) return;
+    const next = mutator(Engine.cloneJson(draft));
+    setStatementDraft(active.id, next);
+    renderWorkspace();
+  }
+
   function handleFormEvent(event) {
     if (state.isApplyingForm) return;
     const target = event.target;
@@ -1841,6 +2383,86 @@
       return;
     }
 
+    if (target.hasAttribute('data-import-map-field')) {
+      updateDraftImportState(function (draft) {
+        draft.mapping = draft.mapping || {};
+        draft.mapping[target.getAttribute('data-import-map-field')] = target.value || '';
+        return draft;
+      });
+      return;
+    }
+
+    if (target.hasAttribute('data-import-row-index')) {
+      const active = getActiveScenario();
+      if (!active) return;
+      const index = Number(target.getAttribute('data-import-row-index'));
+      const key = target.getAttribute('data-import-key');
+      const draft = getStatementDraft(active.id);
+      if (draft) {
+        updateDraftImportState(function (source) {
+          const next = Engine.cloneJson(source);
+          if (next.rawTable) {
+            next.rows = Engine.cloneJson(next.rows || []);
+            delete next.rawTable;
+          }
+          const row = next.rows[index];
+          if (!row) return next;
+          row[key] = key === 'include'
+            ? !!target.checked
+            : (key === 'outstandingAmount' ? Number(target.value) || 0 : String(target.value || '').trim());
+          return next;
+        });
+        return;
+      }
+
+      updateConfirmedImportedStatement(function (statement) {
+        const row = statement.rows[index];
+        if (!row) return statement;
+        row[key] = key === 'include'
+          ? !!target.checked
+          : (key === 'outstandingAmount' ? Number(target.value) || 0 : String(target.value || '').trim());
+        return statement;
+      });
+      return;
+    }
+
+    if (target.hasAttribute('data-import-reconciliation-mode')) {
+      const active = getActiveScenario();
+      if (!active) return;
+      const draft = getStatementDraft(active.id);
+      if (draft) {
+        updateDraftImportState(function (source) {
+          source.reconciliationMode = target.value || 'keep_manual_opening_balance';
+          return source;
+        });
+        return;
+      }
+      updateConfirmedImportedStatement(function (statement) {
+        statement.reconciliationMode = target.value || 'keep_manual_opening_balance';
+        return statement;
+      });
+      return;
+    }
+
+    if (target.hasAttribute('data-import-overdue-days')) {
+      const active = getActiveScenario();
+      if (!active) return;
+      const value = Number(target.value) || 0;
+      const draft = getStatementDraft(active.id);
+      if (draft) {
+        updateDraftImportState(function (source) {
+          source.overdueCollectionDays = value;
+          return source;
+        });
+        return;
+      }
+      updateConfirmedImportedStatement(function (statement) {
+        statement.overdueCollectionDays = value;
+        return statement;
+      });
+      return;
+    }
+
     scheduleRecalc(120);
   }
 
@@ -1868,8 +2490,69 @@
       const presetButton = event.target.closest('[data-preset]');
       if (presetButton) {
         applyPreset(presetButton.getAttribute('data-preset'));
+        return;
+      }
+
+      const statementAction = event.target.closest('[data-statement-action]');
+      if (statementAction) {
+        const active = getActiveScenario();
+        const action = statementAction.getAttribute('data-statement-action');
+        if (action === 'browse' && els.statementUploadInput) {
+          els.statementUploadInput.click();
+        } else if (action === 'confirm') {
+          confirmStatementDraft();
+        } else if (action === 'clear') {
+          clearImportedStatementData();
+        } else if (action === 'switch-manual' && els.openingBalanceReceiptMode) {
+          els.openingBalanceReceiptMode.value = 'manual';
+          updateOpeningBalanceUi();
+          scheduleRecalc(40);
+        }
+        if (active) {
+          renderWorkspace();
+        }
       }
     });
+
+    if (els.statementUploadInput) {
+      els.statementUploadInput.addEventListener('change', function () {
+        const file = els.statementUploadInput.files && els.statementUploadInput.files[0];
+        const active = getActiveScenario();
+        if (file && active) {
+          importOpeningBalanceStatement(file, active);
+        }
+        els.statementUploadInput.value = '';
+      });
+    }
+
+    if (els.openingBalanceImportHost) {
+      ['dragenter', 'dragover'].forEach(function (type) {
+        els.openingBalanceImportHost.addEventListener(type, function (event) {
+          const zone = event.target.closest('[data-dropzone="statement-upload"]');
+          if (!zone) return;
+          event.preventDefault();
+          zone.classList.add('is-dragging');
+        });
+      });
+      ['dragleave', 'dragend', 'drop'].forEach(function (type) {
+        els.openingBalanceImportHost.addEventListener(type, function (event) {
+          const zone = event.target.closest('[data-dropzone="statement-upload"]');
+          if (!zone) return;
+          if (type === 'drop') event.preventDefault();
+          zone.classList.remove('is-dragging');
+        });
+      });
+      els.openingBalanceImportHost.addEventListener('drop', function (event) {
+        const zone = event.target.closest('[data-dropzone="statement-upload"]');
+        if (!zone) return;
+        event.preventDefault();
+        const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+        const active = getActiveScenario();
+        if (file && active) {
+          importOpeningBalanceStatement(file, active);
+        }
+      });
+    }
 
     els.btnBasicMode.addEventListener('click', function () {
       setInputDensity('basic');
@@ -1905,7 +2588,7 @@
     els.btnCalculate.addEventListener('click', function () {
       updateActiveScenarioFromForm();
       const active = getActiveScenario();
-      const validation = active ? buildValidationState(active.assumptions) : { canCalculate: true };
+      const validation = active ? buildValidationState(active) : { canCalculate: true };
       if (!validation.canCalculate) {
         renderWorkspace();
         state.helpers.toast.warn('Complete the required setup fields before calculating.', 2600);
@@ -1919,7 +2602,7 @@
     els.btnRefreshSummary.addEventListener('click', function () {
       updateActiveScenarioFromForm();
       const active = getActiveScenario();
-      const validation = active ? buildValidationState(active.assumptions) : { canCalculate: true };
+      const validation = active ? buildValidationState(active) : { canCalculate: true };
       if (!validation.canCalculate) {
         renderWorkspace();
         state.helpers.toast.warn('Complete the required setup fields before refreshing the summary.', 2600);

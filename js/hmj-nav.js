@@ -32,6 +32,7 @@
     link.href = ADMIN_URL;
     link.removeAttribute('aria-disabled');
     link.classList.remove('requires-admin');
+    link.classList.add('nav-admin-link');
     link.textContent = 'Admin';
     link.title = 'Open the admin sign-in page';
   };

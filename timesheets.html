@@ -38,19 +38,21 @@
     .hmj-menu a{display:inline-block;padding:10px 12px;border-radius:10px;font-weight:700;color:#eaf0ff;text-decoration:none;transition:background .2s,color .2s}
     .hmj-menu a:hover{background:rgba(255,255,255,.10);color:#fff}
     .hmj-menu a[aria-current="page"]{background:rgba(58,102,179,.20);color:#dfe8ff;border:1px solid rgba(58,102,179,.45)}
-    .hmj-burger{display:none;margin-left:auto;border:0;background:transparent;width:42px;height:42px;border-radius:10px;cursor:pointer}
-    .hmj-burger span{display:block;height:2px;background:#eaf0ff;margin:7px 8px;border-radius:2px;transition:transform .2s,opacity .2s}
+    .hmj-burger{display:none;margin-left:auto;width:44px;height:44px;padding:0;border-radius:14px;border:1px solid rgba(236,239,255,.18);background:rgba(236,239,255,.08);color:#fff;align-items:center;justify-content:center;flex-direction:column;gap:6px;cursor:pointer;box-shadow:0 14px 30px rgba(10,15,30,.18);transition:transform .16s ease,background .2s ease,border-color .2s ease,box-shadow .2s ease}
+    .hmj-burger:hover,.hmj-burger:focus-visible{background:rgba(236,239,255,.16);border-color:rgba(236,239,255,.3);box-shadow:0 18px 34px rgba(10,15,30,.24);outline:none;transform:translateY(-1px)}
+    .hmj-burger span{display:block;width:20px;height:2px;background:currentColor;border-radius:999px;transform-origin:center;transition:transform .2s ease,opacity .2s ease}
     .hmj-scrim{position:fixed;inset:0;background:rgba(0,0,0,.35)}
     @media (max-width:900px){
-      .hmj-burger{display:inline-block}
+      .hmj-burger{display:inline-flex}
       .hmj-menu{position:fixed;right:12px;left:12px;top:64px;background:#0f1322;border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.35);display:grid;gap:6px;padding:0;max-height:0;overflow:hidden;transition:max-height .28s ease,padding .2s ease}
       .hmj-menu.open{max-height:70vh;padding:10px}
       .hmj-menu a{padding:14px 12px;width:100%}
       .hmj-scrim[hidden]{display:none}
     }
-    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(9px) rotate(45deg)}
+    .hmj-burger[aria-expanded="true"]{background:rgba(236,239,255,.2);border-color:rgba(236,239,255,.34)}
+    .hmj-burger[aria-expanded="true"] span:nth-child(1){transform:translateY(8px) rotate(45deg)}
     .hmj-burger[aria-expanded="true"] span:nth-child(2){opacity:0}
-    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-9px) rotate(-45deg)}
+    .hmj-burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
 
     /* ===== Announcement bar ===== */
     .announce{
@@ -204,7 +206,7 @@
         <img src="images/logo.png" alt="HMJ-Global Logo" />
       </a>
 
-      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+      <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
         <span></span><span></span><span></span>
       </button>
 
@@ -214,9 +216,8 @@
         <li><a href="clients.html" data-page="clients">Clients</a></li>
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
-        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="https://hmjglobal.timesheetportal.com" id="nav-timesheets">Timesheets</a></li>
-        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin nav-admin-link" style="display:none" aria-disabled="true">Admin</a></li>
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>

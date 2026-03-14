@@ -9,7 +9,38 @@ const {
   buildComparisonSummary,
   summariseAnalytics,
   createCsv,
+  extractMissingAnalyticsColumn,
+  classifyAnalyticsSchemaIssue,
+  writeAnalyticsRowsWithCompatibility,
 } = require('../netlify/functions/_analytics.js');
+
+function createMockSupabase(handlers = {}) {
+  const calls = [];
+  return {
+    calls,
+    from(table) {
+      return {
+        upsert(rows, options) {
+          calls.push({ table, method: 'upsert', rows, options });
+          return Promise.resolve(handlers.upsert ? handlers.upsert(rows, options, table) : { error: null });
+        },
+        insert(rows) {
+          calls.push({ table, method: 'insert', rows });
+          return Promise.resolve(handlers.insert ? handlers.insert(rows, table) : { error: null });
+        },
+        select(columns) {
+          calls.push({ table, method: 'select', columns });
+          return {
+            limit(count) {
+              calls.push({ table, method: 'limit', count });
+              return Promise.resolve(handlers.select ? handlers.select(columns, count, table) : { data: [], error: null });
+            },
+          };
+        },
+      };
+    },
+  };
+}
 
 test('buildIngestRows normalises valid analytics events and skips invalid entries', () => {
   const payload = parseIngestBody(JSON.stringify({
@@ -87,6 +118,46 @@ test('buildComparisonFilters mirrors the previous equivalent period', () => {
   assert.equal(previous.to, '2026-03-09');
   assert.equal(previous.source, 'linkedin');
   assert.equal(previous.scope, 'admin');
+});
+
+test('analytics schema helpers detect missing event_id correctly', () => {
+  const error = { message: 'column analytics_events.event_id does not exist' };
+  assert.equal(extractMissingAnalyticsColumn(error), 'event_id');
+  assert.deepEqual(classifyAnalyticsSchemaIssue(error), {
+    type: 'missing_column',
+    message: 'column analytics_events.event_id does not exist',
+    missingColumn: 'event_id',
+  });
+});
+
+test('writeAnalyticsRowsWithCompatibility falls back to legacy insert when event_id is missing', async () => {
+  const supabase = createMockSupabase({
+    upsert() {
+      return { error: { message: 'column analytics_events.event_id does not exist' } };
+    },
+    insert() {
+      return { error: null };
+    },
+  });
+
+  const rows = [{
+    event_id: 'evt_1',
+    occurred_at: '2026-03-01T00:00:00.000Z',
+    visitor_id: 'visitor-1',
+    session_id: 'session-1',
+    event_type: 'page_view',
+    site_area: 'public',
+    page_path: '/',
+    payload: {},
+  }];
+
+  const result = await writeAnalyticsRowsWithCompatibility(supabase, rows);
+
+  assert.equal(result.mode, 'legacy_insert');
+  assert.deepEqual(result.schemaWarnings, ['event_id']);
+  assert.equal(supabase.calls[0].method, 'upsert');
+  assert.equal(supabase.calls[1].method, 'insert');
+  assert.ok(!Object.prototype.hasOwnProperty.call(supabase.calls[1].rows[0], 'event_id'));
 });
 
 test('summariseAnalytics builds KPI, page, click, and path insights from raw events', () => {

@@ -3,9 +3,11 @@
 const { withAdminCors } = require('./_http.js');
 const { hasSupabase, getSupabase, supabaseStatus } = require('./_supabase.js');
 const {
-  ANALYTICS_EVENTS_TABLE,
   parseIngestBody,
   buildIngestRows,
+  writeAnalyticsRowsWithCompatibility,
+  classifyAnalyticsSchemaIssue,
+  isAnalyticsSchemaError,
   isMissingAnalyticsTableError,
 } = require('./_analytics.js');
 
@@ -58,19 +60,14 @@ const baseHandler = async (event) => {
 
   try {
     const supabase = getSupabase(event);
-    const { error } = await supabase
-      .from(ANALYTICS_EVENTS_TABLE)
-      .upsert(rows, {
-        onConflict: 'event_id',
-        ignoreDuplicates: true,
-      });
-
-    if (error) throw error;
+    const writeResult = await writeAnalyticsRowsWithCompatibility(supabase, rows);
 
     return respond(200, {
       ok: true,
       accepted: rows.length,
       rejected,
+      compatibilityMode: writeResult.mode !== 'upsert',
+      schemaWarnings: writeResult.schemaWarnings || [],
     });
   } catch (error) {
     if (isMissingAnalyticsTableError(error)) {
@@ -80,6 +77,21 @@ const baseHandler = async (event) => {
         accepted: 0,
         rejected,
         message: error?.message || 'analytics_storage_missing',
+      });
+    }
+
+    if (isAnalyticsSchemaError(error)) {
+      const issue = classifyAnalyticsSchemaIssue(error);
+      const detail = issue.missingColumn
+        ? ` Missing column: ${issue.missingColumn}.`
+        : '';
+      return respond(202, {
+        ok: false,
+        schemaMismatch: true,
+        accepted: 0,
+        rejected,
+        code: 'analytics_schema_mismatch',
+        message: `Analytics storage schema mismatch detected.${detail} Apply the Supabase reconciliation SQL to restore full compatibility.`,
       });
     }
 

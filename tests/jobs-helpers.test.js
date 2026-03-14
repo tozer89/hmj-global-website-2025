@@ -206,7 +206,10 @@ test('slugify and resolveSection provide stable keys', () => {
   assert.equal(slugify('Data Centre Delivery'), 'data-centre-delivery');
   const resolved = resolveSection('dc');
   assert.equal(resolved.label, 'Data Centre Delivery');
-  assert.equal(resolved.key, 'dc');
+  assert.equal(resolved.key, 'data-centre-delivery');
+  const resolvedFromLabel = resolveSection('Data Centre Delivery');
+  assert.equal(resolvedFromLabel.label, 'Data Centre Delivery');
+  assert.equal(resolvedFromLabel.key, 'data-centre-delivery');
   const custom = resolveSection('Critical Infrastructure');
   assert.equal(custom.label, 'Critical Infrastructure');
   assert.equal(custom.key, 'critical-infrastructure');

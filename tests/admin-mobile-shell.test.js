@@ -65,12 +65,15 @@ test('shared admin shell exposes a sticky mobile menu for header actions', () =>
   assert.ok(menu, 'header actions should be wrapped into a mobile menu');
   assert.ok(backdrop, 'backdrop should be created for dismissing the menu');
   assert.equal(menu.querySelectorAll('a, button').length, 3, 'menu should retain the original actions');
+  assert.equal(trigger.getAttribute('aria-label'), 'Open menu');
 
   trigger.click();
   assert.equal(window.document.body.classList.contains('hmj-admin-mobile-menu-open'), true);
   assert.equal(trigger.getAttribute('aria-expanded'), 'true');
+  assert.equal(trigger.getAttribute('aria-label'), 'Close menu');
 
   backdrop.click();
   assert.equal(window.document.body.classList.contains('hmj-admin-mobile-menu-open'), false);
   assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(trigger.getAttribute('aria-label'), 'Open menu');
 });

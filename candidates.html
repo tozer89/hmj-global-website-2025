@@ -107,7 +107,7 @@
         <img src="images/logo.png" alt="HMJ-Global Logo" />
       </a>
 
-      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+      <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
         <span></span><span></span><span></span>
       </button>
 
@@ -117,9 +117,8 @@
         <li><a href="clients.html" data-page="clients">Clients</a></li>
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
-        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="https://hmjglobal.timesheetportal.com" id="nav-timesheets">Timesheets</a></li>
-        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin nav-admin-link" style="display:none" aria-disabled="true">Admin</a></li>
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
@@ -195,7 +194,7 @@
   </section>
 
   <!-- ===== Value props ===== -->
-  <section class="section">
+  <section class="section candidate-metrics">
     <div class="wrap grid grid-3">
       <div class="card kpi soft reveal"><h3>48 hrs</h3><p>Typical time to first roles</p></div>
       <div class="card kpi soft reveal"><h3>Fair Pay</h3><p>Transparent rates & weekly payroll</p></div>
@@ -204,7 +203,7 @@
   </section>
 
   <!-- ===== Intro ===== -->
-  <section class="section">
+  <section class="section candidate-intro">
     <div class="wrap">
       <div class="public-window public-window--split reveal">
         <div>
@@ -228,18 +227,18 @@
   </section>
 
   <!-- ===== Trust banner ===== -->
-  <section class="section" style="padding-top:18px;">
+  <section class="section candidate-trust-section">
     <div class="wrap">
-      <div class="card soft" style="display:flex; gap:18px; flex-wrap:wrap; align-items:center;">
-        <div style="display:flex; align-items:center; gap:10px;">
+      <div class="card soft candidate-trust-band">
+        <div class="candidate-trust-band__item">
           <svg width="24" height="24" role="img" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M4 12l4 4 12-12"/></svg>
           <span>Typical first roles in 48 hrs</span>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div class="candidate-trust-band__item">
           <svg width="24" height="24" role="img" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M4 12l4 4 12-12"/></svg>
           <span>Weekly payroll</span>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div class="candidate-trust-band__item">
           <svg width="24" height="24" role="img" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="#3A66B3" stroke-width="2" d="M4 12l4 4 12-12"/></svg>
           <span>EU mobility support</span>
         </div>
@@ -248,133 +247,166 @@
   </section>
 
   <!-- ===== Application Form (full width) ===== -->
-  <section class="section" style="background:#f7f8ff;">
+  <section class="section candidate-profile-section">
     <div class="wrap">
-      <div class="public-section-head public-section-head--left" style="margin-bottom:18px;">
+      <div class="public-section-head public-section-head--left candidate-profile-section__head">
         <p class="public-section-head__eyebrow">Candidate profile</p>
         <h2>Share the detail that helps us represent you properly.</h2>
         <p class="public-section-head__copy">The stronger the profile, the faster we can match you to the right project and brief you accurately before interviews begin.</p>
       </div>
-      <div class="card">
-        <h2 style="margin-top:0;">Submit Your Profile</h2>
-        <p class="small">Complete the form and attach your CV. We’ll be in touch with relevant roles (usually within 48 hrs).</p>
+      <div class="candidate-profile-stage">
+        <div class="candidate-profile-layout">
+          <div class="card candidate-form-shell">
+            <h2 class="candidate-form-shell__title">Submit Your Profile</h2>
+            <p class="small candidate-form-shell__intro">Complete the form and attach your CV. We’ll be in touch with relevant roles (usually within 48 hrs).</p>
 
-        <form name="candidate-cv" action="/" method="POST" data-netlify="true" netlify-honeypot="bot-field"
-              enctype="multipart/form-data" class="cv-form" id="candForm">
-          <input type="hidden" name="form-name" value="candidate-cv" />
-          <!-- Honeypot -->
-          <p style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">
-            <label>Don’t fill this out if you’re human: <input name="bot-field"></label>
-          </p>
-          <!-- Hidden field to collect tags + page URL + RTW selections -->
-          <input type="hidden" name="skills" id="skillsHidden" />
-          <input type="hidden" name="page_url" id="pageUrlHidden" />
-          <input type="hidden" name="right_to_work" id="rtwHidden" />
+            <form name="candidate-cv" action="/" method="POST" data-netlify="true" netlify-honeypot="bot-field"
+                  enctype="multipart/form-data" class="cv-form candidate-form" id="candForm">
+              <input type="hidden" name="form-name" value="candidate-cv" />
+              <!-- Honeypot -->
+              <p style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">
+                <label>Don’t fill this out if you’re human: <input name="bot-field"></label>
+              </p>
+              <!-- Hidden field to collect tags + page URL + RTW selections -->
+              <input type="hidden" name="skills" id="skillsHidden" />
+              <input type="hidden" name="page_url" id="pageUrlHidden" />
+              <input type="hidden" name="right_to_work" id="rtwHidden" />
 
-          <label for="fname">First name *</label>
-          <input id="fname" name="first_name" type="text" required>
+              <fieldset class="candidate-form__section">
+                <legend>Core details</legend>
+                <div class="candidate-form__grid candidate-form__grid--two">
+                  <div class="candidate-field">
+                    <label for="fname">First name *</label>
+                    <input id="fname" name="first_name" type="text" required>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="lname">Surname *</label>
+                    <input id="lname" name="surname" type="text" required>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="email">Email *</label>
+                    <input id="email" name="email" type="email" required>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="phone">Contact telephone (incl. country code) *</label>
+                    <input id="phone" name="phone" type="tel" required
+                           pattern="^\+?[0-9\s\-()]{7,}$" title="Include country code, e.g. +353 85 123 4567">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="location">Current location (City, Country) *</label>
+                    <input id="location" name="location" type="text" required>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="discipline">Discipline *</label>
+                    <select id="discipline" name="discipline" required>
+                      <option value="">Select…</option>
+                      <option>CSA</option>
+                      <option>Electrical (MEP)</option>
+                      <option>Mechanical (MEP)</option>
+                      <option>Commissioning</option>
+                      <option>Security & Cabling</option>
+                      <option>HV / Substations</option>
+                      <option>Pharma / CQV</option>
+                      <option>Critical Facilities</option>
+                    </select>
+                  </div>
+                  <div class="candidate-field candidate-field--full">
+                    <label for="role">Role of interest</label>
+                    <input id="role" name="role" type="text" placeholder="e.g. MEP Commissioning Manager" required>
+                    <p class="small" id="roleTip"></p>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="salary">Salary / day rate expectation (numeric)</label>
+                    <input id="salary" name="salary_expectation" type="number" min="0" step="100">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="notice">Notice period</label>
+                    <input id="notice" name="notice_period" type="text" placeholder="e.g. 2 weeks, immediate" required>
+                  </div>
+                </div>
+              </fieldset>
 
-          <label for="lname">Surname *</label>
-          <input id="lname" name="surname" type="text" required>
+              <fieldset class="candidate-form__section">
+                <legend>Mobility &amp; links</legend>
+                <div class="candidate-form__grid candidate-form__grid--two">
+                  <div class="candidate-field candidate-field--full">
+                    <label>Right to work — regions you’re authorised to work in * <span class="small">(you can select more than one)</span></label>
+                    <div class="rtw-wrap" id="rtwGroup" aria-describedby="rtwHelp">
+                      <label class="rtw-item"><input type="checkbox" value="United Kingdom"> United Kingdom</label>
+                      <label class="rtw-item"><input type="checkbox" value="European Union / EEA"> European Union / EEA</label>
+                      <label class="rtw-item"><input type="checkbox" value="United Arab Emirates (UAE)"> United Arab Emirates (UAE)</label>
+                      <label class="rtw-item"><input type="checkbox" value="Asia–Pacific"> Asia–Pacific</label>
+                      <label class="rtw-item"><input type="checkbox" value="North America"> North America</label>
+                      <label class="rtw-item"><input type="checkbox" value="Latin America (incl. Central America)"> Latin America (incl. Central America)</label>
+                      <label class="rtw-item"><input type="checkbox" value="Other / Please specify in notes"> Other / Please specify in notes</label>
+                    </div>
+                    <p id="rtwHelp" class="small">Tip: choose all that apply (dual nationality welcome).</p>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="reloc">Open to relocation *</label>
+                    <select id="reloc" name="relocation" required>
+                      <option value="" selected disabled>Select…</option>
+                      <option>Maybe</option>
+                      <option>Yes</option>
+                      <option>No</option>
+                    </select>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="linkedin">LinkedIn profile</label>
+                    <input id="linkedin" name="linkedin" type="text" placeholder="https://…">
+                  </div>
+                </div>
+              </fieldset>
 
-          <label for="email">Email *</label>
-          <input id="email" name="email" type="email" required>
+              <fieldset class="candidate-form__section">
+                <legend>Profile details</legend>
+                <div class="candidate-form__grid">
+                  <div class="candidate-field candidate-field--full">
+                    <label>Key skills (add &amp; enter)</label>
+                    <div class="tag-input" id="tagBox">
+                      <input id="tagInput" type="text" placeholder="e.g. IST, BMS, 33kV, Cleanrooms" style="border:0; outline:none; flex:1;">
+                    </div>
+                    <p class="small" id="skillHints"></p>
+                  </div>
+                  <div class="candidate-field candidate-field--full">
+                    <label for="message">Message / cover note</label>
+                    <textarea id="message" name="message" rows="5" placeholder="Tell us what you’re looking for, preferred locations, rotations…"></textarea>
+                  </div>
+                  <div class="candidate-field candidate-field--full">
+                    <label for="cv">Attach CV (PDF/DOC/DOCX) *</label>
+                    <input id="cv" name="attachment" type="file" accept=".pdf,.doc,.docx" required>
+                  </div>
+                  <div class="candidate-field candidate-field--full">
+                    <div class="small candidate-strength__label">Profile strength</div>
+                    <div id="profileStrength" class="c-strength" role="status" aria-live="polite"></div>
+                  </div>
+                  <div class="candidate-field candidate-field--full candidate-consent">
+                    <label class="candidate-consent__label">
+                      <input type="checkbox" required> I consent to HMJ-Global processing my data to find suitable roles.
+                    </label>
+                  </div>
+                  <div class="candidate-form__actions">
+                    <button id="submitBtn" type="submit" class="btn-primary">Send Profile</button>
+                  </div>
+                </div>
+              </fieldset>
+            </form>
 
-          <label for="phone">Contact telephone (incl. country code) *</label>
-          <input id="phone" name="phone" type="tel" required
-                 pattern="^\+?[0-9\s\-()]{7,}$" title="Include country code, e.g. +353 85 123 4567">
-
-          <label for="location">Current location (City, Country) *</label>
-          <input id="location" name="location" type="text" required>
-
-          <label for="discipline">Discipline *</label>
-          <select id="discipline" name="discipline" required>
-            <option value="">Select…</option>
-            <option>CSA</option>
-            <option>Electrical (MEP)</option>
-            <option>Mechanical (MEP)</option>
-            <option>Commissioning</option>
-            <option>Security & Cabling</option>
-            <option>HV / Substations</option>
-            <option>Pharma / CQV</option>
-            <option>Critical Facilities</option>
-          </select>
-
-          <label for="role">Role of interest</label>
-          <input id="role" name="role" type="text" placeholder="e.g. MEP Commissioning Manager" required>
-          <p class="small" id="roleTip" style="margin-top:6px;"></p>
-
-          <label for="salary">Salary / day rate expectation (numeric)</label>
-          <input id="salary" name="salary_expectation" type="number" min="0" step="100">
-
-          <label for="notice">Notice period</label>
-          <input id="notice" name="notice_period" type="text" placeholder="e.g. 2 weeks, immediate" required>
-
-
-          <label>Right to work — regions you’re authorised to work in * <span class="small">(you can select more than one)</span></label>
-          <div class="rtw-wrap" id="rtwGroup" aria-describedby="rtwHelp">
-            <label class="rtw-item"><input type="checkbox" value="United Kingdom"> United Kingdom</label>
-            <label class="rtw-item"><input type="checkbox" value="European Union / EEA"> European Union / EEA</label>
-            <label class="rtw-item"><input type="checkbox" value="United Arab Emirates (UAE)"> United Arab Emirates (UAE)</label>
-            <label class="rtw-item"><input type="checkbox" value="Asia–Pacific"> Asia–Pacific</label>
-            <label class="rtw-item"><input type="checkbox" value="North America"> North America</label>
-            <label class="rtw-item"><input type="checkbox" value="Latin America (incl. Central America)"> Latin America (incl. Central America)</label>
-            <label class="rtw-item"><input type="checkbox" value="Other / Please specify in notes"> Other / Please specify in notes</label>
+            <p class="small candidate-form-shell__privacy">
+              We respect your privacy. We never disclose client names in public listings and only share your details with your permission.
+              <span id="clearDraftWrap" style="display:none;"> · <a href="#" id="clearDraftLink">Clear draft</a></span>
+            </p>
           </div>
-          <p id="rtwHelp" class="small" style="margin-top:6px;">Tip: choose all that apply (dual nationality welcome).</p>
 
-          <label for="reloc">Open to relocation *</label>
-          <select id="reloc" name="relocation" required>
-            <option value="" selected disabled>Select…</option>
-            <option>Maybe</option>
-            <option>Yes</option>
-            <option>No</option>
-          </select>
-
-
-          <label for="linkedin">LinkedIn profile</label>
-          <input id="linkedin" name="linkedin" type="text" placeholder="https://…">
-
-          <label>Key skills (add & enter)</label>
-          <div class="tag-input" id="tagBox">
-            <input id="tagInput" type="text" placeholder="e.g. IST, BMS, 33kV, Cleanrooms" style="border:0; outline:none; flex:1;">
-          </div>
-          <p class="small" id="skillHints" style="margin-top:6px;"></p>
-
-          <label for="message">Message / cover note</label>
-          <textarea id="message" name="message" rows="5" placeholder="Tell us what you’re looking for, preferred locations, rotations…"></textarea>
-
-          <label for="cv">Attach CV (PDF/DOC/DOCX) *</label>
-          <input id="cv" name="attachment" type="file" accept=".pdf,.doc,.docx" required>
-
-          <div class="small" style="margin:8px 0;">Profile strength</div>
-          <div id="profileStrength" class="c-strength" role="status" aria-live="polite"></div>
-
-          <div style="margin-top:14px;">
-            <label style="display:flex; align-items:center; gap:8px;">
-              <input type="checkbox" required> I consent to HMJ-Global processing my data to find suitable roles.
-            </label>
-          </div>
-
-          <button id="submitBtn" type="submit" class="btn-primary" style="margin-top:12px;">Send Profile</button>
-        </form>
-
-        <p class="small" style="margin-top:10px;">
-          We respect your privacy. We never disclose client names in public listings and only share your details with your permission.
-          <span id="clearDraftWrap" style="display:none;"> · <a href="#" id="clearDraftLink">Clear draft</a></span>
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Live preview ===== -->
-  <section class="section" id="previewSection" style="background:#f7f8ff;">
-    <div class="wrap">
-      <div class="card soft">
-        <h2 style="margin:0 0 12px;">Live Profile Preview</h2>
-        <aside id="livePreview" class="c-preview" aria-live="polite">
-          <p class="small">Complete the form to see a live summary of your profile. <span aria-hidden="true">📌</span> <strong>Local preview only.</strong></p>
-        </aside>
+          <aside class="candidate-preview-shell" id="previewSection">
+            <div class="candidate-preview-shell__frame">
+              <h2 class="candidate-preview-shell__title">Live Profile Preview</h2>
+              <aside id="livePreview" class="c-preview" aria-live="polite">
+                <p class="small">Complete the form to see a live summary of your profile. <span aria-hidden="true">📌</span> <strong>Local preview only.</strong></p>
+              </aside>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   </section>
@@ -382,7 +414,7 @@
   <section id="jobsWidget" class="c-jobs" hidden></section>
 
   <!-- ===== What to Expect (timeline) ===== -->
-  <section class="section">
+  <section class="section candidate-journey">
     <div class="wrap">
       <div class="public-section-head public-section-head--left">
         <p class="public-section-head__eyebrow">What to expect</p>
@@ -398,7 +430,7 @@
   </section>
 
   <!-- ===== FAQs ===== -->
-  <section class="section" style="background:#f7f8ff;">
+  <section class="section candidate-faq">
     <div class="wrap">
       <div class="public-section-head">
         <p class="public-section-head__eyebrow">FAQs</p>
@@ -421,7 +453,7 @@
   </section>
 
   <!-- ===== CTA ===== -->
-  <section class="cta">
+  <section class="cta candidate-final-cta">
     <div class="public-cta-band">
       <p class="public-section-head__eyebrow">Start here</p>
       <h2>Ready to line up your next mission-critical role?</h2>
@@ -504,7 +536,7 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="assets/css/candidates.enhanced.css">
+  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=6">
   <script defer src="assets/js/candidates.enhanced.js"></script>
 </body>
 </html>

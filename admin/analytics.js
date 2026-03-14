@@ -245,6 +245,9 @@
     return {
       source: 'supabase',
       setupRequired: false,
+      schemaMismatch: false,
+      schemaWarnings: [],
+      message: '',
       truncated: false,
       definitions: {},
       filters: {
@@ -448,6 +451,28 @@
         els.statusBanner.classList.toggle('is-visible', !!visible && !!message);
       }
 
+      function formatSchemaWarning(field) {
+        const labels = {
+          event_id: 'event ID column',
+          event_id_conflict: 'event ID uniqueness constraint',
+          page_visit_id: 'page visit ID',
+          full_url: 'full URL',
+          utm_source: 'UTM source',
+        };
+        return labels[field] || String(field || '').replace(/_/g, ' ');
+      }
+
+      function analyticsEmptyMessage(defaultMessage) {
+        const summary = state.data || {};
+        if (summary.schemaMismatch) {
+          return summary.message || 'Analytics schema mismatch detected. Apply the Supabase reconciliation SQL and refresh this page.';
+        }
+        if (summary.setupRequired) {
+          return summary.message || 'Apply the website analytics SQL and refresh this page to start loading live analytics.';
+        }
+        return defaultMessage;
+      }
+
       function syncInputs() {
         if (els.filterFrom) els.filterFrom.value = state.filters.from;
         if (els.filterTo) els.filterTo.value = state.filters.to;
@@ -547,6 +572,8 @@
         const summary = state.data || {};
         const filters = summary.filters?.applied || state.filters;
         const setupRequired = !!summary.setupRequired;
+        const schemaMismatch = !!summary.schemaMismatch;
+        const schemaWarnings = Array.isArray(summary.schemaWarnings) ? summary.schemaWarnings : [];
         const compareSummary = summary.comparison || {};
         const topPage = summary.topPages?.[0];
         const summaryFragments = [
@@ -563,8 +590,19 @@
         }
 
         if (els.sourceChip) {
-          els.sourceChip.textContent = setupRequired ? 'SQL setup needed' : (state.isLoading && state.data ? 'Refreshing live view' : 'Supabase live');
-          els.sourceChip.dataset.tone = setupRequired ? 'warn' : (state.isLoading && state.data ? 'warn' : 'good');
+          if (schemaMismatch) {
+            els.sourceChip.textContent = 'Schema mismatch';
+            els.sourceChip.dataset.tone = 'error';
+          } else if (setupRequired) {
+            els.sourceChip.textContent = 'SQL setup needed';
+            els.sourceChip.dataset.tone = 'warn';
+          } else if (schemaWarnings.length) {
+            els.sourceChip.textContent = 'Compat mode';
+            els.sourceChip.dataset.tone = 'warn';
+          } else {
+            els.sourceChip.textContent = state.isLoading && state.data ? 'Refreshing live view' : 'Supabase live';
+            els.sourceChip.dataset.tone = state.isLoading && state.data ? 'warn' : 'good';
+          }
         }
 
         if (els.rangeChip) {
@@ -583,13 +621,21 @@
         }
 
         if (els.heroSummary) {
-          els.heroSummary.textContent = setupRequired
+          els.heroSummary.textContent = schemaMismatch
+            ? (summary.message || 'Analytics schema mismatch detected. Apply the Supabase reconciliation SQL so the dashboard can return to full live reporting.')
+            : setupRequired
             ? 'Apply the Supabase analytics SQL and refresh this page to start loading live traffic, role demand, CTA performance, and session drop-off insights.'
+            : schemaWarnings.length
+            ? `Live analytics loaded with compatibility fallbacks. Missing schema support: ${schemaWarnings.map(formatSchemaWarning).join(', ')}. Apply the reconciliation SQL for full fidelity.`
             : 'Operational visibility into traffic, engagement quality, CTA intent, and role demand across the HMJ public site and admin portal.';
         }
 
         if (els.lastUpdatedChip) {
-          els.lastUpdatedChip.textContent = summary.recentActivity?.[0]?.occurredAt
+          els.lastUpdatedChip.textContent = schemaMismatch
+            ? 'Schema reconciliation required'
+            : setupRequired
+            ? 'Awaiting analytics schema'
+            : summary.recentActivity?.[0]?.occurredAt
             ? `Latest event • ${formatWhen(summary.recentActivity[0].occurredAt)}`
             : 'Waiting for analytics events';
         }
@@ -597,13 +643,19 @@
         if (els.topPageChip) {
           els.topPageChip.textContent = topPage?.path
             ? `Top page • ${topPage.path} (${formatNumber(topPage.pageViews || 0)} views)`
+            : schemaMismatch
+            ? 'Top page unavailable until schema is reconciled'
             : 'Top page pending';
         }
 
         if (els.definitionNote) {
           const definitions = summary.definitions || {};
-          els.definitionNote.textContent = setupRequired
+          els.definitionNote.textContent = schemaMismatch
+            ? `Admin diagnostic: ${summary.message || 'Analytics schema mismatch detected.'}`
+            : setupRequired
             ? 'This module expects the Supabase analytics schema before it can report sessions, page performance, and CTA activity.'
+            : schemaWarnings.length
+            ? `Compatibility note: ${schemaWarnings.map(formatSchemaWarning).join(', ')} missing. Core reporting remains available, but apply the reconciliation SQL for full health checks and deduplication.`
             : `Definitions: unique visitor = ${definitions.unique_visitor || 'distinct visitor_id'}, session = ${definitions.session || 'distinct session_id'}, time on page = ${definitions.time_on_page || 'time_on_page_seconds events'}.`;
         }
       }
@@ -734,7 +786,7 @@
 
         if (!rows.length) {
           els.trendLegend.innerHTML = '';
-          els.trendChart.innerHTML = emptyMarkup('No trend data yet for the current filters.');
+          els.trendChart.innerHTML = emptyMarkup(analyticsEmptyMessage('No trend data yet for the current filters.'));
           return;
         }
 
@@ -827,7 +879,7 @@
         }
         const rows = sortRows(state.data?.topPages || [], state.sorts.topPages);
         if (!rows.length) {
-          els.topPagesBody.innerHTML = `<tr><td colspan="8">${emptyMarkup('No page data yet for the current filters.')}</td></tr>`;
+          els.topPagesBody.innerHTML = `<tr><td colspan="8">${emptyMarkup(analyticsEmptyMessage('No page data yet for the current filters.'))}</td></tr>`;
           return;
         }
         els.topPagesBody.innerHTML = rows.map((row) => `
@@ -907,7 +959,7 @@
             <td class="is-numeric">${formatNumber(row.applyClicks || 0)}</td>
             <td class="is-numeric">${formatNumber(row.ctaClicks || 0)}</td>
           </tr>
-        `).join('') : `<tr><td colspan="4">${emptyMarkup('No identifiable job activity yet for the current filters.')}</td></tr>`;
+        `).join('') : `<tr><td colspan="4">${emptyMarkup(analyticsEmptyMessage('No identifiable job activity yet for the current filters.'))}</td></tr>`;
 
         els.topSpecsBody.innerHTML = specs.length ? specs.map((row) => `
           <tr>
@@ -921,7 +973,7 @@
             <td class="is-numeric">${formatDuration(row.avgTimeOnPageSeconds || 0)}</td>
             <td class="is-numeric">${formatNumber(row.applyClicks || 0)}</td>
           </tr>
-        `).join('') : `<tr><td colspan="4">${emptyMarkup('No identifiable spec activity yet for the current filters.')}</td></tr>`;
+        `).join('') : `<tr><td colspan="4">${emptyMarkup(analyticsEmptyMessage('No identifiable spec activity yet for the current filters.'))}</td></tr>`;
 
         renderSimpleList(
           els.listingIntentList,
@@ -935,7 +987,7 @@
               <span>${formatNumber(row.count || 0)} tracked actions</span>
             </article>
           `,
-          'Role-level CTA actions will appear here once job and spec clicks are recorded.'
+          analyticsEmptyMessage('Role-level CTA actions will appear here once job and spec clicks are recorded.')
         );
 
         renderSimpleList(
@@ -950,7 +1002,7 @@
               <span>${formatNumber(row.views || 0)} views • ${formatNumber(row.applyClicks || 0)} apply clicks • ${formatDuration(row.avgTimeOnPageSeconds || 0)} avg time</span>
             </article>
           `,
-          'Most engaged roles will appear here once enough listing activity is recorded.'
+          analyticsEmptyMessage('Most engaged roles will appear here once enough listing activity is recorded.')
         );
       }
 
@@ -967,7 +1019,7 @@
               <span>${row.topPage ? `Top page: ${escapeHtml(row.topPage)}` : 'CTA activity across current filters'}</span>
             </article>
           `,
-          'No CTA clicks recorded for the current filters.'
+          analyticsEmptyMessage('No CTA clicks recorded for the current filters.')
         );
 
         renderSimpleList(
@@ -981,7 +1033,7 @@
               </div>
             </article>
           `,
-          'No page-level CTA clicks recorded yet.'
+          analyticsEmptyMessage('No page-level CTA clicks recorded yet.')
         );
 
         renderSimpleList(
@@ -995,7 +1047,7 @@
               </div>
             </article>
           `,
-          'No jobs filter activity yet.'
+          analyticsEmptyMessage('No jobs filter activity yet.')
         );
       }
 
@@ -1004,28 +1056,28 @@
           els.landingPagesList,
           state.data?.pathInsights?.landingPages,
           (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} landing sessions</span></article>`,
-          'Landing pages will appear here once sessions are recorded.'
+          analyticsEmptyMessage('Landing pages will appear here once sessions are recorded.')
         );
 
         renderSimpleList(
           els.exitPagesList,
           state.data?.pathInsights?.exitPages,
           (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} exit sessions</span></article>`,
-          'Exit pages will appear here once sessions are recorded.'
+          analyticsEmptyMessage('Exit pages will appear here once sessions are recorded.')
         );
 
         renderSimpleList(
           els.topPathsList,
           state.data?.pathInsights?.topPaths,
           (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} sessions</span></article>`,
-          'Common journeys will appear here after multiple page sequences are tracked.'
+          analyticsEmptyMessage('Common journeys will appear here after multiple page sequences are tracked.')
         );
 
         renderSimpleList(
           els.topTransitionsList,
           state.data?.pathInsights?.topTransitions,
           (row) => `<article class="list-item"><strong>${escapeHtml(row.from)} → ${escapeHtml(row.to)}</strong><span>${formatNumber(row.count || 0)} transitions</span></article>`,
-          'Next-page transitions will appear here once visitors move between pages.'
+          analyticsEmptyMessage('Next-page transitions will appear here once visitors move between pages.')
         );
       }
 
@@ -1044,7 +1096,7 @@
 
         const rows = Array.isArray(state.data?.recentActivity) ? state.data.recentActivity : [];
         if (!rows.length) {
-          els.recentActivityList.innerHTML = emptyMarkup('No recent visitor activity yet.');
+          els.recentActivityList.innerHTML = emptyMarkup(analyticsEmptyMessage('No recent visitor activity yet.'));
           return;
         }
         els.recentActivityList.innerHTML = rows.map((row) => `
@@ -1078,9 +1130,9 @@
       }
 
       function renderMixPanels() {
-        renderMixList(els.sourceMixList, state.data?.breakdowns?.sources, 'Source mix will appear after live traffic is recorded.');
-        renderMixList(els.deviceMixList, state.data?.breakdowns?.devices, 'Device mix will appear once visitor sessions are recorded.');
-        renderMixList(els.siteMixList, state.data?.breakdowns?.siteAreas, 'Public and admin scope mix will appear here.');
+        renderMixList(els.sourceMixList, state.data?.breakdowns?.sources, analyticsEmptyMessage('Source mix will appear after live traffic is recorded.'));
+        renderMixList(els.deviceMixList, state.data?.breakdowns?.devices, analyticsEmptyMessage('Device mix will appear once visitor sessions are recorded.'));
+        renderMixList(els.siteMixList, state.data?.breakdowns?.siteAreas, analyticsEmptyMessage('Public and admin scope mix will appear here.'));
       }
 
       function renderAll() {
@@ -1176,13 +1228,21 @@
         try {
           const response = await api('admin-analytics-dashboard', 'POST', requestPayload);
           if (requestId !== state.requestId) return;
-          state.cache.set(key, response);
+          if (response.setupRequired || response.schemaMismatch || response.schemaWarnings?.length) {
+            state.cache.delete(key);
+          } else {
+            state.cache.set(key, response);
+          }
           state.data = response;
           state.isLoading = false;
           renderAll();
 
           if (response.setupRequired) {
-            setStatus('Apply the website analytics SQL in Supabase, then refresh this page.', 'warn', true);
+            setStatus(response.message || 'Apply the website analytics SQL in Supabase, then refresh this page.', 'warn', true);
+          } else if (response.schemaMismatch) {
+            setStatus(response.message || 'Analytics schema mismatch detected. Apply the Supabase reconciliation SQL.', 'error', true);
+          } else if (response.schemaWarnings?.length) {
+            setStatus(response.message || `Live analytics loaded in compatibility mode. Missing schema support: ${response.schemaWarnings.map(formatSchemaWarning).join(', ')}.`, 'warn', true);
           } else if (!response.topPages?.length && !response.recentActivity?.length) {
             setStatus('Analytics is live, but there are no matching events for the current filters yet.', 'warn', true);
           } else if (response.truncated) {

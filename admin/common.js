@@ -750,7 +750,10 @@
     const compact = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 900px)').matches : false;
 
     row.classList.toggle('hmj-admin-mobile-nav-open', !!open);
-    if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      trigger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    }
     if (actionsWrap) {
       actionsWrap.setAttribute('aria-hidden', open ? 'false' : 'true');
       if ('inert' in actionsWrap) actionsWrap.inert = compact && !open;
@@ -835,6 +838,7 @@
         icon.appendChild(document.createElement('span'));
 
         const label = document.createElement('span');
+        label.className = 'hmj-admin-mobile-trigger__label';
         label.textContent = 'Menu';
 
         trigger.appendChild(icon);
@@ -842,9 +846,21 @@
         row.appendChild(trigger);
       }
 
+      let label = trigger.querySelector('.hmj-admin-mobile-trigger__label');
+      if (!label) {
+        label = Array.from(trigger.children).find((child) => !child.classList?.contains('hmj-admin-mobile-trigger__icon'));
+        if (!label) {
+          label = document.createElement('span');
+          trigger.appendChild(label);
+        }
+        label.className = 'hmj-admin-mobile-trigger__label';
+      }
+      label.textContent = 'Menu';
+
       trigger.setAttribute('aria-haspopup', 'dialog');
       trigger.setAttribute('aria-controls', actionsWrap.id);
       trigger.setAttribute('aria-expanded', row.classList.contains('hmj-admin-mobile-nav-open') ? 'true' : 'false');
+      trigger.setAttribute('aria-label', row.classList.contains('hmj-admin-mobile-nav-open') ? 'Close menu' : 'Open menu');
       actionsWrap.setAttribute('aria-hidden', row.classList.contains('hmj-admin-mobile-nav-open') ? 'false' : 'true');
       if ('inert' in actionsWrap) actionsWrap.inert = typeof window.matchMedia === 'function'
         ? window.matchMedia('(max-width: 900px)').matches && !row.classList.contains('hmj-admin-mobile-nav-open')

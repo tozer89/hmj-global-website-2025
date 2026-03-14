@@ -513,3 +513,1220 @@
   gap: 6px;
   align-items: center;
 }
+
+.candidates-page {
+  --candidate-surface: #ffffff;
+  --candidate-surface-soft: #f7f9ff;
+  --candidate-surface-muted: #eef3ff;
+  --candidate-border: rgba(57, 86, 153, 0.16);
+  --candidate-border-strong: rgba(57, 86, 153, 0.3);
+  --candidate-deep: #0f1730;
+  --candidate-deep-strong: #162349;
+  --candidate-deep-soft: #1d2d57;
+  --candidate-text-soft: rgba(233, 240, 255, 0.78);
+  --candidate-shadow-lg: 0 28px 56px rgba(15, 27, 63, 0.18);
+  --candidate-shadow-md: 0 18px 34px rgba(15, 27, 63, 0.12);
+  --candidate-shadow-sm: 0 12px 22px rgba(15, 27, 63, 0.08);
+}
+
+.candidates-page {
+  background:
+    radial-gradient(circle at top left, rgba(63, 102, 199, 0.14), transparent 30%),
+    radial-gradient(circle at top right, rgba(15, 27, 63, 0.16), transparent 28%),
+    linear-gradient(180deg, #f4f7ff 0%, #eef3ff 100%);
+}
+
+.candidates-page .entry-hero--candidates {
+  min-height: 50vh;
+  padding: 136px 20px 98px;
+}
+
+.candidates-page .entry-hero--candidates::before {
+  background:
+    linear-gradient(180deg, rgba(12, 17, 34, 0.8), rgba(12, 17, 34, 0.6)),
+    linear-gradient(120deg, rgba(63, 102, 199, 0.18), transparent 46%);
+}
+
+.candidates-page .entry-hero--candidates .entry-hero__card {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(30px, 4vw, 42px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(95, 129, 223, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 246, 255, 0.93));
+  box-shadow:
+    0 36px 80px rgba(10, 15, 30, 0.3),
+    0 14px 28px rgba(10, 15, 30, 0.16);
+}
+
+.candidates-page .entry-hero--candidates .entry-hero__card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.42), transparent 30%),
+    radial-gradient(circle at top left, rgba(63, 102, 199, 0.14), transparent 40%);
+}
+
+.candidates-page .entry-hero--candidates .public-hero-copy,
+.candidates-page .entry-hero--candidates .public-hero-side {
+  position: relative;
+  z-index: 1;
+}
+
+.candidates-page .entry-hero__title {
+  max-width: 11ch;
+  letter-spacing: -0.04em;
+}
+
+.candidates-page .entry-hero__lead {
+  max-width: 58ch;
+  font-size: 1.06rem;
+  line-height: 1.72;
+}
+
+.candidates-page :is(.btn-primary, .btn-secondary, .btn-tertiary) {
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+.candidates-page .btn-primary {
+  background: linear-gradient(180deg, #4a76d8, #2f5cc5);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  box-shadow:
+    0 18px 30px rgba(47, 78, 162, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.candidates-page .btn-primary:hover,
+.candidates-page .btn-primary:focus-visible {
+  transform: translateY(-2px);
+  box-shadow:
+    0 24px 34px rgba(47, 78, 162, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.candidates-page .btn-secondary,
+.candidates-page .btn-tertiary {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(238, 243, 255, 0.98));
+  border-color: rgba(57, 86, 153, 0.18);
+  color: var(--ink);
+  box-shadow: var(--candidate-shadow-sm);
+}
+
+.candidates-page .btn-secondary:hover,
+.candidates-page .btn-secondary:focus-visible,
+.candidates-page .btn-tertiary:hover,
+.candidates-page .btn-tertiary:focus-visible {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, #ffffff, rgba(243, 247, 255, 0.98));
+  border-color: rgba(57, 86, 153, 0.34);
+  color: var(--accent);
+  box-shadow: 0 18px 30px rgba(15, 27, 63, 0.12);
+}
+
+.candidates-page .entry-hero__actions {
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.candidates-page .entry-hero__actions .btn-primary {
+  min-width: 172px;
+}
+
+.candidates-page .entry-hero__actions .btn-secondary {
+  min-width: 168px;
+}
+
+.candidates-page .entry-hero__meta {
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.candidates-page .entry-hero__chip {
+  padding: 10px 14px;
+  border-color: rgba(57, 86, 153, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 246, 255, 0.92));
+  color: #26437f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.candidates-page .entry-hero__chip::before {
+  box-shadow: 0 0 0 4px rgba(58, 102, 179, 0.12);
+}
+
+.candidates-page .public-hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(129, 155, 226, 0.2);
+  background:
+    radial-gradient(circle at top right, rgba(84, 119, 216, 0.18), transparent 34%),
+    linear-gradient(160deg, rgba(12, 18, 38, 0.98), rgba(22, 35, 73, 0.94));
+  box-shadow: 0 24px 42px rgba(8, 12, 26, 0.26);
+}
+
+.candidates-page .public-hero-panel h2,
+.candidates-page .public-hero-panel strong {
+  color: #f5f8ff;
+}
+
+.candidates-page .public-hero-panel p,
+.candidates-page .public-hero-panel li {
+  color: var(--candidate-text-soft);
+}
+
+.candidates-page .public-hero-panel__eyebrow {
+  color: rgba(207, 220, 255, 0.84);
+}
+
+.candidates-page .public-hero-panel .public-list li::before {
+  background: linear-gradient(180deg, #7da0ff, #4773df);
+  box-shadow: 0 0 0 5px rgba(87, 120, 214, 0.16);
+}
+
+.candidates-page .candidate-support {
+  margin-top: clamp(-34px, -2vw, -18px);
+}
+
+.candidates-page .candidate-support__grid {
+  gap: 18px;
+}
+
+.candidates-page .candidate-support__card {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 22px 20px;
+  border-radius: 26px;
+  border-color: rgba(57, 86, 153, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 255, 0.94));
+  box-shadow: var(--candidate-shadow-md);
+}
+
+.candidates-page .candidate-support__card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(63, 102, 199, 0.95), rgba(63, 102, 199, 0.18));
+}
+
+.candidates-page .candidate-support__card h2 {
+  font-size: 1.16rem;
+  letter-spacing: -0.02em;
+}
+
+.candidates-page .candidate-support__card p {
+  line-height: 1.74;
+}
+
+.candidates-page .candidate-metrics .kpi {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(112, 139, 210, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(87, 122, 217, 0.22), transparent 34%),
+    linear-gradient(160deg, rgba(11, 18, 37, 0.98), rgba(23, 37, 74, 0.96));
+  box-shadow: 0 22px 44px rgba(10, 15, 30, 0.24);
+}
+
+.candidates-page .candidate-metrics .kpi::after {
+  content: "";
+  position: absolute;
+  inset: auto -14% -50% auto;
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(84, 119, 216, 0.32), transparent 70%);
+}
+
+.candidates-page .candidate-metrics .kpi h3 {
+  position: relative;
+  z-index: 1;
+  color: #f7f9ff;
+  font-size: clamp(2rem, 3vw, 2.85rem);
+}
+
+.candidates-page .candidate-metrics .kpi p {
+  position: relative;
+  z-index: 1;
+  color: rgba(230, 237, 255, 0.74);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.candidates-page .candidate-intro .public-window,
+.candidates-page .candidate-trust-band {
+  box-shadow: var(--candidate-shadow-md);
+}
+
+.candidates-page .candidate-intro .public-window {
+  border-color: rgba(57, 86, 153, 0.14);
+}
+
+.candidates-page .candidate-trust-section {
+  padding-top: 18px;
+}
+
+.candidates-page .candidate-trust-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.candidates-page .candidate-trust-band__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(57, 86, 153, 0.12);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.candidates-page .candidate-trust-band__item svg {
+  flex: 0 0 auto;
+}
+
+.candidates-page .candidate-profile-section {
+  background:
+    linear-gradient(180deg, rgba(63, 102, 199, 0.03), rgba(15, 27, 63, 0.01));
+}
+
+.candidates-page .candidate-profile-section__head {
+  margin-bottom: 22px;
+}
+
+.candidates-page .candidate-profile-stage {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(16px, 3vw, 24px);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(66, 103, 203, 0.28), transparent 34%),
+    linear-gradient(160deg, rgba(10, 16, 33, 0.99), rgba(22, 35, 73, 0.96));
+  box-shadow: 0 34px 64px rgba(15, 27, 63, 0.2);
+}
+
+.candidates-page .candidate-profile-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 28%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 14px);
+  opacity: 0.6;
+}
+
+.candidates-page .candidate-profile-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
+  gap: 22px;
+  align-items: start;
+  min-width: 0;
+}
+
+.candidates-page .candidate-form-shell {
+  padding: clamp(22px, 3vw, 30px);
+  border-color: rgba(113, 138, 206, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(246, 249, 255, 0.96));
+  box-shadow:
+    0 24px 42px rgba(8, 12, 26, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.candidates-page .candidate-form-shell__title {
+  margin: 0 0 8px;
+  font-size: clamp(1.75rem, 3vw, 2.3rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.candidates-page .candidate-form-shell__intro {
+  margin: 0 0 22px;
+  max-width: 62ch;
+  font-size: 0.98rem;
+  line-height: 1.68;
+}
+
+.candidates-page .candidate-form {
+  display: grid;
+  gap: 18px;
+  scroll-margin-top: 108px;
+  min-width: 0;
+}
+
+.candidates-page .candidate-form__section {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid rgba(57, 86, 153, 0.12);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 255, 0.98), rgba(240, 244, 255, 0.8));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.candidates-page .candidate-form__section legend {
+  padding: 0 10px;
+  color: var(--accent-deep);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.candidates-page .candidate-form__grid {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.candidates-page .candidate-form__grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.candidates-page .candidate-field {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  min-width: 0;
+}
+
+.candidates-page .candidate-field--full,
+.candidates-page .candidate-form__actions {
+  grid-column: 1 / -1;
+}
+
+.candidates-page .cv-form label {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.candidates-page .cv-form label .small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.candidates-page .cv-form :is(
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="file"],
+  select,
+  textarea
+) {
+  width: 100%;
+  min-height: 52px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(57, 86, 153, 0.18);
+  background:
+    linear-gradient(180deg, #ffffff, rgba(245, 248, 255, 0.98));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.55);
+  color: var(--ink);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.candidates-page .cv-form textarea {
+  min-height: 152px;
+  resize: vertical;
+}
+
+.candidates-page .cv-form select {
+  appearance: none;
+  padding-right: 42px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23395699' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #ffffff, rgba(245, 248, 255, 0.98));
+  background-position: right 14px center, center;
+  background-repeat: no-repeat;
+}
+
+.candidates-page .cv-form input[type="file"] {
+  padding: 9px;
+}
+
+.candidates-page .cv-form input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  border: 1px solid rgba(57, 86, 153, 0.18);
+  border-radius: 11px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 242, 255, 0.98));
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.candidates-page .cv-form :is(
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="file"],
+  select,
+  textarea
+):hover {
+  border-color: rgba(57, 86, 153, 0.3);
+  box-shadow: 0 10px 18px rgba(15, 27, 63, 0.06);
+}
+
+.candidates-page .cv-form :is(
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="file"],
+  select,
+  textarea
+):focus {
+  border-color: rgba(63, 102, 199, 0.58);
+  box-shadow:
+    0 0 0 4px rgba(63, 102, 199, 0.12),
+    0 16px 26px rgba(15, 27, 63, 0.08);
+  outline: none;
+}
+
+.candidates-page .cv-form :required:invalid {
+  border-color: rgba(57, 86, 153, 0.18);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.candidates-page .cv-form :is(
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="file"],
+  select,
+  textarea
+):focus:invalid {
+  border-color: rgba(180, 35, 24, 0.62);
+  box-shadow:
+    0 0 0 4px rgba(180, 35, 24, 0.12),
+    0 16px 26px rgba(180, 35, 24, 0.06);
+}
+
+.candidates-page .small,
+.candidates-page .c-tagLimit,
+.candidates-page .c-locationNote,
+.candidates-page .c-tooltip,
+.candidates-page .c-fileMeta,
+.candidates-page .c-preview__notice,
+.candidates-page .c-strength__tier {
+  color: #6679a8;
+  line-height: 1.62;
+}
+
+.candidates-page #roleTip {
+  margin: 0;
+  min-height: 0;
+}
+
+.candidates-page #roleTip:empty {
+  display: none;
+}
+
+.candidates-page .tag-input,
+.candidates-page .c-skillBox {
+  min-height: 54px;
+  padding: 8px;
+  border: 1px solid rgba(57, 86, 153, 0.16);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, #ffffff, rgba(246, 249, 255, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.candidates-page .tag-input:focus-within,
+.candidates-page .c-skillBox:focus-within {
+  border-color: rgba(63, 102, 199, 0.52);
+  box-shadow:
+    0 0 0 4px rgba(63, 102, 199, 0.12),
+    0 12px 22px rgba(15, 27, 63, 0.06);
+}
+
+.candidates-page .c-chip {
+  padding: 8px 12px;
+  border: 1px solid rgba(63, 102, 199, 0.18);
+  background: rgba(63, 102, 199, 0.08);
+  color: #244282;
+  font-weight: 700;
+}
+
+.candidates-page .c-chip button {
+  color: inherit;
+}
+
+.candidates-page .c-skillHints {
+  gap: 8px;
+}
+
+.candidates-page .c-skillHints button {
+  border-radius: 999px;
+  border-color: rgba(57, 86, 153, 0.16);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
+  font-weight: 700;
+  padding: 7px 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.candidates-page .c-skillHints button:hover,
+.candidates-page .c-skillHints button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(57, 86, 153, 0.32);
+  box-shadow: 0 10px 18px rgba(15, 27, 63, 0.08);
+}
+
+.candidates-page .rtw-wrap {
+  gap: 12px;
+}
+
+.candidates-page .rtw-item {
+  min-height: 58px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(57, 86, 153, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 255, 0.94));
+  line-height: 1.55;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.candidates-page .rtw-item input,
+.candidates-page .candidate-consent__label input {
+  accent-color: var(--accent);
+}
+
+.candidates-page .rtw-item:focus-within {
+  border-color: rgba(63, 102, 199, 0.48);
+  box-shadow:
+    0 0 0 4px rgba(63, 102, 199, 0.12),
+    0 12px 22px rgba(15, 27, 63, 0.06);
+}
+
+.candidates-page .rtw-item:has(input:checked) {
+  border-color: rgba(63, 102, 199, 0.38);
+  background:
+    linear-gradient(180deg, rgba(238, 244, 255, 0.98), rgba(226, 235, 255, 0.96));
+  box-shadow: 0 16px 24px rgba(15, 27, 63, 0.08);
+}
+
+.candidates-page .c-rtwChips {
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.candidates-page .c-otherText {
+  margin-top: 12px;
+}
+
+.candidates-page .c-otherText input {
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(57, 86, 153, 0.18);
+  background: linear-gradient(180deg, #ffffff, rgba(245, 248, 255, 0.98));
+}
+
+.candidates-page .c-rateHelper {
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.candidates-page .c-rateHelper select,
+.candidates-page .c-rateHelper button {
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(57, 86, 153, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 246, 255, 0.98));
+  color: var(--ink);
+  font-weight: 700;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.candidates-page .c-rateHelper button[aria-pressed="true"] {
+  border-color: rgba(63, 102, 199, 0.4);
+  background: linear-gradient(180deg, #4a76d8, #2f5cc5);
+  color: #fff;
+  box-shadow: 0 14px 22px rgba(47, 78, 162, 0.18);
+}
+
+.candidates-page .c-rateHelper :is(select, button):hover,
+.candidates-page .c-rateHelper :is(select, button):focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(57, 86, 153, 0.3);
+  box-shadow: 0 10px 18px rgba(15, 27, 63, 0.08);
+}
+
+.candidates-page .candidate-strength__label {
+  margin-bottom: 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+}
+
+.candidates-page .c-strength {
+  gap: 12px;
+  border-radius: 16px;
+  border-color: rgba(57, 86, 153, 0.12);
+  background:
+    linear-gradient(180deg, rgba(245, 248, 255, 0.98), rgba(235, 240, 255, 0.92));
+}
+
+.candidates-page .c-strength__label {
+  font-size: 1rem;
+}
+
+.candidates-page .c-strength__bar {
+  height: 12px;
+  background: rgba(63, 102, 199, 0.14);
+}
+
+.candidates-page .c-strength__bar span {
+  background: linear-gradient(90deg, #4a76d8, #2f5cc5);
+}
+
+.candidates-page .candidate-consent__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(57, 86, 153, 0.12);
+  background: rgba(255, 255, 255, 0.76);
+  line-height: 1.64;
+}
+
+.candidates-page .candidate-form__actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.candidates-page #submitBtn {
+  min-width: 182px;
+}
+
+.candidates-page .candidate-form-shell__privacy {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(57, 86, 153, 0.12);
+}
+
+.candidates-page #clearDraftLink {
+  color: var(--accent-deep);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(63, 102, 199, 0.18);
+}
+
+.candidates-page #clearDraftLink:hover,
+.candidates-page #clearDraftLink:focus-visible {
+  border-bottom-color: rgba(63, 102, 199, 0.5);
+}
+
+.candidates-page .candidate-preview-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.candidates-page .candidate-preview-shell__frame {
+  padding: 20px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(84, 119, 216, 0.16), transparent 32%),
+    linear-gradient(160deg, rgba(10, 15, 31, 0.98), rgba(18, 28, 55, 0.96));
+  box-shadow: 0 28px 52px rgba(6, 10, 22, 0.34);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.candidates-page .candidate-preview-shell__title {
+  margin: 0 0 14px;
+  color: #f2f6ff;
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.candidates-page .c-preview {
+  background:
+    linear-gradient(180deg, rgba(17, 25, 49, 0.92), rgba(13, 20, 39, 0.96));
+  border-color: rgba(120, 145, 215, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 34px rgba(0, 0, 0, 0.22);
+  color: #eef3ff;
+}
+
+.candidates-page .c-preview__badge {
+  border: 1px solid rgba(120, 145, 215, 0.22);
+  background: rgba(81, 116, 208, 0.14);
+  color: #dbe5ff;
+}
+
+.candidates-page .c-preview__copy {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eff4ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.candidates-page .c-preview__copy:hover,
+.candidates-page .c-preview__copy:focus-visible {
+  background: rgba(77, 112, 205, 0.24);
+  color: #fff;
+}
+
+.candidates-page .c-preview__section {
+  min-height: 136px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+}
+
+.candidates-page .c-preview__section h3 {
+  color: rgba(210, 222, 255, 0.72);
+}
+
+.candidates-page .c-preview__row,
+.candidates-page .c-preview__empty,
+.candidates-page .c-preview__footer,
+.candidates-page .c-preview__notice {
+  color: rgba(231, 238, 255, 0.76);
+}
+
+.candidates-page .c-preview__pdf {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(239, 244, 255, 0.82);
+}
+
+.candidates-page .c-preview__file {
+  color: #f2f6ff;
+}
+
+.candidates-page .c-preview .c-chip {
+  background: rgba(89, 124, 219, 0.16);
+  border-color: rgba(120, 145, 215, 0.24);
+  color: #eef3ff;
+}
+
+.candidates-page .candidate-journey .timeline {
+  padding: 12px;
+  border-color: rgba(57, 86, 153, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.94));
+}
+
+.candidates-page .candidate-journey .timeline::before {
+  left: 28px;
+  background: linear-gradient(180deg, rgba(63, 102, 199, 0.08), rgba(63, 102, 199, 0.4), rgba(63, 102, 199, 0.08));
+}
+
+.candidates-page .candidate-journey .step {
+  padding: 18px 54px 18px 74px;
+  margin-bottom: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(57, 86, 153, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(242, 246, 255, 0.92));
+  box-shadow: 0 14px 24px rgba(15, 27, 63, 0.06);
+}
+
+.candidates-page .candidate-journey .step:last-child {
+  margin-bottom: 0;
+}
+
+.candidates-page .candidate-journey .step::before {
+  left: 18px;
+  top: 20px;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(180deg, #4a76d8, #2f5cc5);
+  box-shadow: 0 0 0 5px rgba(63, 102, 199, 0.12);
+}
+
+.candidates-page .candidate-journey .step h3 {
+  margin: 0 0 6px;
+  font-size: 1.08rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.candidates-page .candidate-journey .step p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.candidates-page .candidate-journey .step svg {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  opacity: 0.75;
+}
+
+.candidates-page .candidate-faq {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(63, 102, 199, 0.04));
+}
+
+.candidates-page details {
+  padding: 0;
+  overflow: hidden;
+}
+
+.candidates-page details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  font-size: 1rem;
+}
+
+.candidates-page details summary::-webkit-details-marker {
+  display: none;
+}
+
+.candidates-page details summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(63, 102, 199, 0.1);
+  color: var(--accent);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.candidates-page details[open] summary::after {
+  content: "−";
+}
+
+.candidates-page details p {
+  margin: 0;
+  padding: 0 20px 18px;
+  color: var(--muted);
+  line-height: 1.72;
+}
+
+.candidates-page .candidate-final-cta {
+  padding-top: 14px;
+}
+
+.candidates-page .public-cta-band {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 52px rgba(15, 27, 63, 0.28);
+}
+
+.candidates-page .public-cta-band .public-hero-actions {
+  justify-content: center;
+  gap: 12px;
+}
+
+.candidates-page .public-cta-band .btn-primary,
+.candidates-page .public-cta-band .btn-secondary {
+  min-width: 170px;
+}
+
+.candidates-page .public-cta-band .btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  box-shadow: none;
+}
+
+.candidates-page .public-cta-band .btn-secondary:hover,
+.candidates-page .public-cta-band .btn-secondary:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.34);
+  color: #fff;
+}
+
+.candidates-page .c-jobs__card {
+  border-color: rgba(57, 86, 153, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 246, 255, 0.94));
+  box-shadow: var(--candidate-shadow-md);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .candidates-page :is(
+    .candidate-support__card,
+    .candidate-trust-band__item,
+    .candidate-metrics .kpi,
+    .candidate-journey .step,
+    details,
+    .c-jobs__card
+  ) {
+    transition:
+      transform 0.22s ease,
+      box-shadow 0.22s ease,
+      border-color 0.22s ease,
+      background 0.22s ease;
+  }
+
+  .candidates-page :is(
+    .candidate-support__card,
+    .candidate-trust-band__item,
+    .candidate-metrics .kpi,
+    .candidate-journey .step,
+    details,
+    .c-jobs__card
+  ):hover {
+    transform: translateY(-3px);
+    border-color: rgba(57, 86, 153, 0.24);
+    box-shadow: 0 22px 34px rgba(15, 27, 63, 0.12);
+  }
+}
+
+@media (max-width: 1180px) {
+  .candidates-page .candidate-profile-layout,
+  .candidates-page .candidate-trust-band {
+    grid-template-columns: 1fr;
+  }
+
+  .candidates-page .candidate-preview-shell {
+    order: 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .candidates-page .entry-hero__title {
+    max-width: none;
+  }
+
+  .candidates-page .entry-hero__actions {
+    width: 100%;
+  }
+
+  .candidates-page .entry-hero__actions .btn-primary,
+  .candidates-page .entry-hero__actions .btn-secondary {
+    flex: 1 1 220px;
+  }
+
+  .candidates-page .candidate-profile-stage {
+    border-radius: 28px;
+    padding: 14px;
+  }
+
+  .candidates-page .candidate-form-shell,
+  .candidates-page .candidate-preview-shell__frame {
+    border-radius: 24px;
+  }
+}
+
+@media (max-width: 720px) {
+  .candidates-page .candidate-profile-section__head {
+    margin-bottom: 18px;
+  }
+
+  .candidates-page .candidate-form__grid--two,
+  .candidates-page .candidate-trust-band {
+    grid-template-columns: 1fr;
+  }
+
+  .candidates-page .candidate-form__section {
+    padding: 16px;
+  }
+
+  .candidates-page .candidate-form__actions,
+  .candidates-page .public-cta-band .public-hero-actions {
+    width: 100%;
+  }
+
+  .candidates-page #submitBtn,
+  .candidates-page .public-cta-band .btn-primary,
+  .candidates-page .public-cta-band .btn-secondary,
+  .candidates-page .entry-hero__actions .btn-primary,
+  .candidates-page .entry-hero__actions .btn-secondary {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .candidates-page .candidate-preview-shell__frame {
+    padding: 16px;
+  }
+
+  .candidates-page .c-preview__header {
+    align-items: stretch;
+  }
+
+  .candidates-page .c-preview__copy {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  .candidates-page .candidate-journey .step {
+    padding: 18px 18px 18px 62px;
+  }
+
+  .candidates-page .candidate-journey .step svg {
+    position: static;
+    margin-top: 10px;
+  }
+
+  .candidates-page details summary {
+    padding: 16px 18px;
+  }
+
+  .candidates-page details p {
+    padding: 0 18px 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .candidates-page .candidate-support {
+    padding-inline: 10px;
+  }
+
+  .candidates-page .entry-hero--candidates .entry-hero__card {
+    padding: 20px 18px;
+  }
+
+  .candidates-page .entry-hero__title {
+    font-size: clamp(2rem, 11vw, 2.45rem);
+  }
+
+  .candidates-page .entry-hero__lead {
+    font-size: 1rem;
+  }
+
+  .candidates-page .entry-hero__chip {
+    padding: 9px 12px;
+    font-size: 0.85rem;
+  }
+
+  .candidates-page .candidate-support__card,
+  .candidates-page .candidate-trust-band__item {
+    padding: 16px 15px;
+  }
+
+  .candidates-page .candidate-profile-stage {
+    padding: 10px;
+    border-radius: 24px;
+  }
+
+  .candidates-page .candidate-form-shell,
+  .candidates-page .candidate-preview-shell__frame {
+    padding: 16px 14px;
+    border-radius: 20px;
+  }
+
+  .candidates-page .candidate-form-shell__title,
+  .candidates-page .candidate-preview-shell__title {
+    font-size: 2rem;
+  }
+
+  .candidates-page .candidate-form__section {
+    padding: 14px 12px;
+    border-radius: 18px;
+  }
+
+  .candidates-page .cv-form :is(
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="file"],
+    select,
+    textarea
+  ) {
+    padding-inline: 12px;
+  }
+
+  .candidates-page .rtw-item {
+    min-height: 54px;
+    padding: 12px 13px;
+  }
+
+  .candidates-page .hmj-chatbot {
+    right: 10px;
+    left: 10px;
+    --hmj-chatbot-bottom: 12px;
+  }
+
+  .candidates-page .hmj-chatbot__launcher {
+    gap: 8px;
+    padding: 8px 11px;
+  }
+
+  .candidates-page .hmj-chatbot__launcher-label {
+    font-size: 0.8rem;
+  }
+
+  .candidates-page .hmj-chatbot__launcher-meta {
+    display: none;
+  }
+
+  body.candidates-page footer {
+    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candidates-page *,
+  .candidates-page *::before,
+  .candidates-page *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

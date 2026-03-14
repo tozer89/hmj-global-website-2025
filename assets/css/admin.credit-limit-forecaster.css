@@ -438,6 +438,46 @@ a {
   gap: 10px;
 }
 
+.clf-setup-guide {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(41, 71, 143, 0.12);
+  background: linear-gradient(180deg, rgba(41, 71, 143, 0.08), rgba(255, 255, 255, 0.94));
+}
+
+.clf-guide-chip[data-guide-state="complete"] {
+  background: var(--clf-ok-soft);
+  border-color: rgba(19, 135, 84, 0.2);
+  color: var(--clf-ok);
+}
+
+.clf-guide-chip[data-guide-state="current"] {
+  background: var(--clf-accent-soft);
+  border-color: rgba(41, 71, 143, 0.22);
+  color: var(--clf-accent);
+}
+
+.clf-guide-chip[data-guide-state="pending"] {
+  color: var(--clf-muted);
+}
+
+.clf-guide-note {
+  display: grid;
+  gap: 4px;
+}
+
+.clf-guide-note strong {
+  font-size: 14px;
+  color: var(--clf-accent);
+}
+
+.clf-guide-note span {
+  color: var(--clf-muted);
+  font-size: 13px;
+}
+
 .clf-alert {
   display: grid;
   gap: 4px;
@@ -1187,6 +1227,56 @@ a {
 
 .clf-list-card strong {
   display: block;
+}
+
+.clf-import-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(41, 71, 143, 0.14);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.clf-upload-card {
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), rgba(15, 118, 110, 0) 52%),
+    rgba(255, 255, 255, 0.97);
+  border-style: dashed;
+}
+
+.clf-upload-card.is-dragging {
+  border-color: rgba(41, 71, 143, 0.34);
+  box-shadow: 0 18px 34px rgba(41, 71, 143, 0.12);
+}
+
+.clf-import-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  color: var(--clf-muted);
+  font-size: 13px;
+}
+
+.clf-import-table-wrap {
+  max-height: 420px;
+}
+
+.clf-import-table {
+  min-width: 980px;
+}
+
+.clf-import-table input,
+.clf-import-table select {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(41, 71, 143, 0.16);
+  font: inherit;
+  background: #fff;
+  color: var(--clf-ink);
 }
 
 .clf-dialog {

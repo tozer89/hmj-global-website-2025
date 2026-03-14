@@ -11,10 +11,11 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
-  <script defer src="/lib/credit-limit-forecast.js?v=1"></script>
+  <script defer src="/lib/credit-limit-forecast.js?v=3"></script>
+  <script defer src="/lib/credit-limit-statement-import.js?v=1"></script>
   <link rel="stylesheet" href="/assets/css/admin.credit-limit-forecaster.css?v=1"/>
-  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=1"/>
-  <script defer src="/admin/credit-limit-forecaster.js?v=1"></script>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <script defer src="/admin/credit-limit-forecaster.js?v=3"></script>
 </head>
 <body>
   <div class="clf-top">
@@ -117,6 +118,7 @@
               </div>
             </div>
             <div id="validationHost" class="clf-alert-stack" aria-live="polite"></div>
+            <div id="setupGuideHost" aria-live="polite"></div>
 
             <form id="forecastForm" autocomplete="off">
               <input id="growthMode" type="hidden" value="contractor"/>
@@ -189,6 +191,7 @@
                     <span class="clf-label">Opening-balance receipts</span>
                     <select id="openingBalanceReceiptMode">
                       <option value="term_profile">Follow payment-term profile</option>
+                      <option value="import_statement">Import statement</option>
                       <option value="even_runoff">Even runoff across weeks</option>
                       <option value="manual">Manual opening-balance receipts</option>
                       <option value="no_receipts">No opening-balance receipts</option>
@@ -210,6 +213,7 @@
                   </label>
                 </div>
                 <div id="openingBalancePreview" class="clf-list" aria-live="polite"></div>
+                <div id="openingBalanceImportHost" class="clf-list" aria-live="polite" style="display:none"></div>
                 <div class="clf-chip-row clf-no-print">
                   <button class="clf-chip-btn" type="button" data-preset="terms-30-eom">30 days EOM</button>
                   <button class="clf-chip-btn" type="button" data-preset="terms-30-invoice">30 days invoice date</button>
@@ -544,7 +548,7 @@
             <div class="clf-card-head">
               <div>
                 <p class="clf-kicker">Detailed forecast</p>
-                <h3>Weekly opening, invoicing, receipts, and closing balance</h3>
+                <h3>Weekly opening, invoicing, receipt sources, and closing balance</h3>
               </div>
             </div>
             <div id="forecastTableHost" class="clf-table-wrap"></div>
@@ -556,7 +560,7 @@
             <div class="clf-card-head">
               <div>
                 <p class="clf-kicker">Receipt timing</p>
-                <h3>Invoice and expected receipt schedule</h3>
+                <h3>Opening-balance and forecast receipt schedule</h3>
               </div>
             </div>
             <div id="cashTimingHost" class="clf-table-wrap"></div>
@@ -583,6 +587,7 @@
   </dialog>
 
   <datalist id="clientNames"></datalist>
+  <input id="statementUploadInput" type="file" accept=".pdf,.csv,.xlsx,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden/>
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>

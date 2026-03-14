@@ -88,36 +88,44 @@
       margin-left: auto;
       width: 44px;
       height: 44px;
-      border-radius: 12px;
+      padding: 0;
+      border-radius: 14px;
       display: none;
       background: rgba(236, 239, 255, 0.08);
       border: 1px solid rgba(236,239,255,0.18);
       color: #fff;
       align-items: center;
       justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 14px 30px rgba(10, 15, 30, 0.18);
+      transition: transform 0.16s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hmj-burger:hover,
+    .hmj-burger:focus-visible {
+      background: rgba(236, 239, 255, 0.16);
+      border-color: rgba(236, 239, 255, 0.3);
+      box-shadow: 0 18px 34px rgba(10, 15, 30, 0.24);
+      outline: none;
+      transform: translateY(-1px);
     }
     .hmj-burger span {
-      width: 22px;
+      width: 20px;
       height: 2px;
       background: currentColor;
       display: block;
-      position: relative;
-    }
-    .hmj-burger span::before,
-    .hmj-burger span::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      width: 22px;
-      height: 2px;
-      background: currentColor;
+      border-radius: 999px;
+      transform-origin: center;
       transition: transform 0.2s ease, opacity 0.2s ease;
     }
-    .hmj-burger span::before { top: -6px; }
-    .hmj-burger span::after { top: 6px; }
-    .hmj-burger[aria-expanded="true"] span { background: transparent; }
-    .hmj-burger[aria-expanded="true"] span::before { transform: translateY(6px) rotate(45deg); }
-    .hmj-burger[aria-expanded="true"] span::after { transform: translateY(-6px) rotate(-45deg); }
+    .hmj-burger[aria-expanded="true"] {
+      background: rgba(236, 239, 255, 0.2);
+      border-color: rgba(236, 239, 255, 0.34);
+    }
+    .hmj-burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    .hmj-burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+    .hmj-burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
     .hmj-scrim {
       position: fixed;
       inset: 0;
@@ -342,7 +350,7 @@
       <nav class="hmj-nav" aria-label="Main navigation">
         <a class="hmj-logo" href="index.html"><img src="images/logo.png" alt="HMJ-Global Logo" /></a>
         <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
-          <span></span>
+          <span></span><span></span><span></span>
         </button>
         <ul id="hmj-menu" class="hmj-menu">
           <li><a href="index.html">Home</a></li>
@@ -350,9 +358,8 @@
           <li><a href="clients.html" aria-current="page">Clients</a></li>
           <li><a href="candidates.html">Candidates</a></li>
           <li><a href="jobs.html">Jobs</a></li>
-          <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
           <li><a href="https://hmjglobal.timesheetportal.com" id="nav-timesheets">Timesheets</a></li>
-          <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+          <li><a href="/admin/" id="nav-admin" class="requires-admin nav-admin-link" style="display:none" aria-disabled="true">Admin</a></li>
         </ul>
         <div class="hmj-scrim" aria-hidden="true" hidden></div>
       </nav>

@@ -11,15 +11,16 @@ const fs = require('fs');
 // public jobs board or admin jobs editor runtime flow.
 
 const SECTION_PRESETS = new Map([
-  ['commercial', 'Commercial'],
-  ['dc', 'Data Centre Delivery'],
-  ['data-centre-delivery', 'Data Centre Delivery'],
-  ['substations', 'Substations & Energy'],
-  ['substations-energy', 'Substations & Energy'],
-  ['pharma', 'Life Sciences & Pharma'],
-  ['life-sciences', 'Life Sciences & Pharma'],
-  ['ict', 'ICT & Commissioning'],
-  ['ict-commissioning', 'ICT & Commissioning'],
+  ['commercial', { key: 'commercial', label: 'Commercial' }],
+  ['dc', { key: 'data-centre-delivery', label: 'Data Centre Delivery' }],
+  ['data-centre-delivery', { key: 'data-centre-delivery', label: 'Data Centre Delivery' }],
+  ['substations', { key: 'substations-energy', label: 'Substations & Energy' }],
+  ['substations-energy', { key: 'substations-energy', label: 'Substations & Energy' }],
+  ['pharma', { key: 'life-sciences-pharma', label: 'Life Sciences & Pharma' }],
+  ['life-sciences', { key: 'life-sciences-pharma', label: 'Life Sciences & Pharma' }],
+  ['life-sciences-pharma', { key: 'life-sciences-pharma', label: 'Life Sciences & Pharma' }],
+  ['ict', { key: 'ict-commissioning', label: 'ICT & Commissioning' }],
+  ['ict-commissioning', { key: 'ict-commissioning', label: 'ICT & Commissioning' }],
 ]);
 
 const PAY_TYPE_SET = new Set([
@@ -207,11 +208,13 @@ function resolveSection(raw) {
   if (!input) {
     return { key: 'general', label: 'General' };
   }
-  const preset = SECTION_PRESETS.get(input.toLowerCase());
+  const rawKey = input.toLowerCase();
+  const normalizedKey = slugify(input) || rawKey;
+  const preset = SECTION_PRESETS.get(rawKey) || SECTION_PRESETS.get(normalizedKey);
   if (preset) {
-    return { key: slugify(input) || input.toLowerCase(), label: preset };
+    return { ...preset };
   }
-  const key = slugify(input) || input.toLowerCase() || 'general';
+  const key = normalizedKey || 'general';
   const label = startCase(input) || 'General';
   return { key, label };
 }

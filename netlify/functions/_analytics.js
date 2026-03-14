@@ -17,6 +17,41 @@ const EVENT_TYPE_RE = /^[a-z0-9_]{2,80}$/;
 const VALID_DEVICE_TYPES = new Set(['desktop', 'mobile', 'tablet']);
 const VALID_SITE_AREAS = new Set(['public', 'admin']);
 const INTERNAL_BASE_URL = 'https://hmj-global.local';
+const DASHBOARD_FIELDS = [
+  'occurred_at',
+  'visitor_id',
+  'session_id',
+  'page_visit_id',
+  'event_type',
+  'site_area',
+  'page_path',
+  'full_url',
+  'page_title',
+  'referrer',
+  'referrer_domain',
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_term',
+  'utm_content',
+  'link_url',
+  'link_text',
+  'event_label',
+  'event_value',
+  'duration_seconds',
+  'path_from',
+  'path_to',
+  'device_type',
+  'payload',
+];
+const REQUIRED_DASHBOARD_FIELDS = new Set([
+  'occurred_at',
+  'visitor_id',
+  'session_id',
+  'event_type',
+  'site_area',
+  'page_path',
+]);
 
 function header(event, name) {
   if (!event || !event.headers) return '';
@@ -399,56 +434,190 @@ function applyDashboardFilters(query, filters) {
   return next;
 }
 
-const DASHBOARD_SELECT = [
-  'event_id',
-  'occurred_at',
-  'visitor_id',
-  'session_id',
-  'page_visit_id',
-  'event_type',
-  'site_area',
-  'page_path',
-  'full_url',
-  'page_title',
-  'referrer',
-  'referrer_domain',
-  'utm_source',
-  'utm_medium',
-  'utm_campaign',
-  'utm_term',
-  'utm_content',
-  'link_url',
-  'link_text',
-  'event_label',
-  'event_value',
-  'duration_seconds',
-  'path_from',
-  'path_to',
-  'device_type',
-  'payload',
-].join(',');
+function buildDashboardSelect(fields) {
+  return (Array.isArray(fields) && fields.length ? fields : DASHBOARD_FIELDS).join(',');
+}
+
+function extractMissingAnalyticsColumn(error, tableName = ANALYTICS_EVENTS_TABLE) {
+  const message = trimString(error?.message || error, 500);
+  if (!message) return '';
+
+  const escapedTable = String(tableName || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`column\\s+${escapedTable}\\.([a-z0-9_]+)\\s+does not exist`, 'i'),
+    /column\s+"?([a-z0-9_]+)"?\s+does not exist/i,
+    new RegExp(`Could not find the ['"]?([a-z0-9_]+)['"]? column of ['"]?${escapedTable}['"]? in the schema cache`, 'i'),
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(message);
+    if (match && match[1]) {
+      return trimString(match[1], 80).replace(/^analytics_events\./i, '');
+    }
+  }
+  return '';
+}
+
+function isMissingConflictConstraintError(error) {
+  const message = trimString(error?.message || error, 500).toLowerCase();
+  return message.includes('there is no unique or exclusion constraint matching the on conflict specification');
+}
+
+function isAnalyticsSchemaError(error) {
+  return !!(
+    isMissingAnalyticsTableError(error)
+    || extractMissingAnalyticsColumn(error)
+    || isMissingConflictConstraintError(error)
+  );
+}
+
+function classifyAnalyticsSchemaIssue(error) {
+  if (isMissingAnalyticsTableError(error)) {
+    return {
+      type: 'missing_table',
+      message: trimString(error?.message || error, 500) || 'analytics_table_missing',
+      missingColumn: '',
+    };
+  }
+
+  const missingColumn = extractMissingAnalyticsColumn(error);
+  if (missingColumn) {
+    return {
+      type: 'missing_column',
+      message: trimString(error?.message || error, 500) || 'analytics_column_missing',
+      missingColumn,
+    };
+  }
+
+  if (isMissingConflictConstraintError(error)) {
+    return {
+      type: 'missing_conflict_constraint',
+      message: trimString(error?.message || error, 500) || 'analytics_event_id_constraint_missing',
+      missingColumn: '',
+    };
+  }
+
+  return {
+    type: 'unknown_schema_issue',
+    message: trimString(error?.message || error, 500) || 'analytics_schema_issue',
+    missingColumn: '',
+  };
+}
+
+function isMissingAnalyticsTableError(error) {
+  return isMissingTableError(error, ANALYTICS_EVENTS_TABLE);
+}
+
+function diffDashboardFields(fields) {
+  return DASHBOARD_FIELDS.filter((field) => !fields.includes(field));
+}
+
+function stripFieldFromRows(rows, fieldName) {
+  const items = Array.isArray(rows) ? rows : [];
+  return items.map((row) => {
+    if (!row || typeof row !== 'object') return row;
+    const next = { ...row };
+    delete next[fieldName];
+    return next;
+  });
+}
+
+async function runAnalyticsSelectWithCompatibility(buildQuery) {
+  let fields = DASHBOARD_FIELDS.slice();
+  let lastError = null;
+
+  while (fields.length) {
+    const { data, error } = await buildQuery(buildDashboardSelect(fields));
+    if (!error) {
+      return {
+        rows: Array.isArray(data) ? data : [],
+        omittedFields: diffDashboardFields(fields),
+      };
+    }
+
+    const missingColumn = extractMissingAnalyticsColumn(error, ANALYTICS_EVENTS_TABLE);
+    if (!missingColumn || !fields.includes(missingColumn) || REQUIRED_DASHBOARD_FIELDS.has(missingColumn)) {
+      throw error;
+    }
+
+    fields = fields.filter((field) => field !== missingColumn);
+    lastError = error;
+  }
+
+  throw lastError || new Error('analytics_dashboard_select_unavailable');
+}
+
+async function writeAnalyticsRowsWithCompatibility(supabase, rows) {
+  const primaryResult = await supabase
+    .from(ANALYTICS_EVENTS_TABLE)
+    .upsert(rows, {
+      onConflict: 'event_id',
+      ignoreDuplicates: true,
+    });
+
+  if (!primaryResult.error) {
+    return {
+      mode: 'upsert',
+      schemaWarnings: [],
+    };
+  }
+
+  if (!isAnalyticsSchemaError(primaryResult.error)) {
+    throw primaryResult.error;
+  }
+
+  const issue = classifyAnalyticsSchemaIssue(primaryResult.error);
+
+  if (issue.type === 'missing_column' && issue.missingColumn === 'event_id') {
+    const { error } = await supabase
+      .from(ANALYTICS_EVENTS_TABLE)
+      .insert(stripFieldFromRows(rows, 'event_id'));
+    if (error) throw error;
+
+    return {
+      mode: 'legacy_insert',
+      schemaWarnings: ['event_id'],
+    };
+  }
+
+  if (issue.type === 'missing_conflict_constraint') {
+    const { error } = await supabase
+      .from(ANALYTICS_EVENTS_TABLE)
+      .insert(rows);
+    if (error) throw error;
+
+    return {
+      mode: 'insert_without_conflict',
+      schemaWarnings: ['event_id_conflict'],
+    };
+  }
+
+  throw primaryResult.error;
+}
 
 async function fetchAnalyticsRows(supabase, filters, options = {}) {
   const maxRows = Number.isInteger(options.maxRows) ? options.maxRows : MAX_EVENT_ROWS;
   const rows = [];
   let page = 0;
   let truncated = false;
+  let omittedFields = [];
 
   while (rows.length < maxRows) {
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    let query = supabase
-      .from(ANALYTICS_EVENTS_TABLE)
-      .select(DASHBOARD_SELECT)
-      .order('occurred_at', { ascending: true })
-      .range(from, to);
+    const result = await runAnalyticsSelectWithCompatibility((selectClause) => {
+      let query = supabase
+        .from(ANALYTICS_EVENTS_TABLE)
+        .select(selectClause)
+        .order('occurred_at', { ascending: true })
+        .range(from, to);
 
-    query = applyDashboardFilters(query, filters);
+      query = applyDashboardFilters(query, filters);
+      return query;
+    });
 
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const batch = Array.isArray(data) ? data : [];
+    omittedFields = Array.from(new Set(omittedFields.concat(result.omittedFields || [])));
+    const batch = result.rows;
     rows.push(...batch);
     if (batch.length < PAGE_SIZE) break;
     page += 1;
@@ -459,20 +628,20 @@ async function fetchAnalyticsRows(supabase, filters, options = {}) {
     }
   }
 
-  return { rows, truncated };
+  return { rows, truncated, omittedFields };
 }
 
 async function fetchRecentAnalyticsRows(supabase, filters) {
-  let query = supabase
-    .from(ANALYTICS_EVENTS_TABLE)
-    .select(DASHBOARD_SELECT)
-    .order('occurred_at', { ascending: false })
-    .range(0, 199);
+  return runAnalyticsSelectWithCompatibility((selectClause) => {
+    let query = supabase
+      .from(ANALYTICS_EVENTS_TABLE)
+      .select(selectClause)
+      .order('occurred_at', { ascending: false })
+      .range(0, 199);
 
-  query = applyDashboardFilters(query, filters);
-  const { data, error } = await query;
-  if (error) throw error;
-  return Array.isArray(data) ? data : [];
+    query = applyDashboardFilters(query, filters);
+    return query;
+  });
 }
 
 function applySourceFilter(rows, source) {
@@ -1322,6 +1491,7 @@ module.exports = {
   parseDashboardFilters,
   fetchAnalyticsRows,
   fetchRecentAnalyticsRows,
+  writeAnalyticsRowsWithCompatibility,
   applySourceFilter,
   summariseAnalytics,
   createCsv,
@@ -1330,7 +1500,8 @@ module.exports = {
   extractRequestIp,
   hashIpAddress,
   extractCountry,
-  isMissingAnalyticsTableError(error) {
-    return isMissingTableError(error, ANALYTICS_EVENTS_TABLE);
-  },
+  extractMissingAnalyticsColumn,
+  classifyAnalyticsSchemaIssue,
+  isAnalyticsSchemaError,
+  isMissingAnalyticsTableError,
 };

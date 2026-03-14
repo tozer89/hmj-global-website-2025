@@ -12,6 +12,8 @@ const {
   summariseAnalytics,
   buildComparisonSummary,
   createCsv,
+  classifyAnalyticsSchemaIssue,
+  isAnalyticsSchemaError,
   isMissingAnalyticsTableError,
 } = require('./_analytics.js');
 
@@ -25,6 +27,76 @@ function respond(statusCode, body) {
     statusCode,
     headers: JSON_HEADERS,
     body: JSON.stringify(body),
+  };
+}
+
+function buildEmptySummary(filters, overrides = {}) {
+  return {
+    source: 'supabase',
+    setupRequired: false,
+    schemaMismatch: false,
+    schemaWarnings: [],
+    message: '',
+    filters: {
+      applied: filters,
+      options: {
+        pagePaths: [],
+        eventTypes: [],
+        referrers: [],
+        sources: [],
+        deviceTypes: [],
+        siteAreas: ['public', 'admin'],
+      },
+    },
+    kpis: {
+      totalPageViews: 0,
+      uniqueVisitors: 0,
+      sessions: 0,
+      avgSessionDurationSeconds: 0,
+      avgTimeOnPageSeconds: 0,
+      bounceRate: 0,
+      ctaClicks: 0,
+      topPage: '',
+    },
+    comparison: {
+      enabled: false,
+      currentPeriod: { from: filters.from, to: filters.to },
+      previousPeriod: { from: '', to: '' },
+      kpis: {},
+    },
+    trend: [],
+    topPages: [],
+    recentActivity: [],
+    clickAnalytics: {
+      topCtas: [],
+      clicksByPage: [],
+      clicksOverTime: [],
+      jobsFilterUsage: [],
+    },
+    breakdowns: {
+      sources: [],
+      devices: [],
+      siteAreas: [],
+    },
+    listings: {
+      summary: {
+        jobViews: 0,
+        specViews: 0,
+        applyClicks: 0,
+        avgListingTimeSeconds: 0,
+      },
+      jobs: [],
+      specs: [],
+      topIntentActions: [],
+      mostEngaged: [],
+    },
+    pathInsights: {
+      landingPages: [],
+      exitPages: [],
+      topPaths: [],
+      topTransitions: [],
+    },
+    ...overrides,
   };
 }
 
@@ -68,11 +140,22 @@ const baseHandler = async (event, context) => {
       tasks.push(fetchAnalyticsRows(supabase, comparisonFilters));
     }
 
-    const [currentRowsResult, recentRows, previousRowsResult] = await Promise.all(tasks);
+    const [currentRowsResult, recentRowsResult, previousRowsResult] = await Promise.all([
+      tasks[0],
+      tasks[1],
+      tasks[2] || Promise.resolve(null),
+    ]);
 
     const filteredRows = applySourceFilter(currentRowsResult.rows, filters.source);
-    const filteredRecent = applySourceFilter(recentRows, filters.source);
+    const filteredRecent = applySourceFilter(recentRowsResult.rows, filters.source);
     const summary = summariseAnalytics(filteredRows, filters, filteredRecent, currentRowsResult.truncated);
+    summary.schemaWarnings = Array.from(new Set(
+      []
+        .concat(currentRowsResult.omittedFields || [])
+        .concat(recentRowsResult.omittedFields || [])
+    ));
+    summary.schemaMismatch = false;
+    summary.message = '';
 
     if (comparisonFilters && previousRowsResult) {
       const filteredPreviousRows = applySourceFilter(previousRowsResult.rows, comparisonFilters.source);
@@ -94,70 +177,21 @@ const baseHandler = async (event, context) => {
     return respond(200, summary);
   } catch (error) {
     if (isMissingAnalyticsTableError(error)) {
-      return respond(200, {
-        source: 'supabase',
+      return respond(200, buildEmptySummary(filters, {
         setupRequired: true,
         message: 'Apply the website analytics SQL, then refresh this page.',
-        filters: {
-          applied: filters,
-          options: {
-            pagePaths: [],
-            eventTypes: [],
-            referrers: [],
-            sources: [],
-            deviceTypes: [],
-            siteAreas: ['public', 'admin'],
-          },
-        },
-        kpis: {
-          totalPageViews: 0,
-          uniqueVisitors: 0,
-          sessions: 0,
-          avgSessionDurationSeconds: 0,
-          avgTimeOnPageSeconds: 0,
-          bounceRate: 0,
-          ctaClicks: 0,
-          topPage: '',
-        },
-        comparison: {
-          enabled: false,
-          currentPeriod: { from: filters.from, to: filters.to },
-          previousPeriod: { from: '', to: '' },
-          kpis: {},
-        },
-        trend: [],
-        topPages: [],
-        recentActivity: [],
-        clickAnalytics: {
-          topCtas: [],
-          clicksByPage: [],
-          clicksOverTime: [],
-          jobsFilterUsage: [],
-        },
-        breakdowns: {
-          sources: [],
-          devices: [],
-          siteAreas: [],
-        },
-        listings: {
-          summary: {
-            jobViews: 0,
-            specViews: 0,
-            applyClicks: 0,
-            avgListingTimeSeconds: 0,
-          },
-          jobs: [],
-          specs: [],
-          topIntentActions: [],
-          mostEngaged: [],
-        },
-        pathInsights: {
-          landingPages: [],
-          exitPages: [],
-          topPaths: [],
-          topTransitions: [],
-        },
-      });
+      }));
+    }
+
+    if (isAnalyticsSchemaError(error)) {
+      const issue = classifyAnalyticsSchemaIssue(error);
+      const detail = issue.missingColumn
+        ? ` Missing column: ${issue.missingColumn}.`
+        : '';
+      return respond(200, buildEmptySummary(filters, {
+        schemaMismatch: true,
+        message: `Analytics schema mismatch detected.${detail} The dashboard is in safe fallback mode until the Supabase reconciliation SQL is applied.`,
+      }));
     }
 
     return respond(500, {

@@ -496,7 +496,7 @@
       <a class="hmj-logo" href="index.html">
         <img src="images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
       </a>
-      <button class="hmj-burger" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
+      <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
         <span></span><span></span><span></span>
       </button>
       <ul id="hmj-menu" class="hmj-menu">
@@ -505,9 +505,8 @@
         <li><a href="clients.html" data-page="clients">Clients</a></li>
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
-        <li><a href="https://www.hmj-finance.com" target="_blank" rel="noopener">Accounting</a></li>
         <li><a href="https://hmjglobal.timesheetportal.com" id="nav-timesheets">Timesheets</a></li>
-        <li><a href="/admin/" id="nav-admin" class="requires-admin" style="display:none" aria-disabled="true">Admin Dashboard</a></li>
+        <li><a href="/admin/" id="nav-admin" class="requires-admin nav-admin-link" style="display:none" aria-disabled="true">Admin</a></li>
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
@@ -951,12 +950,38 @@
         .slice(0, 80);
     }
 
+    const SECTION_PRESETS = new Map([
+      ['commercial', { key: 'commercial', label: 'Commercial' }],
+      ['dc', { key: 'data-centre-delivery', label: 'Data Centre Delivery' }],
+      ['data-centre-delivery', { key: 'data-centre-delivery', label: 'Data Centre Delivery' }],
+      ['substations', { key: 'substations-energy', label: 'Substations & Energy' }],
+      ['substations-energy', { key: 'substations-energy', label: 'Substations & Energy' }],
+      ['pharma', { key: 'life-sciences-pharma', label: 'Life Sciences & Pharma' }],
+      ['life-sciences', { key: 'life-sciences-pharma', label: 'Life Sciences & Pharma' }],
+      ['life-sciences-pharma', { key: 'life-sciences-pharma', label: 'Life Sciences & Pharma' }],
+      ['ict', { key: 'ict-commissioning', label: 'ICT & Commissioning' }],
+      ['ict-commissioning', { key: 'ict-commissioning', label: 'ICT & Commissioning' }],
+    ]);
+
     function toTitle(text = '') {
       return String(text || '')
         .replace(/[_-]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
         .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+    }
+
+    function resolveSectionInfo(raw = '') {
+      const input = String(raw || '').trim();
+      if (!input) return { key: 'general', label: 'General' };
+      const rawKey = input.toLowerCase();
+      const normalizedKey = slugify(input) || rawKey;
+      const preset = SECTION_PRESETS.get(rawKey) || SECTION_PRESETS.get(normalizedKey);
+      if (preset) return { ...preset };
+      return {
+        key: normalizedKey || 'general',
+        label: toTitle(input) || 'General',
+      };
     }
 
     function escapeHtml(value = '') {
@@ -1206,14 +1231,16 @@
 
     function normaliseJob(job = {}) {
       const out = { ...job };
+      const sectionInfo = resolveSectionInfo(out.sectionLabel || out.section || out.discipline || 'General');
       out.status = (out.status || 'live').toLowerCase();
       out.type = (out.type || 'permanent').toLowerCase();
       out.locationCode = (out.location_code || out.locationCode || '').toLowerCase() || 'various';
       out.locationText = out.locationText || out.location_text || 'UK / Europe';
-      out.discipline = out.discipline || out.sectionLabel || out.section || 'General';
+      out.discipline = out.discipline || sectionInfo.label || 'General';
       out.disciplineValue = out.discipline.trim().toLowerCase();
-      out.sectionLabel = out.sectionLabel || out.section || 'General';
-      out.sectionKey = slugify(out.sectionKey || out.section || out.sectionLabel) || 'general';
+      out.section = sectionInfo.label;
+      out.sectionLabel = sectionInfo.label;
+      out.sectionKey = sectionInfo.key;
       if (!Array.isArray(out.tags)) {
         const raw = Array.isArray(out.keywords) ? out.keywords : String(out.keywords || '').split(',');
         out.tags = raw.map((t) => t.trim()).filter(Boolean);
@@ -1331,8 +1358,12 @@
     function deriveSections(jobs){
       const map = new Map();
       jobs.forEach((job) => {
-        const key = job.sectionKey || slugify(job.sectionLabel || job.section || 'general') || 'general';
-        const label = job.sectionLabel || job.section || toTitle(key) || 'General';
+        const sectionInfo = resolveSectionInfo(job.sectionLabel || job.section || job.sectionKey || 'General');
+        const key = sectionInfo.key;
+        const label = sectionInfo.label;
+        job.section = label;
+        job.sectionLabel = label;
+        job.sectionKey = key;
         if (!map.has(key)) map.set(key, label);
       });
       return Array.from(map, ([key, label]) => ({ key, label })).sort((a, b) => a.label.localeCompare(b.label));
