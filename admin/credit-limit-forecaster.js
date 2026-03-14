@@ -39,6 +39,7 @@
       token: 0,
     },
     wizard: null,
+    wizardReturnFocus: null,
   };
 
   const els = {};
@@ -139,6 +140,7 @@
       'wizardSubtitle',
       'wizardProgressHost',
       'wizardStepHost',
+      'wizardBodyShell',
       'wizardActionsHost',
       'btnCloseWizard',
       'wizardStatementUploadInput',
@@ -1460,11 +1462,42 @@
       parseFailure: null,
       lastUploadedFile: null,
       lastUploadedFileName: confirmed ? confirmed.fileName : '',
+      resetScroll: true,
+      pendingFocus: true,
     };
   }
 
   function getWizard() {
     return state.wizard && state.wizard.open ? state.wizard : null;
+  }
+
+  function setWizardModalState(isOpen) {
+    document.body.classList.toggle('clf-modal-open', !!isOpen);
+  }
+
+  function syncWizardViewport(wizard) {
+    if (!wizard) return;
+    const shouldReset = !!wizard.resetScroll;
+    const shouldFocus = !!wizard.pendingFocus;
+    if (!shouldReset && !shouldFocus) return;
+    wizard.resetScroll = false;
+    wizard.pendingFocus = false;
+    window.requestAnimationFrame(function () {
+      if (shouldReset && els.wizardBodyShell) {
+        els.wizardBodyShell.scrollTop = 0;
+      }
+      if (!shouldFocus) return;
+      const focusTarget = els.wizardStepHost && els.wizardStepHost.querySelector(
+        '[data-wizard-autofocus], input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+      );
+      if (focusTarget && typeof focusTarget.focus === 'function') {
+        focusTarget.focus({ preventScroll: true });
+        return;
+      }
+      if (els.wizardTitle && typeof els.wizardTitle.focus === 'function') {
+        els.wizardTitle.focus({ preventScroll: true });
+      }
+    });
   }
 
   function wizardStepDefinitions(wizard) {
@@ -2305,9 +2338,11 @@
     const wizard = getWizard();
     if (!els.wizardDialog || !els.wizardProgressHost || !els.wizardStepHost) return;
     if (!wizard) {
+      setWizardModalState(false);
       closeDialogElement(els.wizardDialog);
       return;
     }
+    setWizardModalState(true);
     const meta = wizardCurrentStepMeta();
     const currentIssues = wizardStepIssues(meta.current.id, wizard);
     if (els.wizardTitle) {
@@ -2320,17 +2355,21 @@
     els.wizardStepHost.innerHTML = wizardAlertMarkup(currentIssues) + renderWizardStepContent(meta.current.id, wizard);
     renderWizardActions(wizard, meta, currentIssues);
     openDialogElement(els.wizardDialog);
+    syncWizardViewport(wizard);
   }
 
   function openWizard() {
     updateActiveScenarioFromForm();
     const active = getActiveScenario();
     if (!active) return;
+    state.wizardReturnFocus = document.activeElement && typeof document.activeElement.focus === 'function'
+      ? document.activeElement
+      : els.btnUseWizard;
     state.wizard = createWizardState(active);
     renderWizard();
   }
 
-  function closeWizard() {
+  function closeWizard(options) {
     state.wizard = null;
     if (els.wizardActionsHost) {
       els.wizardActionsHost.innerHTML = '';
@@ -2341,7 +2380,20 @@
     if (els.wizardStepHost) {
       els.wizardStepHost.innerHTML = '';
     }
+    setWizardModalState(false);
     closeDialogElement(els.wizardDialog);
+    const skipReturnFocus = !!(options && options.skipReturnFocus);
+    const returnTarget = skipReturnFocus
+      ? null
+      : (state.wizardReturnFocus && typeof state.wizardReturnFocus.focus === 'function'
+        ? state.wizardReturnFocus
+        : els.btnUseWizard);
+    state.wizardReturnFocus = null;
+    if (returnTarget && typeof returnTarget.focus === 'function') {
+      window.requestAnimationFrame(function () {
+        returnTarget.focus({ preventScroll: true });
+      });
+    }
     renderWorkspace();
   }
 
@@ -2353,6 +2405,8 @@
     const nextStep = meta.steps[nextIndex];
     if (nextStep) {
       wizard.step = nextStep.id;
+      wizard.resetScroll = true;
+      wizard.pendingFocus = true;
       renderWizard();
     }
   }
@@ -2402,6 +2456,8 @@
 
       if (wizard.statementDraft && Number(wizard.statementDraft.includedRowCount) > 0) {
         wizard.step = 'statement-review';
+        wizard.resetScroll = true;
+        wizard.pendingFocus = true;
       }
       renderWizard();
       state.helpers.toast.ok(
@@ -2462,7 +2518,7 @@
     renderWorkspace();
     persistWorkspace();
     scheduleSummaryRefresh(true);
-    closeWizard();
+    closeWizard({ skipReturnFocus: true });
     if (els.resultsHeading && typeof els.resultsHeading.scrollIntoView === 'function') {
       els.resultsHeading.scrollIntoView({ behavior: 'smooth', block: 'start' });
       els.resultsHeading.setAttribute('tabindex', '-1');
@@ -4089,6 +4145,8 @@
       if (type === 'mode') {
         wizard.mode = value === 'advanced' ? 'advanced' : 'basic';
         wizard.step = 'basics';
+        wizard.resetScroll = true;
+        wizard.pendingFocus = true;
       } else if (type === 'terms') {
         wizard.assumptions.paymentTerms.type = value || '30_eom';
       } else if (type === 'cadence') {
@@ -4211,7 +4269,37 @@
         wizard.assumptions.openingBalance.receiptMode = 'no_receipts';
       }
       wizard.step = 'terms';
+      wizard.resetScroll = true;
+      wizard.pendingFocus = true;
       renderWizard();
+    }
+  }
+
+  function handleWizardKeydown(event) {
+    const wizard = getWizard();
+    if (!wizard || !els.wizardDialog || !els.wizardDialog.open) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeWizard();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = Array.from(
+      els.wizardDialog.querySelectorAll(
+        'button:not([disabled]), [href], input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(function (node) {
+      return node.offsetParent !== null || node === document.activeElement;
+    });
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
     }
   }
 
@@ -4300,6 +4388,7 @@
       els.wizardDialog.addEventListener('click', handleWizardClick);
       els.wizardDialog.addEventListener('input', handleWizardFieldEvent);
       els.wizardDialog.addEventListener('change', handleWizardFieldEvent);
+      els.wizardDialog.addEventListener('keydown', handleWizardKeydown);
       els.wizardDialog.addEventListener('cancel', function (event) {
         event.preventDefault();
         closeWizard();

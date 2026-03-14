@@ -334,3 +334,29 @@ test('wizard reopens with the active scenario answers preloaded', async () => {
   assert.equal(window.document.querySelector('[data-wizard-field="creditLimit"]').value, '500000');
   assert.equal(window.document.querySelector('[data-wizard-field="currentOutstandingBalance"]').value, '120000');
 });
+
+test('wizard locks the background, keeps the footer visible, and resets body scroll on step transitions', async () => {
+  const dom = await bootForecasterDom();
+  const { window } = dom;
+  const doc = window.document;
+
+  click(window, '#btnUseWizard');
+  await wait(60);
+  assert.equal(doc.body.classList.contains('clf-modal-open'), true);
+  assert.ok(doc.getElementById('wizardActionsHost').textContent.includes('Continue'));
+
+  click(window, '[data-wizard-choice-type="mode"][data-wizard-choice-value="basic"]');
+  await wait(40);
+  assert.equal(doc.activeElement, doc.querySelector('[data-wizard-field="clientName"]'));
+
+  const scrollShell = doc.getElementById('wizardBodyShell');
+  scrollShell.scrollTop = 260;
+  click(window, '[data-wizard-action="next"]');
+  await wait(40);
+  assert.equal(scrollShell.scrollTop, 0);
+  assert.equal(doc.activeElement.closest('#wizardDialog') != null, true);
+
+  click(window, '[data-wizard-action="close"]');
+  await wait(40);
+  assert.equal(doc.body.classList.contains('clf-modal-open'), false);
+});

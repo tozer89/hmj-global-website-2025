@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HMJ Global Team Module Handoff</title>
+  <style>
+    body { font-family: Helvetica, Arial, sans-serif; margin: 48px; color: #1b1f2a; line-height: 1.45; }
+    h1 { font-size: 24pt; margin: 0 0 8px; }
+    h2 { font-size: 15pt; margin: 22px 0 8px; color: #183a78; }
+    p { margin: 0 0 10px; }
+    ul, ol { margin: 0 0 12px 22px; }
+    li { margin: 0 0 6px; }
+    pre { font-family: Menlo, Consolas, monospace; font-size: 9pt; line-height: 1.25; white-space: pre-wrap; border: 1px solid #d7deef; background: #f7f9fd; padding: 14px; border-radius: 8px; }
+    .meta { color: #5a6887; margin-bottom: 18px; }
+  </style>
+</head>
+<body>
+  <h1>HMJ Global Team Module Handoff</h1>
+  <p class="meta">Generated from the current repo state on 14 March 2026.</p>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>The Team admin module has been aligned to a complete Supabase schema and storage setup.</li>
+    <li>The full Supabase SQL is included below and also saved in <strong>scripts/create-team-module.sql</strong>.</li>
+    <li>The Team UI was reworked to fix unreadable scaling, broken button wrapping, and incorrect setup or empty-state rendering.</li>
+    <li>The public About page remains driven by the Team data source and this pass did not break that integration.</li>
+  </ul>
+
+  <h2>Exact Root Cause Of The Setup Required State</h2>
+  <ul>
+    <li>The existing Team loader treated a missing <strong>public.team_members</strong> table as a setup issue and dropped into seeded preview mode.</li>
+    <li>A second missing prerequisite was the <strong>team-images</strong> storage bucket. Without that bucket, image upload and replace flows were blocked even when the table existed.</li>
+    <li>The Team page also had a CSS state bug: hidden sections such as the empty state and member grid were styled with <strong>display:grid</strong>, so hidden and visible states could render together.</li>
+  </ul>
+
+  <h2>Files Changed In This Task</h2>
+  <ul>
+    <li>admin/team.html</li>
+    <li>admin/team.js</li>
+    <li>netlify/functions/admin-team-list.js</li>
+    <li>netlify/functions/_team-helpers.js</li>
+    <li>netlify/functions/_data/team.seed.json</li>
+    <li>scripts/create-team-module.sql</li>
+  </ul>
+
+  <h2>What Was Fixed In Schema And Storage</h2>
+  <ul>
+    <li>Added or upgraded <strong>public.team_members</strong> with all required Team fields.</li>
+    <li>Added <strong>published_at</strong> support and backfill logic.</li>
+    <li>Added slug normalisation and uniqueness backfill for partial installs.</li>
+    <li>Added defaults, not-null enforcement, ordering and publish constraints, indexes, and <strong>updated_at</strong> trigger automation.</li>
+    <li>Added or updated the public <strong>team-images</strong> storage bucket.</li>
+    <li>Added public read policy for Team images while keeping Team writes server-side through Netlify functions and the Supabase service role.</li>
+    <li>Seeded the current four live Team members so the About page does not go empty after setup.</li>
+  </ul>
+
+  <h2>What Was Fixed In UI And Layout</h2>
+  <ul>
+    <li>Reworked the Team card grid so cards keep a sensible minimum width.</li>
+    <li>Rebalanced each card to keep portrait images contained and text readable.</li>
+    <li>Rebuilt action rows so buttons stay horizontal or wrap cleanly instead of collapsing into narrow letter stacks.</li>
+    <li>Improved structure and spacing for the hero area, stats, setup banner, board, editor form, image section, and preview panel.</li>
+    <li>Grouped editor footer actions into clearer secondary and primary controls.</li>
+    <li>Disabled upload and replace controls when storage setup is incomplete so the UI explains the limitation instead of failing unclearly.</li>
+  </ul>
+
+  <h2>What Was Fixed In Setup And Empty State Logic</h2>
+  <ul>
+    <li>The Team module now distinguishes between missing table setup and missing bucket setup.</li>
+    <li>Setup required, read-only preview, filtered-empty, and true empty states now show different messages.</li>
+    <li>Add member is disabled in preview mode.</li>
+    <li>The hidden attribute now properly hides the setup banner, member grid, and empty state when those sections should not render.</li>
+  </ul>
+
+  <h2>What Was Tested</h2>
+  <ul>
+    <li>Syntax checks for the touched Team and public Team JS files.</li>
+    <li>Helper payload check for publish validation and published_at handling.</li>
+    <li>Fallback Team endpoint check returned the seeded 4 public members.</li>
+    <li>Responsive Playwright harness checks at 1280, 1024, 768, and 390 widths to verify card sizing, action button layout, and setup or empty-state behavior.</li>
+  </ul>
+
+  <h2>Manual Steps After Pull</h2>
+  <ol>
+    <li>Run the full SQL below in the correct Supabase project.</li>
+    <li>Confirm <strong>public.team_members</strong> and the <strong>team-images</strong> bucket now exist.</li>
+    <li>Confirm Netlify has <strong>SUPABASE_URL</strong> and a service-role key already configured for the site.</li>
+    <li>Redeploy or restart the site so the updated Netlify functions pick up the schema and storage setup.</li>
+  </ol>
+
+  <h2>Full Supabase SQL</h2>
+  <p>The SQL below is the exact script saved in <strong>scripts/create-team-module.sql</strong> and is intended to be pasted into the Supabase SQL editor.</p>
+  <pre>-- HMJ Global Team / About Us module setup for Supabase
+-- Safe to re-run. This script creates or upgrades the Team table, normalises
+-- existing rows, wires updated_at automation, provisions image storage, and
+-- seeds the current public About Us team members.
+
+begin;
+
+-- ---------------------------------------------------------------------------
+-- Extensions and shared helper functions
+-- ---------------------------------------------------------------------------
+
+create extension if not exists pgcrypto;
+
+create or replace function public.set_row_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create or replace function public.team_member_slugify(input text)
+returns text
+language sql
+immutable
+as $$
+  select left(
+    trim(both &#x27;-&#x27; from regexp_replace(lower(coalesce(input, &#x27;&#x27;)), &#x27;[^a-z0-9]+&#x27;, &#x27;-&#x27;, &#x27;g&#x27;)),
+    80
+  );
+$$;
+
+comment on function public.team_member_slugify(text) is
+  &#x27;Normalises Team module slugs to lowercase kebab-case and caps them at 80 characters.&#x27;;
+
+-- ---------------------------------------------------------------------------
+-- Core Team table
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.team_members (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by text,
+  created_by_email text,
+  updated_by_email text,
+  full_name text not null default &#x27;&#x27;,
+  slug text not null,
+  role_title text not null default &#x27;&#x27;,
+  short_caption text not null default &#x27;&#x27;,
+  full_bio text not null default &#x27;&#x27;,
+  image_url text,
+  image_storage_key text,
+  image_alt_text text,
+  linkedin_url text,
+  email text,
+  display_order integer not null default 100,
+  is_published boolean not null default false,
+  published_at timestamptz,
+  archived_at timestamptz
+);
+
+alter table public.team_members add column if not exists id uuid;
+alter table public.team_members add column if not exists created_at timestamptz default now();
+alter table public.team_members add column if not exists updated_at timestamptz default now();
+alter table public.team_members add column if not exists created_by text;
+alter table public.team_members add column if not exists created_by_email text;
+alter table public.team_members add column if not exists updated_by_email text;
+alter table public.team_members add column if not exists full_name text default &#x27;&#x27;;
+alter table public.team_members add column if not exists slug text;
+alter table public.team_members add column if not exists role_title text default &#x27;&#x27;;
+alter table public.team_members add column if not exists short_caption text default &#x27;&#x27;;
+alter table public.team_members add column if not exists full_bio text default &#x27;&#x27;;
+alter table public.team_members add column if not exists image_url text;
+alter table public.team_members add column if not exists image_storage_key text;
+alter table public.team_members add column if not exists image_alt_text text;
+alter table public.team_members add column if not exists linkedin_url text;
+alter table public.team_members add column if not exists email text;
+alter table public.team_members add column if not exists display_order integer default 100;
+alter table public.team_members add column if not exists is_published boolean default false;
+alter table public.team_members add column if not exists published_at timestamptz;
+alter table public.team_members add column if not exists archived_at timestamptz;
+
+alter table public.team_members alter column id set default gen_random_uuid();
+alter table public.team_members alter column created_at set default now();
+alter table public.team_members alter column updated_at set default now();
+alter table public.team_members alter column full_name set default &#x27;&#x27;;
+alter table public.team_members alter column role_title set default &#x27;&#x27;;
+alter table public.team_members alter column short_caption set default &#x27;&#x27;;
+alter table public.team_members alter column full_bio set default &#x27;&#x27;;
+alter table public.team_members alter column display_order set default 100;
+alter table public.team_members alter column is_published set default false;
+
+update public.team_members
+set
+  id = coalesce(id, gen_random_uuid()),
+  created_at = coalesce(created_at, now()),
+  updated_at = coalesce(updated_at, created_at, now()),
+  full_name = coalesce(full_name, &#x27;&#x27;),
+  role_title = coalesce(role_title, &#x27;&#x27;),
+  short_caption = coalesce(short_caption, &#x27;&#x27;),
+  full_bio = coalesce(full_bio, &#x27;&#x27;),
+  display_order = greatest(coalesce(display_order, 100), 0),
+  is_published = case
+    when archived_at is not null then false
+    else coalesce(is_published, false)
+  end
+where id is null
+   or created_at is null
+   or updated_at is null
+   or full_name is null
+   or role_title is null
+   or short_caption is null
+   or full_bio is null
+   or display_order is null
+   or display_order &lt; 0
+   or is_published is null
+   or (archived_at is not null and is_published is true);
+
+update public.team_members
+set is_published = false
+where is_published is true
+  and (
+    length(btrim(full_name)) = 0
+    or length(btrim(role_title)) = 0
+    or length(btrim(short_caption)) = 0
+  );
+
+update public.team_members
+set published_at = coalesce(published_at, updated_at, created_at, now())
+where is_published is true
+  and published_at is null;
+
+with normalised as (
+  select
+    id,
+    created_at,
+    case
+      when public.team_member_slugify(nullif(slug, &#x27;&#x27;)) &lt;&gt; &#x27;&#x27; then public.team_member_slugify(nullif(slug, &#x27;&#x27;))
+      when public.team_member_slugify(full_name) &lt;&gt; &#x27;&#x27; then public.team_member_slugify(full_name)
+      else public.team_member_slugify(&#x27;team-&#x27; || replace(id::text, &#x27;-&#x27;, &#x27;&#x27;))
+    end as base_slug
+  from public.team_members
+),
+ranked as (
+  select
+    id,
+    row_number() over (
+      partition by base_slug
+      order by created_at asc nulls first, id asc
+    ) as slug_rank,
+    base_slug
+  from normalised
+),
+resolved as (
+  select
+    id,
+    case
+      when slug_rank = 1 then base_slug
+      else left(base_slug, greatest(1, 80 - length(&#x27;-&#x27; || slug_rank::text))) || &#x27;-&#x27; || slug_rank::text
+    end as resolved_slug
+  from ranked
+)
+update public.team_members team_members
+set slug = resolved.resolved_slug
+from resolved
+where team_members.id = resolved.id
+  and coalesce(team_members.slug, &#x27;&#x27;) &lt;&gt; resolved.resolved_slug;
+
+alter table public.team_members alter column id set not null;
+alter table public.team_members alter column created_at set not null;
+alter table public.team_members alter column updated_at set not null;
+alter table public.team_members alter column full_name set not null;
+alter table public.team_members alter column slug set not null;
+alter table public.team_members alter column role_title set not null;
+alter table public.team_members alter column short_caption set not null;
+alter table public.team_members alter column full_bio set not null;
+alter table public.team_members alter column display_order set not null;
+alter table public.team_members alter column is_published set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = &#x27;public.team_members&#x27;::regclass
+      and contype = &#x27;p&#x27;
+  ) then
+    alter table public.team_members
+      add constraint team_members_pkey primary key (id);
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = &#x27;public.team_members&#x27;::regclass
+      and conname = &#x27;team_members_display_order_nonnegative&#x27;
+  ) then
+    alter table public.team_members
+      add constraint team_members_display_order_nonnegative
+      check (display_order &gt;= 0);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = &#x27;public.team_members&#x27;::regclass
+      and conname = &#x27;team_members_slug_format&#x27;
+  ) then
+    alter table public.team_members
+      add constraint team_members_slug_format
+      check (slug ~ &#x27;^[a-z0-9]+(?:-[a-z0-9]+)*$&#x27;);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = &#x27;public.team_members&#x27;::regclass
+      and conname = &#x27;team_members_archived_not_published&#x27;
+  ) then
+    alter table public.team_members
+      add constraint team_members_archived_not_published
+      check (not (archived_at is not null and is_published));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = &#x27;public.team_members&#x27;::regclass
+      and conname = &#x27;team_members_publish_requires_content&#x27;
+  ) then
+    alter table public.team_members
+      add constraint team_members_publish_requires_content
+      check (
+        not is_published
+        or (
+          length(btrim(full_name)) &gt; 0
+          and length(btrim(role_title)) &gt; 0
+          and length(btrim(short_caption)) &gt; 0
+        )
+      );
+  end if;
+end
+$$;
+
+create unique index if not exists team_members_slug_uidx
+  on public.team_members (slug);
+
+create index if not exists team_members_admin_board_idx
+  on public.team_members (archived_at asc nulls first, display_order asc, created_at asc, full_name asc);
+
+create index if not exists team_members_public_order_idx
+  on public.team_members (display_order asc, created_at asc, full_name asc)
+  where is_published is true and archived_at is null;
+
+create index if not exists team_members_updated_idx
+  on public.team_members (updated_at desc);
+
+comment on table public.team_members is
+  &#x27;HMJ About page team members. Browser clients should not query this table directly; Netlify Functions handle public filtering and admin writes using the service role key.&#x27;;
+
+comment on column public.team_members.slug is
+  &#x27;Unique public identifier used for stable team-card references.&#x27;;
+
+comment on column public.team_members.image_storage_key is
+  &#x27;Supabase Storage object key inside the team-images bucket.&#x27;;
+
+comment on column public.team_members.published_at is
+  &#x27;Timestamp of the most recent publish action used for admin metadata and ordering diagnostics.&#x27;;
+
+-- Lock the table down to server-side access. RLS stays enabled with no browser
+-- policies so anon/authenticated clients cannot query or mutate team records.
+alter table public.team_members enable row level security;
+revoke all on public.team_members from anon, authenticated;
+grant all on public.team_members to service_role;
+
+-- ---------------------------------------------------------------------------
+-- updated_at automation
+-- ---------------------------------------------------------------------------
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgrelid = &#x27;public.team_members&#x27;::regclass
+      and tgname = &#x27;team_members_set_updated_at&#x27;
+  ) then
+    create trigger team_members_set_updated_at
+      before update on public.team_members
+      for each row
+      execute function public.set_row_updated_at();
+  end if;
+end
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Supabase Storage bucket for Team portraits
+-- ---------------------------------------------------------------------------
+
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  &#x27;team-images&#x27;,
+  &#x27;team-images&#x27;,
+  true,
+  6291456,
+  array[
+    &#x27;image/jpeg&#x27;,
+    &#x27;image/png&#x27;,
+    &#x27;image/webp&#x27;,
+    &#x27;image/avif&#x27;
+  ]::text[]
+)
+on conflict (id) do update
+set
+  name = excluded.name,
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = &#x27;storage&#x27;
+      and tablename = &#x27;objects&#x27;
+      and policyname = &#x27;Team images are publicly readable&#x27;
+  ) then
+    create policy &quot;Team images are publicly readable&quot;
+      on storage.objects
+      for select
+      using (bucket_id = &#x27;team-images&#x27;);
+  end if;
+end
+$$;
+
+-- Team image writes are intentionally handled by Netlify Functions using the
+-- service role key, so no direct browser upload/update/delete policies are
+-- granted here.
+
+-- ---------------------------------------------------------------------------
+-- Seed the current live About Us cards so the public page stays populated
+-- ---------------------------------------------------------------------------
+
+insert into public.team_members (
+  id,
+  created_at,
+  updated_at,
+  full_name,
+  slug,
+  role_title,
+  short_caption,
+  full_bio,
+  image_url,
+  image_storage_key,
+  image_alt_text,
+  linkedin_url,
+  display_order,
+  is_published,
+  published_at,
+  archived_at
+)
+values
+  (
+    &#x27;11111111-1111-4111-8111-111111111111&#x27;,
+    &#x27;2025-01-10T09:00:00.000Z&#x27;,
+    &#x27;2025-01-10T09:00:00.000Z&#x27;,
+    &#x27;Nick Chamberlain&#x27;,
+    &#x27;nick-chamberlain&#x27;,
+    &#x27;Co-founder &amp; Delivery Director&#x27;,
+    &#x27;Mobilises CSA and MEP contractors for live hyperscale builds, keeping safety and critical milestones in view.&#x27;,
+    &#x27;Specialises in mobilising CSA and MEP contractors inside live hyperscale builds, with a focus on safety briefings and programme-critical milestones.&#x27;,
+    &#x27;/images/director1.jpg&#x27;,
+    null,
+    &#x27;Portrait of Nick Chamberlain&#x27;,
+    &#x27;https://www.linkedin.com/in/nchamberlain88/&#x27;,
+    10,
+    true,
+    &#x27;2025-01-10T09:00:00.000Z&#x27;,
+    null
+  ),
+  (
+    &#x27;22222222-2222-4222-8222-222222222222&#x27;,
+    &#x27;2025-01-10T09:05:00.000Z&#x27;,
+    &#x27;2025-01-10T09:05:00.000Z&#x27;,
+    &#x27;Joe Tozer-O&#x27;&#x27;Sullivan&#x27;,
+    &#x27;joe-tozer-osullivan&#x27;,
+    &#x27;Co-founder &amp; Finance Partner&#x27;,
+    &#x27;Keeps commercial visibility, payroll compliance and contractor care aligned across every HMJ jurisdiction.&#x27;,
+    &#x27;Ensures commercial transparency and compliant payroll across all jurisdictions, aligning HMJ invoicing, insurance and contractor care.&#x27;,
+    &#x27;/images/director2.jpg&#x27;,
+    null,
+    &#x27;Portrait of Joe Tozer-O&#x27;&#x27;Sullivan&#x27;,
+    &#x27;https://www.linkedin.com/in/joe-t-4091542ba&#x27;,
+    20,
+    true,
+    &#x27;2025-01-10T09:05:00.000Z&#x27;,
+    null
+  ),
+  (
+    &#x27;33333333-3333-4333-8333-333333333333&#x27;,
+    &#x27;2025-01-10T09:10:00.000Z&#x27;,
+    &#x27;2025-01-10T09:10:00.000Z&#x27;,
+    &#x27;Samira Patel&#x27;,
+    &#x27;samira-patel&#x27;,
+    &#x27;Head of Contractor Care&#x27;,
+    &#x27;Leads onboarding, wellbeing and weekly payroll operations so contractors stay supported from pre-start to completion.&#x27;,
+    &#x27;Leads onboarding, wellbeing and weekly payroll operations, making sure every contractor is supported from pre-start to project completion.&#x27;,
+    &#x27;/images/about-team.jpg&#x27;,
+    null,
+    &#x27;Portrait of Samira Patel&#x27;,
+    &#x27;https://www.linkedin.com/company/hmj-global&#x27;,
+    30,
+    true,
+    &#x27;2025-01-10T09:10:00.000Z&#x27;,
+    null
+  ),
+  (
+    &#x27;44444444-4444-4444-8444-444444444444&#x27;,
+    &#x27;2025-01-10T09:15:00.000Z&#x27;,
+    &#x27;2025-01-10T09:15:00.000Z&#x27;,
+    &#x27;Liam O&#x27;&#x27;Connor&#x27;,
+    &#x27;liam-oconnor&#x27;,
+    &#x27;Technical Resourcing Lead&#x27;,
+    &#x27;Connects specialist commissioning, controls and HV talent with projects where uptime and safety are non-negotiable.&#x27;,
+    &#x27;Connects specialist commissioning, controls and HV talent with projects where uptime and safety standards are non-negotiable.&#x27;,
+    &#x27;/images/about-team.jpg&#x27;,
+    null,
+    &#x27;Portrait of Liam O&#x27;&#x27;Connor&#x27;,
+    &#x27;https://www.linkedin.com/company/hmj-global&#x27;,
+    40,
+    true,
+    &#x27;2025-01-10T09:15:00.000Z&#x27;,
+    null
+  )
+on conflict (id) do nothing;
+
+commit;
+</pre>
+</body>
+</html>

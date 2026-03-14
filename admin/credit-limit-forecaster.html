@@ -611,17 +611,17 @@
     </div>
   </dialog>
 
-  <dialog id="wizardDialog" class="clf-dialog clf-dialog-wide">
+  <dialog id="wizardDialog" class="clf-dialog clf-dialog-wide" aria-labelledby="wizardTitle" aria-describedby="wizardSubtitle">
     <div class="clf-dialog-shell clf-wizard-shell">
       <div class="clf-dialog-head clf-wizard-head">
         <div>
           <p class="clf-kicker">Guided setup</p>
-          <h3 id="wizardTitle">Set up this forecast with the wizard</h3>
+          <h3 id="wizardTitle" tabindex="-1">Set up this forecast with the wizard</h3>
           <p class="clf-muted" id="wizardSubtitle">Answer the essentials in plain English and the live forecaster will be filled in automatically.</p>
         </div>
         <button class="clf-btn clf-btn-ghost" type="button" id="btnCloseWizard">Close</button>
       </div>
-      <div class="clf-dialog-body clf-wizard-body">
+      <div class="clf-dialog-body clf-wizard-body" id="wizardBodyShell">
         <div class="clf-wizard-progress" id="wizardProgressHost" aria-live="polite"></div>
         <div class="clf-wizard-step" id="wizardStepHost" aria-live="polite"></div>
       </div>

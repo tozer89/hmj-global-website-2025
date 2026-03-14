@@ -1435,6 +1435,8 @@ a {
 
 .clf-dialog {
   width: min(900px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 24px);
   border: 0;
   padding: 0;
   border-radius: 24px;
@@ -1477,33 +1479,50 @@ a {
 .clf-wizard-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: min(760px, calc(100vh - 48px));
+  height: min(820px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
 }
 
 .clf-wizard-head {
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 255, 0.97));
+  box-shadow: 0 1px 0 rgba(41, 71, 143, 0.08);
 }
 
 .clf-wizard-body {
   grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
+  min-height: 0;
   max-height: none;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
 }
 
 .clf-wizard-progress {
   display: grid;
   gap: 14px;
   align-content: start;
+  position: sticky;
+  top: 0;
+  align-self: start;
 }
 
 .clf-wizard-step {
   display: grid;
   gap: 14px;
   min-height: 0;
-  overflow: auto;
-  padding-right: 4px;
+  overflow: visible;
+  padding-right: 2px;
+  padding-bottom: 12px;
+  align-content: start;
 }
 
 .clf-wizard-progress-card,
@@ -1677,6 +1696,12 @@ a {
   gap: 12px;
   padding: 16px 20px 20px;
   border-top: 1px solid rgba(41, 71, 143, 0.12);
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 255, 0.92), rgba(255, 255, 255, 0.99));
+  box-shadow: 0 -16px 28px rgba(16, 32, 70, 0.08);
 }
 
 .clf-wizard-foot-actions,
@@ -1780,6 +1805,10 @@ a {
 
 .clf-wizard-highlight {
   animation: clf-wizard-pulse 1.4s ease;
+}
+
+body.clf-modal-open {
+  overflow: hidden;
 }
 
 @keyframes clf-wizard-pulse {
@@ -1896,6 +1925,10 @@ a {
     align-items: stretch;
   }
 
+  .clf-wizard-progress {
+    position: static;
+  }
+
   .clf-compare-row {
     grid-template-columns: 1fr;
   }
@@ -1903,6 +1936,17 @@ a {
   .clf-kpi-card strong,
   .clf-mini-card strong {
     white-space: normal;
+  }
+}
+
+@media (max-height: 820px) {
+  .clf-dialog {
+    max-height: calc(100dvh - 12px);
+  }
+
+  .clf-wizard-shell {
+    height: min(760px, calc(100dvh - 12px));
+    max-height: calc(100dvh - 12px);
   }
 }
 
