@@ -347,6 +347,28 @@
     return words.length ? words.join(' ') : 'HMJ admin';
   }
 
+  function navigateWindow(mode, target) {
+    try {
+      if (typeof window.__hmjNavigationHook === 'function') {
+        return window.__hmjNavigationHook({ mode, target: target || '' });
+      }
+    } catch (err) {
+      Debug.warn('navigation hook failed', err);
+    }
+
+    if (mode === 'reload') {
+      window.location.reload();
+      return;
+    }
+    if (mode === 'replace' && target) {
+      window.location.replace(target);
+      return;
+    }
+    if (mode === 'href' && target) {
+      window.location.href = target;
+    }
+  }
+
   function scrubAuthCallbackUrl() {
     try {
       const helpers = window.HMJAuthFlow || {};
@@ -998,6 +1020,14 @@
 
   const WHOAMI_CACHE = { token: '', data: null, ts: 0 };
 
+  function resetIdentityCaches() {
+    identityCache = null;
+    identityCacheTs = 0;
+    WHOAMI_CACHE.token = '';
+    WHOAMI_CACHE.data = null;
+    WHOAMI_CACHE.ts = 0;
+  }
+
   async function fetchWhoamiSnapshot(token, opts = {}) {
     if (typeof fetch !== 'function') return null;
     const key = token || '';
@@ -1143,7 +1173,11 @@
 
     let whoami = null;
     try {
-      whoami = await fetchWhoamiSnapshot(token, { verbose: verbose && !!token });
+      whoami = await fetchWhoamiSnapshot(token, {
+        verbose: verbose && !!token,
+        force: forceFresh,
+        ttlMs: forceFresh ? 0 : undefined
+      });
     } catch (err) {
       Debug.warn('whoami snapshot failed', err);
     }
@@ -1237,6 +1271,109 @@
 
   // Console helpers (intentionally global)
   window.getIdentity = identity;
+
+  function setAdminGatePendingState(message) {
+    const gateNode = $('#gate');
+    if (!gateNode) return;
+    gateNode.setAttribute('aria-busy', 'true');
+    const heading = $('[data-gate-heading], strong, h1, h2', gateNode);
+    const why = $('.why', gateNode);
+    if (heading) heading.textContent = 'Finishing sign-in…';
+    if (why && message) why.textContent = message;
+    gateNode.querySelectorAll('[data-admin-login], [data-admin-login-primary]').forEach((button) => {
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+    });
+  }
+
+  function clearAdminGatePendingState() {
+    const gateNode = $('#gate');
+    if (!gateNode) return;
+    gateNode.removeAttribute('aria-busy');
+    gateNode.querySelectorAll('[data-admin-login], [data-admin-login-primary]').forEach((button) => {
+      button.disabled = false;
+      button.removeAttribute('aria-disabled');
+    });
+  }
+
+  async function waitForAdminAccess(requiredRole = 'admin', options = {}) {
+    const timeoutMs = Math.max(1200, Number(options.timeoutMs) || 9000);
+    const intervalMs = Math.max(120, Number(options.intervalMs) || 350);
+    const started = Date.now();
+    let snapshot = null;
+
+    while ((Date.now() - started) < timeoutMs) {
+      snapshot = await identity({
+        requiredRole,
+        forceFresh: true,
+        cacheTtlMs: 0,
+        verbose: false
+      });
+      if (snapshot?.ok) return snapshot;
+      await sleep(intervalMs);
+    }
+
+    return snapshot;
+  }
+
+  async function finishAdminLoginTransition(user, options = {}) {
+    const currentPath = getCurrentAdminPath();
+    const entryPage = isAdminEntryPath(currentPath);
+    const requestedPath = entryPage ? getRequestedAdminPath() : normaliseAdminTarget(currentPath);
+    const pendingMessage = requestedPath
+      ? `Secure sign-in complete. Confirming your HMJ session and opening ${adminTargetLabel(requestedPath)}…`
+      : 'Secure sign-in complete. Confirming your HMJ session and opening the admin dashboard…';
+
+    setAdminGatePendingState(pendingMessage);
+    resetIdentityCaches();
+
+    try {
+      if (user && window.netlifyIdentity && !window.netlifyIdentity.__hmjInitUser) {
+        window.netlifyIdentity.__hmjInitUser = user;
+      }
+    } catch (err) {
+      Debug.warn('login seed user cache failed', err);
+    }
+
+    const snapshot = await waitForAdminAccess('admin', options);
+    clearAdminGatePendingState();
+
+    if (snapshot?.ok) {
+      if (entryPage && requestedPath) {
+        navigateWindow('replace', requestedPath);
+      } else {
+        navigateWindow('reload');
+      }
+      return snapshot;
+    }
+
+    const gateNode = $('#gate');
+    const heading = gateNode ? $('[data-gate-heading], strong, h1, h2', gateNode) : null;
+    const why = gateNode ? $('.why', gateNode) : null;
+
+    if (snapshot?.sessionVerified) {
+      const roles = Array.isArray(snapshot.roles) && snapshot.roles.length ? snapshot.roles.join(', ') : 'none';
+      const identityEmail = snapshot.email || snapshot.identityEmail || 'this account';
+      if (heading) heading.textContent = 'Admin access required';
+      if (why) {
+        why.textContent = `You are signed in as ${identityEmail}, but HMJ admin access is not available for this account on this host yet. Current roles: ${roles}.`;
+      }
+      toast.warn('Sign-in completed, but HMJ admin access could not be confirmed for this account.', 5200);
+      return snapshot;
+    }
+
+    if (heading) heading.textContent = 'HMJ admin sign-in';
+    if (why) {
+      why.textContent = 'The secure sign-in completed, but the session did not finish hydrating on this host. Refresh once if the dashboard does not open, or sign in again on this host.';
+    }
+    toast.warn('Secure sign-in completed, but the admin session is still syncing on this host.', 5600);
+    return snapshot;
+  }
+
+  function finishAdminLogoutTransition() {
+    resetIdentityCaches();
+    navigateWindow('replace', '/admin/');
+  }
 
   // ----------------------------------------------------------------------------
   // API helper (robust)
@@ -1439,6 +1576,8 @@
   }
 
   window.Admin = window.Admin || {};
+  window.Admin.finishLoginTransition = finishAdminLoginTransition;
+  window.Admin.finishLogoutTransition = finishAdminLogoutTransition;
   window.Admin.bootAdmin = async function bootAdmin(mainFn) {
     try {
       const helpers = await window.adminReady();
@@ -1455,16 +1594,16 @@
       const id = window.netlifyIdentity;
       if (id && typeof id.on === 'function' && !id.__hmjHooks) {
         id.__hmjHooks = true;
-        id.on('login', () => {
+        id.on('login', async (user) => {
           try {
-            location.reload();
+            await finishAdminLoginTransition(user);
           } catch (err) {
-            Debug.warn('reload after login failed', err);
+            Debug.warn('post-login transition failed', err);
           }
         });
         id.on('logout', () => {
           try {
-            location.href = '/admin/';
+            finishAdminLogoutTransition();
           } catch (err) {
             Debug.warn('redirect after logout failed', err);
           }
@@ -1477,7 +1616,7 @@
           const target = getAdminEntryUrl(currentPath);
           if (target && target !== `${window.location.pathname}${window.location.search}`) {
             try {
-              window.location.replace(target);
+              navigateWindow('replace', target);
               return;
             } catch (err) {
               Debug.warn('redirect to admin entry failed', err);
@@ -1492,7 +1631,7 @@
         const requestedPath = getRequestedAdminPath();
         if (requestedPath) {
           try {
-            window.location.replace(requestedPath);
+            navigateWindow('replace', requestedPath);
             return;
           } catch (err) {
             Debug.warn('redirect to requested admin page failed', err);

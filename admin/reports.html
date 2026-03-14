@@ -998,8 +998,20 @@
       };
 
       netlifyIdentity?.on('init', start);
-      netlifyIdentity?.on('login', () => location.reload());
-      netlifyIdentity?.on('logout', () => location.href = '/admin/');
+      netlifyIdentity?.on('login', () => {
+        if (window.Admin?.finishLoginTransition) {
+          void window.Admin.finishLoginTransition();
+          return;
+        }
+        location.reload();
+      });
+      netlifyIdentity?.on('logout', () => {
+        if (window.Admin?.finishLogoutTransition) {
+          window.Admin.finishLogoutTransition();
+          return;
+        }
+        location.href = '/admin/';
+      });
 
       setTimeout(() => {
         if (netlifyIdentity?.currentUser()) start();

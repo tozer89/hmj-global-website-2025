@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Website Assistant | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="/admin/chatbot.js?v=1"></script>
+
+  <style>
+    :root{
+      --bg:#eef2fb;
+      --panel:#ffffff;
+      --panel-soft:#f7f9ff;
+      --border:#d9e1f4;
+      --highlight:#2f4ea2;
+      --accent:#3f66c7;
+      --ink:#0f1b3f;
+      --muted:#6072a2;
+      --ok:#138754;
+      --warn:#a96b00;
+      --danger:#b42318;
+      --shadow:0 20px 44px rgba(15,27,63,.12);
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;background:radial-gradient(circle at top left,rgba(63,102,199,.12),transparent 36%),var(--bg);color:var(--ink);font:15px/1.6 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit;text-decoration:none}
+    button,input,select,textarea{font:inherit}
+
+    .top{position:sticky;top:0;z-index:120;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 12px 28px rgba(15,27,63,.22)}
+    .row{max-width:1440px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .brand{font-weight:800;letter-spacing:.02em}
+    .sp{flex:1}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+
+    .btn{appearance:none;border:1px solid rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.05));color:var(--ink);padding:10px 15px;border-radius:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(47,78,162,.16);border-color:rgba(47,78,162,.36)}
+    .btn.primary{background:linear-gradient(180deg,#3657b3,#29489e);border-color:rgba(255,255,255,.28);color:#fff}
+    .btn.ghost{background:#fff;color:var(--highlight);border-color:rgba(47,78,162,.18)}
+    .btn.soft{background:var(--panel-soft);color:var(--highlight)}
+    .btn.small{padding:8px 12px;border-radius:10px;font-size:13px}
+    .btn:disabled{cursor:not-allowed;opacity:.55;transform:none;box-shadow:none}
+
+    .wrap{max-width:1440px;margin:28px auto;padding:0 20px;display:grid;gap:18px}
+    .panel{background:rgba(255,255,255,.94);border:1px solid var(--border);border-radius:20px;padding:20px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+    .muted{color:var(--muted)}
+    .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+    .hero{display:grid;gap:18px;grid-template-columns:minmax(0,1.45fr) minmax(300px,.95fr);align-items:start}
+    .hero h1{margin:4px 0 0;font-size:32px;line-height:1.08}
+    .hero p{margin:0}
+    .hero-card{padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(47,78,162,.08),rgba(255,255,255,.92));border:1px solid rgba(47,78,162,.12);display:grid;gap:14px}
+    .hero-actions,.hero-chips,.toggle-meta,.preview-actions,.conversation-meta,.transcript-toolbar,.section-actions,.test-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;border:1px solid rgba(47,78,162,.16);background:var(--panel-soft);font-size:12px;font-weight:800;letter-spacing:.04em}
+    .chip[data-tone="ok"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.22);color:var(--ok)}
+    .chip[data-tone="warn"]{background:rgba(243,187,47,.14);border-color:rgba(214,156,23,.28);color:var(--warn)}
+    .chip[data-tone="danger"]{background:rgba(180,35,24,.1);border-color:rgba(180,35,24,.16);color:var(--danger)}
+
+    .metrics-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .metric{padding:16px;border-radius:18px;background:var(--panel-soft);border:1px solid rgba(47,78,162,.1);display:grid;gap:6px}
+    .metric span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .metric strong{font-size:28px;line-height:1}
+    .metric small{color:var(--muted)}
+
+    .notice-banner{display:none;padding:18px;border-radius:18px;border:1px solid var(--border);background:#fff}
+    .notice-banner[data-tone="warn"]{display:grid;background:rgba(255,247,232,.92);border-color:rgba(169,107,0,.24)}
+    .notice-banner[data-tone="info"]{display:grid;background:rgba(238,242,255,.92);border-color:rgba(47,78,162,.16)}
+
+    .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+    .section-head h2{margin:4px 0 0;font-size:22px;line-height:1.15}
+    .section-head p:last-child{margin:0;max-width:56ch}
+    .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .field,.check-card{display:grid;gap:7px}
+    .field label,.field legend{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.16);background:#fff;color:var(--ink)}
+    .field textarea{min-height:112px;resize:vertical}
+    .field--wide{grid-column:1 / -1}
+    .field-note{margin:0;color:var(--muted);font-size:12px}
+    .switch-row,.priority-grid,.check-grid{display:grid;gap:12px}
+    .priority-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .check-card{padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.12);background:var(--panel-soft)}
+    .checkline{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--highlight)}
+    .checkline input{width:18px;height:18px}
+
+    .quick-replies{display:grid;gap:12px}
+    .quick-reply-card{padding:16px;border-radius:18px;border:1px solid rgba(47,78,162,.14);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,255,.98));display:grid;gap:12px}
+    .quick-reply-card__top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .quick-reply-card__title{display:grid;gap:4px}
+    .quick-reply-card__title strong{font-size:16px}
+    .quick-reply-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    .preview-grid{display:grid;grid-template-columns:minmax(280px,.95fr) minmax(0,1.15fr);gap:18px}
+    .preview-card{display:grid;gap:14px;padding:18px;border-radius:22px;background:linear-gradient(180deg,rgba(18,27,63,.96),rgba(32,51,110,.92));color:#eef2ff;box-shadow:0 18px 40px rgba(15,27,63,.24)}
+    .preview-card__badge{display:inline-flex;align-items:center;gap:8px;width:fit-content;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+    .preview-card h3{margin:0;font-size:24px;line-height:1.12}
+    .preview-card p{margin:0;color:rgba(234,240,255,.82)}
+    .preview-card__bubble{padding:12px 14px;border-radius:18px 18px 18px 8px;background:#fff;color:var(--ink);box-shadow:0 12px 24px rgba(15,27,63,.2)}
+    .preview-card__chip{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);font-size:13px;font-weight:700}
+    .test-output,.prompt-preview{padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(255,255,255,.85)}
+    .test-output strong,.prompt-preview strong{display:block;margin-bottom:6px}
+    .test-output p,.prompt-preview pre{margin:0}
+    .prompt-preview pre{white-space:pre-wrap;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;color:var(--muted);max-height:320px;overflow:auto}
+
+    .conversation-layout{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(0,1.2fr);gap:18px}
+    .conversation-list{display:grid;gap:10px;max-height:720px;overflow:auto}
+    .conversation-card{padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.12);background:#fff;display:grid;gap:8px;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease}
+    .conversation-card:hover,.conversation-card.is-active{transform:translateY(-1px);box-shadow:0 14px 26px rgba(15,27,63,.1);border-color:rgba(47,78,162,.26)}
+    .conversation-card__head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .conversation-card__head strong{font-size:15px;line-height:1.25}
+    .conversation-card__preview{margin:0;color:var(--muted)}
+    .conversation-card__meta{font-size:12px;color:var(--muted)}
+    .conversation-empty{padding:20px;border-radius:18px;border:1px dashed rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(247,249,255,.95),rgba(255,255,255,.95));color:var(--muted);text-align:center}
+
+    .transcript-shell{display:grid;gap:14px;min-height:420px}
+    .transcript-toolbar{justify-content:space-between;align-items:flex-end}
+    .transcript-toolbar h3{margin:0;font-size:20px}
+    .transcript-meta{display:grid;gap:8px}
+    .transcript-meta p{margin:0}
+    .transcript{display:grid;gap:12px;max-height:620px;overflow:auto;padding-right:4px}
+    .transcript-message{display:grid;gap:6px;max-width:88%}
+    .transcript-message[data-role="assistant"]{justify-self:start}
+    .transcript-message[data-role="user"]{justify-self:end}
+    .transcript-bubble{padding:12px 14px;border-radius:18px;box-shadow:0 10px 22px rgba(15,27,63,.08);line-height:1.5}
+    .transcript-message[data-role="assistant"] .transcript-bubble{background:#fff;border:1px solid rgba(47,78,162,.12);border-bottom-left-radius:8px}
+    .transcript-message[data-role="user"] .transcript-bubble{background:linear-gradient(180deg,rgba(58,102,179,.94),rgba(43,76,142,.96));color:#fff;border-bottom-right-radius:8px}
+    .transcript-meta-line{font-size:12px;color:var(--muted)}
+
+    #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.22);box-shadow:0 18px 32px rgba(15,27,63,.2);font-weight:800}
+
+    @media (max-width:1160px){
+      .hero,.preview-grid,.conversation-layout,.settings-grid{grid-template-columns:1fr}
+      .metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+
+    @media (max-width:820px){
+      .wrap{padding:0 14px}
+      .row{padding:12px 14px}
+      .field-grid,.priority-grid,.check-grid{grid-template-columns:1fr}
+      .metrics-grid{grid-template-columns:1fr}
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=1" />
+</head>
+<body>
+  <div class="top"><div class="row">
+    <div class="brand">HMJ Global Admin</div>
+    <span class="pill">Website Assistant</span>
+    <div class="sp"></div>
+    <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
+    <a class="btn ghost" href="/">← Website</a>
+    <button class="btn ghost" type="button" data-admin-logout>Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn ghost" type="button" data-admin-login>Log in</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel hero" aria-labelledby="assistantHeading">
+      <div>
+        <p class="eyebrow">Public website conversion assistant</p>
+        <h1 id="assistantHeading">Website Assistant</h1>
+        <p class="muted" id="welcomeMeta">Loading user…</p>
+        <p class="muted">Control the live HMJ website chatbot from one place: appearance, routing, tone, GPT instructions, quick actions, safe data sent to GPT, and retained conversation history for admin review.</p>
+      </div>
+      <aside class="hero-card">
+        <p class="eyebrow">Live status</p>
+        <div class="hero-chips">
+          <span class="chip" id="heroEnabledChip">Loading status…</span>
+          <span class="chip" id="heroRouteChip">Checking routes…</span>
+          <span class="chip" id="heroStorageChip">Checking history storage…</span>
+        </div>
+        <p class="muted" id="heroSummary">Loading assistant configuration…</p>
+        <div class="hero-actions">
+          <button class="btn primary" id="saveSettingsBtn" type="button">Save settings</button>
+          <button class="btn soft" id="reloadSettingsBtn" type="button">Reload</button>
+          <button class="btn soft" id="testAssistantBtn" type="button">Run preview test</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="notice-banner panel" id="storageBanner" hidden>
+      <strong id="storageBannerTitle">Storage setup</strong>
+      <p id="storageBannerBody" class="muted" style="margin:6px 0 0">Conversation history will appear here once the Supabase SQL for the chatbot module has been applied.</p>
+    </section>
+
+    <section class="metrics-grid" aria-label="Assistant overview">
+      <article class="panel metric">
+        <span>Assistant status</span>
+        <strong id="metricEnabled">—</strong>
+        <small id="metricEnabledLabel">Waiting for settings</small>
+      </article>
+      <article class="panel metric">
+        <span>Quick replies</span>
+        <strong id="metricQuickReplies">0</strong>
+        <small id="metricQuickRepliesLabel">Approved actions in the widget</small>
+      </article>
+      <article class="panel metric">
+        <span>Conversations</span>
+        <strong id="metricConversations">0</strong>
+        <small id="metricConversationsLabel">Stored visitor sessions</small>
+      </article>
+      <article class="panel metric">
+        <span>Handoffs logged</span>
+        <strong id="metricHandoffs">0</strong>
+        <small id="metricHandoffsLabel">Sessions routed to a human path</small>
+      </article>
+    </section>
+
+    <section class="settings-grid" aria-label="Assistant settings">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">General</p>
+            <h2>Enablement & launcher</h2>
+          </div>
+          <p class="muted">Control whether the assistant is live, how it opens, how long it stays expanded, and where the launcher sits.</p>
+        </div>
+        <div class="switch-row">
+          <label class="checkline"><input id="enabled" type="checkbox"> Assistant enabled on the public website</label>
+          <label class="checkline"><input id="autoOpen" type="checkbox"> Auto-open once on arrival</label>
+          <label class="checkline"><input id="showLabel" type="checkbox"> Show launcher text next to the icon</label>
+        </div>
+        <div class="field-grid" style="margin-top:14px">
+          <div class="field">
+            <label for="autoOpenDelayMs">Auto-open delay (ms)</label>
+            <input id="autoOpenDelayMs" type="number" min="0" step="100">
+            <p class="field-note">Use a short delay so the widget feels polite rather than abrupt.</p>
+          </div>
+          <div class="field">
+            <label for="autoHideDelayMs">Auto-hide delay (ms)</label>
+            <input id="autoHideDelayMs" type="number" min="4000" step="500">
+            <p class="field-note">If a visitor does not engage, the panel will collapse after this delay.</p>
+          </div>
+          <div class="field">
+            <label for="launcherPosition">Launcher position</label>
+            <select id="launcherPosition">
+              <option value="right">Bottom right</option>
+              <option value="left">Bottom left</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="launcherLabel">Launcher label</label>
+            <input id="launcherLabel" type="text" maxlength="42">
+          </div>
+          <div class="field">
+            <label for="launcherCompactLabel">Compact label</label>
+            <input id="launcherCompactLabel" type="text" maxlength="18">
+          </div>
+          <div class="field">
+            <label for="launcherBadge">Header badge</label>
+            <input id="launcherBadge" type="text" maxlength="32">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Welcome</p>
+            <h2>Opening copy</h2>
+          </div>
+          <p class="muted">Keep the opening state short, commercially useful, and calm.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field field--wide">
+            <label for="welcomeTitle">Opening headline</label>
+            <input id="welcomeTitle" type="text" maxlength="140">
+          </div>
+          <div class="field field--wide">
+            <label for="welcomeBody">Opening support copy</label>
+            <textarea id="welcomeBody"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="emptyStatePrompt">Empty-state helper line</label>
+            <input id="emptyStatePrompt" type="text" maxlength="140">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Tone & style</p>
+            <h2>How the assistant speaks</h2>
+          </div>
+          <p class="muted">Use presets for day-to-day control, with custom instructions for edge cases.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="tonePreset">Tone preset</label>
+            <select id="tonePreset">
+              <option value="professional_friendly">Professional & friendly</option>
+              <option value="direct_consultative">Direct & consultative</option>
+              <option value="warm_supportive">Warm & supportive</option>
+              <option value="confident_recruitment">Confident recruitment</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="writingStyle">Writing style</label>
+            <select id="writingStyle">
+              <option value="concise_guided">Concise & guided</option>
+              <option value="conversational">More conversational</option>
+              <option value="direct">Short & direct</option>
+              <option value="consultative">Consultative</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="formality">Formality</label>
+            <select id="formality">
+              <option value="professional">Professional</option>
+              <option value="neutral">Neutral</option>
+              <option value="relaxed">Relaxed</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="warmth">Warmth</label>
+            <select id="warmth">
+              <option value="friendly">Friendly</option>
+              <option value="balanced">Balanced</option>
+              <option value="matter_of_fact">Matter of fact</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="proactivity">Proactivity</label>
+            <select id="proactivity">
+              <option value="low">Low</option>
+              <option value="balanced">Balanced</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ctaCadence">CTA guidance level</label>
+            <select id="ctaCadence">
+              <option value="light">Light</option>
+              <option value="balanced">Balanced</option>
+              <option value="frequent">Frequent</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="replyLength">Reply length</label>
+            <select id="replyLength">
+              <option value="short">Short</option>
+              <option value="medium">More conversational</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="recruitmentFocus">Commercial focus</label>
+            <select id="recruitmentFocus">
+              <option value="balanced">Balanced</option>
+              <option value="candidate_first">Candidate-first</option>
+              <option value="client_first">Client-first</option>
+              <option value="support_first">Support-first</option>
+            </select>
+          </div>
+          <div class="field field--wide">
+            <label for="customInstructions">Custom behaviour instructions</label>
+            <textarea id="customInstructions"></textarea>
+          </div>
+          <label class="checkline" style="grid-column:1/-1"><input id="ukEnglish" type="checkbox"> Prefer UK spelling and phrasing</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Commercial goals</p>
+            <h2>Visitor journey priorities</h2>
+          </div>
+          <p class="muted">These priorities shape how the prompt encourages next steps.</p>
+        </div>
+        <div class="priority-grid">
+          <div class="field">
+            <label for="goalCandidateRegistration">Candidate registration priority</label>
+            <select id="goalCandidateRegistration"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+          </div>
+          <div class="field">
+            <label for="goalRoleApplication">Role application priority</label>
+            <select id="goalRoleApplication"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+          </div>
+          <div class="field">
+            <label for="goalClientEnquiry">Client enquiry priority</label>
+            <select id="goalClientEnquiry"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+          </div>
+          <div class="field">
+            <label for="goalContactForm">Contact form priority</label>
+            <select id="goalContactForm"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+          </div>
+          <div class="field">
+            <label for="goalHumanHandoff">Human handoff priority</label>
+            <select id="goalHumanHandoff"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Routing</p>
+            <h2>Page rules & CTA destinations</h2>
+          </div>
+          <p class="muted">Control where the assistant appears and which routes it can send visitors to.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="routeMode">Route mode</label>
+            <select id="routeMode">
+              <option value="all_public">All public pages</option>
+              <option value="selected">Selected pages / patterns only</option>
+            </select>
+          </div>
+          <div class="field field--wide">
+            <label for="includePatterns">Include patterns</label>
+            <textarea id="includePatterns" placeholder="/jobs.html&#10;/jobs/*"></textarea>
+            <p class="field-note">One path or wildcard pattern per line. Used when route mode is set to selected.</p>
+          </div>
+          <div class="field field--wide">
+            <label for="excludePatterns">Exclude patterns</label>
+            <textarea id="excludePatterns" placeholder="/admin&#10;/timesheets"></textarea>
+          </div>
+        </div>
+        <div class="check-grid" style="margin-top:14px">
+          <label class="check-card"><span class="checkline"><input id="pageTargetHome" type="checkbox"> Homepage</span></label>
+          <label class="check-card"><span class="checkline"><input id="pageTargetAbout" type="checkbox"> About page</span></label>
+          <label class="check-card"><span class="checkline"><input id="pageTargetJobs" type="checkbox"> Jobs list</span></label>
+          <label class="check-card"><span class="checkline"><input id="pageTargetJobDetail" type="checkbox"> Job detail pages</span></label>
+          <label class="check-card"><span class="checkline"><input id="pageTargetCandidates" type="checkbox"> Candidate pages</span></label>
+          <label class="check-card"><span class="checkline"><input id="pageTargetClients" type="checkbox"> Client pages</span></label>
+          <label class="check-card"><span class="checkline"><input id="pageTargetContact" type="checkbox"> Contact / apply page</span></label>
+          <label class="check-card"><span class="checkline"><input id="pageTargetOtherPublic" type="checkbox"> Other public pages</span></label>
+        </div>
+        <div class="field-grid" style="margin-top:14px">
+          <div class="field">
+            <label for="candidateRegistrationUrl">Candidate registration URL</label>
+            <input id="candidateRegistrationUrl" type="text">
+          </div>
+          <div class="field">
+            <label for="jobsUrl">Jobs page URL</label>
+            <input id="jobsUrl" type="text">
+          </div>
+          <div class="field">
+            <label for="applicationUrl">Application URL</label>
+            <input id="applicationUrl" type="text">
+          </div>
+          <div class="field">
+            <label for="clientEnquiryUrl">Client enquiry URL</label>
+            <input id="clientEnquiryUrl" type="text">
+          </div>
+          <div class="field">
+            <label for="contactUrl">Contact URL</label>
+            <input id="contactUrl" type="text">
+          </div>
+          <div class="field">
+            <label for="handoffMessage">Handoff wording</label>
+            <input id="handoffMessage" type="text">
+          </div>
+          <div class="field">
+            <label for="supportEmail">Support email</label>
+            <input id="supportEmail" type="email">
+          </div>
+          <div class="field">
+            <label for="supportPhone">Support phone</label>
+            <input id="supportPhone" type="text">
+          </div>
+          <div class="field field--wide">
+            <label for="whatsappUrl">WhatsApp URL</label>
+            <input id="whatsappUrl" type="text">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Data sent to GPT</p>
+            <h2>Context controls</h2>
+          </div>
+          <p class="muted">Choose how much page and history context the assistant receives server-side.</p>
+        </div>
+        <div class="check-grid">
+          <label class="check-card"><span class="checkline"><input id="includeRoute" type="checkbox"> Include current route</span></label>
+          <label class="check-card"><span class="checkline"><input id="includePageTitle" type="checkbox"> Include page title</span></label>
+          <label class="check-card"><span class="checkline"><input id="includeMetaDescription" type="checkbox"> Include meta description</span></label>
+          <label class="check-card"><span class="checkline"><input id="includePageCategory" type="checkbox"> Include page category</span></label>
+          <label class="check-card"><span class="checkline"><input id="includeConversationHistory" type="checkbox"> Include conversation history</span></label>
+          <label class="check-card"><span class="checkline"><input id="classifyIntent" type="checkbox"> Classify intent before responding</span></label>
+          <label class="check-card"><span class="checkline"><input id="injectCtaCatalog" type="checkbox"> Inject approved CTA catalog</span></label>
+          <label class="check-card"><span class="checkline"><input id="injectBusinessContext" type="checkbox"> Inject business context</span></label>
+        </div>
+        <div class="field-grid" style="margin-top:14px">
+          <div class="field">
+            <label for="maxHistoryMessages">Max history messages</label>
+            <input id="maxHistoryMessages" type="number" min="1" max="12">
+          </div>
+          <label class="checkline" style="align-self:end"><input id="collectLeadInChat" type="checkbox"> Collect lead details in chat (reserved)</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Prompt instructions</p>
+            <h2>Core GPT guidance</h2>
+          </div>
+          <p class="muted">These sections stay server-side and shape how the assistant behaves without exposing them to the public widget.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field field--wide">
+            <label for="promptBaseRole">Base assistant role</label>
+            <textarea id="promptBaseRole"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="promptAdditionalContext">Business context</label>
+            <textarea id="promptAdditionalContext"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="promptBusinessGoals">Business goals & priorities</label>
+            <textarea id="promptBusinessGoals"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="promptRoutingInstructions">Routing instructions</label>
+            <textarea id="promptRoutingInstructions"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="promptSafetyConstraints">Safety constraints</label>
+            <textarea id="promptSafetyConstraints"></textarea>
+          </div>
+          <div class="field field--wide">
+            <label for="promptPageAwareInstructions">Page-aware instructions</label>
+            <textarea id="promptPageAwareInstructions"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Quick replies</p>
+            <h2>CTA buttons & guided actions</h2>
+          </div>
+          <div class="section-actions">
+            <button class="btn soft small" id="addQuickReplyBtn" type="button">Add quick reply</button>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:-6px">Manage the buttons shown on first open and during the conversation. Use “navigate” for direct routes and “send prompt” for conversational nudges.</p>
+        <div class="quick-replies" id="quickRepliesList"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Advanced</p>
+            <h2>Model & request controls</h2>
+          </div>
+          <p class="muted">Keep this for technical tuning. Sensible defaults are already applied.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="model">Primary model</label>
+            <input id="model" type="text">
+          </div>
+          <div class="field">
+            <label for="fallbackModel">Fallback model</label>
+            <input id="fallbackModel" type="text">
+          </div>
+          <div class="field">
+            <label for="temperature">Temperature</label>
+            <input id="temperature" type="number" min="0" max="2" step="0.1">
+          </div>
+          <div class="field">
+            <label for="maxOutputTokens">Max output tokens</label>
+            <input id="maxOutputTokens" type="number" min="120" max="1000" step="10">
+          </div>
+          <div class="field">
+            <label for="requestTimeoutMs">Request timeout (ms)</label>
+            <input id="requestTimeoutMs" type="number" min="5000" max="45000" step="500">
+          </div>
+          <label class="checkline" style="align-self:end"><input id="debugLogging" type="checkbox"> Debug logging (admin/server only)</label>
+        </div>
+      </section>
+
+      <section class="panel" style="grid-column:1 / -1">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Preview & test</p>
+            <h2>Preview the widget and test a response</h2>
+          </div>
+          <p class="muted">Use the current form values, even before saving, to preview copy and test how the assistant would respond.</p>
+        </div>
+        <div class="preview-grid">
+          <div class="preview-card">
+            <span class="preview-card__badge" id="previewBadge">HMJ Assistant</span>
+            <div>
+              <h3 id="previewTitle">Preview title</h3>
+              <p id="previewBody">Preview support copy</p>
+            </div>
+            <div class="preview-card__bubble" id="previewBubble">Welcome message preview</div>
+            <div class="preview-actions" id="previewActions"></div>
+          </div>
+          <div style="display:grid;gap:16px">
+            <div class="field-grid">
+              <div class="field">
+                <label for="previewRoute">Preview route</label>
+                <input id="previewRoute" type="text" value="/index.html">
+              </div>
+              <div class="field">
+                <label for="previewCategory">Page category</label>
+                <select id="previewCategory">
+                  <option value="home">Home</option>
+                  <option value="about">About</option>
+                  <option value="jobs">Jobs list</option>
+                  <option value="job_detail">Job detail</option>
+                  <option value="candidates">Candidates</option>
+                  <option value="clients">Clients</option>
+                  <option value="contact">Contact / apply</option>
+                  <option value="other_public">Other public</option>
+                </select>
+              </div>
+              <div class="field field--wide">
+                <label for="previewTitleInput">Preview page title</label>
+                <input id="previewTitleInput" type="text" value="HMJ Global | Data Centre & Pharma Recruitment Partner">
+              </div>
+              <div class="field field--wide">
+                <label for="previewMetaDescription">Preview meta description</label>
+                <textarea id="previewMetaDescription">People-first teams powering hyperscale data centres and pharma manufacturing.</textarea>
+              </div>
+              <div class="field field--wide">
+                <label for="testMessage">Test visitor message</label>
+                <textarea id="testMessage">Hi, I’m looking for work in commissioning and want to know the best next step.</textarea>
+              </div>
+            </div>
+            <div class="test-actions">
+              <button class="btn primary" id="runPreviewTestBtn" type="button">Run test reply</button>
+              <button class="btn soft" id="refreshPreviewBtn" type="button">Refresh preview card</button>
+            </div>
+            <div class="test-output">
+              <strong>Latest test reply</strong>
+              <p id="testReplyOutput" class="muted">Run a preview test to see the assistant’s reply here.</p>
+            </div>
+            <div class="prompt-preview">
+              <strong>Assembled prompt preview</strong>
+              <pre id="promptPreviewOutput">Run a preview test to inspect the composed prompt sections.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel" aria-labelledby="conversationHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Conversation history</p>
+          <h2 id="conversationHeading">Stored chatbot sessions</h2>
+        </div>
+        <div class="section-actions">
+          <div class="field" style="min-width:240px">
+            <label for="conversationSearch">Search</label>
+            <input id="conversationSearch" type="text" placeholder="Route, intent, session, or preview text">
+          </div>
+          <button class="btn soft small" id="refreshConversationsBtn" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="conversation-layout">
+        <div>
+          <div class="conversation-list" id="conversationList"></div>
+          <div class="conversation-empty" id="conversationEmpty" hidden>
+            Conversation history will appear here once visitors engage with the live assistant and the Supabase storage SQL has been applied.
+          </div>
+        </div>
+        <div class="transcript-shell">
+          <div class="transcript-toolbar">
+            <div>
+              <h3 id="transcriptHeading">Select a conversation</h3>
+              <p id="transcriptSummary" class="muted" style="margin:4px 0 0">The message transcript and context will appear here.</p>
+            </div>
+            <div class="conversation-meta" id="transcriptMeta"></div>
+          </div>
+          <div class="transcript" id="transcriptMessages"></div>
+          <div class="conversation-empty" id="transcriptEmpty">
+            Choose a stored conversation from the list to inspect the full message history.
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

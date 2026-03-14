@@ -28,7 +28,8 @@
 
     /* ===== FILTER BAR ===== */
     .filters{
-      position:sticky; top:0; z-index:8;
+      /* Keep the jobs filter panel in normal document flow so it never obscures cards. */
+      position:relative; top:auto; z-index:1;
       background:rgba(255,255,255,.9);
       backdrop-filter:blur(14px);
       border-bottom:1px solid rgba(26,26,46,.08);

@@ -3,6 +3,8 @@
 
   const TIMESHEETS_URL = 'https://hmjglobal.timesheetportal.com';
   const ADMIN_URL = '/admin/';
+  const CHATBOT_SCRIPT_ID = 'hmj-chatbot-script';
+  const CHATBOT_STYLE_ID = 'hmj-chatbot-style';
 
   const ensureIdentity = () => {
     try {
@@ -54,6 +56,31 @@
     return identity;
   };
 
+  const shouldBootChatbot = () => {
+    const path = String(window.location.pathname || '/');
+    if (path.startsWith('/admin')) return false;
+    if (path === '/timesheets.html') return false;
+    return true;
+  };
+
+  const ensureChatbotAssets = () => {
+    if (!shouldBootChatbot()) return;
+    if (!document.getElementById(CHATBOT_STYLE_ID)) {
+      const style = document.createElement('link');
+      style.id = CHATBOT_STYLE_ID;
+      style.rel = 'stylesheet';
+      style.href = '/assets/css/hmj-chatbot.css?v=1';
+      document.head.appendChild(style);
+    }
+    if (!document.getElementById(CHATBOT_SCRIPT_ID)) {
+      const script = document.createElement('script');
+      script.id = CHATBOT_SCRIPT_ID;
+      script.defer = true;
+      script.src = '/js/hmj-chatbot.js?v=1';
+      document.head.appendChild(script);
+    }
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     const adminLink = document.getElementById('nav-admin');
     const timesheetsLink = document.getElementById('nav-timesheets');
@@ -80,5 +107,6 @@
     });
 
     attachAndRender(ensureIdentity());
+    ensureChatbotAssets();
   });
 })();

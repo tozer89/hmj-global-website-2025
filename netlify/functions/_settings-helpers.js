@@ -1,6 +1,7 @@
 // netlify/functions/_settings-helpers.js
 // Centralised admin settings helper with Supabase + fallback support.
 const { hasSupabase, getSupabase, supabaseStatus } = require('./_supabase.js');
+const { DEFAULT_CHATBOT_SETTINGS } = require('./_chatbot-config.js');
 
 const DEFAULT_SETTINGS = {
   fiscal_week1_ending: '2025-11-02', // Week 1 ends Sunday 2nd November 2025 by default
@@ -8,6 +9,7 @@ const DEFAULT_SETTINGS = {
   timesheet_deadline_note: 'Submit approved timesheets by Monday 10:00 (UK time) to guarantee payroll.',
   timesheet_deadline_timezone: 'Europe/London',
   noticeboard_enabled: true,
+  chatbot_settings: DEFAULT_CHATBOT_SETTINGS,
 };
 
 const MS_DAY = 86400000;
@@ -41,10 +43,16 @@ function mapRows(rows = []) {
   return map;
 }
 
+function cloneSettingValue(value) {
+  if (value == null) return value;
+  if (typeof value !== 'object') return value;
+  return JSON.parse(JSON.stringify(value));
+}
+
 function ensureDefaults(keys = Object.keys(DEFAULT_SETTINGS)) {
   const settings = {};
   keys.forEach((key) => {
-    settings[key] = DEFAULT_SETTINGS[key];
+    settings[key] = cloneSettingValue(DEFAULT_SETTINGS[key]);
   });
   return settings;
 }
@@ -71,7 +79,7 @@ async function fetchSettings(event, keys = Object.keys(DEFAULT_SETTINGS)) {
     requested.forEach((key) => {
       if (map.has(key)) settings[key] = map.get(key);
       else {
-        settings[key] = DEFAULT_SETTINGS[key];
+        settings[key] = cloneSettingValue(DEFAULT_SETTINGS[key]);
         missing.push(key);
       }
     });
