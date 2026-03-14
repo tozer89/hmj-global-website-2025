@@ -5,6 +5,7 @@
   const ADMIN_URL = '/admin/';
   const CHATBOT_SCRIPT_ID = 'hmj-chatbot-script';
   const CHATBOT_STYLE_ID = 'hmj-chatbot-style';
+  const ANALYTICS_SCRIPT_ID = 'hmj-analytics-script';
 
   const ensureIdentity = () => {
     try {
@@ -63,6 +64,13 @@
     return true;
   };
 
+  const shouldBootAnalytics = () => {
+    const path = String(window.location.pathname || '/');
+    if (path.startsWith('/admin')) return false;
+    if (path === '/timesheets.html') return false;
+    return true;
+  };
+
   const ensureChatbotAssets = () => {
     if (!shouldBootChatbot()) return;
     if (!document.getElementById(CHATBOT_STYLE_ID)) {
@@ -77,6 +85,18 @@
       script.id = CHATBOT_SCRIPT_ID;
       script.defer = true;
       script.src = '/js/hmj-chatbot.js?v=4';
+      document.head.appendChild(script);
+    }
+  };
+
+  const ensureAnalyticsAssets = () => {
+    if (!shouldBootAnalytics()) return;
+    if (window.HMJAnalytics && window.HMJAnalytics.__initialized) return;
+    if (!document.getElementById(ANALYTICS_SCRIPT_ID)) {
+      const script = document.createElement('script');
+      script.id = ANALYTICS_SCRIPT_ID;
+      script.defer = true;
+      script.src = '/js/hmj-analytics.js?v=1';
       document.head.appendChild(script);
     }
   };
@@ -107,6 +127,7 @@
     });
 
     attachAndRender(ensureIdentity());
+    ensureAnalyticsAssets();
     ensureChatbotAssets();
   });
 })();

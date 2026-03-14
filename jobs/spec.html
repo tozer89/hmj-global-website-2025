@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Job Spec | HMJ Global</title>
+  <script defer src="../js/hmj-analytics.js"></script>
   <link rel="stylesheet" href="../css/style.css"/>
   <style>
     :root {
@@ -857,9 +858,9 @@
           </div>
 
           <div class="action-row">
-            <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
-            <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
-            <a class="btn btn-secondary" data-email-share href="#">Share by email</a>
+            <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
+            <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
+            <a class="btn btn-secondary" data-email-share data-analytics-event="email_link_clicked" href="#">Share by email</a>
             <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
           </div>
 
@@ -929,9 +930,9 @@
                 <li>You can still return to the live jobs list if you want to compare roles.</li>
               </ul>
               <div class="action-column">
-                <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
-                <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
-                <a class="btn btn-ghost" data-email-share href="#">Share by email</a>
+                <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
+                <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
+                <a class="btn btn-ghost" data-email-share data-analytics-event="email_link_clicked" href="#">Share by email</a>
               </div>
             </section>
 
@@ -964,9 +965,9 @@
           <p>Apply with this role already attached, share the page with a colleague, or head back to the wider HMJ vacancies list.</p>
         </div>
         <div class="cta-band__actions">
-          <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
-          <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
-          <a class="btn btn-secondary" data-email-share href="#">Share by email</a>
+          <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
+          <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
+          <a class="btn btn-secondary" data-email-share data-analytics-event="email_link_clicked" href="#">Share by email</a>
           <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
         </div>
       </section>
@@ -979,8 +980,8 @@
       <span id="stickyMeta"></span>
     </div>
     <div class="sticky-cta__actions">
-      <button class="btn btn-secondary" data-copy-link type="button">Share role</button>
-      <a class="btn btn-primary" data-apply-link href="#">Apply now</a>
+      <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
+      <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
     </div>
   </div>
 
@@ -1058,6 +1059,13 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function applyAnalyticsPayload(nodes, payload) {
+        const serialised = JSON.stringify(payload || {});
+        (nodes || []).forEach((node) => {
+          node.dataset.analyticsPayload = serialised;
+        });
       }
 
       function toTitleCase(value = '') {
@@ -1627,16 +1635,32 @@
           applyUrl,
         };
 
+        const analyticsPayload = {
+          job_id: meta.jobId || job.id || '',
+          job_title: details.title,
+          share_slug: meta.slug || localSlug || '',
+          job_location: details.locationText,
+          job_status: status,
+          employment_type: details.rawEmploymentType || '',
+          job_reference: details.reference || '',
+        };
+
         applyLinks.forEach((link) => {
           link.href = applyUrl;
+          link.dataset.analyticsLabel = `Apply for ${job.title || 'role'}`;
         });
         emailLinks.forEach((link) => {
           link.href = emailHref;
+          link.dataset.analyticsLabel = `Share ${job.title || 'role'} by email`;
         });
         copyButtons.forEach((button) => {
           button.disabled = false;
           button.removeAttribute('aria-disabled');
+          button.dataset.analyticsLabel = `Share ${job.title || 'role'}`;
         });
+        applyAnalyticsPayload(applyLinks, analyticsPayload);
+        applyAnalyticsPayload(emailLinks, analyticsPayload);
+        applyAnalyticsPayload(copyButtons, analyticsPayload);
 
         if (stickyCta) {
           stickyCta.style.display = '';

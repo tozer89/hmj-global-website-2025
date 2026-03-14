@@ -7,6 +7,7 @@
   <script src="js/hmj-identity.js"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-analytics.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
   <link rel="stylesheet" href="css/style.css" />
@@ -750,9 +751,40 @@
     let chips = [];
     const fallbackAnchorIds = new Set();
     let revealObserver = null;
+    let searchTrackTimer = 0;
 
     const getPins = () => new Set(JSON.parse(localStorage.getItem(PIN_KEY) || '[]'));
     const setPins = (set) => localStorage.setItem(PIN_KEY, JSON.stringify([...set]));
+
+    function analyticsTrack(eventType, extra){
+      try {
+        if (!window.HMJAnalytics || typeof window.HMJAnalytics.track !== 'function') return;
+        window.HMJAnalytics.track(eventType, extra || {});
+      } catch {}
+    }
+
+    function currentFilterSnapshot(){
+      return {
+        status: state.status,
+        location: state.location,
+        type: state.type,
+        disc: state.disc,
+        search: state.search,
+        shortlist_only: state.shortlistOnly,
+      };
+    }
+
+    function trackJobsFilter(filterName, filterValue){
+      analyticsTrack('jobs_filter_used', {
+        label: filterName,
+        payload: {
+          filter_name: filterName,
+          filter_value: filterValue,
+          filter_summary: filterValue ? `${filterName}: ${filterValue}` : filterName,
+          filters: currentFilterSnapshot(),
+        },
+      });
+    }
 
     function refreshJobsElements(){
       jobsEls = Array.from(jobsContainer?.querySelectorAll('.job') || []);
@@ -779,6 +811,7 @@
           if (!group) return;
           setChipSelection(group, chip.dataset.value);
           state[group] = chip.dataset.value;
+          trackJobsFilter(group, chip.dataset.value || 'all');
           applyFilters();
         });
       });
@@ -842,8 +875,17 @@
             const pins = getPins();
             const id = job.dataset.id || job.dataset.anchor || job.id || job.querySelector('h3')?.textContent?.trim();
             if (!id) return;
+            const willSave = !pins.has(id);
             if (pins.has(id)) pins.delete(id); else pins.add(id);
             setPins(pins);
+            analyticsTrack('jobs_shortlist_toggled', {
+              label: willSave ? 'Saved role' : 'Removed saved role',
+              payload: {
+                action: willSave ? 'saved' : 'removed',
+                job_id: job.dataset.id || '',
+                job_title: job.dataset.title || '',
+              },
+            });
             refreshPinsUI();
             applyFilters();
           });
@@ -1396,7 +1438,7 @@
         ? ` href="${escapeAttr(publicDetailUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(detailLabel)}"`
         : '';
       const detailAction = hasPublicDetails
-        ? `<a class="btn-tertiary job-details-link" href="${escapeAttr(publicDetailUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(detailLabel)}">Show details</a>`
+        ? `<a class="btn-tertiary job-details-link" href="${escapeAttr(publicDetailUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(detailLabel)}" data-analytics-event="jobs_card_clicked" data-analytics-label="Show details for ${escapeAttr(job.title || 'role')}">Show details</a>`
         : '';
       return `
       <div id="${anchorId}" class="job reveal${hasPublicDetails ? ' job--has-detail' : ''}"
@@ -1412,7 +1454,7 @@
            data-title="${escapeAttr(job.title)}"
            data-tags="${escapeAttr(tagsList.map((t) => t.toLowerCase()).join(','))}"
            data-keywords="${escapeAttr(`${job.title} ${job.locationText} ${job.discipline} ${job.customer || ''} ${payText} ${(job.keywords || '')} ${benefitsList.join(' ')}`.toLowerCase())}">
-        <${leadTag} class="job-card-link${hasPublicDetails ? '' : ' job-card-link--static'}"${leadAttrs}>
+        <${leadTag} class="job-card-link${hasPublicDetails ? '' : ' job-card-link--static'}"${leadAttrs}${hasPublicDetails ? ` data-analytics-event="jobs_card_clicked" data-analytics-label="Open ${escapeAttr(job.title || 'role')}"` : ''}>
         <div class="job-topline">
           <span class="status ${statusClass}">${getStatusLabel(job.status)}</span>
           <span class="job-current">${getStatusCue(job.status)}</span>
@@ -1431,13 +1473,13 @@
         ${hasPublicDetails ? '<span class="job-detail-cue">Show full role brief</span>' : ''}
         </${leadTag}>
         <div class="job-primary-actions">
-          <a class="btn btn-primary" href="${escapeAttr(applyUrl)}">${job.status === 'closed' ? 'Register interest' : 'Apply now'}</a>
-          <a class="btn-tertiary btn-ghost" href="${escapeAttr(contactUrl)}">Speak to HMJ</a>
+          <a class="btn btn-primary" href="${escapeAttr(applyUrl)}" data-analytics-event="job_apply_clicked" data-analytics-label="${escapeAttr(job.status === 'closed' ? 'Register interest' : 'Apply now')}">${job.status === 'closed' ? 'Register interest' : 'Apply now'}</a>
+          <a class="btn-tertiary btn-ghost" href="${escapeAttr(contactUrl)}" data-analytics-event="contact_form_cta_clicked" data-analytics-label="Speak to HMJ about ${escapeAttr(job.title || 'role')}">Speak to HMJ</a>
         </div>
         <div class="actions job-secondary-actions">
           ${detailAction}
           <button class="pin-btn" type="button" aria-pressed="false">☆ Save</button>
-          <button class="share-btn" type="button" data-share>Share</button>
+          <button class="share-btn" type="button" data-share data-analytics-event="job_share_clicked" data-analytics-label="Share ${escapeAttr(job.title || 'role')}">Share</button>
         </div>
       </div>`;
     }
@@ -1637,6 +1679,10 @@
     function syncSearch(value){
       if(searchBox && document.activeElement!==searchBox){ searchBox.value=value; }
       state.search=value.trim().toLowerCase(); applyFilters();
+      clearTimeout(searchTrackTimer);
+      searchTrackTimer = setTimeout(() => {
+        trackJobsFilter('search', state.search || 'cleared');
+      }, 500);
     }
     searchBox?.addEventListener('input',e=>syncSearch(e.target.value));
 
@@ -1655,11 +1701,12 @@
       state.shortlistOnly=!state.shortlistOnly;
       shortlistBtn.classList.toggle('btn-primary',state.shortlistOnly);
       shortlistBtn.title=state.shortlistOnly?'Showing only saved roles':'Show saved roles';
+      trackJobsFilter('shortlist', state.shortlistOnly ? 'saved-only' : 'all-roles');
       applyFilters();
     });
     refreshPinsUI();
 
-    locationSel.addEventListener('change',()=>{ state.location=locationSel.value; applyFilters(); });
+    locationSel.addEventListener('change',()=>{ state.location=locationSel.value; trackJobsFilter('location', state.location || 'all'); applyFilters(); });
     function resetFilters(){
       refreshChips();
       state.status='all'; state.location='all'; state.type='all'; state.disc='all'; state.search=''; state.shortlistOnly=false;
@@ -1668,6 +1715,7 @@
       shortlistBtn.classList.remove('btn-primary');
       shortlistBtn.title='Show saved roles';
       ['status','type','disc'].forEach((group)=>setChipSelection(group,'all'));
+      trackJobsFilter('reset', 'all');
       applyFilters();
     }
     clearBtn.addEventListener('click', resetFilters);

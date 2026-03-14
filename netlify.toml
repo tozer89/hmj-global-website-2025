@@ -128,6 +128,17 @@
   status = 302
 
 [[redirects]]
+  from = "/admin/analytics.html"
+  to = "/admin/analytics.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/analytics.html"
+  to = "/admin/?next=analytics.html"
+  status = 302
+
+[[redirects]]
   from = "/admin/timesheets.html"
   to = "/admin/timesheets.html"
   status = 200

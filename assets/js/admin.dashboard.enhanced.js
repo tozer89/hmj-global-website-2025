@@ -662,6 +662,7 @@
           m: '/admin/candidate-matcher.html',
           n: '/admin/candidates.html',
           a: '/admin/assignments.html',
+          l: '/admin/analytics.html',
           j: '/admin/jobs.html',
           p: '/admin/payroll.html',
           t: '/admin/timesheets.html',

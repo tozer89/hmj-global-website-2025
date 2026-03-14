@@ -19,6 +19,7 @@
     activeScenarioId: '',
     compareScenarioId: '',
     savedLibrary: [],
+    inputDensity: 'basic',
     isApplyingForm: false,
     recalcTimer: null,
     summaryTimer: null,
@@ -39,6 +40,8 @@
       'summarySourceChip',
       'heroPeakBalance',
       'heroCapacity',
+      'btnBasicMode',
+      'btnAdvancedMode',
       'btnCalculate',
       'btnRefreshSummary',
       'btnPrint',
@@ -54,6 +57,9 @@
       'btnCloseScenarioDialog',
       'scenarioTabs',
       'forecastForm',
+      'validationHost',
+      'activeDriverLabel',
+      'advancedPanel',
       'clientName',
       'scenarioName',
       'currency',
@@ -93,6 +99,7 @@
       'resultsHeading',
       'resultsMeta',
       'kpiGrid',
+      'resultsNoticeHost',
       'gptSummaryText',
       'summaryLoader',
       'assumptionSnapshot',
@@ -135,7 +142,7 @@
   }
 
   function cloneScenarioAssumptions(assumptions) {
-    return Engine.cloneJson(Engine.sanitizeAssumptions(assumptions));
+    return Engine.cloneJson(ensureScenarioArrays(assumptions));
   }
 
   function createScenario(name, overrides) {
@@ -171,12 +178,13 @@
     return {
       scenarios: [base, proposed, stretch],
       activeScenarioId: base.id,
-      compareScenarioId: proposed.id,
+      compareScenarioId: '',
     };
   }
 
   function ensureScenarioArrays(input) {
-    const assumptions = Engine.sanitizeAssumptions(input || {});
+    const source = input && typeof input === 'object' ? input : {};
+    const assumptions = normaliseScenarioAssumptions(source);
     const horizon = assumptions.forecastHorizonWeeks;
     const manualCounts = Array.isArray(assumptions.invoice.manualEventCounts)
       ? assumptions.invoice.manualEventCounts.slice(0, horizon)
@@ -202,22 +210,25 @@
       };
     });
 
-    assumptions.receiptLines = Array.isArray(assumptions.receiptLines)
-      ? assumptions.receiptLines.map(function (line, index) {
+    const receiptLines = Array.isArray(source.receiptLines)
+      ? source.receiptLines
+      : Array.isArray(assumptions.receiptLines)
+        ? assumptions.receiptLines
+        : [];
+    assumptions.receiptLines = receiptLines.map(function (line, index) {
         return {
           id: String((line && line.id) || uid('receipt') + '-' + index),
           date: Engine.formatDate(line && line.date ? line.date : assumptions.forecastStartDate),
           amount: Number(line && line.amount) || 0,
           note: String(line && line.note || '').trim(),
         };
-      })
-      : [];
+      });
 
     return assumptions;
   }
 
   function buildScenarioSignature(assumptions) {
-    return JSON.stringify(ensureScenarioArrays(assumptions));
+    return JSON.stringify(buildCalculationPayload(assumptions));
   }
 
   function hydrateWorkspace() {
@@ -313,6 +324,195 @@
     return 'ok';
   }
 
+  function normaliseGrowthMode(value) {
+    return String(value || '').trim() === 'direct' ? 'direct' : 'contractor';
+  }
+
+  function modeLabel(mode) {
+    return normaliseGrowthMode(mode) === 'direct' ? 'Direct weekly uplift' : 'Contractor mode';
+  }
+
+  function hasDirectInputs(assumptions) {
+    const direct = assumptions && assumptions.direct ? assumptions.direct : {};
+    return [
+      direct.baseWeeklyNet,
+      direct.baseWeeklyGross,
+      direct.scenarioWeeklyNet,
+      direct.scenarioWeeklyGross,
+    ].some(function (value) {
+      return Number(value) > 0;
+    });
+  }
+
+  function hasContractorInputs(assumptions) {
+    const contractor = assumptions && assumptions.contractor ? assumptions.contractor : {};
+    return [
+      contractor.currentContractors,
+      contractor.additionalContractors,
+      contractor.weeklyPayPerContractor,
+      contractor.hourlyWage,
+      contractor.perContractorNetInvoice,
+      contractor.perContractorGrossInvoice,
+    ].some(function (value) {
+      return Number(value) > 0;
+    });
+  }
+
+  function normaliseScenarioAssumptions(input) {
+    const assumptions = Engine.sanitizeAssumptions(input || {});
+    if (assumptions.growthMode === 'combined') {
+      assumptions.growthMode = hasContractorInputs(assumptions)
+        ? 'contractor'
+        : (hasDirectInputs(assumptions) ? 'direct' : 'contractor');
+    } else {
+      assumptions.growthMode = normaliseGrowthMode(assumptions.growthMode);
+    }
+    return assumptions;
+  }
+
+  function buildCalculationPayload(input) {
+    const assumptions = ensureScenarioArrays(input);
+    const payload = Engine.cloneJson(assumptions);
+    payload.growthMode = normaliseGrowthMode(payload.growthMode);
+    if (payload.growthMode === 'contractor') {
+      payload.direct = {
+        baseWeeklyNet: 0,
+        baseWeeklyGross: 0,
+        scenarioWeeklyNet: 0,
+        scenarioWeeklyGross: 0,
+      };
+    } else {
+      payload.contractor = {
+        currentContractors: 0,
+        additionalContractors: 0,
+        weeklyPayPerContractor: 0,
+        hourlyWage: 0,
+        weeklyHours: payload.contractor && payload.contractor.weeklyHours
+          ? Number(payload.contractor.weeklyHours)
+          : Engine.DEFAULT_ASSUMPTIONS.contractor.weeklyHours,
+        marginPercent: 0,
+        perContractorNetInvoice: 0,
+        perContractorGrossInvoice: 0,
+      };
+    }
+    return Engine.sanitizeAssumptions(payload);
+  }
+
+  function countAdvancedOverrides(assumptions) {
+    if (!assumptions) return 0;
+    let count = 0;
+    if (Number(assumptions.paymentTerms && assumptions.paymentTerms.receiptLagDays) > 0) count += 1;
+    if ((assumptions.invoice && assumptions.invoice.cadence) === 'monthly') count += 1;
+    if (Number(assumptions.invoice && assumptions.invoice.invoiceWeekday) !== 2) count += 1;
+    if (assumptions.invoice && assumptions.invoice.autoCountDates === false) count += 1;
+    if (Array.isArray(assumptions.invoice && assumptions.invoice.manualEventCounts)
+      && assumptions.invoice.manualEventCounts.some(function (value) { return value != null; })) count += 1;
+    if (Array.isArray(assumptions.receiptLines) && assumptions.receiptLines.length) count += 1;
+    if (Array.isArray(assumptions.receiptWeekAdjustments)
+      && assumptions.receiptWeekAdjustments.some(function (entry) { return Number(entry && entry.amount) !== 0; })) count += 1;
+    if (String(assumptions.notes || '').trim()) count += 1;
+    if (assumptions.forecastStartDate && assumptions.forecastStartDate !== Engine.DEFAULT_ASSUMPTIONS.forecastStartDate) count += 1;
+    if (Number(assumptions.riskThresholdPercent) !== Number(Engine.DEFAULT_ASSUMPTIONS.riskThresholdPercent)) count += 1;
+    return count;
+  }
+
+  function contractorValueSource(assumptions) {
+    const contractor = assumptions && assumptions.contractor ? assumptions.contractor : {};
+    if (Number(contractor.perContractorGrossInvoice) > 0 || Number(contractor.perContractorNetInvoice) > 0) {
+      return 'Per-contractor invoice value';
+    }
+    if (Number(contractor.hourlyWage) > 0) {
+      return 'Hourly wage and weekly hours';
+    }
+    if (Number(contractor.weeklyPayPerContractor) > 0) {
+      return 'Weekly pay and margin';
+    }
+    return 'No contractor value entered';
+  }
+
+  function directValueSource(assumptions) {
+    const direct = assumptions && assumptions.direct ? assumptions.direct : {};
+    if (Number(direct.scenarioWeeklyGross) > 0) return 'Weekly gross uplift';
+    if (Number(direct.scenarioWeeklyNet) > 0) return 'Weekly net uplift';
+    if (Number(direct.baseWeeklyGross) > 0 || Number(direct.baseWeeklyNet) > 0) return 'Base weekly uplift only';
+    return 'No uplift entered';
+  }
+
+  function buildScenarioSummary(assumptions, result) {
+    const raw = ensureScenarioArrays(assumptions);
+    const payload = buildCalculationPayload(raw);
+    const derived = result && result.derived ? result.derived : Engine.deriveRunRateComponents(payload);
+    const manualReceiptCount = Array.isArray(raw.receiptLines) ? raw.receiptLines.length : 0;
+    const weeklyAdjustments = Array.isArray(raw.receiptWeekAdjustments)
+      ? raw.receiptWeekAdjustments.filter(function (entry) { return Number(entry && entry.amount) !== 0; }).length
+      : 0;
+    const activeMode = normaliseGrowthMode(raw.growthMode);
+    const advancedOverrideCount = countAdvancedOverrides(raw);
+    const activeGrowthSource = activeMode === 'contractor'
+      ? contractorValueSource(raw)
+      : directValueSource(raw);
+    return {
+      activeMode: activeMode,
+      activeModeLabel: modeLabel(activeMode),
+      activeGrowthSource: activeGrowthSource,
+      termLabel: Engine.TERM_LABELS[raw.paymentTerms.type] || raw.paymentTerms.type,
+      vatLabel: raw.vatApplicable ? ('VAT on at ' + raw.vatRate + '%') : 'VAT off',
+      manualReceiptCount: manualReceiptCount,
+      weeklyAdjustmentCount: weeklyAdjustments,
+      advancedOverrideCount: advancedOverrideCount,
+      advancedOverridesActive: advancedOverrideCount > 0,
+      compareLoaded: !!getCompareScenario(),
+      compareLabel: getCompareScenario() ? scenarioDisplayName(getCompareScenario()) : 'No comparison loaded',
+      invoiceCadenceLabel: payload.invoice.cadence === 'monthly' ? 'Monthly' : 'Weekly',
+      invoiceWeekdayLabel: Engine.weekdayLabel(payload.invoice.invoiceWeekday),
+      totalBaseGross: derived.totalBaseGross,
+      totalScenarioGross: derived.totalScenarioGross,
+      capacityUnitGross: derived.capacityUnitGross,
+      zeroGrowth: derived.totalBaseGross === 0 && derived.totalScenarioGross === 0,
+      raw: raw,
+      payload: payload,
+      derived: derived,
+    };
+  }
+
+  function buildValidationState(assumptions) {
+    const summary = buildScenarioSummary(assumptions);
+    const blocking = [];
+    const warnings = [];
+
+    if (!String(els.creditLimit && els.creditLimit.value || '').trim()) {
+      blocking.push('Enter the client credit limit before calculating.');
+    } else if (Number(summary.raw.creditLimit) <= 0) {
+      blocking.push('Credit limit must be greater than zero for an insured-limit forecast.');
+    }
+    if (!String(els.currentOutstandingBalance && els.currentOutstandingBalance.value || '').trim()) {
+      blocking.push('Enter the current outstanding balance so the forecast has a starting point.');
+    }
+    if (summary.raw.paymentTerms.type === 'custom_net' && !String(els.customNetDays && els.customNetDays.value || '').trim()) {
+      blocking.push('Enter the custom net days for the selected payment terms.');
+    }
+    if (summary.activeMode === 'contractor') {
+      const hasHeadcount = Number(summary.raw.contractor.currentContractors) > 0 || Number(summary.raw.contractor.additionalContractors) > 0;
+      const hasValue = summary.capacityUnitGross > 0;
+      if (hasHeadcount && !hasValue) {
+        blocking.push('Add weekly pay, hourly rate, or a per-contractor invoice value so contractor mode has a weekly value to model.');
+      }
+    }
+    if (summary.zeroGrowth) {
+      warnings.push('No weekly growth input is currently active, so balances remain flat unless receipts are entered manually.');
+    }
+    if (summary.raw.paymentTerms.receiptLagDays > 0) {
+      warnings.push('Receipt lag override is active, so receipt timing will differ from the default payment-term schedule.');
+    }
+
+    return {
+      canCalculate: blocking.length === 0,
+      blocking: blocking,
+      warnings: warnings,
+      summary: summary,
+    };
+  }
+
   function readAssumptionsFromForm(previous) {
     const assumptions = Engine.cloneJson(previous || Engine.DEFAULT_ASSUMPTIONS);
     assumptions.clientName = String(els.clientName.value || '').trim();
@@ -329,7 +529,7 @@
     assumptions.paymentTerms.type = els.paymentTermsType.value || '30_eom';
     assumptions.paymentTerms.customNetDays = Number(els.customNetDays.value) || 0;
     assumptions.paymentTerms.receiptLagDays = Number(els.receiptLagDays.value) || 0;
-    assumptions.growthMode = els.growthMode.value || 'contractor';
+    assumptions.growthMode = normaliseGrowthMode(els.growthMode.value || 'contractor');
     assumptions.direct = assumptions.direct || {};
     assumptions.direct.baseWeeklyNet = Number(els.directBaseWeeklyNet.value) || 0;
     assumptions.direct.baseWeeklyGross = Number(els.directBaseWeeklyGross.value) || 0;
@@ -368,7 +568,7 @@
     els.paymentTermsType.value = scenario.paymentTerms.type || '30_eom';
     els.customNetDays.value = scenario.paymentTerms.customNetDays || 0;
     els.receiptLagDays.value = scenario.paymentTerms.receiptLagDays || 0;
-    els.growthMode.value = scenario.growthMode || 'contractor';
+    els.growthMode.value = normaliseGrowthMode(scenario.growthMode || 'contractor');
     els.directBaseWeeklyNet.value = scenario.direct.baseWeeklyNet || 0;
     els.directBaseWeeklyGross.value = scenario.direct.baseWeeklyGross || 0;
     els.directScenarioWeeklyNet.value = scenario.direct.scenarioWeeklyNet || 0;
@@ -385,6 +585,9 @@
     els.invoiceWeekday.value = String(scenario.invoice.invoiceWeekday != null ? scenario.invoice.invoiceWeekday : 2);
     els.autoCountDates.checked = scenario.invoice.autoCountDates !== false;
     els.notes.value = scenario.notes || '';
+    updatePaymentTermsUi();
+    updateVatUi();
+    applyGrowthModeUi(els.growthMode.value);
     state.isApplyingForm = false;
   }
 
@@ -397,10 +600,11 @@
 
   function calculateScenario(scenario) {
     scenario.assumptions = ensureScenarioArrays(scenario.assumptions);
-    const result = Engine.buildForecast(scenario.assumptions);
-    const capacity = Engine.analyseCapacity(scenario.assumptions);
+    scenario.calculationAssumptions = buildCalculationPayload(scenario.assumptions);
+    const result = Engine.buildForecast(scenario.calculationAssumptions);
+    const capacity = Engine.analyseCapacity(scenario.calculationAssumptions);
     result.capacity = capacity;
-    result.fallbackSummary = Engine.generateFallbackSummary(result, scenario.assumptions, capacity);
+    result.fallbackSummary = Engine.generateFallbackSummary(result, scenario.calculationAssumptions, capacity);
     scenario.result = result;
     const signature = buildScenarioSignature(scenario.assumptions);
     if (!scenario.summary || scenario.summary.signature !== signature) {
@@ -422,9 +626,17 @@
     window.clearTimeout(state.recalcTimer);
     state.recalcTimer = window.setTimeout(function () {
       updateActiveScenarioFromForm();
-      calculateWorkspace();
+      const active = getActiveScenario();
+      const validation = active ? buildValidationState(active.assumptions) : { canCalculate: true };
+      if (validation.canCalculate) {
+        calculateWorkspace();
+      } else {
+        persistWorkspace();
+      }
       renderWorkspace();
-      scheduleSummaryRefresh(false);
+      if (validation.canCalculate) {
+        scheduleSummaryRefresh(false);
+      }
     }, typeof delay === 'number' ? delay : 140);
   }
 
@@ -460,7 +672,7 @@
 
   function renderCompareSelect() {
     const activeId = state.activeScenarioId;
-    const options = ['<option value="">No comparison</option>'].concat(
+    const options = ['<option value="">No comparison loaded</option>'].concat(
       state.scenarios
         .filter(function (scenario) { return scenario.id !== activeId; })
         .map(function (scenario) {
@@ -472,25 +684,109 @@
     els.compareScenarioSelect.innerHTML = options.join('');
   }
 
+  function setInputDensity(mode) {
+    state.inputDensity = mode === 'advanced' ? 'advanced' : 'basic';
+    document.body.dataset.inputDensity = state.inputDensity;
+    if (els.btnBasicMode) {
+      els.btnBasicMode.classList.toggle('is-active', state.inputDensity === 'basic');
+      els.btnBasicMode.setAttribute('aria-pressed', state.inputDensity === 'basic' ? 'true' : 'false');
+    }
+    if (els.btnAdvancedMode) {
+      els.btnAdvancedMode.classList.toggle('is-active', state.inputDensity === 'advanced');
+      els.btnAdvancedMode.setAttribute('aria-pressed', state.inputDensity === 'advanced' ? 'true' : 'false');
+    }
+    Array.from(document.querySelectorAll('.clf-advanced-only')).forEach(function (node) {
+      node.hidden = state.inputDensity !== 'advanced';
+    });
+  }
+
+  function updatePaymentTermsUi() {
+    const isCustom = els.paymentTermsType.value === 'custom_net';
+    const host = document.querySelector('[data-custom-terms-field]');
+    if (host) {
+      host.hidden = !isCustom;
+      host.classList.toggle('is-disabled', !isCustom);
+    }
+    els.customNetDays.disabled = !isCustom;
+  }
+
+  function updateVatUi() {
+    const vatOn = !!els.vatApplicable.checked;
+    els.vatRate.disabled = !vatOn;
+    const host = els.vatRate.closest('.clf-field');
+    if (host) host.classList.toggle('is-disabled', !vatOn);
+  }
+
+  function applyGrowthModeUi(mode) {
+    const activeMode = normaliseGrowthMode(mode || els.growthMode.value);
+    els.growthMode.value = activeMode;
+    if (els.activeDriverLabel) {
+      els.activeDriverLabel.textContent = modeLabel(activeMode);
+    }
+
+    Array.from(document.querySelectorAll('[data-growth-mode]')).forEach(function (node) {
+      const isActive = node.getAttribute('data-growth-mode') === activeMode;
+      node.classList.toggle('is-active', isActive);
+      node.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    Array.from(document.querySelectorAll('[data-mode-panel]')).forEach(function (panel) {
+      const isActive = panel.getAttribute('data-mode-panel') === activeMode;
+      panel.classList.toggle('is-active', isActive);
+      panel.classList.toggle('is-inactive', !isActive);
+      const chip = panel.querySelector('[data-mode-state]');
+      if (chip) {
+        chip.textContent = isActive ? 'Active' : 'Inactive';
+        chip.dataset.tone = isActive ? 'ok' : 'neutral';
+      }
+      Array.from(panel.querySelectorAll('input, select, textarea')).forEach(function (control) {
+        control.disabled = !isActive;
+      });
+    });
+  }
+
+  function renderValidation(active) {
+    const validation = buildValidationState(active.assumptions);
+    const cards = [];
+    validation.blocking.forEach(function (message) {
+      cards.push('<div class="clf-alert" data-tone="danger"><strong>Complete this before calculating</strong><span>'
+        + escapeHtml(message) + '</span></div>');
+    });
+    validation.warnings.forEach(function (message) {
+      cards.push('<div class="clf-alert" data-tone="warn"><strong>Check the assumptions</strong><span>'
+        + escapeHtml(message) + '</span></div>');
+    });
+    if (validation.blocking.length && active.result) {
+      cards.push('<div class="clf-alert" data-tone="info"><strong>Last valid result still shown</strong><span>The results workspace below is still showing the last valid calculation until the required inputs are completed.</span></div>');
+    }
+    els.validationHost.innerHTML = cards.join('');
+    els.validationHost.style.display = cards.length ? '' : 'none';
+    els.btnCalculate.disabled = !validation.canCalculate;
+    return validation;
+  }
+
   function renderGrowthPreview(active) {
-    const derived = Engine.deriveRunRateComponents(active.assumptions);
-    const currency = active.assumptions.currency;
+    const summary = buildScenarioSummary(active.assumptions, active.result);
+    const derived = summary.derived;
+    const currency = summary.payload.currency;
     const cards = [
       {
-        label: 'Base weekly gross',
+        label: summary.activeMode === 'contractor' ? 'Current weekly gross' : 'Base weekly gross',
         value: formatMoneyPrecise(derived.totalBaseGross, currency),
       },
       {
-        label: 'Scenario weekly gross',
+        label: summary.activeMode === 'contractor' ? 'Extra weekly gross' : 'Scenario weekly gross',
         value: formatMoneyPrecise(derived.totalScenarioGross, currency),
       },
       {
-        label: 'Per contractor gross',
-        value: formatMoneyPrecise(derived.capacityUnitGross, currency),
+        label: summary.activeMode === 'contractor' ? 'Per contractor gross' : 'Invoice cadence',
+        value: summary.activeMode === 'contractor'
+          ? formatMoneyPrecise(derived.capacityUnitGross, currency)
+          : summary.invoiceCadenceLabel + ' on ' + summary.invoiceWeekdayLabel,
       },
       {
-        label: 'Per contractor net',
-        value: formatMoneyPrecise(derived.capacityUnitNet, currency),
+        label: summary.activeMode === 'contractor' ? 'Value source' : 'Invoice source',
+        value: summary.activeGrowthSource,
       },
     ];
     els.growthPreview.innerHTML = cards.map(function (card) {
@@ -499,7 +795,8 @@
   }
 
   function renderInvoiceDatePreview(active) {
-    const invoicePlan = Engine.buildInvoicePlan(active.assumptions, Engine.generateWeeks(active.assumptions));
+    const payload = buildCalculationPayload(active.assumptions);
+    const invoicePlan = Engine.buildInvoicePlan(payload, Engine.generateWeeks(payload));
     const dates = [];
     invoicePlan.forEach(function (week) {
       week.invoiceDates.forEach(function (date) {
@@ -516,13 +813,14 @@
   }
 
   function renderInvoiceOverrideTable(active) {
-    if (active.assumptions.invoice.autoCountDates !== false) {
+    const assumptions = ensureScenarioArrays(active.assumptions);
+    if (assumptions.invoice.autoCountDates !== false) {
       els.invoiceOverrideHost.innerHTML = '<div class="clf-empty">Automatic counting is on. Switch it off to confirm or override invoice-event counts week by week.</div>';
       return;
     }
-    const weeks = Engine.generateWeeks(active.assumptions);
+    const weeks = Engine.generateWeeks(buildCalculationPayload(assumptions));
     const rows = weeks.map(function (week, index) {
-      const value = active.assumptions.invoice.manualEventCounts[index];
+      const value = assumptions.invoice.manualEventCounts[index];
       return '<tr>'
         + '<td>Week ' + week.weekNumber + '</td>'
         + '<td>' + escapeHtml(Engine.formatLongDate(week.weekStartDate)) + '</td>'
@@ -568,9 +866,10 @@
   }
 
   function renderReceiptAdjustments(active) {
-    const weeks = Engine.generateWeeks(active.assumptions);
+    const assumptions = ensureScenarioArrays(active.assumptions);
+    const weeks = Engine.generateWeeks(buildCalculationPayload(assumptions));
     const rows = weeks.map(function (week, index) {
-      const item = active.assumptions.receiptWeekAdjustments[index] || { amount: 0 };
+      const item = assumptions.receiptWeekAdjustments[index] || { amount: 0 };
       return '<tr>'
         + '<td>Week ' + week.weekNumber + '</td>'
         + '<td>' + escapeHtml(Engine.formatLongDate(week.weekStartDate)) + '</td>'
@@ -590,6 +889,11 @@
   function renderAssumptionUi() {
     const active = getActiveScenario();
     if (!active) return;
+    setInputDensity(state.inputDensity);
+    updatePaymentTermsUi();
+    updateVatUi();
+    applyGrowthModeUi(active.assumptions.growthMode);
+    renderValidation(active);
     renderGrowthPreview(active);
     renderInvoiceDatePreview(active);
     renderInvoiceOverrideTable(active);
@@ -611,7 +915,7 @@
       { label: 'Additional contractors allowed', value: capacity.available ? String(capacity.maxAdditionalContractorsAllowed) : '—', meta: 'Safe extra contractors', tone: capacity.available && capacity.maxAdditionalContractorsAllowed > 0 ? 'ok' : toneForStatus(result.overallStatus) },
       { label: 'Contractors to remove', value: capacity.available ? String(capacity.contractorsToRemove || 0) : '—', meta: capacity.available && capacity.contractorsToRemove ? 'Required to de-risk' : 'None implied', tone: capacity.available && capacity.contractorsToRemove ? 'danger' : 'ok' },
       { label: 'Max safe weekly increase', value: capacity.available ? formatMoney(capacity.maxSafeWeeklyGrossIncrease, currency) : '—', meta: 'Gross weekly uplift', tone: toneForStatus(result.overallStatus) },
-      { label: 'Status', value: result.overallStatusLabel, meta: active.assumptions.paymentTerms.type.replace(/_/g, ' '), tone: toneForStatus(result.overallStatus) },
+      { label: 'Status', value: result.overallStatusLabel, meta: Engine.TERM_LABELS[active.assumptions.paymentTerms.type] || active.assumptions.paymentTerms.type.replace(/_/g, ' '), tone: toneForStatus(result.overallStatus) },
     ];
     els.kpiGrid.innerHTML = cards.map(function (card) {
       return '<article class="clf-kpi-card" data-tone="' + escapeAttr(card.tone) + '">'
@@ -631,47 +935,66 @@
   }
 
   function renderAssumptionSnapshot(active) {
-    const result = active.result;
-    const derived = result.derived;
-    const assumptions = active.assumptions;
-    const invoiceDates = result.invoicePlan.reduce(function (total, week) { return total + week.invoiceCount; }, 0);
+    const summary = buildScenarioSummary(active.assumptions, active.result);
+    const assumptions = summary.raw;
+    const invoiceDates = active.result
+      ? active.result.invoicePlan.reduce(function (total, week) { return total + week.invoiceCount; }, 0)
+      : 0;
     const rows = [
       {
-        title: 'Client & scenario',
-        value: (assumptions.clientName || 'Unnamed client') + ' • ' + scenarioDisplayName(active),
+        title: 'Active method',
+        value: summary.activeModeLabel,
       },
       {
-        title: 'Payment terms',
-        value: (Engine.TERM_LABELS[assumptions.paymentTerms.type] || assumptions.paymentTerms.type) + ' • lag ' + assumptions.paymentTerms.receiptLagDays + ' day(s)',
-      },
-      {
-        title: 'Invoicing cadence',
-        value: (assumptions.invoice.cadence === 'monthly' ? 'Monthly' : 'Weekly') + ' on ' + Engine.weekdayLabel(assumptions.invoice.invoiceWeekday) + ' • ' + invoiceDates + ' projected invoice dates',
+        title: 'What drives the forecast',
+        value: summary.activeGrowthSource,
       },
       {
         title: 'VAT basis',
-        value: assumptions.vatApplicable ? ('VAT on at ' + assumptions.vatRate + '%') : 'VAT excluded',
+        value: summary.vatLabel,
       },
       {
-        title: 'Base weekly gross',
-        value: formatMoneyPrecise(derived.totalBaseGross, assumptions.currency),
+        title: 'Payment terms',
+        value: summary.termLabel + (assumptions.paymentTerms.receiptLagDays ? (' • lag ' + assumptions.paymentTerms.receiptLagDays + ' day(s)') : ''),
       },
       {
-        title: 'Scenario weekly gross',
-        value: formatMoneyPrecise(derived.totalScenarioGross, assumptions.currency),
+        title: 'Advanced overrides',
+        value: summary.advancedOverridesActive ? ('Yes • ' + summary.advancedOverrideCount + ' active') : 'No advanced overrides active',
       },
       {
-        title: 'Per contractor gross',
-        value: formatMoneyPrecise(derived.capacityUnitGross, assumptions.currency),
+        title: 'Manual receipts in play',
+        value: String(summary.manualReceiptCount + summary.weeklyAdjustmentCount),
       },
       {
-        title: 'Notes',
-        value: assumptions.notes || 'No internal note attached.',
+        title: 'Comparison scenario',
+        value: summary.compareLabel,
+      },
+      {
+        title: 'Invoice schedule',
+        value: summary.invoiceCadenceLabel + ' on ' + summary.invoiceWeekdayLabel + (invoiceDates ? (' • ' + invoiceDates + ' projected dates') : ''),
       },
     ];
     els.assumptionSnapshot.innerHTML = rows.map(function (row) {
       return '<div class="clf-list-card"><strong>' + escapeHtml(row.title) + '</strong><span>' + escapeHtml(row.value) + '</span></div>';
     }).join('');
+  }
+
+  function renderResultNotices(active) {
+    const validation = buildValidationState(active.assumptions);
+    const notices = [];
+    if (validation.summary.zeroGrowth) {
+      notices.push('<div class="clf-alert" data-tone="warn"><strong>Flat forecast profile</strong><span>No weekly growth input is currently active, so balances stay flat unless receipts are entered manually.</span></div>');
+    }
+    if (active.result && active.result.metrics.creditLimit > 0) {
+      const ratio = active.result.metrics.minimumHeadroom / active.result.metrics.creditLimit;
+      if (ratio <= 0.05) {
+        notices.push('<div class="clf-alert" data-tone="danger"><strong>Very low headroom</strong><span>Minimum headroom falls below 5% of the insured limit, so even a small timing change could push the account over limit.</span></div>');
+      } else if (ratio <= 0.1) {
+        notices.push('<div class="clf-alert" data-tone="warn"><strong>Headroom is tightening</strong><span>Minimum headroom falls below 10% of the insured limit. Review breach timing and cash receipts closely.</span></div>');
+      }
+    }
+    els.resultsNoticeHost.innerHTML = notices.join('');
+    els.resultsNoticeHost.style.display = notices.length ? '' : 'none';
   }
 
   function linePath(points) {
@@ -802,7 +1125,7 @@
 
   function renderCompareSummary(active, compare) {
     if (!compare || !compare.result) {
-      els.compareSummary.innerHTML = '<div class="clf-empty">Select another scenario to overlay its trajectory and compare peak balance, headroom, and first breach timing side by side.</div>';
+      els.compareSummary.innerHTML = '<div class="clf-empty">No comparison loaded. Open Advanced if you want to overlay another scenario and compare breach timing side by side.</div>';
       return;
     }
     const currency = active.assumptions.currency;
@@ -810,7 +1133,7 @@
       ['Status', active.result.overallStatusLabel, compare.result.overallStatusLabel],
       ['Peak balance', formatMoney(active.result.metrics.forecastPeakBalance, currency), formatMoney(compare.result.metrics.forecastPeakBalance, currency)],
       ['Minimum headroom', formatMoney(active.result.metrics.minimumHeadroom, currency), formatMoney(compare.result.metrics.minimumHeadroom, currency)],
-      ['Additional contractors allowed', String(active.result.capacity.maxAdditionalContractorsAllowed), String(compare.result.capacity.maxAdditionalContractorsAllowed)],
+      ['Additional contractors allowed', active.result.capacity.available ? String(active.result.capacity.maxAdditionalContractorsAllowed) : 'Not modelled', compare.result.capacity.available ? String(compare.result.capacity.maxAdditionalContractorsAllowed) : 'Not modelled'],
       ['First breach', active.result.firstBreach ? ('Week ' + active.result.firstBreach.weekNumber) : 'None', compare.result.firstBreach ? ('Week ' + compare.result.firstBreach.weekNumber) : 'None'],
     ];
     els.compareSummary.innerHTML = rows.map(function (row) {
@@ -825,7 +1148,12 @@
   function renderSensitivity(active) {
     const capacity = active.result.capacity;
     if (!capacity.available) {
-      els.sensitivityHost.innerHTML = '<div class="clf-empty">Add contractor value assumptions to unlock safe-capacity calculations.</div>';
+      const mode = normaliseGrowthMode(active.assumptions.growthMode);
+      els.sensitivityHost.innerHTML = '<div class="clf-empty">'
+        + escapeHtml(mode === 'direct'
+          ? 'Contractor capacity is not being modelled in direct uplift mode. Switch to contractor mode if you want a safe headcount answer.'
+          : 'Add contractor value assumptions to unlock safe-capacity calculations.')
+        + '</div>';
       return;
     }
     const currency = active.assumptions.currency;
@@ -907,6 +1235,7 @@
   }
 
   function renderHero(active) {
+    const summary = buildScenarioSummary(active.assumptions, active.result);
     els.pageStatusBadge.dataset.status = active.result.overallStatus;
     els.pageStatusBadge.textContent = active.result.overallStatusLabel;
     els.heroPeakBalance.textContent = formatMoney(active.result.metrics.forecastPeakBalance, active.assumptions.currency);
@@ -914,7 +1243,7 @@
     els.resultsHeading.textContent = scenarioDisplayName(active) + ' output';
     els.resultsMeta.textContent = (active.assumptions.clientName || 'No client selected')
       + ' • '
-      + active.result.overallStatusLabel
+      + summary.activeModeLabel
       + ' • '
       + active.assumptions.forecastHorizonWeeks
       + ' week horizon';
@@ -926,6 +1255,7 @@
     if (!active || !active.result) return;
     renderHero(active);
     renderKpis(active);
+    renderResultNotices(active);
     renderSummary(active);
     renderAssumptionSnapshot(active);
     renderCharts(active, compare);
@@ -1204,6 +1534,7 @@
     const active = getActiveScenario();
     if (!active || !active.result) return;
     const signature = buildScenarioSignature(active.assumptions);
+    const payload = buildCalculationPayload(active.assumptions);
     if (!force && active.summary && active.summary.source === 'openai' && active.summary.signature === signature) {
       return;
     }
@@ -1221,7 +1552,7 @@
 
     try {
       const response = await state.helpers.api('admin-credit-limit-summary', 'POST', {
-        assumptions: active.assumptions,
+        assumptions: payload,
       });
       if (token !== state.summaryToken) return;
       active.summary = {
@@ -1261,8 +1592,47 @@
     }
   }
 
+  function applyPreset(preset) {
+    switch (preset) {
+      case 'hmj-standard':
+        els.paymentTermsType.value = '30_eom';
+        els.forecastHorizonWeeks.value = 20;
+        els.vatApplicable.checked = true;
+        els.vatRate.value = 20;
+        els.invoiceCadence.value = 'weekly';
+        els.invoiceWeekday.value = '2';
+        els.autoCountDates.checked = true;
+        els.growthMode.value = 'contractor';
+        setInputDensity('basic');
+        break;
+      case 'terms-30-eom':
+        els.paymentTermsType.value = '30_eom';
+        break;
+      case 'terms-30-invoice':
+        els.paymentTermsType.value = '30_from_invoice';
+        break;
+      case 'terms-14-net':
+        els.paymentTermsType.value = '14_net';
+        break;
+      case 'weekly-tuesday':
+        els.invoiceCadence.value = 'weekly';
+        els.invoiceWeekday.value = '2';
+        break;
+      case 'vat-20':
+        els.vatApplicable.checked = true;
+        els.vatRate.value = 20;
+        break;
+      default:
+        return;
+    }
+    updatePaymentTermsUi();
+    updateVatUi();
+    applyGrowthModeUi(els.growthMode.value);
+    scheduleRecalc(40);
+  }
+
   function expandAll(open) {
-    Array.from(document.querySelectorAll('.clf-assumption-group')).forEach(function (node) {
+    Array.from(document.querySelectorAll('.clf-advanced-group')).forEach(function (node) {
       node.open = !!open;
     });
   }
@@ -1287,6 +1657,13 @@
     if (state.isApplyingForm) return;
     const target = event.target;
     if (!target) return;
+
+    if (target.id === 'paymentTermsType') {
+      updatePaymentTermsUi();
+    }
+    if (target.id === 'vatApplicable') {
+      updateVatUi();
+    }
 
     if (target.hasAttribute('data-invoice-count-index')) {
       const active = getActiveScenario();
@@ -1339,6 +1716,38 @@
   function bindStaticActions() {
     els.forecastForm.addEventListener('input', handleFormEvent);
     els.forecastForm.addEventListener('change', handleFormEvent);
+    els.forecastForm.addEventListener('click', function (event) {
+      const receiptButton = event.target.closest('#btnAddReceiptLine');
+      if (receiptButton) {
+        addReceiptLine();
+        return;
+      }
+
+      const modeButton = event.target.closest('[data-growth-mode]');
+      if (modeButton) {
+        const nextMode = normaliseGrowthMode(modeButton.getAttribute('data-growth-mode'));
+        if (els.growthMode.value !== nextMode) {
+          els.growthMode.value = nextMode;
+          applyGrowthModeUi(nextMode);
+          scheduleRecalc(40);
+        }
+        return;
+      }
+
+      const presetButton = event.target.closest('[data-preset]');
+      if (presetButton) {
+        applyPreset(presetButton.getAttribute('data-preset'));
+      }
+    });
+
+    els.btnBasicMode.addEventListener('click', function () {
+      setInputDensity('basic');
+      renderWorkspace();
+    });
+    els.btnAdvancedMode.addEventListener('click', function () {
+      setInputDensity('advanced');
+      renderWorkspace();
+    });
 
     els.receiptLinesHost.addEventListener('click', function (event) {
       const trigger = event.target.closest('[data-remove-receipt-index]');
@@ -1364,12 +1773,27 @@
 
     els.btnCalculate.addEventListener('click', function () {
       updateActiveScenarioFromForm();
+      const active = getActiveScenario();
+      const validation = active ? buildValidationState(active.assumptions) : { canCalculate: true };
+      if (!validation.canCalculate) {
+        renderWorkspace();
+        state.helpers.toast.warn('Complete the required setup fields before calculating.', 2600);
+        return;
+      }
       calculateWorkspace();
       renderWorkspace();
       scheduleSummaryRefresh(true);
       state.helpers.toast.ok('Forecast recalculated.', 1800);
     });
     els.btnRefreshSummary.addEventListener('click', function () {
+      updateActiveScenarioFromForm();
+      const active = getActiveScenario();
+      const validation = active ? buildValidationState(active.assumptions) : { canCalculate: true };
+      if (!validation.canCalculate) {
+        renderWorkspace();
+        state.helpers.toast.warn('Complete the required setup fields before refreshing the summary.', 2600);
+        return;
+      }
       scheduleSummaryRefresh(true);
     });
     els.btnPrint.addEventListener('click', function () {
@@ -1383,7 +1807,6 @@
     els.btnResetScenario.addEventListener('click', resetActiveScenario);
     els.btnExpandAll.addEventListener('click', function () { expandAll(true); });
     els.btnCollapseAll.addEventListener('click', function () { expandAll(false); });
-    els.btnAddReceiptLine.addEventListener('click', addReceiptLine);
     els.btnCloseScenarioDialog.addEventListener('click', closeScenarioDialog);
     els.savedScenarioList.addEventListener('click', function (event) {
       const load = event.target.closest('[data-load-saved]');
@@ -1416,6 +1839,7 @@
     window.Admin.bootAdmin(async function (helpers) {
       setupElements();
       state.helpers = helpers;
+      setInputDensity(state.inputDensity);
       hydrateWorkspace();
       bindStaticActions();
 
