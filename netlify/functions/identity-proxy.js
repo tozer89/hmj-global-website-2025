@@ -4,15 +4,17 @@ function resolveProductionIdentityBase() {
   const direct = String(process.env.HMJ_IDENTITY_BASE || '').trim();
   if (direct) return direct.replace(/\/$/, '');
 
-  const canonicalSite = String(process.env.HMJ_CANONICAL_SITE_URL || process.env.SITE_URL || '').trim();
-  if (canonicalSite) {
+  const siteUrl = String(process.env.SITE_URL || '').trim();
+  if (siteUrl) {
     try {
-      const url = new URL(canonicalSite);
-      return `${url.origin.replace(/\/$/, '')}/.netlify/identity`;
+      const url = new URL(siteUrl);
+      if (/\.netlify\.app$/i.test(url.hostname || '')) {
+        return `${url.origin.replace(/\/$/, '')}/.netlify/identity`;
+      }
     } catch {}
   }
 
-  return 'https://hmj-global.com/.netlify/identity';
+  return 'https://hmjg.netlify.app/.netlify/identity';
 }
 
 const PRODUCTION_IDENTITY_BASE = resolveProductionIdentityBase();

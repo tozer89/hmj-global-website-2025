@@ -128,10 +128,10 @@
 
     addCandidate(envIdentity);
     if (isPreviewHost) {
-      addCandidate(originProxyIdentity);
+      addCandidate(originIdentity);
       if (inlineIdentity && !inlineLooksDefault) addCandidate(inlineIdentity);
       if (netlifyIdentityUrl && !netlifyLooksDefault) addCandidate(netlifyIdentityUrl);
-      addCandidate(originIdentity);
+      addCandidate(originProxyIdentity);
     } else {
       addCandidate(inlineIdentity);
       addCandidate(netlifyIdentityUrl);

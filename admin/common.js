@@ -78,9 +78,8 @@
     const candidates = [
       ADMIN_ENV.ADMIN_IDENTITY_URL,
       window.ADMIN_IDENTITY_URL,
-      IS_PREVIEW_HOST ? ORIGIN_PROXY_IDENTITY_URL : '',
-      !IS_PREVIEW_HOST ? ORIGIN_IDENTITY_URL : '',
-      IS_PREVIEW_HOST ? ORIGIN_IDENTITY_URL : ''
+      ORIGIN_IDENTITY_URL,
+      IS_PREVIEW_HOST ? ORIGIN_PROXY_IDENTITY_URL : ''
     ];
     for (const candidate of candidates) {
       const resolved = normaliseIdentityCandidate(candidate);

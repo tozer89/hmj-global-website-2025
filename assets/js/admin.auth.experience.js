@@ -537,7 +537,7 @@
 
     if (!response.ok) {
       const error = new Error(
-        safeString(data?.msg || data?.error || data?.error_description || rawText).trim() ||
+        safeString(data?.msg || data?.error_description || data?.error || rawText).trim() ||
         `Request failed (${response.status})`
       );
       error.status = response.status;
@@ -569,24 +569,45 @@
   }
 
   async function signInWithPassword(email, password) {
-    const identity = await resolveIdentity(6000);
-    const client = resolveGoTrue(identity);
-    if (!client || typeof client.login !== 'function') {
-      throw new Error('Secure sign-in is not ready in this browser. Refresh and try again.');
+    const result = await fetchIdentityJson('token?grant_type=password', {
+      method: 'POST',
+      body: {
+        email,
+        password
+      }
+    });
+
+    const accessToken = safeString(result?.access_token).trim();
+    if (!accessToken) {
+      throw new Error('No verified session was returned for this sign-in attempt. Please try again.');
     }
 
-    const result = await client.login(email, password, true);
-    return waitForSignedInUser(identity, result, 4200);
+    const identity = await resolveIdentity(2400);
+    const seededUser = Object.assign(
+      {},
+      result?.user && typeof result.user === 'object' ? result.user : {},
+      result,
+      {
+        email: readUserEmail(result?.user) || safeString(result?.email).trim() || safeString(email).trim(),
+        access_token: accessToken,
+        refresh_token: safeString(result?.refresh_token).trim()
+      }
+    );
+
+    if (identity && !identity.__hmjInitUser) {
+      identity.__hmjInitUser = seededUser;
+    }
+
+    return waitForSignedInUser(identity, seededUser, 1200);
   }
 
   async function requestPasswordResetEmail(email) {
-    const identity = await resolveIdentity(6000);
-    const client = resolveGoTrue(identity);
-    if (!client || typeof client.requestPasswordRecovery !== 'function') {
-      throw new Error('Password recovery is not ready in this browser. Refresh and try again.');
-    }
-
-    await client.requestPasswordRecovery(email);
+    await fetchIdentityJson('recover', {
+      method: 'POST',
+      body: {
+        email
+      }
+    });
     return true;
   }
 

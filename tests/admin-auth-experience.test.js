@@ -85,3 +85,10 @@ test('classifyIdentityError maps invalid login failures to a supportable reason 
     }
   );
 });
+
+test('normaliseIdentityError maps missing-user login responses to the HMJ invalid credentials message', () => {
+  assert.equal(
+    normaliseIdentityError('No user found with that email, or password invalid.'),
+    'HMJ could not sign you in with that email and password. Check the details or request a fresh password reset.'
+  );
+});

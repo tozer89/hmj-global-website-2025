@@ -26,11 +26,12 @@ exports.handler = async (event, context) => {
       contractor = c || null;
 
       if (contractor?.id) {
-        const { data: a } = await sb
+        const { count, error: assignmentsError } = await sb
           .from('assignments')
           .select('id', { count: 'exact', head: true })
           .eq('contractor_id', contractor.id);
-        assignmentCount = a || 0; // head:true returns count in headers; in some versions a is null
+        if (assignmentsError) throw assignmentsError;
+        assignmentCount = count || 0;
       }
     }
   } catch (e) {
