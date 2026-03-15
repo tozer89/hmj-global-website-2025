@@ -759,6 +759,52 @@ tbody tr:hover,
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76), var(--hmj-admin-shadow-md);
 }
 
+/* Guard light-surface text against inheriting the muted-on-dark palette when
+   these cards sit inside dark hero shells or persisted theme state changes. */
+.auth-card,
+.shortlink-panel,
+.shortlink-result,
+.shortlink-item,
+.shortlink-empty,
+.quick-strip-panel,
+.module-shell,
+.quick-grid .quick-link:not(:nth-child(1)):not(:nth-child(4)),
+.module-grid .card:not(:nth-child(1)):not(:nth-child(4)) {
+  color: var(--hmj-admin-ink);
+}
+
+.auth-card :is(h1, h2, h3, h4, strong, label, button, a),
+.shortlink-panel :is(h1, h2, h3, h4, strong, label, button, a),
+.shortlink-result :is(h1, h2, h3, h4, strong, label, button, a),
+.shortlink-item :is(h1, h2, h3, h4, strong, label, button, a),
+.quick-strip-panel :is(h1, h2, h3, h4, strong, label, button, a),
+.module-shell :is(h1, h2, h3, h4, strong, label, button, a),
+.quick-grid .quick-link:not(:nth-child(1)):not(:nth-child(4)) strong,
+.module-grid .card:not(:nth-child(1)):not(:nth-child(4)) h3,
+.module-grid .card:not(:nth-child(1)):not(:nth-child(4)) .card-mark {
+  color: var(--hmj-admin-ink);
+}
+
+.auth-card :is(.eyebrow, .muted, .auth-inline-hint, .auth-field > span, .auth-card__intro, .auth-link-card span),
+.shortlink-panel :is(.eyebrow, .muted, .shortlink-panel__intro, .utility-note, .utility-field > span),
+.shortlink-result :is(.eyebrow, .muted, .utility-note, .utility-field > span),
+.shortlink-item :is(.muted, .shortlink-item__meta),
+.shortlink-empty,
+.quick-strip-panel :is(.eyebrow, .muted, .section-note, .section-head > p, .quick-link:not(:nth-child(1)):not(:nth-child(4)) span),
+.module-shell :is(.eyebrow, .muted, .section-note, .section-head > p),
+.module-grid .card:not(:nth-child(1)):not(:nth-child(4)) p {
+  color: var(--hmj-admin-muted);
+}
+
+.auth-card .eyebrow,
+.shortlink-panel .eyebrow,
+.shortlink-result .eyebrow,
+.quick-strip-panel .eyebrow,
+.module-shell .eyebrow,
+.quick-grid .quick-link:not(:nth-child(1)):not(:nth-child(4)) .quick-link__eyebrow {
+  color: var(--highlight);
+}
+
 #sidePanel {
   background:
     radial-gradient(circle at top right, rgba(122, 154, 243, 0.16), transparent 36%),

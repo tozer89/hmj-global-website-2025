@@ -14,15 +14,22 @@ function buildOrFilter({ q, emailHas, job }) {
   if (q) {
     // try matching across common text fields
     const like = `%${q}%`;
+    parts.push(`full_name.ilike.${like}`);
     parts.push(`first_name.ilike.${like}`);
     parts.push(`last_name.ilike.${like}`);
     parts.push(`email.ilike.${like}`);
     parts.push(`phone.ilike.${like}`);
     parts.push(`job_title.ilike.${like}`);
+    parts.push(`headline_role.ilike.${like}`);
+    parts.push(`location.ilike.${like}`);
+    parts.push(`sector_focus.ilike.${like}`);
     parts.push(`address.ilike.${like}`);
   }
   if (emailHas) parts.push(`email.ilike.%${emailHas}%`);
-  if (job) parts.push(`job_title.ilike.%${job}%`);
+  if (job) {
+    parts.push(`job_title.ilike.%${job}%`);
+    parts.push(`headline_role.ilike.%${job}%`);
+  }
   return parts.join(',');
 }
 

@@ -9,6 +9,12 @@ const DEFAULT_SETTINGS = {
   timesheet_deadline_note: 'Submit approved timesheets by Monday 10:00 (UK time) to guarantee payroll.',
   timesheet_deadline_timezone: 'Europe/London',
   noticeboard_enabled: true,
+  team_tasks_settings: {
+    dueSoonDays: 3,
+    collapseDoneByDefault: true,
+    reminderRecipientMode: 'assignee_creator_watchers',
+    defaultPriority: 'medium',
+  },
   chatbot_settings: DEFAULT_CHATBOT_SETTINGS,
 };
 

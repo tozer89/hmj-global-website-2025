@@ -16,19 +16,88 @@
   const isReducedMotion = () => !!(mediaQuery && mediaQuery.matches);
 
   const hasIntersectionObserver = 'IntersectionObserver' in window;
-  const toNumber = (value) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
 
-  const formatNumber = (() => {
-    try {
-      const formatter = new Intl.NumberFormat('en-GB');
-      return (value) => formatter.format(Math.round(value));
-    } catch (error) {
-      return (value) => Math.round(value).toString();
+  const SEEDED_NOTICEBOARD_NOTICES = [
+    {
+      id: 'seeded-notice-1',
+      slug: 'frankfurt-benelux-mobilisation-planning',
+      category: 'Project note',
+      kicker: 'Featured sector update',
+      title: 'Frankfurt and Benelux programmes are pushing mobilisation planning earlier',
+      summary: 'Live projects are asking for document packs, payroll expectations and onboarding timelines to be discussed earlier so contractors can move with fewer last-minute surprises.',
+      body: `Across several live European programmes, the biggest source of friction is not finding interest in the role. It is the gap between offer stage and a contractor being genuinely ready to start.\n\nClients are increasingly asking for mobilisation conversations to begin earlier, especially where travel, accommodation, access windows and local payroll expectations all affect confidence.\n\n- Earlier right-to-work and document reviews reduce late churn\n- Clear payroll and rotation conversations improve confidence before start\n- Site contacts and induction timing matter just as much as the offer itself`,
+      publishAt: '2026-03-12T09:00:00.000Z',
+      featured: true,
+      ctaLabel: 'Open roles',
+      ctaUrl: 'jobs.html',
+    },
+    {
+      id: 'seeded-notice-2',
+      slug: 'commissioning-support-roles-expanding',
+      category: 'Sector note',
+      title: 'Commissioning demand is widening beyond the usual lead roles',
+      summary: 'Projects are not only looking for lead commissioning engineers. They also need planners, turnover support, QA coordination and contractor-facing admin support to keep interfaces moving.',
+      body: `The strongest demand is no longer limited to the headline leadership appointments. More programmes are asking for surrounding support roles that keep commissioning teams organised and productive.\n\nThat includes planners, turnover administrators, QA support, document coordination and site-facing roles that help maintain handover pace when multiple systems are moving together.`,
+      publishAt: '2026-03-09T09:00:00.000Z',
+      featured: false,
+      ctaLabel: 'Register interest',
+      ctaUrl: 'candidates.html',
+    },
+    {
+      id: 'seeded-notice-3',
+      slug: 'payroll-clarity-before-start-date',
+      category: 'Payroll update',
+      title: 'Contractors are asking for payroll detail much earlier in the process',
+      summary: 'Payment cadence, deductions, local rules and timesheet routes are increasingly part of the pre-start conversation, especially on fast-track cross-border moves.',
+      body: `On fast-moving assignments, payroll clarity is often a retention issue as much as an admin issue.\n\nContractors want to understand the practical side early: how timesheets are approved, how deductions work, what the pay rhythm looks like and who to contact if something changes once they are live.`,
+      publishAt: '2026-03-05T09:00:00.000Z',
+      featured: false,
+      ctaLabel: 'Talk to HMJ',
+      ctaUrl: 'contact.html',
+    },
+    {
+      id: 'seeded-notice-4',
+      slug: 'document-packs-before-offer-sign-off',
+      category: 'Mobilisation',
+      title: 'Cross-border starts are smoother when document packs are reviewed before offer sign-off',
+      summary: 'Projects that map compliance documents early tend to avoid the last-minute friction that can derail a seemingly straightforward mobilisation.',
+      body: `When start dates are tight, the real delay often comes from paperwork that was left until after the offer was agreed.\n\n- Passport and right-to-work checks should be clear before travel is discussed\n- Site-specific requirements need to be visible early, not after acceptance\n- Contractors are more likely to commit when the route to site feels organised`,
+      publishAt: '2026-02-27T09:00:00.000Z',
+      featured: false,
+      ctaLabel: 'See opportunities',
+      ctaUrl: 'jobs.html',
+    },
+    {
+      id: 'seeded-notice-5',
+      slug: 'schedule-shifts-and-retention',
+      category: 'Retention',
+      title: 'Retention risk rises when schedules shift without clear communication',
+      summary: 'The programmes that hold people best tend to explain changing dates, reporting lines and site expectations quickly rather than letting uncertainty build.',
+      body: `Contractors can usually absorb pressure better than uncertainty.\n\nWhere schedules move, confidence holds up better when the project communicates clearly about revised start timing, expected rotations and who the contractor should speak to when something changes.`,
+      publishAt: '2026-02-20T09:00:00.000Z',
+      featured: false,
+      ctaLabel: 'Contact HMJ',
+      ctaUrl: 'contact.html',
     }
-  })();
+  ];
+
+  const TEAM_FALLBACK_CARDS = [
+    {
+      initials: 'DL',
+      title: 'Delivery leadership',
+      summary: 'Recruitment support aligned to package scope, reporting lines and the pressure points affecting live site delivery.'
+    },
+    {
+      initials: 'MC',
+      title: 'Mobilisation & compliance',
+      summary: 'Pre-start documentation, onboarding coordination and cross-border readiness handled with a clear route to site.'
+    },
+    {
+      initials: 'PC',
+      title: 'Payroll & contractor care',
+      summary: 'Timesheets, pay queries, extensions and continuity support once teams are live and schedules begin to move.'
+    }
+  ];
 
   let toastStack;
   const ensureToastStack = () => {
@@ -253,6 +322,30 @@
       `;
     };
 
+    const renderFallbackState = () => {
+      if (!emptyState) return;
+      emptyState.innerHTML = `
+        <div class="about-team__fallback">
+          <div class="about-team__fallback-copy">
+            <span class="about-team__fallback-label">Leadership profiles coming soon</span>
+            <h3>HMJ still supports programmes through connected delivery, mobilisation and payroll functions.</h3>
+            <p>When live team profiles have not yet been published, the About page switches to an intentional fallback rather than leaving this area blank. The model remains the same: specialist recruitment supported by practical onboarding, compliance coordination and contractor care.</p>
+          </div>
+          <div class="about-team__fallback-grid" aria-label="HMJ leadership fallback roles">
+            ${TEAM_FALLBACK_CARDS.map((card) => `
+              <article class="about-team__fallback-card">
+                <div class="about-team__fallback-avatar" aria-hidden="true">${escapeHtml(card.initials)}</div>
+                <div class="about-team__fallback-body">
+                  <h4>${escapeHtml(card.title)}</h4>
+                  <p>${escapeHtml(card.summary)}</p>
+                </div>
+              </article>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    };
+
     const bindCardInteractions = () => {
       const cards = Array.from(grid.querySelectorAll('[data-team-card]'));
       if (!cards.length) return;
@@ -337,6 +430,7 @@
       if (!list.length) {
         grid.innerHTML = '';
         grid.hidden = true;
+        renderFallbackState();
         if (emptyState) emptyState.hidden = false;
         return;
       }
@@ -368,6 +462,8 @@
       bindCardInteractions();
     };
 
+    renderFallbackState();
+
     fetch('/.netlify/functions/team-list', {
       headers: { Accept: 'application/json' }
     })
@@ -384,77 +480,6 @@
         console.warn('[about] team unavailable', error);
         renderMembers([]);
       });
-  };
-
-  const initValues = () => {
-    const items = Array.from(document.querySelectorAll('.about-values__item'));
-    if (!items.length) return;
-
-    items.forEach((item) => {
-      item.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          if (event.target !== item) return;
-          event.preventDefault();
-          item.classList.toggle('is-active');
-        } else if (event.key === 'Escape') {
-          item.classList.remove('is-active');
-          item.blur();
-        }
-      });
-
-      item.addEventListener('blur', () => {
-        item.classList.remove('is-active');
-      });
-    });
-  };
-
-  const initCounters = () => {
-    const stats = Array.from(document.querySelectorAll('.about-stat[data-count]'));
-    if (!stats.length) return;
-
-    const animate = (element) => {
-      const target = toNumber(element.getAttribute('data-count'));
-      const suffix = element.getAttribute('data-suffix') || '';
-      const numberEl = element.querySelector('.about-stat__number');
-      if (!numberEl) return;
-      if (isReducedMotion() || target <= 0) {
-        numberEl.textContent = formatNumber(target) + suffix;
-        return;
-      }
-
-      const duration = Math.min(Math.max(toNumber(element.getAttribute('data-duration')) || 900, 400), 1600);
-      const startTime = performance.now();
-
-      const step = (now) => {
-        const progress = Math.min((now - startTime) / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const value = target * eased;
-        numberEl.textContent = formatNumber(value) + suffix;
-        if (progress < 1) {
-          window.requestAnimationFrame(step);
-        }
-      };
-
-      window.requestAnimationFrame(step);
-    };
-
-    if (!hasIntersectionObserver) {
-      stats.forEach(animate);
-      return;
-    }
-
-    const seen = new WeakSet();
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && !seen.has(entry.target)) {
-          seen.add(entry.target);
-          animate(entry.target);
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.45, rootMargin: '0px 0px -10% 0px' });
-
-    stats.forEach((stat) => observer.observe(stat));
   };
 
   const initSlider = () => {
@@ -677,7 +702,7 @@
 
     const featuredMarkup = (notice, index) => {
       const summary = notice.summary || deriveExcerpt(notice.body, 180);
-      const kicker = notice.featured ? 'Featured update' : 'Latest update';
+      const kicker = notice.kicker || notice.category || (notice.featured ? 'Featured update' : 'Latest update');
       const ctaMarkup = notice.ctaUrl
         ? `<a class="btn-secondary" href="${escapeHtml(notice.ctaUrl)}">${escapeHtml(notice.ctaLabel || 'Related link')}</a>`
         : '';
@@ -703,6 +728,7 @@
 
     const cardMarkup = (notice, index) => {
       const summary = notice.summary || deriveExcerpt(notice.body, 120);
+      const tag = notice.category || (notice.featured ? 'Featured' : '');
       const ctaMarkup = notice.ctaUrl
         ? `<a class="btn-secondary" href="${escapeHtml(notice.ctaUrl)}">${escapeHtml(notice.ctaLabel || 'Open link')}</a>`
         : '';
@@ -713,7 +739,7 @@
           <div class="about-noticeboard__content">
             <div class="about-noticeboard__meta">
               <time class="about-noticeboard__date" datetime="${escapeHtml(notice.publishAt || '')}">${escapeHtml(formatDate(notice.publishAt || Date.now()))}</time>
-              ${notice.featured ? '<span class="about-noticeboard__tag">Featured</span>' : ''}
+              ${tag ? `<span class="about-noticeboard__tag">${escapeHtml(tag)}</span>` : ''}
             </div>
             <h3>${escapeHtml(notice.title)}</h3>
             <p>${escapeHtml(summary)}</p>
@@ -792,9 +818,11 @@
           return;
         }
 
-        const notices = Array.isArray(payload?.notices) ? payload.notices : [];
+        const liveNotices = Array.isArray(payload?.notices) ? payload.notices : [];
+        const notices = liveNotices.length ? liveNotices : SEEDED_NOTICEBOARD_NOTICES;
         state.notices = notices;
         section.hidden = false;
+        section.dataset.noticeSource = liveNotices.length ? 'live' : 'fallback';
 
         if (!notices.length) {
           if (featuredHost) featuredHost.innerHTML = '';
@@ -823,6 +851,25 @@
       })
       .catch((error) => {
         console.warn('[about] noticeboard unavailable', error);
+        state.notices = SEEDED_NOTICEBOARD_NOTICES;
+        section.hidden = false;
+        section.dataset.noticeSource = 'fallback';
+        if (emptyState) emptyState.hidden = true;
+
+        const [featured, ...rest] = SEEDED_NOTICEBOARD_NOTICES;
+        const rail = rest.slice(0, 3);
+        const grid = rest.slice(3);
+
+        if (featuredHost) {
+          featuredHost.innerHTML = featured ? featuredMarkup(featured, 0) : '';
+        }
+        if (railHost) {
+          railHost.innerHTML = rail.map((notice, offset) => cardMarkup(notice, offset + 1)).join('');
+        }
+        if (gridHost) {
+          gridHost.innerHTML = grid.map((notice, offset) => cardMarkup(notice, offset + 4)).join('');
+          gridHost.hidden = !grid.length;
+        }
       });
   };
 
@@ -860,8 +907,6 @@
     initTimeline();
     initNoticeboard();
     initTeam();
-    initValues();
-    initCounters();
     initSlider();
     initReveal();
     initTestimonialsPause();
@@ -888,7 +933,6 @@
       } else {
         initHeroParallax();
         slider?.__hmjStartAutoplay?.();
-        initCounters();
       }
     });
   }

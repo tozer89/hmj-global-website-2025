@@ -7,7 +7,14 @@
   <script src="js/hmj-identity.js"></script>
   <script defer src="js/hmj-auth-flow.js"></script>
   <script defer src="js/hmj-auth-handoff.js" data-hmj-auth-destination="/admin/" data-hmj-auth-invite-destination="/admin/complete-account.html" data-hmj-auth-recovery-destination="/admin/reset-password.html"></script>
-  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    if (!['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
+      const identityScript = document.createElement('script');
+      identityScript.defer = true;
+      identityScript.src = 'https://identity.netlify.com/v1/netlify-identity-widget.js';
+      document.head.appendChild(identityScript);
+    }
+  </script>
   <script defer src="js/hmj-nav.js"></script>
   <script defer src="js/hmj-analytics.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
@@ -127,82 +134,215 @@
     <section class="about-hero" id="aboutHero">
       <div class="about-hero__glow" aria-hidden="true"></div>
       <div class="about-shell about-hero__inner" data-reveal>
-        <p class="about-eyebrow">Specialist recruitment for mission-critical delivery</p>
-        <h1>People-first teams powering hyperscale data centres &amp; pharma manufacturing</h1>
-        <p class="about-lead">We embed with programmes across Europe to mobilise CSA, MEP, commissioning and operations talent on pace&mdash;while keeping compliance, wellbeing and commercial control front and centre.</p>
-        <div class="about-hero__actions">
-          <a class="btn-primary" href="#aboutTeam">Meet the team</a>
-          <a class="btn-secondary" href="jobs.html">Open roles</a>
+        <div class="about-hero__copy">
+          <p class="about-eyebrow">Mission-critical recruitment partner</p>
+          <h1>Recruitment support built for programmes that cannot afford drift.</h1>
+          <p class="about-lead">HMJ supports data centre, commissioning, MEP, CSA and GMP delivery teams across Europe. We combine specialist shortlisting with cross-border mobilisation, payroll clarity and contractor care so hiring decisions hold up once work starts on site.</p>
+          <div class="about-hero__actions">
+            <a class="btn-primary" href="#aboutApproach">See the delivery model</a>
+            <a class="btn-secondary" href="#aboutTeam">Leadership &amp; support</a>
+            <a class="btn-secondary" href="jobs.html">Open roles</a>
+          </div>
+          <div class="about-hero__chips" aria-label="HMJ specialist areas">
+            <span class="about-chip">Data centres &amp; commissioning</span>
+            <span class="about-chip">Clean utilities &amp; GMP delivery</span>
+            <span class="about-chip">Cross-border mobilisation support</span>
+          </div>
         </div>
-        <div class="about-hero__chips" aria-label="Key service metrics">
-          <span class="about-chip">48 hrs to first shortlist</span>
-          <span class="about-chip">EU mobility &amp; visas managed</span>
-          <span class="about-chip">Weekly contractor payroll</span>
-        </div>
+        <aside class="about-hero__aside" aria-label="HMJ overview">
+          <article class="about-hero__panel about-hero__panel--feature">
+            <span class="about-hero__label">Where HMJ fits best</span>
+            <h2>Projects needing recruitment to behave like part of delivery.</h2>
+            <p>Most live programmes do not struggle with awareness. They struggle with coordination: who is genuinely right for the package, what needs to be cleared before site access, and who supports the contractor once they are on the ground.</p>
+            <ul class="about-hero__list">
+              <li>CSA, MEP and commissioning packages under active schedule pressure</li>
+              <li>Client-side and contractor-side support roles around turnover, controls and delivery</li>
+              <li>UK, Ireland, Benelux, DACH and Nordics project locations</li>
+            </ul>
+          </article>
+          <div class="about-hero__mini-grid">
+            <article class="about-hero__panel">
+              <span class="about-hero__label">Typical brief</span>
+              <p>A campus expansion, turnover push or regulated upgrade where engineering, support and site admin hires all need to land in the right order.</p>
+            </article>
+            <article class="about-hero__panel">
+              <span class="about-hero__label">What clients value</span>
+              <p>Shortlist quality, practical mobilisation advice, transparent payroll handling and consistent communication once contractors are live.</p>
+            </article>
+          </div>
+        </aside>
       </div>
     </section>
 
     <section class="about-timeline about-section" id="aboutTimeline">
       <div class="about-shell">
         <div class="about-section__header" data-reveal>
-          <p class="about-eyebrow">Our story</p>
-          <h2>Building dependable delivery partners, one milestone at a time</h2>
-          <p class="about-text">We have grown alongside the rapid build-out of European digital infrastructure and regulated pharma facilities. Each step sharpened our playbook for safe, predictable mobilisation.</p>
+          <p class="about-eyebrow">How HMJ developed</p>
+          <h2>Built around the demands of fast-track delivery across Europe</h2>
+          <p class="about-text">Our operating model has been shaped by hyperscale expansion, commissioning-heavy programmes and regulated clean utilities work, where recruitment only adds value when it reflects what is happening on site.</p>
         </div>
         <div class="about-timeline__track" role="list">
           <article class="about-timeline__item" role="listitem" tabindex="0" data-reveal>
-            <span class="about-timeline__year">2019</span>
-            <h3>HMJ-Global launches</h3>
-            <p class="about-timeline__summary">Brought together data centre recruiters and finance expertise to create a boutique partner.</p>
-            <p class="about-timeline__detail">Embedded inside hyperscale campus expansions in Dublin and Frankfurt, delivering technical contractors under accelerated timelines.</p>
+            <span class="about-timeline__year">Phase 1</span>
+            <h3>Data-centre foundations</h3>
+            <p class="about-timeline__summary">Early work centred on live hyperscale construction programmes where hiring pace and site-readiness had to line up.</p>
+            <p class="about-timeline__detail">That meant learning quickly how package sequencing, reporting lines and start dates affect whether a shortlist is genuinely useful.</p>
           </article>
           <article class="about-timeline__item" role="listitem" tabindex="0" data-reveal>
-            <span class="about-timeline__year">2020</span>
-            <h3>Pan-European mobilisation</h3>
-            <p class="about-timeline__summary">Established compliant payroll and mobility frameworks across Benelux, Nordics and Iberia.</p>
-            <p class="about-timeline__detail">Managed visa workflows, A1 portability, insurance and H&amp;S onboarding for cross-border commissioning teams.</p>
+            <span class="about-timeline__year">Phase 2</span>
+            <h3>Cross-border mobilisation playbook</h3>
+            <p class="about-timeline__summary">As projects widened geographically, recruitment had to connect with compliance, onboarding, travel realities and payroll clarity.</p>
+            <p class="about-timeline__detail">HMJ developed a more structured approach to documentation, contractor communication and mobilisation support across European markets.</p>
           </article>
           <article class="about-timeline__item" role="listitem" tabindex="0" data-reveal>
-            <span class="about-timeline__year">2021</span>
-            <h3>Life-sciences expansion</h3>
-            <p class="about-timeline__summary">Scaled into GMP cleanrooms and utilities, adding CQV and process engineering networks.</p>
-            <p class="about-timeline__detail">Partnered with pharmaceutical majors on validated utilities projects, aligning hiring to qualification gates.</p>
+            <span class="about-timeline__year">Phase 3</span>
+            <h3>Pharma and clean utilities support</h3>
+            <p class="about-timeline__summary">Regulated projects added a different layer of discipline around documentation, qualification and site procedures.</p>
+            <p class="about-timeline__detail">That experience sharpened how HMJ briefs candidates, supports onboarding and aligns hiring to cleanroom and GMP environments.</p>
           </article>
           <article class="about-timeline__item" role="listitem" tabindex="0" data-reveal aria-current="step">
-            <span class="about-timeline__year">2024</span>
-            <h3>Integrated delivery squads</h3>
-            <p class="about-timeline__summary">Deploy cross-functional pods that align CSA, MEP, commissioning and ops talent end-to-end.</p>
-            <p class="about-timeline__detail">Standing up project controls, HSE and reliability teams with digital reporting, giving clients real-time visibility on programme health.</p>
+            <span class="about-timeline__year">Current</span>
+            <h3>Integrated delivery support</h3>
+            <p class="about-timeline__summary">Today HMJ supports clients through the full journey from scope review and shortlisting to mobilisation, payroll and live contractor care.</p>
+            <p class="about-timeline__detail">The focus stays practical: reduce friction, keep documentation moving and help project teams retain the people they have worked hard to secure.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="about-operating-model about-section" id="aboutApproach">
+    <section class="about-programmes about-section" id="aboutProgrammes">
       <div class="about-shell">
         <div class="about-section__header" data-reveal>
-          <p class="about-eyebrow">How HMJ works</p>
-          <h2>Structured support for programmes where mobilisation has to be dependable.</h2>
-          <p class="about-text">We support projects that need recruitment to plug into delivery reality: package deadlines, onboarding readiness, payroll clarity and contractor care across multiple regions.</p>
+          <p class="about-eyebrow">Featured programme stories</p>
+          <h2>Representative briefs shaped by pace, mobilisation and delivery fit</h2>
+          <p class="about-text">HMJ is typically brought in when a programme needs more than CV flow. These anonymised examples show the kind of support that matters when project teams are hiring against live milestones.</p>
         </div>
-        <div class="about-operating-model__grid" data-reveal>
-          <article class="about-operating-model__panel about-operating-model__panel--primary">
-            <span class="about-operating-model__label">Who HMJ supports</span>
-            <h3>Clients, contractors and teams working in environments that do not tolerate loose delivery.</h3>
-            <ul class="about-operating-model__list">
-              <li>Tier-one contractors and specialist packages across CSA, MEP and commissioning</li>
-              <li>Pharma and clean utilities teams working inside regulated project environments</li>
-              <li>Critical facilities and operations functions that need reliable contractor support</li>
+        <div class="about-programmes__layout" data-reveal>
+          <article class="about-story-card about-story-card--featured">
+            <span class="about-story-card__label">Hyperscale campus support</span>
+            <h3>Helping a Frankfurt expansion add delivery-critical hires without slowing the programme</h3>
+            <p class="about-story-card__summary">HMJ supported a live expansion team that needed CSA, MEP and commissioning contractors introduced in sequence as packages moved from install into turnover. The brief was less about volume than fit: people who could step into active interfaces, clear site onboarding and stay productive through changing release dates.</p>
+            <ul class="about-story-card__list">
+              <li>Shortlists aligned to live package priorities rather than generic titles</li>
+              <li>Mobilisation planning coordinated against access, induction and rotation dates</li>
+              <li>Payroll and contractor queries handled through one route after start</li>
             </ul>
           </article>
-          <div class="about-operating-model__stack">
-            <article class="about-operating-model__panel">
-              <span class="about-operating-model__label">Operating approach</span>
-              <p>We combine recruitment, compliance, onboarding and payroll support so teams move from approval to mobilisation with less friction and stronger visibility.</p>
+          <div class="about-programmes__stack">
+            <article class="about-story-card">
+              <span class="about-story-card__label">Commissioning mobilisation</span>
+              <h3>Backing a Benelux ramp-up where commissioning demand moved faster than local availability</h3>
+              <p class="about-story-card__summary">As turnover activities accelerated, the project needed electrical, controls and commissioning support from multiple markets. HMJ helped widen the search, coordinate documentation early and keep onboarding conversations practical for contractors relocating at short notice.</p>
+              <ul class="about-story-card__list">
+                <li>Cross-border readiness checks before offer stage</li>
+                <li>Compliance coordination with onboarding teams</li>
+                <li>Clear pre-start communication around payroll, accommodation and reporting lines</li>
+              </ul>
             </article>
-            <article class="about-operating-model__panel">
-              <span class="about-operating-model__label">UK &amp; EU reach</span>
-              <p>Our network and payroll frameworks support projects across the UK, Ireland, Benelux, Nordics, DACH and wider European programme locations.</p>
+            <article class="about-story-card">
+              <span class="about-story-card__label">GMP / clean utilities</span>
+              <h3>Supporting regulated project teams with hires who could work inside documentation-heavy environments</h3>
+              <p class="about-story-card__summary">For clean utilities and GMP packages, the challenge was matching technical capability with the discipline needed around validation, change control and site procedures. HMJ focused on candidates who were comfortable in structured project settings and clients who needed dependable onboarding.</p>
+              <ul class="about-story-card__list">
+                <li>Role briefs written around qualification gates and site expectations</li>
+                <li>Candidate packs prepared with documentation and right-to-work clarity</li>
+                <li>Ongoing support for extensions, payroll rhythm and contractor continuity</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-delivery about-section" id="aboutApproach">
+      <div class="about-shell">
+        <div class="about-delivery__surface" data-reveal>
+          <div class="about-delivery__intro">
+            <div class="about-section__header">
+              <p class="about-eyebrow">Delivery model</p>
+              <h2>A structured route from scope review to live contractor support</h2>
+              <p class="about-text">HMJ works best when recruitment is tied to delivery sequence rather than treated as a standalone admin task. The process below is how briefs stay grounded, mobilisation stays organised and contractors stay supported once they start.</p>
+            </div>
+          </div>
+          <div class="about-process" aria-label="HMJ delivery model">
+            <article class="about-process__step">
+              <span class="about-process__number">01</span>
+              <h3>Brief / scope review</h3>
+              <p>We clarify package pressure, reporting lines, shift patterns and what the role needs to solve on site.</p>
+            </article>
+            <article class="about-process__step">
+              <span class="about-process__number">02</span>
+              <h3>Shortlist &amp; role fit</h3>
+              <p>Candidates are screened against live delivery context, not just discipline keywords or headline titles.</p>
+            </article>
+            <article class="about-process__step">
+              <span class="about-process__number">03</span>
+              <h3>Compliance &amp; documentation</h3>
+              <p>Right-to-work, insurance, site paperwork and supporting documents are organised before they become a bottleneck.</p>
+            </article>
+            <article class="about-process__step">
+              <span class="about-process__number">04</span>
+              <h3>Onboarding &amp; mobilisation</h3>
+              <p>Travel, induction timing, accommodation expectations and site contacts are confirmed so starts feel controlled.</p>
+            </article>
+            <article class="about-process__step">
+              <span class="about-process__number">05</span>
+              <h3>Payroll &amp; live support</h3>
+              <p>Once contractors are on site, HMJ stays involved through payroll, check-ins, extensions and continuity planning.</p>
+            </article>
+          </div>
+          <aside class="about-delivery__aside" aria-label="Why HMJ process matters">
+            <span class="about-delivery__label">Why the model matters</span>
+            <p>Fast-track projects usually lose time in the handovers between resourcing, documentation, onboarding and payroll. HMJ is designed to close those gaps.</p>
+            <ul class="about-delivery__list">
+              <li>Fewer late surprises around documentation and site access</li>
+              <li>More confidence for contractors before day one</li>
+              <li>Stronger retention when schedules move and support is needed quickly</li>
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-insights about-section" id="aboutInsights">
+      <div class="about-shell">
+        <div class="about-section__header" data-reveal>
+          <p class="about-eyebrow">Market insights</p>
+          <h2>What HMJ is seeing across data-centre, commissioning and regulated delivery hiring</h2>
+          <p class="about-text">These seeded briefings are written to reflect the conversations happening around mobilisation, retention and project readiness on live European programmes.</p>
+        </div>
+        <div class="about-insights__layout" data-reveal>
+          <article class="about-insight-card about-insight-card--feature">
+            <span class="about-insight-card__label">Commissioning outlook</span>
+            <h3>Why commissioning talent is tightening across European programmes</h3>
+            <p>Demand is no longer concentrated only in the lead roles. Projects are looking for people who can bridge install, turnover, systems interaction and handover readiness, often across multiple locations at once.</p>
+            <p>That puts pressure on availability, especially when schedules shift and teams need contractors who are documentation-ready as well as technically credible.</p>
+          </article>
+          <div class="about-insights__grid">
+            <article class="about-insight-card">
+              <span class="about-insight-card__label">Mobilisation</span>
+              <h3>What clients need in place before cross-border mobilisation</h3>
+              <p>Offer acceptance is only one part of the journey. Projects move faster when right-to-work, insurance, onboarding windows and payroll expectations are discussed before travel is booked.</p>
+            </article>
+            <article class="about-insight-card">
+              <span class="about-insight-card__label">Payroll</span>
+              <h3>Why payroll and onboarding matter so much on fast-track projects</h3>
+              <p>Contractors will tolerate pressure better than uncertainty. Clear timesheet routes, payment cadence and pre-start communication often do as much for retention as the rate itself.</p>
+            </article>
+            <article class="about-insight-card">
+              <span class="about-insight-card__label">Support roles</span>
+              <h3>Demand is rising beyond core engineering hires</h3>
+              <p>Programmes increasingly need planners, document controllers, QA support, turnover admins and contractor-facing coordinators to keep package teams moving.</p>
+            </article>
+            <article class="about-insight-card">
+              <span class="about-insight-card__label">Retention</span>
+              <h3>Project schedules have a direct effect on contractor retention</h3>
+              <p>When start dates move repeatedly or site expectations are vague, confidence drops. The programmes that hold people best tend to communicate earlier and manage changes more cleanly.</p>
+            </article>
+            <article class="about-insight-card">
+              <span class="about-insight-card__label">Pharma / clean utilities</span>
+              <h3>Documentation-ready hires are increasingly important on regulated packages</h3>
+              <p>Technical fit still matters, but projects are putting more value on people who understand structured procedures, change control and the realities of validated environments.</p>
             </article>
           </div>
         </div>
@@ -213,8 +353,8 @@
       <div class="about-shell">
         <div class="about-section__header about-noticeboard__header" data-reveal>
           <p class="about-eyebrow">Noticeboard</p>
-          <h2>Latest HMJ updates, programme notices and company bulletin items</h2>
-          <p class="about-text">A curated stream of announcements, delivery milestones and sector updates from across HMJ’s mission-critical programmes.</p>
+          <h2>Current HMJ updates, sector notes and mobilisation checkpoints</h2>
+          <p class="about-text">Published noticeboard items appear here whenever the live feed is available. If the public feed is being refreshed, the page falls back to seeded specialist updates so the section never feels empty.</p>
         </div>
         <div class="about-noticeboard__surface" data-reveal>
           <div id="noticeboardFeatured" class="about-noticeboard__featured"></div>
@@ -222,8 +362,8 @@
         </div>
         <div id="noticeboardGrid" class="about-noticeboard__grid" data-reveal></div>
         <div id="noticeboardEmpty" class="about-noticeboard__empty" hidden>
-          <strong>Fresh updates will appear here soon</strong>
-          <p>We use this space for company announcements, sector moves and current programme milestones as soon as they are ready for public release.</p>
+          <strong>Updates are being refreshed</strong>
+          <p>HMJ uses this space for company notes, sector observations and programme updates relevant to current delivery environments.</p>
           <div class="about-noticeboard__empty-actions">
             <a class="btn-secondary" href="jobs.html">Browse open roles</a>
             <a class="btn-primary" href="contact.html">Contact HMJ</a>
@@ -235,136 +375,14 @@
     <section class="about-team about-section" id="aboutTeam">
       <div class="about-shell">
         <div class="about-section__header" data-reveal>
-          <p class="about-eyebrow">Leadership</p>
-          <h2>Meet the team driving rapid, responsible mobilisation</h2>
-          <p class="about-text">We blend hands-on recruitment, programme controls and finance rigour. Hover or focus to learn how each leader supports clients and contractors.</p>
+          <p class="about-eyebrow">Leadership &amp; support</p>
+          <h2>People who keep delivery support practical, visible and commercially clear</h2>
+          <p class="about-text">The About page will always prioritise real team data when it is available from the admin module. Where profiles are still being refreshed, HMJ shows an intentional leadership fallback instead of an empty placeholder state.</p>
         </div>
         <div class="about-team__grid" id="aboutTeamGrid" data-team-grid data-reveal aria-live="polite"></div>
         <div class="about-team__empty" id="aboutTeamEmpty" data-reveal hidden>
-          <strong>Fresh team profiles will appear here shortly</strong>
-          <p>HMJ keeps this section up to date from the admin portal, so published leadership profiles flow straight onto the About page.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="about-values about-section" id="aboutValues">
-      <div class="about-shell">
-        <div class="about-section__header" data-reveal>
-          <p class="about-eyebrow">Values</p>
-          <h2>The principles that keep projects safe, fast and fair</h2>
-        </div>
-        <div class="about-values__grid" data-reveal>
-          <article class="about-values__item" tabindex="0">
-            <div class="about-values__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M4 16l6 10 18-18"/></svg>
-            </div>
-            <h3>Assured compliance</h3>
-            <div class="about-values__reveal">
-              <ul>
-                <li>Right-to-work, safety passports, insurance checks</li>
-                <li>Digital audit trail for every placement</li>
-              </ul>
-            </div>
-          </article>
-          <article class="about-values__item" tabindex="0">
-            <div class="about-values__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M16 4l12 8-12 8-12-8zM4 20l12 8 12-8"/></svg>
-            </div>
-            <h3>Transparent finance</h3>
-            <div class="about-values__reveal">
-              <ul>
-                <li>Weekly payroll with clear deductions</li>
-                <li>Budget and variance reporting for clients</li>
-              </ul>
-            </div>
-          </article>
-          <article class="about-values__item" tabindex="0">
-            <div class="about-values__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M16 6a6 6 0 016 6v2h4a2 2 0 012 2v10H4V16a2 2 0 012-2h4v-2a6 6 0 016-6z"/></svg>
-            </div>
-            <h3>People wellbeing</h3>
-            <div class="about-values__reveal">
-              <ul>
-                <li>Site check-ins, rotations and accommodation support</li>
-                <li>Dedicated helpline for contractors and families</li>
-              </ul>
-            </div>
-          </article>
-          <article class="about-values__item" tabindex="0">
-            <div class="about-values__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M6 24l6-14 6 6 8-10"/></svg>
-            </div>
-            <h3>Delivery discipline</h3>
-            <div class="about-values__reveal">
-              <ul>
-                <li>Role scorecards aligned to programme critical path</li>
-                <li>Proactive replacement cover to avoid downtime</li>
-              </ul>
-            </div>
-          </article>
-          <article class="about-values__item" tabindex="0">
-            <div class="about-values__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M4 18h24M4 10h24M10 4v24"/></svg>
-            </div>
-            <h3>Data-led insights</h3>
-            <div class="about-values__reveal">
-              <ul>
-                <li>Market intelligence dashboards on availability</li>
-                <li>Rate benchmarking refreshed quarterly</li>
-              </ul>
-            </div>
-          </article>
-          <article class="about-values__item" tabindex="0">
-            <div class="about-values__icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M16 4l8 14h-6l2 10-8-12h6z"/></svg>
-            </div>
-            <h3>Rapid response</h3>
-            <div class="about-values__reveal">
-              <ul>
-                <li>48-hour shortlists for urgent scopes</li>
-                <li>24/7 escalation line during go-live windows</li>
-              </ul>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="about-stats about-section" id="aboutStats">
-      <div class="about-shell">
-        <div class="about-stats__grid" data-reveal>
-          <article class="about-stat" data-count="14" data-suffix="+" aria-label="14 countries mobilised">
-            <span class="about-stat__label">Countries mobilised</span>
-            <span class="about-stat__number">14</span>
-          </article>
-          <article class="about-stat" data-count="320" data-suffix="+" aria-label="Over 320 contractors supported">
-            <span class="about-stat__label">Contractors supported</span>
-            <span class="about-stat__number">320</span>
-          </article>
-          <article class="about-stat" data-count="62" data-suffix="+" aria-label="62 programmes delivered">
-            <span class="about-stat__label">Programmes delivered</span>
-            <span class="about-stat__number">62</span>
-          </article>
-        </div>
-        <aside class="about-esg" data-reveal>
-          <h3>ESG &amp; contractor commitments</h3>
-          <p>We enforce safety leadership, fair pay and sustainability requirements on every assignment. Review our policies below.</p>
-          <div class="about-esg__links">
-            <a href="https://www.hmj-global.com/policies/safety-charter" class="btn-secondary">Safety charter</a>
-            <a href="https://www.hmj-global.com/policies/fair-pay" class="btn-primary">Fair pay policy</a>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <section class="about-logos about-section" id="aboutLogos" hidden>
-      <div class="about-shell">
-        <div class="about-logos__marquee" aria-hidden="true">
-          <div class="about-logos__track">
-            <div class="about-logos__item"><img src="images/Gleave.png" alt="Gleave" loading="lazy" /></div>
-            <div class="about-logos__item"><img src="images/Sa3%20Power.png" alt="Sa3 Power" loading="lazy" /></div>
-            <div class="about-logos__item"><img src="images/Sudlows.png" alt="Sudlows" loading="lazy" /></div>
-          </div>
+          <strong>Leadership profiles are being updated</strong>
+          <p>Published team cards flow in here from the live Team module.</p>
         </div>
       </div>
     </section>
@@ -372,36 +390,37 @@
     <section class="about-testimonials about-section" id="aboutTestimonials">
       <div class="about-shell">
         <div class="about-section__header" data-reveal>
-          <p class="about-eyebrow">Testimonials</p>
-          <h2>Trusted by mission-critical leaders</h2>
+          <p class="about-eyebrow">Project feedback</p>
+          <h2>What stakeholders value once teams are live on site</h2>
+          <p class="about-text">These anonymised comments reflect the kind of feedback HMJ aims to earn: practical support, fewer surprises and people who arrive ready to contribute.</p>
         </div>
         <div class="about-testimonials__slider" data-slider data-reveal>
           <div class="about-testimonials__viewport" data-viewport>
             <article class="about-testimonial" data-slide>
               <blockquote>
-                “HMJ mobilised commissioning teams across three countries with zero slippage to our energisation date. Their compliance pack made client approvals painless.”
+                “HMJ handled the recruitment side like part of the delivery team. The shortlist quality was strong, onboarding was organised and the contractors understood the site reality before they arrived.”
               </blockquote>
               <p class="about-testimonial__author">
                 <strong>Programme Director</strong>
-                <span>Hyperscale Data Centre, Dublin</span>
+                <span>Hyperscale data-centre expansion, continental Europe</span>
               </p>
             </article>
             <article class="about-testimonial" data-slide>
               <blockquote>
-                “Weekly payroll, swift onboarding and constant communication kept our contractors engaged through a complex GMP upgrade. They felt part of our business.”
+                “On a regulated package, documentation quality and communication mattered just as much as technical fit. HMJ kept both moving without overcomplicating the process.”
               </blockquote>
               <p class="about-testimonial__author">
-                <strong>Operations Manager</strong>
-                <span>Pharmaceutical Manufacturer, Netherlands</span>
+                <strong>Project Lead</strong>
+                <span>GMP utilities programme, Benelux</span>
               </p>
             </article>
             <article class="about-testimonial" data-slide>
               <blockquote>
-                “HMJ gave us market data, rate benchmarking and rapid replacements when scope evolved. Their pods integrate seamlessly with our project controls.”
+                “What stood out was the follow-through after start date. Payroll questions, extensions and site issues all had a clear route, which helped us keep people engaged through a changing schedule.”
               </blockquote>
               <p class="about-testimonial__author">
-                <strong>Construction Lead</strong>
-                <span>Data Centre EPC, Nordics</span>
+                <strong>Package Manager</strong>
+                <span>Commissioning-led programme, Northern Europe</span>
               </p>
             </article>
           </div>
@@ -414,24 +433,13 @@
       </div>
     </section>
 
-    <section class="about-cta about-section" id="aboutCta">
-      <div class="about-shell about-cta__inner" data-reveal>
-        <h2>Ready to accelerate your next mission-critical build?</h2>
-        <p>Let’s align talent to your programme roadmap, protect compliance and keep your teams productive from day one.</p>
-        <div class="about-cta__actions">
-          <a class="btn-primary" href="jobs.html">Browse jobs</a>
-          <a class="btn-secondary" href="contact.html">Talk to us</a>
-        </div>
-      </div>
-    </section>
-
     <section class="about-finance about-section" id="aboutFinance">
       <div class="about-shell">
         <div class="about-finance__surface" data-reveal>
           <div class="about-finance__copy">
             <p class="about-eyebrow">Group services</p>
-            <h2>HMJ Finance provides dependable financial support behind fast-moving teams.</h2>
-            <p class="about-text">For clients who need finance capability alongside recruitment delivery, HMJ Finance offers bookkeeping, payroll, management accounts and practical back-office support with the same straightforward service ethos.</p>
+            <h2>HMJ Finance provides dependable back-office support behind fast-moving teams.</h2>
+            <p class="about-text">Where clients need broader finance or payroll capability alongside recruitment delivery, HMJ Finance adds practical support with the same straightforward and commercially clear service approach.</p>
           </div>
           <aside class="about-finance__panel" aria-label="HMJ Finance services">
             <span class="about-finance__label">HMJ Finance</span>
@@ -443,6 +451,17 @@
             </ul>
             <a class="btn-secondary" href="https://www.hmj-finance.com" target="_blank" rel="noopener">Visit HMJ Finance</a>
           </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-cta about-section" id="aboutCta">
+      <div class="about-shell about-cta__inner" data-reveal>
+        <h2>Need specialist support on a live programme or upcoming mobilisation?</h2>
+        <p>HMJ helps clients hire with more delivery context and helps contractors mobilise with more clarity from the outset.</p>
+        <div class="about-cta__actions">
+          <a class="btn-primary" href="jobs.html">Browse jobs</a>
+          <a class="btn-secondary" href="contact.html">Talk to us</a>
         </div>
       </div>
     </section>

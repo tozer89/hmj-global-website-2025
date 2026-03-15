@@ -345,6 +345,10 @@
       ...row,
       id: row.id ?? row.ref ?? `tmp-${Math.random().toString(36).slice(2)}`,
       ref: row.ref || null,
+      auth_user_id: row.auth_user_id || null,
+      has_portal_account: !!(row.has_portal_account || row.auth_user_id),
+      portal_account_state: row.portal_account_state || (row.auth_user_id ? 'linked' : 'none'),
+      last_portal_login_at: row.last_portal_login_at || '',
       first_name: first,
       last_name: last,
       full_name: full || `${first} ${last}`.trim() || 'Candidate',
@@ -352,14 +356,18 @@
       email: row.email || '',
       phone: row.phone || '',
       status,
-      role: row.role || row.job_title || '',
-      region: row.region || row.county || row.country || '',
+      role: row.role || row.job_title || row.headline_role || '',
+      region: row.region || row.location || row.county || row.country || '',
+      headline_role: row.headline_role || row.role || row.job_title || '',
+      location: row.location || row.region || row.county || row.country || '',
+      sector_focus: row.sector_focus || '',
       skills: skillList,
       tags,
       docs,
       notes,
       audit: Array.isArray(row.audit) ? row.audit : [],
-      availability_on: row.availability_on || row.start_date || '',
+      applications: Array.isArray(row.applications) ? row.applications : [],
+      availability_on: row.availability_on || row.availability_date || row.availability || row.start_date || '',
       created_at: row.created_at || row.createdAt || '',
       updated_at: row.updated_at || row.updatedAt || row.created_at || '',
       source: row.source || (state.cacheMode ? 'cache' : 'supabase')
@@ -608,12 +616,18 @@
     row.style.top = `${index * ROW_HEIGHT}px`;
     const selected = selectionHas(candidate.id) ? 'checked' : '';
     const disabledActions = candidate.status === 'blocked';
+    const portalChip = candidate.has_portal_account
+      ? '<span class="chip blue" style="margin-top:4px">Portal linked</span>'
+      : candidate.portal_account_state === 'closed'
+      ? '<span class="chip gray" style="margin-top:4px">Portal closed</span>'
+      : '';
     row.innerHTML = `
       <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected}></div>
       <div>${candidate.ref || '—'}</div>
       <div>
         <div class="row-name">${candidate.name || '—'}</div>
         <div class="muted" style="font-size:12px">${candidate.region || ''}</div>
+        ${portalChip}
       </div>
       <div>${candidate.email || '—'}</div>
       <div><span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span></div>
@@ -770,6 +784,11 @@
   }
 
   function renderProfile(candidate) {
+    const portalStatus = candidate.has_portal_account
+      ? 'Portal linked'
+      : candidate.portal_account_state === 'closed'
+      ? 'Portal account closed'
+      : 'No portal account';
     return `
       <div class="drawer-section">
         <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">
@@ -786,6 +805,12 @@
           ${editableField('Availability', 'availability_on', candidate.availability_on, 'date')}
           ${editableSelect('Status', 'status', candidate.status, Object.keys(STATUS_META))}
           ${editableField('Reference', 'ref', candidate.ref)}
+        </div>
+        <div class="profile-grid" style="margin-top:12px">
+          <div class="drawer-field"><span>Portal account</span><strong>${portalStatus}</strong></div>
+          <div class="drawer-field"><span>Portal last seen</span><strong>${formatDateTime(candidate.last_portal_login_at)}</strong></div>
+          <div class="drawer-field"><span>Location</span><strong>${candidate.location || '—'}</strong></div>
+          <div class="drawer-field"><span>Sector focus</span><strong>${candidate.sector_focus || '—'}</strong></div>
         </div>
         <div style="margin-top:12px">
           <label class="muted" style="display:block;margin-bottom:4px">Skills / tags</label>
@@ -859,11 +884,21 @@
   }
 
   function renderAudit(candidate) {
-    if (!candidate.audit || !candidate.audit.length) return '<div class="muted">Audit trail empty.</div>';
-    return `<div class="audit-list">${candidate.audit
-      .slice(0, 20)
-      .map((entry) => `<div class="audit-row"><strong>${formatDateTime(entry.at || entry.created_at)}</strong><span>${entry.action || ''}</span></div>`)
-      .join('')}</div>`;
+    const applications = Array.isArray(candidate.applications) ? candidate.applications : [];
+    const auditRows = Array.isArray(candidate.audit) ? candidate.audit : [];
+    const applicationsMarkup = applications.length
+      ? `<div style="margin-bottom:18px"><h3 style="margin:0 0 10px">Recent applications</h3><div class="audit-list">${applications
+          .slice(0, 8)
+          .map((entry) => `<div class="audit-row"><strong>${formatDateTime(entry.applied_at)}</strong><span>${entry.job_title || entry.job_id || 'HMJ role'} · ${statusLabel(entry.status || 'in progress')}</span></div>`)
+          .join('')}</div></div>`
+      : '<div class="muted" style="margin-bottom:18px">No tracked portal applications yet.</div>';
+    const activityMarkup = auditRows.length
+      ? `<div><h3 style="margin:0 0 10px">Portal activity</h3><div class="audit-list">${auditRows
+          .slice(0, 20)
+          .map((entry) => `<div class="audit-row"><strong>${formatDateTime(entry.at || entry.created_at)}</strong><span>${entry.description || entry.action || entry.activity_type || ''}</span></div>`)
+          .join('')}</div></div>`
+      : '<div class="muted">Portal activity history empty.</div>';
+    return `${applicationsMarkup}${activityMarkup}`;
   }
 
   function bindProfileEditors(candidate) {
@@ -1021,7 +1056,7 @@
     if (!silent) renderSkeleton();
     const started = performance.now();
     try {
-      const payload = {
+      const basePayload = {
         query: state.filters.query,
         status: state.filters.status,
         role: state.filters.role,
@@ -1033,10 +1068,27 @@
         quick: state.quickSearch
       };
       pushLog({ action: 'list', detail: 'Loading candidates' });
-      const response = await state.helpers.api('admin-candidates-list', 'POST', payload);
-      const rows = Array.isArray(response?.rows) ? response.rows : Array.isArray(response) ? response : [];
-      state.supabaseMode = response?.supabase?.ok ? 'live' : 'cache';
-      state.cacheMode = !response?.supabase?.ok;
+      let page = 1;
+      let pages = 1;
+      let lastResponse = null;
+      const rows = [];
+
+      while (page <= pages) {
+        const response = await state.helpers.api('admin-candidates-list', 'POST', {
+          ...basePayload,
+          page,
+          size: 250,
+        });
+        lastResponse = response;
+        const pageRows = Array.isArray(response?.rows) ? response.rows : Array.isArray(response) ? response : [];
+        rows.push(...pageRows);
+        pages = Math.max(1, Number(response?.pages) || 1);
+        page += 1;
+        if (page > 20) break;
+      }
+
+      state.supabaseMode = lastResponse?.supabase?.ok ? 'live' : 'cache';
+      state.cacheMode = !lastResponse?.supabase?.ok;
       updateSupabaseBadge();
       state.raw = rows.map(normalizeCandidate).filter(Boolean);
       loadSelection();

@@ -21,7 +21,7 @@
     <div class="row">
       <div class="brand">
         <strong>HMJ Website Analytics</strong>
-        <span>Live operational traffic and engagement reporting</span>
+        <span>Live reporting on website visits and visitor behaviour</span>
       </div>
       <span class="top-pill">Live module</span>
       <div class="sp"></div>
@@ -55,7 +55,7 @@
             <div class="command-copy">
               <p class="eyebrow">HMJ Intelligence</p>
               <h1>Website Analytics</h1>
-              <p class="muted" id="heroSummary">Operational visibility into traffic, engagement quality, CTA intent, and role demand across the HMJ public site and admin portal.</p>
+              <p class="muted" id="heroSummary">A plain-English view of visits, page interest, call-to-action clicks, and role demand across the HMJ public site and admin portal.</p>
             </div>
             <div class="command-actions">
               <button class="btn outline" id="refreshData" type="button">Refresh</button>
@@ -97,13 +97,13 @@
               </div>
 
               <label class="field field--grow">
-                <span>Page / Path</span>
+                <span>Page / web address</span>
                 <input id="filterPagePath" type="search" list="pagePathOptions" placeholder="/jobs or /jobs/spec.html" />
               </label>
 
               <label class="field field--grow">
-                <span>Source / Referrer</span>
-                <input id="filterSource" type="search" list="sourceOptions" placeholder="google, linkedin, direct, utm source..." />
+                <span>Source / referring site</span>
+                <input id="filterSource" type="search" list="sourceOptions" placeholder="google, linkedin, direct, campaign source..." />
               </label>
             </div>
 
@@ -123,7 +123,7 @@
 
             <div class="advanced-filters" id="advancedFilters" hidden>
               <label class="field">
-                <span>Event type</span>
+                <span>Type of activity</span>
                 <select id="filterEventType">
                   <option value="">All event types</option>
                 </select>
@@ -137,11 +137,61 @@
               </label>
 
               <p class="foot-note" id="definitionNote">
-                Page views, sessions, unique visitors, bounce rate, and time-on-page all follow the analytics definitions loaded from the live module.
+                Plain-English key: a visit = one session, a unique visitor = one person/browser we can recognise, and a call to action = a button or link such as Apply, Contact, Call, Email, or Open.
               </p>
             </div>
 
             <div class="active-filter-strip" id="activeFilterChips"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel analytics-guide-panel">
+        <div class="panel__inner">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Plain-English key</p>
+              <h2 class="panel-title">What the analytics terms mean</h2>
+            </div>
+            <p class="muted">Short explanations for the phrases used on this page, written for non-specialists.</p>
+          </div>
+          <div class="glossary-grid" aria-label="Analytics glossary">
+            <article class="glossary-card">
+              <strong>Visit (session)</strong>
+              <p>One continuous visit to the site. The same person can create more than one visit in a day.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Unique visitor</strong>
+              <p>An estimated distinct person or browser seen during the selected date range.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Call to action (CTA)</strong>
+              <p>A button or link asking someone to do something next, such as Apply, Contact, Call, Email, or Open a job spec.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Job spec</strong>
+              <p>A job specification page or document that explains the role, requirements, and responsibilities in more detail.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Bounce rate</strong>
+              <p>The share of visits where someone viewed one page only and then left without exploring further.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Landing page</strong>
+              <p>The first page a visitor arrived on during a visit.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Exit page</strong>
+              <p>The last page viewed before that visit ended.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Average time on page</strong>
+              <p>An estimate of how long people actively spent on a page, not just how long the tab stayed open.</p>
+            </article>
+            <article class="glossary-card">
+              <strong>Top path</strong>
+              <p>A common sequence of pages people move through, which helps show how they navigate the site.</p>
+            </article>
           </div>
         </div>
       </section>
@@ -154,7 +204,7 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Trend Chart</p>
-                <h2 class="panel-title">Traffic and engagement over time</h2>
+                <h2 class="panel-title">Visits and activity over time</h2>
               </div>
               <div class="segmented" id="trendMetricToggle" role="group" aria-label="Traffic metric toggle"></div>
             </div>
@@ -170,7 +220,7 @@
                 <p class="eyebrow">Audience Mix</p>
                 <h2 class="panel-title">Where HMJ attention is coming from</h2>
               </div>
-              <p class="muted">Scan source quality, device mix, and public/admin share without leaving the dashboard.</p>
+              <p class="muted">See where visitors came from, which devices they used, and whether activity happened on the public site or admin area.</p>
             </div>
 
             <div class="insight-stack">
@@ -209,7 +259,7 @@
               <p class="eyebrow">Top Pages</p>
               <h2 class="panel-title">Which pages are pulling the most weight</h2>
             </div>
-            <p class="muted">Views, unique visitors, average time, exits, and CTA activity in one sortable operating table.</p>
+            <p class="muted">Views, visitors, reading time, exits, and call-to-action clicks in one sortable table.</p>
           </div>
 
           <div class="table-scroll">
@@ -223,7 +273,7 @@
                   <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topPages" data-sort-key="avgTimeOnPageSeconds">Avg time</button></th>
                   <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topPages" data-sort-key="exits">Exits</button></th>
                   <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topPages" data-sort-key="exitRate">Exit rate</button></th>
-                  <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topPages" data-sort-key="ctaClicks">CTA clicks</button></th>
+                  <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topPages" data-sort-key="ctaClicks">Call-to-action clicks</button></th>
                 </tr>
               </thead>
               <tbody id="topPagesBody"></tbody>
@@ -237,9 +287,9 @@
           <div class="panel-head">
             <div>
               <p class="eyebrow">Jobs &amp; Specs</p>
-              <h2 class="panel-title">Role demand and spec engagement</h2>
+              <h2 class="panel-title">Role interest and job spec activity</h2>
             </div>
-            <p class="muted">Use this to understand which live roles win attention, which spec pages hold interest, and where apply intent is strongest.</p>
+            <p class="muted">Use this to see which live roles attract attention, which job spec pages are being read, and where people are most likely to apply.</p>
           </div>
 
           <div class="listing-summary" id="listingSummaryCards"></div>
@@ -248,7 +298,7 @@
             <section class="mini-panel mini-panel--table">
               <div class="mini-panel__head">
                 <h3>Top jobs</h3>
-                <span class="micro-copy">Role opens and intent</span>
+                <span class="micro-copy">Role views and next-step clicks</span>
               </div>
               <div class="table-scroll table-scroll--compact">
                 <table class="analytics-table analytics-table--compact">
@@ -257,7 +307,7 @@
                       <th><button class="sort-btn" type="button" data-sort-table="topJobs" data-sort-key="title">Job</button></th>
                       <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topJobs" data-sort-key="views">Views</button></th>
                       <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topJobs" data-sort-key="applyClicks">Apply clicks</button></th>
-                      <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topJobs" data-sort-key="ctaClicks">CTA clicks</button></th>
+                      <th class="is-numeric"><button class="sort-btn" type="button" data-sort-table="topJobs" data-sort-key="ctaClicks">Call-to-action clicks</button></th>
                     </tr>
                   </thead>
                   <tbody id="topJobsBody"></tbody>
@@ -267,8 +317,8 @@
 
             <section class="mini-panel mini-panel--table">
               <div class="mini-panel__head">
-                <h3>Top specs</h3>
-                <span class="micro-copy">Spec views and hold time</span>
+                <h3>Top job specs</h3>
+                <span class="micro-copy">Job spec views and reading time</span>
               </div>
               <div class="table-scroll table-scroll--compact">
                 <table class="analytics-table analytics-table--compact">
@@ -289,8 +339,8 @@
           <div class="analytics-grid analytics-grid--balanced">
             <section class="mini-panel">
               <div class="mini-panel__head">
-                <h3>Top intent actions</h3>
-                <span class="micro-copy">Role-level CTA behaviour</span>
+                <h3>Top next-step actions</h3>
+                <span class="micro-copy">Role-level next-step clicks</span>
               </div>
               <div class="list" id="listingIntentList"></div>
             </section>
@@ -298,7 +348,7 @@
             <section class="mini-panel">
               <div class="mini-panel__head">
                 <h3>Most engaged roles</h3>
-                <span class="micro-copy">Strongest combined attention</span>
+                <span class="micro-copy">Most sustained interest</span>
               </div>
               <div class="list" id="listingEngagementList"></div>
             </section>
@@ -312,15 +362,15 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Click Analytics</p>
-                <h2 class="panel-title">Which CTAs are earning intent</h2>
+                <h2 class="panel-title">Which calls to action are driving next steps</h2>
               </div>
-              <p class="muted">CTA behaviour, page-level click concentration, and jobs filter usage in one clean view.</p>
+              <p class="muted">See which buttons and links get clicked most, which pages drive those clicks, and how often visitors use the jobs filters.</p>
             </div>
             <div class="list" id="topCtasList"></div>
             <div class="mini-panel" style="margin-top:14px">
               <div class="mini-panel__head">
                 <h3>Clicks by page</h3>
-                <span class="micro-copy">Where CTAs cluster most</span>
+                <span class="micro-copy">Where action clicks happen most</span>
               </div>
               <div class="list" id="clicksByPageList"></div>
             </div>
@@ -338,10 +388,10 @@
           <div class="panel__inner">
             <div class="panel-head">
               <div>
-                <p class="eyebrow">Journey Insights</p>
-                <h2 class="panel-title">Landing pages, exits, and key paths</h2>
+                <p class="eyebrow">Visitor Journeys</p>
+                <h2 class="panel-title">Where visits start, end, and move next</h2>
               </div>
-              <p class="muted">See where sessions start, where they end, and which routes move visitors toward priority pages.</p>
+              <p class="muted">See where visits start, where they end, and the most common routes people take through the site.</p>
             </div>
             <div class="path-grid">
               <div class="mini-panel">
@@ -354,21 +404,21 @@
               <div class="mini-panel">
                 <div class="mini-panel__head">
                   <h3>Exit pages</h3>
-                  <span class="micro-copy">Where sessions end</span>
+                  <span class="micro-copy">Where visits end</span>
                 </div>
                 <div class="list" id="exitPagesList"></div>
               </div>
               <div class="mini-panel">
                 <div class="mini-panel__head">
-                  <h3>Top paths</h3>
-                  <span class="micro-copy">Most common sequences</span>
+                  <h3>Common page paths</h3>
+                  <span class="micro-copy">Most common page sequences</span>
                 </div>
                 <div class="list" id="topPathsList"></div>
               </div>
               <div class="mini-panel">
                 <div class="mini-panel__head">
-                  <h3>Next-page transitions</h3>
-                  <span class="micro-copy">Strongest page-to-page movement</span>
+                  <h3>Next-page moves</h3>
+                  <span class="micro-copy">Most common step from one page to the next</span>
                 </div>
                 <div class="list" id="topTransitionsList"></div>
               </div>
@@ -384,7 +434,7 @@
               <p class="eyebrow">Recent Activity</p>
               <h2 class="panel-title">Latest visitor activity</h2>
             </div>
-            <p class="muted">A readable internal feed of recent page views, CTA clicks, engagement events, and notable actions.</p>
+            <p class="muted">A readable internal feed of recent page views, call-to-action clicks, time-on-page signals, and other notable actions.</p>
           </div>
           <div class="feed-list" id="recentActivityList"></div>
         </div>

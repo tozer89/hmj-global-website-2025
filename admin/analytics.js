@@ -4,9 +4,9 @@
   const STORAGE_KEY = 'hmj.analytics.dashboard-state:v2';
   const TREND_METRICS = [
     { key: 'pageViews', comparisonKey: 'totalPageViews', label: 'Page views', color: '#2f4ea2' },
-    { key: 'sessions', comparisonKey: 'sessions', label: 'Sessions', color: '#158059' },
+    { key: 'sessions', comparisonKey: 'sessions', label: 'Visits (sessions)', color: '#158059' },
     { key: 'uniqueVisitors', comparisonKey: 'uniqueVisitors', label: 'Unique visitors', color: '#9d5cff' },
-    { key: 'ctaClicks', comparisonKey: 'ctaClicks', label: 'CTA clicks', color: '#b78103' },
+    { key: 'ctaClicks', comparisonKey: 'ctaClicks', label: 'Call-to-action clicks', color: '#b78103' },
   ];
   const SCOPE_OPTIONS = [
     { key: 'public', label: 'Public Website' },
@@ -120,6 +120,25 @@
     } catch {
       return value || '';
     }
+  }
+
+  function humanizeToken(value) {
+    const text = trimString(value)
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ');
+    if (!text) return '';
+    return text.replace(/\b([a-z])/gi, (match) => match.toUpperCase());
+  }
+
+  function readableActionLabel(value) {
+    const raw = trimString(value).toLowerCase();
+    if (!raw || raw === 'cta') return 'Call to action';
+    if (raw.includes('apply')) return 'Apply click';
+    if (raw.includes('email')) return 'Email click';
+    if (raw.includes('phone') || raw.includes('call')) return 'Phone click';
+    if (raw.includes('contact')) return 'Contact click';
+    if (raw.includes('share')) return 'Share click';
+    return humanizeToken(value);
   }
 
   function emptyMarkup(message) {
@@ -624,10 +643,10 @@
           els.heroSummary.textContent = schemaMismatch
             ? (summary.message || 'Analytics schema mismatch detected. Apply the Supabase reconciliation SQL so the dashboard can return to full live reporting.')
             : setupRequired
-            ? 'Apply the Supabase analytics SQL and refresh this page to start loading live traffic, role demand, CTA performance, and session drop-off insights.'
+            ? 'Apply the Supabase analytics SQL and refresh this page to start loading live traffic, role demand, call-to-action performance, and where visits drop off.'
             : schemaWarnings.length
-            ? `Live analytics loaded with compatibility fallbacks. Missing schema support: ${schemaWarnings.map(formatSchemaWarning).join(', ')}. Apply the reconciliation SQL for full fidelity.`
-            : 'Operational visibility into traffic, engagement quality, CTA intent, and role demand across the HMJ public site and admin portal.';
+            ? `Live analytics loaded with some temporary fallbacks. Missing schema support: ${schemaWarnings.map(formatSchemaWarning).join(', ')}. Apply the reconciliation SQL for full reporting.`
+            : 'A plain-English view of visits, page interest, call-to-action clicks, and role demand across the HMJ public site and admin portal.';
         }
 
         if (els.lastUpdatedChip) {
@@ -653,10 +672,10 @@
           els.definitionNote.textContent = schemaMismatch
             ? `Admin diagnostic: ${summary.message || 'Analytics schema mismatch detected.'}`
             : setupRequired
-            ? 'This module expects the Supabase analytics schema before it can report sessions, page performance, and CTA activity.'
+            ? 'This module expects the Supabase analytics schema before it can report visits, page performance, and call-to-action clicks.'
             : schemaWarnings.length
-            ? `Compatibility note: ${schemaWarnings.map(formatSchemaWarning).join(', ')} missing. Core reporting remains available, but apply the reconciliation SQL for full health checks and deduplication.`
-            : `Definitions: unique visitor = ${definitions.unique_visitor || 'distinct visitor_id'}, session = ${definitions.session || 'distinct session_id'}, time on page = ${definitions.time_on_page || 'time_on_page_seconds events'}.`;
+            ? `Compatibility note: ${schemaWarnings.map(formatSchemaWarning).join(', ')} missing. Core reporting still works, but apply the reconciliation SQL for the full cleaned-up data model.`
+            : `Plain-English key: unique visitor = one recognisable person/browser in this date range; visit (session) = one continuous visit; average time on page = estimated active reading time. Technical definition: unique visitor = ${definitions.unique_visitor || 'distinct visitor_id'}, session = ${definitions.session || 'distinct session_id'}, time on page = ${definitions.time_on_page || 'time_on_page_seconds events'}.`;
         }
       }
 
@@ -679,50 +698,50 @@
             key: 'totalPageViews',
             label: 'Total page views',
             value: formatNumber(kpis.totalPageViews || 0),
-            subtitle: 'Tracked page_view events',
+            subtitle: 'All tracked page loads',
             meta: `Across ${scopeLabel(state.filters.scope).toLowerCase()}`,
           },
           {
             key: 'uniqueVisitors',
             label: 'Unique visitors',
             value: formatNumber(kpis.uniqueVisitors || 0),
-            subtitle: 'Distinct anonymous visitors',
-            meta: 'Browser-level visitor IDs',
+            subtitle: 'Estimated distinct people or browsers',
+            meta: 'One person can return more than once',
           },
           {
             key: 'sessions',
-            label: 'Sessions',
+            label: 'Visits (sessions)',
             value: formatNumber(kpis.sessions || 0),
-            subtitle: 'Distinct session IDs',
-            meta: 'Good indicator of active usage',
+            subtitle: 'Separate visits during this period',
+            meta: 'The same visitor can create multiple visits',
           },
           {
             key: 'avgSessionDurationSeconds',
-            label: 'Avg session duration',
+            label: 'Average visit length',
             value: formatDuration(kpis.avgSessionDurationSeconds || 0),
-            subtitle: 'Session depth over time',
-            meta: 'Last event minus first event',
+            subtitle: 'Typical time spent during a visit',
+            meta: 'Measured from first tracked action to last tracked action',
           },
           {
             key: 'avgTimeOnPageSeconds',
             label: 'Avg time on page',
             value: formatDuration(kpis.avgTimeOnPageSeconds || 0),
-            subtitle: 'Average active time per page',
-            meta: 'Based on heartbeat and leave events',
+            subtitle: 'Estimated active reading time per page',
+            meta: 'Based on engagement signals, not just an open tab',
           },
           {
             key: 'bounceRate',
-            label: 'Bounce rate',
+            label: 'Bounce rate (one-page visits)',
             value: formatPercent(kpis.bounceRate || 0),
-            subtitle: 'Approximate single-page sessions',
-            meta: 'Lower is generally stronger',
+            subtitle: 'Visits that started and ended on one page',
+            meta: 'Lower usually means people explored further',
           },
           {
             key: 'ctaClicks',
-            label: 'CTA clicks',
+            label: 'Call-to-action clicks',
             value: formatNumber(kpis.ctaClicks || 0),
-            subtitle: 'Tracked commercial actions',
-            meta: 'Apply, contact, email, phone, share',
+            subtitle: 'Clicks on buttons or links asking for a next step',
+            meta: 'Apply, contact, email, phone, share, or open',
           },
           {
             key: 'topPage',
@@ -866,7 +885,7 @@
               <span>${formatNumber(item.pageViews || 0)} views</span>
             </div>
             <div class="mix-bar"><i style="width:${Math.max(8, Math.round((Number(item.pageViews || 0) / max) * 100))}%"></i></div>
-            <span>${formatNumber(item.sessions || 0)} sessions • ${formatNumber(item.uniqueVisitors || 0)} visitors</span>
+            <span>${formatNumber(item.sessions || 0)} visits • ${formatNumber(item.uniqueVisitors || 0)} visitors</span>
           </article>
         `).join('');
       }
@@ -923,8 +942,8 @@
         if (state.isLoading && !state.data) {
           els.listingSummaryCards.innerHTML = Array.from({ length: 4 }, skeletonCard).join('');
           els.topJobsBody.innerHTML = `<tr><td colspan="4">${emptyMarkup('Loading job demand…')}</td></tr>`;
-          els.topSpecsBody.innerHTML = `<tr><td colspan="4">${emptyMarkup('Loading spec engagement…')}</td></tr>`;
-          els.listingIntentList.innerHTML = emptyMarkup('Loading role-level CTA activity…');
+          els.topSpecsBody.innerHTML = `<tr><td colspan="4">${emptyMarkup('Loading job spec activity…')}</td></tr>`;
+          els.listingIntentList.innerHTML = emptyMarkup('Loading role-level action clicks…');
           els.listingEngagementList.innerHTML = emptyMarkup('Loading engaged roles…');
           return;
         }
@@ -936,9 +955,9 @@
 
         els.listingSummaryCards.innerHTML = [
           { label: 'Job views', value: formatNumber(summary.jobViews || 0), hint: 'Role detail opens and role-level demand' },
-          { label: 'Spec views', value: formatNumber(summary.specViews || 0), hint: 'Resolved spec page interest' },
-          { label: 'Apply clicks', value: formatNumber(summary.applyClicks || 0), hint: 'Role apply intent across jobs and specs' },
-          { label: 'Avg listing time', value: formatDuration(summary.avgListingTimeSeconds || 0), hint: 'Average engaged time on tracked roles' },
+          { label: 'Job spec views', value: formatNumber(summary.specViews || 0), hint: 'Interest in detailed job spec pages' },
+          { label: 'Apply clicks', value: formatNumber(summary.applyClicks || 0), hint: 'People choosing to apply from jobs and job specs' },
+          { label: 'Avg listing time', value: formatDuration(summary.avgListingTimeSeconds || 0), hint: 'Average active reading time on tracked roles' },
         ].map((item) => `
           <article class="summary-card">
             <span>${escapeHtml(item.label)}</span>
@@ -966,14 +985,14 @@
             <td>
               <div class="entity-cell" title="${escapeHtml(listingMeta(row))}">
                 <span class="entity-title">${escapeHtml(row.title || 'Untitled spec')}</span>
-                <span class="entity-meta">${escapeHtml(listingMeta(row) || 'Shareable spec page')}</span>
+                <span class="entity-meta">${escapeHtml(listingMeta(row) || 'Shareable job spec page')}</span>
               </div>
             </td>
             <td class="is-numeric">${formatNumber(row.views || 0)}</td>
             <td class="is-numeric">${formatDuration(row.avgTimeOnPageSeconds || 0)}</td>
             <td class="is-numeric">${formatNumber(row.applyClicks || 0)}</td>
           </tr>
-        `).join('') : `<tr><td colspan="4">${emptyMarkup(analyticsEmptyMessage('No identifiable spec activity yet for the current filters.'))}</td></tr>`;
+        `).join('') : `<tr><td colspan="4">${emptyMarkup(analyticsEmptyMessage('No clear job spec activity yet for the current filters.'))}</td></tr>`;
 
         renderSimpleList(
           els.listingIntentList,
@@ -982,12 +1001,12 @@
             <article class="list-item">
               <div class="list-item__top">
                 <strong>${escapeHtml(row.title || 'Untitled role')}</strong>
-                <span class="badge" data-tone="cta">${escapeHtml(row.action || 'CTA')}</span>
+                <span class="badge" data-tone="cta">${escapeHtml(readableActionLabel(row.action))}</span>
               </div>
-              <span>${formatNumber(row.count || 0)} tracked actions</span>
+              <span>${formatNumber(row.count || 0)} clicks recorded</span>
             </article>
           `,
-          analyticsEmptyMessage('Role-level CTA actions will appear here once job and spec clicks are recorded.')
+          analyticsEmptyMessage('Role-level next-step clicks will appear here once job and job spec clicks are recorded.')
         );
 
         renderSimpleList(
@@ -997,7 +1016,7 @@
             <article class="list-item">
               <div class="list-item__top">
                 <strong>${escapeHtml(row.title || 'Untitled role')}</strong>
-                <span class="badge">${row.kind === 'spec' ? 'Spec' : 'Job'}</span>
+                <span class="badge">${row.kind === 'spec' ? 'Job spec' : 'Job'}</span>
               </div>
               <span>${formatNumber(row.views || 0)} views • ${formatNumber(row.applyClicks || 0)} apply clicks • ${formatDuration(row.avgTimeOnPageSeconds || 0)} avg time</span>
             </article>
@@ -1016,10 +1035,10 @@
                 <strong>${escapeHtml(row.label)}</strong>
                 <span class="badge" data-tone="cta">${formatNumber(row.clicks || 0)} clicks</span>
               </div>
-              <span>${row.topPage ? `Top page: ${escapeHtml(row.topPage)}` : 'CTA activity across current filters'}</span>
+              <span>${row.topPage ? `Top page: ${escapeHtml(row.topPage)}` : 'Call-to-action activity across current filters'}</span>
             </article>
           `,
-          analyticsEmptyMessage('No CTA clicks recorded for the current filters.')
+          analyticsEmptyMessage('No call-to-action clicks recorded for the current filters.')
         );
 
         renderSimpleList(
@@ -1033,7 +1052,7 @@
               </div>
             </article>
           `,
-          analyticsEmptyMessage('No page-level CTA clicks recorded yet.')
+          analyticsEmptyMessage('No page-level call-to-action clicks recorded yet.')
         );
 
         renderSimpleList(
@@ -1055,29 +1074,29 @@
         renderSimpleList(
           els.landingPagesList,
           state.data?.pathInsights?.landingPages,
-          (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} landing sessions</span></article>`,
-          analyticsEmptyMessage('Landing pages will appear here once sessions are recorded.')
+          (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} visits started here</span></article>`,
+          analyticsEmptyMessage('Landing pages will appear here once visits are recorded.')
         );
 
         renderSimpleList(
           els.exitPagesList,
           state.data?.pathInsights?.exitPages,
-          (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} exit sessions</span></article>`,
-          analyticsEmptyMessage('Exit pages will appear here once sessions are recorded.')
+          (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} visits ended here</span></article>`,
+          analyticsEmptyMessage('Exit pages will appear here once visits are recorded.')
         );
 
         renderSimpleList(
           els.topPathsList,
           state.data?.pathInsights?.topPaths,
-          (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} sessions</span></article>`,
-          analyticsEmptyMessage('Common journeys will appear here after multiple page sequences are tracked.')
+          (row) => `<article class="list-item"><strong>${escapeHtml(row.path)}</strong><span>${formatNumber(row.sessions || 0)} visits</span></article>`,
+          analyticsEmptyMessage('Common page routes will appear here after multiple page sequences are tracked.')
         );
 
         renderSimpleList(
           els.topTransitionsList,
           state.data?.pathInsights?.topTransitions,
-          (row) => `<article class="list-item"><strong>${escapeHtml(row.from)} → ${escapeHtml(row.to)}</strong><span>${formatNumber(row.count || 0)} transitions</span></article>`,
-          analyticsEmptyMessage('Next-page transitions will appear here once visitors move between pages.')
+          (row) => `<article class="list-item"><strong>${escapeHtml(row.from)} → ${escapeHtml(row.to)}</strong><span>${formatNumber(row.count || 0)} next-page moves</span></article>`,
+          analyticsEmptyMessage('Next-page moves will appear here once visitors move between pages.')
         );
       }
 
@@ -1111,7 +1130,7 @@
             <div class="feed-item__meta">
               <small>${escapeHtml(formatWhen(row.occurredAt))}</small>
               <small>${escapeHtml(row.pagePath || '/')}</small>
-              <small>Session ${escapeHtml(row.sessionIdShort || '')}</small>
+              <small>Visit ${escapeHtml(row.sessionIdShort || '')}</small>
               ${row.source ? `<small>${escapeHtml(row.source)}</small>` : ''}
               ${row.deviceType ? `<small>${escapeHtml(row.deviceType)}</small>` : ''}
             </div>
@@ -1131,7 +1150,7 @@
 
       function renderMixPanels() {
         renderMixList(els.sourceMixList, state.data?.breakdowns?.sources, analyticsEmptyMessage('Source mix will appear after live traffic is recorded.'));
-        renderMixList(els.deviceMixList, state.data?.breakdowns?.devices, analyticsEmptyMessage('Device mix will appear once visitor sessions are recorded.'));
+        renderMixList(els.deviceMixList, state.data?.breakdowns?.devices, analyticsEmptyMessage('Device mix will appear once enough visits are recorded.'));
         renderMixList(els.siteMixList, state.data?.breakdowns?.siteAreas, analyticsEmptyMessage('Public and admin scope mix will appear here.'));
       }
 

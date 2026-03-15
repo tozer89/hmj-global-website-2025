@@ -249,6 +249,12 @@
     </div>
   </section>
 
+  <section class="section candidate-portal-section" id="candidatePortalAuthSection">
+    <div class="wrap">
+      <div id="candidatePortalAuthRoot"></div>
+    </div>
+  </section>
+
   <!-- ===== Application Form (full width) ===== -->
   <section class="section candidate-profile-section">
     <div class="wrap">
@@ -257,7 +263,8 @@
         <h2>Share the detail that helps us represent you properly.</h2>
         <p class="public-section-head__copy">The stronger the profile, the faster we can match you to the right project and brief you accurately before interviews begin.</p>
       </div>
-      <div class="candidate-profile-stage">
+      <div id="candidateDashboardRoot" hidden aria-live="polite"></div>
+      <div class="candidate-profile-stage" id="candidateApplicationView">
         <div class="candidate-profile-layout">
           <div class="card candidate-form-shell">
             <h2 class="candidate-form-shell__title">Submit Your Profile</h2>
@@ -539,7 +546,8 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=6">
+  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=7">
   <script defer src="assets/js/candidates.enhanced.js"></script>
+  <script type="module" src="assets/js/candidates.portal.js?v=3"></script>
 </body>
 </html>

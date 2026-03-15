@@ -9,6 +9,9 @@
   node_bundler = "esbuild"
   included_files = ["data/*.json", "netlify/functions/_data/*.json"]
 
+[functions."admin-team-tasks-reminders-run"]
+  schedule = "@hourly"
+
 [[redirects]]
   from = "/go/:slug"
   to = "/.netlify/functions/short-link-go?slug=:slug"
@@ -144,6 +147,28 @@
 [[redirects]]
   from = "/admin/noticeboard.html"
   to = "/admin/?next=noticeboard.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/team.html"
+  to = "/admin/team.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/team.html"
+  to = "/admin/?next=team.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/team-tasks.html"
+  to = "/admin/team-tasks.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/team-tasks.html"
+  to = "/admin/?next=team-tasks.html"
   status = 302
 
 [[redirects]]

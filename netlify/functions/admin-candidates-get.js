@@ -80,8 +80,21 @@ const baseHandler = async (event, context) => {
     }
 
     const full = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim();
-    const record = { ...toCandidate(data), full_name: full || data.full_name || null, source: 'supabase', readOnly: false };
+    const record = {
+      ...toCandidate(data),
+      full_name: full || data.full_name || null,
+      source: 'supabase',
+      readOnly: false,
+      has_portal_account: !!data.auth_user_id,
+      portal_account_state: data.auth_user_id
+        ? 'linked'
+        : data.portal_account_closed_at
+        ? 'closed'
+        : 'none',
+    };
     let storedDocs = [];
+    let applicationRows = [];
+    let activityRows = [];
 
     try {
       const { data: docRows, error: docsError } = await supabase
@@ -99,7 +112,43 @@ const baseHandler = async (event, context) => {
       console.warn('[candidates] document decoration failed (%s)', docsError?.message || docsError);
     }
 
+    try {
+      const { data: appRows, error: appError } = await supabase
+        .from('job_applications')
+        .select('id,job_id,job_title,job_location,job_type,job_pay,status,applied_at')
+        .eq('candidate_id', id)
+        .order('applied_at', { ascending: false })
+        .limit(12);
+
+      if (appError) {
+        console.warn('[candidates] application lookup failed (%s)', appError.message || appError);
+      } else {
+        applicationRows = Array.isArray(appRows) ? appRows : [];
+      }
+    } catch (appError) {
+      console.warn('[candidates] application decoration failed (%s)', appError?.message || appError);
+    }
+
+    try {
+      const { data: activityData, error: activityError } = await supabase
+        .from('candidate_activity')
+        .select('id,activity_type,description,created_at,actor_role')
+        .eq('candidate_id', id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (activityError) {
+        console.warn('[candidates] activity lookup failed (%s)', activityError.message || activityError);
+      } else {
+        activityRows = Array.isArray(activityData) ? activityData : [];
+      }
+    } catch (activityError) {
+      console.warn('[candidates] activity decoration failed (%s)', activityError?.message || activityError);
+    }
+
     record.docs = storedDocs.concat(buildLegacyDocs(record));
+    record.applications = applicationRows;
+    record.audit = activityRows;
 
     return { statusCode: 200, body: JSON.stringify(record) };
   } catch (e) {

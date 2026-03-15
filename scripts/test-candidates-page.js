@@ -1,13 +1,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'admin', 'candidates.html'), 'utf8');
+const adminHtml = fs.readFileSync(path.join(__dirname, '..', 'admin', 'candidates.html'), 'utf8');
+const publicHtml = fs.readFileSync(path.join(__dirname, '..', 'candidates.html'), 'utf8');
 
-const hasToolbar = /class="toolbar"/.test(html);
-const hasFilters = /id="filters"/.test(html);
-const hasRows = /id="rows"/.test(html);
+const hasToolbar = /class="toolbar"/.test(adminHtml);
+const hasFilters = /id="filters"/.test(adminHtml);
+const hasRows = /id="rows"/.test(adminHtml);
+const hasPortalAuthRoot = /id="candidatePortalAuthRoot"/.test(publicHtml);
+const hasDashboardRoot = /id="candidateDashboardRoot"/.test(publicHtml);
 
-if (!hasToolbar || !hasFilters || !hasRows) {
+if (!hasToolbar || !hasFilters || !hasRows || !hasPortalAuthRoot || !hasDashboardRoot) {
   throw new Error('Candidates page failed basic mount check.');
 }
 
