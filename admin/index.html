@@ -134,7 +134,7 @@
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
   <link rel="stylesheet" href="/assets/css/admin.auth.experience.css?v=1" />
 </head>
-<body>
+<body data-auth-view="login">
   <div class="top"><div class="row">
     <div class="brand">HMJ Global Admin</div>
     <div class="sp"></div>
@@ -180,7 +180,7 @@
             </div>
             <p class="muted" id="authStateCopy">Use your HMJ work email to sign in, reset your password, or complete an access email on this page.</p>
             <ol class="auth-step-list" id="authStateSteps">
-              <li data-step="1"><div><strong>Sign in with your HMJ email</strong><span>Open the secure sign-in dialog and use the work email tied to your HMJ admin account.</span></div></li>
+              <li data-step="1"><div><strong>Sign in with your HMJ email</strong><span>Use the HMJ admin sign-in form with the work email tied to your admin account.</span></div></li>
               <li data-step="2"><div><strong>Reset a forgotten password</strong><span>Send yourself a fresh password reset email if you cannot sign in.</span></div></li>
               <li data-step="3"><div><strong>Need first-time access?</strong><span>Open your latest invite email on this page, or contact HMJ access support if it has expired.</span></div></li>
             </ol>
@@ -191,14 +191,38 @@
           <div class="auth-card__head">
             <p class="eyebrow">Secure access</p>
             <h2 id="authCardHeading">Sign in to continue</h2>
-            <p class="muted auth-card__intro" id="authCardIntro">Use your HMJ work email. If you opened an invite or password email, this page will guide you through the next step.</p>
+            <p class="muted auth-card__intro" id="authCardIntro">Use your HMJ work email and password to open the secure admin workspace.</p>
           </div>
 
-          <div class="auth-message" id="authMessage" hidden></div>
+          <div class="auth-message" id="authMessage" data-auth-message hidden></div>
+
+          <form id="authLoginForm" class="auth-login-form" data-auth-login-form novalidate>
+            <label class="auth-field">
+              <span>Work email</span>
+              <input id="authLoginEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@hmj-global.com" />
+            </label>
+
+            <label class="auth-field">
+              <span>Password</span>
+              <div class="auth-password-wrap">
+                <input id="authLoginPassword" type="password" autocomplete="current-password" placeholder="Enter your password" />
+                <button class="auth-password-toggle" type="button" data-password-toggle="authLoginPassword" aria-pressed="false">Show</button>
+              </div>
+            </label>
+
+            <div class="auth-form-actions auth-form-actions--stack">
+              <button class="btn" id="authLoginSubmit" type="submit">Sign in</button>
+              <div class="auth-inline-links auth-inline-links--compact">
+                <a id="authForgotLink" href="/admin/forgot-password.html">Forgot password?</a>
+                <a data-auth-support-link href="mailto:info@hmj-global.com?subject=HMJ%20Admin%20Access%20Help">Account help</a>
+              </div>
+            </div>
+          </form>
+
+          <div class="auth-divider" aria-hidden="true"></div>
 
           <div class="auth-actions">
-            <button class="btn" type="button" data-admin-login data-admin-login-primary>Open secure sign-in</button>
-            <button class="btn outline" type="button" data-auth-action="continue-token">Continue secure email link</button>
+            <button class="btn outline" type="button" data-auth-action="continue-token" hidden>Continue secure email link</button>
           </div>
 
           <div class="auth-secondary-actions">
@@ -207,17 +231,17 @@
           </div>
 
           <div class="auth-help-grid" aria-label="Password help options">
-            <button class="auth-link-card" type="button" data-auth-action="show-reset" aria-pressed="false">
+            <button class="auth-link-card" type="button" data-auth-toggle="reset" aria-pressed="false">
               <strong>Reset password</strong>
               <span>Send a fresh reset email to your HMJ work inbox.</span>
             </button>
-            <button class="auth-link-card" type="button" data-auth-action="show-setup" aria-pressed="false">
+            <button class="auth-link-card" type="button" data-auth-toggle="setup" aria-pressed="false">
               <strong>Create / set password</strong>
               <span>Use your invite or setup email here, or get help if it has expired.</span>
             </button>
           </div>
 
-          <form id="authRecoveryForm" class="auth-recovery-form" novalidate>
+          <form id="authRecoveryForm" class="auth-recovery-form" data-auth-recovery-form novalidate>
             <label class="auth-field">
               <span>Work email</span>
               <input id="authRecoveryEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@hmj-global.com" />
@@ -253,6 +277,7 @@
           </div>
           <p class="muted hero-copy__intro">Open the live HMJ modules below, or use the utility panel to create clean branded short links for specs, forms, and other shareable resources.</p>
           <div class="hero-actions">
+            <a href="/admin/account.html" class="btn ghost small">Account</a>
             <button id="themeToggle" class="btn ghost small" aria-pressed="false" title="Toggle theme">🌓</button>
             <details class="view-settings">
               <summary class="btn ghost small" aria-haspopup="true">View options</summary>

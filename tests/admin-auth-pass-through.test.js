@@ -247,7 +247,7 @@ test('authenticated admin landing renders cleanly across small, mobile, tablet, 
   }
 });
 
-test('logout transition returns the user to the admin entry page', () => {
+test('logout transition returns the user to the admin entry page with a signed-out notice', () => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/',
     width: 390,
@@ -256,6 +256,6 @@ test('logout transition returns the user to the admin entry page', () => {
   harness.window.Admin.finishLogoutTransition();
 
   assert.deepEqual(plainNavigation(harness.navigation), [
-    { mode: 'replace', target: '/admin/' },
+    { mode: 'replace', target: '/admin/?auth_notice=signed-out' },
   ]);
 });

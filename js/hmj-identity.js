@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const FALLBACKS = ['/.netlify/identity', 'https://hmjg.netlify.app/.netlify/identity'];
+  const FALLBACKS = ['/.netlify/identity'];
   const targetUrl = (
     window.HMJ_IDENTITY_URL ||
     window.ADMIN_IDENTITY_URL ||

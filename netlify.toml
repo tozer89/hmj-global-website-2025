@@ -40,6 +40,17 @@
   status = 302
 
 [[redirects]]
+  from = "/admin/account.html"
+  to = "/admin/account.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/account.html"
+  to = "/admin/?next=account.html"
+  status = 302
+
+[[redirects]]
   from = "/admin/chatbot.html"
   to = "/admin/chatbot.html"
   status = 200

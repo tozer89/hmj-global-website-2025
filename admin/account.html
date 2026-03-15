@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Account | HMJ Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/js/hmj-auth-flow.js"></script>
+  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="/assets/js/admin.auth.experience.js?v=2"></script>
+  <link rel="stylesheet" href="/assets/css/admin.auth.experience.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+
+  <style>
+    :root{ --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --muted:#5d6f9e; --ink:#0f1b3f; }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit;text-decoration:none}
+    .top{position:sticky;top:0;z-index:80;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 10px 28px rgba(15,27,63,.18)}
+    .row{max-width:1240px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em}
+    .sp{flex:1}
+    .btn{background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));color:#1b2b5a;border:1px solid rgba(255,255,255,.4);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(15,27,63,.22);border-color:rgba(255,255,255,.6)}
+    .btn.outline{background:#fff;color:var(--highlight);border-color:rgba(47,78,162,.25)}
+    .wrap{max-width:1240px;margin:32px auto;padding:0 22px 48px}
+    .muted{color:var(--muted)}
+    .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+  </style>
+</head>
+<body data-auth-view="account">
+  <div class="top"><div class="row">
+    <div class="brand">HMJ Global Admin</div>
+    <div class="sp"></div>
+    <a class="btn outline" href="/admin/">Dashboard</a>
+    <button class="btn outline" type="button" data-admin-logout hidden aria-hidden="true">Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <section class="auth-gate" aria-labelledby="accountGateHeading">
+      <div class="auth-grid">
+        <div class="auth-overview auth-surface">
+          <div class="auth-kicker-row">
+            <p class="eyebrow">Secure HMJ access</p>
+            <span class="auth-security-badge">Authorised admin only</span>
+          </div>
+          <div>
+            <h1 id="accountGateHeading">Sign in to view your HMJ account.</h1>
+            <p class="muted auth-lede why">Use your HMJ work email to continue into the secure account area.</p>
+          </div>
+        </div>
+
+        <aside class="auth-card auth-surface">
+          <div class="auth-card__head">
+            <p class="eyebrow">Account access</p>
+            <h2>Secure sign-in required</h2>
+            <p class="muted auth-card__intro">Only authorised HMJ admin users can view this account area.</p>
+          </div>
+          <div class="auth-page-actions">
+            <a class="btn" href="/admin/">Go to admin sign-in</a>
+            <a class="btn outline" href="/">Back to website</a>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <main class="wrap" id="app" style="display:none">
+    <section class="auth-account-shell">
+      <div class="auth-account-grid">
+        <section class="auth-account-panel" aria-labelledby="accountHeading">
+          <div class="auth-kicker-row">
+            <p class="eyebrow">Account summary</p>
+            <span class="auth-security-badge">Verified HMJ session</span>
+          </div>
+
+          <div>
+            <h1 id="accountHeading">Your HMJ admin account.</h1>
+            <p class="muted" id="accountSummary">Checking your current HMJ admin session…</p>
+          </div>
+
+          <div class="auth-summary-grid">
+            <article class="auth-summary-card">
+              <span class="auth-summary-card__label">Signed-in email</span>
+              <p class="auth-summary-card__value" id="accountEmail">Loading…</p>
+            </article>
+            <article class="auth-summary-card">
+              <span class="auth-summary-card__label">Roles</span>
+              <p class="auth-summary-card__value" id="accountRoles">Loading…</p>
+            </article>
+          </div>
+
+          <div class="auth-message" data-auth-message hidden></div>
+        </section>
+
+        <aside class="auth-account-sidebar">
+          <div>
+            <p class="eyebrow">Account actions</p>
+            <h2 style="margin:4px 0 8px">Keep access under control</h2>
+            <p class="muted">Use a fresh reset email if you want to change your password, or sign out when you finish using the admin workspace.</p>
+          </div>
+
+          <div class="auth-summary-card">
+            <span class="auth-summary-card__label">Password management</span>
+            <p class="muted" style="margin:0">HMJ can send a fresh password reset email to the signed-in address on this account.</p>
+            <div class="auth-summary-card__actions">
+              <button class="btn" type="button" data-auth-send-reset>Send reset email</button>
+              <a class="btn outline" href="/admin/forgot-password.html">Open reset page</a>
+            </div>
+          </div>
+
+          <div class="auth-summary-card">
+            <span class="auth-summary-card__label">Navigation</span>
+            <div class="auth-summary-card__actions">
+              <a class="btn outline" href="/admin/">Back to dashboard</a>
+              <button class="btn outline" type="button" data-admin-logout>Sign out</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

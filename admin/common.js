@@ -41,6 +41,8 @@
   const ADMIN_ENV = window.__HMJ_ADMIN_ENV || {};
   const HOSTNAME = (() => { try { return window.location?.hostname || ''; } catch { return ''; } })();
   const IS_PREVIEW_HOST = /^deploy-preview-/i.test(HOSTNAME) || HOSTNAME.includes('--');
+  const AUTH_DIAG_ENDPOINT = '/.netlify/functions/admin-auth-event';
+  const AUTH_DIAG_FLOW_KEY = 'hmj.admin.auth.flow:v1';
   const DEBUG_CHIP_STORE = 'hmj.admin.debug-chip-expanded:v1';
   const DEBUG_CHIP_ENABLE_STORE = 'hmj.admin.debug-chip-enabled:v1';
   const DEBUG_CHIP_ENABLED = (() => {
@@ -88,6 +90,109 @@
   })();
   let identityCache = null;
   let identityCacheTs = 0;
+
+  function detectAuthEnvironment(hostname) {
+    const host = String(hostname || '').toLowerCase();
+    if (!host) return 'unknown';
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) return 'local';
+    if (/^deploy-preview-/i.test(host) || host.includes('--')) return 'preview';
+    if (host.endsWith('.netlify.app')) return 'netlify';
+    if (host === 'hmj-global.com' || host === 'www.hmj-global.com') return 'production';
+    return 'custom';
+  }
+
+  function maskEmail(email) {
+    const value = String(email || '').trim().toLowerCase();
+    if (!value || !value.includes('@')) return '';
+    const [local, domain] = value.split('@');
+    if (!local || !domain) return '';
+    if (local.length <= 2) return `${local.charAt(0) || '*'}*@${domain}`;
+    return `${local.charAt(0)}***${local.charAt(local.length - 1)}@${domain}`;
+  }
+
+  function readAuthFlowId() {
+    try {
+      const existing = window.sessionStorage.getItem(AUTH_DIAG_FLOW_KEY);
+      if (existing) return existing;
+      const next = `auth-${Math.random().toString(36).slice(2, 10)}`;
+      window.sessionStorage.setItem(AUTH_DIAG_FLOW_KEY, next);
+      return next;
+    } catch {
+      return 'auth-anon';
+    }
+  }
+
+  function safeReasonCode(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 80);
+  }
+
+  function safePageLabel(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9/_-]+/g, '-')
+      .slice(0, 120);
+  }
+
+  function emitAuthDiagnostic(eventName, details = {}) {
+    const event = safeReasonCode(eventName);
+    if (!event) return;
+
+    const payload = {
+      ts: new Date().toISOString(),
+      event,
+      status: safeReasonCode(details.status) || 'info',
+      reason: safeReasonCode(details.reason),
+      page: safePageLabel(details.page) || safePageLabel(window.location?.pathname || ''),
+      route: safePageLabel(window.location?.pathname || ''),
+      host: String(window.location?.hostname || ''),
+      env: detectAuthEnvironment(window.location?.hostname || ''),
+      intent: safeReasonCode(details.intent),
+      source: safeReasonCode(details.source),
+      next: safePageLabel(details.next),
+      maskedEmail: maskEmail(details.email),
+      flowId: readAuthFlowId()
+    };
+
+    Object.keys(payload).forEach((key) => {
+      if (!payload[key]) delete payload[key];
+    });
+
+    try {
+      console.info('[HMJ auth]', payload);
+    } catch {}
+
+    try {
+      const body = JSON.stringify(payload);
+      if (navigator?.sendBeacon) {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon(AUTH_DIAG_ENDPOINT, blob);
+        return;
+      }
+      if (typeof fetch === 'function') {
+        fetch(AUTH_DIAG_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'omit',
+          keepalive: true,
+          body
+        }).catch(() => {});
+      }
+    } catch {}
+  }
+
+  window.HMJAdminAuthDiagnostics = {
+    emit: emitAuthDiagnostic,
+    maskEmail,
+    env: detectAuthEnvironment(HOSTNAME),
+    flowId: readAuthFlowId(),
+    endpoint: AUTH_DIAG_ENDPOINT
+  };
 
   function readDebugChipExpanded() {
     try {
@@ -334,6 +439,16 @@
     const safeTarget = normaliseAdminTarget(targetPath);
     const suffix = safeTarget ? safeTarget.replace(/^\/admin\//, '') : '';
     return suffix ? `/admin/?next=${encodeURIComponent(suffix)}` : '/admin/';
+  }
+
+  function routeToAdminEntry(targetPath) {
+    const destination = getAdminEntryUrl(targetPath || getCurrentAdminPath());
+    emitAuthDiagnostic('redirect_to_login', {
+      status: 'redirect',
+      source: 'admin_gate',
+      next: destination
+    });
+    navigateWindow('replace', destination);
   }
 
   function adminTargetLabel(path) {
@@ -709,7 +824,7 @@
       button.removeAttribute('onclick');
       button.onclick = async (event) => {
         if (event) event.preventDefault();
-        await openIdentityDialog('login');
+        routeToAdminEntry();
       };
     });
 
@@ -1362,6 +1477,12 @@
     clearAdminGatePendingState();
 
     if (snapshot?.ok) {
+      emitAuthDiagnostic('login_success', {
+        status: 'ok',
+        source: 'identity_session',
+        email: snapshot.email || snapshot.identityEmail || user?.email || '',
+        next: requestedPath || '/admin/'
+      });
       if (entryPage && requestedPath) {
         navigateWindow('replace', requestedPath);
       } else {
@@ -1376,6 +1497,13 @@
 
     if (snapshot?.sessionVerified) {
       const identityEmail = snapshot.email || snapshot.identityEmail || 'this account';
+      emitAuthDiagnostic('admin_access_blocked', {
+        status: 'blocked',
+        reason: 'role_mismatch',
+        source: 'identity_session',
+        email: identityEmail,
+        next: requestedPath || currentPath
+      });
       if (heading) heading.textContent = 'Admin access required';
       if (why) {
         why.textContent = `You are signed in as ${identityEmail}, but this account is not authorised for HMJ admin on this browser.`;
@@ -1388,13 +1516,23 @@
     if (why) {
       why.textContent = 'Secure sign-in completed, but the session did not finish loading on this browser. Refresh once if the dashboard does not open, or sign in again here.';
     }
+    emitAuthDiagnostic('login_sync_pending', {
+      status: 'warn',
+      reason: 'session_not_verified',
+      source: 'identity_session',
+      email: user?.email || ''
+    });
     toast.warn('Secure sign-in completed, but the admin session is still syncing in this browser.', 5600);
     return snapshot;
   }
 
   function finishAdminLogoutTransition() {
     resetIdentityCaches();
-    navigateWindow('replace', '/admin/');
+    emitAuthDiagnostic('logout_success', {
+      status: 'ok',
+      source: 'identity_session'
+    });
+    navigateWindow('replace', '/admin/?auth_notice=signed-out');
   }
 
   // ----------------------------------------------------------------------------
@@ -1503,11 +1641,11 @@
     if (button) {
       button.type = 'button';
       if (!button.textContent || /log\s*in/i.test(button.textContent) || /sign\s*in/i.test(button.textContent)) {
-        button.textContent = 'Open secure sign-in';
+        button.textContent = 'Go to admin sign-in';
       }
       button.onclick = async (event) => {
         if (event) event.preventDefault();
-        await openIdentityDialog('login');
+        routeToAdminEntry(targetPath || currentPath);
       };
     }
     bindIdentityButtons(g || document);
@@ -1518,6 +1656,13 @@
           : 'Sign in with your HMJ work email to access HMJ admin on this site.';
       } else if (adminOnly) {
         const identityEmail = who.email || who.identityEmail || 'this account';
+        emitAuthDiagnostic('admin_access_blocked', {
+          status: 'blocked',
+          reason: 'role_mismatch',
+          source: 'gate',
+          email: identityEmail,
+          next: targetPath || currentPath
+        });
         why.textContent = targetPath
           ? `You are signed in as ${identityEmail}, but this account is not authorised to open ${targetLabel}. Use Sign out above if you need to switch accounts.`
           : `You are signed in as ${identityEmail}, but this account is not authorised for HMJ admin on this site. Use Sign out above if you need to switch accounts.`;
@@ -1691,6 +1836,15 @@
       } catch {}
     }
   };
+
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    resetIdentityCaches();
+    const path = getCurrentAdminPath();
+    if (path.startsWith('/admin/')) {
+      navigateWindow('reload');
+    }
+  });
 
   function addChip(host, text, ok) {
     const span = document.createElement('span');

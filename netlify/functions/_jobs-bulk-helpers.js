@@ -2,7 +2,11 @@ const { slugify, toJob } = require('./_jobs-helpers.js');
 
 const ALLOWED_STATUSES = new Set(['live', 'interviewing', 'closed']);
 const ALLOWED_TYPES = new Set(['permanent', 'contract', 'fixed-term']);
-const ALLOWED_TAG_MODES = new Set(['append', 'replace', 'remove']);
+const ALLOWED_PAY_TYPES = new Set(['day_rate', 'salary_range', 'hourly_range', 'competitive', 'negotiable']);
+const ALLOWED_TAG_MODES = new Set(['append', 'replace', 'remove', 'clear']);
+const ALLOWED_LIST_MODES = new Set(['append', 'replace', 'remove', 'clear']);
+const ALLOWED_TEXT_MODES = new Set(['replace', 'clear']);
+const ALLOWED_LONG_TEXT_MODES = new Set(['replace', 'prepend', 'append', 'clear']);
 
 function cleanString(value) {
   return String(value ?? '').trim();
@@ -16,49 +20,165 @@ function toBoolean(value) {
   return !!value;
 }
 
-function normaliseTagValues(value) {
+function toNullableNumber(value, label = 'value') {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(String(value).replace(/,/g, '').trim());
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Bulk edit requires a valid ${label}`);
+  }
+  return parsed;
+}
+
+function normaliseListValues(value) {
   const items = Array.isArray(value)
     ? value
     : cleanString(value)
-      ? String(value).split(/\r?\n|,/)
+      ? String(value).split(/\r?\n|\u2022|,/)
       : [];
   const seen = new Set();
-  const tags = [];
+  const list = [];
   items.forEach((item) => {
-    const tag = cleanString(item);
-    if (!tag) return;
-    const key = tag.toLowerCase();
+    const entry = cleanString(item).replace(/^[-*•\s]+/, '').trim();
+    if (!entry) return;
+    const key = entry.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
-    tags.push(tag);
+    list.push(entry);
   });
-  return tags;
+  return list;
 }
 
-function applyTagOperation(existing, operation = {}) {
-  const current = normaliseTagValues(existing);
-  const mode = ALLOWED_TAG_MODES.has(cleanString(operation.mode).toLowerCase())
+function normaliseTagValues(value) {
+  return normaliseListValues(value);
+}
+
+function applyListOperation(existing, operation = {}) {
+  const current = normaliseListValues(existing);
+  const mode = ALLOWED_LIST_MODES.has(cleanString(operation.mode).toLowerCase())
     ? cleanString(operation.mode).toLowerCase()
     : 'replace';
-  const values = normaliseTagValues(operation.values);
-  const currentMap = new Map(current.map((tag) => [tag.toLowerCase(), tag]));
+  const values = normaliseListValues(operation.values);
+  const currentMap = new Map(current.map((item) => [item.toLowerCase(), item]));
+
+  if (mode === 'clear') {
+    return [];
+  }
 
   if (mode === 'append') {
-    values.forEach((tag) => {
-      const key = tag.toLowerCase();
+    values.forEach((item) => {
+      const key = item.toLowerCase();
       if (!currentMap.has(key)) {
-        currentMap.set(key, tag);
+        currentMap.set(key, item);
       }
     });
     return Array.from(currentMap.values());
   }
 
   if (mode === 'remove') {
-    values.forEach((tag) => currentMap.delete(tag.toLowerCase()));
+    values.forEach((item) => currentMap.delete(item.toLowerCase()));
     return Array.from(currentMap.values());
   }
 
   return values;
+}
+
+function applyTagOperation(existing, operation = {}) {
+  return applyListOperation(existing, operation);
+}
+
+function normaliseTextOperation(input, options = {}) {
+  const {
+    label = 'field',
+    allowedModes = ALLOWED_TEXT_MODES,
+  } = options;
+
+  const payload = input && typeof input === 'object' && !Array.isArray(input)
+    ? input
+    : { mode: 'replace', value: input };
+  const rawMode = cleanString(payload.mode).toLowerCase() || 'replace';
+  const mode = allowedModes.has(rawMode) ? rawMode : null;
+  if (!mode) {
+    throw new Error(`Bulk edit requires a valid ${label} action`);
+  }
+  if (mode === 'clear') {
+    return { mode: 'clear', value: '' };
+  }
+
+  const value = cleanString(payload.value);
+  if (!value) {
+    throw new Error(`Bulk edit requires a ${label} value`);
+  }
+  return { mode, value };
+}
+
+function normaliseListOperation(input, options = {}) {
+  const { label = 'list', allowedModes = ALLOWED_LIST_MODES } = options;
+  const payload = input && typeof input === 'object' && !Array.isArray(input)
+    ? input
+    : { mode: 'replace', values: input };
+  const rawMode = cleanString(payload.mode).toLowerCase() || 'replace';
+  const mode = allowedModes.has(rawMode) ? rawMode : null;
+  if (!mode) {
+    throw new Error(`Bulk edit requires a valid ${label} action`);
+  }
+
+  if (mode === 'clear') {
+    return { mode: 'clear', values: [] };
+  }
+
+  const values = normaliseListValues(payload.values);
+  if ((mode === 'append' || mode === 'remove') && !values.length) {
+    throw new Error(`Bulk ${label} updates need at least one value when using ${mode}`);
+  }
+  if (mode === 'replace' && !values.length) {
+    return { mode: 'clear', values: [] };
+  }
+  return { mode, values };
+}
+
+function normalisePayOperation(input) {
+  const payload = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  const rawMode = cleanString(payload.mode).toLowerCase() || 'replace';
+  if (!['replace', 'clear'].includes(rawMode)) {
+    throw new Error('Bulk pay updates require a valid action');
+  }
+  if (rawMode === 'clear') {
+    return { mode: 'clear' };
+  }
+
+  const payType = cleanString(payload.payType).toLowerCase();
+  if (!ALLOWED_PAY_TYPES.has(payType)) {
+    throw new Error('Bulk pay updates require a valid pay display');
+  }
+
+  const next = {
+    mode: 'replace',
+    payType,
+    currency: cleanString(payload.currency).toUpperCase() || null,
+    dayRateMin: null,
+    dayRateMax: null,
+    salaryMin: null,
+    salaryMax: null,
+    hourlyMin: null,
+    hourlyMax: null,
+  };
+
+  if (payType === 'day_rate') {
+    next.dayRateMin = toNullableNumber(payload.dayRateMin, 'day rate min');
+    next.dayRateMax = toNullableNumber(payload.dayRateMax, 'day rate max');
+  } else if (payType === 'salary_range') {
+    next.salaryMin = toNullableNumber(payload.salaryMin, 'salary min');
+    next.salaryMax = toNullableNumber(payload.salaryMax, 'salary max');
+  } else if (payType === 'hourly_range') {
+    next.hourlyMin = toNullableNumber(payload.hourlyMin, 'hourly min');
+    next.hourlyMax = toNullableNumber(payload.hourlyMax, 'hourly max');
+  }
+
+  if (/_range$/.test(payType) || payType === 'day_rate') {
+    next.currency = next.currency || 'GBP';
+  }
+
+  return next;
 }
 
 function sanitiseBulkEdits(input = {}) {
@@ -85,10 +205,6 @@ function sanitiseBulkEdits(input = {}) {
     next.section = section;
   }
 
-  if (Object.prototype.hasOwnProperty.call(edits, 'discipline')) {
-    next.discipline = cleanString(edits.discipline);
-  }
-
   if (Object.prototype.hasOwnProperty.call(edits, 'type')) {
     const type = cleanString(edits.type).toLowerCase();
     if (!ALLOWED_TYPES.has(type)) {
@@ -97,48 +213,110 @@ function sanitiseBulkEdits(input = {}) {
     next.type = type;
   }
 
+  if (Object.prototype.hasOwnProperty.call(edits, 'discipline')) {
+    next.discipline = normaliseTextOperation(edits.discipline, { label: 'discipline' });
+  }
+
   if (Object.prototype.hasOwnProperty.call(edits, 'clientName')) {
-    next.clientName = cleanString(edits.clientName);
+    next.clientName = normaliseTextOperation(edits.clientName, { label: 'client name' });
   }
 
   if (Object.prototype.hasOwnProperty.call(edits, 'customer')) {
-    next.customer = cleanString(edits.customer);
+    next.customer = normaliseTextOperation(edits.customer, { label: 'customer' });
   }
 
   if (Object.prototype.hasOwnProperty.call(edits, 'locationText')) {
-    next.locationText = cleanString(edits.locationText);
+    next.locationText = normaliseTextOperation(edits.locationText, { label: 'location' });
   }
 
   if (Object.prototype.hasOwnProperty.call(edits, 'locationCode')) {
-    next.locationCode = cleanString(edits.locationCode);
+    next.locationCode = normaliseTextOperation(edits.locationCode, { label: 'location code' });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(edits, 'applyUrl')) {
+    next.applyUrl = normaliseTextOperation(edits.applyUrl, { label: 'apply URL' });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(edits, 'overview')) {
+    next.overview = normaliseTextOperation(edits.overview, {
+      label: 'overview',
+      allowedModes: ALLOWED_LONG_TEXT_MODES,
+    });
   }
 
   if (Object.prototype.hasOwnProperty.call(edits, 'sortOrder')) {
     if (edits.sortOrder === null || edits.sortOrder === '') {
       next.sortOrder = null;
     } else {
-      const parsed = Number(edits.sortOrder);
-      if (!Number.isFinite(parsed)) {
-        throw new Error('Bulk edit requires a valid sort weight');
-      }
-      next.sortOrder = parsed;
+      next.sortOrder = toNullableNumber(edits.sortOrder, 'sort weight');
     }
   }
 
   if (Object.prototype.hasOwnProperty.call(edits, 'tags')) {
-    const rawTags = edits.tags && typeof edits.tags === 'object' && !Array.isArray(edits.tags)
-      ? edits.tags
-      : { mode: 'replace', values: edits.tags };
-    const mode = ALLOWED_TAG_MODES.has(cleanString(rawTags.mode).toLowerCase())
-      ? cleanString(rawTags.mode).toLowerCase()
-      : 'replace';
-    const values = normaliseTagValues(rawTags.values);
-    if ((mode === 'append' || mode === 'remove') && !values.length) {
-      throw new Error('Bulk tag updates need at least one tag when using append or remove');
-    }
-    next.tags = { mode, values };
+    next.tags = normaliseListOperation(edits.tags, { label: 'tag' });
   }
 
+  if (Object.prototype.hasOwnProperty.call(edits, 'benefits')) {
+    next.benefits = normaliseListOperation(edits.benefits, { label: 'benefit' });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(edits, 'responsibilities')) {
+    next.responsibilities = normaliseListOperation(edits.responsibilities, { label: 'responsibility' });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(edits, 'requirements')) {
+    next.requirements = normaliseListOperation(edits.requirements, { label: 'requirement' });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(edits, 'pay')) {
+    next.pay = normalisePayOperation(edits.pay);
+  }
+
+  return next;
+}
+
+function applyTextOperation(currentValue, operation = {}, options = {}) {
+  const input = operation && typeof operation === 'object' && !Array.isArray(operation)
+    ? operation
+    : { mode: 'replace', value: operation };
+  const value = cleanString(currentValue);
+  const nextValue = cleanString(input.value);
+  const joiner = options.joiner || '\n\n';
+
+  if (input.mode === 'clear') {
+    return '';
+  }
+  if (input.mode === 'prepend') {
+    return [nextValue, value].filter(Boolean).join(joiner).trim();
+  }
+  if (input.mode === 'append') {
+    return [value, nextValue].filter(Boolean).join(joiner).trim();
+  }
+  return nextValue;
+}
+
+function applyPayOperation(next, operation = {}) {
+  if (operation.mode === 'clear') {
+    next.payType = '';
+    next.currency = '';
+    next.dayRateMin = null;
+    next.dayRateMax = null;
+    next.salaryMin = null;
+    next.salaryMax = null;
+    next.hourlyMin = null;
+    next.hourlyMax = null;
+    next.payText = '';
+    return next;
+  }
+
+  next.payType = operation.payType;
+  next.currency = operation.currency || '';
+  next.dayRateMin = operation.dayRateMin;
+  next.dayRateMax = operation.dayRateMax;
+  next.salaryMin = operation.salaryMin;
+  next.salaryMax = operation.salaryMax;
+  next.hourlyMin = operation.hourlyMin;
+  next.hourlyMax = operation.hourlyMax;
   return next;
 }
 
@@ -157,22 +335,28 @@ function applyBulkEditsToJob(job, edits = {}) {
     next.sectionKey = slugify(edits.section) || 'general';
   }
   if (Object.prototype.hasOwnProperty.call(edits, 'discipline')) {
-    next.discipline = edits.discipline;
+    next.discipline = applyTextOperation(next.discipline, edits.discipline);
   }
   if (Object.prototype.hasOwnProperty.call(edits, 'type')) {
     next.type = edits.type;
   }
   if (Object.prototype.hasOwnProperty.call(edits, 'clientName')) {
-    next.clientName = edits.clientName;
+    next.clientName = applyTextOperation(next.clientName, edits.clientName);
   }
   if (Object.prototype.hasOwnProperty.call(edits, 'customer')) {
-    next.customer = edits.customer;
+    next.customer = applyTextOperation(next.customer, edits.customer);
   }
   if (Object.prototype.hasOwnProperty.call(edits, 'locationText')) {
-    next.locationText = edits.locationText;
+    next.locationText = applyTextOperation(next.locationText, edits.locationText);
   }
   if (Object.prototype.hasOwnProperty.call(edits, 'locationCode')) {
-    next.locationCode = edits.locationCode;
+    next.locationCode = applyTextOperation(next.locationCode, edits.locationCode);
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'applyUrl')) {
+    next.applyUrl = applyTextOperation(next.applyUrl, edits.applyUrl);
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'overview')) {
+    next.overview = applyTextOperation(next.overview, edits.overview, { joiner: '\n\n' });
   }
   if (Object.prototype.hasOwnProperty.call(edits, 'sortOrder')) {
     next.sortOrder = edits.sortOrder;
@@ -181,6 +365,18 @@ function applyBulkEditsToJob(job, edits = {}) {
     const tags = applyTagOperation(next.tags, edits.tags);
     next.tags = tags;
     next.keywords = tags.join(', ');
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'benefits')) {
+    next.benefits = applyListOperation(next.benefits, edits.benefits);
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'responsibilities')) {
+    next.responsibilities = applyListOperation(next.responsibilities, edits.responsibilities);
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'requirements')) {
+    next.requirements = applyListOperation(next.requirements, edits.requirements);
+  }
+  if (Object.prototype.hasOwnProperty.call(edits, 'pay')) {
+    applyPayOperation(next, edits.pay);
   }
 
   return next;
@@ -226,8 +422,12 @@ function createDuplicateJob(job, registries = {}) {
 module.exports = {
   ALLOWED_STATUSES,
   ALLOWED_TYPES,
+  ALLOWED_PAY_TYPES,
   ALLOWED_TAG_MODES,
+  ALLOWED_LIST_MODES,
   normaliseTagValues,
+  normaliseListValues,
+  applyListOperation,
   applyTagOperation,
   sanitiseBulkEdits,
   applyBulkEditsToJob,

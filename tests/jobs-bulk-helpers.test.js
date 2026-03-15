@@ -47,7 +47,7 @@ test('sanitiseBulkEdits rejects invalid bulk values', () => {
 
   assert.throws(
     () => sanitiseBulkEdits({ tags: { mode: 'append', values: [] } }),
-    /need at least one tag/i
+    /need at least one value/i
   );
 });
 
@@ -122,4 +122,74 @@ test('createDuplicateJob generates safe unique ids and unpublished copy titles',
   assert.equal(duplicate.title, 'Senior Planner (Copy 2)');
   assert.equal(duplicate.published, false);
   assert.equal(duplicate.section, 'General');
+});
+
+test('sanitiseBulkEdits supports rich text, list, and pay operations for batch updates', () => {
+  const edits = sanitiseBulkEdits({
+    discipline: { mode: 'replace', value: ' Commissioning ' },
+    overview: { mode: 'append', value: 'Urgent fill' },
+    benefits: { mode: 'remove', values: 'Travel support' },
+    pay: {
+      mode: 'replace',
+      payType: 'salary_range',
+      currency: ' gbp ',
+      salaryMin: '65000',
+      salaryMax: '80000',
+    },
+  });
+
+  assert.deepEqual(edits, {
+    discipline: { mode: 'replace', value: 'Commissioning' },
+    overview: { mode: 'append', value: 'Urgent fill' },
+    benefits: { mode: 'remove', values: ['Travel support'] },
+    pay: {
+      mode: 'replace',
+      payType: 'salary_range',
+      currency: 'GBP',
+      dayRateMin: null,
+      dayRateMax: null,
+      salaryMin: 65000,
+      salaryMax: 80000,
+      hourlyMin: null,
+      hourlyMax: null,
+    },
+  });
+});
+
+test('applyBulkEditsToJob can append overview text, clear customer data, and replace pay details', () => {
+  const updated = applyBulkEditsToJob({
+    id: 'job-2',
+    title: 'Commissioning Lead',
+    section: 'General',
+    sectionLabel: 'General',
+    sectionKey: 'general',
+    status: 'live',
+    published: true,
+    customer: 'Client A',
+    overview: 'Initial overview.',
+    payType: 'day_rate',
+    currency: 'GBP',
+    dayRateMin: 450,
+    dayRateMax: 550,
+  }, {
+    customer: { mode: 'clear' },
+    overview: { mode: 'append', value: 'Urgent fill.' },
+    pay: {
+      mode: 'replace',
+      payType: 'competitive',
+      currency: null,
+      dayRateMin: null,
+      dayRateMax: null,
+      salaryMin: null,
+      salaryMax: null,
+      hourlyMin: null,
+      hourlyMax: null,
+    },
+  });
+
+  assert.equal(updated.customer, '');
+  assert.match(updated.overview, /Initial overview\.\n\nUrgent fill\./);
+  assert.equal(updated.payType, 'competitive');
+  assert.equal(updated.dayRateMin, null);
+  assert.equal(updated.salaryMax, null);
 });
