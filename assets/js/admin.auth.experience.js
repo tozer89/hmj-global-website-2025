@@ -548,6 +548,26 @@
     return data || {};
   }
 
+  async function waitForSignedInUser(identity, fallbackUser, maxMs) {
+    const timeoutMs = Number.isFinite(maxMs) ? maxMs : 4200;
+    const directUser = typeof identity?.currentUser === 'function' ? identity.currentUser() : null;
+    if (directUser) return directUser;
+
+    const fallback = fallbackUser && typeof fallbackUser === 'object'
+      ? (fallbackUser.user && typeof fallbackUser.user === 'object' ? fallbackUser.user : fallbackUser)
+      : null;
+    if (fallback) return fallback;
+
+    const started = Date.now();
+    while ((Date.now() - started) < timeoutMs) {
+      await wait(140);
+      const nextUser = typeof identity?.currentUser === 'function' ? identity.currentUser() : null;
+      if (nextUser) return nextUser;
+    }
+
+    return fallback || null;
+  }
+
   async function signInWithPassword(email, password) {
     const identity = await resolveIdentity(6000);
     const client = resolveGoTrue(identity);
@@ -555,8 +575,8 @@
       throw new Error('Secure sign-in is not ready in this browser. Refresh and try again.');
     }
 
-    await client.login(email, password, true);
-    return identity?.currentUser?.() || null;
+    const result = await client.login(email, password, true);
+    return waitForSignedInUser(identity, result, 4200);
   }
 
   async function requestPasswordResetEmail(email) {
