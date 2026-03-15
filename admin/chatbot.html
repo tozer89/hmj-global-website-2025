@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
-  <script defer src="/admin/chatbot.js?v=3"></script>
+  <script defer src="/admin/chatbot.js?v=4"></script>
 
   <style>
     :root{
@@ -160,6 +160,7 @@
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
 </head>
 <body>
   <div class="top"><div class="row">
@@ -191,6 +192,7 @@
         <p class="eyebrow">Live status</p>
         <div class="hero-chips">
           <span class="chip" id="heroEnabledChip">Loading status…</span>
+          <span class="chip" id="heroConfigChip">Loading config…</span>
           <span class="chip" id="heroRouteChip">Checking routes…</span>
           <span class="chip" id="heroStorageChip">Checking history storage…</span>
         </div>
@@ -198,6 +200,7 @@
         <div class="hero-actions">
           <button class="btn primary" id="saveSettingsBtn" type="button">Save settings</button>
           <button class="btn soft" id="reloadSettingsBtn" type="button">Reload</button>
+          <button class="btn soft" id="resetDefaultsBtn" type="button">Reset to defaults</button>
           <button class="btn soft" id="testAssistantBtn" type="button">Run preview test</button>
         </div>
       </aside>
@@ -324,8 +327,13 @@
             <input id="launcherCompactLabel" type="text" maxlength="18">
           </div>
           <div class="field">
+            <label for="assistantName">Assistant name</label>
+            <input id="assistantName" type="text" maxlength="24">
+            <p class="field-note">Used for the assistant identity in the chat thread and prompt instructions.</p>
+          </div>
+          <div class="field">
             <label for="launcherBadge">Header badge</label>
-            <input id="launcherBadge" type="text" maxlength="32">
+            <input id="launcherBadge" type="text" maxlength="40">
           </div>
         </div>
       </section>
@@ -366,6 +374,7 @@
           <div class="field">
             <label for="tonePreset">Tone preset</label>
             <select id="tonePreset">
+              <option value="professional_helpful">Professional and helpful</option>
               <option value="professional_friendly">Professional & friendly</option>
               <option value="direct_consultative">Direct & consultative</option>
               <option value="warm_supportive">Warm & supportive</option>
@@ -375,6 +384,7 @@
           <div class="field">
             <label for="writingStyle">Writing style</label>
             <select id="writingStyle">
+              <option value="concise_clear_commercial">Concise, clear, commercially useful</option>
               <option value="concise_guided">Concise & guided</option>
               <option value="conversational">More conversational</option>
               <option value="direct">Short & direct</option>
@@ -384,6 +394,9 @@
           <div class="field">
             <label for="formality">Formality</label>
             <select id="formality">
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="low">Low</option>
               <option value="professional">Professional</option>
               <option value="neutral">Neutral</option>
               <option value="relaxed">Relaxed</option>
@@ -392,6 +405,9 @@
           <div class="field">
             <label for="warmth">Warmth</label>
             <select id="warmth">
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="low">Low</option>
               <option value="friendly">Friendly</option>
               <option value="balanced">Balanced</option>
               <option value="matter_of_fact">Matter of fact</option>
@@ -400,6 +416,9 @@
           <div class="field">
             <label for="directness">Directness</label>
             <select id="directness">
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
               <option value="soft">Soft</option>
               <option value="balanced">Balanced</option>
               <option value="straightforward">Straightforward</option>
@@ -408,6 +427,7 @@
           <div class="field">
             <label for="proactivity">Proactivity</label>
             <select id="proactivity">
+              <option value="medium_high">Medium-high</option>
               <option value="low">Low</option>
               <option value="balanced">Balanced</option>
               <option value="high">High</option>
@@ -416,6 +436,7 @@
           <div class="field">
             <label for="ctaCadence">CTA guidance level</label>
             <select id="ctaCadence">
+              <option value="strong">Strong</option>
               <option value="light">Light</option>
               <option value="balanced">Balanced</option>
               <option value="frequent">Frequent</option>
@@ -424,6 +445,7 @@
           <div class="field">
             <label for="replyLength">Reply length</label>
             <select id="replyLength">
+              <option value="short_medium">Short to medium</option>
               <option value="short">Short</option>
               <option value="medium">More conversational</option>
             </select>
@@ -431,6 +453,7 @@
           <div class="field">
             <label for="conversionStrength">Conversion strength</label>
             <select id="conversionStrength">
+              <option value="medium_high">Medium-high</option>
               <option value="soft">Soft</option>
               <option value="balanced">Balanced</option>
               <option value="strong">Strong</option>
@@ -439,6 +462,8 @@
           <div class="field">
             <label for="recruitmentFocus">Commercial focus</label>
             <select id="recruitmentFocus">
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
               <option value="balanced">Balanced</option>
               <option value="candidate_first">Candidate-first</option>
               <option value="client_first">Client-first</option>
@@ -448,6 +473,7 @@
           <div class="field">
             <label for="askFollowUpQuestion">Follow-up question style</label>
             <select id="askFollowUpQuestion">
+              <option value="single_focused_question">One focused question at a time</option>
               <option value="rarely">Rarely</option>
               <option value="balanced">Balanced</option>
               <option value="often">Often</option>
@@ -456,6 +482,7 @@
           <div class="field">
             <label for="fallbackStyle">Fallback style</label>
             <select id="fallbackStyle">
+              <option value="honest_calm_redirect">Honest, calm, redirect to best next step</option>
               <option value="reassuring_action">Reassuring with action</option>
               <option value="brief_redirect">Brief redirect</option>
               <option value="warm_handoff">Warm handoff</option>
@@ -489,23 +516,23 @@
         <div class="priority-grid">
           <div class="field">
             <label for="goalCandidateRegistration">Candidate registration priority</label>
-            <select id="goalCandidateRegistration"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+            <input id="goalCandidateRegistration" type="number" min="1" max="10" step="1">
           </div>
           <div class="field">
             <label for="goalRoleApplication">Role application priority</label>
-            <select id="goalRoleApplication"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+            <input id="goalRoleApplication" type="number" min="1" max="10" step="1">
           </div>
           <div class="field">
             <label for="goalClientEnquiry">Client enquiry priority</label>
-            <select id="goalClientEnquiry"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+            <input id="goalClientEnquiry" type="number" min="1" max="10" step="1">
           </div>
           <div class="field">
             <label for="goalContactForm">Contact form priority</label>
-            <select id="goalContactForm"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+            <input id="goalContactForm" type="number" min="1" max="10" step="1">
           </div>
           <div class="field">
             <label for="goalHumanHandoff">Human handoff priority</label>
-            <select id="goalHumanHandoff"><option value="5">Highest</option><option value="4">High</option><option value="3">Medium</option><option value="2">Low</option><option value="1">Lowest</option></select>
+            <input id="goalHumanHandoff" type="number" min="1" max="10" step="1">
           </div>
         </div>
       </section>
@@ -613,7 +640,7 @@
           </div>
           <div class="field">
             <label for="maxGroundingJobs">Max grounded jobs</label>
-            <input id="maxGroundingJobs" type="number" min="1" max="5">
+            <input id="maxGroundingJobs" type="number" min="1" max="12">
           </div>
           <label class="checkline" style="align-self:end"><input id="collectLeadInChat" type="checkbox"> Collect lead details in chat (reserved)</label>
         </div>
@@ -720,23 +747,24 @@
         </div>
         <div class="preview-grid">
           <div class="preview-card">
-            <span class="preview-card__badge" id="previewBadge">Henley, HMJ Assistant</span>
+            <span class="preview-card__badge" id="previewBadge">Live support</span>
             <div>
-              <h3 id="previewTitle">Preview title</h3>
-              <p id="previewBody">Preview support copy</p>
+              <p class="muted" id="previewAssistantName" style="margin:0 0 6px">Jacob, HMJ Assistant</p>
+              <h3 id="previewTitle">HMJ Global support</h3>
+              <p id="previewBody">Ask about jobs, applications, candidate registration, or hiring support.</p>
             </div>
-            <div class="preview-card__bubble" id="previewBubble">Welcome message preview</div>
+            <div class="preview-card__bubble" id="previewBubble">Hi, I can help you find roles, apply, register as a candidate, or contact the HMJ team.</div>
             <div class="preview-actions" id="previewActions"></div>
           </div>
           <div style="display:grid;gap:16px">
             <div class="field-grid">
               <div class="field">
                 <label for="previewRoute">Preview route</label>
-                <input id="previewRoute" type="text" value="/index.html">
+                <input id="previewRoute" type="text" value="/jobs" data-transient-field="1">
               </div>
               <div class="field">
                 <label for="previewCategory">Page category</label>
-                <select id="previewCategory">
+                <select id="previewCategory" data-transient-field="1">
                   <option value="home">Home</option>
                   <option value="about">About</option>
                   <option value="jobs">Jobs list</option>
@@ -749,15 +777,15 @@
               </div>
               <div class="field field--wide">
                 <label for="previewTitleInput">Preview page title</label>
-                <input id="previewTitleInput" type="text" value="HMJ Global | Data Centre & Pharma Recruitment Partner">
+                <input id="previewTitleInput" type="text" value="Jobs at HMJ Global" data-transient-field="1">
               </div>
               <div class="field field--wide">
                 <label for="previewMetaDescription">Preview meta description</label>
-                <textarea id="previewMetaDescription">People-first teams powering hyperscale data centres and pharma manufacturing.</textarea>
+                <textarea id="previewMetaDescription" data-transient-field="1">Explore live HMJ Global roles across mission-critical, data centre, life sciences and commercial projects.</textarea>
               </div>
               <div class="field field--wide">
                 <label for="testMessage">Test visitor message</label>
-                <textarea id="testMessage">Hi, I’m looking for work in commissioning and want to know the best next step.</textarea>
+                <textarea id="testMessage" data-transient-field="1">I am looking for electrical jobs in Europe.</textarea>
               </div>
             </div>
             <div class="test-actions">
@@ -786,7 +814,7 @@
         <div class="section-actions">
           <div class="field" style="min-width:240px">
             <label for="conversationSearch">Search</label>
-            <input id="conversationSearch" type="text" placeholder="Route, intent, session, or preview text">
+            <input id="conversationSearch" type="text" placeholder="Route, intent, session, or preview text" data-transient-field="1">
           </div>
           <button class="btn soft small" id="refreshConversationsBtn" type="button">Refresh</button>
         </div>

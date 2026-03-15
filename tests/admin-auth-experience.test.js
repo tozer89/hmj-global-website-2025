@@ -9,6 +9,7 @@ const {
   classifyIdentityError,
   normaliseIdentityError,
   normaliseNextTarget,
+  resolveAuthenticatedAdminRedirect,
   readNotice,
   validatePasswordPair,
 } = require('../assets/js/admin.auth.experience.js');
@@ -91,4 +92,23 @@ test('normaliseIdentityError maps missing-user login responses to the HMJ invali
     normaliseIdentityError('No user found with that email, or password invalid.'),
     'HMJ could not sign you in with that email and password. Check the details or request a fresh password reset.'
   );
+});
+
+test('classifyIdentityError maps method-not-allowed auth host failures to a host guidance message', () => {
+  assert.deepEqual(
+    classifyIdentityError({ status: 405, message: 'Method Not Allowed' }),
+    {
+      reason: 'auth_method_not_allowed',
+      message: 'HMJ sign-in is not available on this host right now. Open the secure HMJ admin URL and try again.'
+    }
+  );
+});
+
+test('resolveAuthenticatedAdminRedirect keeps signed-in admins on the dashboard root when no next target is present', () => {
+  assert.equal(resolveAuthenticatedAdminRedirect('login', '', false), '');
+  assert.equal(resolveAuthenticatedAdminRedirect('login', '/admin/jobs.html', false), '/admin/jobs.html');
+  assert.equal(resolveAuthenticatedAdminRedirect('forgot-password', '', false), '/admin/');
+  assert.equal(resolveAuthenticatedAdminRedirect('complete-account', '', false), '/admin/');
+  assert.equal(resolveAuthenticatedAdminRedirect('reset-password', '', false), '/admin/');
+  assert.equal(resolveAuthenticatedAdminRedirect('reset-password', '', true), '');
 });

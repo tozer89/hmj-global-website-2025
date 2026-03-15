@@ -78,14 +78,14 @@
       const style = document.createElement('link');
       style.id = CHATBOT_STYLE_ID;
       style.rel = 'stylesheet';
-      style.href = '/assets/css/hmj-chatbot.css?v=5';
+      style.href = '/assets/css/hmj-chatbot.css?v=6';
       document.head.appendChild(style);
     }
     if (!document.getElementById(CHATBOT_SCRIPT_ID)) {
       const script = document.createElement('script');
       script.id = CHATBOT_SCRIPT_ID;
       script.defer = true;
-      script.src = '/js/hmj-chatbot.js?v=5';
+      script.src = '/js/hmj-chatbot.js?v=6';
       document.head.appendChild(script);
     }
   };

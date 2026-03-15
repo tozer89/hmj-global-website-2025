@@ -41,6 +41,8 @@
   const ADMIN_ENV = window.__HMJ_ADMIN_ENV || {};
   const HOSTNAME = (() => { try { return window.location?.hostname || ''; } catch { return ''; } })();
   const IS_PREVIEW_HOST = /^deploy-preview-/i.test(HOSTNAME) || HOSTNAME.includes('--');
+  const IS_NETLIFY_HOST = IS_PREVIEW_HOST || HOSTNAME.endsWith('.netlify.app');
+  const IS_CUSTOM_PRODUCTION_HOST = HOSTNAME === 'hmj-global.com' || HOSTNAME === 'www.hmj-global.com';
   const AUTH_DIAG_ENDPOINT = '/.netlify/functions/admin-auth-event';
   const AUTH_DIAG_FLOW_KEY = 'hmj.admin.auth.flow:v1';
   const DEBUG_CHIP_STORE = 'hmj.admin.debug-chip-expanded:v1';
@@ -75,12 +77,19 @@
     }
   }
   const IDENTITY_URL = (() => {
-    const candidates = [
-      ADMIN_ENV.ADMIN_IDENTITY_URL,
-      window.ADMIN_IDENTITY_URL,
-      ORIGIN_IDENTITY_URL,
-      IS_PREVIEW_HOST ? ORIGIN_PROXY_IDENTITY_URL : ''
-    ];
+    const candidates = IS_CUSTOM_PRODUCTION_HOST
+      ? [
+          ADMIN_ENV.ADMIN_IDENTITY_URL,
+          ORIGIN_PROXY_IDENTITY_URL,
+          window.ADMIN_IDENTITY_URL,
+          ORIGIN_IDENTITY_URL
+        ]
+      : [
+          ADMIN_ENV.ADMIN_IDENTITY_URL,
+          window.ADMIN_IDENTITY_URL,
+          ORIGIN_IDENTITY_URL,
+          ORIGIN_PROXY_IDENTITY_URL
+        ];
     for (const candidate of candidates) {
       const resolved = normaliseIdentityCandidate(candidate);
       if (resolved) return resolved;
@@ -212,7 +221,14 @@
     window.__hmjResolvedIdentityUrl = IDENTITY_URL;
     window.NETLIFY_IDENTITY_URL = IDENTITY_URL;
     window.HMJ_IDENTITY_URL = IDENTITY_URL;
-    Debug.log('Resolved Identity API URL →', IDENTITY_URL, IS_PREVIEW_HOST ? '(preview host)' : '');
+    window.__hmjIdentityTransport = IDENTITY_URL.includes('/.netlify/functions/identity-proxy') ? 'proxy' : 'direct';
+    Debug.log(
+      'Resolved Identity API URL →',
+      IDENTITY_URL,
+      window.__hmjIdentityTransport === 'proxy'
+        ? '(proxy transport)'
+        : (IS_NETLIFY_HOST ? '(direct netlify host)' : '')
+    );
   }
 
   const base64Decode = (input) => {

@@ -118,6 +118,8 @@
     state.host = host || '';
 
     const isPreviewHost = /^deploy-preview-/i.test(host) || host.includes('--');
+    const isNetlifyHost = isPreviewHost || /\.netlify\.app$/i.test(host);
+    const isCustomProductionHost = host === 'hmj-global.com' || host === 'www.hmj-global.com';
     const originIdentity = originBase ? `${originBase}/.netlify/identity` : '';
     const originProxyIdentity = originBase ? `${originBase}/.netlify/functions/identity-proxy` : '';
     const envIdentity = ADMIN_ENV.ADMIN_IDENTITY_URL || '';
@@ -127,7 +129,12 @@
     const netlifyLooksDefault = String(netlifyIdentityUrl || '').trim() === '/.netlify/identity';
 
     addCandidate(envIdentity);
-    if (isPreviewHost) {
+    if (isCustomProductionHost) {
+      addCandidate(originProxyIdentity);
+      if (inlineIdentity && !inlineLooksDefault) addCandidate(inlineIdentity);
+      if (netlifyIdentityUrl && !netlifyLooksDefault) addCandidate(netlifyIdentityUrl);
+      addCandidate(originIdentity);
+    } else if (isNetlifyHost) {
       addCandidate(originIdentity);
       if (inlineIdentity && !inlineLooksDefault) addCandidate(inlineIdentity);
       if (netlifyIdentityUrl && !netlifyLooksDefault) addCandidate(netlifyIdentityUrl);
@@ -163,6 +170,7 @@
 
     emitState({
       apiUrl: resolved,
+      transport: resolved.includes('/.netlify/functions/identity-proxy') ? 'proxy' : 'direct',
       widgetScriptInjected: hasWidgetTag(),
       widgetScriptLoaded: typeof window.netlifyIdentity !== 'undefined',
       widgetReady: typeof window.netlifyIdentity !== 'undefined' && !!window.netlifyIdentity,

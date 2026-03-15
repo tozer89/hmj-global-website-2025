@@ -200,6 +200,30 @@ test('successful login waits for admin session verification before routing to th
   ]);
 });
 
+test('preview hosts resolve admin identity to the same-host netlify identity endpoint', () => {
+  const harness = createAdminHarness({
+    url: 'https://deploy-preview-105--hmjg.netlify.app/admin/',
+    width: 390,
+  });
+
+  assert.equal(
+    harness.window.ADMIN_IDENTITY_URL,
+    'https://deploy-preview-105--hmjg.netlify.app/.netlify/identity'
+  );
+});
+
+test('custom production hosts resolve admin identity to the same-host identity proxy', () => {
+  const harness = createAdminHarness({
+    url: 'https://hmj-global.com/admin/',
+    width: 390,
+  });
+
+  assert.equal(
+    harness.window.ADMIN_IDENTITY_URL,
+    'https://hmj-global.com/.netlify/functions/identity-proxy'
+  );
+});
+
 test('unauthenticated protected admin routes redirect back to the admin entry gate', async () => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/jobs.html',

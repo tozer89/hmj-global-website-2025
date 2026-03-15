@@ -1,7 +1,12 @@
 'use strict';
 
 const CHATBOT_SETTINGS_KEY = 'chatbot_settings';
-const DEFAULT_ASSISTANT_BADGE = 'Henley, HMJ Assistant';
+const DEFAULT_ASSISTANT_NAME = 'Jacob';
+const DEFAULT_ASSISTANT_BADGE = 'Live support';
+const LEGACY_ASSISTANT_BADGES = new Set([
+  'HMJ Assistant',
+  'Henley, HMJ Assistant',
+]);
 
 const PAGE_TARGET_KEYS = [
   'home',
@@ -30,8 +35,8 @@ const DEFAULT_CHATBOT_SETTINGS = {
   enabled: true,
   visibility: {
     routeMode: 'all_public',
-    includePatterns: [],
-    excludePatterns: ['/admin', '/timesheets'],
+    includePatterns: ['/', '/about*', '/jobs*', '/candidates*', '/clients*', '/contact*', '/apply*'],
+    excludePatterns: ['/admin*', '/dashboard*', '/preview*'],
     pageTargets: {
       home: true,
       about: true,
@@ -40,58 +45,68 @@ const DEFAULT_CHATBOT_SETTINGS = {
       candidates: true,
       clients: true,
       contact: true,
-      other_public: true,
+      other_public: false,
     },
   },
   launcher: {
     autoOpen: true,
-    autoOpenDelayMs: 1200,
-    autoHideDelayMs: 10000,
+    autoOpenDelayMs: 4500,
+    autoHideDelayMs: 18000,
     position: 'right',
     showLabel: true,
-    label: 'Need help?',
-    compactLabel: 'Chat',
+    label: 'Chat with HMJ',
+    compactLabel: 'Ask HMJ',
     badge: DEFAULT_ASSISTANT_BADGE,
+    assistantName: DEFAULT_ASSISTANT_NAME,
   },
   welcome: {
-    title: 'Hi — need help finding a role or getting in touch?',
-    body: 'I can point you to jobs, candidate registration, applications, or the right HMJ contact route.',
-    emptyStatePrompt: 'Choose an option below or ask a quick question.',
+    title: 'HMJ Global support',
+    body: 'Ask about jobs, applications, candidate registration, or hiring support.',
+    emptyStatePrompt: 'I can help you find roles, apply, register, or contact the HMJ team.',
   },
   tone: {
-    tonePreset: 'professional_friendly',
-    writingStyle: 'concise_guided',
-    formality: 'professional',
-    warmth: 'friendly',
-    directness: 'straightforward',
-    proactivity: 'balanced',
-    ctaCadence: 'balanced',
-    replyLength: 'short',
-    recruitmentFocus: 'balanced',
-    conversionStrength: 'balanced',
-    askFollowUpQuestion: 'balanced',
-    fallbackStyle: 'reassuring_action',
-    bannedPhrases: [],
-    maxReplySentences: 3,
+    tonePreset: 'professional_helpful',
+    writingStyle: 'concise_clear_commercial',
+    formality: 'medium',
+    warmth: 'medium',
+    directness: 'high',
+    proactivity: 'medium_high',
+    ctaCadence: 'strong',
+    replyLength: 'short_medium',
+    recruitmentFocus: 'high',
+    conversionStrength: 'medium_high',
+    askFollowUpQuestion: 'single_focused_question',
+    fallbackStyle: 'honest_calm_redirect',
+    bannedPhrases: [
+      'delighted',
+      'absolutely',
+      'no worries',
+      'reach out',
+      'touch base',
+      'world-class',
+      'best-in-class',
+      'game-changing',
+    ],
+    maxReplySentences: 5,
     ukEnglish: true,
-    customInstructions: '',
+    customInstructions: 'Use a professional, friendly HMJ Global tone. Prioritise helping visitors move toward a useful next step quickly. For candidates, focus on relevant job routes, application routes, candidate registration, and clear explanation of requirements where possible. For clients, focus on staffing support, labour supply, recruitment support, and contact routes. Keep answers concise and practical. Ask at most one follow-up question when required. Offer CTA options naturally. Avoid sounding robotic or overexcited. Be especially strong on mission-critical, data centre, life sciences, commercial, and construction hiring contexts. Use UK spelling. Do not invent job details, salary, locations, visa rules, or availability. If unsure, say so briefly and direct the user to the best HMJ route.',
   },
   goals: {
-    candidate_registration: 5,
-    role_application: 5,
-    client_enquiry: 4,
-    contact_form: 3,
-    human_handoff: 3,
+    candidate_registration: 10,
+    role_application: 10,
+    client_enquiry: 9,
+    contact_form: 8,
+    human_handoff: 7,
   },
   prompts: {
-    baseRole: 'You are the HMJ Global website assistant for a recruitment business serving data centres, critical infrastructure, and pharma projects.',
-    additionalContext: 'Help visitors move quickly toward jobs, candidate registration, applications, client enquiries, or a human contact route.',
-    businessGoals: 'Prioritise candidate registration, role applications, and client enquiries when intent is clear.',
-    routingInstructions: 'Use only approved HMJ routes and CTA ids supplied by the application. Do not invent URLs or offers.',
-    safetyConstraints: 'Do not invent roles, rates, sponsorship, legal advice, financial advice, or business details that are not provided. When unsure, route to a human or contact form.',
-    pageAwareInstructions: 'Use the current page context briefly when it helps, but do not overstate what is known from the page.',
-    answerStructure: 'Default to: direct answer, short supporting detail, recommended next step, and one follow-up question only when it helps move the conversation forward.',
-    offTopicHandling: 'If a question is unrelated to HMJ Global, jobs, candidates, clients, hiring or contact routes, politely redirect the visitor back to HMJ-related help.',
+    baseRole: 'You are the HMJ Global website assistant. Your job is to help public website visitors move quickly to the best next step: finding jobs, applying, registering as a candidate, making a client enquiry, or contacting HMJ.',
+    additionalContext: 'HMJ Global is a recruitment and labour supply business supporting sectors such as mission-critical construction, data centres, life sciences, commercial and related project environments. The website serves both candidates and clients. The assistant should reflect a professional, credible, fast-moving recruitment brand.',
+    businessGoals: '1. Help candidates find the right route quickly. 2. Encourage job browsing and applications where relevant. 3. Encourage candidate registration where no immediate job match is obvious. 4. Help clients understand HMJ services and drive them to enquiry/contact routes. 5. Reduce friction and confusion. 6. Avoid long answers when a route or CTA is better.',
+    routingInstructions: 'When the visitor shows job-seeking intent, prioritise jobs, apply, and candidate pages. When the visitor shows hiring intent, prioritise client and contact routes. When the visitor asks general company questions, answer briefly and offer the most relevant route. Use approved CTAs only. Never send users to admin or hidden routes.',
+    safetyConstraints: 'Do not invent facts, jobs, pay rates, sponsorship availability, client names, compliance outcomes, or guarantees. Do not give legal, immigration, or regulated employment advice as fact. Do not claim a live recruiter is immediately available unless confirmed by configured routes/processes. Do not collect sensitive personal data in open chat beyond basic lead-capture intent unless that flow is explicitly enabled. Keep the assistant within HMJ website topics and next steps.',
+    pageAwareInstructions: 'Use the current page to keep replies relevant. On jobs pages, bias toward helping with roles and applications. On candidate pages, bias toward registration and candidate support. On client pages, bias toward staffing support and enquiry. On contact/apply pages, be brief and action-oriented.',
+    answerStructure: '1. Direct answer in one or two sentences. 2. Best next step. 3. Optional single CTA or single follow-up question.',
+    offTopicHandling: 'If a message is unrelated to HMJ website support, respond briefly that you can help with HMJ jobs, applications, candidate registration, hiring support, and contact routes, then offer one relevant option.',
   },
   dataPolicy: {
     includeRoute: true,
@@ -99,31 +114,31 @@ const DEFAULT_CHATBOT_SETTINGS = {
     includeMetaDescription: true,
     includePageCategory: true,
     includeConversationHistory: true,
-    maxHistoryMessages: 8,
+    maxHistoryMessages: 10,
     classifyIntent: true,
     injectCtaCatalog: true,
     injectBusinessContext: true,
     injectWebsiteContext: true,
     injectJobsContext: true,
-    maxGroundingJobs: 3,
+    maxGroundingJobs: 12,
   },
   handoff: {
-    candidateRegistrationUrl: '/candidates.html#candForm',
-    jobsUrl: '/jobs.html',
-    applicationUrl: '/contact.html',
-    clientEnquiryUrl: '/clients.html#clientEnquiryForm',
-    contactUrl: '/contact.html',
-    supportEmail: 'info@HMJ-Global.com',
-    supportPhone: '0800 861 1230',
-    whatsappUrl: 'https://wa.me/447842550187',
-    handoffMessage: 'If you would rather speak to the HMJ team directly, I can send you to the best contact route.',
+    candidateRegistrationUrl: '/candidates',
+    jobsUrl: '/jobs',
+    applicationUrl: '/apply',
+    clientEnquiryUrl: '/clients',
+    contactUrl: '/contact',
+    supportEmail: 'info@hmj-global.com',
+    supportPhone: '',
+    whatsappUrl: '',
+    handoffMessage: 'Prefer to speak with the HMJ team directly? Use the contact route and we’ll point you to the right person.',
     collectLeadInChat: false,
   },
   quickReplies: [
     {
       id: 'find_jobs',
-      label: 'Find jobs',
-      description: 'Browse current live HMJ roles.',
+      label: 'Browse jobs',
+      description: 'See current HMJ opportunities.',
       placement: 'welcome',
       style: 'primary',
       actionMode: 'navigate',
@@ -133,21 +148,9 @@ const DEFAULT_CHATBOT_SETTINGS = {
       visible: true,
     },
     {
-      id: 'register_candidate',
-      label: 'Register as candidate',
-      description: 'Send your CV and profile.',
-      placement: 'welcome',
-      style: 'secondary',
-      actionMode: 'navigate',
-      target: 'candidate_registration',
-      url: '',
-      prompt: '',
-      visible: true,
-    },
-    {
       id: 'apply_role',
-      label: 'Apply for a role',
-      description: 'Open the application route.',
+      label: 'Apply now',
+      description: 'Go to the HMJ application route.',
       placement: 'welcome',
       style: 'secondary',
       actionMode: 'navigate',
@@ -157,9 +160,21 @@ const DEFAULT_CHATBOT_SETTINGS = {
       visible: true,
     },
     {
+      id: 'register_candidate',
+      label: 'Candidate registration',
+      description: 'Register your profile or send your CV.',
+      placement: 'welcome',
+      style: 'secondary',
+      actionMode: 'navigate',
+      target: 'candidate_registration',
+      url: '',
+      prompt: '',
+      visible: true,
+    },
+    {
       id: 'hiring_staff',
-      label: 'Hiring staff',
-      description: 'Open the client enquiry route.',
+      label: 'Hiring support',
+      description: 'Go to the HMJ client enquiry route.',
       placement: 'welcome',
       style: 'secondary',
       actionMode: 'navigate',
@@ -169,21 +184,9 @@ const DEFAULT_CHATBOT_SETTINGS = {
       visible: true,
     },
     {
-      id: 'ask_question',
-      label: 'Ask a question',
-      description: 'Get a quick answer from Henley, the HMJ assistant.',
-      placement: 'welcome',
-      style: 'ghost',
-      actionMode: 'send_prompt',
-      target: 'contact',
-      url: '',
-      prompt: 'I have a question about HMJ and the roles you recruit for.',
-      visible: true,
-    },
-    {
       id: 'contact_hmj',
       label: 'Contact HMJ',
-      description: 'Go straight to the contact page.',
+      description: 'Go straight to the HMJ contact page.',
       placement: 'conversation',
       style: 'ghost',
       actionMode: 'navigate',
@@ -192,14 +195,26 @@ const DEFAULT_CHATBOT_SETTINGS = {
       prompt: '',
       visible: true,
     },
+    {
+      id: 'ask_sectors',
+      label: 'What sectors do you cover?',
+      description: 'Ask what HMJ supports and the roles covered.',
+      placement: 'conversation',
+      style: 'ghost',
+      actionMode: 'send_prompt',
+      target: 'contact',
+      url: '',
+      prompt: 'What sectors do you support and what types of roles do you usually cover?',
+      visible: true,
+    },
   ],
   advanced: {
     model: 'gpt-5-mini',
     fallbackModel: 'gpt-4.1-mini',
     temperature: 0.4,
-    maxOutputTokens: 280,
-    requestTimeoutMs: 15000,
-    debugLogging: false,
+    maxOutputTokens: 450,
+    requestTimeoutMs: 18000,
+    debugLogging: true,
   },
 };
 
@@ -297,7 +312,10 @@ function mergeObjects(baseValue, overrideValue) {
 }
 
 function resolvePosition(value) {
-  return ['left', 'right'].includes(trimString(value, 16)) ? trimString(value, 16) : DEFAULT_CHATBOT_SETTINGS.launcher.position;
+  const safe = trimString(value, 24);
+  if (safe === 'bottom-left') return 'left';
+  if (safe === 'bottom-right') return 'right';
+  return ['left', 'right'].includes(safe) ? safe : DEFAULT_CHATBOT_SETTINGS.launcher.position;
 }
 
 function resolveEnum(value, allowed, fallback) {
@@ -308,23 +326,38 @@ function resolveEnum(value, allowed, fallback) {
 function normaliseVisibility(visibility = {}) {
   const fallback = DEFAULT_CHATBOT_SETTINGS.visibility;
   const pageTargets = {};
+  const routeMode = trimString(visibility.routeMode, 40) === 'all_public_pages'
+    ? 'all_public'
+    : resolveEnum(visibility.routeMode, ['all_public', 'selected'], fallback.routeMode);
+  const includePatterns = dedupeStrings(visibility.includePatterns, 12);
+  const excludePatterns = dedupeStrings(visibility.excludePatterns, 12);
+  const isLegacyVisibility = routeMode === 'all_public'
+    && !includePatterns.length
+    && excludePatterns.length === 2
+    && excludePatterns.includes('/admin')
+    && excludePatterns.includes('/timesheets');
   PAGE_TARGET_KEYS.forEach((key) => {
     pageTargets[key] = asBoolean(visibility?.pageTargets?.[key], fallback.pageTargets[key]);
   });
   return {
-    routeMode: resolveEnum(visibility.routeMode, ['all_public', 'selected'], fallback.routeMode),
-    includePatterns: dedupeStrings(visibility.includePatterns, 12),
-    excludePatterns: dedupeStrings(visibility.excludePatterns, 12),
+    routeMode,
+    includePatterns: isLegacyVisibility ? fallback.includePatterns.slice() : includePatterns,
+    excludePatterns: isLegacyVisibility ? fallback.excludePatterns.slice() : excludePatterns,
     pageTargets,
   };
 }
 
 function normaliseLauncher(launcher = {}) {
   const fallback = DEFAULT_CHATBOT_SETTINGS.launcher;
-  const rawBadge = trimString(launcher.badge, 32);
-  const badge = rawBadge === 'HMJ Assistant'
+  const rawBadge = trimString(launcher.badge, 40);
+  const isLegacyBadge = LEGACY_ASSISTANT_BADGES.has(rawBadge);
+  const badge = isLegacyBadge
     ? DEFAULT_ASSISTANT_BADGE
     : (rawBadge || fallback.badge);
+  const rawAssistantName = trimString(launcher.assistantName, 24);
+  const derivedAssistantName = rawAssistantName
+    || (isLegacyBadge ? '' : trimString((rawBadge.match(/^([^,]+),\s*HMJ Assistant$/i) || [])[1], 24))
+    || fallback.assistantName;
   return {
     autoOpen: asBoolean(launcher.autoOpen, fallback.autoOpen),
     autoOpenDelayMs: asNumber(launcher.autoOpenDelayMs, fallback.autoOpenDelayMs, 0, 10000),
@@ -334,6 +367,7 @@ function normaliseLauncher(launcher = {}) {
     label: trimString(launcher.label, 42) || fallback.label,
     compactLabel: trimString(launcher.compactLabel, 18) || fallback.compactLabel,
     badge,
+    assistantName: derivedAssistantName,
   };
 }
 
@@ -349,18 +383,18 @@ function normaliseWelcome(welcome = {}) {
 function normaliseTone(tone = {}) {
   const fallback = DEFAULT_CHATBOT_SETTINGS.tone;
   return {
-    tonePreset: resolveEnum(tone.tonePreset, ['professional_friendly', 'direct_consultative', 'warm_supportive', 'confident_recruitment'], fallback.tonePreset),
-    writingStyle: resolveEnum(tone.writingStyle, ['concise_guided', 'conversational', 'direct', 'consultative'], fallback.writingStyle),
-    formality: resolveEnum(tone.formality, ['professional', 'neutral', 'relaxed'], fallback.formality),
-    warmth: resolveEnum(tone.warmth, ['friendly', 'balanced', 'matter_of_fact'], fallback.warmth),
-    directness: resolveEnum(tone.directness, ['soft', 'balanced', 'straightforward'], fallback.directness),
-    proactivity: resolveEnum(tone.proactivity, ['low', 'balanced', 'high'], fallback.proactivity),
-    ctaCadence: resolveEnum(tone.ctaCadence, ['light', 'balanced', 'frequent'], fallback.ctaCadence),
-    replyLength: resolveEnum(tone.replyLength, ['short', 'medium'], fallback.replyLength),
-    recruitmentFocus: resolveEnum(tone.recruitmentFocus, ['balanced', 'candidate_first', 'client_first', 'support_first'], fallback.recruitmentFocus),
-    conversionStrength: resolveEnum(tone.conversionStrength, ['soft', 'balanced', 'strong'], fallback.conversionStrength),
-    askFollowUpQuestion: resolveEnum(tone.askFollowUpQuestion, ['rarely', 'balanced', 'often'], fallback.askFollowUpQuestion),
-    fallbackStyle: resolveEnum(tone.fallbackStyle, ['reassuring_action', 'brief_redirect', 'warm_handoff'], fallback.fallbackStyle),
+    tonePreset: resolveEnum(tone.tonePreset, ['professional_helpful', 'professional_friendly', 'direct_consultative', 'warm_supportive', 'confident_recruitment'], fallback.tonePreset),
+    writingStyle: resolveEnum(tone.writingStyle, ['concise_clear_commercial', 'concise_guided', 'conversational', 'direct', 'consultative'], fallback.writingStyle),
+    formality: resolveEnum(tone.formality, ['low', 'medium', 'high', 'professional', 'neutral', 'relaxed'], fallback.formality),
+    warmth: resolveEnum(tone.warmth, ['low', 'medium', 'high', 'friendly', 'balanced', 'matter_of_fact'], fallback.warmth),
+    directness: resolveEnum(tone.directness, ['low', 'medium', 'high', 'soft', 'balanced', 'straightforward'], fallback.directness),
+    proactivity: resolveEnum(tone.proactivity, ['low', 'balanced', 'medium_high', 'high'], fallback.proactivity),
+    ctaCadence: resolveEnum(tone.ctaCadence, ['light', 'balanced', 'frequent', 'strong'], fallback.ctaCadence),
+    replyLength: resolveEnum(tone.replyLength, ['short', 'medium', 'short_medium'], fallback.replyLength),
+    recruitmentFocus: resolveEnum(tone.recruitmentFocus, ['balanced', 'candidate_first', 'client_first', 'support_first', 'medium', 'high'], fallback.recruitmentFocus),
+    conversionStrength: resolveEnum(tone.conversionStrength, ['soft', 'balanced', 'strong', 'medium_high'], fallback.conversionStrength),
+    askFollowUpQuestion: resolveEnum(tone.askFollowUpQuestion, ['rarely', 'balanced', 'often', 'single_focused_question'], fallback.askFollowUpQuestion),
+    fallbackStyle: resolveEnum(tone.fallbackStyle, ['reassuring_action', 'brief_redirect', 'warm_handoff', 'honest_calm_redirect'], fallback.fallbackStyle),
     bannedPhrases: dedupeStrings(tone.bannedPhrases, 16),
     maxReplySentences: asNumber(tone.maxReplySentences, fallback.maxReplySentences, 1, 6),
     ukEnglish: asBoolean(tone.ukEnglish, fallback.ukEnglish),
@@ -371,11 +405,11 @@ function normaliseTone(tone = {}) {
 function normaliseGoals(goals = {}) {
   const fallback = DEFAULT_CHATBOT_SETTINGS.goals;
   return {
-    candidate_registration: asNumber(goals.candidate_registration, fallback.candidate_registration, 1, 5),
-    role_application: asNumber(goals.role_application, fallback.role_application, 1, 5),
-    client_enquiry: asNumber(goals.client_enquiry, fallback.client_enquiry, 1, 5),
-    contact_form: asNumber(goals.contact_form, fallback.contact_form, 1, 5),
-    human_handoff: asNumber(goals.human_handoff, fallback.human_handoff, 1, 5),
+    candidate_registration: asNumber(goals.candidate_registration, fallback.candidate_registration, 1, 10),
+    role_application: asNumber(goals.role_application, fallback.role_application, 1, 10),
+    client_enquiry: asNumber(goals.client_enquiry, fallback.client_enquiry, 1, 10),
+    contact_form: asNumber(goals.contact_form, fallback.contact_form, 1, 10),
+    human_handoff: asNumber(goals.human_handoff, fallback.human_handoff, 1, 10),
   };
 }
 
@@ -407,7 +441,7 @@ function normaliseDataPolicy(dataPolicy = {}) {
     injectBusinessContext: asBoolean(dataPolicy.injectBusinessContext, fallback.injectBusinessContext),
     injectWebsiteContext: asBoolean(dataPolicy.injectWebsiteContext, fallback.injectWebsiteContext),
     injectJobsContext: asBoolean(dataPolicy.injectJobsContext, fallback.injectJobsContext),
-    maxGroundingJobs: asNumber(dataPolicy.maxGroundingJobs, fallback.maxGroundingJobs, 1, 5),
+    maxGroundingJobs: asNumber(dataPolicy.maxGroundingJobs, fallback.maxGroundingJobs, 1, 12),
   };
 }
 
@@ -432,8 +466,10 @@ function normaliseQuickReply(entry = {}, index = 0) {
     || DEFAULT_CHATBOT_SETTINGS.quickReplies[0];
   const label = trimString(entry.label, 48) || fallback.label;
   const id = slugify(entry.id || label || fallback.id || `reply_${index + 1}`) || `reply_${index + 1}`;
-  const actionMode = resolveEnum(entry.actionMode, ['navigate', 'send_prompt'], fallback.actionMode);
-  const target = resolveEnum(entry.target, TARGET_KEYS, fallback.target);
+  const actionMode = resolveEnum(entry.actionMode || entry.type, ['navigate', 'send_prompt'], fallback.actionMode);
+  const rawValue = trimString(entry.value, 320);
+  const target = resolveEnum(entry.target, TARGET_KEYS, actionMode === 'navigate' && rawValue ? 'custom_url' : fallback.target);
+  const customUrl = trimString(entry.url, 280) || (actionMode === 'navigate' && target === 'custom_url' ? trimString(rawValue, 280) : '');
   return {
     id,
     label,
@@ -442,9 +478,9 @@ function normaliseQuickReply(entry = {}, index = 0) {
     style: resolveEnum(entry.style, ['primary', 'secondary', 'ghost'], fallback.style),
     actionMode,
     target,
-    url: trimString(entry.url, 280),
-    prompt: trimString(entry.prompt, 320) || (actionMode === 'send_prompt' ? label : ''),
-    visible: asBoolean(entry.visible, fallback.visible),
+    url: customUrl,
+    prompt: trimString(entry.prompt, 320) || (actionMode === 'send_prompt' ? rawValue || label : ''),
+    visible: asBoolean(entry.visible, asBoolean(entry.enabled, fallback.visible)),
   };
 }
 

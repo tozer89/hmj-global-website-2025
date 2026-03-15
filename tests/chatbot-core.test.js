@@ -2,15 +2,28 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { callOpenAIForChat, buildFallbackReply } = require('../netlify/functions/_chatbot-core.js');
+const { resolveChatbotSettings } = require('../netlify/functions/_chatbot-config.js');
+const adminChatbotConfigFunction = require('../netlify/functions/admin-chatbot-config.js');
 const { classifyVisitorIntent } = require('../netlify/functions/_chatbot-grounding.js');
 const chatbotConfigFunction = require('../netlify/functions/chatbot-config.js');
 const chatbotChatFunction = require('../netlify/functions/chatbot-chat.js');
+const adminChatbotConfigMirror = require('../admin-v2/functions/admin-chatbot-config.js');
 const chatbotChatMirror = require('../admin-v2/functions/chatbot-chat.js');
 const chatbotConfigMirror = require('../admin-v2/functions/chatbot-config.js');
 const chatbotPreviewMirror = require('../admin-v2/functions/admin-chatbot-preview.js');
 const chatbotConversationsMirror = require('../admin-v2/functions/admin-chatbot-conversations.js');
 const chatbotEventMirror = require('../admin-v2/functions/chatbot-event.js');
 const chatbotAnalyticsMirror = require('../admin-v2/functions/admin-chatbot-analytics.js');
+
+function makeAdminBearerToken() {
+  const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    sub: 'admin-test',
+    email: 'admin@example.com',
+    app_metadata: { roles: ['admin'] },
+  })).toString('base64url');
+  return `${header}.${payload}.`;
+}
 
 test('callOpenAIForChat returns structured reply with approved CTA ids', async () => {
   const originalApiKey = process.env.OPENAI_API_KEY;
@@ -60,7 +73,7 @@ test('callOpenAIForChat returns structured reply with approved CTA ids', async (
     });
 
     assert.equal(requestBody.model, 'gpt-5-mini');
-    assert.equal(requestBody.max_output_tokens, 280);
+    assert.equal(requestBody.max_output_tokens, 450);
     assert.equal(response.intent, 'candidate_job_search');
     assert.equal(response.visitorType, 'candidate');
     assert.deepEqual(response.ctaIds, ['find_jobs', 'register_candidate']);
@@ -150,6 +163,48 @@ test('chatbot-config exposes only public-safe configuration fields', async () =>
   assert.equal('advanced' in payload.config, false);
 });
 
+test('resolveChatbotSettings backfills missing sections with the new HMJ defaults', () => {
+  const settings = resolveChatbotSettings({
+    visibility: {
+      routeMode: 'all_public',
+      includePatterns: [],
+      excludePatterns: ['/admin', '/timesheets'],
+    },
+    launcher: {
+      label: 'Need help now',
+    },
+    quickReplies: [],
+  });
+
+  assert.equal(settings.launcher.label, 'Need help now');
+  assert.equal(settings.launcher.assistantName, 'Jacob');
+  assert.equal(settings.launcher.badge, 'Live support');
+  assert.equal(settings.launcher.autoOpenDelayMs, 4500);
+  assert.deepEqual(settings.visibility.includePatterns, ['/', '/about*', '/jobs*', '/candidates*', '/clients*', '/contact*', '/apply*']);
+  assert.deepEqual(settings.visibility.excludePatterns, ['/admin*', '/dashboard*', '/preview*']);
+  assert.equal(settings.goals.candidate_registration, 10);
+  assert.equal(settings.dataPolicy.maxGroundingJobs, 12);
+  assert.equal(settings.advanced.debugLogging, true);
+  assert.equal(Array.isArray(settings.quickReplies), true);
+  assert.ok(settings.quickReplies.length >= 1);
+});
+
+test('admin-chatbot-config returns effective defaults and reset seed data when no saved row exists', async () => {
+  const response = await adminChatbotConfigFunction.handler({
+    httpMethod: 'GET',
+    headers: { authorization: `Bearer ${makeAdminBearerToken()}` },
+  }, {});
+
+  assert.equal(response.statusCode, 200);
+  const payload = JSON.parse(response.body);
+
+  assert.equal(payload.ok, true);
+  assert.equal(payload.usingDefaults, true);
+  assert.equal(payload.settings.launcher.assistantName, 'Jacob');
+  assert.equal(payload.settings.launcher.badge, 'Live support');
+  assert.equal(payload.defaultSettings.launcher.assistantName, 'Jacob');
+});
+
 test('chatbot-chat returns graceful fallback when the OpenAI key is missing', async () => {
   const originalApiKey = process.env.OPENAI_API_KEY;
   delete process.env.OPENAI_API_KEY;
@@ -202,6 +257,7 @@ test('buildFallbackReply prioritises the right CTA set for candidate registratio
 });
 
 test('admin-v2 function entrypoints mirror the chatbot handlers used by preview and branch deploys', () => {
+  assert.equal(adminChatbotConfigMirror.handler, adminChatbotConfigFunction.handler);
   assert.equal(chatbotChatMirror.handler, chatbotChatFunction.handler);
   assert.equal(chatbotConfigMirror.handler, chatbotConfigFunction.handler);
   assert.equal(typeof chatbotPreviewMirror.handler, 'function');

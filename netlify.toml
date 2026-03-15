@@ -14,6 +14,36 @@
   to = "/.netlify/functions/short-link-go?slug=:slug"
   status = 200
 
+[[redirects]]
+  from = "/about"
+  to = "/about.html"
+  status = 200
+
+[[redirects]]
+  from = "/jobs"
+  to = "/jobs.html"
+  status = 200
+
+[[redirects]]
+  from = "/candidates"
+  to = "/candidates.html"
+  status = 200
+
+[[redirects]]
+  from = "/clients"
+  to = "/clients.html"
+  status = 200
+
+[[redirects]]
+  from = "/contact"
+  to = "/contact.html"
+  status = 200
+
+[[redirects]]
+  from = "/apply"
+  to = "/contact.html"
+  status = 200
+
 # Keep /admin/ public as the single sign-in entry, but require an admin
 # role for the actual tool pages. Non-admin visitors are sent back to the
 # dashboard gate with a safe continuation target.

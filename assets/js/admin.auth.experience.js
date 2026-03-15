@@ -194,6 +194,7 @@
   }
 
   function classifyIdentityError(error) {
+    const status = Number(error?.status) || 0;
     const raw = safeString(
       error?.message ||
       error?.msg ||
@@ -209,6 +210,24 @@
       return {
         reason: 'unexpected_error',
         message: 'We could not complete that request. Please try again.'
+      };
+    }
+    if (status === 405) {
+      return {
+        reason: 'auth_method_not_allowed',
+        message: 'HMJ sign-in is not available on this host right now. Open the secure HMJ admin URL and try again.'
+      };
+    }
+    if (status === 404) {
+      return {
+        reason: 'auth_host_not_found',
+        message: 'HMJ could not reach the secure sign-in service on this host. Open the secure HMJ admin URL and try again.'
+      };
+    }
+    if (lower.includes('no verified session')) {
+      return {
+        reason: 'no_session_returned',
+        message: 'HMJ signed the request in, but no verified session was returned. Please try again on the secure HMJ admin URL.'
       };
     }
     if (lower.includes('invalid login') || lower.includes('invalid email') || lower.includes('email not found') || lower.includes('no user')) {
@@ -258,7 +277,26 @@
   }
 
   function getRequestedDestination() {
-    return getRequestedNext() || ADMIN_ROUTES.account;
+    return getRequestedNext() || ADMIN_ROUTES.login;
+  }
+
+  function resolveAuthenticatedAdminRedirect(view, nextTarget, hasTokenPayload) {
+    const currentView = safeString(view).trim().toLowerCase();
+    const requested = safeString(nextTarget).trim();
+
+    if (currentView === 'login') {
+      return requested || '';
+    }
+
+    if (currentView === 'forgot-password') {
+      return requested || ADMIN_ROUTES.login;
+    }
+
+    if ((currentView === 'complete-account' || currentView === 'reset-password') && !hasTokenPayload) {
+      return requested || ADMIN_ROUTES.login;
+    }
+
+    return '';
   }
 
   async function readAdminSnapshot() {
@@ -277,25 +315,15 @@
     const snapshot = await readAdminSnapshot();
     if (!snapshot?.ok) return false;
 
-    if (view === 'login' || view === 'forgot-password') {
+    const destination = resolveAuthenticatedAdminRedirect(view, getRequestedNext(), state.hasTokenPayload);
+    if (destination) {
       emitAuthEvent('signed_in_redirect', {
         status: 'redirect',
         source: view,
         email: snapshot.email || snapshot.identityEmail || '',
-        next: getRequestedDestination()
+        next: destination
       });
-      navigateReplace(getRequestedDestination());
-      return true;
-    }
-
-    if ((view === 'complete-account' || view === 'reset-password') && !state.hasTokenPayload) {
-      emitAuthEvent('signed_in_redirect', {
-        status: 'redirect',
-        source: view,
-        email: snapshot.email || snapshot.identityEmail || '',
-        next: getRequestedDestination()
-      });
-      navigateReplace(getRequestedDestination());
+      navigateReplace(destination);
       return true;
     }
 
@@ -487,6 +515,19 @@
     return null;
   }
 
+  async function signInThroughIdentityClient(identity, email, password) {
+    const gotrue = resolveGoTrue(identity);
+    if (!gotrue || typeof gotrue.login !== 'function') {
+      throw new Error('HMJ sign-in is still loading in this browser. Refresh once and try again.');
+    }
+
+    const user = await gotrue.login(email, password, true);
+    if (identity && user && !identity.__hmjInitUser) {
+      identity.__hmjInitUser = user;
+    }
+    return user;
+  }
+
   function resolveIdentityApiBase() {
     if (typeof window === 'undefined') return '/.netlify/identity';
     return safeString(
@@ -569,36 +610,49 @@
   }
 
   async function signInWithPassword(email, password) {
-    const result = await fetchIdentityJson('token?grant_type=password', {
-      method: 'POST',
-      body: {
-        email,
-        password
-      }
-    });
-
-    const accessToken = safeString(result?.access_token).trim();
-    if (!accessToken) {
-      throw new Error('No verified session was returned for this sign-in attempt. Please try again.');
-    }
-
     const identity = await resolveIdentity(2400);
-    const seededUser = Object.assign(
-      {},
-      result?.user && typeof result.user === 'object' ? result.user : {},
-      result,
-      {
-        email: readUserEmail(result?.user) || safeString(result?.email).trim() || safeString(email).trim(),
-        access_token: accessToken,
-        refresh_token: safeString(result?.refresh_token).trim()
-      }
-    );
+    let user = null;
 
-    if (identity && !identity.__hmjInitUser) {
-      identity.__hmjInitUser = seededUser;
+    try {
+      user = await signInThroughIdentityClient(identity, email, password);
+    } catch (error) {
+      if (error && typeof error === 'object') {
+        error.authSource = 'identity_client';
+        error.identityUrl = resolveIdentityApiBase();
+      }
+      throw error;
     }
 
-    return waitForSignedInUser(identity, seededUser, 1200);
+    const signedInUser = await waitForSignedInUser(identity, user, 1600);
+    const token = await (async () => {
+      if (!signedInUser || typeof signedInUser !== 'object') return '';
+      if (typeof signedInUser.token === 'function') {
+        try {
+          const next = await signedInUser.token();
+          if (safeString(next).trim()) return safeString(next).trim();
+        } catch {}
+      }
+      if (typeof signedInUser.jwt === 'function') {
+        try {
+          const next = await signedInUser.jwt();
+          if (safeString(next).trim()) return safeString(next).trim();
+        } catch {}
+      }
+      return safeString(
+        signedInUser.access_token ||
+        signedInUser.accessToken ||
+        signedInUser.token
+      ).trim();
+    })();
+
+    if (!token) {
+      const missingSessionError = new Error('No verified session was returned for this sign-in attempt. Please try again.');
+      missingSessionError.reason = 'no_session_returned';
+      missingSessionError.identityUrl = resolveIdentityApiBase();
+      throw missingSessionError;
+    }
+
+    return signedInUser;
   }
 
   async function requestPasswordResetEmail(email) {
@@ -1406,6 +1460,7 @@
     classifyIdentityError,
     normaliseIdentityError,
     normaliseNextTarget,
+    resolveAuthenticatedAdminRedirect,
     readNotice,
     validatePasswordPair
   };

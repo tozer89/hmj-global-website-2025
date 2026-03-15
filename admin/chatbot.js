@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const DEFAULT_ASSISTANT_BADGE = 'Henley, HMJ Assistant';
+  const DEFAULT_ASSISTANT_NAME = 'Jacob';
+  const DEFAULT_ASSISTANT_BADGE = 'Live support';
 
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
@@ -27,6 +28,9 @@
     dirty: false,
     conversationSetupRequired: false,
     analyticsSetupRequired: false,
+    defaultSettings: null,
+    usingDefaults: false,
+    mergedDefaults: false,
   };
 
   const els = {};
@@ -37,11 +41,11 @@
 
   function cacheElements() {
     [
-      'welcomeMeta', 'heroEnabledChip', 'heroRouteChip', 'heroStorageChip', 'heroSummary',
-      'saveSettingsBtn', 'reloadSettingsBtn', 'testAssistantBtn',
+      'welcomeMeta', 'heroEnabledChip', 'heroConfigChip', 'heroRouteChip', 'heroStorageChip', 'heroSummary',
+      'saveSettingsBtn', 'reloadSettingsBtn', 'resetDefaultsBtn', 'testAssistantBtn',
       'storageBanner', 'storageBannerTitle', 'storageBannerBody',
       'metricEnabled', 'metricEnabledLabel', 'metricQuickReplies', 'metricQuickRepliesLabel', 'metricConversations', 'metricConversationsLabel', 'metricHandoffs', 'metricHandoffsLabel',
-      'enabled', 'autoOpen', 'showLabel', 'autoOpenDelayMs', 'autoHideDelayMs', 'launcherPosition', 'launcherLabel', 'launcherCompactLabel', 'launcherBadge',
+      'enabled', 'autoOpen', 'showLabel', 'autoOpenDelayMs', 'autoHideDelayMs', 'launcherPosition', 'launcherLabel', 'launcherCompactLabel', 'assistantName', 'launcherBadge',
       'welcomeTitle', 'welcomeBody', 'emptyStatePrompt',
       'tonePreset', 'writingStyle', 'formality', 'warmth', 'directness', 'proactivity', 'ctaCadence', 'replyLength', 'conversionStrength', 'recruitmentFocus', 'askFollowUpQuestion', 'fallbackStyle', 'maxReplySentences', 'customInstructions', 'bannedPhrases', 'ukEnglish',
       'goalCandidateRegistration', 'goalRoleApplication', 'goalClientEnquiry', 'goalContactForm', 'goalHumanHandoff',
@@ -51,7 +55,7 @@
       'promptBaseRole', 'promptAdditionalContext', 'promptBusinessGoals', 'promptRoutingInstructions', 'promptSafetyConstraints', 'promptPageAwareInstructions', 'promptAnswerStructure', 'promptOffTopicHandling',
       'quickRepliesList', 'addQuickReplyBtn',
       'model', 'fallbackModel', 'temperature', 'maxOutputTokens', 'requestTimeoutMs', 'debugLogging',
-      'previewBadge', 'previewTitle', 'previewBody', 'previewBubble', 'previewActions', 'previewRoute', 'previewCategory', 'previewTitleInput', 'previewMetaDescription', 'testMessage', 'runPreviewTestBtn', 'refreshPreviewBtn', 'testReplyOutput', 'promptPreviewOutput',
+      'previewBadge', 'previewAssistantName', 'previewTitle', 'previewBody', 'previewBubble', 'previewActions', 'previewRoute', 'previewCategory', 'previewTitleInput', 'previewMetaDescription', 'testMessage', 'runPreviewTestBtn', 'refreshPreviewBtn', 'testReplyOutput', 'promptPreviewOutput',
       'analyticsSourceChip', 'analyticsBody', 'metricWidgetOpens', 'metricFirstMessages', 'metricUsefulRoutes', 'metricFallbackResponses', 'analyticsIntentList', 'analyticsIntentEmpty', 'analyticsOutcomeList', 'analyticsOutcomeEmpty', 'analyticsCtaList', 'analyticsCtaEmpty',
       'conversationSearch', 'refreshConversationsBtn', 'conversationList', 'conversationEmpty', 'transcriptHeading', 'transcriptSummary', 'transcriptMeta', 'transcriptMessages', 'transcriptEmpty',
     ].forEach((id) => { els[id] = byId(id); });
@@ -103,10 +107,37 @@
   function markDirty(isDirty = true) {
     state.dirty = isDirty;
     els.saveSettingsBtn.textContent = isDirty ? 'Save changes' : 'Saved';
+    updateConfigChip();
+  }
+
+  function getAssistantIdentityLabel(settings) {
+    const assistantName = trimString(settings?.launcher?.assistantName || '', 24) || DEFAULT_ASSISTANT_NAME;
+    return `${assistantName}, HMJ Assistant`;
+  }
+
+  function updateConfigChip() {
+    if (!els.heroConfigChip) return;
+    if (state.dirty) {
+      els.heroConfigChip.textContent = 'Unsaved changes';
+      els.heroConfigChip.dataset.tone = 'warn';
+      return;
+    }
+    if (state.usingDefaults) {
+      els.heroConfigChip.textContent = 'Default config loaded';
+      els.heroConfigChip.dataset.tone = 'info';
+      return;
+    }
+    if (state.mergedDefaults) {
+      els.heroConfigChip.textContent = 'Saved config + defaults';
+      els.heroConfigChip.dataset.tone = 'info';
+      return;
+    }
+    els.heroConfigChip.textContent = 'Using saved config';
+    els.heroConfigChip.dataset.tone = 'ok';
   }
 
   function bindDirtyTracking() {
-    document.querySelectorAll('#app input, #app select, #app textarea').forEach((field) => {
+    document.querySelectorAll('#app input:not([data-transient-field]), #app select:not([data-transient-field]), #app textarea:not([data-transient-field])').forEach((field) => {
       field.addEventListener('input', () => {
         markDirty(true);
         refreshPreviewCard();
@@ -127,6 +158,7 @@
     setFieldValue('launcherPosition', settings.launcher.position);
     setFieldValue('launcherLabel', settings.launcher.label);
     setFieldValue('launcherCompactLabel', settings.launcher.compactLabel);
+    setFieldValue('assistantName', settings.launcher.assistantName);
     setFieldValue('launcherBadge', settings.launcher.badge);
 
     setFieldValue('welcomeTitle', settings.welcome.title);
@@ -263,6 +295,7 @@
         showLabel: getCheckboxValue('showLabel'),
         label: getStringValue('launcherLabel'),
         compactLabel: getStringValue('launcherCompactLabel'),
+        assistantName: getStringValue('assistantName'),
         badge: getStringValue('launcherBadge'),
       },
       welcome: {
@@ -474,6 +507,7 @@
   function refreshPreviewCard() {
     const settings = readSettingsFromForm();
     els.previewBadge.textContent = settings.launcher.badge || DEFAULT_ASSISTANT_BADGE;
+    els.previewAssistantName.textContent = getAssistantIdentityLabel(settings);
     els.previewTitle.textContent = settings.welcome.title || 'Welcome title';
     els.previewBody.textContent = settings.welcome.body || 'Welcome support copy';
     els.previewBubble.textContent = [settings.welcome.title, settings.welcome.body].filter(Boolean).join(' ') || 'Welcome message preview';
@@ -542,18 +576,22 @@
   }
 
   async function loadSettings() {
-    const response = await state.helpers.api('admin-settings-get', 'POST', { keys: ['chatbot_settings'] });
-    state.settings = cloneJson(response?.settings?.chatbot_settings || {});
+    const response = await state.helpers.api('admin-chatbot-config', 'GET');
+    state.settings = cloneJson(response?.settings || {});
+    state.defaultSettings = cloneJson(response?.defaultSettings || response?.settings || {});
+    state.usingDefaults = !!response?.usingDefaults;
+    state.mergedDefaults = !!response?.mergedDefaults;
     applySettingsToForm(state.settings);
   }
 
   async function saveSettings() {
     const settings = readSettingsFromForm();
-    await state.helpers.api('admin-settings-save', 'POST', {
-      chatbot_settings: settings,
-    });
-    state.settings = cloneJson(settings);
-    markDirty(false);
+    const response = await state.helpers.api('admin-chatbot-config', 'POST', { settings });
+    state.settings = cloneJson(response?.settings || settings);
+    state.defaultSettings = cloneJson(response?.defaultSettings || state.defaultSettings || {});
+    state.usingDefaults = !!response?.usingDefaults;
+    state.mergedDefaults = !!response?.mergedDefaults;
+    applySettingsToForm(state.settings);
     state.helpers.toast('Website assistant settings saved', 'info', 2200);
   }
 
@@ -727,6 +765,17 @@
       } catch (error) {
         state.helpers.toast('Reload failed: ' + (error.message || error), 'error', 3200);
       }
+    });
+
+    els.resetDefaultsBtn.addEventListener('click', () => {
+      if (!state.defaultSettings) return;
+      const confirmed = window.confirm('Reset the Website Assistant form back to the HMJ default profile? You can still review the values before saving.');
+      if (!confirmed) return;
+      applySettingsToForm(cloneJson(state.defaultSettings));
+      state.usingDefaults = true;
+      state.mergedDefaults = false;
+      markDirty(true);
+      state.helpers.toast('Default assistant profile loaded. Save to make it live.', 'info', 2600);
     });
 
     els.testAssistantBtn.addEventListener('click', () => runPreviewTest());

@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>HMJ Admin | Secure Access</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js?v=3"></script>
+  <script defer src="/js/hmj-auth-flow.js"></script>
+  <script defer src="/admin/common.js?v=34"></script>
+  <script defer src="/admin/short-links.js?v=1"></script>
+  <link rel="stylesheet" href="/assets/css/admin.dashboard.enhanced.css?v=1"/>
+  <script defer src="/assets/js/admin.dashboard.enhanced.js?v=2"></script>
+  <script defer src="/assets/js/admin.auth.experience.js?v=4"></script>
+
+  <style>
+    :root{ --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --muted:#5d6f9e; --ink:#0f1b3f; }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit;text-decoration:none}
+
+    .top{position:sticky;top:0;z-index:80;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 10px 28px rgba(15,27,63,.18)}
+    .row{max-width:1320px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em}
+    .sp{flex:1}
+
+    .btn{background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.1));color:#1b2b5a;border:1px solid rgba(255,255,255,.4);padding:9px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(15,27,63,.22);border-color:rgba(255,255,255,.6)}
+    .btn.outline{background:#fff;color:var(--highlight);border-color:rgba(47,78,162,.25)}
+
+    .wrap{max-width:1320px;margin:28px auto;padding:0 22px;display:grid;gap:22px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;box-shadow:0 18px 40px rgba(15,27,63,.12)}
+    .muted{color:var(--muted)}
+
+    .section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+    .section-head h3{margin:4px 0 0;font-size:22px;line-height:1.15}
+    .section-head .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+    .section-head p:last-child{margin:0;max-width:54ch}
+
+    .hero-shell{display:grid;gap:18px;grid-template-columns:minmax(0,1.18fr) minmax(300px,.9fr) minmax(300px,.9fr);align-items:start}
+    .hero-copy{display:grid;gap:16px}
+    .hero-copy__intro{margin:0;max-width:60ch}
+    .shortlink-panel{display:grid;gap:14px;padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.16);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 18px 36px rgba(15,27,63,.08);height:100%;align-content:start}
+    .shortlink-panel .btn:not(.outline){background:linear-gradient(180deg,#3657b3,#29489e);color:#fff;border-color:rgba(41,72,158,.48);box-shadow:0 12px 24px rgba(47,78,162,.16)}
+    .shortlink-panel .btn:not(.outline):hover{border-color:rgba(41,72,158,.62)}
+    .shortlink-panel__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .shortlink-panel__head h3{margin:4px 0 0;font-size:22px;line-height:1.15}
+    .shortlink-panel__intro{margin:0}
+    .shortlink-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(47,78,162,.08);border:1px solid rgba(47,78,162,.14);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--highlight)}
+    .shortlink-form,.shortlink-result,.shortlink-history{display:grid;gap:12px}
+    .shortlink-fields{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .utility-field{display:grid;gap:6px}
+    .utility-field--wide{grid-column:1 / -1}
+    .utility-field span{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+    .utility-field input{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink)}
+    .utility-field input[readonly]{background:#f7f9ff;color:var(--highlight);font-weight:800}
+    .utility-note{margin:0;font-size:12px;color:var(--muted)}
+    .shortlink-actions,.shortlink-item__actions{display:flex;gap:8px;flex-wrap:wrap}
+    .shortlink-feedback{padding:11px 12px;border-radius:14px;border:1px solid transparent;font-weight:700}
+    .shortlink-feedback[data-tone="info"]{background:rgba(47,78,162,.08);border-color:rgba(47,78,162,.14);color:var(--highlight)}
+    .shortlink-feedback[data-tone="ok"]{background:rgba(19,135,84,.09);border-color:rgba(19,135,84,.18);color:#0e6f46}
+    .shortlink-feedback[data-tone="error"]{background:rgba(180,35,24,.08);border-color:rgba(180,35,24,.16);color:#9f2c22}
+    .shortlink-result{padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(255,255,255,.78)}
+    .shortlink-result__row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+    .shortlink-history__head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+    .shortlink-history__head h4{margin:0;font-size:16px}
+    .shortlink-list{display:grid;gap:10px;max-height:548px;overflow:auto;padding-right:4px}
+    .shortlink-item{display:grid;gap:10px;padding:12px 14px;border-radius:14px;border:1px solid rgba(47,78,162,.12);background:rgba(255,255,255,.88)}
+    .shortlink-item__top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .shortlink-item__title{font-weight:800;line-height:1.25}
+    .shortlink-item__slug{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:rgba(47,78,162,.08);color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.04em}
+    .shortlink-item__slug--inactive{background:rgba(93,111,158,.12);color:var(--muted)}
+    .shortlink-item__meta,.shortlink-item__url{margin:0}
+    .shortlink-item__meta{font-size:12px;color:var(--muted)}
+    .shortlink-item__url{font-size:13px;color:var(--ink);word-break:break-all}
+    .shortlink-empty{padding:14px;border-radius:14px;border:1px dashed rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(247,249,255,.95),rgba(255,255,255,.95));color:var(--muted)}
+
+    .quick-strip-panel,.module-shell{display:grid;gap:18px}
+    .quick-grid,.module-grid{display:grid;gap:16px}
+    .quick-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+    .module-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+    .module-grid--active{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+
+    .quick-link,.card{position:relative;display:flex;flex-direction:column;text-decoration:none;border-radius:16px;border:1px solid rgba(47,78,162,.16);background:#fff;box-shadow:0 18px 36px rgba(15,27,63,.12);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .quick-link:hover,.card:hover{transform:translateY(-2px);box-shadow:0 22px 44px rgba(15,27,63,.18);border-color:rgba(47,78,162,.35)}
+    .quick-link{gap:6px;padding:16px 18px;min-height:118px;background:linear-gradient(180deg,rgba(47,78,162,.05),rgba(255,255,255,.98))}
+    .quick-link strong{font-size:17px;line-height:1.2}
+    .quick-link span{color:var(--muted)}
+    .quick-link__eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--highlight)}
+    .quick-link--placeholder{background:linear-gradient(180deg,rgba(93,111,158,.05),rgba(255,255,255,.96));border-style:dashed}
+
+    .card{gap:14px;padding:20px;min-height:208px;justify-content:flex-start}
+    .card h3{margin:0;font-size:20px;line-height:1.2}
+    .card p{margin:0;color:var(--muted);max-width:30ch}
+    .card-copy{display:grid;gap:8px}
+    .card-mark{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:12px;background:rgba(47,78,162,.1);color:var(--highlight);font-size:14px;font-weight:800;letter-spacing:.06em}
+    .card--primary{border-color:rgba(47,78,162,.24);background:linear-gradient(180deg,rgba(47,78,162,.08),rgba(255,255,255,.98))}
+    .card--primary .card-mark{background:linear-gradient(180deg,rgba(47,78,162,.2),rgba(47,78,162,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+    .card--placeholder{background:linear-gradient(180deg,rgba(93,111,158,.05),rgba(255,255,255,.96));border-style:dashed;border-color:rgba(93,111,158,.24)}
+    .card--placeholder .card-mark{background:rgba(93,111,158,.1);color:var(--muted)}
+    .card--placeholder p{color:#6e7b9d}
+    .section-note{margin:0}
+
+    .module-grid .card[data-status="Live"]::after{background:rgba(19,135,84,.14);color:#138754;border-color:rgba(19,135,84,.22)}
+    .module-grid .card[data-status="Coming Soon"]::after{background:rgba(93,111,158,.12);color:var(--muted);border-color:rgba(93,111,158,.18)}
+
+    .quick-link:focus-visible,.module-grid .card:focus-visible{transform:translateY(-1px);border-color:rgba(47,78,162,.48);box-shadow:0 0 0 4px rgba(47,78,162,.12),0 18px 36px rgba(15,27,63,.18)}
+    .panel pre{background:#f8faff;border:1px solid var(--border);border-radius:12px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:13px;color:var(--muted)}
+
+    #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.25);box-shadow:0 16px 30px rgba(15,27,63,.18);font-weight:700}
+
+    @media (max-width:1120px){
+      .hero-shell{grid-template-columns:minmax(0,1fr) minmax(300px,1fr)}
+      .hero-copy{grid-column:1 / -1}
+    }
+
+    @media (max-width:720px){
+      .section-head{align-items:flex-start}
+      .card{min-height:unset}
+      .quick-link{min-height:unset}
+      .shortlink-fields,.shortlink-result__row,.hero-shell{grid-template-columns:1fr}
+      .shortlink-item__top{flex-direction:column}
+    }
+
+    @media (min-width:1100px){
+      .quick-strip-panel,.module-shell{grid-column:1 / 2}
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/admin.auth.experience.css?v=3" />
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
+<style id="hmj-preview-force-app">#gate,[data-preview-hide="gate"]{display:none !important;}#app,#content{display:grid !important;visibility:visible !important;opacity:1 !important;}body{min-height:100vh !important;}</style>
+</head>
+<body data-auth-view="login">
+  <div class="top"><div class="row">
+    <div class="brand">HMJ Global Admin</div>
+    <div class="sp"></div>
+    <a class="btn outline" href="/">← Website</a>
+    <button class="btn outline" type="button" data-admin-logout hidden aria-hidden="true">Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <section class="auth-gate" aria-labelledby="gateHeading">
+      <div class="auth-grid">
+        <div class="auth-overview auth-surface">
+          <div class="auth-kicker-row">
+            <p class="eyebrow">Secure team access</p>
+            <span class="auth-security-badge">Authorised HMJ access</span>
+          </div>
+          <div>
+            <h1 id="gateHeading" data-gate-heading>Secure admin sign-in</h1>
+            <p class="muted auth-lede why">Authorised HMJ team access only. Sign in with your work email to continue.</p>
+          </div>
+
+          <div class="auth-bullet-grid" aria-label="Portal overview">
+            <article class="auth-bullet">
+              <strong>Who should use this page</strong>
+              <p class="muted">Authorised HMJ team members using an approved work account.</p>
+            </article>
+            <article class="auth-bullet">
+              <strong>Before you continue</strong>
+              <p class="muted">Use your HMJ work email, or open your latest invite or password email on this page.</p>
+            </article>
+            <article class="auth-bullet">
+              <strong>Protected access</strong>
+              <p class="muted">This area remains behind secure sign-in and role-based access checks.</p>
+            </article>
+          </div>
+
+          <section class="auth-status" aria-live="polite" aria-labelledby="authStateTitle">
+            <div class="auth-status__header">
+              <div>
+                <p class="eyebrow">Access help</p>
+                <h3 id="authStateTitle">Access guidance</h3>
+              </div>
+              <span class="auth-context-badge" id="authContextBadge">Authorised HMJ access</span>
+            </div>
+            <p class="muted" id="authStateCopy">Use your HMJ work email to sign in, reset your password, or complete an access email on this page.</p>
+            <ol class="auth-step-list" id="authStateSteps">
+              <li data-step="1"><div><strong>Sign in with your HMJ email</strong><span>Use the HMJ admin sign-in form with the work email tied to your admin account.</span></div></li>
+              <li data-step="2"><div><strong>Reset a forgotten password</strong><span>Send yourself a fresh password reset email if you cannot sign in.</span></div></li>
+              <li data-step="3"><div><strong>Need first-time access?</strong><span>Open your latest invite email on this page, or contact HMJ access support if it has expired.</span></div></li>
+            </ol>
+          </section>
+        </div>
+
+        <aside class="auth-card auth-surface" aria-labelledby="authCardHeading">
+          <div class="auth-card__head">
+            <p class="eyebrow">Secure access</p>
+            <h2 id="authCardHeading">Sign in to continue</h2>
+            <p class="muted auth-card__intro" id="authCardIntro">Use your HMJ work email and password to open the secure admin workspace.</p>
+          </div>
+
+          <div class="auth-message" id="authMessage" data-auth-message hidden></div>
+
+          <form id="authLoginForm" class="auth-login-form" data-auth-login-form novalidate>
+            <label class="auth-field">
+              <span>Work email</span>
+              <input id="authLoginEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@hmj-global.com" />
+            </label>
+
+            <label class="auth-field">
+              <span>Password</span>
+              <div class="auth-password-wrap">
+                <input id="authLoginPassword" type="password" autocomplete="current-password" placeholder="Enter your password" />
+                <button class="auth-password-toggle" type="button" data-password-toggle="authLoginPassword" aria-pressed="false">Show</button>
+              </div>
+            </label>
+
+            <div class="auth-form-actions auth-form-actions--stack">
+              <button class="btn" id="authLoginSubmit" type="submit">Sign in</button>
+              <div class="auth-inline-links auth-inline-links--compact">
+                <a id="authForgotLink" href="/admin/forgot-password.html">Forgot password?</a>
+                <a data-auth-support-link href="mailto:info@hmj-global.com?subject=HMJ%20Admin%20Access%20Help">Account help</a>
+              </div>
+            </div>
+          </form>
+
+          <div class="auth-divider" aria-hidden="true"></div>
+
+          <div class="auth-actions">
+            <button class="btn outline" type="button" data-auth-action="continue-token" hidden>Continue secure email link</button>
+          </div>
+
+          <div class="auth-secondary-actions">
+            <a class="btn outline" href="/">Back to main site</a>
+            <a class="btn outline" data-auth-support-link href="mailto:info@hmj-global.com?subject=HMJ%20Admin%20Access%20Help">Get access help</a>
+          </div>
+
+          <div class="auth-help-grid" aria-label="Password help options">
+            <button class="auth-link-card" type="button" data-auth-toggle="reset" aria-pressed="false">
+              <strong>Reset password</strong>
+              <span>Send a fresh reset email to your HMJ work inbox.</span>
+            </button>
+            <button class="auth-link-card" type="button" data-auth-toggle="setup" aria-pressed="false">
+              <strong>Create / set password</strong>
+              <span>Use your invite or setup email here, or get help if it has expired.</span>
+            </button>
+          </div>
+
+          <form id="authRecoveryForm" class="auth-recovery-form" data-auth-recovery-form novalidate>
+            <label class="auth-field">
+              <span>Work email</span>
+              <input id="authRecoveryEmail" type="email" autocomplete="email" inputmode="email" placeholder="name@hmj-global.com" />
+            </label>
+            <div class="auth-form-actions">
+              <button class="btn outline" id="authRecoverySubmit" type="submit">Send password reset</button>
+              <p class="auth-inline-hint" id="authRecoveryNote">Use your HMJ work email. If you never created a password and your invite has expired, contact HMJ access support.</p>
+            </div>
+          </form>
+
+          <div class="auth-inline-links">
+            <a href="/">Back to site</a>
+            <a data-auth-support-link href="mailto:info@hmj-global.com?subject=HMJ%20Admin%20Access%20Help">Account help</a>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section id="notesBoard" class="panel notes-board" hidden></section>
+
+    <section class="panel hero" aria-labelledby="welcomeHeading">
+      <div class="hero-shell">
+        <div class="hero-copy">
+          <div class="hero-main">
+            <div>
+              <p class="eyebrow">Welcome back</p>
+              <h2 id="welcomeHeading">Admin</h2>
+              <p class="muted" id="welcomeMeta">Loading user…</p>
+            </div>
+            <div class="hero-meta" aria-live="polite" id="envMeta">Environment • Detecting…</div>
+          </div>
+          <p class="muted hero-copy__intro">Open the live HMJ modules below, or use the utility panel to create clean branded short links for specs, forms, and other shareable resources.</p>
+          <div class="hero-actions">
+            <a href="/admin/account.html" class="btn ghost small">Account</a>
+            <button id="themeToggle" class="btn ghost small" aria-pressed="false" title="Toggle theme">🌓</button>
+            <details class="view-settings">
+              <summary class="btn ghost small" aria-haspopup="true">View options</summary>
+              <div class="view-panel" role="group" aria-label="Dashboard view preferences">
+                <label class="switch">
+                  <span>Future module order</span>
+                  <select id="tileOrderSelect">
+                    <option value="default">Default</option>
+                    <option value="alpha">A → Z</option>
+                    <option value="recent">Most recent</option>
+                  </select>
+                </label>
+                <button type="button" class="btn ghost small" id="resetView">Reset view</button>
+              </div>
+            </details>
+          </div>
+          <div class="hero-brandmark" aria-hidden="true">
+            <img src="/images/logo.png" alt="" loading="eager" decoding="async"/>
+          </div>
+        </div>
+
+        <aside class="shortlink-panel shortlink-panel--builder" aria-labelledby="shortLinkHeading">
+          <div class="shortlink-panel__head">
+            <div>
+              <p class="eyebrow">Admin utility</p>
+              <h3 id="shortLinkHeading">Short links</h3>
+            </div>
+            <span class="shortlink-badge">Internal create only</span>
+          </div>
+          <p class="muted shortlink-panel__intro">Create clean HMJ links at <strong>/go/:slug</strong> for jobs, forms, specs, and polished outbound sharing.</p>
+
+          <form id="shortLinkForm" class="shortlink-form" novalidate>
+            <div class="shortlink-fields">
+              <label class="utility-field">
+                <span>Label</span>
+                <input id="shortLinkTitle" type="text" maxlength="120" placeholder="Candidate pack"/>
+              </label>
+              <label class="utility-field">
+                <span>Short code</span>
+                <input id="shortLinkSlug" type="text" maxlength="80" inputmode="text" placeholder="Leave blank to auto-generate"/>
+              </label>
+              <label class="utility-field utility-field--wide">
+                <span>Destination URL</span>
+                <input id="shortLinkDestination" type="url" required placeholder="https://example.com/long/path"/>
+              </label>
+            </div>
+            <p class="utility-note" id="shortLinkPreview">Leave the short code blank to auto-generate a clean HMJ short link.</p>
+            <div class="shortlink-actions">
+              <button type="button" class="btn outline small" id="btnSuggestShortLink">Suggest code</button>
+              <button type="submit" class="btn small" id="btnCreateShortLink">Generate link</button>
+            </div>
+          </form>
+
+          <div class="shortlink-feedback" id="shortLinkFeedback" hidden></div>
+
+          <section class="shortlink-result" id="shortLinkResult" hidden aria-labelledby="shortLinkResultHeading">
+            <div>
+              <p class="eyebrow">Generated link</p>
+              <h4 id="shortLinkResultHeading" style="margin:4px 0 0;font-size:16px">Ready to copy</h4>
+            </div>
+            <div class="shortlink-result__row">
+              <input id="shortLinkOutput" type="text" readonly aria-label="Generated HMJ short link"/>
+              <button type="button" class="btn outline small" id="btnCopyShortLink">Copy</button>
+              <a class="btn small" id="shortLinkOpen" target="_blank" rel="noopener" hidden aria-hidden="true">Open</a>
+            </div>
+            <p class="utility-note" id="shortLinkMeta"></p>
+          </section>
+        </aside>
+
+        <aside class="shortlink-panel shortlink-panel--history" aria-labelledby="shortLinkHistoryHeading">
+          <div class="shortlink-panel__head">
+            <div>
+              <p class="eyebrow">Recent links</p>
+              <h3 id="shortLinkHistoryHeading">Reuse recent HMJ links</h3>
+            </div>
+            <button type="button" class="btn outline small" id="btnRefreshShortLinks">Refresh</button>
+          </div>
+          <p class="muted shortlink-panel__intro">Open, reuse, or copy the latest branded links without scrolling through a long utility stack.</p>
+          <section class="shortlink-history" aria-labelledby="shortLinkHistoryHeading">
+            <div class="shortlink-list" id="shortLinkList" aria-live="polite"></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section class="panel quick-strip-panel" aria-labelledby="quickAccessHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Quick access</p>
+          <h3 id="quickAccessHeading">Admin Summary</h3>
+        </div>
+        <p class="muted">Jump straight into the core admin areas without digging through the full dashboard.</p>
+      </div>
+      <nav class="quick-grid" aria-label="Quick admin links">
+        <a class="quick-link" href="/admin/jobs.html" aria-label="Open Jobs quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Jobs</strong>
+          <span>Manage live roles, specs, and vacancy publishing.</span>
+        </a>
+        <a class="quick-link" href="/admin/credit-limit-forecaster.html" aria-label="Open Credit Limit Forecaster quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Credit Limit Forecaster</strong>
+          <span>Forecast insured limit headroom, receipt timing, and safe contractor capacity by client account.</span>
+        </a>
+        <a class="quick-link" href="/admin/candidate-matcher.html" aria-label="Open Candidate Matcher quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Candidate Matcher</strong>
+          <span>Upload CVs privately and compare candidates against live HMJ roles.</span>
+        </a>
+        <a class="quick-link" href="/admin/noticeboard.html" aria-label="Open Noticeboard quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Noticeboard</strong>
+          <span>Publish premium About Us updates with scheduling, imagery, and public visibility control.</span>
+        </a>
+        <a class="quick-link" href="/admin/team.html" aria-label="Open Team quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Team</strong>
+          <span>Manage the live About Us team cards, image uploads, ordering, and publish state without editing code.</span>
+        </a>
+        <a class="quick-link" href="/admin/analytics.html" aria-label="Open Website Analytics quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Website Analytics</strong>
+          <span>Review live page views, visitor journeys, time on page, landing and exit behaviour, and CTA engagement.</span>
+        </a>
+        <a class="quick-link" href="/admin/chatbot.html" aria-label="Open Website Assistant quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Website Assistant</strong>
+          <span>Control the live website chatbot, quick replies, GPT instructions, and stored visitor conversations.</span>
+        </a>
+      </nav>
+    </section>
+
+    <section class="panel module-shell" id="future-modules" aria-labelledby="futureModulesHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Operations workspaces</p>
+          <h3 id="futureModulesHeading">More Admin Areas</h3>
+        </div>
+        <p class="muted">Use these direct workspace links for day-to-day client, candidate, assignment, payroll, and reporting work without going through a generic CRM landing page.</p>
+      </div>
+      <section class="module-grid grid" aria-label="Admin modules" data-tile-order>
+        <a class="card card--primary" id="placeholder-1" href="/admin/clients.html" data-status="Live" aria-labelledby="placeholder1Title" aria-describedby="placeholder1Desc">
+          <span class="card-mark" aria-hidden="true">CL</span>
+          <div class="card-copy">
+            <h3 id="placeholder1Title">Clients</h3>
+            <p id="placeholder1Desc">Open the live client console for contact records, billing details, assignment visibility, and account-level admin updates.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-2" href="/admin/candidates.html" data-status="Live" aria-labelledby="placeholder2Title" aria-describedby="placeholder2Desc">
+          <span class="card-mark" aria-hidden="true">CA</span>
+          <div class="card-copy">
+            <h3 id="placeholder2Title">Candidates</h3>
+            <p id="placeholder2Desc">Review candidate records, notes, pipeline detail, and related internal hiring activity in one workspace.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-3" href="/admin/assignments.html" data-status="Live" aria-labelledby="placeholder3Title" aria-describedby="placeholder3Desc">
+          <span class="card-mark" aria-hidden="true">AS</span>
+          <div class="card-copy">
+            <h3 id="placeholder3Title">Assignments</h3>
+            <p id="placeholder3Desc">Manage active placements, assignment terms, status tracking, and linked commercial records.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-4" href="/admin/payroll.html" data-status="Live" aria-labelledby="placeholder4Title" aria-describedby="placeholder4Desc">
+          <span class="card-mark" aria-hidden="true">PY</span>
+          <div class="card-copy">
+            <h3 id="placeholder4Title">Payroll</h3>
+            <p id="placeholder4Desc">Open the payroll console for reconciliation, week numbering, timesheet-linked margin checks, and payroll admin tasks.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-5" href="/admin/reports.html" data-status="Live" aria-labelledby="placeholder5Title" aria-describedby="placeholder5Desc">
+          <span class="card-mark" aria-hidden="true">RP</span>
+          <div class="card-copy">
+            <h3 id="placeholder5Title">Reports</h3>
+            <p id="placeholder5Desc">Go straight to reporting, week configuration, reconciliation tools, and cross-module operational checks.</p>
+          </div>
+        </a>
+        <a class="card card--primary" id="placeholder-6" href="/admin/settings.html" data-status="Live" aria-labelledby="placeholder6Title" aria-describedby="placeholder6Desc">
+          <span class="card-mark" aria-hidden="true">ST</span>
+          <div class="card-copy">
+            <h3 id="placeholder6Title">Settings</h3>
+            <p id="placeholder6Desc">Open platform tools, recent activity, deploy health, and useful admin and public website links from one settings workspace.</p>
+          </div>
+        </a>
+      </section>
+      <p class="section-note muted" id="settings-placeholder">The quick access strip above covers the headline modules. This section now avoids duplicates, while Settings holds the platform tools and recent activity that no longer need to dominate the dashboard.</p>
+    </section>
+  </div>
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+  (function startDashboard(){
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+      return setTimeout(startDashboard, 40);
+    }
+
+    window.Admin.bootAdmin(async (helpers) => {
+      const { identity, sel, toast } = helpers;
+      try {
+        const who = await identity('admin');
+        if (who?.ok) {
+          const signOutButton = sel('[data-admin-logout]');
+          if (signOutButton) {
+            signOutButton.hidden = false;
+            signOutButton.removeAttribute('aria-hidden');
+          }
+          sel('#welcomeMeta').textContent = `Signed in as ${who.email || 'admin user'}`;
+          if (window.HMJDashboardEnhancer && typeof window.HMJDashboardEnhancer.init === 'function') {
+            window.HMJDashboardEnhancer.init({ helpers, who });
+          }
+          if (window.HMJShortLinks && typeof window.HMJShortLinks.init === 'function') {
+            window.HMJShortLinks.init({ helpers, who });
+          }
+        }
+      } catch (e) {
+        toast('Unable to load user details', 'warn', 2600);
+      }
+
+    });
+  })();
+  </script>
+<script id="hmj-preview-force-script">(function(){function force(){var style=document.getElementById("hmj-preview-force-app");if(!style){style=document.createElement("style");style.id="hmj-preview-force-app";style.textContent="#gate,[data-preview-hide=\"gate\"]{display:none !important;}#app,#content{display:grid !important;visibility:visible !important;opacity:1 !important;}body{min-height:100vh !important;}";document.head.appendChild(style);} var app=document.getElementById("app"); if(app){app.hidden=false; app.style.display="grid";} var content=document.getElementById("content"); if(content){content.hidden=false; content.style.display="grid";} var gate=document.getElementById("gate"); if(gate){gate.hidden=true; gate.style.display="none";}} force(); window.addEventListener("load", force); setInterval(force, 120);}());</script>
+</body>
+</html>

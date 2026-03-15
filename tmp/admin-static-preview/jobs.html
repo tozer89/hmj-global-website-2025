@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Jobs — Admin | HMJ Global</title>
+
+  
+  
+  
+  
+  
+
+  <style>
+    :root{
+      --bg:#f4f6ff; --panel:#ffffff; --border:#d7def3; --highlight:#2f4ea2; --accent:#3f66c7;
+      --ink:#0f1b3f; --muted:#5d6f9e; --chip:#eef2ff; --danger:#b42318; --ok:#138754;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:inherit}
+
+    .top{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 10px 28px rgba(15,27,63,.18)}
+    .row{max-width:1420px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px}
+    .brand{font-weight:800;letter-spacing:.02em;font-size:16px}
+    .sp{flex:1}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.32);color:#f5f7ff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+
+    .btn{background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.04));color:var(--ink);border:1px solid rgba(47,78,162,.25);padding:9px 15px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(47,78,162,.18);border-color:rgba(47,78,162,.45)}
+    .btn.ghost{background:#fff;border-color:rgba(47,78,162,.18);color:var(--highlight)}
+    .btn.primary{background:linear-gradient(180deg,rgba(47,78,162,.22),rgba(47,78,162,.12));border-color:rgba(47,78,162,.55);color:#fff;box-shadow:0 12px 28px rgba(47,78,162,.22)}
+    .btn.danger{background:linear-gradient(180deg,rgba(180,35,24,.18),rgba(180,35,24,.08));border-color:rgba(180,35,24,.4);color:#fff}
+    .btn.small{padding:7px 12px;font-size:13px;border-radius:10px}
+    .btn:disabled,.btn.disabled{cursor:not-allowed;opacity:.55;box-shadow:none;transform:none}
+
+    .wrap{max-width:1420px;margin:24px auto;padding:0 20px;display:grid;gap:18px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(15,27,63,.12)}
+    .panel.notice{display:none;background:#eef2ff;border:1px solid rgba(47,78,162,.25);color:var(--highlight);font-weight:600;gap:6px}
+    .panel.notice[data-tone="warn"]{background:#fff8e8;border-color:rgba(122,91,0,.22);color:#7a5b00}
+    .panel.notice[data-tone="ok"]{background:#ecfdf3;border-color:rgba(19,135,84,.24);color:#0f6b43}
+    .panel.notice[data-tone="info"]{background:#eef2ff;border-color:rgba(47,78,162,.25);color:var(--highlight)}
+    .panel h2{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
+    .muted{color:var(--muted)}
+    .gate-panel{display:grid;gap:12px}
+    .gate-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .gate-help{margin:0;padding-left:18px;color:var(--muted)}
+
+    .status-panel{display:grid;gap:14px}
+    .status-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px;align-items:flex-start}
+    .status-copy{display:grid;gap:6px}
+    .status-summary{font-weight:700;color:var(--ink)}
+    .status-chips{display:flex;flex-wrap:wrap;gap:10px}
+    .status-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#f8faff;color:var(--ink);font-weight:800;font-size:12px;letter-spacing:.03em}
+    .status-chip::before{content:'';width:8px;height:8px;border-radius:999px;background:currentColor;opacity:.7}
+    .status-chip[data-tone="neutral"]{background:#f8faff;color:var(--muted)}
+    .status-chip[data-tone="live"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.26);color:var(--ok)}
+    .status-chip[data-tone="ok"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.26);color:var(--ok)}
+    .status-chip[data-tone="warn"]{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.36);color:#8a5a00}
+    .status-chip[data-tone="error"]{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.28);color:var(--danger)}
+    .status-detail{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .status-detail .slot{background:#f8faff;border:1px solid rgba(47,78,162,.12);border-radius:14px;padding:12px}
+    .status-detail span{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .status-detail strong{display:block;margin-top:5px;font-size:14px;color:var(--ink)}
+
+    .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .filters-grid .search{grid-column:span 2;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid rgba(47,78,162,.15);border-radius:12px;padding:6px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+    .filters-grid .search input{flex:1;background:transparent;border:0;color:var(--ink);font:inherit;padding:4px 0}
+    .filters-grid select{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink);font-weight:600}
+    .filters-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+    .filters-panel{position:relative;overflow:visible}
+    .filters-sticky-shell{position:sticky;top:var(--filters-sticky-top,84px);z-index:80;display:grid;gap:12px;padding:0 0 14px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(244,247,255,.9));backdrop-filter:blur(16px)}
+    .filters-panel.is-stuck .filters-sticky-shell{padding-bottom:10px;border-bottom:1px solid rgba(47,78,162,.12);box-shadow:0 16px 32px rgba(15,27,63,.12)}
+    .batch-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:16px;border:1px solid rgba(47,78,162,.16);background:rgba(248,250,255,.98);box-shadow:0 14px 28px rgba(15,27,63,.08)}
+    .batch-toolbar__summary{display:grid;gap:3px;min-width:0}
+    .batch-toolbar__summary strong{font-size:14px;line-height:1.2}
+    .batch-toolbar__actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .category-tools{display:grid;gap:12px;padding-top:6px;border-top:1px solid rgba(47,78,162,.1)}
+    .category-tools__head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start}
+    .category-tools__copy{display:grid;gap:4px}
+    .category-tools__copy h2{margin:0;font-size:15px}
+    .category-tools__body{display:grid;gap:14px;overflow:hidden;max-height:420px;opacity:1;transition:max-height .28s ease,opacity .2s ease,margin-top .2s ease}
+    .category-tools.is-collapsed .category-tools__body{max-height:0;opacity:0;margin-top:-6px;pointer-events:none}
+    .category-tools__section{display:grid;gap:8px}
+    .category-tools__label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+    .chip-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.25);background:var(--chip);cursor:pointer;font-weight:700;font-size:13px;color:var(--highlight);transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .chip .dot{width:8px;height:8px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 2px rgba(47,78,162,.2)}
+    .chip.active{border-color:rgba(47,78,162,.55);background:rgba(47,78,162,.12);transform:translateY(-1px);box-shadow:0 12px 24px rgba(47,78,162,.18)}
+    .chip-list--preview{margin-top:0}
+    .chip-list--compact{max-height:120px;overflow:auto;padding-right:4px}
+    .chip-list--compact::-webkit-scrollbar{width:8px}
+    .chip-list--compact::-webkit-scrollbar-thumb{background:rgba(47,78,162,.22);border-radius:999px}
+
+    .section-form{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .section-form input{flex:1;min-width:220px;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
+
+    .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:start}
+    .board.board--dense{gap:12px}
+    .board.board--dense .column{padding:12px}
+    .column{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;display:grid;gap:10px;min-height:240px;position:relative}
+    .column.drag-target{border-color:rgba(47,78,162,.65);box-shadow:0 0 0 2px rgba(47,78,162,.35)}
+    .column-header{display:flex;align-items:center;gap:8px;justify-content:space-between}
+    .column-header h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
+    .column-header .count{padding:2px 8px;border-radius:999px;background:#eef2ff;font-size:12px;color:var(--highlight);font-weight:700}
+    .column-body{display:grid;gap:10px;min-height:150px}
+    .drop-zone{flex:1;border:1px dashed rgba(47,78,162,.25);border-radius:14px;padding:20px;display:grid;place-items:center;color:var(--muted);font-weight:600;background:#f7f8ff}
+
+    .card{position:relative;background:#fff;border:1px solid rgba(47,78,162,.18);border-radius:16px;padding:14px 14px 12px;display:grid;gap:8px;cursor:grab;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease,background .2s ease}
+    .card:active{cursor:grabbing}
+    .card:hover{transform:translateY(-2px);box-shadow:0 18px 32px rgba(15,27,63,.18);border-color:rgba(47,78,162,.45)}
+    .card.is-selected{border-color:rgba(47,78,162,.58);box-shadow:0 0 0 3px rgba(47,78,162,.15),0 18px 34px rgba(15,27,63,.16);background:linear-gradient(180deg,rgba(47,78,162,.06),rgba(255,255,255,.98))}
+    .board.board--dense .card{padding:12px 12px 10px;gap:6px}
+    .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .card-select{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#f8faff;cursor:pointer;flex:0 0 auto}
+    .card-select input{width:16px;height:16px;margin:0;accent-color:var(--highlight)}
+    .card-main{display:grid;gap:4px;min-width:0}
+    .card h4{margin:0;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:6px}
+    .card-subhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .card-inline-controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+    .card-inline-select{min-height:34px;padding:7px 10px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#f8faff;color:var(--ink);font-weight:800;font-size:12px;letter-spacing:.02em}
+    .card-inline-select:disabled{opacity:.65}
+    .card-meta{display:grid;gap:4px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(47,78,162,.12);color:var(--highlight);text-transform:uppercase;letter-spacing:.05em}
+    .badge.live{background:rgba(17,137,84,.12);color:#0f5132;border:1px solid rgba(17,137,84,.28)}
+    .badge.interviewing{background:rgba(250,204,21,.14);color:#854d0e;border:1px solid rgba(250,204,21,.35)}
+    .badge.closed{background:rgba(180,35,24,.12);color:#842029;border:1px solid rgba(180,35,24,.35)}
+    .tags{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+    .tags span{padding:3px 7px;border-radius:999px;background:rgba(47,78,162,.12);border:1px solid rgba(47,78,162,.35);color:var(--highlight);font-weight:600}
+    .card footer{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+    .card footer button{background:transparent;border:0;color:var(--highlight);font-weight:700;cursor:pointer}
+    .card footer button:hover{text-decoration:underline}
+    .card-updated{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#f7f9ff;border:1px solid rgba(47,78,162,.14);color:var(--muted);font-weight:700}
+
+    body.modal-open{overflow:hidden}
+    .modal-shell,.confirm-shell{position:fixed;inset:0;z-index:240;display:grid;place-items:center;padding:24px}
+    .modal-backdrop{position:absolute;inset:0;background:rgba(15,27,63,.46);backdrop-filter:blur(8px)}
+    .modal-panel,.confirm-panel{position:relative;display:grid;background:linear-gradient(180deg,#f8f9ff,#eef3ff);border:1px solid rgba(215,222,243,.85);box-shadow:0 28px 64px rgba(15,27,63,.28)}
+    .modal-panel{grid-template-rows:auto 1fr auto;width:min(960px,100%);max-height:min(88dvh,100%);border-radius:26px;overflow:hidden}
+    .modal-head,.modal-foot{padding:18px 22px;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}
+    .modal-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:14px;align-items:flex-start;border-bottom:1px solid rgba(215,222,243,.92)}
+    .modal-head__copy{display:grid;gap:6px;min-width:0}
+    .modal-body{padding:18px 22px;overflow:auto;display:grid;gap:18px}
+    .modal-foot{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center;border-top:1px solid rgba(215,222,243,.92)}
+    .modal-foot__copy{display:grid;gap:4px;min-width:0}
+    .modal-summary-card{display:grid;gap:12px;padding:16px;border-radius:18px;border:1px solid rgba(47,78,162,.16);background:rgba(255,255,255,.9)}
+    .batch-preview-list{display:grid;gap:8px;margin:0;padding-left:18px;color:var(--ink)}
+    .batch-form{display:grid;gap:14px}
+    .confirm-panel{width:min(520px,100%);padding:22px;border-radius:22px;gap:14px}
+    .confirm-panel.is-danger{border-color:rgba(180,35,24,.34);box-shadow:0 28px 64px rgba(122,26,26,.24)}
+    .confirm-panel.is-danger .confirm-details{background:rgba(255,246,246,.96);border-color:rgba(180,35,24,.24)}
+    .confirm-details{display:grid;gap:8px;padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.16);background:rgba(255,255,255,.92)}
+    .confirm-details strong{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .batch-pay-field.is-hidden{display:none}
+
+    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(680px,92vw);background:#f8f9ff;border-left:1px solid var(--border);box-shadow:-24px 0 60px rgba(15,27,63,.24);transform:translateX(100%);transition:transform .24s ease;display:grid;grid-template-rows:auto 1fr auto;z-index:200}
+    .drawer.open{transform:translateX(0)}
+    .drawer-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:#fff}
+    .drawer-body{padding:18px 22px;overflow:auto;display:grid;gap:18px}
+    .drawer-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;background:#fff}
+    .drawer h3{margin:0;font-size:18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .field{display:grid;gap:6px}
+    .field.is-hidden{display:none}
+    .field label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+    .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink);font-weight:600;font-size:14px}
+    .field textarea{min-height:110px;resize:vertical}
+    .field-note{margin:0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5;text-transform:none;letter-spacing:0}
+    .switch{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--highlight)}
+    .switch input{width:18px;height:18px}
+    .tag-editor{display:flex;flex-wrap:wrap;gap:8px;background:#f4f6ff;border:1px solid rgba(47,78,162,.18);border-radius:12px;padding:10px}
+    .tag-editor .token{padding:6px 10px;border-radius:999px;background:rgba(47,78,162,.12);display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--highlight)}
+    .tag-editor .token button{background:transparent;border:0;color:var(--highlight);font-weight:900;cursor:pointer}
+    .tag-editor input{flex:1;min-width:140px;border:0;background:transparent;color:var(--ink);font-weight:600;padding:4px}
+    .public-visibility{display:grid;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(47,78,162,.18);background:#f8faff}
+    .public-visibility__head{display:grid;gap:6px}
+    .public-visibility__head strong{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .public-visibility__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+    .check-item{display:grid;gap:6px;padding:12px 13px;border-radius:14px;border:1px solid rgba(47,78,162,.14);background:#fff}
+    .check-item__top{display:flex;gap:10px;align-items:flex-start}
+    .check-item input{margin-top:2px;width:18px;height:18px}
+    .check-item span{font-weight:800;color:var(--ink)}
+    .check-item small{color:var(--muted);font-size:12px;line-height:1.45}
+
+    .share-box{display:grid;gap:10px;background:#f4f6ff;border:1px solid rgba(47,78,162,.2);border-radius:14px;padding:14px}
+    .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
+    .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
+    .share-box .share-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .board.busy{opacity:.7;pointer-events:none;transition:opacity .18s ease}
+    .drawer[data-busy="true"] .drawer-foot,
+    .drawer[data-busy="true"] .drawer-head{opacity:.92}
+    .field--wide{grid-column:1 / -1}
+    .jobs-drawer{background:linear-gradient(180deg,#f8f9ff,#eef3ff)}
+    .jobs-drawer .drawer-head{position:sticky;top:0;z-index:3;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:flex-start}
+    .drawer-head__main{display:grid;gap:6px;min-width:0}
+    .drawer-head__eyebrow{margin:0;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+    .drawer-head__title{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+    .drawer-head__meta{font-size:13px;line-height:1.45}
+    .drawer-head__actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+    .switch--publish{padding:8px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.16);background:#f4f6ff}
+    .editor-status-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid rgba(47,78,162,.2);background:#f8faff;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+    .editor-status-pill::before{content:'';width:8px;height:8px;border-radius:999px;background:currentColor;opacity:.7}
+    .editor-status-pill[data-tone="ok"],.editor-status-pill[data-tone="live"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.26);color:var(--ok)}
+    .editor-status-pill[data-tone="warn"]{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.34);color:#8a5a00}
+    .editor-status-pill[data-tone="error"]{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.28);color:var(--danger)}
+    .editor-form{display:grid;gap:14px}
+    .editor-jumpnav{position:sticky;top:-18px;z-index:2;display:flex;gap:8px;overflow:auto;padding:4px 0 8px;margin:-4px 0 0;background:linear-gradient(180deg,#f8f9ff 70%,rgba(248,249,255,0))}
+    .editor-jumpnav::-webkit-scrollbar{display:none}
+    .editor-jump{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.16);background:rgba(255,255,255,.92);color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.04em;white-space:nowrap;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .editor-jump:hover,.editor-jump.active{transform:translateY(-1px);border-color:rgba(47,78,162,.42);box-shadow:0 14px 24px rgba(15,27,63,.12);background:#fff}
+    .editor-section{border:1px solid rgba(47,78,162,.16);border-radius:18px;background:#fff;box-shadow:0 16px 32px rgba(15,27,63,.08);overflow:hidden}
+    .editor-section + .editor-section{margin-top:0}
+    .editor-section[open]{box-shadow:0 20px 38px rgba(15,27,63,.1)}
+    .editor-section__summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;background:linear-gradient(180deg,rgba(47,78,162,.06),rgba(255,255,255,.94));cursor:pointer}
+    .editor-section__summary::-webkit-details-marker{display:none}
+    .editor-section__summary::after{content:'▾';font-size:14px;font-weight:900;color:var(--muted);transition:transform .18s ease}
+    .editor-section[open] .editor-section__summary::after{transform:rotate(180deg)}
+    .editor-section__summary-copy{display:grid;gap:4px;min-width:0}
+    .editor-section__summary-copy strong{font-size:15px;line-height:1.2}
+    .editor-section__summary-copy small{font-size:12px;line-height:1.45;color:var(--muted)}
+    .editor-section__meta{display:inline-flex;justify-content:flex-end;min-width:0;color:var(--muted);font-size:12px;font-weight:700;line-height:1.4;text-align:right}
+    .editor-section__body{display:grid;gap:16px;padding:0 18px 18px}
+    .drawer-foot__note{font-size:12px;line-height:1.4;color:var(--muted);max-width:30ch}
+    .drawer-foot__actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-left:auto}
+    .jobs-drawer .drawer-foot{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.96);backdrop-filter:blur(14px)}
+    .jobs-drawer .drawer-foot .btn{min-width:138px}
+
+    @media(max-width:820px){
+      .filters-sticky-shell{top:var(--filters-sticky-top,76px)}
+      .batch-toolbar{padding:12px}
+      .batch-toolbar__actions{width:100%}
+      .category-tools__head{align-items:stretch}
+      .category-tools__head .btn{width:100%}
+      .jobs-drawer{top:auto;left:0;right:0;bottom:0;width:100vw;max-width:100vw;height:min(92dvh,100%);border-left:0;border-top:1px solid var(--border);border-radius:24px 24px 0 0;box-shadow:0 -24px 56px rgba(15,27,63,.26);transform:translateY(102%)}
+      .jobs-drawer.open{transform:translateY(0)}
+      .jobs-drawer .drawer-head{padding:16px 16px 14px;border-radius:24px 24px 0 0;grid-template-columns:1fr}
+      .jobs-drawer .drawer-body{padding:14px 16px 18px;gap:14px}
+      .jobs-drawer .drawer-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+      .editor-jumpnav{top:-14px;padding:4px 0 10px}
+      .jobs-drawer .grid{gap:12px}
+      .field textarea{min-height:96px}
+      .modal-shell,.confirm-shell{padding:0;place-items:end stretch}
+      .modal-panel{width:100vw;max-height:min(92dvh,100%);border-radius:26px 26px 0 0}
+      .modal-head,.modal-body,.modal-foot{padding-inline:16px}
+      .modal-head{padding-top:16px}
+      .modal-foot{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+      .confirm-shell{place-items:center;padding:16px}
+      .confirm-panel{width:min(100%, 520px)}
+    }
+
+    @media(max-width:560px){
+      .filters-actions .btn{width:100%}
+      .filters-actions{align-items:stretch}
+      .batch-toolbar__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+      .batch-toolbar__actions .btn:last-child{grid-column:1 / -1}
+      .card-head{align-items:stretch}
+      .card-inline-controls{width:100%;justify-content:flex-start}
+      .card-inline-select{flex:1 1 140px}
+      .modal-foot{align-items:stretch}
+      .modal-foot .drawer-foot__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+      .modal-foot .drawer-foot__actions .btn{width:100%}
+      .drawer-head__actions{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+      .switch--publish{min-width:0}
+      .editor-section__summary{align-items:flex-start;padding:15px 16px}
+      .editor-section__meta{justify-content:flex-start;text-align:left}
+      .editor-section__body{padding:0 16px 16px}
+      .jobs-drawer .drawer-foot{align-items:stretch}
+      .drawer-foot__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;margin-left:0}
+      .jobs-drawer .drawer-foot .btn{width:100%;min-width:0}
+      .drawer-foot__note{max-width:none}
+    }
+
+    #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
+    #toast .notice{padding:10px 12px;border-radius:12px;background:#ffffff;border:1px solid rgba(47,78,162,.25);box-shadow:0 18px 34px rgba(15,27,63,.2);font-weight:700}
+
+    @media(max-width:820px){
+      .filters-grid .search{grid-column:span 1}
+      .column{min-height:200px}
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
+<style id="hmj-preview-force-app">#gate,[data-preview-hide="gate"]{display:none !important;}#app,#content{display:grid !important;visibility:visible !important;opacity:1 !important;}body{min-height:100vh !important;}</style>
+</head>
+<body>
+  <div class="top"><div class="row">
+    <div class="brand">Jobs Console</div>
+    <span class="pill">Admin</span>
+    <div class="sp"></div>
+    <a class="btn ghost" href="/">← Website</a>
+    <button class="btn ghost" id="btnDiag" title="Show diagnostics">◉</button>
+    <a class="btn ghost" href="/admin/">⟵ Dashboard</a>
+    <button class="btn" type="button" data-admin-logout>Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel gate-panel">
+      <h2>Jobs Console Access</h2>
+      <p class="muted why">Checking your session…</p>
+      <p class="muted">Sign in with your HMJ staff email. This page is only available to users with the <strong>admin</strong> role.</p>
+      <ul class="gate-help">
+        <li>If you are not signed in, use the login button below.</li>
+        <li>If you are signed in but still blocked, your HMJ account probably does not have admin access on this host yet.</li>
+      </ul>
+      <div class="gate-actions">
+        <button class="btn primary" type="button" data-admin-login>Log in with HMJ email</button>
+        <a class="btn ghost" href="/admin/">Back to admin home</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel status-panel" id="statusPanel">
+      <div class="status-row">
+        <div class="status-copy">
+          <h2>Console Status</h2>
+          <div class="status-summary" id="statusSummary">Checking your HMJ admin session and loading jobs…</div>
+        </div>
+        <div class="status-chips">
+          <span class="status-chip" id="sessionChip" data-tone="neutral">Session pending</span>
+          <span class="status-chip" id="authChip" data-tone="neutral">Access pending</span>
+          <span class="status-chip" id="modeChip" data-tone="neutral">Mode pending</span>
+          <span class="status-chip" id="activityChip" data-tone="neutral">Starting up</span>
+        </div>
+      </div>
+      <div class="status-detail">
+        <div class="slot">
+          <span>Signed in</span>
+          <strong id="statusUser">Checking session…</strong>
+        </div>
+        <div class="slot">
+          <span>Access</span>
+          <strong id="statusAccess">Verifying admin access…</strong>
+        </div>
+        <div class="slot">
+          <span>Data source</span>
+          <strong id="statusMode">Checking live jobs connection…</strong>
+        </div>
+        <div class="slot">
+          <span>Last refresh</span>
+          <strong id="statusTime">Not loaded yet</strong>
+        </div>
+      </div>
+    </section>
+    <section class="panel notice" id="readOnlyNotice" data-tone="warn">
+      <div id="readOnlyTitle">Read-only mode.</div>
+      <div class="muted" id="readOnlyBody">The live HMJ jobs system is currently unavailable. You can review the console state here, but changes cannot be saved until the connection is restored.</div>
+    </section>
+    <section class="panel notice" id="seedNotice" data-tone="info" style="display:none">
+      <div id="seedTitle">Imported from the legacy jobs board.</div>
+      <div class="muted" id="seedBody">These jobs came from the static site. Save a job to import it into Supabase and unlock sharing.</div>
+    </section>
+    <section class="panel filters-panel" id="filtersPanel">
+      <div class="filters-sticky-shell" id="filtersStickyShell">
+        <div class="filters-grid">
+          <div class="search"><svg width="16" height="16" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="m11 11 4 4"/></svg><input id="filterSearch" type="search" placeholder="Search title, location, keywords" autocomplete="off"/></div>
+          <select id="filterStatus">
+            <option value="all">Any status</option>
+            <option value="live">Live</option>
+            <option value="interviewing">Interviewing</option>
+            <option value="closed">Closed</option>
+          </select>
+          <select id="filterType">
+            <option value="all">Any type</option>
+            <option value="permanent">Permanent</option>
+            <option value="contract">Contract</option>
+            <option value="fixed-term">Fixed term</option>
+          </select>
+          <select id="filterPublished">
+            <option value="all">All visibility</option>
+            <option value="published">Published</option>
+            <option value="drafts">Draft only</option>
+          </select>
+          <select id="filterSection">
+            <option value="all">All categories</option>
+          </select>
+        </div>
+        <div class="filters-actions">
+          <div class="muted" id="resultMeta">Loading jobs…</div>
+          <div class="sp"></div>
+          <button class="btn ghost small" id="densityToggle" type="button" aria-pressed="false">Compact cards</button>
+          <button class="btn ghost small" id="clearFilters">Clear filters</button>
+          <button class="btn ghost small" id="btnRefresh">Refresh</button>
+          <button class="btn primary small" id="btnNew" data-readonly="true">＋ New job</button>
+        </div>
+        <div class="batch-toolbar" id="batchToolbar">
+          <div class="batch-toolbar__summary">
+            <strong id="selectedCount">0 selected</strong>
+            <span class="muted" id="batchScopeMeta">Select visible jobs to update them together.</span>
+          </div>
+          <div class="batch-toolbar__actions">
+            <button class="btn ghost small" id="selectVisible" type="button">Select all visible</button>
+            <button class="btn ghost small" id="clearSelection" type="button">Clear selection</button>
+            <button class="btn primary small" id="btnBatchAction" type="button">Batch action</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="category-tools" id="categoryTools">
+        <div class="category-tools__head">
+          <div class="category-tools__copy">
+            <h2>Category Tools</h2>
+            <div class="muted" id="categoryToolsMeta">Loading categories…</div>
+          </div>
+          <button class="btn ghost small" id="toggleCategoryTools" type="button" aria-expanded="false" aria-controls="categoryToolsBody">Show category tools</button>
+        </div>
+        <div class="chip-list chip-list--preview" id="categoryPreviewChips"></div>
+        <div class="category-tools__body" id="categoryToolsBody" hidden>
+          <div class="category-tools__section">
+            <div class="category-tools__label">Quick category filter</div>
+            <div class="chip-list" id="sectionFilterChips"></div>
+          </div>
+          <div class="category-tools__section">
+            <div class="category-tools__label">Tag filters</div>
+            <div class="chip-list chip-list--compact" id="tagFilterChips"></div>
+          </div>
+          <form class="section-form" id="addSectionForm">
+            <input id="newSectionInput" placeholder="Add new category heading (e.g. Critical Infrastructure)" autocomplete="off"/>
+            <button class="btn ghost small" type="submit">Add category</button>
+          </form>
+        </div>
+      </section>
+    </section>
+
+    <section class="board" id="boardColumns" aria-live="polite"></section>
+  </div>
+
+  <aside class="drawer jobs-drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <div class="drawer-head__main">
+        <p class="drawer-head__eyebrow">Jobs editor</p>
+        <div class="drawer-head__title">
+          <h3 id="drawerTitle">Job editor</h3>
+          <span class="editor-status-pill" id="editorStatusPill" data-tone="neutral">Draft</span>
+        </div>
+        <div class="muted drawer-head__meta" id="drawerMeta"></div>
+      </div>
+      <div class="drawer-head__actions">
+        <label class="switch switch--publish"><input type="checkbox" id="edPublished"/> Published</label>
+        <button class="btn ghost small" id="btnClose">Close</button>
+      </div>
+    </div>
+    <div class="drawer-body">
+      <div class="editor-jumpnav" id="editorJumpNav" aria-label="Job editor sections">
+        <button class="editor-jump active" type="button" data-editor-jump="basics">Basic info</button>
+        <button class="editor-jump" type="button" data-editor-jump="placement">Location &amp; client</button>
+        <button class="editor-jump" type="button" data-editor-jump="pay">Pay</button>
+        <button class="editor-jump" type="button" data-editor-jump="content">Content</button>
+        <button class="editor-jump" type="button" data-editor-jump="visibility">Visibility</button>
+        <button class="editor-jump" type="button" data-editor-jump="sharing">Sharing</button>
+      </div>
+      <form id="jobForm" autocomplete="off" class="editor-form">
+        <details class="editor-section" data-editor-section="basics" open>
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Basic info</strong>
+              <small>Core title, status, category, and ordering.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryBasics">Draft · Untitled role</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="grid">
+              <div class="field"><label for="edId">Job slug / ID</label><input id="edId" placeholder="auto"/></div>
+              <div class="field field--wide"><label for="edTitle">Title</label><input id="edTitle" required/></div>
+              <div class="field"><label for="edStatus">Status</label><select id="edStatus"><option value="live">Live</option><option value="interviewing">Interviewing</option><option value="closed">Closed</option></select></div>
+              <div class="field"><label for="edSection">Category heading</label><input id="edSection" list="sectionOptions" placeholder="e.g. Data Centre Delivery"/></div>
+              <div class="field"><label for="edDiscipline">Discipline</label><input id="edDiscipline"/></div>
+              <div class="field"><label for="edType">Employment type</label><select id="edType"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="fixed-term">Fixed term</option></select></div>
+              <div class="field"><label for="edSortOrder">Sort weight</label><input id="edSortOrder" type="number" step="1" min="0"/></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-section" data-editor-section="placement">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Location &amp; client</strong>
+              <small>Public location details plus internal client context.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryPlacement">Location pending</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="grid">
+              <div class="field">
+                <label for="edCustomer">Customer</label>
+                <input id="edCustomer" placeholder="Shown publicly if populated"/>
+                <p class="field-note">Public. This appears on the jobs page and shared spec if entered.</p>
+              </div>
+              <div class="field">
+                <label for="edClientName">Client name</label>
+                <input id="edClientName" placeholder="Internal client reference"/>
+                <p class="field-note">Internal only. Never shown on public job cards or share/spec pages.</p>
+              </div>
+              <div class="field"><label for="edLocationText">Location (display)</label><input id="edLocationText"/></div>
+              <div class="field"><label for="edLocationCode">Location code</label><input id="edLocationCode" placeholder="slug for filters"/></div>
+              <div class="field field--wide"><label for="edApply">Apply URL</label><input id="edApply" placeholder="Defaults to contact form"/></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-section" data-editor-section="pay">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Pay</strong>
+              <small>Choose how package details should appear publicly.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryPay">Package not specified</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="grid">
+              <div class="field">
+                <label for="edPayType">Pay display</label>
+                <select id="edPayType">
+                  <option value="">Not specified</option>
+                  <option value="day_rate">Day rate</option>
+                  <option value="salary_range">Salary range</option>
+                  <option value="hourly_range">Hourly range</option>
+                  <option value="competitive">Competitive</option>
+                  <option value="negotiable">Negotiable</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid" id="payFieldGrid">
+              <div class="field pay-field is-hidden" data-pay-types="day_rate salary_range hourly_range">
+                <label for="edCurrency">Currency code</label>
+                <input id="edCurrency" placeholder="GBP"/>
+                <p class="field-note">Optional. Defaults to GBP when a pay range is shown.</p>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="day_rate">
+                <label for="edDayRateMin">Day rate min</label>
+                <input id="edDayRateMin" type="number" min="0" step="0.01" placeholder="450"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="day_rate">
+                <label for="edDayRateMax">Day rate max</label>
+                <input id="edDayRateMax" type="number" min="0" step="0.01" placeholder="550"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="salary_range">
+                <label for="edSalaryMin">Salary min</label>
+                <input id="edSalaryMin" type="number" min="0" step="1" placeholder="65000"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="salary_range">
+                <label for="edSalaryMax">Salary max</label>
+                <input id="edSalaryMax" type="number" min="0" step="1" placeholder="80000"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="hourly_range">
+                <label for="edHourlyMin">Hourly min</label>
+                <input id="edHourlyMin" type="number" min="0" step="0.01" placeholder="28"/>
+              </div>
+              <div class="field pay-field is-hidden" data-pay-types="hourly_range">
+                <label for="edHourlyMax">Hourly max</label>
+                <input id="edHourlyMax" type="number" min="0" step="0.01" placeholder="35"/>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-section" data-editor-section="content">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Content</strong>
+              <small>Skills, benefits, overview copy, and role detail.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryContent">Add overview, skills, and requirements</span>
+          </summary>
+          <div class="editor-section__body">
+            <div class="field">
+              <label>Tags</label>
+              <div class="tag-editor" id="tagEditor"><input id="tagInput" placeholder="Type tag and press Enter"/></div>
+            </div>
+
+            <div class="field">
+              <label>Benefits</label>
+              <div class="tag-editor" id="benefitsEditor"><input id="benefitInput" placeholder="Type benefit and press Enter"/></div>
+              <p class="field-note">Public. Benefits are shown on public job cards and the shared job spec when present.</p>
+            </div>
+
+            <div class="field"><label for="edOverview">Card overview</label><textarea id="edOverview" placeholder="Short intro shown on jobs page"></textarea></div>
+
+            <div class="grid">
+              <div class="field"><label for="edResponsibilities">Responsibilities (one per line)</label><textarea id="edResponsibilities"></textarea></div>
+              <div class="field"><label for="edRequirements">Requirements (one per line)</label><textarea id="edRequirements"></textarea></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-section" data-editor-section="visibility">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>Visibility</strong>
+              <small>Control what appears on the public role page.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummaryVisibility">Public sections ready</span>
+          </summary>
+          <div class="editor-section__body">
+        <section class="public-visibility">
+          <div class="public-visibility__head">
+            <strong>Public role page visibility</strong>
+            <p class="muted">These toggles affect the public/shareable role page only. Internal-only data such as client name stays private regardless of these settings.</p>
+          </div>
+          <div class="public-visibility__grid">
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowOverview" type="checkbox"/><span>Show overview</span></div>
+              <small>Displays the summary copy at the top of the advert and in the overview section.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowPay" type="checkbox"/><span>Show package/pay</span></div>
+              <small>Displays package details in the advert when pay information is available.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowCustomer" type="checkbox"/><span>Show customer</span></div>
+              <small>Use only when the customer or project context is appropriate to show publicly.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowBenefits" type="checkbox"/><span>Show benefits</span></div>
+              <small>Shows benefits or support points on the public advert.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowResponsibilities" type="checkbox"/><span>Show responsibilities</span></div>
+              <small>Displays the responsibilities section on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowRequirements" type="checkbox"/><span>Show requirements</span></div>
+              <small>Displays the requirements section on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowTags" type="checkbox"/><span>Show key skills</span></div>
+              <small>Shows the key skills/tags chip group.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowRoleHighlights" type="checkbox"/><span>Show role highlights</span></div>
+              <small>Displays the “At a glance” / highlights panel on the advert.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowApplyPanel" type="checkbox"/><span>Show apply panel</span></div>
+              <small>Displays the right-hand apply panel on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowSecondaryCta" type="checkbox"/><span>Show secondary CTA block</span></div>
+              <small>Displays the extra bottom CTA section on the advert.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowPageMeta" type="checkbox"/><span>Show page meta</span></div>
+              <small>Displays the optional small footer/meta block on the public role page.</small>
+            </label>
+            <label class="check-item">
+              <div class="check-item__top"><input id="pvShowReference" type="checkbox"/><span>Show reference</span></div>
+              <small>Displays the job reference on the advert when useful externally.</small>
+            </label>
+          </div>
+        </section>
+          </div>
+        </details>
+      </form>
+
+      <details class="editor-section" data-editor-section="sharing">
+        <summary class="editor-section__summary">
+          <span class="editor-section__summary-copy">
+            <strong>Sharing</strong>
+            <small>Generate and manage the public/shareable spec link.</small>
+          </span>
+          <span class="editor-section__meta" id="editorSummarySharing">Save the job when you are ready to share it</span>
+        </summary>
+        <div class="editor-section__body">
+          <div class="share-box">
+            <div>
+              <strong>Shareable spec</strong>
+              <p class="muted" id="shareDescription">Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.</p>
+            </div>
+            <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
+            <div id="shareResult" style="display:none">
+              <code id="shareMeta"></code>
+              <input id="shareUrl" readonly/>
+              <div class="share-actions">
+                <button class="btn ghost small" id="btnCopyShare" data-readonly="soft">Copy link</button>
+                <button class="btn ghost small" id="btnRefreshShare" data-readonly="soft" style="display:none">Refresh link</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="drawer-foot">
+      <div class="drawer-foot__note" id="drawerFootNote">Delete is permanent. Save updates the live jobs board whenever the connection is available.</div>
+      <div class="drawer-foot__actions">
+        <button class="btn ghost" id="btnDelete" data-readonly="true">Delete</button>
+        <button class="btn primary" id="btnSave" data-readonly="true">Save job</button>
+      </div>
+    </div>
+  </aside>
+
+  <datalist id="sectionOptions"></datalist>
+  <div class="modal-shell" id="batchModalShell" hidden>
+    <div class="modal-backdrop" data-batch-close></div>
+    <section class="modal-panel" id="batchModal" role="dialog" aria-modal="true" aria-labelledby="batchModalTitle" aria-describedby="batchSelectedSummary" tabindex="-1">
+      <div class="modal-head">
+        <div class="modal-head__copy">
+          <p class="drawer-head__eyebrow">Bulk editing</p>
+          <h3 id="batchModalTitle">Batch edit jobs</h3>
+          <p class="muted" id="batchSelectedSummary">You are editing 0 selected jobs.</p>
+        </div>
+        <button class="btn ghost small" id="btnBatchClose" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <section class="modal-summary-card">
+          <div>
+            <strong>Selected roles</strong>
+            <p class="muted" id="batchPreviewMeta">Choose fields to update across the selected jobs. Leave any field set to “Leave unchanged” to skip it.</p>
+          </div>
+          <ul class="batch-preview-list" id="batchPreviewList"></ul>
+        </section>
+
+        <form class="batch-form" id="batchForm" autocomplete="off">
+          <details class="editor-section" open>
+            <summary class="editor-section__summary">
+              <span class="editor-section__summary-copy">
+                <strong>Publishing &amp; workflow</strong>
+                <small>Status, visibility, and employment type for the selected roles.</small>
+              </span>
+            </summary>
+            <div class="editor-section__body">
+              <div class="grid">
+                <div class="field">
+                  <label for="batchStatusMode">Status action</label>
+                  <select id="batchStatusMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Set status</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchStatusMode">
+                  <label for="batchStatusValue">Status</label>
+                  <select id="batchStatusValue">
+                    <option value="live">Live</option>
+                    <option value="interviewing">Interviewing</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="batchPublishedMode">Visibility action</label>
+                  <select id="batchPublishedMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Set visibility</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchPublishedMode">
+                  <label for="batchPublishedValue">Visibility</label>
+                  <select id="batchPublishedValue">
+                    <option value="published">Published</option>
+                    <option value="draft">Draft / unpublish</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="batchTypeMode">Employment type action</label>
+                  <select id="batchTypeMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Set type</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchTypeMode">
+                  <label for="batchTypeValue">Employment type</label>
+                  <select id="batchTypeValue">
+                    <option value="permanent">Permanent</option>
+                    <option value="contract">Contract</option>
+                    <option value="fixed-term">Fixed term</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="editor-section">
+            <summary class="editor-section__summary">
+              <span class="editor-section__summary-copy">
+                <strong>Category &amp; placement</strong>
+                <small>Move jobs between category groupings and update client/location metadata.</small>
+              </span>
+            </summary>
+            <div class="editor-section__body">
+              <div class="grid">
+                <div class="field">
+                  <label for="batchSectionMode">Category action</label>
+                  <select id="batchSectionMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Move to category</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchSectionMode">
+                  <label for="batchSectionValue">Category heading</label>
+                  <input id="batchSectionValue" list="sectionOptions" placeholder="e.g. Critical Infrastructure"/>
+                </div>
+                <div class="field">
+                  <label for="batchDisciplineMode">Discipline action</label>
+                  <select id="batchDisciplineMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace value</option>
+                    <option value="clear">Clear value</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchDisciplineMode">
+                  <label for="batchDisciplineValue">Discipline</label>
+                  <input id="batchDisciplineValue" placeholder="e.g. Planning"/>
+                </div>
+                <div class="field">
+                  <label for="batchLocationMode">Location action</label>
+                  <select id="batchLocationMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace value</option>
+                    <option value="clear">Clear value</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchLocationMode">
+                  <label for="batchLocationValue">Location</label>
+                  <input id="batchLocationValue" placeholder="e.g. Frankfurt, Germany"/>
+                </div>
+                <div class="field">
+                  <label for="batchLocationCodeMode">Location code action</label>
+                  <select id="batchLocationCodeMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace value</option>
+                    <option value="clear">Clear value</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchLocationCodeMode">
+                  <label for="batchLocationCodeValue">Location code</label>
+                  <input id="batchLocationCodeValue" placeholder="e.g. frankfurt"/>
+                </div>
+                <div class="field">
+                  <label for="batchCustomerMode">Customer action</label>
+                  <select id="batchCustomerMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace value</option>
+                    <option value="clear">Clear value</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchCustomerMode">
+                  <label for="batchCustomerValue">Customer</label>
+                  <input id="batchCustomerValue" placeholder="Public customer name"/>
+                </div>
+                <div class="field">
+                  <label for="batchClientMode">Internal client action</label>
+                  <select id="batchClientMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace value</option>
+                    <option value="clear">Clear value</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchClientMode">
+                  <label for="batchClientValue">Internal client</label>
+                  <input id="batchClientValue" placeholder="Internal-only client reference"/>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="editor-section">
+            <summary class="editor-section__summary">
+              <span class="editor-section__summary-copy">
+                <strong>Pay &amp; application</strong>
+                <small>Update package presentation or the application URL.</small>
+              </span>
+            </summary>
+            <div class="editor-section__body">
+              <div class="grid">
+                <div class="field">
+                  <label for="batchPayMode">Pay action</label>
+                  <select id="batchPayMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace package</option>
+                    <option value="clear">Clear package</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchPayMode">
+                  <label for="batchPayType">Pay display</label>
+                  <select id="batchPayType">
+                    <option value="day_rate">Day rate</option>
+                    <option value="salary_range">Salary range</option>
+                    <option value="hourly_range">Hourly range</option>
+                    <option value="competitive">Competitive</option>
+                    <option value="negotiable">Negotiable</option>
+                  </select>
+                </div>
+                <div class="field" data-batch-field="batchPayMode">
+                  <label for="batchPayCurrency">Currency</label>
+                  <input id="batchPayCurrency" placeholder="GBP"/>
+                </div>
+                <div class="field batch-pay-field" data-pay-types="day_rate">
+                  <label for="batchDayRateMin">Day rate min</label>
+                  <input id="batchDayRateMin" type="number" min="0" step="0.01"/>
+                </div>
+                <div class="field batch-pay-field" data-pay-types="day_rate">
+                  <label for="batchDayRateMax">Day rate max</label>
+                  <input id="batchDayRateMax" type="number" min="0" step="0.01"/>
+                </div>
+                <div class="field batch-pay-field" data-pay-types="salary_range">
+                  <label for="batchSalaryMin">Salary min</label>
+                  <input id="batchSalaryMin" type="number" min="0" step="1"/>
+                </div>
+                <div class="field batch-pay-field" data-pay-types="salary_range">
+                  <label for="batchSalaryMax">Salary max</label>
+                  <input id="batchSalaryMax" type="number" min="0" step="1"/>
+                </div>
+                <div class="field batch-pay-field" data-pay-types="hourly_range">
+                  <label for="batchHourlyMin">Hourly min</label>
+                  <input id="batchHourlyMin" type="number" min="0" step="0.01"/>
+                </div>
+                <div class="field batch-pay-field" data-pay-types="hourly_range">
+                  <label for="batchHourlyMax">Hourly max</label>
+                  <input id="batchHourlyMax" type="number" min="0" step="0.01"/>
+                </div>
+                <div class="field">
+                  <label for="batchApplyMode">Apply URL action</label>
+                  <select id="batchApplyMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace value</option>
+                    <option value="clear">Clear value</option>
+                  </select>
+                </div>
+                <div class="field field--wide" data-batch-field="batchApplyMode">
+                  <label for="batchApplyValue">Apply URL</label>
+                  <input id="batchApplyValue" placeholder="https://..."/>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="editor-section">
+            <summary class="editor-section__summary">
+              <span class="editor-section__summary-copy">
+                <strong>Content &amp; lists</strong>
+                <small>Use append/remove/replace carefully when changing shared role content in bulk.</small>
+              </span>
+            </summary>
+            <div class="editor-section__body">
+              <div class="grid">
+                <div class="field">
+                  <label for="batchTagsMode">Tags action</label>
+                  <select id="batchTagsMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="append">Add tags</option>
+                    <option value="remove">Remove tags</option>
+                    <option value="replace">Replace tags</option>
+                    <option value="clear">Clear tags</option>
+                  </select>
+                </div>
+                <div class="field field--wide" data-batch-field="batchTagsMode">
+                  <label for="batchTagsValue">Tags</label>
+                  <textarea id="batchTagsValue" placeholder="One per line or comma separated"></textarea>
+                </div>
+                <div class="field">
+                  <label for="batchBenefitsMode">Benefits action</label>
+                  <select id="batchBenefitsMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="append">Add benefits</option>
+                    <option value="remove">Remove benefits</option>
+                    <option value="replace">Replace benefits</option>
+                    <option value="clear">Clear benefits</option>
+                  </select>
+                </div>
+                <div class="field field--wide" data-batch-field="batchBenefitsMode">
+                  <label for="batchBenefitsValue">Benefits</label>
+                  <textarea id="batchBenefitsValue" placeholder="One per line or comma separated"></textarea>
+                </div>
+                <div class="field">
+                  <label for="batchOverviewMode">Overview action</label>
+                  <select id="batchOverviewMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="replace">Replace copy</option>
+                    <option value="prepend">Prepend copy</option>
+                    <option value="append">Append copy</option>
+                    <option value="clear">Clear copy</option>
+                  </select>
+                </div>
+                <div class="field field--wide" data-batch-field="batchOverviewMode">
+                  <label for="batchOverviewValue">Overview text</label>
+                  <textarea id="batchOverviewValue" placeholder="Short summary shown on the public jobs page"></textarea>
+                  <p class="field-note">Replacing or clearing overview text is treated as a higher-risk change.</p>
+                </div>
+                <div class="field">
+                  <label for="batchResponsibilitiesMode">Responsibilities action</label>
+                  <select id="batchResponsibilitiesMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="append">Add responsibilities</option>
+                    <option value="remove">Remove responsibilities</option>
+                    <option value="replace">Replace responsibilities</option>
+                    <option value="clear">Clear responsibilities</option>
+                  </select>
+                </div>
+                <div class="field field--wide" data-batch-field="batchResponsibilitiesMode">
+                  <label for="batchResponsibilitiesValue">Responsibilities</label>
+                  <textarea id="batchResponsibilitiesValue" placeholder="One per line"></textarea>
+                </div>
+                <div class="field">
+                  <label for="batchRequirementsMode">Requirements action</label>
+                  <select id="batchRequirementsMode">
+                    <option value="leave">Leave unchanged</option>
+                    <option value="append">Add requirements</option>
+                    <option value="remove">Remove requirements</option>
+                    <option value="replace">Replace requirements</option>
+                    <option value="clear">Clear requirements</option>
+                  </select>
+                </div>
+                <div class="field field--wide" data-batch-field="batchRequirementsMode">
+                  <label for="batchRequirementsValue">Requirements</label>
+                  <textarea id="batchRequirementsValue" placeholder="One per line"></textarea>
+                </div>
+              </div>
+            </div>
+          </details>
+        </form>
+      </div>
+      <div class="modal-foot">
+        <div class="modal-foot__copy">
+          <strong id="batchChangeSummary">No changes selected yet.</strong>
+          <span class="muted" id="batchRiskNote">Choose at least one field before saving batch changes.</span>
+        </div>
+        <div class="drawer-foot__actions">
+          <button class="btn ghost" id="btnBatchCancel" type="button">Cancel</button>
+          <button class="btn primary" id="btnBatchReview" type="button">Save batch changes</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="confirm-shell" id="batchConfirmShell" hidden>
+    <div class="modal-backdrop" data-batch-confirm-close></div>
+    <section class="confirm-panel" id="batchConfirmDialog" role="alertdialog" aria-modal="true" aria-labelledby="batchConfirmTitle" aria-describedby="batchConfirmMessage" tabindex="-1">
+      <p class="drawer-head__eyebrow">Confirm batch change</p>
+      <h3 id="batchConfirmTitle">Review these changes carefully</h3>
+      <p class="muted" id="batchConfirmMessage">You are about to update live HMJ job records.</p>
+      <div class="confirm-details" id="batchConfirmDetails"></div>
+      <div class="drawer-foot__actions">
+        <button class="btn ghost" id="btnBatchConfirmCancel" type="button">Cancel</button>
+        <button class="btn primary" id="btnBatchConfirmSave" type="button">Confirm changes</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast"></div>
+
+  
+</body>
+</html>

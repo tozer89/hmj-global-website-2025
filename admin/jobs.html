@@ -281,6 +281,7 @@
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
 </head>
 <body>
   <div class="top"><div class="row">
@@ -1039,6 +1040,22 @@
 
   <script>
   (function startJobs(){
+    function forceCloseStrayBatchUi() {
+      const batchModalShell = document.getElementById('batchModalShell');
+      const batchConfirmShell = document.getElementById('batchConfirmShell');
+      if (batchModalShell) batchModalShell.hidden = true;
+      if (batchConfirmShell) batchConfirmShell.hidden = true;
+      document.body?.classList.remove('modal-open');
+    }
+
+    if (!window.__hmjJobsBatchUiResetBound) {
+      window.__hmjJobsBatchUiResetBound = true;
+      window.addEventListener('pagehide', forceCloseStrayBatchUi);
+      window.addEventListener('pageshow', forceCloseStrayBatchUi);
+    }
+
+    forceCloseStrayBatchUi();
+
     if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
       return setTimeout(startJobs, 40);
     }
@@ -1207,6 +1224,7 @@
       const editorJumpButtons = Array.from(document.querySelectorAll('[data-editor-jump]'));
       const batchPayFields = Array.from(document.querySelectorAll('.batch-pay-field'));
       const batchFieldGroups = Array.from(document.querySelectorAll('[data-batch-field]'));
+      const toastHost = sel('#toast');
       const editorSectionSummaries = {
         basics: sel('#editorSummaryBasics'),
         placement: sel('#editorSummaryPlacement'),
@@ -1255,6 +1273,19 @@
         if (state.confirmOpen && batchConfirmDialog && !batchConfirmShell?.hidden) return batchConfirmDialog;
         if (state.batchOpen && batchModal && !batchModalShell?.hidden) return batchModal;
         return null;
+      }
+
+      function syncBatchUiState() {
+        const batchVisible = !!state.batchOpen;
+        const confirmVisible = !!state.confirmOpen;
+        if (batchModalShell) batchModalShell.hidden = !batchVisible;
+        if (batchConfirmShell) batchConfirmShell.hidden = !confirmVisible;
+        document.body.classList.toggle('modal-open', batchVisible || confirmVisible);
+      }
+
+      function clearJobsToasts() {
+        if (!toastHost) return;
+        toastHost.replaceChildren();
       }
 
       function trapFocus(event, root) {
@@ -1524,6 +1555,7 @@
       }
 
       function updateControlState() {
+        syncBatchUiState();
         readOnlyControls.forEach((el) => {
           if (!el) return;
           const mode = (el.dataset.readonly || 'hard').toLowerCase();
@@ -1614,7 +1646,7 @@
         if (btnBatchReview) {
           if (!btnBatchReview.dataset.defaultLabel) btnBatchReview.dataset.defaultLabel = btnBatchReview.textContent;
           btnBatchReview.textContent = state.batchSaving ? 'Saving…' : btnBatchReview.dataset.defaultLabel;
-          btnBatchReview.disabled = state.batchSaving || state.readOnly || state.loadingJobs;
+          btnBatchReview.disabled = state.batchSaving || state.readOnly || state.loadingJobs || !hasValidBatchChanges();
         }
         if (btnBatchClose) btnBatchClose.disabled = state.batchSaving;
         if (btnBatchCancel) btnBatchCancel.disabled = state.batchSaving;
@@ -1622,7 +1654,7 @@
         if (btnBatchConfirmSave) {
           if (!btnBatchConfirmSave.dataset.defaultLabel) btnBatchConfirmSave.dataset.defaultLabel = btnBatchConfirmSave.textContent;
           btnBatchConfirmSave.textContent = state.batchSaving ? 'Saving…' : btnBatchConfirmSave.dataset.defaultLabel;
-          btnBatchConfirmSave.disabled = state.batchSaving;
+          btnBatchConfirmSave.disabled = state.batchSaving || !hasValidBatchChanges(state.pendingBatchEdit);
         }
         const editorDisabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering || state.batchSaving;
         editorFields.forEach((field) => {
@@ -3206,15 +3238,12 @@
       }
 
       function updateBatchSummary() {
-        const edits = readBatchForm();
-        const labels = describeBatchFields(edits);
-        const changes = describeBatchChanges(edits);
-        const risky = isRiskyBatchEdit(edits);
-        const highImpact = risky && state.selectedIds.size >= 5;
+        const summary = summariseBatchEdits();
+        const { edits, labels, changes, risky, highImpact } = summary;
         if (!labels.length) {
           if (batchChangeSummary) batchChangeSummary.textContent = 'No changes selected yet.';
           if (batchRiskNote) batchRiskNote.textContent = 'Choose at least one field before saving batch changes.';
-          return { edits, labels, changes, risky, highImpact };
+          return summary;
         }
         if (batchChangeSummary) {
           batchChangeSummary.textContent = `Updating ${changes.length} field${changes.length === 1 ? '' : 's'} on ${state.selectedIds.size} selected job${state.selectedIds.size === 1 ? '' : 's'}.`;
@@ -3226,7 +3255,40 @@
               ? 'This batch includes higher-risk live changes. A confirmation warning will appear before anything is saved.'
               : 'These changes will be applied in one save flow to the visible selection.';
         }
+        return summary;
+      }
+
+      function summariseBatchEdits() {
+        const edits = readBatchForm();
+        const labels = describeBatchFields(edits);
+        const changes = describeBatchChanges(edits);
+        const risky = isRiskyBatchEdit(edits);
+        const highImpact = risky && state.selectedIds.size >= 5;
         return { edits, labels, changes, risky, highImpact };
+      }
+
+      function hasValidBatchChanges(summary = null) {
+        const resolved = summary && typeof summary === 'object' ? summary : summariseBatchEdits();
+        return !!state.selectedIds.size && Array.isArray(resolved.labels) && resolved.labels.length > 0;
+      }
+
+      function discardTransientBatchState(options = {}) {
+        state.batchOpen = false;
+        state.confirmOpen = false;
+        state.pendingBatchEdit = null;
+        state.batchSaving = false;
+        batchFocusReturn = null;
+        confirmFocusReturn = null;
+        if (options.clearSelection) {
+          state.selectedIds.clear();
+        }
+        if (options.resetForm !== false) {
+          resetBatchForm();
+        }
+        syncBatchUiState();
+        if (options.clearToasts) {
+          clearJobsToasts();
+        }
       }
 
       function openBatchModal() {
@@ -3235,9 +3297,8 @@
         batchFocusReturn = document.activeElement;
         state.batchOpen = true;
         state.pendingBatchEdit = null;
-        batchModalShell.hidden = false;
-        document.body.classList.add('modal-open');
         resetBatchForm();
+        syncBatchUiState();
         renderBatchPreview();
         updateBatchSummary();
         updateControlState();
@@ -3249,10 +3310,8 @@
       function closeBatchConfirm(options = {}) {
         if (state.batchSaving && !options.force) return;
         state.confirmOpen = false;
-        batchConfirmShell.hidden = true;
-        if (!state.batchOpen) {
-          document.body.classList.remove('modal-open');
-        }
+        state.pendingBatchEdit = null;
+        syncBatchUiState();
         if (options.restoreFocus !== false) {
           (confirmFocusReturn || btnBatchReview)?.focus?.();
         }
@@ -3264,8 +3323,7 @@
         closeBatchConfirm({ force: true, restoreFocus: false });
         state.batchOpen = false;
         state.pendingBatchEdit = null;
-        batchModalShell.hidden = true;
-        document.body.classList.remove('modal-open');
+        syncBatchUiState();
         if (options.restoreFocus !== false) {
           batchFocusReturn?.focus?.();
         }
@@ -3273,16 +3331,16 @@
       }
 
       function openBatchConfirm() {
+        if (!state.batchOpen || batchModalShell?.hidden) return;
         const summary = updateBatchSummary();
-        if (!summary.labels.length) {
+        if (!hasValidBatchChanges(summary)) {
           toast('Choose at least one batch change first', 'warn', 2400);
           return;
         }
         state.pendingBatchEdit = summary;
         state.confirmOpen = true;
         confirmFocusReturn = document.activeElement;
-        batchConfirmShell.hidden = false;
-        document.body.classList.add('modal-open');
+        syncBatchUiState();
         batchConfirmDialog?.classList.toggle('is-danger', summary.risky);
         if (batchConfirmTitle) {
           batchConfirmTitle.textContent = summary.highImpact
@@ -3361,8 +3419,9 @@
       }
 
       async function commitBatchChanges() {
+        if (!state.batchOpen || !state.confirmOpen) return;
         const pending = state.pendingBatchEdit || updateBatchSummary();
-        if (!pending?.labels?.length) {
+        if (!hasValidBatchChanges(pending)) {
           toast('Choose at least one batch change first', 'warn', 2400);
           return;
         }
@@ -3921,10 +3980,12 @@
           field.addEventListener('input', () => {
             updateBatchFieldVisibility();
             updateBatchSummary();
+            updateControlState();
           });
           field.addEventListener('change', () => {
             updateBatchFieldVisibility();
             updateBatchSummary();
+            updateControlState();
           });
         });
       }
@@ -3967,6 +4028,14 @@
         updateStickyState();
       });
       window.addEventListener('scroll', updateStickyState, { passive: true });
+      window.addEventListener('pagehide', () => {
+        discardTransientBatchState({ clearSelection: true, clearToasts: true });
+      });
+      window.addEventListener('pageshow', () => {
+        discardTransientBatchState({ clearSelection: true, clearToasts: true });
+        renderAll({ preserveSelection: true });
+        updateControlState();
+      });
 
       try {
         const who = await identity('admin');
@@ -3984,7 +4053,7 @@
       filterType.value = state.filters.type;
       filterPublished.value = state.filters.published;
       setCategoryToolsExpanded(state.preferences.categoryToolsExpanded, { skipPersist: true });
-      resetBatchForm();
+      discardTransientBatchState({ clearSelection: true, clearToasts: true });
       syncStickyOffset();
       updateStickyState();
       updateControlState();

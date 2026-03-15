@@ -22,11 +22,21 @@ function createMatchMedia(width) {
   };
 }
 
-function buildJobsHarnessHtml() {
+function buildJobsHarnessHtml(options = {}) {
   const file = path.join(process.cwd(), 'admin/jobs.html');
-  return fs
+  let html = fs
     .readFileSync(file, 'utf8')
     .replace(/<script\b[^>]*\bsrc="[^"]+"[^>]*><\/script>\s*/g, '');
+
+  if (options.staleBatchUi) {
+    html = html
+      .replace('<body data-auth-view="login">', '<body data-auth-view="login" class="modal-open">')
+      .replace('id="batchModalShell" hidden', 'id="batchModalShell"')
+      .replace('id="batchConfirmShell" hidden', 'id="batchConfirmShell"')
+      .replace('<div id="toast"></div>', '<div id="toast"><div class="notice">Choose at least one batch change first</div></div>');
+  }
+
+  return html;
 }
 
 async function settle(window, passes = 6) {
@@ -79,8 +89,8 @@ function makeJob(id, title, overrides = {}) {
   };
 }
 
-async function createJobsDom(width = 390) {
-  const html = buildJobsHarnessHtml();
+async function createJobsDom(width = 390, options = {}) {
+  const html = buildJobsHarnessHtml(options);
   const saveCalls = [];
   const bulkCalls = [];
   let currentJobs = [
@@ -103,57 +113,62 @@ async function createJobsDom(width = 390) {
       window.HTMLElement.prototype.scrollIntoView = function scrollIntoView() {};
       window.navigator.clipboard = { writeText: async () => {} };
       window.Admin = {
-        bootAdmin: async (mainFn) => mainFn({
-          api: async (endpoint, method, payload) => {
-            if (endpoint === 'admin-jobs-list') {
-              return {
-                jobs: currentJobs,
-                supabase: { ok: true },
-                readOnly: false,
-              };
-            }
+        bootAdmin: async (mainFn) => {
+          if (options.delayBootMs) {
+            await new Promise((resolve) => window.setTimeout(resolve, options.delayBootMs));
+          }
+          return mainFn({
+            api: async (endpoint, method, payload) => {
+              if (endpoint === 'admin-jobs-list') {
+                return {
+                  jobs: currentJobs,
+                  supabase: { ok: true },
+                  readOnly: false,
+                };
+              }
 
-            if (endpoint === 'admin-jobs-save') {
-              saveCalls.push(payload.job);
-              currentJobs = currentJobs.map((job) => (
-                job.id === payload.job.id
-                  ? { ...job, ...payload.job, updatedAt: '2026-03-13T12:00:00Z' }
-                  : job
-              ));
-              return {
-                job: currentJobs.find((job) => job.id === payload.job.id),
-              };
-            }
+              if (endpoint === 'admin-jobs-save') {
+                saveCalls.push(payload.job);
+                currentJobs = currentJobs.map((job) => (
+                  job.id === payload.job.id
+                    ? { ...job, ...payload.job, updatedAt: '2026-03-13T12:00:00Z' }
+                    : job
+                ));
+                return {
+                  job: currentJobs.find((job) => job.id === payload.job.id),
+                };
+              }
 
-            if (endpoint === 'admin-jobs-bulk') {
-              bulkCalls.push(payload);
-              currentJobs = currentJobs.map((job) => {
-                if (!payload.ids.includes(job.id)) return job;
-                const next = { ...job };
-                if (payload.edits.status) next.status = payload.edits.status;
-                if (Object.prototype.hasOwnProperty.call(payload.edits, 'published')) next.published = payload.edits.published;
-                if (payload.edits.overview?.mode === 'append') {
-                  next.overview = `${next.overview}\n\n${payload.edits.overview.value}`.trim();
-                }
-                return { ...next, updatedAt: '2026-03-13T12:30:00Z' };
-              });
-              return {
-                jobs: currentJobs.filter((job) => payload.ids.includes(job.id)),
-                updatedCount: payload.ids.length,
-              };
-            }
+              if (endpoint === 'admin-jobs-bulk') {
+                bulkCalls.push(payload);
+                currentJobs = currentJobs.map((job) => {
+                  if (!payload.ids.includes(job.id)) return job;
+                  const next = { ...job };
+                  if (payload.edits.status) next.status = payload.edits.status;
+                  if (Object.prototype.hasOwnProperty.call(payload.edits, 'published')) next.published = payload.edits.published;
+                  if (payload.edits.overview?.mode === 'append') {
+                    next.overview = `${next.overview}\n\n${payload.edits.overview.value}`.trim();
+                  }
+                  return { ...next, updatedAt: '2026-03-13T12:30:00Z' };
+                });
+                return {
+                  jobs: currentJobs.filter((job) => payload.ids.includes(job.id)),
+                  updatedCount: payload.ids.length,
+                };
+              }
 
-            return {};
-          },
-          sel: (selector, root = window.document) => root.querySelector(selector),
-          toast: () => {},
-          identity: async () => ({ ok: true, email: 'admin@hmj-global.com' }),
-        }),
+              return {};
+            },
+            sel: (selector, root = window.document) => root.querySelector(selector),
+            toast: () => {},
+            identity: async () => ({ ok: true, email: 'admin@hmj-global.com' }),
+          });
+        },
       };
     },
   });
 
-  await settle(dom.window);
+  await settle(dom.window, options.settlePasses || 6);
   return { dom, saveCalls, bulkCalls };
 }
 
@@ -187,6 +202,26 @@ test('selection controls follow visible jobs and reconcile after filter changes'
   assert.equal(document.querySelector('#btnBatchAction').disabled, true);
 });
 
+test('stale batch overlays and warning toasts are cleared on page boot', async () => {
+  const { dom } = await createJobsDom(390, { staleBatchUi: true });
+  const { document } = dom.window;
+
+  assert.equal(document.body.classList.contains('modal-open'), false);
+  assert.equal(document.querySelector('#batchModalShell').hidden, true);
+  assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+  assert.equal(document.querySelector('#toast').textContent.trim(), '');
+  assert.equal(document.querySelector('#selectedCount').textContent.trim(), '0 selected');
+});
+
+test('stale batch overlays are cleared before admin boot finishes', async () => {
+  const { dom } = await createJobsDom(390, { staleBatchUi: true, delayBootMs: 120, settlePasses: 1 });
+  const { document } = dom.window;
+
+  assert.equal(document.body.classList.contains('modal-open'), false);
+  assert.equal(document.querySelector('#batchModalShell').hidden, true);
+  assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+});
+
 test('batch modal confirms and submits structured bulk edits', async () => {
   const { dom, bulkCalls } = await createJobsDom();
   const { document, Event } = dom.window;
@@ -204,6 +239,7 @@ test('batch modal confirms and submits structured bulk edits', async () => {
 
   assert.equal(document.querySelector('#batchModalShell').hidden, false);
   assert.match(document.querySelector('#batchSelectedSummary').textContent, /2 selected jobs/i);
+  assert.equal(document.querySelector('#btnBatchReview').disabled, true);
 
   document.querySelector('#batchStatusMode').value = 'replace';
   document.querySelector('#batchStatusMode').dispatchEvent(new Event('change', { bubbles: true }));
@@ -214,6 +250,8 @@ test('batch modal confirms and submits structured bulk edits', async () => {
   document.querySelector('#batchOverviewValue').value = 'Urgent delivery note';
   document.querySelector('#batchOverviewValue').dispatchEvent(new Event('input', { bubbles: true }));
   await settle(dom.window);
+
+  assert.equal(document.querySelector('#btnBatchReview').disabled, false);
 
   document.querySelector('#btnBatchReview').click();
   await settle(dom.window);
@@ -234,6 +272,37 @@ test('batch modal confirms and submits structured bulk edits', async () => {
   assert.equal(bulkCalls[0].edits.overview.value, 'Urgent delivery note');
   assert.equal(document.querySelector('#selectedCount').textContent.trim(), '0 selected');
   assert.equal(document.querySelector('#batchModalShell').hidden, true);
+});
+
+test('page restore clears batch workflow state before the console becomes usable again', async () => {
+  const { dom } = await createJobsDom();
+  const { document, Event } = dom.window;
+
+  const plannerCheckbox = document.querySelector('[data-id="planner-role"] [data-role="select-card"]');
+  plannerCheckbox.checked = true;
+  plannerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+  await settle(dom.window);
+
+  document.querySelector('#btnBatchAction').click();
+  await settle(dom.window);
+  document.querySelector('#batchStatusMode').value = 'replace';
+  document.querySelector('#batchStatusMode').dispatchEvent(new Event('change', { bubbles: true }));
+  document.querySelector('#batchStatusValue').value = 'closed';
+  document.querySelector('#batchStatusValue').dispatchEvent(new Event('change', { bubbles: true }));
+  await settle(dom.window);
+  document.querySelector('#btnBatchReview').click();
+  await settle(dom.window);
+
+  assert.equal(document.querySelector('#batchConfirmShell').hidden, false);
+
+  const restoreEvent = new dom.window.Event('pageshow');
+  dom.window.dispatchEvent(restoreEvent);
+  await settle(dom.window);
+
+  assert.equal(document.body.classList.contains('modal-open'), false);
+  assert.equal(document.querySelector('#batchModalShell').hidden, true);
+  assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+  assert.equal(document.querySelector('#selectedCount').textContent.trim(), '0 selected');
 });
 
 test('inline edits and admin view preferences persist locally', async () => {

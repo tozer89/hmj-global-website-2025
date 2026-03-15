@@ -11,15 +11,16 @@
   const MAX_STORED_MESSAGES = 18;
   const MAX_CONVERSATION_ACTIONS = 2;
   const MAX_WELCOME_ACTIONS = 4;
-  const DEFAULT_ASSISTANT_BADGE = 'Henley, HMJ Assistant';
-  const LEGACY_ASSISTANT_BADGE = 'HMJ Assistant';
+  const DEFAULT_ASSISTANT_NAME = 'Jacob';
+  const DEFAULT_ASSISTANT_BADGE = 'Live support';
+  const LEGACY_ASSISTANT_BADGES = new Set(['HMJ Assistant', 'Henley, HMJ Assistant']);
 
   const DEFAULT_CONFIG = {
     enabled: true,
     visibility: {
       routeMode: 'all_public',
-      includePatterns: [],
-      excludePatterns: ['/admin', '/timesheets'],
+      includePatterns: ['/', '/about*', '/jobs*', '/candidates*', '/clients*', '/contact*', '/apply*'],
+      excludePatterns: ['/admin*', '/dashboard*', '/preview*'],
       pageTargets: {
         home: true,
         about: true,
@@ -28,36 +29,37 @@
         candidates: true,
         clients: true,
         contact: true,
-        other_public: true,
+        other_public: false,
       },
     },
     launcher: {
       autoOpen: true,
-      autoOpenDelayMs: 1200,
-      autoHideDelayMs: 10000,
+      autoOpenDelayMs: 4500,
+      autoHideDelayMs: 18000,
+      assistantName: DEFAULT_ASSISTANT_NAME,
       position: 'right',
       showLabel: true,
-      label: 'Need help?',
-      compactLabel: 'Chat',
+      label: 'Chat with HMJ',
+      compactLabel: 'Ask HMJ',
       badge: DEFAULT_ASSISTANT_BADGE,
     },
     welcome: {
-      title: 'Hi — need help finding a role or getting in touch?',
-      body: 'I can point you to jobs, candidate registration, applications, or the right HMJ contact route.',
-      emptyStatePrompt: 'Choose an option below or ask a quick question.',
+      title: 'HMJ Global support',
+      body: 'Ask about jobs, applications, candidate registration, or hiring support.',
+      emptyStatePrompt: 'I can help you find roles, apply, register, or contact the HMJ team.',
     },
     handoff: {
-      supportEmail: 'info@HMJ-Global.com',
-      supportPhone: '0800 861 1230',
-      handoffMessage: 'If you would rather speak to the HMJ team directly, I can point you to the best route.',
+      supportEmail: 'info@hmj-global.com',
+      supportPhone: '',
+      handoffMessage: 'Prefer to speak with the HMJ team directly? Use the contact route and we’ll point you to the right person.',
     },
     quickReplies: [
-      { id: 'find_jobs', label: 'Find jobs', placement: 'welcome', style: 'primary', actionMode: 'navigate', href: '/jobs.html', prompt: '' },
-      { id: 'register_candidate', label: 'Register as candidate', placement: 'welcome', style: 'secondary', actionMode: 'navigate', href: '/candidates.html#candForm', prompt: '' },
-      { id: 'apply_role', label: 'Apply for a role', placement: 'welcome', style: 'secondary', actionMode: 'navigate', href: '/contact.html', prompt: '' },
-      { id: 'hiring_staff', label: 'Hiring staff', placement: 'welcome', style: 'secondary', actionMode: 'navigate', href: '/clients.html#clientEnquiryForm', prompt: '' },
-      { id: 'ask_question', label: 'Ask a question', placement: 'welcome', style: 'ghost', actionMode: 'send_prompt', href: '', prompt: 'I have a question about HMJ and the roles you recruit for.' },
-      { id: 'contact_hmj', label: 'Contact HMJ', placement: 'conversation', style: 'ghost', actionMode: 'navigate', href: '/contact.html', prompt: '' },
+      { id: 'find_jobs', label: 'Browse jobs', placement: 'welcome', style: 'primary', actionMode: 'navigate', href: '/jobs', prompt: '' },
+      { id: 'apply_role', label: 'Apply now', placement: 'welcome', style: 'secondary', actionMode: 'navigate', href: '/apply', prompt: '' },
+      { id: 'register_candidate', label: 'Candidate registration', placement: 'welcome', style: 'secondary', actionMode: 'navigate', href: '/candidates', prompt: '' },
+      { id: 'hiring_staff', label: 'Hiring support', placement: 'welcome', style: 'secondary', actionMode: 'navigate', href: '/clients', prompt: '' },
+      { id: 'contact_hmj', label: 'Contact HMJ', placement: 'conversation', style: 'ghost', actionMode: 'navigate', href: '/contact', prompt: '' },
+      { id: 'ask_sectors', label: 'What sectors do you cover?', placement: 'conversation', style: 'ghost', actionMode: 'send_prompt', href: '', prompt: 'What sectors do you support and what types of roles do you usually cover?' },
     ],
   };
 
@@ -164,13 +166,23 @@
   }
 
   function getAssistantBadge() {
-    const badge = trimString(state.config?.launcher?.badge, 32) || DEFAULT_ASSISTANT_BADGE;
-    return badge === LEGACY_ASSISTANT_BADGE ? DEFAULT_ASSISTANT_BADGE : badge;
+    const badge = trimString(state.config?.launcher?.badge, 40) || DEFAULT_ASSISTANT_BADGE;
+    return LEGACY_ASSISTANT_BADGES.has(badge) ? DEFAULT_ASSISTANT_BADGE : badge;
   }
 
   function getAssistantName() {
+    const configured = trimString(state.config?.launcher?.assistantName, 24);
+    if (configured) return configured;
+    const rawBadge = trimString(state.config?.launcher?.badge, 40);
+    if (LEGACY_ASSISTANT_BADGES.has(rawBadge) || rawBadge === DEFAULT_ASSISTANT_BADGE) {
+      return DEFAULT_ASSISTANT_NAME;
+    }
     const primary = getAssistantBadge().split(',')[0];
-    return trimString(primary, 24) || 'Henley';
+    return trimString(primary, 24) || DEFAULT_ASSISTANT_NAME;
+  }
+
+  function getAssistantIdentityLabel() {
+    return `${getAssistantName()}, HMJ Assistant`;
   }
 
   function getStoredSession() {
@@ -237,17 +249,17 @@
 
   function getContext() {
     const pathname = window.location.pathname || '/';
-    const route = pathname === '/' ? '/index.html' : pathname.replace(/\/+$/, '') || '/index.html';
+    const route = pathname === '/' ? '/' : pathname.replace(/\/+$/, '') || '/';
     const body = document.body;
     let pageCategory = 'other_public';
 
-    if (route === '/index.html' || route === '/') pageCategory = 'home';
-    else if (route === '/about.html') pageCategory = 'about';
-    else if (route === '/jobs.html') pageCategory = 'jobs';
-    else if (/^\/jobs\/.+/.test(route) && route !== '/jobs.html') pageCategory = 'job_detail';
-    else if (route === '/candidates.html') pageCategory = 'candidates';
-    else if (route === '/clients.html') pageCategory = 'clients';
-    else if (route === '/contact.html') pageCategory = 'contact';
+    if (route === '/' || route === '/index.html') pageCategory = 'home';
+    else if (route === '/about' || route === '/about.html') pageCategory = 'about';
+    else if (route === '/jobs' || route === '/jobs.html') pageCategory = 'jobs';
+    else if (/^\/jobs\/.+/.test(route) && route !== '/jobs' && route !== '/jobs.html') pageCategory = 'job_detail';
+    else if (route === '/candidates' || route === '/candidates.html') pageCategory = 'candidates';
+    else if (route === '/clients' || route === '/clients.html') pageCategory = 'clients';
+    else if (route === '/contact' || route === '/contact.html' || route === '/apply') pageCategory = 'contact';
 
     if (body?.classList.contains('clients-body')) {
       pageCategory = 'clients';
@@ -403,7 +415,7 @@
 
     const launcherText = createElement('span', 'hmj-chatbot__launcher-text');
     const launcherLabel = createElement('span', 'hmj-chatbot__launcher-label', state.config.launcher.showLabel ? state.config.launcher.label : state.config.launcher.compactLabel);
-    const launcherMeta = createElement('span', 'hmj-chatbot__launcher-meta', 'HMJ website assistant');
+    const launcherMeta = createElement('span', 'hmj-chatbot__launcher-meta', getAssistantIdentityLabel());
     launcherText.appendChild(launcherLabel);
     if (state.config.launcher.showLabel) launcherText.appendChild(launcherMeta);
     const launcherDot = createElement('span', 'hmj-chatbot__launcher-dot');

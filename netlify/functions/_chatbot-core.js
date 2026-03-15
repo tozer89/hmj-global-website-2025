@@ -70,8 +70,14 @@ function formatGoalSummary(settings) {
 
   return Object.entries(settings.goals)
     .sort((left, right) => Number(right[1]) - Number(left[1]))
-    .map(([key, value]) => `${labels[key] || key}: ${value}/5`)
+    .map(([key, value]) => `${labels[key] || key}: ${value}`)
     .join(' | ');
+}
+
+function describeAssistantIdentity(settings) {
+  const assistantName = trimString(settings.launcher?.assistantName, 24);
+  if (!assistantName) return '';
+  return `Assistant name: ${assistantName}. If a visitor asks who they are speaking with, use this name naturally and sparingly.`;
 }
 
 function describeTone(settings) {
@@ -140,6 +146,9 @@ function buildPromptPreview(settings, context = {}) {
     '[Tone]',
     describeTone(resolved),
     '',
+    '[Identity]',
+    describeAssistantIdentity(resolved) || 'Use the configured assistant name when helpful.',
+    '',
     '[Business Context]',
     resolved.prompts.additionalContext,
     '',
@@ -177,6 +186,7 @@ function buildInstructions(settings, context, actionCatalog, heuristicIntent, gr
     settings.prompts.businessGoals,
     `Priority summary: ${formatGoalSummary(settings)}`,
     describeTone(settings),
+    describeAssistantIdentity(settings),
     settings.prompts.routingInstructions,
     settings.prompts.safetyConstraints,
     settings.prompts.pageAwareInstructions,
@@ -484,6 +494,7 @@ function shouldUseFollowUpQuestion(settings, intent) {
   const mode = trimString(settings.tone?.askFollowUpQuestion, 40) || 'balanced';
   if (mode === 'rarely') return false;
   if (mode === 'often') return true;
+  if (mode === 'single_focused_question') return !['off_topic', 'contact_request'].includes(intent);
   return !['off_topic', 'contact_request'].includes(intent);
 }
 
@@ -526,6 +537,8 @@ function buildBaseFallbackText(style, message) {
   switch (style) {
     case 'brief_redirect':
       return message;
+    case 'honest_calm_redirect':
+      return `${message} If helpful, I can point you to the best HMJ route next.`;
     case 'warm_handoff':
       return `${message} If you would prefer, I can point you to the best HMJ contact route straight away.`;
     default:

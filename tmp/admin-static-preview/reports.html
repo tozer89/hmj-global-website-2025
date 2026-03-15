@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reports — Admin | HMJ Global</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  
+  
+  
+  
+  
+  <style>
+    :root {
+      --bg:#0b0f18; --panel:#111b2e; --border:#25324a; --ink:#e6eefc; --muted:#96a8c4;
+      --accent:#4f7fff; --accent-soft:rgba(79,127,255,.12); --good:#1f9d63; --warn:#f0ad3d; --bad:#d9534f;
+    }
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .top{position:sticky;top:0;background:#0c1526;border-bottom:1px solid rgba(255,255,255,.08);z-index:40}
+    .row{max-width:1280px;margin:0 auto;padding:14px 18px;display:flex;gap:10px;align-items:center}
+    .brand{font-weight:800;font-size:1.15rem}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--accent-soft);border:1px solid rgba(79,127,255,.3);font-weight:700}
+    .sp{flex:1}
+    .btn{background:var(--accent);border:0;color:#fff;font-weight:700;padding:9px 14px;border-radius:12px;cursor:pointer;transition:background .18s}
+    .btn:hover{background:#3c6fff}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.2);color:#e6eefc}
+    .btn.small{padding:7px 12px;border-radius:10px;font-size:0.9rem}
+    .wrap{max-width:1280px;margin:24px auto;padding:0 18px;display:grid;gap:18px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 20px 40px rgba(5,10,25,.35)}
+    .panel.light{background:#13213b}
+    .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+    .metric{background:#162640;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px}
+    .metric strong{font-size:1.4rem}
+    .metric span{color:var(--muted);font-size:.85rem}
+    .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .filters input,.filters select{background:#0f1d33;color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:10px;font-weight:600}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
+    th{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    tbody tr:hover{background:rgba(79,127,255,.08)}
+    .grid{display:grid;grid-template-columns:1.7fr 1fr;gap:18px}
+    @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+    .list{display:grid;gap:10px}
+    .list-item{background:#162640;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:4px}
+    .tag{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(79,127,255,.14);border:1px solid rgba(79,127,255,.3);font-size:.75rem;font-weight:700}
+    .muted{color:var(--muted)}
+    .notice{margin-top:12px;padding:12px;border-radius:14px;background:rgba(79,127,255,.12);border:1px solid rgba(79,127,255,.25);font-weight:600}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .card{background:#162640;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .notes{width:100%;min-height:140px;background:#0f1d33;color:var(--ink);border:1px solid var(--border);border-radius:14px;padding:12px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{background:#0f1d33;border:1px solid rgba(255,255,255,.16);color:var(--ink);padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:700}
+    .lead{text-transform:uppercase;letter-spacing:.12em;font-size:.75rem;color:var(--muted)}
+    .table-scroll{overflow:auto;max-height:420px}
+    .small-btns{display:flex;gap:8px;flex-wrap:wrap}
+  </style>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
+<style id="hmj-preview-force-app">#gate,[data-preview-hide="gate"]{display:none !important;}#app,#content{display:grid !important;visibility:visible !important;opacity:1 !important;}body{min-height:100vh !important;}</style>
+</head>
+<body>
+  <div class="top">
+    <div class="row">
+      <div class="brand">Reports Console</div>
+      <span class="pill">Analytics</span>
+      <div class="sp"></div>
+      <div id="diagChips" class="chips"></div>
+      <a class="btn ghost small" href="/">Website</a>
+      <a class="btn ghost small" href="/admin/">⟵ Dashboard</a>
+      <button class="btn small" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <h2>Admin only</h2>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn" type="button" data-admin-login>Log in</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel">
+      <div class="filters" id="filterBar">
+        <input id="filterFrom" type="date" aria-label="From week ending" />
+        <input id="filterTo" type="date" aria-label="To week ending" />
+        <select id="filterStatus">
+          <option value="">All statuses</option>
+          <option value="approved">Approved</option>
+          <option value="submitted">Submitted</option>
+          <option value="draft">Draft</option>
+        </select>
+        <select id="filterCurrency">
+          <option value="">All currencies</option>
+          <option value="GBP">GBP</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+        </select>
+        <button class="btn small" id="btnRun">Run report</button>
+        <button class="btn ghost small" id="btnCsv">Download CSV</button>
+        <div class="sp"></div>
+        <span class="muted" id="sourceMeta"></span>
+      </div>
+      <div class="metrics" id="metricCards"></div>
+      <div class="notice" id="weekNotice">Week 1 ends 2 Nov 2025 · adjust below if your fiscal year changes.</div>
+    </section>
+
+    <section class="panel light" id="configPanel">
+      <h3 style="margin:0 0 12px">Week numbering &amp; deadlines</h3>
+      <p class="muted" style="margin:0 0 14px">Week numbers drive payroll and reporting views. Update the fiscal Week&nbsp;1 end date or adjust the public submission deadline message for the contractor portal.</p>
+      <div class="small-btns" style="align-items:flex-end;flex-wrap:wrap">
+        <label class="lead">Week&nbsp;1 ending
+          <input id="weekBaseInput" type="date" style="margin-top:6px" />
+        </label>
+        <label class="lead" style="flex:1;min-width:220px">Deadline message
+          <textarea id="deadlineInput" rows="2" style="margin-top:6px;width:100%;min-height:64px" placeholder="e.g. Submit timesheets by Monday 10:00 UK time"></textarea>
+        </label>
+        <label class="lead">Timezone
+          <select id="deadlineTz" style="margin-top:6px">
+            <option value="Europe/London">Europe/London (UK)</option>
+            <option value="Europe/Dublin">Europe/Dublin (IE)</option>
+            <option value="Europe/Amsterdam">Europe/Amsterdam (NL)</option>
+            <option value="UTC">UTC</option>
+          </select>
+        </label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn small" id="btnSaveWeek">Save configuration</button>
+          <button class="btn ghost small" id="btnReloadWeek">Reload default</button>
+        </div>
+        <span class="muted" id="weekSaveMeta"></span>
+      </div>
+    </section>
+
+    <section class="panel" id="reconcilePanel">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <h3 style="margin:0">Data reconciliation</h3>
+        <span class="pill" id="reconBadge">Checking…</span>
+        <div class="sp"></div>
+        <button class="btn ghost small" id="btnReconRefresh">Refresh</button>
+      </div>
+      <p class="muted" style="margin-top:0">Compare Supabase tables with the bundled preview datasets where they still exist. Jobs now use the live jobs endpoint instead of a bundled runtime fallback.</p>
+      <div class="table-scroll" style="max-height:260px">
+        <table>
+          <thead><tr><th>Dataset</th><th>Supabase</th><th>Fallback</th><th>Delta</th><th>Notes</th></tr></thead>
+          <tbody id="reconBody"><tr><td colspan="5" class="muted">Loading reconciliation…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="notice" id="reconNotice" style="display:none"></div>
+      <div class="small-btns" style="margin-top:12px">
+        <a class="btn ghost small" href="/admin/jobs.html">Review jobs board</a>
+        <a class="btn ghost small" href="/admin/candidates.html">Open candidates</a>
+        <a class="btn ghost small" href="/admin/payroll.html">Payroll console</a>
+        <button class="btn ghost small" id="btnReconCopy" type="button">Copy summary</button>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel" id="tablePanel">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <h3 style="margin:0">Gross margin by timesheet</h3>
+          <span class="pill" id="rowCount">0 rows</span>
+          <div class="sp"></div>
+          <button class="btn ghost small" id="btnToggleEmpty">Hide £0 rows</button>
+        </div>
+        <div class="table-scroll">
+          <table id="reportTable">
+            <thead>
+              <tr>
+                <th>Week</th>
+                <th>#</th>
+                <th>Candidate</th>
+                <th>Client</th>
+                <th>Assignment</th>
+                <th>Hours</th>
+                <th>Pay</th>
+                <th>Charge</th>
+                <th>Margin</th>
+                <th>Currency</th>
+              </tr>
+            </thead>
+            <tbody id="reportBody"><tr><td colspan="10" class="muted">Run the report to populate data.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="panel" id="leaderboardPanel">
+        <h3 style="margin:0 0 12px">Top contractors by margin</h3>
+        <div class="list" id="contractorList"></div>
+        <h3 style="margin:18px 0 12px">Currency mix</h3>
+        <div class="list" id="currencyList"></div>
+      </aside>
+    </div>
+
+    <section class="panel" id="trendPanel">
+      <h3 style="margin:0 0 12px">Weekly gross margin trend</h3>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Week #</th><th>Week ending</th><th>Timesheets</th><th>Pay</th><th>Charge</th><th>Margin</th></tr>
+          </thead>
+          <tbody id="trendBody"><tr><td colspan="6" class="muted">No data yet.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="actionsPanel">
+      <h3 style="margin:0 0 12px">Operations & quick actions</h3>
+      <div class="cards">
+        <div class="card">
+          <span class="lead">Assignments health</span>
+          <p class="muted" id="assignmentsSummary">—</p>
+          <a class="btn ghost small" href="/admin/assignments.html">Open assignments</a>
+        </div>
+        <div class="card">
+          <span class="lead">Payroll queue</span>
+          <p class="muted" id="payrollSummary">—</p>
+          <a class="btn ghost small" href="/admin/payroll.html">Manage payroll</a>
+        </div>
+        <div class="card">
+          <span class="lead">Timesheet approvals</span>
+          <p class="muted" id="timesheetSummary">—</p>
+          <a class="btn ghost small" href="/admin/timesheets.html">Review timesheets</a>
+        </div>
+        <div class="card">
+          <span class="lead">Jobs performance</span>
+          <p class="muted">Keep live roles refreshed for accurate reporting.</p>
+          <a class="btn ghost small" href="/admin/jobs.html">Open jobs board</a>
+        </div>
+        <div class="card">
+          <span class="lead">Client coverage</span>
+          <p class="muted" id="clientSummary">—</p>
+          <a class="btn ghost small" href="/admin/clients.html">Client directory</a>
+        </div>
+        <div class="card">
+          <span class="lead">Candidate pipeline</span>
+          <p class="muted">Use the candidates console to parse CVs and send emails directly.</p>
+          <a class="btn ghost small" href="/admin/candidates.html">Candidates</a>
+        </div>
+        <div class="card">
+          <span class="lead">Audit trail</span>
+          <p class="muted">Recent payroll actions logged below. Export full history as needed.</p>
+          <button class="btn ghost small" id="btnRefreshAudit">Refresh audit</button>
+        </div>
+        <div class="card">
+          <span class="lead">Report CSV</span>
+          <p class="muted">Download the current table including week numbers & currency totals.</p>
+          <button class="btn ghost small" id="btnDownloadCsv">Download CSV</button>
+        </div>
+        <div class="card">
+          <span class="lead">Notes board</span>
+          <textarea id="notesBoard" class="notes" placeholder="Leave handover notes for the team…"></textarea>
+          <button class="btn ghost small" id="btnSaveNotes">Save notes</button>
+        </div>
+        <div class="card">
+          <span class="lead">Back office</span>
+          <p class="muted">Track miscellaneous admin actions such as invoicing cycles or FX updates.</p>
+          <div class="chips" id="miscChips"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="auditPanel">
+      <h3 style="margin:0 0 12px">Latest audit events</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+          <tbody id="auditBody"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  
+</body>
+</html>
