@@ -191,6 +191,38 @@ alter table if exists public.candidates
   add column if not exists portal_account_closed_at timestamptz;
 alter table if exists public.candidates
   add column if not exists last_portal_login_at timestamptz;
+alter table if exists public.candidates
+  add column if not exists address1 text;
+alter table if exists public.candidates
+  add column if not exists address2 text;
+alter table if exists public.candidates
+  add column if not exists town text;
+alter table if exists public.candidates
+  add column if not exists county text;
+alter table if exists public.candidates
+  add column if not exists postcode text;
+alter table if exists public.candidates
+  add column if not exists nationality text;
+alter table if exists public.candidates
+  add column if not exists right_to_work_status text;
+alter table if exists public.candidates
+  add column if not exists right_to_work_regions text[] not null default '{}'::text[];
+alter table if exists public.candidates
+  add column if not exists primary_specialism text;
+alter table if exists public.candidates
+  add column if not exists secondary_specialism text;
+alter table if exists public.candidates
+  add column if not exists current_job_title text;
+alter table if exists public.candidates
+  add column if not exists desired_roles text;
+alter table if exists public.candidates
+  add column if not exists qualifications text;
+alter table if exists public.candidates
+  add column if not exists sector_experience text;
+alter table if exists public.candidates
+  add column if not exists relocation_preference text;
+alter table if exists public.candidates
+  add column if not exists salary_expectation text;
 
 update public.candidates
 set
@@ -202,8 +234,24 @@ set
     nullif(trim(concat_ws(' ', first_name, last_name)), '')
   ),
   phone = nullif(trim(phone), ''),
+  address1 = nullif(trim(address1), ''),
+  address2 = nullif(trim(address2), ''),
+  town = nullif(trim(town), ''),
+  county = nullif(trim(county), ''),
+  postcode = nullif(trim(postcode), ''),
   location = nullif(trim(location), ''),
   country = nullif(trim(country), ''),
+  nationality = nullif(trim(nationality), ''),
+  right_to_work_status = nullif(trim(right_to_work_status), ''),
+  right_to_work_regions = coalesce(right_to_work_regions, '{}'::text[]),
+  primary_specialism = nullif(trim(primary_specialism), ''),
+  secondary_specialism = nullif(trim(secondary_specialism), ''),
+  current_job_title = nullif(trim(current_job_title), ''),
+  desired_roles = nullif(trim(desired_roles), ''),
+  qualifications = nullif(trim(qualifications), ''),
+  sector_experience = nullif(trim(sector_experience), ''),
+  relocation_preference = nullif(trim(relocation_preference), ''),
+  salary_expectation = nullif(trim(salary_expectation), ''),
   headline_role = nullif(trim(headline_role), ''),
   sector_focus = nullif(trim(sector_focus), ''),
   summary = nullif(trim(summary), ''),
@@ -227,6 +275,10 @@ alter table public.candidates
   alter column skills set default '{}'::text[];
 alter table public.candidates
   alter column skills set not null;
+alter table public.candidates
+  alter column right_to_work_regions set default '{}'::text[];
+alter table public.candidates
+  alter column right_to_work_regions set not null;
 
 do $$
 begin
@@ -589,8 +641,28 @@ begin
     ),
     email = coalesce(nullif(keep_row.email, ''), nullif(drop_row.email, '')),
     phone = coalesce(nullif(keep_row.phone, ''), nullif(drop_row.phone, '')),
+    address1 = coalesce(nullif(keep_row.address1, ''), nullif(drop_row.address1, '')),
+    address2 = coalesce(nullif(keep_row.address2, ''), nullif(drop_row.address2, '')),
+    town = coalesce(nullif(keep_row.town, ''), nullif(drop_row.town, '')),
+    county = coalesce(nullif(keep_row.county, ''), nullif(drop_row.county, '')),
+    postcode = coalesce(nullif(keep_row.postcode, ''), nullif(drop_row.postcode, '')),
     location = coalesce(nullif(keep_row.location, ''), nullif(drop_row.location, '')),
     country = coalesce(nullif(keep_row.country, ''), nullif(drop_row.country, '')),
+    nationality = coalesce(nullif(keep_row.nationality, ''), nullif(drop_row.nationality, '')),
+    right_to_work_status = coalesce(nullif(keep_row.right_to_work_status, ''), nullif(drop_row.right_to_work_status, '')),
+    right_to_work_regions = (
+      select coalesce(array_agg(distinct region order by region), '{}'::text[])
+      from unnest(coalesce(keep_row.right_to_work_regions, '{}'::text[]) || coalesce(drop_row.right_to_work_regions, '{}'::text[])) as region
+      where nullif(trim(region), '') is not null
+    ),
+    primary_specialism = coalesce(nullif(keep_row.primary_specialism, ''), nullif(drop_row.primary_specialism, '')),
+    secondary_specialism = coalesce(nullif(keep_row.secondary_specialism, ''), nullif(drop_row.secondary_specialism, '')),
+    current_job_title = coalesce(nullif(keep_row.current_job_title, ''), nullif(drop_row.current_job_title, '')),
+    desired_roles = coalesce(nullif(keep_row.desired_roles, ''), nullif(drop_row.desired_roles, '')),
+    qualifications = coalesce(nullif(keep_row.qualifications, ''), nullif(drop_row.qualifications, '')),
+    sector_experience = coalesce(nullif(keep_row.sector_experience, ''), nullif(drop_row.sector_experience, '')),
+    relocation_preference = coalesce(nullif(keep_row.relocation_preference, ''), nullif(drop_row.relocation_preference, '')),
+    salary_expectation = coalesce(nullif(keep_row.salary_expectation, ''), nullif(drop_row.salary_expectation, '')),
     headline_role = coalesce(nullif(keep_row.headline_role, ''), nullif(drop_row.headline_role, '')),
     experience_years = coalesce(keep_row.experience_years, drop_row.experience_years),
     sector_focus = coalesce(nullif(keep_row.sector_focus, ''), nullif(drop_row.sector_focus, '')),
