@@ -1305,6 +1305,12 @@
         return `${text.slice(0, max).replace(/\s+\S*$/, '')}…`;
       }
 
+      function trimString(value = '', maxLength = 0) {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!maxLength || text.length <= maxLength) return text;
+        return text.slice(0, maxLength).trim();
+      }
+
       function normalizePublicPageConfig(value) {
         const input = value && typeof value === 'object' ? value : {};
         const next = {};
