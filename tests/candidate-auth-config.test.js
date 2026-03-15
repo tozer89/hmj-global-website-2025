@@ -55,8 +55,8 @@ test('candidate auth config uses the public request host when available', () => 
   withEnv({
     HMJ_CANDIDATE_PORTAL_SITE_URL: '',
     HMJ_CANONICAL_SITE_URL: '',
-    URL: '',
-    DEPLOY_PRIME_URL: '',
+    URL: 'https://hmjg.netlify.app',
+    DEPLOY_PRIME_URL: 'https://deploy-preview-106--hmjg.netlify.app',
     SITE_URL: '',
   }, () => {
     const { _resolveCandidatePortalBaseUrl } = loadHelpers();
@@ -86,10 +86,10 @@ test('candidate auth config falls back to the production HMJ domain when only lo
       },
     });
 
-    assert.equal(baseUrl, 'https://www.hmj-global.com');
+    assert.equal(baseUrl, 'https://hmjg.netlify.app');
     assert.equal(
       _buildRedirectUrl(baseUrl, '/candidates.html?candidate_auth=verified'),
-      'https://www.hmj-global.com/candidates.html?candidate_auth=verified'
+      'https://hmjg.netlify.app/candidates.html?candidate_auth=verified'
     );
   });
 });

@@ -7,9 +7,12 @@ const { getSupabase } = require('./_supabase.js');
 const { getSupabaseUrl, getSupabaseAnonKey } = require('./_supabase-env.js');
 const { fetchSettings } = require('./_settings-helpers.js');
 const {
+  buildAssignableAdminMembers,
+  fetchNetlifyIdentityUsers,
+} = require('./_admin-users.js');
+const {
   TEAM_TASKS_SETTINGS_KEY,
   normalizeTaskSettings,
-  dedupeMembers,
   memberDisplayName,
   trimString,
   lowerEmail,
@@ -80,42 +83,51 @@ function displayNameFromMeta(meta, email, userId) {
   return displayName || memberDisplayName({ email, userId });
 }
 
-async function readAdminMembers(supabase, user) {
+async function readAdminMembers(supabase, user, context) {
+  let tableRows = [];
   try {
     const { data, error } = await supabase
       .from('admin_users')
-      .select('user_id,email,role,is_active,meta')
+      .select('id,user_id,email,role,is_active,meta')
       .eq('is_active', true)
       .order('email', { ascending: true });
 
     if (error) throw error;
 
-    const rows = Array.isArray(data) ? data.map((row) => ({
+    tableRows = Array.isArray(data) ? data.map((row) => ({
+      id: trimString(row.id, 120),
       userId: trimString(row.user_id, 120),
       email: lowerEmail(row.email),
       displayName: displayNameFromMeta(row.meta, row.email, row.user_id),
       role: trimString(row.role, 64) || 'admin',
       isActive: row.is_active !== false,
+      meta: row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta) ? row.meta : {},
     })) : [];
-
-    const currentFallback = {
-      userId: trimString(user?.id || user?.sub, 120) || lowerEmail(user?.email),
-      email: lowerEmail(user?.email),
-      displayName: displayNameFromMeta(user?.user_metadata || {}, user?.email, user?.id),
-      role: 'admin',
-      isActive: true,
-    };
-
-    return dedupeMembers(rows.concat(currentFallback));
   } catch (error) {
-    return dedupeMembers([{
+    tableRows = [];
+  }
+
+  let identityUsers = [];
+  try {
+    identityUsers = await fetchNetlifyIdentityUsers(context);
+  } catch (error) {
+    console.warn('[team-tasks] Netlify Identity member lookup failed (%s)', error?.message || error);
+  }
+
+  return buildAssignableAdminMembers({
+    tableRows,
+    identityUsers,
+    currentUser: {
       userId: trimString(user?.id || user?.sub, 120) || lowerEmail(user?.email),
       email: lowerEmail(user?.email),
       displayName: displayNameFromMeta(user?.user_metadata || {}, user?.email, user?.id),
       role: 'admin',
       isActive: true,
-    }]);
-  }
+      meta: user?.user_metadata && typeof user.user_metadata === 'object' && !Array.isArray(user.user_metadata)
+        ? user.user_metadata
+        : {},
+    },
+  });
 }
 
 async function readSchemaStatus(supabase) {
@@ -211,7 +223,7 @@ const baseHandler = async (event, context) => {
     }
 
     const [memberRows, settingsResult, schemaStatus] = await Promise.all([
-      readAdminMembers(supabase, user),
+      readAdminMembers(supabase, user, context),
       fetchSettings(event, [TEAM_TASKS_SETTINGS_KEY]),
       readSchemaStatus(supabase),
     ]);

@@ -260,17 +260,18 @@
     <div class="wrap">
       <div class="public-section-head public-section-head--left candidate-profile-section__head">
         <p class="public-section-head__eyebrow">Candidate profile</p>
-        <h2>Share the detail that helps us represent you properly.</h2>
-        <p class="public-section-head__copy">The stronger the profile, the faster we can match you to the right project and brief you accurately before interviews begin.</p>
+        <h2>Register once, send your profile properly, and let HMJ represent you with context.</h2>
+        <p class="public-section-head__copy">This is the main candidate registration form. Keep the account box ticked if you want an HMJ login as well as a profile submission.</p>
       </div>
       <div id="candidateDashboardRoot" hidden aria-live="polite"></div>
       <div class="candidate-profile-stage" id="candidateApplicationView">
         <div class="candidate-profile-layout">
-          <div class="card candidate-form-shell">
-            <h2 class="candidate-form-shell__title">Submit Your Profile</h2>
-            <p class="small candidate-form-shell__intro">Complete the form and attach your CV. We’ll be in touch with relevant roles (usually within 48 hrs).</p>
+          <div class="card candidate-form-shell" id="candidateRegisterAnchor">
+            <h2 class="candidate-form-shell__title">Create your candidate profile</h2>
+            <p class="small candidate-form-shell__intro">Complete this form to send your details to HMJ. If you keep the account option ticked, we will also set up your candidate login so you can save your profile, track applications, and upload documents later.</p>
+            <div id="candidateFormStatusRoot" hidden aria-live="polite"></div>
 
-            <form name="candidate-cv" action="/" method="POST" data-netlify="true" netlify-honeypot="bot-field"
+            <form name="candidate-cv" action="/candidates.html?submitted=1" method="POST" data-netlify="true" netlify-honeypot="bot-field"
                   enctype="multipart/form-data" class="cv-form candidate-form" id="candForm">
               <input type="hidden" name="form-name" value="candidate-cv" />
               <!-- Honeypot -->
@@ -281,33 +282,113 @@
               <input type="hidden" name="skills" id="skillsHidden" />
               <input type="hidden" name="page_url" id="pageUrlHidden" />
               <input type="hidden" name="right_to_work" id="rtwHidden" />
+              <input type="hidden" name="candidate_account_requested" id="candidateAccountRequested" value="yes" />
 
               <fieldset class="candidate-form__section">
-                <legend>Core details</legend>
+                <legend>Account options</legend>
+                <div class="candidate-account-control">
+                  <label class="candidate-account-toggle" for="candidateCreateAccount">
+                    <input id="candidateCreateAccount" type="checkbox" checked>
+                    <span>Create an HMJ Global candidate account</span>
+                  </label>
+                  <p class="small candidate-account-copy">Recommended. Your account lets you save your profile, track applications, and keep documents in one secure place.</p>
+                  <p class="small candidate-account-copy" id="candidateAccountModeText">Leave this ticked if you want login access. Untick it if you only want to send your details today without creating a password.</p>
+                </div>
+                <div class="candidate-password-panel" id="candidatePasswordFields">
+                  <div class="candidate-form__grid candidate-form__grid--two">
+                    <div class="candidate-field">
+                      <label for="candidatePassword">Password *</label>
+                      <div class="candidate-password-input">
+                        <input id="candidatePassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters">
+                        <button class="candidate-password-toggle" type="button" data-password-toggle="candidatePassword">Show</button>
+                      </div>
+                      <p class="small">Use at least 8 characters, including a letter and a number.</p>
+                    </div>
+                    <div class="candidate-field">
+                      <label for="candidateConfirmPassword">Confirm password *</label>
+                      <div class="candidate-password-input">
+                        <input id="candidateConfirmPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Repeat your password">
+                        <button class="candidate-password-toggle" type="button" data-password-toggle="candidateConfirmPassword">Show</button>
+                      </div>
+                      <p class="small">We’ll only let you submit once both password fields match.</p>
+                    </div>
+                  </div>
+                  <div class="candidate-password-status" id="candidatePasswordStatus" aria-live="polite"></div>
+                </div>
+              </fieldset>
+
+              <fieldset class="candidate-form__section">
+                <legend>Contact details</legend>
                 <div class="candidate-form__grid candidate-form__grid--two">
                   <div class="candidate-field">
                     <label for="fname">First name *</label>
-                    <input id="fname" name="first_name" type="text" required>
+                    <input id="fname" name="first_name" type="text" autocomplete="given-name" required>
                   </div>
                   <div class="candidate-field">
                     <label for="lname">Surname *</label>
-                    <input id="lname" name="surname" type="text" required>
+                    <input id="lname" name="surname" type="text" autocomplete="family-name" required>
                   </div>
                   <div class="candidate-field">
                     <label for="email">Email *</label>
-                    <input id="email" name="email" type="email" required>
+                    <input id="email" name="email" type="email" autocomplete="email" required>
                   </div>
                   <div class="candidate-field">
-                    <label for="phone">Contact telephone (incl. country code) *</label>
+                    <label for="phone">Mobile / phone *</label>
                     <input id="phone" name="phone" type="tel" required
                            pattern="^\+?[0-9\s\-()]{7,}$" title="Include country code, e.g. +353 85 123 4567">
                   </div>
                   <div class="candidate-field">
-                    <label for="location">Current location (City, Country) *</label>
-                    <input id="location" name="location" type="text" required>
+                    <label for="address1">Address line 1 *</label>
+                    <input id="address1" name="address1" type="text" autocomplete="address-line1" required>
                   </div>
                   <div class="candidate-field">
-                    <label for="discipline">Discipline *</label>
+                    <label for="address2">Address line 2</label>
+                    <input id="address2" name="address2" type="text" autocomplete="address-line2">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="town">Town / city *</label>
+                    <input id="town" name="town" type="text" autocomplete="address-level2" required>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="county">County / region</label>
+                    <input id="county" name="county" type="text" autocomplete="address-level1">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="postcode">Postcode *</label>
+                    <input id="postcode" name="postcode" type="text" autocomplete="postal-code" required>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="country">Country *</label>
+                    <input id="country" name="country" type="text" autocomplete="country-name" required placeholder="United Kingdom">
+                  </div>
+                  <div class="candidate-field candidate-field--full">
+                    <label for="location">Current location *</label>
+                    <input id="location" name="location" type="text" required placeholder="Where are you based right now?">
+                    <p class="small">This helps us judge travel, mobilisation, and rotation suitability.</p>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset class="candidate-form__section">
+                <legend>Recruitment profile</legend>
+                <div class="candidate-form__grid candidate-form__grid--two">
+                  <div class="candidate-field">
+                    <label for="nationality">Nationality</label>
+                    <input id="nationality" name="nationality" type="text" autocomplete="country">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="rightToWorkStatus">Right to work status *</label>
+                    <select id="rightToWorkStatus" name="right_to_work_status" required>
+                      <option value="">Select…</option>
+                      <option>Full right to work already in place</option>
+                      <option>EU / EEA work rights</option>
+                      <option>UK work rights</option>
+                      <option>Permit or visa already in place</option>
+                      <option>I need advice on this</option>
+                    </select>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="discipline">Primary specialism / discipline *</label>
                     <select id="discipline" name="discipline" required>
                       <option value="">Select…</option>
                       <option>CSA</option>
@@ -320,27 +401,60 @@
                       <option>Critical Facilities</option>
                     </select>
                   </div>
+                  <div class="candidate-field">
+                    <label for="secondarySpecialism">Secondary specialism</label>
+                    <input id="secondarySpecialism" name="secondary_specialism" type="text" placeholder="Optional second discipline">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="currentJobTitle">Current job title *</label>
+                    <input id="currentJobTitle" name="current_job_title" type="text" required placeholder="e.g. Lead Electrical Supervisor">
+                  </div>
                   <div class="candidate-field candidate-field--full">
-                    <label for="role">Role of interest</label>
-                    <input id="role" name="role" type="text" placeholder="e.g. MEP Commissioning Manager" required>
+                    <label for="role">Role(s) you are looking for *</label>
+                    <input id="role" name="role" type="text" placeholder="e.g. MEP Commissioning Manager, CSA Package Manager" required>
                     <p class="small" id="roleTip"></p>
                   </div>
                   <div class="candidate-field">
-                    <label for="salary">Salary / day rate expectation (numeric)</label>
-                    <input id="salary" name="salary_expectation" type="number" min="0" step="100">
+                    <label for="yearsExperience">Years of experience *</label>
+                    <input id="yearsExperience" name="years_experience" type="number" min="0" max="60" step="1" required>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="qualifications">Qualifications / certifications *</label>
+                    <textarea id="qualifications" name="qualifications" rows="4" required placeholder="e.g. SSSTS, AP, IOSH, IST, GMP, cleanroom certs"></textarea>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="sectorExperience">Sector experience *</label>
+                    <input id="sectorExperience" name="sector_experience" type="text" required placeholder="e.g. Data centres, pharma, substations">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="availability">Availability / start date *</label>
+                    <input id="availability" name="availability" type="text" required placeholder="Immediate, two weeks, available from 15 April">
                   </div>
                   <div class="candidate-field">
                     <label for="notice">Notice period</label>
-                    <input id="notice" name="notice_period" type="text" placeholder="e.g. 2 weeks, immediate" required>
+                    <input id="notice" name="notice_period" type="text" placeholder="e.g. Immediate, 2 weeks">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="salary">Salary / day rate expectation</label>
+                    <input id="salary" name="salary_expectation" type="number" min="0" step="100">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="reloc">Open to relocation *</label>
+                    <select id="reloc" name="relocation" required>
+                      <option value="" selected disabled>Select…</option>
+                      <option>Yes</option>
+                      <option>Maybe</option>
+                      <option>No</option>
+                    </select>
                   </div>
                 </div>
               </fieldset>
 
               <fieldset class="candidate-form__section">
-                <legend>Mobility &amp; links</legend>
+                <legend>Mobility, skills &amp; supporting details</legend>
                 <div class="candidate-form__grid candidate-form__grid--two">
                   <div class="candidate-field candidate-field--full">
-                    <label>Right to work — regions you’re authorised to work in * <span class="small">(you can select more than one)</span></label>
+                    <label>Regions you are authorised to work in now * <span class="small">(select all that apply)</span></label>
                     <div class="rtw-wrap" id="rtwGroup" aria-describedby="rtwHelp">
                       <label class="rtw-item"><input type="checkbox" value="United Kingdom"> United Kingdom</label>
                       <label class="rtw-item"><input type="checkbox" value="European Union / EEA"> European Union / EEA</label>
@@ -350,37 +464,22 @@
                       <label class="rtw-item"><input type="checkbox" value="Latin America (incl. Central America)"> Latin America (incl. Central America)</label>
                       <label class="rtw-item"><input type="checkbox" value="Other / Please specify in notes"> Other / Please specify in notes</label>
                     </div>
-                    <p id="rtwHelp" class="small">Tip: choose all that apply (dual nationality welcome).</p>
-                  </div>
-                  <div class="candidate-field">
-                    <label for="reloc">Open to relocation *</label>
-                    <select id="reloc" name="relocation" required>
-                      <option value="" selected disabled>Select…</option>
-                      <option>Maybe</option>
-                      <option>Yes</option>
-                      <option>No</option>
-                    </select>
+                    <p id="rtwHelp" class="small">Choose all that apply. If you are dual national or hold more than one right-to-work route, include all of them.</p>
                   </div>
                   <div class="candidate-field">
                     <label for="linkedin">LinkedIn profile</label>
-                    <input id="linkedin" name="linkedin" type="text" placeholder="https://…">
+                    <input id="linkedin" name="linkedin" type="url" placeholder="https://…">
                   </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="candidate-form__section">
-                <legend>Profile details</legend>
-                <div class="candidate-form__grid">
                   <div class="candidate-field candidate-field--full">
-                    <label>Key skills (add &amp; enter)</label>
+                    <label>Key skills *</label>
                     <div class="tag-input" id="tagBox">
                       <input id="tagInput" type="text" placeholder="e.g. IST, BMS, 33kV, Cleanrooms" style="border:0; outline:none; flex:1;">
                     </div>
                     <p class="small" id="skillHints"></p>
                   </div>
                   <div class="candidate-field candidate-field--full">
-                    <label for="message">Message / cover note</label>
-                    <textarea id="message" name="message" rows="5" placeholder="Tell us what you’re looking for, preferred locations, rotations…"></textarea>
+                    <label for="message">Summary / notes</label>
+                    <textarea id="message" name="message" rows="5" placeholder="Tell us what you are looking for, preferred locations, rotations, travel limits, or anything else HMJ should know."></textarea>
                   </div>
                   <div class="candidate-field candidate-field--full">
                     <label for="cv">Attach CV (PDF/DOC/DOCX) *</label>
@@ -396,7 +495,7 @@
                     </label>
                   </div>
                   <div class="candidate-form__actions">
-                    <button id="submitBtn" type="submit" class="btn-primary">Send Profile</button>
+                    <button id="submitBtn" type="submit" class="btn-primary">Create account and send profile</button>
                   </div>
                 </div>
               </fieldset>
@@ -546,8 +645,8 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=7">
-  <script defer src="assets/js/candidates.enhanced.js"></script>
-  <script type="module" src="assets/js/candidates.portal.js?v=4"></script>
+  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=9">
+  <script defer src="assets/js/candidates.enhanced.js?v=3"></script>
+  <script type="module" src="assets/js/candidates.portal.js?v=6"></script>
 </body>
 </html>

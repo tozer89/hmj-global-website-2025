@@ -307,15 +307,46 @@
     };
   }
 
+  function pickPreferredLabel(existing, incoming) {
+    const left = trimText(existing, 160);
+    const right = trimText(incoming, 160);
+    if (!left) return right;
+    if (!right) return left;
+    if (left.includes('@') && !right.includes('@')) return right;
+    if (!left.includes(' ') && right.includes(' ')) return right;
+    return left.length >= right.length ? left : right;
+  }
+
   function normaliseMembers(rows = []) {
     const out = [];
-    const seen = new Set();
+    const userIndex = new Map();
+    const emailIndex = new Map();
     rows.forEach((row) => {
       const member = normaliseMember(row);
-      const key = member.userId || member.email;
-      if (!key || seen.has(key)) return;
-      seen.add(key);
-      out.push(member);
+      const userId = trimText(member.userId, 120);
+      const email = lowerEmail(member.email);
+      const existingIndex = (
+        (userId && userIndex.has(userId) ? userIndex.get(userId) : null)
+        ?? (email && emailIndex.has(email) ? emailIndex.get(email) : null)
+      );
+      if (existingIndex == null) {
+        const index = out.push(member) - 1;
+        if (userId) userIndex.set(userId, index);
+        if (email) emailIndex.set(email, index);
+        return;
+      }
+
+      const existing = out[existingIndex];
+      out[existingIndex] = {
+        ...existing,
+        id: trimText(existing.id, 120) || trimText(member.id, 120) || userId || email,
+        userId: trimText(existing.userId, 120) || userId || email,
+        email: lowerEmail(existing.email) || email,
+        displayName: pickPreferredLabel(existing.displayName, member.displayName),
+        role: trimText(existing.role, 64) || trimText(member.role, 64) || 'admin',
+      };
+      if (trimText(out[existingIndex].userId, 120)) userIndex.set(trimText(out[existingIndex].userId, 120), existingIndex);
+      if (lowerEmail(out[existingIndex].email)) emailIndex.set(lowerEmail(out[existingIndex].email), existingIndex);
     });
     return out.sort((left, right) => left.displayName.localeCompare(right.displayName, 'en-GB', { sensitivity: 'base' }));
   }
@@ -376,6 +407,15 @@
     if (!key) return null;
     const email = lowerEmail(key);
     return state.members.find((member) => member.userId === key || (!!email && member.email === email)) || null;
+  }
+
+  function memberOptionValue(member) {
+    return trimText(member?.userId || member?.email, 120);
+  }
+
+  function resolveMemberOptionValue(userId, email) {
+    const member = findMemberByKey(userId) || findMemberByKey(email);
+    return member ? memberOptionValue(member) : (trimText(userId, 120) || lowerEmail(email) || '');
   }
 
   function taskComments(taskId) {
@@ -617,7 +657,12 @@
       if (!taskMatchesScope(task)) return false;
       if (!shouldIncludeDone(task)) return false;
       if (assignee && assignee !== 'all') {
-        if (!sameActor(assignee, assignee, task.assigned_to, task.assigned_to_email)) return false;
+        const selectedMember = findMemberByKey(assignee);
+        if (selectedMember) {
+          if (!sameActor(selectedMember.userId, selectedMember.email, task.assigned_to, task.assigned_to_email)) return false;
+        } else if (!sameActor(assignee, assignee, task.assigned_to, task.assigned_to_email)) {
+          return false;
+        }
       }
       if (!query) return true;
       return taskSearchHaystack(task).includes(query);
@@ -724,8 +769,8 @@
 
   function populateMemberInputs() {
     const memberOptions = state.members.map((member) => ({
-      value: member.userId || member.email,
-      label: member.displayName + (member.email ? ` (${member.email})` : ''),
+      value: memberOptionValue(member),
+      label: member.displayName + (member.email ? ` — ${member.email}` : ''),
     }));
 
     populateSelect(els.quickAssignedTo, memberOptions, 'Unassigned');
@@ -1078,7 +1123,9 @@
     const creatorName = memberDisplayName(task.created_by, task.created_by_email);
     const canEditSource = isTaskCreator(task);
     const reminderMode = REMINDER_MODES.includes(task.reminder_mode) ? task.reminder_mode : 'none';
-    const watcherValues = taskWatchers(task.id).map((watcher) => trimText(watcher.user_id || watcher.user_email, 120)).filter(Boolean);
+    const watcherValues = taskWatchers(task.id)
+      .map((watcher) => resolveMemberOptionValue(watcher.user_id, watcher.user_email))
+      .filter(Boolean);
     const metaBits = [
       `<span class="badge">${escapeHtml(creatorName)}</span>`,
       `<span class="badge">Created ${escapeHtml(formatDateTime(task.created_at))}</span>`,
@@ -1092,7 +1139,7 @@
     els.detailDescription.value = task.description || '';
     els.detailStatus.value = task.status || 'open';
     els.detailPriority.value = task.priority || 'medium';
-    els.detailAssignedTo.value = trimText(task.assigned_to, 120) || '';
+    els.detailAssignedTo.value = resolveMemberOptionValue(task.assigned_to, task.assigned_to_email);
     els.detailDueAt.value = toLocalInputValue(task.due_at);
     els.detailReminderEnabled.checked = task.reminder_enabled === true;
     els.detailReminderMode.value = reminderMode;
@@ -1318,11 +1365,14 @@
       return member || { userId: value, email: lowerEmail(value) };
     }));
     const existing = taskWatchers(taskId);
-    const existingKeys = new Set(existing.map((item) => trimText(item.user_id || item.user_email, 120)).filter(Boolean));
-    const desiredKeys = new Set(desiredMembers.map((item) => trimText(item.userId || item.email, 120)).filter(Boolean));
 
     const removeIds = existing
-      .filter((item) => !desiredKeys.has(trimText(item.user_id || item.user_email, 120)))
+      .filter((item) => !desiredMembers.some((member) => sameActor(
+        member.userId,
+        member.email,
+        item.user_id,
+        item.user_email
+      )))
       .map((item) => item.id);
     if (removeIds.length) {
       const { error } = await client
@@ -1333,7 +1383,12 @@
     }
 
     const inserts = desiredMembers
-      .filter((item) => !existingKeys.has(trimText(item.userId || item.email, 120)))
+      .filter((item) => !existing.some((existingRow) => sameActor(
+        item.userId,
+        item.email,
+        existingRow.user_id,
+        existingRow.user_email
+      )))
       .map((item) => ({
         task_id: taskId,
         user_id: trimText(item.userId, 120) || lowerEmail(item.email),

@@ -6,7 +6,7 @@
     "node": ">=20.16.0 <21 || >=22.3.0"
   },
   "scripts": {
-    "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js && node --test tests/candidate-portal-helpers.test.js && node --test tests/candidate-auth-config.test.js",
+    "test": "node scripts/verify-published-snapshot.js && node scripts/test-candidates-page.js && node scripts/test-timesheets-page.js && node --test tests/candidate-portal-helpers.test.js && node --test tests/candidate-auth-config.test.js && node --test tests/candidate-auth-ux.test.js",
     "test:layout": "node scripts/layout-smoke-check.js",
     "check:team-module": "node scripts/check-team-module-reconcile.js"
   },

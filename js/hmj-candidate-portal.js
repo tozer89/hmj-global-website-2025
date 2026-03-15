@@ -19,6 +19,160 @@ function getGlobalState() {
   return root.__hmjCandidatePortal;
 }
 
+function isLocalCandidateMockMode() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search || '');
+  const host = String(window.location.hostname || '').toLowerCase();
+  return params.get('candidate_mock') === '1' && (host === 'localhost' || host === '127.0.0.1');
+}
+
+function getMockStore() {
+  const root = typeof window !== 'undefined' ? window : globalThis;
+  if (!root.__hmjCandidatePortalLocalMockState) {
+    root.__hmjCandidatePortalLocalMockState = {
+      seq: 1,
+      usersByEmail: {},
+      currentUser: null,
+      currentSession: null,
+      candidate: null,
+      applications: [],
+      documents: [],
+      verificationEmailsSent: 0,
+      resetEmailsSent: 0,
+      subscribers: new Set(),
+    };
+  }
+  return root.__hmjCandidatePortalLocalMockState;
+}
+
+function mockNextId(prefix) {
+  const store = getMockStore();
+  const id = `${prefix}-${store.seq}`;
+  store.seq += 1;
+  return id;
+}
+
+function mockSessionForUser(user) {
+  return {
+    access_token: `mock-token-${user.id}`,
+    token_type: 'bearer',
+    user,
+  };
+}
+
+function emitMockAuthState(eventName) {
+  const store = getMockStore();
+  store.subscribers.forEach((callback) => {
+    try {
+      callback({
+        event: eventName,
+        session: store.currentSession,
+        user: store.currentUser,
+      });
+    } catch (error) {
+      // Ignore individual subscriber failures in local mock mode.
+    }
+  });
+}
+
+function lowerMockEmail(value) {
+  return lowerEmail(value);
+}
+
+function ensureMockCandidate(seed = {}, user = null) {
+  const store = getMockStore();
+  const email = lowerMockEmail(seed.email || user?.email);
+  if (!email && !store.candidate) {
+    throw new Error('candidate_email_required');
+  }
+
+  if (!store.candidate) {
+    const fullName = trimText(seed.name || seed.full_name || user?.user_metadata?.full_name, 240);
+    const split = splitName(fullName);
+    store.candidate = {
+      id: mockNextId('candidate'),
+      auth_user_id: user?.id || null,
+      email: email || null,
+      first_name: trimText(seed.first_name || split.firstName, 120) || null,
+      last_name: trimText(seed.last_name || seed.surname || split.lastName, 120) || null,
+      full_name: trimText(fullName || `${split.firstName} ${split.lastName}`.trim(), 240) || null,
+      skills: [],
+      right_to_work_regions: [],
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  if (email) store.candidate.email = email;
+  if (user?.id) {
+    store.candidate.auth_user_id = user.id;
+  }
+  return store.candidate;
+}
+
+function cloneMockRecord(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function ensureMockUserForEmail(email) {
+  const store = getMockStore();
+  return store.usersByEmail[lowerMockEmail(email)] || null;
+}
+
+function findMockUserById(userId) {
+  const store = getMockStore();
+  return Object.values(store.usersByEmail).find((user) => String(user?.id || '') === String(userId || '')) || null;
+}
+
+function publicMockUser(user) {
+  if (!user) return null;
+  const clone = cloneMockRecord(user);
+  delete clone.password;
+  return clone;
+}
+
+function mockPortalConfig() {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1:8765';
+  return {
+    ok: true,
+    supabaseUrl: 'mock://candidate-portal',
+    supabaseAnonKey: 'mock-anon-key',
+    siteUrl: origin,
+    emailRedirectUrl: `${origin}/candidates.html?candidate_auth=verified&candidate_mock=1`,
+    recoveryRedirectUrl: `${origin}/candidates.html?candidate_action=recovery&candidate_mock=1`,
+    recoveryRedirectPath: '/candidates.html?candidate_action=recovery&candidate_mock=1',
+    emailRedirectPath: '/candidates.html?candidate_auth=verified&candidate_mock=1',
+  };
+}
+
+function applyMockCandidateSeed(seed = {}, user = null) {
+  const store = getMockStore();
+  const existing = ensureMockCandidate(seed, user);
+  const payload = buildCandidateProfilePayload(seed, {
+    user,
+    includeCreatedAt: !existing?.created_at,
+  });
+  const merged = {
+    ...existing,
+    ...payload,
+    id: existing.id,
+    auth_user_id: user?.id || payload.auth_user_id || existing.auth_user_id || null,
+    email: payload.email || existing.email || user?.email || null,
+    created_at: existing.created_at || payload.created_at || new Date().toISOString(),
+    updated_at: payload.updated_at || new Date().toISOString(),
+    status: payload.status || existing.status || 'active',
+  };
+  store.candidate = merged;
+  return merged;
+}
+
+function resolveMockUserFromAccessToken(accessToken) {
+  const match = /^mock-token-(.+)$/.exec(String(accessToken || ''));
+  if (!match) return null;
+  return findMockUserById(match[1]);
+}
+
 function trimText(value, maxLength) {
   const text = typeof value === 'string'
     ? value.trim()
@@ -49,6 +203,31 @@ function normaliseSkillList(value) {
     out.push(skill);
   });
   return out;
+}
+
+function normaliseTextList(value, maxLength = 120) {
+  const items = Array.isArray(value)
+    ? value
+    : String(value == null ? '' : value).split(/[\n,]/);
+
+  const out = [];
+  const seen = new Set();
+  items.forEach((item) => {
+    const entry = trimText(item, maxLength);
+    if (!entry) return;
+    const key = entry.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(entry);
+  });
+  return out;
+}
+
+function parsePositiveInteger(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 function splitName(value) {
@@ -149,6 +328,10 @@ async function loadSupabaseModule() {
 }
 
 export async function getCandidatePortalConfig() {
+  if (isLocalCandidateMockMode()) {
+    return mockPortalConfig();
+  }
+
   const state = getGlobalState();
   if (!state.configPromise) {
     state.configPromise = fetch(CONFIG_ENDPOINT, {
@@ -167,6 +350,10 @@ export async function getCandidatePortalConfig() {
 }
 
 export async function getCandidatePortalClient() {
+  if (isLocalCandidateMockMode()) {
+    return null;
+  }
+
   const state = getGlobalState();
   if (!state.clientPromise) {
     state.clientPromise = (async () => {
@@ -188,6 +375,16 @@ export async function getCandidatePortalClient() {
 }
 
 export async function getCandidatePortalContext() {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    return {
+      client: null,
+      config: mockPortalConfig(),
+      session: store.currentSession ? cloneMockRecord(store.currentSession) : null,
+      user: store.currentUser ? cloneMockRecord(store.currentUser) : null,
+    };
+  }
+
   const [client, config] = await Promise.all([
     getCandidatePortalClient(),
     getCandidatePortalConfig(),
@@ -209,6 +406,14 @@ export async function getCandidatePortalSession() {
 }
 
 export async function onCandidateAuthStateChange(callback) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    store.subscribers.add(callback);
+    return () => {
+      store.subscribers.delete(callback);
+    };
+  }
+
   const client = await getCandidatePortalClient();
   const state = getGlobalState();
   if (state.authSubscription) {
@@ -238,13 +443,38 @@ function buildCandidateProfilePayload(input = {}, options = {}) {
     last_name: trimText(input.last_name || input.surname || split.lastName, 120) || null,
     full_name: trimText(fullName || `${split.firstName} ${split.lastName}`.trim(), 240) || null,
     phone: trimText(input.phone, 80) || null,
+    address1: trimText(input.address1, 240) || null,
+    address2: trimText(input.address2, 240) || null,
+    town: trimText(input.town, 160) || null,
+    county: trimText(input.county, 160) || null,
+    postcode: trimText(input.postcode, 32) || null,
+    country: trimText(input.country, 120) || null,
     location: trimText(input.location || input.current_location, 240) || null,
-    sector_focus: trimText(input.sector_focus || input.discipline, 240) || null,
+    nationality: trimText(input.nationality, 120) || null,
+    right_to_work_status: trimText(input.right_to_work_status, 240) || null,
+    right_to_work_regions: normaliseTextList(input.right_to_work_regions || input.right_to_work, 120),
+    primary_specialism: trimText(input.primary_specialism || input.discipline, 240) || null,
+    secondary_specialism: trimText(input.secondary_specialism, 240) || null,
+    current_job_title: trimText(input.current_job_title, 240) || null,
+    desired_roles: trimText(input.desired_roles || input.roles_looking_for || input.role, 320) || null,
+    experience_years: parsePositiveInteger(input.experience_years ?? input.years_experience),
+    qualifications: trimText(input.qualifications, 4000) || null,
+    sector_experience: trimText(input.sector_experience, 1000) || null,
+    relocation_preference: trimText(input.relocation_preference || input.relocation, 120) || null,
+    salary_expectation: trimText(input.salary_expectation, 160) || null,
+    sector_focus: trimText(input.sector_focus || input.sector_experience || input.discipline, 240) || null,
     skills: normaliseSkillList(input.skills),
     availability: trimText(input.availability || input.notice_period, 160) || null,
     linkedin_url: trimText(input.linkedin_url || input.linkedin, 500) || null,
     summary: trimText(input.summary || input.message, 4000) || null,
-    headline_role: trimText(input.headline_role || input.role || input.job_title, 240) || null,
+    headline_role: trimText(
+      input.headline_role
+      || input.desired_roles
+      || input.role
+      || input.current_job_title
+      || input.job_title,
+      240
+    ) || null,
     updated_at: new Date().toISOString(),
   };
 
@@ -395,7 +625,28 @@ async function queryCandidateDocuments(client, candidateId) {
     .order('created_at', { ascending: false });
 }
 
+async function retryWithoutUnknownColumns(run, payload) {
+  let working = { ...payload };
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const result = await run(working);
+    if (!result?.error) return result;
+    if (!missingColumnError(result.error)) return result;
+    const match = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(result.error.message || '');
+    if (!match || !(match[1] in working)) return result;
+    delete working[match[1]];
+  }
+  return run(working);
+}
+
 export async function ensureCandidateProfileRow(seed = {}) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    if (!store.currentUser?.id) {
+      throw new Error('candidate_not_authenticated');
+    }
+    return cloneMockRecord(applyMockCandidateSeed(seed, store.currentUser));
+  }
+
   const { client, user } = await getCandidatePortalContext();
   if (!user?.id) {
     throw new Error('candidate_not_authenticated');
@@ -414,11 +665,16 @@ export async function ensureCandidateProfileRow(seed = {}) {
       user,
       includeCreatedAt: true,
     });
-    const { data: inserted, error: insertError } = await client
-      .from('candidates')
-      .insert(directInsertPayload)
-      .select('*')
-      .single();
+    const directInsert = await retryWithoutUnknownColumns(
+      (working) => client
+        .from('candidates')
+        .insert(working)
+        .select('*')
+        .single(),
+      directInsertPayload
+    );
+    const inserted = directInsert?.data;
+    const insertError = directInsert?.error;
     if (!insertError && inserted) {
       return inserted;
     }
@@ -437,17 +693,31 @@ export async function loadCandidateProfile() {
 }
 
 export async function saveCandidateProfile(input = {}) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    if (!store.currentUser?.id) {
+      throw new Error('candidate_not_authenticated');
+    }
+    const saved = applyMockCandidateSeed(input, store.currentUser);
+    return cloneMockRecord(saved);
+  }
+
   const { client, user } = await getCandidatePortalContext();
   const candidate = await ensureCandidateProfileRow(input);
   const payload = buildCandidateProfilePayload(input, { user });
   const candidateId = String(candidate.id);
 
-  const { data, error } = await client
-    .from('candidates')
-    .update(payload)
-    .eq('id', candidate.id)
-    .select('*')
-    .single();
+  const updateResult = await retryWithoutUnknownColumns(
+    (working) => client
+      .from('candidates')
+      .update(working)
+      .eq('id', candidate.id)
+      .select('*')
+      .single(),
+    payload
+  );
+  const data = updateResult?.data;
+  const error = updateResult?.error;
 
   if (error) throw error;
 
@@ -489,6 +759,16 @@ export async function saveCandidateProfile(input = {}) {
 }
 
 export async function loadCandidateApplications(candidateIdInput) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    const candidateId = String(candidateIdInput || store.candidate?.id || '');
+    return cloneMockRecord(
+      store.applications
+        .filter((application) => !candidateId || String(application.candidate_id) === candidateId)
+        .sort((left, right) => String(right.applied_at || '').localeCompare(String(left.applied_at || '')))
+    );
+  }
+
   const { client } = await getCandidatePortalContext();
   const candidate = candidateIdInput ? { id: candidateIdInput } : await ensureCandidateProfileRow();
   const { data, error } = await client
@@ -512,6 +792,16 @@ async function createDocumentDownloadUrl(client, storageKey) {
 }
 
 export async function loadCandidateDocuments(candidateIdInput) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    const candidateId = String(candidateIdInput || store.candidate?.id || '');
+    return cloneMockRecord(
+      store.documents
+        .filter((documentRow) => !candidateId || String(documentRow.candidate_id) === candidateId)
+        .sort((left, right) => String(right.uploaded_at || '').localeCompare(String(left.uploaded_at || '')))
+    );
+  }
+
   const { client } = await getCandidatePortalContext();
   const candidate = candidateIdInput ? { id: candidateIdInput } : await ensureCandidateProfileRow();
   const { data, error } = await queryCandidateDocuments(client, candidate.id);
@@ -530,6 +820,38 @@ export async function loadCandidateDocuments(candidateIdInput) {
 }
 
 export async function uploadCandidateDocument({ file, documentType, label }) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    if (!store.currentUser?.id) {
+      throw new Error('candidate_not_authenticated');
+    }
+    const candidate = applyMockCandidateSeed({}, store.currentUser);
+    validateCandidateDocument(file);
+    const safeName = slugifyFilename(file?.name || 'document');
+    const uploadedAt = new Date().toISOString();
+    const documentRow = {
+      id: mockNextId('document'),
+      candidate_id: String(candidate.id),
+      owner_auth_user_id: store.currentUser.id,
+      document_type: normaliseDocumentType(documentType),
+      label: trimText(label, 240) || trimText(file?.name, 280) || 'Document',
+      original_filename: trimText(file?.name, 280) || 'document',
+      filename: trimText(file?.name, 280) || 'document',
+      file_extension: fileExtensionFromName(safeName) || null,
+      mime_type: trimText(file?.type, 120) || null,
+      file_size_bytes: Number(file?.size || 0) || null,
+      storage_bucket: CANDIDATE_DOCS_BUCKET,
+      storage_path: `${STORAGE_PREFIX}/${store.currentUser.id}/${Date.now()}-${safeName}`,
+      storage_key: `${STORAGE_PREFIX}/${store.currentUser.id}/${Date.now()}-${safeName}`,
+      uploaded_at: uploadedAt,
+      created_at: uploadedAt,
+      updated_at: uploadedAt,
+      download_url: '#mock-document',
+    };
+    store.documents.unshift(documentRow);
+    return cloneMockRecord(documentRow);
+  }
+
   const { client, user } = await getCandidatePortalContext();
   const candidate = await ensureCandidateProfileRow();
   validateCandidateDocument(file);
@@ -580,6 +902,12 @@ export async function uploadCandidateDocument({ file, documentType, label }) {
 }
 
 export async function deleteCandidateDocument(documentRecord) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    store.documents = store.documents.filter((item) => String(item.id) !== String(documentRecord?.id));
+    return true;
+  }
+
   const { client, user } = await getCandidatePortalContext();
   const candidate = await ensureCandidateProfileRow();
   const documentId = documentRecord?.id;
@@ -615,6 +943,43 @@ export async function deleteCandidateDocument(documentRecord) {
 }
 
 export async function signUpCandidate({ name, email, password }) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    const cleanEmail = lowerEmail(email);
+    const existing = ensureMockUserForEmail(cleanEmail);
+    if (existing) {
+      return {
+        user: {
+          ...publicMockUser(existing),
+          identities: [],
+        },
+        session: null,
+      };
+    }
+
+    const split = splitName(name);
+    const user = {
+      id: mockNextId('user'),
+      email: cleanEmail,
+      password: String(password || ''),
+      email_confirmed_at: null,
+      created_at: new Date().toISOString(),
+      user_metadata: {
+        full_name: trimText(name, 240) || cleanEmail,
+        first_name: split.firstName,
+        last_name: split.lastName,
+      },
+      identities: [{ identity_id: mockNextId('identity'), provider: 'email' }],
+    };
+    store.usersByEmail[cleanEmail] = user;
+    store.verificationEmailsSent += 1;
+    applyMockCandidateSeed({ name, email: cleanEmail }, publicMockUser(user));
+    return {
+      user: publicMockUser(user),
+      session: null,
+    };
+  }
+
   const { client, config } = await getCandidatePortalContext();
   const redirectTo = resolveCandidateRedirectUrl(config, 'emailRedirectUrl', 'emailRedirectPath');
   const fullName = trimText(name, 240);
@@ -644,6 +1009,28 @@ export async function signUpCandidate({ name, email, password }) {
 }
 
 export async function signInCandidate({ email, password }) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    const cleanEmail = lowerEmail(email);
+    const user = ensureMockUserForEmail(cleanEmail);
+    if (!user || user.password !== String(password || '')) {
+      throw new Error('Invalid login credentials');
+    }
+    if (!user.email_confirmed_at) {
+      throw new Error('Email not confirmed');
+    }
+    const publicUser = publicMockUser(user);
+    const session = mockSessionForUser(publicUser);
+    store.currentUser = publicUser;
+    store.currentSession = session;
+    applyMockCandidateSeed({ email: cleanEmail }, publicUser);
+    emitMockAuthState('SIGNED_IN');
+    return {
+      user: cloneMockRecord(publicUser),
+      session: cloneMockRecord(session),
+    };
+  }
+
   const { client } = await getCandidatePortalContext();
   const { data, error } = await client.auth.signInWithPassword({
     email: lowerEmail(email),
@@ -657,6 +1044,16 @@ export async function signInCandidate({ email, password }) {
 }
 
 export async function resendCandidateVerification(email) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    const user = ensureMockUserForEmail(email);
+    if (!user) {
+      throw new Error('That email does not have an HMJ candidate account yet.');
+    }
+    store.verificationEmailsSent += 1;
+    return { sent: true };
+  }
+
   const { client, config } = await getCandidatePortalContext();
   const redirectTo = resolveCandidateRedirectUrl(config, 'emailRedirectUrl', 'emailRedirectPath');
   const { data, error } = await client.auth.resend({
@@ -671,6 +1068,17 @@ export async function resendCandidateVerification(email) {
 }
 
 export async function requestCandidatePasswordReset(email) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    const cleanEmail = lowerEmail(email);
+    const user = ensureMockUserForEmail(cleanEmail);
+    if (!user) {
+      throw new Error('That email does not have an HMJ candidate account yet.');
+    }
+    store.resetEmailsSent += 1;
+    return { sent: true };
+  }
+
   const { client, config, user } = await getCandidatePortalContext();
   const redirectTo = resolveCandidateRedirectUrl(config, 'recoveryRedirectUrl', 'recoveryRedirectPath');
   const { data, error } = await client.auth.resetPasswordForEmail(lowerEmail(email), {
@@ -698,6 +1106,19 @@ export async function requestCandidatePasswordReset(email) {
 }
 
 export async function updateCandidatePassword(password) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    if (!store.currentUser?.id) {
+      throw new Error('candidate_not_authenticated');
+    }
+    const user = findMockUserById(store.currentUser.id);
+    if (!user) {
+      throw new Error('candidate_not_authenticated');
+    }
+    user.password = String(password || '');
+    return { user: publicMockUser(user) };
+  }
+
   const { client } = await getCandidatePortalContext();
   const { data, error } = await client.auth.updateUser({ password });
   if (error) throw error;
@@ -705,6 +1126,30 @@ export async function updateCandidatePassword(password) {
 }
 
 export async function updateCandidateEmail(email) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    if (!store.currentUser?.id) {
+      throw new Error('candidate_not_authenticated');
+    }
+    const cleanEmail = lowerEmail(email);
+    const user = findMockUserById(store.currentUser.id);
+    if (!user) {
+      throw new Error('candidate_not_authenticated');
+    }
+    delete store.usersByEmail[lowerMockEmail(user.email)];
+    user.email = cleanEmail;
+    user.email_confirmed_at = null;
+    store.usersByEmail[cleanEmail] = user;
+    store.verificationEmailsSent += 1;
+    store.currentUser = publicMockUser(user);
+    if (store.currentSession) {
+      store.currentSession.user = publicMockUser(user);
+    }
+    applyMockCandidateSeed({ email: cleanEmail }, store.currentUser);
+    emitMockAuthState('USER_UPDATED');
+    return { user: cloneMockRecord(store.currentUser) };
+  }
+
   const { client } = await getCandidatePortalContext();
   const { data, error } = await client.auth.updateUser({ email: lowerEmail(email) });
   if (error) throw error;
@@ -712,6 +1157,14 @@ export async function updateCandidateEmail(email) {
 }
 
 export async function signOutCandidate() {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    store.currentUser = null;
+    store.currentSession = null;
+    emitMockAuthState('SIGNED_OUT');
+    return true;
+  }
+
   const { client } = await getCandidatePortalContext();
   const { error } = await client.auth.signOut();
   if (error) throw error;
@@ -719,6 +1172,20 @@ export async function signOutCandidate() {
 }
 
 export async function closeCandidateAccount() {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    if (!store.currentUser?.id) {
+      throw new Error('candidate_not_authenticated');
+    }
+    const candidate = applyMockCandidateSeed({}, store.currentUser);
+    candidate.status = 'archived';
+    candidate.portal_account_closed_at = new Date().toISOString();
+    store.currentUser = null;
+    store.currentSession = null;
+    emitMockAuthState('SIGNED_OUT');
+    return { ok: true };
+  }
+
   const { session } = await getCandidatePortalContext();
   if (!session?.access_token) {
     throw new Error('candidate_not_authenticated');
@@ -742,6 +1209,17 @@ export async function closeCandidateAccount() {
 }
 
 export async function buildBackgroundSyncPayload(basePayload = {}) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    if (store.currentSession?.access_token) {
+      return {
+        ...basePayload,
+        access_token: store.currentSession.access_token,
+      };
+    }
+    return { ...basePayload };
+  }
+
   const payload = { ...basePayload };
   try {
     const { session } = await getCandidatePortalContext();
@@ -755,6 +1233,24 @@ export async function buildBackgroundSyncPayload(basePayload = {}) {
 }
 
 export async function backgroundSyncCandidatePayload(basePayload = {}) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    const payload = await buildBackgroundSyncPayload(basePayload);
+    if (payload?.candidate && typeof payload.candidate === 'object') {
+      applyMockCandidateSeed(payload.candidate, store.currentUser);
+    }
+    if (payload?.application && typeof payload.application === 'object' && store.candidate?.id) {
+      store.applications.unshift({
+        id: mockNextId('application'),
+        candidate_id: String(store.candidate.id),
+        applied_at: new Date().toISOString(),
+        status: 'submitted',
+        ...cloneMockRecord(payload.application),
+      });
+    }
+    return true;
+  }
+
   const payload = await buildBackgroundSyncPayload(basePayload);
   const body = JSON.stringify(payload);
 
