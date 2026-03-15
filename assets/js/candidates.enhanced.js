@@ -36,9 +36,18 @@
     last: doc.getElementById('lname'),
     email: doc.getElementById('email'),
     phone: doc.getElementById('phone'),
+    address1: doc.getElementById('address1'),
+    town: doc.getElementById('town'),
+    postcode: doc.getElementById('postcode'),
+    country: doc.getElementById('country'),
     location: doc.getElementById('location'),
     discipline: doc.getElementById('discipline'),
+    currentJobTitle: doc.getElementById('currentJobTitle'),
     role: doc.getElementById('role'),
+    yearsExperience: doc.getElementById('yearsExperience'),
+    qualifications: doc.getElementById('qualifications'),
+    sectorExperience: doc.getElementById('sectorExperience'),
+    availability: doc.getElementById('availability'),
     salary: doc.getElementById('salary'),
     notice: doc.getElementById('notice'),
     reloc: doc.getElementById('reloc'),
@@ -122,6 +131,40 @@
     els.rtwHidden.value = getRTWSelections().join(', ');
   }
 
+  function setFieldValidity(field, message) {
+    if (!field || typeof field.setCustomValidity !== 'function') return;
+    field.setCustomValidity(message || '');
+    if (message) {
+      field.setAttribute('aria-invalid', 'true');
+    } else {
+      field.removeAttribute('aria-invalid');
+    }
+  }
+
+  function validateRequiredCollections(options = {}) {
+    const report = !!options.report;
+    const skillMessage = state.skills.length
+      ? ''
+      : 'Add at least one key skill before submitting your profile.';
+    const rtwMessage = getRTWSelections().length
+      ? ''
+      : 'Select at least one region where you are already authorised to work.';
+    const firstRtwCheckbox = els.rtwGroup?.querySelector('input[type="checkbox"]');
+
+    setFieldValidity(els.tagInput, skillMessage);
+    setFieldValidity(firstRtwCheckbox, rtwMessage);
+
+    if (report) {
+      if (skillMessage) {
+        els.tagInput?.reportValidity?.();
+      } else if (rtwMessage) {
+        firstRtwCheckbox?.reportValidity?.();
+      }
+    }
+
+    return !skillMessage && !rtwMessage;
+  }
+
   function ensureLocationDatalist() {
     if (!els.location) return;
     const listId = 'candidate-location-suggest';
@@ -177,6 +220,7 @@
     if (els.skillsHidden) {
       els.skillsHidden.value = state.skills.join(', ');
     }
+    validateRequiredCollections();
     renderSkillChips();
     updatePreview();
     scheduleAutosave();
@@ -394,8 +438,19 @@
     if (locationText) {
       summaryRows.push(`Current location: ${locationText}`);
     }
+    if (getValue(els.currentJobTitle)) {
+      summaryRows.push(`Current job title: ${getValue(els.currentJobTitle)}`);
+    }
+    if (getValue(els.yearsExperience)) {
+      summaryRows.push(`Experience: ${getValue(els.yearsExperience)} years`);
+    }
+    if (getValue(els.address1) || getValue(els.town) || getValue(els.country)) {
+      summaryRows.push(`Base address: ${[getValue(els.address1), getValue(els.town), getValue(els.country)].filter(Boolean).join(', ')}`);
+    }
 
     const availabilityRows = [];
+    const availability = getValue(els.availability);
+    if (availability) availabilityRows.push(`Availability: ${availability}`);
     const notice = getValue(els.notice);
     const salaryValue = getValue(els.salary);
     const basisLabel = state.rateBasis === 'per hour' ? 'per hour' : 'per day';
@@ -423,6 +478,12 @@
     }
 
     const notesRows = [];
+    if (getValue(els.sectorExperience)) {
+      notesRows.push(`Sector experience: ${getValue(els.sectorExperience)}`);
+    }
+    if (getValue(els.qualifications)) {
+      notesRows.push(`Qualifications: ${getValue(els.qualifications)}`);
+    }
     if (getValue(els.message)) {
       notesRows.push(getValue(els.message));
     }
@@ -472,7 +533,25 @@
     const tier = doc.getElementById('strengthTier');
     if (!span || !label || !tier) return;
 
-    const required = [els.first, els.last, els.email, els.phone, els.location, els.discipline, els.role, els.notice, els.reloc];
+    const required = [
+      els.first,
+      els.last,
+      els.email,
+      els.phone,
+      els.address1,
+      els.town,
+      els.postcode,
+      els.country,
+      els.location,
+      els.discipline,
+      els.currentJobTitle,
+      els.role,
+      els.yearsExperience,
+      els.qualifications,
+      els.sectorExperience,
+      els.availability,
+      els.reloc
+    ];
     let score = 0;
     let completed = 0;
     required.forEach((el) => {
@@ -483,7 +562,8 @@
     if (Number(getValue(els.salary))) score += 10;
     if (state.skills.length >= 5) score += 8;
     if (getValue(els.linkedin)) score += 5;
-    if (getValue(els.notice)) score += 5;
+    if (getValue(els.notice)) score += 4;
+    if (getValue(els.availability)) score += 4;
     if (score > 100) score = 100;
 
     let tierLabel = 'Getting started';
@@ -633,6 +713,7 @@
         otherInput.value = '';
       }
       updateRTWHidden();
+      validateRequiredCollections();
       updatePreview();
       scheduleAutosave();
     };
@@ -704,7 +785,29 @@
   }
 
   function buildStrengthWatchers() {
-    const inputs = [els.first, els.last, els.email, els.phone, els.location, els.discipline, els.role, els.notice, els.reloc, els.salary, els.linkedin, els.message];
+    const inputs = [
+      els.first,
+      els.last,
+      els.email,
+      els.phone,
+      els.address1,
+      els.town,
+      els.postcode,
+      els.country,
+      els.location,
+      els.discipline,
+      els.currentJobTitle,
+      els.role,
+      els.yearsExperience,
+      els.qualifications,
+      els.sectorExperience,
+      els.availability,
+      els.notice,
+      els.reloc,
+      els.salary,
+      els.linkedin,
+      els.message
+    ];
     inputs.forEach((input) => {
       input?.addEventListener('input', () => {
         updatePreview();
@@ -903,7 +1006,11 @@
   }
 
   function handleFormSubmission() {
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (event) => {
+      if (!validateRequiredCollections({ report: true })) {
+        event.preventDefault();
+        return;
+      }
       if (els.pageUrlHidden) {
         els.pageUrlHidden.value = window.location.href;
       }
@@ -1002,6 +1109,7 @@
   handleFormSubmission();
   initJobsWidget();
 
+  validateRequiredCollections();
   updatePreview();
   maybeRestoreDraft();
 

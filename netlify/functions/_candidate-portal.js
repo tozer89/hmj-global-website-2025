@@ -33,6 +33,25 @@ function normaliseSkillList(value) {
   return out;
 }
 
+function normaliseTextList(value, maxLength = 120) {
+  const raw = Array.isArray(value)
+    ? value
+    : String(value == null ? '' : value)
+        .split(/[\n,]/);
+
+  const seen = new Set();
+  const out = [];
+  raw.forEach((item) => {
+    const entry = trimString(item, maxLength);
+    if (!entry) return;
+    const key = entry.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(entry);
+  });
+  return out;
+}
+
 function splitName(value) {
   const full = trimString(value, 240) || '';
   if (!full) {
@@ -92,6 +111,13 @@ function pickFirst(...values) {
     return value;
   }
   return undefined;
+}
+
+function parsePositiveInteger(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 function buildCandidateWritePayload(input = {}, options = {}) {
@@ -157,9 +183,98 @@ function buildCandidateWritePayload(input = {}, options = {}) {
     { hasValue: hasOwn(input, 'location') || hasOwn(input, 'current_location') }
   );
   assign(
+    'address1',
+    trimString(pickFirst(input.address1, input.address_1, input.address_line_1, input.addressLine1), 240),
+    { hasValue: hasOwn(input, 'address1') || hasOwn(input, 'address_1') || hasOwn(input, 'address_line_1') || hasOwn(input, 'addressLine1') }
+  );
+  assign(
+    'address2',
+    trimString(pickFirst(input.address2, input.address_2, input.address_line_2, input.addressLine2), 240),
+    { hasValue: hasOwn(input, 'address2') || hasOwn(input, 'address_2') || hasOwn(input, 'address_line_2') || hasOwn(input, 'addressLine2') }
+  );
+  assign(
+    'town',
+    trimString(pickFirst(input.town, input.city), 160),
+    { hasValue: hasOwn(input, 'town') || hasOwn(input, 'city') }
+  );
+  assign(
+    'county',
+    trimString(pickFirst(input.county, input.region), 160),
+    { hasValue: hasOwn(input, 'county') || hasOwn(input, 'region') }
+  );
+  assign(
+    'postcode',
+    trimString(pickFirst(input.postcode, input.postal_code), 32),
+    { hasValue: hasOwn(input, 'postcode') || hasOwn(input, 'postal_code') }
+  );
+  assign('country', trimString(input.country, 120), { hasValue: hasOwn(input, 'country') });
+  assign('nationality', trimString(input.nationality, 120), { hasValue: hasOwn(input, 'nationality') });
+  assign(
+    'right_to_work_status',
+    trimString(pickFirst(input.right_to_work_status, input.work_authorisation_status), 240),
+    { hasValue: hasOwn(input, 'right_to_work_status') || hasOwn(input, 'work_authorisation_status') }
+  );
+  const rightToWorkRegions = normaliseTextList(
+    pickFirst(input.right_to_work_regions, input.right_to_work),
+    120
+  );
+  if (
+    rightToWorkRegions.length
+    || includeNulls
+    || hasOwn(input, 'right_to_work_regions')
+    || hasOwn(input, 'right_to_work')
+  ) {
+    payload.right_to_work_regions = rightToWorkRegions;
+  }
+  assign(
+    'primary_specialism',
+    trimString(pickFirst(input.primary_specialism, input.discipline), 240),
+    { hasValue: hasOwn(input, 'primary_specialism') || hasOwn(input, 'discipline') }
+  );
+  assign(
+    'secondary_specialism',
+    trimString(input.secondary_specialism, 240),
+    { hasValue: hasOwn(input, 'secondary_specialism') }
+  );
+  assign(
+    'current_job_title',
+    trimString(input.current_job_title, 240),
+    { hasValue: hasOwn(input, 'current_job_title') }
+  );
+  assign(
+    'desired_roles',
+    trimString(pickFirst(input.desired_roles, input.roles_looking_for), 320),
+    { hasValue: hasOwn(input, 'desired_roles') || hasOwn(input, 'roles_looking_for') }
+  );
+  assign(
+    'qualifications',
+    trimString(input.qualifications, 4000),
+    { hasValue: hasOwn(input, 'qualifications') }
+  );
+  assign(
+    'sector_experience',
+    trimString(input.sector_experience, 1000),
+    { hasValue: hasOwn(input, 'sector_experience') }
+  );
+  assign(
+    'relocation_preference',
+    trimString(pickFirst(input.relocation_preference, input.relocation), 120),
+    { hasValue: hasOwn(input, 'relocation_preference') || hasOwn(input, 'relocation') }
+  );
+  assign(
+    'salary_expectation',
+    trimString(input.salary_expectation, 160),
+    { hasValue: hasOwn(input, 'salary_expectation') }
+  );
+  assign(
+    'experience_years',
+    parsePositiveInteger(pickFirst(input.experience_years, input.years_experience)),
+    { hasValue: hasOwn(input, 'experience_years') || hasOwn(input, 'years_experience') }
+  );
+  assign(
     'sector_focus',
-    trimString(pickFirst(input.sector_focus, input.discipline), 240),
-    { hasValue: hasOwn(input, 'sector_focus') || hasOwn(input, 'discipline') }
+    trimString(pickFirst(input.sector_focus, input.sector_experience, input.discipline), 240),
+    { hasValue: hasOwn(input, 'sector_focus') || hasOwn(input, 'sector_experience') || hasOwn(input, 'discipline') }
   );
 
   const skills = normaliseSkillList(
@@ -186,8 +301,28 @@ function buildCandidateWritePayload(input = {}, options = {}) {
   );
   assign(
     'headline_role',
-    trimString(pickFirst(input.headline_role, input.role, input.job_title, input.title), 240),
-    { hasValue: hasOwn(input, 'headline_role') || hasOwn(input, 'role') || hasOwn(input, 'job_title') || hasOwn(input, 'title') }
+    trimString(
+      pickFirst(
+        input.headline_role,
+        input.desired_roles,
+        input.roles_looking_for,
+        input.role,
+        input.current_job_title,
+        input.job_title,
+        input.title
+      ),
+      240
+    ),
+    {
+      hasValue:
+        hasOwn(input, 'headline_role')
+        || hasOwn(input, 'desired_roles')
+        || hasOwn(input, 'roles_looking_for')
+        || hasOwn(input, 'role')
+        || hasOwn(input, 'current_job_title')
+        || hasOwn(input, 'job_title')
+        || hasOwn(input, 'title'),
+    }
   );
   assign('updated_at', now, { hasValue: true });
   if (options.touchPortalLogin) {

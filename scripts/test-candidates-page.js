@@ -9,8 +9,11 @@ const hasFilters = /id="filters"/.test(adminHtml);
 const hasRows = /id="rows"/.test(adminHtml);
 const hasPortalAuthRoot = /id="candidatePortalAuthRoot"/.test(publicHtml);
 const hasDashboardRoot = /id="candidateDashboardRoot"/.test(publicHtml);
+const hasCreateAccountToggle = /id="candidateCreateAccount"/.test(publicHtml);
+const hasPasswordFields = /id="candidatePasswordFields"/.test(publicHtml);
+const hasCandidateStatusRoot = /id="candidateFormStatusRoot"/.test(publicHtml);
 
-if (!hasToolbar || !hasFilters || !hasRows || !hasPortalAuthRoot || !hasDashboardRoot) {
+if (!hasToolbar || !hasFilters || !hasRows || !hasPortalAuthRoot || !hasDashboardRoot || !hasCreateAccountToggle || !hasPasswordFields || !hasCandidateStatusRoot) {
   throw new Error('Candidates page failed basic mount check.');
 }
 
