@@ -205,7 +205,14 @@ select,
 textarea {
   border-color: rgba(20, 43, 96, 0.16);
   background: #fff;
+  color: var(--hmj-admin-ink);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(15, 27, 63, 0.56);
+  opacity: 1;
 }
 
 input:focus-visible,
@@ -254,6 +261,50 @@ textarea:focus-visible {
   background: var(--hmj-admin-surface);
   border-color: var(--hmj-admin-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), var(--hmj-admin-shadow-md);
+}
+
+/* Reset light surfaces back to dark ink when they sit inside dark hero shells. */
+.panel,
+.card,
+.clf-panel,
+.auth-surface,
+.auth-card,
+.auth-summary-card,
+.auth-account-panel,
+.auth-account-sidebar,
+.summary-card,
+.metric,
+.metric-card,
+.split,
+.notice-card,
+.quick-reply-card,
+.conversation-card,
+.analytics-card,
+.analytics-block,
+.mini-panel,
+.control-card,
+.workflow-step,
+.guidance-card,
+.list-item,
+.table-card,
+.qv,
+.hero-card,
+.link-card,
+.quick-link,
+.check-card,
+.section-card--surface,
+.share-box,
+.modal-summary-card,
+.confirm-details,
+.activity-empty,
+.activity-list li,
+.note-card,
+.attachment,
+.shortlink-panel,
+.shortlink-result,
+.shortlink-item,
+.shortlink-empty {
+  color: var(--hmj-admin-ink);
 }
 
 .panel,

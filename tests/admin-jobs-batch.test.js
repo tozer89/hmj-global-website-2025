@@ -31,8 +31,8 @@ function buildJobsHarnessHtml(options = {}) {
   if (options.staleBatchUi) {
     html = html
       .replace('<body data-auth-view="login">', '<body data-auth-view="login" class="modal-open">')
-      .replace('id="batchModalShell" hidden', 'id="batchModalShell"')
-      .replace('id="batchConfirmShell" hidden', 'id="batchConfirmShell"')
+      .replace('id="batchModalShell" hidden inert aria-hidden="true" data-open="false"', 'id="batchModalShell" data-open="true" aria-hidden="false"')
+      .replace('id="batchConfirmShell" hidden inert aria-hidden="true" data-open="false"', 'id="batchConfirmShell" data-open="true" aria-hidden="false"')
       .replace('<div id="toast"></div>', '<div id="toast"><div class="notice">Choose at least one batch change first</div></div>');
   }
 
@@ -172,6 +172,16 @@ async function createJobsDom(width = 390, options = {}) {
   return { dom, saveCalls, bulkCalls };
 }
 
+function assertBatchUiClosed(document) {
+  assert.equal(document.body.classList.contains('modal-open'), false);
+  assert.equal(document.querySelector('#batchModalShell').hidden, true);
+  assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+  assert.equal(document.querySelector('#batchModalShell').dataset.open, 'false');
+  assert.equal(document.querySelector('#batchConfirmShell').dataset.open, 'false');
+  assert.equal(document.querySelector('#batchModalShell').getAttribute('aria-hidden'), 'true');
+  assert.equal(document.querySelector('#batchConfirmShell').getAttribute('aria-hidden'), 'true');
+}
+
 test('selection controls follow visible jobs and reconcile after filter changes', async () => {
   const { dom } = await createJobsDom();
   const { document, Event } = dom.window;
@@ -206,9 +216,7 @@ test('stale batch overlays and warning toasts are cleared on page boot', async (
   const { dom } = await createJobsDom(390, { staleBatchUi: true });
   const { document } = dom.window;
 
-  assert.equal(document.body.classList.contains('modal-open'), false);
-  assert.equal(document.querySelector('#batchModalShell').hidden, true);
-  assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+  assertBatchUiClosed(document);
   assert.equal(document.querySelector('#toast').textContent.trim(), '');
   assert.equal(document.querySelector('#selectedCount').textContent.trim(), '0 selected');
 });
@@ -217,9 +225,31 @@ test('stale batch overlays are cleared before admin boot finishes', async () => 
   const { dom } = await createJobsDom(390, { staleBatchUi: true, delayBootMs: 120, settlePasses: 1 });
   const { document } = dom.window;
 
-  assert.equal(document.body.classList.contains('modal-open'), false);
-  assert.equal(document.querySelector('#batchModalShell').hidden, true);
+  assertBatchUiClosed(document);
+});
+
+test('batch confirm cannot open without a valid batch payload', async () => {
+  const { dom } = await createJobsDom();
+  const { document, Event, KeyboardEvent } = dom.window;
+
+  const plannerCheckbox = document.querySelector('[data-id="planner-role"] [data-role="select-card"]');
+  plannerCheckbox.checked = true;
+  plannerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+  await settle(dom.window);
+
+  document.querySelector('#btnBatchAction').click();
+  await settle(dom.window);
+
+  assert.equal(document.querySelector('#batchModalShell').hidden, false);
   assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+  assert.equal(document.querySelector('#btnBatchReview').disabled, true);
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+  await settle(dom.window);
+
+  assert.equal(document.querySelector('#batchModalShell').hidden, false);
+  assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+  assert.equal(document.querySelector('#batchConfirmShell').dataset.open, 'false');
 });
 
 test('batch modal confirms and submits structured bulk edits', async () => {
@@ -274,6 +304,27 @@ test('batch modal confirms and submits structured bulk edits', async () => {
   assert.equal(document.querySelector('#batchModalShell').hidden, true);
 });
 
+test('closing batch modal removes the blocking layer and body lock', async () => {
+  const { dom } = await createJobsDom();
+  const { document, Event } = dom.window;
+
+  const plannerCheckbox = document.querySelector('[data-id="planner-role"] [data-role="select-card"]');
+  plannerCheckbox.checked = true;
+  plannerCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+  await settle(dom.window);
+
+  document.querySelector('#btnBatchAction').click();
+  await settle(dom.window);
+
+  assert.equal(document.body.classList.contains('modal-open'), true);
+  assert.equal(document.querySelector('#batchModalShell').dataset.open, 'true');
+
+  document.querySelector('#btnBatchCancel').click();
+  await settle(dom.window);
+
+  assertBatchUiClosed(document);
+});
+
 test('page restore clears batch workflow state before the console becomes usable again', async () => {
   const { dom } = await createJobsDom();
   const { document, Event } = dom.window;
@@ -299,10 +350,20 @@ test('page restore clears batch workflow state before the console becomes usable
   dom.window.dispatchEvent(restoreEvent);
   await settle(dom.window);
 
-  assert.equal(document.body.classList.contains('modal-open'), false);
-  assert.equal(document.querySelector('#batchModalShell').hidden, true);
-  assert.equal(document.querySelector('#batchConfirmShell').hidden, true);
+  assertBatchUiClosed(document);
   assert.equal(document.querySelector('#selectedCount').textContent.trim(), '0 selected');
+});
+
+test('jobs admin markup exposes only one batch modal, one confirm modal, and one backdrop each', async () => {
+  const { dom } = await createJobsDom();
+  const { document } = dom.window;
+
+  assert.equal(document.querySelectorAll('#batchModalShell').length, 1);
+  assert.equal(document.querySelectorAll('#batchConfirmShell').length, 1);
+  assert.equal(document.querySelectorAll('#batchModal').length, 1);
+  assert.equal(document.querySelectorAll('#batchConfirmDialog').length, 1);
+  assert.equal(document.querySelectorAll('[data-batch-close]').length, 1);
+  assert.equal(document.querySelectorAll('[data-batch-confirm-close]').length, 1);
 });
 
 test('inline edits and admin view preferences persist locally', async () => {

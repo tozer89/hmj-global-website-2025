@@ -135,7 +135,9 @@
     .card-updated{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#f7f9ff;border:1px solid rgba(47,78,162,.14);color:var(--muted);font-weight:700}
 
     body.modal-open{overflow:hidden}
-    .modal-shell,.confirm-shell{position:fixed;inset:0;z-index:240;display:grid;place-items:center;padding:24px}
+    .modal-shell,.confirm-shell{position:fixed;inset:0;z-index:240;display:grid;place-items:center;padding:24px;opacity:0;visibility:hidden;pointer-events:none}
+    .modal-shell[hidden],.confirm-shell[hidden]{display:none !important}
+    .modal-shell[data-open="true"],.confirm-shell[data-open="true"]{opacity:1;visibility:visible;pointer-events:auto}
     .modal-backdrop{position:absolute;inset:0;background:rgba(15,27,63,.46);backdrop-filter:blur(8px)}
     .modal-panel,.confirm-panel{position:relative;display:grid;background:linear-gradient(180deg,#f8f9ff,#eef3ff);border:1px solid rgba(215,222,243,.85);box-shadow:0 28px 64px rgba(15,27,63,.28)}
     .modal-panel{grid-template-rows:auto 1fr auto;width:min(960px,100%);max-height:min(88dvh,100%);border-radius:26px;overflow:hidden}
@@ -691,7 +693,7 @@
   </aside>
 
   <datalist id="sectionOptions"></datalist>
-  <div class="modal-shell" id="batchModalShell" hidden>
+  <div class="modal-shell" id="batchModalShell" hidden inert aria-hidden="true" data-open="false">
     <div class="modal-backdrop" data-batch-close></div>
     <section class="modal-panel" id="batchModal" role="dialog" aria-modal="true" aria-labelledby="batchModalTitle" aria-describedby="batchSelectedSummary" tabindex="-1">
       <div class="modal-head">
@@ -1022,7 +1024,7 @@
     </section>
   </div>
 
-  <div class="confirm-shell" id="batchConfirmShell" hidden>
+  <div class="confirm-shell" id="batchConfirmShell" hidden inert aria-hidden="true" data-open="false">
     <div class="modal-backdrop" data-batch-confirm-close></div>
     <section class="confirm-panel" id="batchConfirmDialog" role="alertdialog" aria-modal="true" aria-labelledby="batchConfirmTitle" aria-describedby="batchConfirmMessage" tabindex="-1">
       <p class="drawer-head__eyebrow">Confirm batch change</p>
@@ -1040,21 +1042,32 @@
 
   <script>
   (function startJobs(){
-    function forceCloseStrayBatchUi() {
-      const batchModalShell = document.getElementById('batchModalShell');
-      const batchConfirmShell = document.getElementById('batchConfirmShell');
-      if (batchModalShell) batchModalShell.hidden = true;
-      if (batchConfirmShell) batchConfirmShell.hidden = true;
+    function applyClosedBatchUiDomState() {
+      const shells = [
+        document.getElementById('batchModalShell'),
+        document.getElementById('batchConfirmShell'),
+      ];
+      shells.forEach((shell) => {
+        if (!shell) return;
+        shell.hidden = true;
+        shell.dataset.open = 'false';
+        shell.setAttribute('aria-hidden', 'true');
+        shell.toggleAttribute('inert', true);
+        if ('inert' in shell) shell.inert = true;
+      });
+      document.getElementById('batchModal')?.setAttribute('aria-hidden', 'true');
+      document.getElementById('batchConfirmDialog')?.setAttribute('aria-hidden', 'true');
+      document.getElementById('batchConfirmDialog')?.classList.remove('is-danger');
       document.body?.classList.remove('modal-open');
     }
 
-    if (!window.__hmjJobsBatchUiResetBound) {
-      window.__hmjJobsBatchUiResetBound = true;
-      window.addEventListener('pagehide', forceCloseStrayBatchUi);
-      window.addEventListener('pageshow', forceCloseStrayBatchUi);
+    if (!window.__hmjJobsBatchUiGuardBound) {
+      window.__hmjJobsBatchUiGuardBound = true;
+      window.addEventListener('pagehide', applyClosedBatchUiDomState);
+      window.addEventListener('pageshow', applyClosedBatchUiDomState);
     }
 
-    forceCloseStrayBatchUi();
+    applyClosedBatchUiDomState();
 
     if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
       return setTimeout(startJobs, 40);
@@ -1135,6 +1148,7 @@
 
       let batchFocusReturn = null;
       let confirmFocusReturn = null;
+      const VALID_BATCH_CONFIRM_SOURCES = new Set(['user-submit']);
 
       const filtersPanel = sel('#filtersPanel');
       const filtersStickyShell = sel('#filtersStickyShell');
@@ -1275,11 +1289,23 @@
         return null;
       }
 
+      function setBatchShellState(shell, open) {
+        if (!shell) return;
+        const isOpen = !!open;
+        shell.dataset.open = isOpen ? 'true' : 'false';
+        shell.hidden = !isOpen;
+        shell.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        shell.toggleAttribute('inert', !isOpen);
+        if ('inert' in shell) shell.inert = !isOpen;
+      }
+
       function syncBatchUiState() {
         const batchVisible = !!state.batchOpen;
         const confirmVisible = !!state.confirmOpen;
-        if (batchModalShell) batchModalShell.hidden = !batchVisible;
-        if (batchConfirmShell) batchConfirmShell.hidden = !confirmVisible;
+        setBatchShellState(batchModalShell, batchVisible);
+        setBatchShellState(batchConfirmShell, confirmVisible);
+        if (batchModal) batchModal.setAttribute('aria-hidden', batchVisible ? 'false' : 'true');
+        if (batchConfirmDialog) batchConfirmDialog.setAttribute('aria-hidden', confirmVisible ? 'false' : 'true');
         document.body.classList.toggle('modal-open', batchVisible || confirmVisible);
       }
 
@@ -3272,13 +3298,17 @@
         return !!state.selectedIds.size && Array.isArray(resolved.labels) && resolved.labels.length > 0;
       }
 
-      function discardTransientBatchState(options = {}) {
+      function resetBatchUiToClosedState(options = {}) {
         state.batchOpen = false;
         state.confirmOpen = false;
         state.pendingBatchEdit = null;
         state.batchSaving = false;
         batchFocusReturn = null;
         confirmFocusReturn = null;
+        batchConfirmDialog?.classList.remove('is-danger');
+        if (batchConfirmTitle) batchConfirmTitle.textContent = 'Review these changes carefully';
+        if (batchConfirmMessage) batchConfirmMessage.textContent = 'You are about to update live HMJ job records.';
+        if (batchConfirmDetails) batchConfirmDetails.replaceChildren();
         if (options.clearSelection) {
           state.selectedIds.clear();
         }
@@ -3309,29 +3339,35 @@
 
       function closeBatchConfirm(options = {}) {
         if (state.batchSaving && !options.force) return;
+        const returnFocus = confirmFocusReturn || btnBatchReview;
         state.confirmOpen = false;
         state.pendingBatchEdit = null;
+        batchConfirmDialog?.classList.remove('is-danger');
         syncBatchUiState();
         if (options.restoreFocus !== false) {
-          (confirmFocusReturn || btnBatchReview)?.focus?.();
+          returnFocus?.focus?.();
         }
         updateControlState();
       }
 
       function closeBatchModal(options = {}) {
         if (state.batchSaving && !options.force) return;
-        closeBatchConfirm({ force: true, restoreFocus: false });
-        state.batchOpen = false;
-        state.pendingBatchEdit = null;
-        syncBatchUiState();
+        const returnFocus = batchFocusReturn;
+        resetBatchUiToClosedState({
+          clearSelection: false,
+          clearToasts: false,
+          resetForm: options.resetForm !== false,
+        });
         if (options.restoreFocus !== false) {
-          batchFocusReturn?.focus?.();
+          returnFocus?.focus?.();
         }
         updateControlState();
       }
 
-      function openBatchConfirm() {
-        if (!state.batchOpen || batchModalShell?.hidden) return;
+      function openBatchConfirm(options = {}) {
+        const source = String(options?.source || '').trim().toLowerCase();
+        if (!VALID_BATCH_CONFIRM_SOURCES.has(source)) return;
+        if (!state.batchOpen || batchModalShell?.hidden || state.readOnly || !state.selectedIds.size) return;
         const summary = updateBatchSummary();
         if (!hasValidBatchChanges(summary)) {
           toast('Choose at least one batch change first', 'warn', 2400);
@@ -3428,8 +3464,8 @@
         const ids = Array.from(state.selectedIds);
         if (!ids.length) {
           toast('No selected jobs left to update', 'warn', 2400);
-          closeBatchConfirm();
-          closeBatchModal();
+          resetBatchUiToClosedState({ clearSelection: true, clearToasts: false });
+          updateControlState();
           return;
         }
 
@@ -3445,9 +3481,7 @@
           });
           const updatedCount = Array.isArray(res?.jobs) ? res.jobs.length : Number(res?.updatedCount || 0);
           const failureCount = Array.isArray(res?.failures) ? res.failures.length : 0;
-          state.selectedIds.clear();
-          closeBatchConfirm({ force: true, restoreFocus: false });
-          closeBatchModal({ force: true, restoreFocus: false });
+          resetBatchUiToClosedState({ clearSelection: true, clearToasts: false });
           await loadJobs();
           const summary = failureCount
             ? `Updated ${updatedCount} job${updatedCount === 1 ? '' : 's'} with ${failureCount} failure${failureCount === 1 ? '' : 's'}.`
@@ -3457,6 +3491,7 @@
         } catch (err) {
           console.error('[jobs] batch save failed', err);
           setLastAction('Batch save failed', 'error');
+          resetBatchUiToClosedState({ clearSelection: false, clearToasts: false });
           toast('Batch save failed: ' + (err.message || err), 'error', 4200);
         } finally {
           state.batchSaving = false;
@@ -3869,7 +3904,7 @@
       }
       if (btnBatchClose) btnBatchClose.onclick = () => closeBatchModal();
       if (btnBatchCancel) btnBatchCancel.onclick = () => closeBatchModal();
-      if (btnBatchReview) btnBatchReview.onclick = () => openBatchConfirm();
+      if (btnBatchReview) btnBatchReview.onclick = () => openBatchConfirm({ source: 'user-submit' });
       if (btnBatchConfirmCancel) btnBatchConfirmCancel.onclick = () => closeBatchConfirm();
       if (btnBatchConfirmSave) btnBatchConfirmSave.onclick = () => commitBatchChanges();
       document.querySelectorAll('[data-batch-close]').forEach((element) => {
@@ -4014,7 +4049,7 @@
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
           e.preventDefault();
           if (state.confirmOpen) commitBatchChanges();
-          else if (state.batchOpen) openBatchConfirm();
+          else if (state.batchOpen) openBatchConfirm({ source: 'user-submit' });
           else if (drawer.classList.contains('open')) saveJob();
         }
         if (e.key === 'Escape' && drawer.classList.contains('open')) {
@@ -4029,10 +4064,10 @@
       });
       window.addEventListener('scroll', updateStickyState, { passive: true });
       window.addEventListener('pagehide', () => {
-        discardTransientBatchState({ clearSelection: true, clearToasts: true });
+        resetBatchUiToClosedState({ clearSelection: true, clearToasts: true });
       });
       window.addEventListener('pageshow', () => {
-        discardTransientBatchState({ clearSelection: true, clearToasts: true });
+        resetBatchUiToClosedState({ clearSelection: true, clearToasts: true });
         renderAll({ preserveSelection: true });
         updateControlState();
       });
@@ -4053,7 +4088,7 @@
       filterType.value = state.filters.type;
       filterPublished.value = state.filters.published;
       setCategoryToolsExpanded(state.preferences.categoryToolsExpanded, { skipPersist: true });
-      discardTransientBatchState({ clearSelection: true, clearToasts: true });
+      resetBatchUiToClosedState({ clearSelection: true, clearToasts: true });
       syncStickyOffset();
       updateStickyState();
       updateControlState();
