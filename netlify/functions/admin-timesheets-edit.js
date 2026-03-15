@@ -1,11 +1,11 @@
 // netlify/functions/admin-timesheets-edit.js
 const { withAdminCors } = require('./_http.js');
-const { getContext } = require('./_timesheet-helpers.js');
+const { getContext } = require('./_auth.js');
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 const baseHandler = async (event, context) => {
   try {
-    const { user, supabase } = await getContext(context, { requireAdmin: true });
+    const { user, supabase } = await getContext(event, context, { requireAdmin: true });
 
     const { id, entries = {}, keep_status = true } = JSON.parse(event.body || '{}');
     if (!id) throw new Error('Missing id');

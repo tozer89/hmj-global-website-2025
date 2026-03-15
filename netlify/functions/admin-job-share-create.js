@@ -5,6 +5,7 @@ const { getSupabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { toJob, toPublicJob, findStaticJob, slugify, isSchemaError, isMissingTableError, isPublicJob, buildPublicJobDetailPath } = require('./_jobs-helpers.js');
 const { createShareAccessToken, buildTokenizedJobDetailPath } = require('./_job-detail-tokens.js');
+const { enrichJobSpec } = require('./_job-spec-enrichment.js');
 
 function adjustRecordForSchema(record, err) {
   const message = (err?.message || '').toLowerCase();
@@ -89,6 +90,17 @@ function buildFallbackShareLink({ origin, job, expiresAt }) {
   return null;
 }
 
+function buildAiMeta(result = {}, overrides = {}) {
+  return {
+    requested: !!result.requested,
+    applied: !!result.applied,
+    source: result.source || (result.ok ? 'openai' : 'fallback'),
+    model: result.model || null,
+    error: result.error || null,
+    ...overrides,
+  };
+}
+
 const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
@@ -101,7 +113,7 @@ const baseHandler = async (event, context) => {
       supabase = null;
     }
 
-    const { jobId, jobPayload, expiresInDays = 30, notes } = JSON.parse(event.body || '{}');
+    const { jobId, jobPayload, expiresInDays = 30, notes, enrichSpec = false, aiPolish = false } = JSON.parse(event.body || '{}');
     if (!jobId && !jobPayload) {
       return { statusCode: 400, body: JSON.stringify({ error: 'jobId required' }) };
     }
@@ -151,7 +163,37 @@ const baseHandler = async (event, context) => {
       return { statusCode: 404, body: JSON.stringify({ error: 'Job not found', id: fallbackId }) };
     }
 
-    const sharedJob = toPublicJob(job);
+    const shouldEnrichSpec = enrichSpec === true || aiPolish === true;
+    let sharedJob = toPublicJob(job);
+    let aiMeta = buildAiMeta({ requested: shouldEnrichSpec, applied: false, source: shouldEnrichSpec ? 'fallback' : 'disabled' });
+
+    if (shouldEnrichSpec && supabase) {
+      const enriched = await enrichJobSpec(sharedJob);
+      if (enriched.ok && enriched.shareSpec) {
+        sharedJob = {
+          ...sharedJob,
+          shareSpec: enriched.shareSpec,
+        };
+        aiMeta = buildAiMeta(enriched, {
+          applied: true,
+          source: 'openai',
+          error: null,
+        });
+      } else {
+        aiMeta = buildAiMeta(enriched, {
+          applied: false,
+          source: 'fallback',
+        });
+      }
+    } else if (shouldEnrichSpec) {
+      aiMeta = buildAiMeta({
+        requested: true,
+        applied: false,
+        source: 'fallback',
+        error: 'share_storage_unavailable',
+      });
+    }
+
     const slug = supabase ? buildSlug(sharedJob.id) : (sharedJob.id || slugify(sharedJob.title || 'job'));
     const expires = supabase && Number.isFinite(expiresInDays) && expiresInDays > 0
       ? new Date(Date.now() + expiresInDays * 86400000)
@@ -189,6 +231,7 @@ const baseHandler = async (event, context) => {
               url,
               expires_at: inserted.expires_at ?? record.expires_at ?? null,
               schema: schemaAdjusted || undefined,
+              ai: aiMeta,
             }),
           };
         }
@@ -235,6 +278,10 @@ const baseHandler = async (event, context) => {
           fallback: true,
           fallbackMode: fallbackLink.mode,
           schema: true,
+          ai: buildAiMeta(aiMeta, shouldEnrichSpec ? {
+            applied: false,
+            error: aiMeta.error || 'share_storage_unavailable',
+          } : {}),
         }),
       };
     }
@@ -263,6 +310,10 @@ const baseHandler = async (event, context) => {
         fallbackMode: fallbackLink.mode,
         reason: supabaseErr?.code || 'supabase_unavailable',
         schema: isSchemaError(supabaseErr) || undefined,
+        ai: buildAiMeta(aiMeta, shouldEnrichSpec ? {
+          applied: false,
+          error: aiMeta.error || 'share_storage_unavailable',
+        } : {}),
       }),
     };
   } catch (e) {

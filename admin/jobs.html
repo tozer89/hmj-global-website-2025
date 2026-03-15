@@ -187,6 +187,7 @@
     .check-item small{color:var(--muted);font-size:12px;line-height:1.45}
 
     .share-box{display:grid;gap:10px;background:#f4f6ff;border:1px solid rgba(47,78,162,.2);border-radius:14px;padding:14px}
+    .share-box .check-item{margin:0}
     .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
     .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
     .share-box .share-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -670,6 +671,10 @@
               <strong>Shareable spec</strong>
               <p class="muted" id="shareDescription">Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.</p>
             </div>
+            <label class="check-item">
+              <div class="check-item__top"><input id="shareAiPolish" type="checkbox"/><span>AI polish the share spec copy</span></div>
+              <small>Optional. Uses GPT to improve the overview, responsibilities, and requirements on the shared spec only. It does not rewrite the saved job record.</small>
+            </label>
             <button class="btn ghost small" id="btnShare" data-readonly="soft">Generate share link</button>
             <div id="shareResult" style="display:none">
               <code id="shareMeta"></code>
@@ -1186,6 +1191,7 @@
       const shareMeta = sel('#shareMeta');
       const shareUrl = sel('#shareUrl');
       const shareDescription = sel('#shareDescription');
+      const shareAiPolish = sel('#shareAiPolish');
       const btnRefreshShare = sel('#btnRefreshShare');
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
@@ -1628,6 +1634,9 @@
           if (!btnShare.dataset.defaultLabel) btnShare.dataset.defaultLabel = btnShare.textContent;
           btnShare.textContent = state.sharing ? 'Preparing…' : btnShare.dataset.defaultLabel;
           btnShare.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving;
+        }
+        if (shareAiPolish) {
+          shareAiPolish.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving;
         }
         if (btnCopyShare) {
           btnCopyShare.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving || !shareUrl?.value;
@@ -3001,6 +3010,9 @@
               ? 'This job still comes from the legacy static site. Save it once to Supabase before creating a live share link.'
               : 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
         }
+        if (shareAiPolish) {
+          shareAiPolish.checked = !state.readOnly;
+        }
         syncEditorSections('basics');
         updateEditorSummaries();
         openDrawer();
@@ -3600,6 +3612,9 @@
         updateControlState();
         updateStatusPanel();
         if (state.readOnly) {
+          if (shareAiPolish?.checked) {
+            toast('AI polish is only available for live share links stored through the server. Continuing with a local preview link.', 'warn', 3400);
+          }
           const existingSlug = shareBox?.dataset?.slug || null;
           const result = ensureLocalShare(target, { preferredSlug: existingSlug });
           if (!result || !result.entry) {
@@ -3659,7 +3674,9 @@
           const res = await api('admin-job-share-create', 'POST', {
             jobId: target.id,
             jobPayload: buildSharePayload(target),
+            enrichSpec: !!shareAiPolish?.checked,
           });
+          const aiMeta = res?.ai && typeof res.ai === 'object' ? res.ai : null;
           const fallback = !!res?.fallback;
           const schemaMismatch = !!res?.schema;
           const fallbackMode = res?.fallbackMode || '';
@@ -3679,9 +3696,16 @@
                 fallbackParts.push('No expiry');
               }
             }
+            if (aiMeta?.requested) {
+              fallbackParts.push(aiMeta.applied ? 'AI polished' : 'Base copy');
+            }
             shareMeta.textContent = fallbackParts.join(' · ');
           } else {
-            shareMeta.textContent = `Slug ${res.slug} · Expires ${res.expires_at || 'never'}`;
+            const parts = [`Slug ${res.slug}`, `Expires ${res.expires_at || 'never'}`];
+            if (aiMeta?.requested) {
+              parts.push(aiMeta.applied ? 'AI polished' : 'Base copy');
+            }
+            shareMeta.textContent = parts.join(' · ');
           }
           shareUrl.value = res.url || '';
           shareBox.style.display = '';
@@ -3701,6 +3725,11 @@
             'ok',
             2000
           );
+          if (aiMeta?.requested && !aiMeta.applied) {
+            toast(`Share link created using the original role copy${aiMeta.error ? ` (${aiMeta.error.replace(/_/g, ' ')})` : ''}.`, 'warn', 3200);
+          } else if (aiMeta?.applied) {
+            toast('Share link created with AI-polished spec copy.', 'ok', 2400);
+          }
           setLastAction(
             fallback
               ? fallbackMode === 'secure_token'
@@ -3708,7 +3737,9 @@
                 : fallbackMode === 'public_detail'
                   ? 'Public detail link ready'
                   : 'Fallback share link ready'
-              : 'Live share link created',
+              : aiMeta?.applied
+                ? 'Live AI-polished share link created'
+                : 'Live share link created',
             fallback ? 'warn' : 'ok'
           );
           updateEditorSummaries();

@@ -11,6 +11,7 @@ import {
   normaliseSkillList,
   onCandidateAuthStateChange,
   requestCandidatePasswordReset,
+  resendCandidateVerification,
   saveCandidateProfile,
   signInCandidate,
   signOutCandidate,
@@ -31,14 +32,56 @@ import {
 
   if (!authRoot || !applicationView || !dashboardRoot || !form) return;
 
-  const params = new URLSearchParams(window.location.search);
+  function readAuthParams() {
+    const search = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+    return {
+      get(key) {
+        return search.get(key) ?? hash.get(key);
+      },
+      has(key) {
+        return search.has(key) || hash.has(key);
+      },
+    };
+  }
+
+  function authMessageFromParams(params) {
+    if (params.get('candidate_auth') === 'verified') {
+      return {
+        tone: 'success',
+        text: 'Your email has been verified. You can now sign in to your candidate dashboard.',
+      };
+    }
+
+    const errorCode = trimText(params.get('error_code'), 120).toLowerCase();
+    const errorDescription = trimText(
+      String(params.get('error_description') || params.get('error') || '').replace(/\+/g, ' '),
+      400
+    );
+
+    if (!errorCode && !errorDescription) {
+      return null;
+    }
+
+    if (errorCode === 'otp_expired' || /invalid|expired/i.test(errorDescription)) {
+      return {
+        tone: 'warn',
+        text: 'That email link is no longer valid. Use the newest email only. If you already confirmed the account, sign in below. Otherwise create the account again and we will send a fresh email.',
+      };
+    }
+
+    return {
+      tone: 'error',
+      text: errorDescription || 'Candidate authentication could not be completed. Please try again.',
+    };
+  }
+
+  const params = readAuthParams();
   const state = {
     hydrating: true,
     authAvailable: true,
     authMode: params.get('candidate_action') === 'recovery' ? 'recovery' : 'signin',
-    authMessage: params.get('candidate_auth') === 'verified'
-      ? { tone: 'success', text: 'Your email has been verified. You can now sign in to your candidate dashboard.' }
-      : null,
+    authMessage: authMessageFromParams(params),
     authBusy: false,
     dashboardBusy: false,
     settingsBusy: false,
@@ -97,6 +140,27 @@ import {
       detail: 'You have been placed on this role.',
     },
   };
+
+  function authErrorMessage(mode, error) {
+    const text = trimText(error?.message || 'Candidate authentication failed.', 400);
+    const lower = text.toLowerCase();
+    if (lower.includes('email not confirmed')) {
+      return 'Your email is not confirmed yet. Check your inbox or use "Resend verification email" below.';
+    }
+    if (lower.includes('invalid login credentials')) {
+      return 'Those sign-in details did not match our records. Please check your email and password and try again.';
+    }
+    if (lower.includes('user already registered')) {
+      return 'That email already has a candidate account. Sign in below or reset the password if needed.';
+    }
+    if (lower.includes('too many requests')) {
+      return 'Too many attempts were made just now. Please wait a moment and try again.';
+    }
+    if (mode === 'signup' && lower.includes('redirect')) {
+      return 'The account was created, but the email link settings need attention. Please contact HMJ support before trying again.';
+    }
+    return text;
+  }
 
   function formatDate(value) {
     if (!value) return 'Awaiting update';
@@ -222,7 +286,11 @@ import {
               <label>Password
                 <input type="password" name="password" autocomplete="current-password" required minlength="8">
               </label>
-              <button class="candidate-portal-btn" type="submit" ${isBusy}>${state.authBusy && mode === 'signin' ? 'Signing in…' : 'Sign in'}</button>
+              <div class="candidate-dashboard-actions">
+                <button class="candidate-portal-btn" type="submit" ${isBusy}>${state.authBusy && mode === 'signin' ? 'Signing in…' : 'Sign in'}</button>
+                <button class="candidate-portal-btn candidate-portal-btn--ghost" type="button" data-auth-action="resend-verification" ${isBusy}>Resend verification email</button>
+              </div>
+              <p class="candidate-field-help">If your confirmation email has expired, enter the same email address here and resend a fresh one.</p>
             </form>
           </div>
           <div class="candidate-portal-panel ${mode === 'signup' ? 'is-active' : ''}" data-auth-panel="signup">
@@ -644,7 +712,7 @@ import {
         state.authMode = 'signin';
         state.authMessage = {
           tone: 'success',
-          text: 'Account created. Check your inbox to verify your email before signing in.',
+          text: 'Account created. Check your inbox to verify your email before signing in. If the email expires, you can resend it from Sign in.',
         };
       } else if (mode === 'reset') {
         await requestCandidatePasswordReset(formData.get('email'));
@@ -671,7 +739,7 @@ import {
     } catch (error) {
       state.authMessage = {
         tone: 'error',
-        text: error?.message || 'Candidate authentication failed.',
+        text: authErrorMessage(mode, error),
       };
     } finally {
       state.authBusy = false;
@@ -754,13 +822,47 @@ import {
   }
 
   async function handleDashboardAction(event) {
-    const button = event.target.closest('[data-dashboard-action],[data-dashboard-tab],[data-auth-mode],[data-document-delete],[data-dashboard-toggle]');
+    const button = event.target.closest('[data-dashboard-action],[data-dashboard-tab],[data-auth-mode],[data-auth-action],[data-document-delete],[data-dashboard-toggle]');
     if (!button) return;
 
     if (button.hasAttribute('data-auth-mode')) {
       state.authMode = button.getAttribute('data-auth-mode');
       state.authMessage = null;
       render();
+      return;
+    }
+
+    const authAction = button.getAttribute('data-auth-action');
+    if (authAction === 'resend-verification') {
+      const signInForm = authRoot.querySelector('[data-auth-form="signin"]');
+      const email = trimText(signInForm?.elements?.email?.value, 320);
+      if (!email) {
+        state.authMessage = {
+          tone: 'warn',
+          text: 'Enter your email address first, then resend the verification email.',
+        };
+        render();
+        return;
+      }
+
+      state.authBusy = true;
+      render();
+
+      try {
+        await resendCandidateVerification(email);
+        state.authMessage = {
+          tone: 'success',
+          text: 'A fresh verification email has been sent. Please open the newest email only.',
+        };
+      } catch (error) {
+        state.authMessage = {
+          tone: 'error',
+          text: authErrorMessage('signin', error),
+        };
+      } finally {
+        state.authBusy = false;
+        render();
+      }
       return;
     }
 

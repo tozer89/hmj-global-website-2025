@@ -535,6 +535,7 @@ img {
   gap: 18px;
   position: relative;
   overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .tool-card::before {
@@ -550,6 +551,10 @@ img {
   z-index: 1;
 }
 
+.tools-grid > .tool-card.is-collapsed {
+  grid-column: span 4;
+}
+
 .tool-card--wide {
   grid-column: span 7;
 }
@@ -560,6 +565,59 @@ img {
 
 .tool-card--full {
   grid-column: 1 / -1;
+}
+
+.tool-card--stretched {
+  grid-column: 1 / -1;
+}
+
+.tool-card__frame {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.tool-card__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.tool-card__peek {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px dashed rgba(63, 102, 199, 0.28);
+  background: rgba(63, 102, 199, 0.05);
+}
+
+.tool-card__peek-title {
+  font-size: 1rem;
+}
+
+.tool-card__peek-meta {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.tool-card__content {
+  display: grid;
+  gap: 18px;
+}
+
+.tool-card__content[hidden] {
+  display: none;
+}
+
+.tool-card.is-collapsed:hover,
+.tool-card.is-collapsed:focus-within {
+  transform: translateY(-2px);
+  border-color: rgba(63, 102, 199, 0.26);
+  box-shadow: 0 24px 44px rgba(15, 27, 63, 0.12);
 }
 
 .tool-card__head {
@@ -1680,6 +1738,10 @@ img {
     grid-column: span 6;
   }
 
+  .tools-grid > .tool-card.is-collapsed {
+    grid-column: span 6;
+  }
+
   .brief-sidebar {
     position: static;
   }
@@ -1706,8 +1768,13 @@ img {
   .tool-card,
   .tool-card--wide,
   .tool-card--compact,
-  .tool-card--full {
+  .tool-card--full,
+  .tool-card--stretched {
     grid-column: auto;
+  }
+
+  .tool-card__widen {
+    display: none;
   }
 
   .tools-feature-strip,
@@ -1762,9 +1829,15 @@ img {
   .tool-summary-row,
   .budget-mode-row,
   .checklist-summary-row,
-  .scope-output-meta {
+  .scope-output-meta,
+  .tool-card__frame,
+  .tool-card__controls {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .tool-card__frame {
+    display: flex;
   }
 
   .toast-region {

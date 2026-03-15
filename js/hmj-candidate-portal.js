@@ -112,6 +112,17 @@ async function parseJsonResponse(response) {
   return response.json().catch(() => ({}));
 }
 
+function resolveCandidateRedirectUrl(config, fullUrlKey, pathKey) {
+  const explicit = trimText(config?.[fullUrlKey], 1000);
+  if (explicit) return explicit;
+
+  const path = trimText(config?.[pathKey], 400);
+  if (!path) return window.location.origin;
+
+  const base = trimText(config?.siteUrl, 1000) || window.location.origin;
+  return new URL(path, base).toString();
+}
+
 async function postCandidatePortalJson(url, body, accessToken) {
   const response = await fetch(url, {
     method: 'POST',
@@ -169,7 +180,6 @@ export async function getCandidatePortalClient() {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          flowType: 'pkce',
         },
       });
     })();
@@ -606,7 +616,7 @@ export async function deleteCandidateDocument(documentRecord) {
 
 export async function signUpCandidate({ name, email, password }) {
   const { client, config } = await getCandidatePortalContext();
-  const redirectTo = new URL(config.emailRedirectPath, window.location.origin).toString();
+  const redirectTo = resolveCandidateRedirectUrl(config, 'emailRedirectUrl', 'emailRedirectPath');
   const fullName = trimText(name, 240);
   const { data, error } = await client.auth.signUp({
     email: lowerEmail(email),
@@ -646,9 +656,23 @@ export async function signInCandidate({ email, password }) {
   return data;
 }
 
+export async function resendCandidateVerification(email) {
+  const { client, config } = await getCandidatePortalContext();
+  const redirectTo = resolveCandidateRedirectUrl(config, 'emailRedirectUrl', 'emailRedirectPath');
+  const { data, error } = await client.auth.resend({
+    type: 'signup',
+    email: lowerEmail(email),
+    options: {
+      emailRedirectTo: redirectTo,
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function requestCandidatePasswordReset(email) {
   const { client, config, user } = await getCandidatePortalContext();
-  const redirectTo = new URL(config.recoveryRedirectPath, window.location.origin).toString();
+  const redirectTo = resolveCandidateRedirectUrl(config, 'recoveryRedirectUrl', 'recoveryRedirectPath');
   const { data, error } = await client.auth.resetPasswordForEmail(lowerEmail(email), {
     redirectTo,
   });

@@ -703,6 +703,57 @@
       transform: translateX(-50%) translateY(-2px);
     }
 
+    .print-only {
+      display: none;
+    }
+
+    .print-summary {
+      gap: 14px;
+      padding: 22px 24px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+    }
+
+    .print-summary__meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--hmj-muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .print-summary__grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .print-summary__item {
+      display: grid;
+      gap: 6px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--hmj-line);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .print-summary__item strong {
+      color: var(--hmj-muted);
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+
+    .print-summary__item span,
+    .print-summary__item a {
+      color: var(--hmj-navy);
+      font-size: 0.94rem;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
     .sr-only {
       position: absolute;
       width: 1px;
@@ -800,6 +851,125 @@
         transition: none !important;
       }
     }
+
+    @page {
+      size: A4;
+      margin: 12mm;
+    }
+
+    @media print {
+      html,
+      body {
+        background: #fff !important;
+      }
+
+      body {
+        color: #111827;
+        font-size: 11pt;
+        line-height: 1.45;
+      }
+
+      .page-shell {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      .page,
+      .content-main,
+      .sticky-stack,
+      .hero__main,
+      .hero__side,
+      .section-card,
+      .apply-panel,
+      .system-panel,
+      .cta-band,
+      .fact-card,
+      .highlight-card,
+      .detail-card,
+      .system-item,
+      .print-summary {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .panel,
+      .status-shell,
+      .fact-card,
+      .highlight-card,
+      .detail-card,
+      .system-item,
+      .print-summary__item {
+        background: #fff !important;
+        box-shadow: none !important;
+        border-color: rgba(15, 27, 63, 0.18) !important;
+        backdrop-filter: none !important;
+      }
+
+      .topbar,
+      .hero__main,
+      .hero__side,
+      .section-card,
+      .apply-panel,
+      .system-panel,
+      .cta-band,
+      .print-summary {
+        padding: 18px;
+        border-radius: 18px;
+      }
+
+      .topbar__actions,
+      .action-row,
+      .action-column,
+      .cta-band__actions,
+      .sticky-cta,
+      .toast,
+      [data-copy-link],
+      [data-email-share],
+      [data-print-spec] {
+        display: none !important;
+      }
+
+      .print-only {
+        display: grid !important;
+      }
+
+      .hero,
+      .content-grid,
+      .print-summary__grid,
+      .fact-grid,
+      .system-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      .hero,
+      .content-grid,
+      .page {
+        gap: 14px;
+      }
+
+      .hero__title {
+        max-width: none;
+        font-size: 24pt;
+      }
+
+      .hero__intro,
+      .rich-text,
+      .list-card ul,
+      .apply-panel__summary,
+      .highlight-card__text,
+      .detail-card__text,
+      .system-meta,
+      .cta-band__copy p,
+      .hero__note {
+        color: #273246 !important;
+      }
+
+      .btn,
+      a {
+        box-shadow: none !important;
+      }
+    }
   </style>
   <link rel="stylesheet" href="/assets/css/public.responsive.css?v=1" />
 </head>
@@ -818,10 +988,36 @@
           </span>
         </a>
         <div class="topbar__actions">
+          <button class="topbar__link" data-print-spec type="button">Print / PDF</button>
           <a class="topbar__link" href="../jobs.html">Back to live jobs</a>
           <span id="topMetaBadge" class="topbar__meta" style="display:none"></span>
         </div>
       </header>
+
+      <section class="panel print-summary print-only">
+        <div class="print-summary__meta">
+          <span>HMJ Global printable job specification</span>
+          <span id="printPreparedOn"></span>
+        </div>
+        <div class="print-summary__grid">
+          <div class="print-summary__item">
+            <strong>Role reference</strong>
+            <span id="printReference">Shared role spec</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Spec copy</strong>
+            <span id="printCopyMode">Role advert copy</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Share link</strong>
+            <a id="printShareLink" href="#"></a>
+          </div>
+          <div class="print-summary__item">
+            <strong>Apply link</strong>
+            <a id="printApplyLink" href="#"></a>
+          </div>
+        </div>
+      </section>
 
       <section id="heroSection" class="hero">
         <div class="panel hero__main">
@@ -860,6 +1056,7 @@
           <div class="action-row">
             <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
             <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
+            <button class="btn btn-secondary" data-print-spec type="button">Print / PDF</button>
             <a class="btn btn-secondary" data-email-share data-analytics-event="email_link_clicked" href="#">Share by email</a>
             <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
           </div>
@@ -932,6 +1129,7 @@
               <div class="action-column">
                 <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
                 <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
+                <button class="btn btn-secondary" data-print-spec type="button">Print / PDF</button>
                 <a class="btn btn-ghost" data-email-share data-analytics-event="email_link_clicked" href="#">Share by email</a>
               </div>
             </section>
@@ -967,6 +1165,7 @@
         <div class="cta-band__actions">
           <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
           <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
+          <button class="btn btn-secondary" data-print-spec type="button">Print / PDF</button>
           <a class="btn btn-secondary" data-email-share data-analytics-event="email_link_clicked" href="#">Share by email</a>
           <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
         </div>
@@ -980,6 +1179,7 @@
       <span id="stickyMeta"></span>
     </div>
     <div class="sticky-cta__actions">
+      <button class="btn btn-secondary" data-print-spec type="button">Print / PDF</button>
       <button class="btn btn-secondary" data-copy-link data-analytics-event="job_share_clicked" type="button">Share role</button>
       <a class="btn btn-primary" data-apply-link data-analytics-event="job_apply_clicked" href="#">Apply now</a>
     </div>
@@ -998,6 +1198,7 @@
       const slug = params.get('slug');
       const jobId = params.get('id') || params.get('job');
       const accessToken = params.get('token');
+      const autoPrint = params.get('print') === '1' || params.get('pdf') === '1';
 
       const loading = document.getElementById('loading');
       const errorBox = document.getElementById('error');
@@ -1011,9 +1212,11 @@
       const copyButtons = Array.from(document.querySelectorAll('[data-copy-link]'));
       const applyLinks = Array.from(document.querySelectorAll('[data-apply-link]'));
       const emailLinks = Array.from(document.querySelectorAll('[data-email-share]'));
+      const printButtons = Array.from(document.querySelectorAll('[data-print-spec]'));
 
       let shareContext = null;
       let toastTimer = null;
+      let autoPrintQueued = false;
       const PUBLIC_PAGE_DEFAULTS = Object.freeze({
         showOverview: true,
         showPay: true,
@@ -1033,6 +1236,26 @@
         button.disabled = true;
         button.setAttribute('aria-disabled', 'true');
       });
+
+      printButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          if (typeof window.print !== 'function') {
+            showToast('Print is unavailable in this browser');
+            return;
+          }
+          window.print();
+        });
+      });
+
+      function maybeAutoPrint() {
+        if (!autoPrint || autoPrintQueued || typeof window.print !== 'function') return;
+        autoPrintQueued = true;
+        window.setTimeout(() => {
+          try {
+            window.print();
+          } catch (_) {}
+        }, 280);
+      }
 
       function showToast(message) {
         if (!copyToast) return;
@@ -1472,6 +1695,7 @@
 
       function renderSpec(job, meta){
         const publicPageConfig = normalizePublicPageConfig(job.publicPageConfig || job.public_page_config);
+        const shareSpec = job.shareSpec && typeof job.shareSpec === 'object' ? job.shareSpec : null;
         const payText = job.payText || buildPayText(job);
         const locationText = job.locationText || 'Flexible / discussed with HMJ';
         const rawEmploymentType = String(job.type || '').trim();
@@ -1480,7 +1704,7 @@
         const benefits = Array.isArray(job.benefits) ? job.benefits.filter(Boolean) : [];
         const tags = Array.isArray(job.tags) ? job.tags.filter(Boolean) : [];
         const reference = meta.jobId || job.id || '';
-        const overviewText = String(job.overview || '').trim();
+        const overviewText = trimString(shareSpec?.overview || job.overview || '', 2200);
         const visiblePayText = publicPageConfig.showPay ? payText : '';
         const visibleCustomerText = publicPageConfig.showCustomer ? customerText : '';
         const visibleBenefits = publicPageConfig.showBenefits ? benefits : [];
@@ -1531,6 +1755,9 @@
         setText('applyPanelSummary', [details.title, details.locationText, details.employmentText].filter(Boolean).join(' • '));
         setText('stickyTitle', details.title);
         setText('stickyMeta', [details.locationText, details.employmentText, details.payText, details.reference].filter(Boolean).join(' • ') || 'Apply directly with HMJ Global');
+        setText('printPreparedOn', formatDate(new Date().toISOString(), true) || 'Current');
+        setText('printReference', visibleReference || 'Shared role spec');
+        setText('printCopyMode', shareSpec?.enhanced ? 'AI-polished share copy' : 'Role advert copy');
 
         const heroSection = document.getElementById('heroSection');
         const heroSide = document.getElementById('heroSide');
@@ -1541,6 +1768,8 @@
         const metaPanel = document.getElementById('metaPanel');
         const metaSummary = document.getElementById('meta');
         const ctaBand = document.getElementById('ctaBand');
+        const printShareLink = document.getElementById('printShareLink');
+        const printApplyLink = document.getElementById('printApplyLink');
 
         const payCard = document.getElementById('payCard');
         if (visiblePayText) {
@@ -1596,20 +1825,27 @@
         applyNodeVisibility(heroSide, showHeroSide);
         heroSection.classList.toggle('hero--single', !showHeroSide);
 
-        const respItems = Array.isArray(job.responsibilities) ? job.responsibilities.filter(Boolean) : [];
+        const respItems = Array.isArray(shareSpec?.responsibilities) && shareSpec.responsibilities.length
+          ? shareSpec.responsibilities.filter(Boolean)
+          : Array.isArray(job.responsibilities) ? job.responsibilities.filter(Boolean) : [];
         const respSection = document.getElementById('responsibilitiesSection');
         const respList = document.getElementById('respList');
         respList.innerHTML = respItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
         applyNodeVisibility(respSection, publicPageConfig.showResponsibilities && respItems.length > 0);
 
-        const reqItems = Array.isArray(job.requirements) ? job.requirements.filter(Boolean) : [];
+        const reqItems = Array.isArray(shareSpec?.requirements) && shareSpec.requirements.length
+          ? shareSpec.requirements.filter(Boolean)
+          : Array.isArray(job.requirements) ? job.requirements.filter(Boolean) : [];
         const reqSection = document.getElementById('requirementsSection');
         const reqList = document.getElementById('reqList');
         reqList.innerHTML = reqItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
         applyNodeVisibility(reqSection, publicPageConfig.showRequirements && reqItems.length > 0);
         applyNodeVisibility(overviewSection, showOverview);
 
-        const metaText = visibleReference ? `Role reference: ${visibleReference}` : '';
+        const metaBits = [];
+        if (visibleReference) metaBits.push(`Role reference: ${visibleReference}`);
+        if (shareSpec?.enhanced) metaBits.push('AI-polished share copy active');
+        const metaText = metaBits.join(' • ');
         setText('meta', metaText);
         applyNodeVisibility(metaSummary, !!metaText);
 
@@ -1634,6 +1870,15 @@
           emailHref,
           applyUrl,
         };
+
+        if (printShareLink) {
+          printShareLink.href = location.href;
+          printShareLink.textContent = location.href;
+        }
+        if (printApplyLink) {
+          printApplyLink.href = applyUrl;
+          printApplyLink.textContent = new URL(applyUrl, location.origin).href;
+        }
 
         const analyticsPayload = {
           job_id: meta.jobId || job.id || '',
@@ -1692,6 +1937,7 @@
           renderSpec(payload.job, meta);
           loading.style.display = 'none';
           page.style.display = 'grid';
+          maybeAutoPrint();
           return;
         }
         showError('This share link is invalid or has expired. Please generate a new link from the HMJ Global admin dashboard.');
@@ -1712,6 +1958,7 @@
           });
           loading.style.display = 'none';
           page.style.display = 'grid';
+          maybeAutoPrint();
           return;
         }
         showError('This preview link has expired or is unavailable on this device. Please generate a fresh link from the HMJ Global admin dashboard.');
@@ -1740,6 +1987,7 @@
         renderSpec(data.job, data);
         loading.style.display = 'none';
         page.style.display = 'grid';
+        maybeAutoPrint();
       } catch (err) {
         showError(err.message || 'Unable to load job spec.');
       }

@@ -1,10 +1,10 @@
 // netlify/functions/admin-timesheets-approve.js
 const { withAdminCors } = require('./_http.js');
-const { getContext } = require('./_timesheet-helpers.js');
+const { getContext } = require('./_auth.js');
 
 const baseHandler = async (event, context) => {
   try {
-    const { user, supabase } = await getContext(context, { requireAdmin: true });
+    const { user, supabase } = await getContext(event, context, { requireAdmin: true });
     const { id } = JSON.parse(event.body || '{}');
     if (!id) throw new Error('Missing id');
 

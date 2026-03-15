@@ -1,10 +1,10 @@
 // netlify/functions/admin-timesheets-bulk-approve.js
 const { withAdminCors } = require('./_http.js');
-const { getContext } = require('./_timesheet-helpers.js');
+const { getContext } = require('./_auth.js');
 
 const baseHandler = async (event, context) => {
   try {
-    const { user, supabase } = await getContext(context, { requireAdmin: true });
+    const { user, supabase } = await getContext(event, context, { requireAdmin: true });
     const { ids = [] } = JSON.parse(event.body || '{}');
     if (!ids.length) throw new Error('No ids');
 

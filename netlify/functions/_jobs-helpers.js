@@ -46,6 +46,29 @@ const PUBLIC_PAGE_DEFAULTS = Object.freeze({
   showReference: false,
 });
 
+function normaliseShareSpec(value) {
+  const input = value && typeof value === 'object' ? value : null;
+  if (!input) return null;
+
+  const overview = asString(input.overview);
+  const responsibilities = cleanArray(input.responsibilities).slice(0, 8);
+  const requirements = cleanArray(input.requirements).slice(0, 8);
+
+  if (!overview && !responsibilities.length && !requirements.length) {
+    return null;
+  }
+
+  return {
+    enhanced: input.enhanced !== false,
+    source: asString(input.source),
+    model: asString(input.model),
+    overview,
+    responsibilities,
+    requirements,
+    generatedAt: input.generatedAt || input.generated_at || null,
+  };
+}
+
 function readJsonSafe(filePath) {
   try {
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -417,6 +440,7 @@ function toJob(row = {}) {
     createdAt: row.created_at || row.createdAt || null,
     updatedAt: row.updated_at || row.updatedAt || null,
     publicPageConfig,
+    shareSpec: normaliseShareSpec(row.shareSpec || row.share_spec),
   };
 }
 
@@ -474,6 +498,7 @@ function toPublicJob(row = {}) {
     updatedAt: job.updatedAt,
     publicDetailPath: buildPublicJobDetailPath(job),
     publicPageConfig: job.publicPageConfig,
+    shareSpec: job.shareSpec || null,
   };
 }
 

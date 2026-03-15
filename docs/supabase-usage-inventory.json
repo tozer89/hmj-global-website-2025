@@ -1,0 +1,873 @@
+{
+  "generated_at": "2026-03-15T16:46:00Z",
+  "audit_scope": {
+    "workspace": "/Users/joetozerosullivan/Desktop/HMJ Global Ltd/Website/WORKING COPY",
+    "repo_as_source_of_truth": true,
+    "public_site_included": true,
+    "admin_portal_included": true,
+    "checked_in_sql_audited": true
+  },
+  "live_supabase_introspection": {
+    "available": false,
+    "reason": "No live SUPABASE_* credentials were available in the local environment during the audit, and the audit was performed from repo state plus checked-in SQL."
+  },
+  "supabase_clients": [
+    {
+      "name": "service_role_singleton",
+      "runtime": "netlify_function_server",
+      "files": [
+        "netlify/functions/_supabase.js",
+        "admin-v2/functions/_supabase.js"
+      ],
+      "env_keys": [
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_KEY",
+        "SUPABASE_SERVICE_ROLE",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "used_by": [
+        "most public Netlify functions",
+        "most admin Netlify functions",
+        "candidate portal sync/delete functions",
+        "analytics ingest/dashboard",
+        "chatbot storage/config",
+        "team module",
+        "noticeboard module",
+        "candidate matcher",
+        "jobs",
+        "short links"
+      ]
+    },
+    {
+      "name": "candidate_portal_browser_client",
+      "runtime": "browser",
+      "files": [
+        "js/hmj-candidate-portal.js",
+        "assets/js/candidates.portal.js",
+        "assets/js/contact.portal.js",
+        "netlify/functions/candidate-auth-config.js"
+      ],
+      "env_keys": [
+        "SUPABASE_URL",
+        "SUPABASE_ANON_KEY",
+        "VITE_SUPABASE_URL",
+        "VITE_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      ],
+      "used_by": [
+        "candidate signup/login/reset",
+        "candidate profile CRUD",
+        "candidate self-service document uploads",
+        "candidate self-service document downloads",
+        "candidate self-service activity logging",
+        "candidate application history reads"
+      ]
+    },
+    {
+      "name": "team_tasks_browser_client",
+      "runtime": "browser",
+      "files": [
+        "admin/team-tasks.js",
+        "netlify/functions/admin-team-tasks-config.js"
+      ],
+      "env_keys": [
+        "SUPABASE_URL",
+        "SUPABASE_ANON_KEY",
+        "SUPABASE_JWT_SECRET",
+        "SUPABASE_JWT_SIGNING_SECRET",
+        "JWT_SECRET"
+      ],
+      "used_by": [
+        "admin team tasks direct CRUD",
+        "admin team tasks realtime channel hmj-team-tasks-live"
+      ]
+    }
+  ],
+  "auth_models": [
+    {
+      "name": "admin_netlify_identity",
+      "files": [
+        "netlify/functions/_auth.js",
+        "netlify.toml",
+        "admin/*.html"
+      ],
+      "summary": "Primary admin auth still relies on Netlify Identity roles plus server-side checks against public.admin_users."
+    },
+    {
+      "name": "candidate_supabase_auth",
+      "files": [
+        "js/hmj-candidate-portal.js",
+        "netlify/functions/candidate-auth-config.js",
+        "netlify/functions/candidate-portal-sync.js",
+        "netlify/functions/candidate-account-delete.js"
+      ],
+      "summary": "Candidate-facing auth uses Supabase Auth and repo code expects RLS on candidate-owned profile/document/activity records."
+    }
+  ],
+  "modules": [
+    {
+      "name": "admin_support_and_settings",
+      "surfaces": [
+        "admin portal"
+      ],
+      "files": [
+        "netlify/functions/_auth.js",
+        "netlify/functions/_settings-helpers.js",
+        "netlify/functions/admin-settings-get.js",
+        "netlify/functions/admin-settings-save.js",
+        "netlify/functions/_audit.js",
+        "netlify/functions/admin-audit-list.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "admin_users",
+          "admin_settings",
+          "admin_audit_logs"
+        ],
+        "views": [
+          "audit_log"
+        ],
+        "functions": [
+          "set_row_updated_at",
+          "audit_log_view_insert_bridge",
+          "audit_log_table_sync_bridge"
+        ],
+        "storage_buckets": [],
+        "rpc_functions": [],
+        "auth_usage": [
+          "Netlify Identity JWT parsing",
+          "admin_users table lookup"
+        ]
+      },
+      "repo_sql_coverage": {
+        "status": "covered_in_repo_sql",
+        "files": [
+          "scripts/supabase-project-reconciliation.sql"
+        ]
+      }
+    },
+    {
+      "name": "jobs_public_admin_and_share_links",
+      "surfaces": [
+        "public website",
+        "admin portal"
+      ],
+      "files": [
+        "netlify/functions/_jobs-helpers.js",
+        "netlify/functions/jobs-list.js",
+        "netlify/functions/admin-jobs-list.js",
+        "netlify/functions/admin-jobs-get.js",
+        "netlify/functions/admin-jobs-save.js",
+        "netlify/functions/admin-jobs-delete.js",
+        "netlify/functions/admin-jobs-bulk.js",
+        "netlify/functions/admin-jobs-reorder.js",
+        "netlify/functions/admin-job-share-create.js",
+        "netlify/functions/job-spec-get.js",
+        "assets/js/candidates.enhanced.js",
+        "jobs.html"
+      ],
+      "dependencies": {
+        "tables": [
+          "jobs",
+          "job_specs"
+        ],
+        "views": [],
+        "functions": [],
+        "storage_buckets": [],
+        "rpc_functions": [],
+        "required_columns": {
+          "jobs": [
+            "id",
+            "title",
+            "status",
+            "section",
+            "discipline",
+            "type",
+            "location_text",
+            "location_code",
+            "overview",
+            "responsibilities",
+            "requirements",
+            "keywords",
+            "benefits",
+            "client_name",
+            "customer",
+            "pay_type",
+            "day_rate_min",
+            "day_rate_max",
+            "salary_min",
+            "salary_max",
+            "hourly_min",
+            "hourly_max",
+            "currency",
+            "apply_url",
+            "published",
+            "sort_order",
+            "created_at",
+            "updated_at",
+            "public_page_config"
+          ],
+          "job_specs": [
+            "slug",
+            "job_id",
+            "title",
+            "payload",
+            "notes",
+            "expires_at",
+            "created_at"
+          ]
+        }
+      },
+      "repo_sql_coverage": {
+        "status": "covered_in_repo_sql",
+        "files": [
+          "scripts/supabase-project-reconciliation.sql",
+          "scripts/create-job-specs-table.sql",
+          "scripts/alter-jobs-add-public-page-config.sql",
+          "scripts/alter-jobs-add-commercial-fields.sql"
+        ]
+      }
+    },
+    {
+      "name": "candidate_admin_and_documents",
+      "surfaces": [
+        "admin portal"
+      ],
+      "files": [
+        "netlify/functions/admin-candidates-list.js",
+        "netlify/functions/admin-candidates-get.js",
+        "netlify/functions/admin-candidates-save.js",
+        "netlify/functions/admin-candidates-delete.js",
+        "netlify/functions/admin-candidate-doc-upload.js",
+        "netlify/functions/admin-candidate-doc-delete.js",
+        "netlify/functions/admin-candidate-docs-list.js",
+        "netlify/functions/_candidate-docs.js",
+        "netlify/functions/_candidates-helpers.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "candidates",
+          "candidate_documents",
+          "job_applications",
+          "candidate_activity",
+          "admin_audit_logs"
+        ],
+        "views": [],
+        "functions": [],
+        "storage_buckets": [
+          "candidate-docs"
+        ],
+        "rpc_functions": [],
+        "required_columns": {
+          "candidate_documents": [
+            "id",
+            "candidate_id",
+            "label",
+            "filename",
+            "storage_key",
+            "url",
+            "meta",
+            "created_at",
+            "document_type",
+            "original_filename",
+            "file_extension",
+            "mime_type",
+            "file_size_bytes",
+            "storage_bucket",
+            "storage_path",
+            "uploaded_at",
+            "updated_at",
+            "deleted_at",
+            "owner_auth_user_id"
+          ]
+        }
+      },
+      "repo_sql_coverage": {
+        "status": "partially_covered_in_repo_sql",
+        "files": [
+          "scripts/supabase-project-reconciliation.sql",
+          "scripts/create-candidate-portal.sql"
+        ],
+        "gap_summary": [
+          "admin upload code still inserted only the legacy candidate_documents shape before this audit",
+          "checked-in master reconciliation script did not yet include the full candidate portal enrichment and RLS"
+        ]
+      }
+    },
+    {
+      "name": "candidate_portal_and_public_form_sync",
+      "surfaces": [
+        "public website"
+      ],
+      "files": [
+        "js/hmj-candidate-portal.js",
+        "assets/js/candidates.portal.js",
+        "assets/js/contact.portal.js",
+        "js/job-application-context.js",
+        "netlify/functions/candidate-auth-config.js",
+        "netlify/functions/candidate-portal-sync.js",
+        "netlify/functions/candidate-account-delete.js",
+        "netlify/functions/_candidate-portal.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "candidates",
+          "candidate_skills",
+          "job_applications",
+          "candidate_activity",
+          "candidate_documents"
+        ],
+        "views": [],
+        "functions": [
+          "hmj_candidate_has_auth_user"
+        ],
+        "storage_buckets": [
+          "candidate-docs"
+        ],
+        "rpc_functions": [],
+        "auth_usage": [
+          "auth.getSession",
+          "auth.onAuthStateChange",
+          "auth.signUp",
+          "auth.signInWithPassword",
+          "auth.resend",
+          "auth.resetPasswordForEmail",
+          "auth.updateUser",
+          "auth.signOut",
+          "auth.admin.deleteUser"
+        ],
+        "required_columns": {
+          "candidates": [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "full_name",
+            "phone",
+            "location",
+            "country",
+            "status",
+            "auth_user_id",
+            "headline_role",
+            "sector_focus",
+            "summary",
+            "linkedin_url",
+            "skills",
+            "availability",
+            "archived_at",
+            "portal_account_closed_at",
+            "last_portal_login_at",
+            "created_at",
+            "updated_at"
+          ],
+          "job_applications": [
+            "id",
+            "candidate_id",
+            "job_id",
+            "status",
+            "applied_at",
+            "notes",
+            "job_title",
+            "job_location",
+            "job_type",
+            "job_pay",
+            "source",
+            "source_submission_id",
+            "share_code",
+            "created_at",
+            "updated_at"
+          ],
+          "candidate_activity": [
+            "id",
+            "candidate_id",
+            "activity_type",
+            "description",
+            "actor_role",
+            "actor_identifier",
+            "meta",
+            "created_at"
+          ]
+        }
+      },
+      "repo_sql_coverage": {
+        "status": "partially_covered_in_repo_sql",
+        "files": [
+          "scripts/create-candidate-portal.sql"
+        ],
+        "gap_summary": [
+          "checked-in candidate portal SQL assumed UUID candidate primary keys, while repo runtime is more type-tolerant",
+          "job_applications.share_code is referenced in runtime code but missing from checked-in SQL"
+        ]
+      }
+    },
+    {
+      "name": "about_team_and_noticeboard",
+      "surfaces": [
+        "public website",
+        "admin portal"
+      ],
+      "files": [
+        "assets/js/about.enhanced.js",
+        "netlify/functions/team-list.js",
+        "netlify/functions/admin-team-list.js",
+        "netlify/functions/admin-team-save.js",
+        "netlify/functions/admin-team-image-upload.js",
+        "netlify/functions/admin-team-image-delete.js",
+        "netlify/functions/_team-helpers.js",
+        "netlify/functions/noticeboard-list.js",
+        "netlify/functions/admin-noticeboard-list.js",
+        "netlify/functions/admin-noticeboard-save.js",
+        "netlify/functions/admin-noticeboard-delete.js",
+        "netlify/functions/admin-noticeboard-image-upload.js",
+        "netlify/functions/admin-noticeboard-image-delete.js",
+        "netlify/functions/_noticeboard-helpers.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "team_members",
+          "noticeboard_posts",
+          "admin_settings"
+        ],
+        "views": [],
+        "functions": [
+          "team_member_slugify",
+          "set_row_updated_at"
+        ],
+        "storage_buckets": [
+          "team-images",
+          "noticeboard-images"
+        ],
+        "rpc_functions": [],
+        "required_columns": {
+          "team_members": [
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "created_by_email",
+            "updated_by_email",
+            "full_name",
+            "slug",
+            "role_title",
+            "short_caption",
+            "full_bio",
+            "image_url",
+            "image_storage_key",
+            "image_alt_text",
+            "linkedin_url",
+            "email",
+            "display_order",
+            "is_published",
+            "published_at",
+            "archived_at"
+          ],
+          "noticeboard_posts": [
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "created_by_email",
+            "updated_by_email",
+            "title",
+            "slug",
+            "summary",
+            "body",
+            "image_url",
+            "image_storage_key",
+            "image_alt_text",
+            "status",
+            "publish_at",
+            "expires_at",
+            "featured",
+            "sort_order",
+            "cta_label",
+            "cta_url"
+          ]
+        }
+      },
+      "repo_sql_coverage": {
+        "status": "partially_covered_in_repo_sql",
+        "files": [
+          "scripts/supabase-project-reconciliation.sql",
+          "scripts/create-noticeboard.sql",
+          "scripts/create-team-module.sql"
+        ],
+        "gap_summary": [
+          "noticeboard is covered in the existing master reconciliation script",
+          "team module exists in its own checked-in SQL but was missing from the checked-in master reconciliation script"
+        ]
+      }
+    },
+    {
+      "name": "chatbot",
+      "surfaces": [
+        "public website",
+        "admin portal"
+      ],
+      "files": [
+        "js/hmj-chatbot.js",
+        "netlify/functions/chatbot-config.js",
+        "netlify/functions/chatbot-chat.js",
+        "netlify/functions/chatbot-event.js",
+        "netlify/functions/admin-chatbot-config.js",
+        "netlify/functions/admin-chatbot-analytics.js",
+        "netlify/functions/admin-chatbot-conversations.js",
+        "netlify/functions/_chatbot-storage.js",
+        "netlify/functions/_chatbot-config.js",
+        "netlify/functions/_chatbot-core.js",
+        "netlify/functions/_chatbot-grounding.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "chatbot_conversations",
+          "chatbot_messages",
+          "chatbot_events",
+          "admin_settings"
+        ],
+        "views": [],
+        "functions": [
+          "set_row_updated_at"
+        ],
+        "storage_buckets": [],
+        "rpc_functions": []
+      },
+      "repo_sql_coverage": {
+        "status": "covered_in_repo_sql",
+        "files": [
+          "scripts/supabase-project-reconciliation.sql",
+          "scripts/create-chatbot-module.sql"
+        ]
+      }
+    },
+    {
+      "name": "analytics",
+      "surfaces": [
+        "public website",
+        "admin portal"
+      ],
+      "files": [
+        "js/hmj-analytics.js",
+        "netlify/functions/analytics-ingest.js",
+        "netlify/functions/admin-analytics-dashboard.js",
+        "netlify/functions/_analytics.js",
+        "admin/analytics.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "analytics_events"
+        ],
+        "views": [
+          "analytics_session_rollups",
+          "analytics_page_daily",
+          "analytics_listing_daily"
+        ],
+        "functions": [
+          "analytics_extract_path",
+          "analytics_extract_referrer_domain",
+          "analytics_numeric_or_null",
+          "analytics_integer_or_null",
+          "analytics_events_sync_compat"
+        ],
+        "storage_buckets": [],
+        "rpc_functions": [],
+        "required_columns": {
+          "analytics_events": [
+            "event_id",
+            "occurred_at",
+            "created_at",
+            "visitor_id",
+            "session_id",
+            "page_visit_id",
+            "event_type",
+            "site_area",
+            "page_path",
+            "full_url",
+            "page_title",
+            "referrer",
+            "referrer_domain",
+            "utm_source",
+            "utm_medium",
+            "utm_campaign",
+            "utm_term",
+            "utm_content",
+            "link_url",
+            "link_text",
+            "event_label",
+            "event_value",
+            "duration_seconds",
+            "path_from",
+            "path_to",
+            "device_type",
+            "browser_language",
+            "viewport_width",
+            "viewport_height",
+            "timezone",
+            "user_agent",
+            "ip_hash",
+            "country",
+            "payload",
+            "id",
+            "event_at",
+            "event_name",
+            "path",
+            "page_url",
+            "click_target",
+            "click_text",
+            "click_href",
+            "heartbeat_count",
+            "anon_ip_hash",
+            "country_code",
+            "meta"
+          ]
+        }
+      },
+      "repo_sql_coverage": {
+        "status": "covered_in_repo_sql",
+        "files": [
+          "scripts/supabase-project-reconciliation.sql",
+          "scripts/create-website-analytics.sql"
+        ]
+      }
+    },
+    {
+      "name": "candidate_matcher",
+      "surfaces": [
+        "admin portal"
+      ],
+      "files": [
+        "admin/candidate-matcher.js",
+        "lib/candidate-matcher-core.js",
+        "lib/admin-candidate-match-function.js",
+        "netlify/functions/admin-candidate-match.js",
+        "netlify/functions/admin-candidate-run-match.js",
+        "netlify/functions/admin-candidate-run-match-background.js",
+        "netlify/functions/admin-candidate-match-status.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "candidate_match_runs",
+          "candidate_match_files",
+          "jobs"
+        ],
+        "views": [],
+        "functions": [
+          "set_row_updated_at"
+        ],
+        "storage_buckets": [
+          "candidate-matcher-uploads"
+        ],
+        "rpc_functions": []
+      },
+      "repo_sql_coverage": {
+        "status": "covered_in_repo_sql",
+        "files": [
+          "scripts/supabase-project-reconciliation.sql",
+          "scripts/create-candidate-matcher.sql",
+          "scripts/alter-candidate-match-runs-add-async-job-fields.sql"
+        ]
+      }
+    },
+    {
+      "name": "team_tasks",
+      "surfaces": [
+        "admin portal"
+      ],
+      "files": [
+        "admin/team-tasks.js",
+        "netlify/functions/admin-team-tasks-config.js",
+        "netlify/functions/admin-team-tasks-reminders-run.js",
+        "netlify/functions/_team-tasks-helpers.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "task_items",
+          "task_comments",
+          "task_watchers",
+          "task_reminders",
+          "task_audit_log",
+          "admin_users",
+          "admin_settings"
+        ],
+        "views": [
+          "task_items_view"
+        ],
+        "functions": [
+          "hmj_task_current_user_id",
+          "hmj_task_current_user_email",
+          "hmj_task_current_roles",
+          "hmj_task_is_admin",
+          "hmj_task_is_creator",
+          "log_task_audit",
+          "get_task_summary"
+        ],
+        "storage_buckets": [],
+        "rpc_functions": [],
+        "realtime_channels": [
+          "hmj-team-tasks-live"
+        ]
+      },
+      "repo_sql_coverage": {
+        "status": "partially_covered_in_repo_sql",
+        "files": [
+          "scripts/create-team-tasks-module.sql"
+        ],
+        "gap_summary": [
+          "team tasks module exists in checked-in SQL but was missing from the checked-in master reconciliation script"
+        ]
+      }
+    },
+    {
+      "name": "core_crm_timesheets_payroll_finance",
+      "surfaces": [
+        "admin portal",
+        "timesheet workflow"
+      ],
+      "files": [
+        "netlify/functions/admin-clients-list.js",
+        "netlify/functions/admin-clients-save.js",
+        "netlify/functions/admin-contractors-list.js",
+        "netlify/functions/admin-contractors-save.js",
+        "netlify/functions/admin-assignments-list.js",
+        "netlify/functions/admin-assignments-save.js",
+        "netlify/functions/admin-timesheets-list.js",
+        "netlify/functions/admin-timesheets-detail.js",
+        "netlify/functions/admin-timesheets-remind.js",
+        "netlify/functions/admin-payroll-list.js",
+        "netlify/functions/admin-payroll-process.js",
+        "netlify/functions/admin-report-gross-margin.js",
+        "netlify/functions/timesheets-save.js",
+        "netlify/functions/timesheets-submit.js",
+        "netlify/functions/timesheets-history.js",
+        "netlify/functions/timesheets-get-this-week.js",
+        "netlify/functions/_timesheet-helpers.js"
+      ],
+      "dependencies": {
+        "tables": [
+          "clients",
+          "contractors",
+          "assignments",
+          "projects",
+          "sites",
+          "timesheets",
+          "timesheet_entries",
+          "candidates",
+          "admin_audit_logs"
+        ],
+        "views": [
+          "v_timesheets_admin"
+        ],
+        "functions": [],
+        "storage_buckets": [],
+        "rpc_functions": [
+          "upsert_timesheet_entry"
+        ]
+      },
+      "repo_sql_coverage": {
+        "status": "core_table_not_bootstrapped",
+        "files": [
+          "docs/supabase-hardening-audit.md"
+        ],
+        "gap_summary": [
+          "the repo does not contain a single authoritative checked-in bootstrap migration for clients/contractors/assignments/projects/sites/timesheets/timesheet_entries/v_timesheets_admin/upsert_timesheet_entry",
+          "safe reconciliation can validate and add a small number of repo-driven columns, but should not blindly recreate the full older CRM schema"
+        ]
+      }
+    }
+  ],
+  "resources": {
+    "tables": {
+      "admin_settings": "covered_in_repo_sql",
+      "admin_users": "covered_in_repo_sql",
+      "admin_audit_logs": "covered_in_repo_sql",
+      "candidate_documents": "covered_but_needed_portal_enrichment",
+      "noticeboard_posts": "covered_in_repo_sql",
+      "team_members": "repo_sql_exists_but_missing_from_old_master",
+      "short_links": "covered_in_repo_sql",
+      "job_specs": "covered_in_repo_sql",
+      "candidate_match_runs": "covered_in_repo_sql",
+      "candidate_match_files": "covered_in_repo_sql",
+      "chatbot_conversations": "covered_in_repo_sql",
+      "chatbot_messages": "covered_in_repo_sql",
+      "chatbot_events": "covered_in_repo_sql",
+      "analytics_events": "covered_in_repo_sql",
+      "candidate_skills": "repo_sql_exists_but_missing_from_old_master",
+      "job_applications": "repo_sql_exists_but_missing_from_old_master",
+      "candidate_activity": "repo_sql_exists_but_missing_from_old_master",
+      "task_items": "repo_sql_exists_but_missing_from_old_master",
+      "task_comments": "repo_sql_exists_but_missing_from_old_master",
+      "task_watchers": "repo_sql_exists_but_missing_from_old_master",
+      "task_reminders": "repo_sql_exists_but_missing_from_old_master",
+      "task_audit_log": "repo_sql_exists_but_missing_from_old_master",
+      "jobs": "core_table_existing_but_additive_fields_required",
+      "candidates": "core_table_existing_but_portal_fields_required",
+      "clients": "manual_live_validation_required",
+      "contractors": "manual_live_validation_required",
+      "assignments": "manual_live_validation_required",
+      "projects": "manual_live_validation_required",
+      "sites": "manual_live_validation_required",
+      "timesheets": "manual_live_validation_required",
+      "timesheet_entries": "manual_live_validation_required"
+    },
+    "views": {
+      "audit_log": "covered_in_repo_sql",
+      "analytics_session_rollups": "covered_in_repo_sql",
+      "analytics_page_daily": "covered_in_repo_sql",
+      "analytics_listing_daily": "covered_in_repo_sql",
+      "task_items_view": "repo_sql_exists_but_missing_from_old_master",
+      "v_timesheets_admin": "manual_live_validation_required"
+    },
+    "functions": {
+      "set_row_updated_at": "covered_in_repo_sql",
+      "team_member_slugify": "repo_sql_exists_but_missing_from_old_master",
+      "hmj_candidate_has_auth_user": "repo_sql_exists_but_should_be_hardened_for_legacy_candidate_key_types",
+      "hmj_task_current_user_id": "repo_sql_exists_but_missing_from_old_master",
+      "hmj_task_current_user_email": "repo_sql_exists_but_missing_from_old_master",
+      "hmj_task_current_roles": "repo_sql_exists_but_missing_from_old_master",
+      "hmj_task_is_admin": "repo_sql_exists_but_missing_from_old_master",
+      "hmj_task_is_creator": "repo_sql_exists_but_missing_from_old_master",
+      "log_task_audit": "repo_sql_exists_but_missing_from_old_master",
+      "get_task_summary": "repo_sql_exists_but_missing_from_old_master",
+      "upsert_timesheet_entry": "manual_live_validation_required"
+    },
+    "storage_buckets": {
+      "candidate-docs": "covered_in_repo_sql",
+      "noticeboard-images": "covered_in_repo_sql",
+      "team-images": "repo_sql_exists_but_missing_from_old_master",
+      "candidate-matcher-uploads": "covered_in_repo_sql"
+    }
+  },
+  "mismatches": [
+    {
+      "id": "master_sql_gap_team_portal_tasks",
+      "type": "checked_in_sql_gap",
+      "summary": "The checked-in master reconciliation script does not yet cover team_members, team task tables, or the full candidate portal schema/RLS."
+    },
+    {
+      "id": "candidate_documents_admin_insert_shape",
+      "type": "repo_runtime_gap",
+      "summary": "Admin candidate document upload inserted only the legacy candidate_documents columns while portal/runtime code expects richer storage metadata columns as well."
+    },
+    {
+      "id": "job_applications_share_code_missing",
+      "type": "repo_to_sql_gap",
+      "summary": "Runtime code writes job_applications.share_code but the checked-in candidate portal SQL does not create that column."
+    },
+    {
+      "id": "candidate_portal_uuid_assumption",
+      "type": "sql_risk",
+      "summary": "The checked-in candidate portal SQL assumes UUID candidate primary keys, but repo runtime is more type-tolerant and the fallback/admin data model does not prove that assumption."
+    },
+    {
+      "id": "legacy_admin_timesheet_helper_mismatch",
+      "type": "repo_bug",
+      "summary": "Legacy admin-timesheet create/edit/approve/reject endpoints import the contractor-side helper and call it with the wrong signature."
+    }
+  ],
+  "manual_validation_required": [
+    "Confirm the live candidates primary key type before running older candidate-portal SQL directly; the new master reconciliation script avoids forcing a UUID candidate primary key migration.",
+    "Confirm the live CRM/timesheet base schema for clients, contractors, assignments, projects, sites, timesheets, timesheet_entries, v_timesheets_admin, and upsert_timesheet_entry.",
+    "Confirm live storage bucket settings and object counts before changing any bucket public/private posture in production.",
+    "Run the generated post-reconciliation checks in Supabase after the master reconciliation script because the repo audit could not query the live database catalog directly."
+  ]
+}

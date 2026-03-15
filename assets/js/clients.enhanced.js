@@ -902,6 +902,109 @@
     return head;
   }
 
+  function summarizeLabels(items, max = 2) {
+    const list = items.filter(Boolean);
+    if (!list.length) return '';
+    if (list.length <= max) return humanJoin(list);
+    return `${list.slice(0, max).join(', ')} +${list.length - max} more`;
+  }
+
+  function createToolCardShell(options) {
+    const { sizeClass, eyebrow, title, copy, allowWide = true } = options;
+
+    const card = doc.createElement('article');
+    card.className = `tool-card ${sizeClass} is-collapsed`;
+
+    const frame = doc.createElement('div');
+    frame.className = 'tool-card__frame';
+
+    const heading = makeHeading(eyebrow, title, copy);
+
+    const controls = doc.createElement('div');
+    controls.className = 'tool-card__controls';
+
+    const toggleBtn = createButton('tool-secondary tool-card__toggle', 'Open tool');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+
+    controls.appendChild(toggleBtn);
+
+    let wideBtn = null;
+    if (allowWide) {
+      wideBtn = createButton('tool-ghost tool-card__widen', 'Open wide');
+      controls.appendChild(wideBtn);
+    }
+
+    frame.append(heading, controls);
+
+    const preview = doc.createElement('div');
+    preview.className = 'tool-card__peek';
+    const previewTitle = doc.createElement('strong');
+    previewTitle.className = 'tool-card__peek-title';
+    const previewMeta = doc.createElement('p');
+    previewMeta.className = 'tool-card__peek-meta';
+    preview.append(previewTitle, previewMeta);
+
+    const content = doc.createElement('div');
+    content.className = 'tool-card__content';
+    content.hidden = true;
+
+    function syncControls() {
+      const expanded = card.classList.contains('is-expanded');
+      const stretched = card.classList.contains('tool-card--stretched');
+
+      toggleBtn.textContent = expanded ? 'Minimise' : 'Open tool';
+      toggleBtn.setAttribute('aria-expanded', String(expanded));
+
+      if (wideBtn) {
+        wideBtn.textContent = !expanded ? 'Open wide' : stretched ? 'Standard width' : 'Widen';
+      }
+    }
+
+    function setExpanded(nextExpanded) {
+      if (!nextExpanded) {
+        if (content.contains(doc.activeElement)) toggleBtn.focus();
+        card.classList.remove('tool-card--stretched');
+      }
+
+      card.classList.toggle('is-expanded', nextExpanded);
+      card.classList.toggle('is-collapsed', !nextExpanded);
+      preview.hidden = nextExpanded;
+      content.hidden = !nextExpanded;
+      syncControls();
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      setExpanded(!card.classList.contains('is-expanded'));
+    });
+
+    if (wideBtn) {
+      wideBtn.addEventListener('click', () => {
+        if (!card.classList.contains('is-expanded')) {
+          setExpanded(true);
+          card.classList.add('tool-card--stretched');
+          syncControls();
+          return;
+        }
+
+        card.classList.toggle('tool-card--stretched');
+        syncControls();
+      });
+    }
+
+    card.append(frame, preview, content);
+    syncControls();
+
+    return {
+      card,
+      content,
+      setExpanded,
+      setPreview(titleText, metaText) {
+        previewTitle.textContent = titleText || 'Ready when you are';
+        previewMeta.textContent = metaText || 'Open the tool to work through the detail.';
+      }
+    };
+  }
+
   function normalizeScopeState(raw) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const selectedRoleIds = uniqueList(Array.isArray(source.selectedRoleIds) ? source.selectedRoleIds : []).filter((id) => roleMap.has(id));
@@ -1037,22 +1140,23 @@
   }
 
   function initScopeBuilder(container) {
-    const card = doc.createElement('article');
-    card.className = 'tool-card tool-card--wide';
+    const cardUi = createToolCardShell({
+      sizeClass: 'tool-card--wide',
+      eyebrow: 'Briefing tool',
+      title: 'Role scope builder',
+      copy: 'Select one or more roles, add key context and generate copy you can edit, copy or send straight into the HMJ vacancy form.'
+    });
+    const { card, content, setPreview } = cardUi;
 
     const state = normalizeScopeState(readStorage(STORAGE_KEYS.scope, defaultScopeState()));
     if (!state.outputText && state.selectedRoleIds.length && !state.manualEdit) {
       state.outputText = buildScopeCopy(state);
     }
 
-    const heading = makeHeading(
-      'Briefing tool',
-      'Role scope builder',
-      'Select one or more roles, add key context and generate copy you can edit, copy or send straight into the HMJ vacancy form.'
-    );
-
     const summary = doc.createElement('div');
     summary.className = 'scope-selection-summary';
+    let summaryTitleText = 'No roles selected yet';
+    let summaryMetaText = 'Pick the roles you want to blend into one working brief.';
 
     const roleGrid = doc.createElement('div');
     roleGrid.className = 'scope-role-grid';
@@ -1183,11 +1287,15 @@
       const focusLabels = state.focusIds.map((id) => focusMap.get(id)?.label).filter(Boolean);
       summary.innerHTML = '';
       const title = doc.createElement('strong');
-      title.textContent = roleLabels.length ? `${roleLabels.length} role${roleLabels.length > 1 ? 's' : ''} selected` : 'No roles selected yet';
+      summaryTitleText = roleLabels.length ? `${roleLabels.length} role${roleLabels.length > 1 ? 's' : ''} selected` : 'No roles selected yet';
+      title.textContent = summaryTitleText;
       const meta = doc.createElement('span');
+      summaryMetaText = roleLabels.length
+        ? `${summarizeLabels(roleLabels)}${focusLabels.length ? ` | ${summarizeLabels(focusLabels)}` : ''}`
+        : 'Pick the roles you want to blend into one working brief.';
       meta.textContent = roleLabels.length
         ? `${humanJoin(roleLabels)}${focusLabels.length ? ` | ${humanJoin(focusLabels)}` : ''}`
-        : 'Pick the roles you want to blend into one working brief.';
+        : summaryMetaText;
       summary.append(title, meta);
     }
 
@@ -1220,6 +1328,7 @@
       clearBtn.disabled = !hasOutput;
       sendBtn.disabled = !hasOutput;
       regenerateBtn.disabled = !state.selectedRoleIds.length;
+      setPreview(summaryTitleText, `${summaryMetaText} | ${outputStatus.textContent}`);
     }
 
     function applyStateToFields() {
@@ -1321,8 +1430,7 @@
       insertScopeIntoForm(state.outputText, state);
     });
 
-    card.append(
-      heading,
+    content.append(
       summary,
       roleGrid,
       focusLabel,
@@ -1506,17 +1614,16 @@
   }
 
   function initBudgetEstimator(container) {
-    const card = doc.createElement('article');
-    card.className = 'tool-card tool-card--compact';
+    const cardUi = createToolCardShell({
+      sizeClass: 'tool-card--compact',
+      eyebrow: 'Planning tool',
+      title: 'Budget & rate estimator',
+      copy: 'Switch between contractor and permanent modelling, edit every value directly and copy a clean estimate summary for internal planning.'
+    });
+    const { card, content, setPreview } = cardUi;
 
     const state = normalizeBudgetState(readStorage(STORAGE_KEYS.budget, defaultBudgetState()));
     let currentSummary = null;
-
-    const heading = makeHeading(
-      'Planning tool',
-      'Budget & rate estimator',
-      'Switch between contractor and permanent modelling, edit every value directly and copy a clean estimate summary for internal planning.'
-    );
 
     const modeRow = doc.createElement('div');
     modeRow.className = 'budget-mode-row';
@@ -1747,6 +1854,7 @@
         metricsGrid.appendChild(metricCard('Status', 'Awaiting values'));
         copyEstimateBtn.disabled = true;
         copySummaryBtn.disabled = true;
+        setPreview('Estimate waiting for values', 'Open the estimator to model rates, fees and urgency.');
         return;
       }
 
@@ -1773,6 +1881,24 @@
       note.textContent = currentSummary.note;
       copyEstimateBtn.disabled = false;
       copySummaryBtn.disabled = false;
+
+      if (state.mode === 'contractor') {
+        const duration = Number(state.contractor.duration);
+        const rate = Number(state.contractor.rate);
+        const hires = Number(state.contractor.hires);
+        setPreview(
+          currentSummary.title,
+          `${duration} wk | ${formatCurrency(rate)} per ${state.rateBasis === 'daily' ? 'day' : 'week'} | ${hires} hire${hires === 1 ? '' : 's'} | ${formatCurrency(currentSummary.low)} to ${formatCurrency(currentSummary.high)}`
+        );
+        return;
+      }
+
+      const salary = Number(state.permanent.salary);
+      const hires = Number(state.permanent.hires);
+      setPreview(
+        currentSummary.title,
+        `${formatCurrency(salary)} salary | ${hires} hire${hires === 1 ? '' : 's'} | ${formatCurrency(currentSummary.low)} to ${formatCurrency(currentSummary.high)}`
+      );
     }
 
     function render() {
@@ -1882,8 +2008,7 @@
       hmjToast('Budget estimator reset', 'info');
     });
 
-    card.append(
-      heading,
+    content.append(
       modeRow,
       urgencyRow,
       contractorControls,
@@ -1949,16 +2074,16 @@
   }
 
   function initChecklist(container) {
-    const card = doc.createElement('article');
-    card.className = 'tool-card tool-card--full';
+    const cardUi = createToolCardShell({
+      sizeClass: 'tool-card--full',
+      eyebrow: 'Readiness tool',
+      title: 'Document checklist',
+      copy: 'Track commercial, onboarding, access and project documentation items, add your own checklist points and copy a clean readiness summary.',
+      allowWide: false
+    });
+    const { card, content, setPreview } = cardUi;
 
     const state = normalizeChecklistState(readStorage(STORAGE_KEYS.checklist, defaultChecklistState()));
-
-    const heading = makeHeading(
-      'Readiness tool',
-      'Document checklist',
-      'Track commercial, onboarding, access and project documentation items, add your own checklist points and copy a clean readiness summary.'
-    );
 
     const summaryCard = doc.createElement('div');
     summaryCard.className = 'checklist-summary-card';
@@ -2068,6 +2193,12 @@
         : 'No missing items. The current checklist is complete.';
 
       copyBtn.disabled = totals.total === 0;
+      setPreview(
+        `${totals.complete} of ${totals.total} complete`,
+        missingItems.length
+          ? `${statusPill.textContent} | ${missingItems.length} item${missingItems.length === 1 ? '' : 's'} still open`
+          : `${statusPill.textContent} | All checklist items are marked complete`
+      );
     }
 
     function renderGroups() {
@@ -2194,7 +2325,7 @@
     });
 
     layout.append(groupsWrap, customWrap);
-    card.append(heading, summaryCard, layout, actions);
+    content.append(summaryCard, layout, actions);
     container.appendChild(card);
     render();
   }

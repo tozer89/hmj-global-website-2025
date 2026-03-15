@@ -167,6 +167,14 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
     hourly_min: 28,
     hourly_max: 35,
     currency: 'GBP',
+    shareSpec: {
+      enhanced: true,
+      source: 'openai',
+      model: 'gpt-5-mini',
+      overview: 'Polished share overview',
+      responsibilities: ['Lead planning cadence'],
+      requirements: ['Advanced Primavera P6'],
+    },
   });
 
   assert.equal(job.clientName, undefined);
@@ -176,6 +184,15 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
   assert.equal(job.payText, '£28 - £35 per hour');
   assert.equal(job.publicDetailPath, '/jobs/spec.html?id=role-3');
   assert.deepEqual(job.publicPageConfig, PUBLIC_PAGE_DEFAULTS);
+  assert.deepEqual(job.shareSpec, {
+    enhanced: true,
+    source: 'openai',
+    model: 'gpt-5-mini',
+    overview: 'Polished share overview',
+    responsibilities: ['Lead planning cadence'],
+    requirements: ['Advanced Primavera P6'],
+    generatedAt: null,
+  });
 });
 
 test('normalisePublicPageConfig applies defaults and understands string booleans', () => {
