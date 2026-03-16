@@ -98,6 +98,7 @@ function toCandidate(row = {}) {
     sector_experience: row.sector_experience || null,
     relocation_preference: row.relocation_preference || null,
     salary_expectation: row.salary_expectation || null,
+    salary_expectation_unit: row.salary_expectation_unit || null,
     experience_years: row.experience_years || null,
     sector_focus: row.sector_focus || null,
     headline_role: row.headline_role || row.role || null,

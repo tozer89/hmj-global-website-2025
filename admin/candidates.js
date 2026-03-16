@@ -61,6 +61,15 @@
     return root.querySelector(sel);
   }
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function loadFilters() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -237,6 +246,26 @@
     } catch {
       return value;
     }
+  }
+
+  function formatMoneyAmount(value, currency = 'GBP') {
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return '';
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: String(currency || 'GBP').toUpperCase(),
+        maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+      }).format(amount);
+    } catch {
+      return `${amount} ${currency || 'GBP'}`.trim();
+    }
+  }
+
+  function formatAssignmentPay(row) {
+    const pay = row?.rate_pay ?? row?.rate_std;
+    const text = formatMoneyAmount(pay, row?.currency || 'GBP');
+    return text ? `${text} pay` : 'Rate pending';
   }
 
   function ensureDebugPanel() {
@@ -471,9 +500,14 @@
       headline_role: row.headline_role || row.role || row.job_title || '',
       location: row.location || row.region || row.county || row.country || '',
       sector_focus: row.sector_focus || '',
+      salary_expectation: row.salary_expectation || '',
+      salary_expectation_unit: row.salary_expectation_unit || '',
       skills: skillList,
       tags,
       docs,
+      assignments: Array.isArray(row.assignments) ? row.assignments.slice() : [],
+      assignment_options: Array.isArray(row.assignment_options) ? row.assignment_options.slice() : [],
+      assignment_linking_available: row.assignment_linking_available !== false,
       onboarding,
       payment_summary: paymentSummary,
       notes,
@@ -945,7 +979,10 @@
     }
     if (!compare.summary) {
       statusHost.textContent = compare.message || 'Timesheet Portal comparison is unavailable right now.';
-      summaryHost.innerHTML = '';
+      const attempts = Array.isArray(compare.attempts) ? compare.attempts.slice(0, 4) : [];
+      summaryHost.innerHTML = attempts.length
+        ? `<div class="mapping-item"><strong>Latest TSP checks</strong><p>${attempts.map((attempt) => `${attempt.path} → ${attempt.status}${attempt.authScheme ? ` (${attempt.authScheme})` : ''}`).join(' · ')}</p></div>`
+        : '';
       return;
     }
     statusHost.textContent = `Compared ${compare.summary.websiteTotal} website candidates against ${compare.summary.timesheetPortalTotal} Timesheet Portal profiles.`;
@@ -1038,6 +1075,7 @@
   function renderDrawerSkeleton() {
     elements.dwName.textContent = 'Loading…';
     elements.dwProfile.innerHTML = '<div class="skeleton-card"></div>';
+    elements.dwAssignments.innerHTML = '';
     elements.dwDocs.innerHTML = '';
     elements.dwNotes.innerHTML = '';
     elements.dwAudit.innerHTML = '';
@@ -1065,6 +1103,8 @@
     elements.dwBlock.onclick = () => toggleBlock(candidate);
     elements.dwProfile.innerHTML = renderProfile(candidate);
     bindProfileEditors(candidate);
+    elements.dwAssignments.innerHTML = renderAssignments(candidate);
+    bindAssignmentActions(candidate);
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
     elements.dwNotes.innerHTML = renderNotes(candidate);
@@ -1216,6 +1256,131 @@
         </div>
         <div class="doc-list">${rows}</div>
       </div>`;
+  }
+
+  function renderAssignments(candidate) {
+    const linked = Array.isArray(candidate.assignments) ? candidate.assignments : [];
+    const options = Array.isArray(candidate.assignment_options) ? candidate.assignment_options : [];
+    const linkingAvailable = candidate.assignment_linking_available !== false;
+    const optionMarkup = options
+      .filter((assignment) => String(assignment.candidate_id || '') !== String(candidate.id))
+      .map((assignment) => {
+        const bits = [
+          assignment.as_ref || `AS-${assignment.id}`,
+          assignment.job_title || 'Assignment',
+          assignment.client_name || null,
+          statusLabel(assignment.status),
+        ].filter(Boolean);
+        return `<option value="${assignment.id}">${escapeHtml(bits.join(' • '))}</option>`;
+      }).join('');
+
+    const linkedMarkup = linked.length
+      ? linked.map((assignment) => `
+          <div class="doc-row">
+            <div style="min-width:0">
+              <div style="font-weight:700;word-break:break-word">${escapeHtml(assignment.job_title || assignment.as_ref || `Assignment #${assignment.id}`)}</div>
+              <div class="muted" style="font-size:12px;line-height:1.45">
+                ${escapeHtml([
+                  assignment.as_ref || null,
+                  assignment.client_name || null,
+                  assignment.client_site || null,
+                  assignment.start_date ? `${formatDate(assignment.start_date)}${assignment.end_date ? ` – ${formatDate(assignment.end_date)}` : ''}` : null,
+                  formatAssignmentPay(assignment),
+                ].filter(Boolean).join(' • '))}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              <a class="btn ghost small" href="/admin/assignments.html?q=${encodeURIComponent(assignment.as_ref || assignment.job_title || assignment.client_name || assignment.id)}" target="_blank" rel="noopener">Open</a>
+              ${linkingAvailable ? `<button class="btn ghost small" type="button" data-assignment-unlink="${assignment.id}">Unlink</button>` : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<div class="muted">No linked assignments yet.</div>';
+
+    return `
+      <div class="drawer-section">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <h3 style="margin:0 0 4px">Assignments</h3>
+            <div class="muted" style="font-size:13px">Pair this candidate to live or active assignments without leaving the candidate workspace.</div>
+          </div>
+          ${linkingAvailable ? `
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:min(360px,100%)">
+              <select class="drawer-input" data-assignment-select>
+                <option value="">Select assignment…</option>
+                ${optionMarkup}
+              </select>
+              <button class="btn" type="button" data-assignment-link ${optionMarkup ? '' : 'disabled'}>Link assignment</button>
+            </div>
+          ` : `
+            <div class="muted" style="font-size:13px;max-width:320px">Assignment pairing will appear here after the latest Supabase assignments reconciliation is applied.</div>
+          `}
+        </div>
+        <div class="doc-list">${linkedMarkup}</div>
+      </div>`;
+  }
+
+  async function refreshCandidateAssignments(candidate) {
+    const refreshed = await fetchCandidate(candidate.id);
+    if (!refreshed) return;
+    Object.assign(candidate, refreshed);
+    if (state.drawerId && String(state.drawerId) === String(candidate.id)) {
+      renderDrawer(candidate);
+    }
+  }
+
+  async function updateCandidateAssignment(candidate, assignmentId, action) {
+    const response = await state.helpers.api('admin-candidate-assignment-link', 'POST', {
+      action,
+      candidateId: candidate.id,
+      assignmentId,
+    });
+    await refreshCandidateAssignments(candidate);
+    showToast(
+      response?.message || (action === 'unlink' ? 'Assignment unlinked.' : 'Assignment linked.'),
+      'info',
+      2800,
+    );
+  }
+
+  function bindAssignmentActions(candidate) {
+    const host = elements.dwAssignments;
+    if (!host) return;
+    const select = qs('[data-assignment-select]', host);
+    const linkButton = qs('[data-assignment-link]', host);
+    if (linkButton && select) {
+      linkButton.addEventListener('click', async () => {
+        const assignmentId = String(select.value || '').trim();
+        if (!assignmentId) {
+          showToast('Select an assignment first.', 'warn', 2800);
+          return;
+        }
+        linkButton.disabled = true;
+        try {
+          await updateCandidateAssignment(candidate, assignmentId, 'link');
+        } catch (err) {
+          console.error('[candidates] assignment link failed', err);
+          showToast(err.message || 'Could not link the assignment.', 'error', 4200);
+        } finally {
+          linkButton.disabled = false;
+        }
+      });
+    }
+    host.querySelectorAll('[data-assignment-unlink]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const assignmentId = button.dataset.assignmentUnlink;
+        if (!assignmentId) return;
+        button.disabled = true;
+        try {
+          await updateCandidateAssignment(candidate, assignmentId, 'unlink');
+        } catch (err) {
+          console.error('[candidates] assignment unlink failed', err);
+          showToast(err.message || 'Could not unlink the assignment.', 'error', 4200);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
   }
 
   async function readFileAsBase64(file) {
@@ -2213,6 +2378,7 @@
     elements.drawer = qs('#drawer');
     elements.dwName = qs('#dw-name');
     elements.dwProfile = qs('#dw-profile');
+    elements.dwAssignments = qs('#dw-assignments');
     elements.dwDocs = qs('#dw-docs');
     elements.dwNotes = qs('#dw-notes');
     elements.dwAudit = qs('#dw-audit');

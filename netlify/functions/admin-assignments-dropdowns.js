@@ -21,6 +21,14 @@ const baseHandler = async (event, context) => {
       supabase.from('contractors').select('id,name,email').order('name', { ascending: true })
     );
 
+    const candidatesRaw = await safeSelect(() =>
+      supabase
+        .from('candidates')
+        .select('id,full_name,first_name,last_name,email,status,payroll_ref')
+        .order('updated_at', { ascending: false })
+        .limit(400)
+    );
+
     const clients = await safeSelect(() =>
       supabase.from('clients').select('id,name').order('name', { ascending: true })
     );
@@ -46,6 +54,21 @@ const baseHandler = async (event, context) => {
       ...project,
       client_name: clientMap.get(project.client_id)?.name || null,
     }));
+
+    const candidates = candidatesRaw
+      .map((candidate) => ({
+        id: String(candidate.id),
+        name: candidate.full_name || [candidate.first_name, candidate.last_name].filter(Boolean).join(' ').trim() || candidate.email || `Candidate ${candidate.id}`,
+        full_name: candidate.full_name || null,
+        email: candidate.email || null,
+        status: candidate.status || null,
+        payroll_ref: candidate.payroll_ref || null,
+      }))
+      .sort((a, b) => {
+        const aName = String(a.name || '').toLowerCase();
+        const bName = String(b.name || '').toLowerCase();
+        return aName.localeCompare(bName);
+      });
 
     const siteMap = new Map();
 
@@ -81,6 +104,7 @@ const baseHandler = async (event, context) => {
       statusCode: 200,
       body: JSON.stringify({
         contractors,
+        candidates,
         clients,
         projects,
         sites,

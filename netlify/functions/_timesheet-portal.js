@@ -3,6 +3,7 @@
 const DEFAULT_BASE_URL = 'https://gb3.api.timesheetportal.com';
 const DEFAULT_TOKEN_PATH = '/oauth/token';
 const DEFAULT_CANDIDATE_PATHS = [
+  '/users',
   '/recruitment/candidates',
   '/contractors',
   '/recruitment/contractors',
@@ -41,20 +42,52 @@ function truthyEnv(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 }
 
+function firstEnv(...values) {
+  for (const value of values) {
+    const text = trimString(value, 4000);
+    if (text) return text;
+  }
+  return '';
+}
+
 function readTimesheetPortalConfig() {
-  const baseUrl = normalizeBaseUrl(process.env.TIMESHEET_PORTAL_BASE_URL || DEFAULT_BASE_URL);
-  const resourceBaseUrl = normalizeBaseUrl(process.env.TIMESHEET_PORTAL_RESOURCE_BASE_URL_OVERRIDE || baseUrl);
-  const clientId = trimString(process.env.TIMESHEET_PORTAL_CLIENT_ID, 4000);
-  const clientSecret = trimString(process.env.TIMESHEET_PORTAL_CLIENT_SECRET, 4000);
-  const apiToken = trimString(process.env.TIMESHEET_PORTAL_API_TOKEN, 4000);
-  const tokenPath = trimString(process.env.TIMESHEET_PORTAL_TOKEN_PATH, 240) || DEFAULT_TOKEN_PATH;
-  const scope = trimString(process.env.TIMESHEET_PORTAL_SCOPE, 240);
+  const baseUrl = normalizeBaseUrl(firstEnv(
+    process.env.TIMESHEET_PORTAL_BASE_URL,
+    process.env.TSP_BASE_URL,
+    DEFAULT_BASE_URL,
+  ));
+  const resourceBaseUrl = normalizeBaseUrl(firstEnv(
+    process.env.TIMESHEET_PORTAL_RESOURCE_BASE_URL_OVERRIDE,
+    process.env.TSP_RESOURCE_BASE_URL_OVERRIDE,
+    baseUrl,
+  ));
+  const clientId = firstEnv(
+    process.env.TIMESHEET_PORTAL_CLIENT_ID,
+    process.env.TSP_OAUTH_CLIENT_ID,
+  );
+  const clientSecret = firstEnv(
+    process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
+    process.env.TSP_OAUTH_CLIENT_SECRET,
+  );
+  const apiToken = firstEnv(
+    process.env.TIMESHEET_PORTAL_API_TOKEN,
+    process.env.TSP_API_KEY,
+  );
+  const tokenPath = trimString(firstEnv(
+    process.env.TIMESHEET_PORTAL_TOKEN_PATH,
+    process.env.TSP_TOKEN_URL,
+    DEFAULT_TOKEN_PATH,
+  ), 240) || DEFAULT_TOKEN_PATH;
+  const scope = trimString(firstEnv(
+    process.env.TIMESHEET_PORTAL_SCOPE,
+    process.env.TSP_SCOPE,
+  ), 240);
   const configuredPaths = [
-    trimString(process.env.TIMESHEET_PORTAL_CANDIDATE_PATH_OVERRIDE, 240),
-    trimString(process.env.TIMESHEET_PORTAL_CANDIDATE_PATH, 240),
+    trimString(firstEnv(process.env.TIMESHEET_PORTAL_CANDIDATE_PATH_OVERRIDE, process.env.TSP_CANDIDATE_PATH_OVERRIDE), 240),
+    trimString(firstEnv(process.env.TIMESHEET_PORTAL_CANDIDATE_PATH, process.env.TSP_CANDIDATE_PATH), 240),
   ].filter(Boolean);
   const candidatePaths = configuredPaths.length ? configuredPaths : DEFAULT_CANDIDATE_PATHS;
-  const enabled = truthyEnv(process.env.TIMESHEET_PORTAL_ENABLED) || !!apiToken || (!!clientId && !!clientSecret);
+  const enabled = truthyEnv(firstEnv(process.env.TIMESHEET_PORTAL_ENABLED, process.env.TSP_ENABLED)) || !!apiToken || (!!clientId && !!clientSecret);
 
   return {
     enabled,
@@ -70,21 +103,23 @@ function readTimesheetPortalConfig() {
   };
 }
 
-function bearerHeaders(token) {
+function authHeaders(auth) {
+  const token = trimString(auth?.token, 8000);
+  const scheme = trimString(auth?.scheme, 40).toLowerCase();
   return {
     accept: 'application/json',
-    authorization: `Bearer ${token}`,
+    authorization: scheme === 'bearer' ? `Bearer ${token}` : token,
   };
 }
 
 async function getBearerToken(config) {
-  if (config.apiToken) return config.apiToken;
   if (!config.clientId || !config.clientSecret) {
     const error = new Error('Timesheet Portal credentials are not configured.');
     error.code = 'timesheet_portal_not_configured';
     throw error;
   }
-  if (cachedToken && cachedToken.expiresAt > Date.now()) return cachedToken.value;
+  const cacheKey = JSON.stringify([config.baseUrl, config.tokenPath, config.clientId, config.clientSecret, config.scope || '']);
+  if (cachedToken && cachedToken.key === cacheKey && cachedToken.expiresAt > Date.now()) return cachedToken.value;
 
   const body = new URLSearchParams();
   body.set('grant_type', 'client_credentials');
@@ -109,16 +144,39 @@ async function getBearerToken(config) {
   }
   const expiresIn = Math.max(120, Number(data.expires_in) || 900);
   cachedToken = {
+    key: cacheKey,
     value: trimString(data.access_token, 8000),
     expiresAt: Date.now() + ((expiresIn - 60) * 1000),
   };
   return cachedToken.value;
 }
 
-async function fetchJson(url, token) {
+async function getAuthCandidates(config) {
+  const auths = [];
+  let oauthError = null;
+
+  if (config.clientId && config.clientSecret) {
+    try {
+      const token = await getBearerToken(config);
+      auths.push({ scheme: 'bearer', token, source: 'oauth' });
+    } catch (error) {
+      oauthError = error;
+    }
+  }
+
+  if (config.apiToken) {
+    auths.push({ scheme: 'token', token: config.apiToken, source: 'api_token' });
+    auths.push({ scheme: 'bearer', token: config.apiToken, source: 'api_token_bearer' });
+  }
+
+  if (!auths.length && oauthError) throw oauthError;
+  return { auths, oauthError };
+}
+
+async function fetchJson(url, auth) {
   const response = await fetch(url, {
     method: 'GET',
-    headers: bearerHeaders(token),
+    headers: authHeaders(auth),
   });
   const text = await response.text();
   let json = null;
@@ -173,26 +231,67 @@ function normalizeContractor(record = {}) {
   };
 }
 
-async function discoverCandidatePath(config, token) {
+function buildPagedUrl(baseUrl, candidatePath, options = {}) {
+  const cleanPath = trimString(candidatePath, 240);
+  const queryPath = cleanPath.includes('?') ? cleanPath : cleanPath.startsWith('/users')
+    ? `${cleanPath}?page=${Math.max(1, Number(options.page) || 1)}`
+    : `${cleanPath}?take=${Math.max(1, Math.min(1000, Number(options.take) || 500))}`;
+  return joinUrl(baseUrl, queryPath);
+}
+
+async function discoverCandidatePath(config, authCandidates) {
   const attempts = [];
-  for (const path of config.candidatePaths) {
-    const cleanPath = trimString(path, 240);
-    if (!cleanPath) continue;
-    const queryPath = cleanPath.includes('?') ? cleanPath : `${cleanPath}?take=5`;
-    const url = joinUrl(config.resourceBaseUrl, queryPath);
-    const result = await fetchJson(url, token);
-    attempts.push({
-      path: cleanPath,
-      status: result.response.status,
-    });
-    if (result.response.ok) {
-      return { candidatePath: cleanPath, attempts };
+  for (const auth of authCandidates) {
+    for (const path of config.candidatePaths) {
+      const cleanPath = trimString(path, 240);
+      if (!cleanPath) continue;
+      const url = buildPagedUrl(config.resourceBaseUrl, cleanPath, { take: 5, page: 1 });
+      const result = await fetchJson(url, auth);
+      attempts.push({
+        path: cleanPath,
+        status: result.response.status,
+        authSource: auth.source,
+        authScheme: auth.scheme,
+      });
+      if (result.response.ok) {
+        return { candidatePath: cleanPath, auth, attempts };
+      }
     }
   }
-  const error = new Error('Timesheet Portal candidates endpoint could not be discovered.');
-  error.code = 'timesheet_portal_candidate_path_missing';
+  const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
+  const error = new Error(sawUnauthorized
+    ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
+    : 'Timesheet Portal candidate endpoint could not be discovered for this account.');
+  error.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_candidate_path_missing';
   error.attempts = attempts;
   throw error;
+}
+
+async function fetchUsersCollection(config, auth, candidatePath) {
+  const seenKeys = new Set();
+  const rows = [];
+  for (let page = 1; page <= 25; page += 1) {
+    const url = buildPagedUrl(config.resourceBaseUrl, candidatePath, { page });
+    const result = await fetchJson(url, auth);
+    if (!result.response.ok) {
+      const error = new Error(`Timesheet Portal candidate list failed (${result.response.status})`);
+      error.code = 'timesheet_portal_candidate_list_failed';
+      error.status = result.response.status;
+      throw error;
+    }
+    const pageRows = extractCollection(result.json).map(normalizeContractor).filter((row) => row.id || row.email || row.reference);
+    if (!pageRows.length) break;
+    let added = 0;
+    pageRows.forEach((row) => {
+      const key = row.id || row.email || row.reference;
+      if (!key || seenKeys.has(key)) return;
+      seenKeys.add(key);
+      rows.push(row);
+      added += 1;
+    });
+    if (!added || pageRows.length < 100) break;
+  }
+  return rows;
 }
 
 async function listTimesheetPortalContractors(config, options = {}) {
@@ -202,20 +301,33 @@ async function listTimesheetPortalContractors(config, options = {}) {
     throw error;
   }
 
-  const token = await getBearerToken(config);
-  const discovery = await discoverCandidatePath(config, token);
-  const take = Math.max(1, Math.min(1000, Number(options.take) || 500));
-  const separator = discovery.candidatePath.includes('?') ? '&' : '?';
-  const url = joinUrl(config.resourceBaseUrl, `${discovery.candidatePath}${separator}take=${take}`);
-  const result = await fetchJson(url, token);
+  const { auths, oauthError } = await getAuthCandidates(config);
+  if (!auths.length) {
+    if (oauthError) throw oauthError;
+    const error = new Error('Timesheet Portal credentials are not configured.');
+    error.code = 'timesheet_portal_not_configured';
+    throw error;
+  }
 
+  const discovery = await discoverCandidatePath(config, auths);
+  const take = Math.max(1, Math.min(1000, Number(options.take) || 500));
+  const contractors = discovery.candidatePath.startsWith('/users')
+    ? await fetchUsersCollection(config, discovery.auth, discovery.candidatePath)
+    : (() => null)();
+  if (contractors) {
+    return {
+      discovery,
+      contractors,
+    };
+  }
+  const url = buildPagedUrl(config.resourceBaseUrl, discovery.candidatePath, { take });
+  const result = await fetchJson(url, discovery.auth);
   if (!result.response.ok) {
     const error = new Error(`Timesheet Portal candidate list failed (${result.response.status})`);
     error.code = 'timesheet_portal_candidate_list_failed';
     error.status = result.response.status;
     throw error;
   }
-
   return {
     discovery,
     contractors: extractCollection(result.json).map(normalizeContractor).filter((row) => row.id || row.email || row.reference),

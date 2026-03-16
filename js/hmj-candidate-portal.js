@@ -226,6 +226,38 @@ function normaliseTextList(value, maxLength = 120) {
   return out;
 }
 
+function normaliseSalaryExpectationUnit(value) {
+  const raw = trimText(value, 40).toLowerCase();
+  if (!raw) return '';
+  if (raw === 'hour' || raw === 'hourly' || raw === 'per_hour') return 'hourly';
+  if (raw === 'day' || raw === 'daily' || raw === 'per_day') return 'daily';
+  if (raw === 'year' || raw === 'annual_salary' || raw === 'per_year') return 'annual';
+  return ['annual', 'daily', 'hourly'].includes(raw) ? raw : '';
+}
+
+function salaryExpectationSuffix(unit) {
+  if (unit === 'hourly') return 'per hour';
+  if (unit === 'daily') return 'per day';
+  if (unit === 'annual') return 'per year';
+  return '';
+}
+
+function formatSalaryExpectation(value, unit) {
+  const raw = trimText(value, 160);
+  if (!raw) return '';
+  if (/per\s+(hour|day|year)/i.test(raw)) return raw;
+  const normalizedUnit = normaliseSalaryExpectationUnit(unit);
+  if (!normalizedUnit) return raw;
+  const numeric = Number(String(raw).replace(/,/g, ''));
+  if (!Number.isFinite(numeric)) return `${raw} ${salaryExpectationSuffix(normalizedUnit)}`.trim();
+  const maxFractionDigits = normalizedUnit === 'annual' || Number.isInteger(numeric) ? 0 : 2;
+  const formatted = new Intl.NumberFormat('en-GB', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxFractionDigits,
+  }).format(numeric);
+  return `${formatted} ${salaryExpectationSuffix(normalizedUnit)}`;
+}
+
 function normalisePaymentMethodInput(value, currency) {
   const raw = trimText(value, 40).toLowerCase();
   if (raw === 'gbp_local' || raw === 'gbp') return 'gbp_local';
@@ -526,6 +558,7 @@ export async function onCandidateAuthStateChange(callback) {
 function buildCandidateProfilePayload(input = {}, options = {}) {
   const fullName = trimText(input.full_name || input.name, 240);
   const split = splitName(fullName);
+  const salaryExpectationUnit = normaliseSalaryExpectationUnit(input.salary_expectation_unit || input.salary_unit || input.salary_expectation_basis);
   const payload = {
     auth_user_id: trimText(options.user?.id || input.auth_user_id, 120) || null,
     email: lowerEmail(input.email || options.user?.email),
@@ -551,7 +584,8 @@ function buildCandidateProfilePayload(input = {}, options = {}) {
     qualifications: trimText(input.qualifications, 4000) || null,
     sector_experience: trimText(input.sector_experience, 1000) || null,
     relocation_preference: trimText(input.relocation_preference || input.relocation, 120) || null,
-    salary_expectation: trimText(input.salary_expectation, 160) || null,
+    salary_expectation: formatSalaryExpectation(input.salary_expectation, salaryExpectationUnit) || null,
+    salary_expectation_unit: salaryExpectationUnit || null,
     sector_focus: trimText(input.sector_focus || input.sector_experience || input.discipline, 240) || null,
     skills: normaliseSkillList(input.skills),
     availability: trimText(input.availability || input.notice_period, 160) || null,

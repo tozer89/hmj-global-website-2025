@@ -263,8 +263,6 @@
   </div>
 
   <div class="wrap" id="app" style="display:none">
-    <section id="notesBoard" class="panel notes-board" hidden></section>
-
     <section class="panel hero" aria-labelledby="welcomeHeading">
       <div class="hero-shell">
         <div class="hero-copy">
@@ -373,6 +371,16 @@
         <p class="muted">Jump straight into the core admin areas without digging through the full dashboard.</p>
       </div>
       <nav class="quick-grid" aria-label="Quick admin links">
+        <a class="quick-link" href="/admin/clients.html" aria-label="Open Clients quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Clients</strong>
+          <span>Manage live client records, billing context, and linked commercial activity.</span>
+        </a>
+        <a class="quick-link" href="/admin/assignments.html" aria-label="Open Assignments quick access">
+          <span class="quick-link__eyebrow">Live module</span>
+          <strong>Assignments</strong>
+          <span>Manage live placements, link assignments to candidate profiles, and track assignment status.</span>
+        </a>
         <a class="quick-link" href="/admin/jobs.html" aria-label="Open Jobs quick access">
           <span class="quick-link__eyebrow">Live module</span>
           <strong>Jobs</strong>
@@ -430,20 +438,6 @@
         <p class="muted">Use these direct workspace links for day-to-day client, candidate, assignment, payroll, and reporting work without going through a generic CRM landing page.</p>
       </div>
       <section class="module-grid grid" aria-label="Admin modules" data-tile-order>
-        <a class="card card--primary" id="placeholder-1" href="/admin/clients.html" data-status="Live" aria-labelledby="placeholder1Title" aria-describedby="placeholder1Desc">
-          <span class="card-mark" aria-hidden="true">CL</span>
-          <div class="card-copy">
-            <h3 id="placeholder1Title">Clients</h3>
-            <p id="placeholder1Desc">Open the live client console for contact records, billing details, assignment visibility, and account-level admin updates.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-3" href="/admin/assignments.html" data-status="Live" aria-labelledby="placeholder3Title" aria-describedby="placeholder3Desc">
-          <span class="card-mark" aria-hidden="true">AS</span>
-          <div class="card-copy">
-            <h3 id="placeholder3Title">Assignments</h3>
-            <p id="placeholder3Desc">Manage active placements, assignment terms, status tracking, and linked commercial records.</p>
-          </div>
-        </a>
         <a class="card card--primary" id="placeholder-4" href="/admin/payroll.html" data-status="Live" aria-labelledby="placeholder4Title" aria-describedby="placeholder4Desc">
           <span class="card-mark" aria-hidden="true">PY</span>
           <div class="card-copy">
@@ -468,6 +462,8 @@
       </section>
       <p class="section-note muted" id="settings-placeholder">The quick access strip above covers the headline modules. This section now avoids duplicates, while Settings holds the platform tools and recent activity that no longer need to dominate the dashboard.</p>
     </section>
+
+    <section id="notesBoard" class="panel notes-board" hidden></section>
   </div>
 
   <div id="toast" aria-live="polite" aria-atomic="true"></div>

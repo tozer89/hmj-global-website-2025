@@ -1,6 +1,7 @@
 // netlify/functions/admin-candidates-get.js
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
+const { loadAssignmentOptions, loadLinkedAssignments } = require('./_candidate-assignments.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 const { attachOnboardingSummaries } = require('./_candidate-onboarding-admin.js');
 const { presentCandidateDocuments } = require('./_candidate-docs.js');
@@ -119,6 +120,9 @@ const baseHandler = async (event, context) => {
     let storedDocs = [];
     let applicationRows = [];
     let activityRows = [];
+    let assignmentRows = [];
+    let assignmentOptions = [];
+    let assignmentLinkingAvailable = true;
 
     try {
       const { data: docRows, error: docsError } = await supabase
@@ -170,9 +174,24 @@ const baseHandler = async (event, context) => {
       console.warn('[candidates] activity decoration failed (%s)', activityError?.message || activityError);
     }
 
+    try {
+      const linked = await loadLinkedAssignments(supabase, id);
+      assignmentRows = Array.isArray(linked?.rows) ? linked.rows : [];
+      assignmentLinkingAvailable = linked?.candidateIdSupported !== false;
+      const options = await loadAssignmentOptions(supabase, id, { limit: 80 });
+      assignmentOptions = Array.isArray(options?.rows) ? options.rows : [];
+      assignmentLinkingAvailable = assignmentLinkingAvailable && options?.candidateIdSupported !== false;
+    } catch (assignmentError) {
+      console.warn('[candidates] assignment lookup failed (%s)', assignmentError?.message || assignmentError);
+      assignmentLinkingAvailable = false;
+    }
+
     record.docs = storedDocs.concat(buildLegacyDocs(record));
     record.applications = applicationRows;
     record.audit = activityRows;
+    record.assignments = assignmentRows;
+    record.assignment_options = assignmentOptions;
+    record.assignment_linking_available = assignmentLinkingAvailable;
 
     const [enriched] = await attachOnboardingSummaries(supabase, [record]);
 

@@ -98,6 +98,38 @@ import {
     return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
   }
 
+  function normaliseSalaryExpectationUnit(value) {
+    const raw = trimText(value, 40).toLowerCase();
+    if (!raw) return 'annual';
+    if (raw === 'hour' || raw === 'hourly' || raw === 'per_hour') return 'hourly';
+    if (raw === 'day' || raw === 'daily' || raw === 'per_day') return 'daily';
+    if (raw === 'year' || raw === 'annual_salary' || raw === 'per_year') return 'annual';
+    return ['annual', 'daily', 'hourly'].includes(raw) ? raw : 'annual';
+  }
+
+  function salaryExpectationSuffix(unit) {
+    if (unit === 'hourly') return 'per hour';
+    if (unit === 'daily') return 'per day';
+    return 'per year';
+  }
+
+  function formatSalaryExpectation(value, unit) {
+    const raw = trimText(value, 80);
+    if (!raw) return '';
+    const normalisedUnit = normaliseSalaryExpectationUnit(unit);
+    if (/per\s+(hour|day|year)/i.test(raw)) return raw;
+    const numeric = Number(String(raw).replace(/,/g, ''));
+    if (!Number.isFinite(numeric)) {
+      return `${raw} ${salaryExpectationSuffix(normalisedUnit)}`.trim();
+    }
+    const maxFractionDigits = normalisedUnit === 'annual' || Number.isInteger(numeric) ? 0 : 2;
+    const formatted = new Intl.NumberFormat('en-GB', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: maxFractionDigits,
+    }).format(numeric);
+    return `${formatted} ${salaryExpectationSuffix(normalisedUnit)}`;
+  }
+
   function remainingRequestedDocuments(documents, requestedDocuments) {
     const uploaded = new Set((Array.isArray(documents) ? documents : [])
       .map((row) => normaliseRequestedDocumentType(row?.document_type || row?.label || ''))
@@ -773,8 +805,8 @@ import {
             <label>Relocation preference
               <input type="text" name="relocation_preference" value="${escapeHtml(candidate.relocation_preference || '')}" placeholder="Yes, maybe, or no">
             </label>
-            <label>Salary / day rate expectation
-              <input type="text" name="salary_expectation" value="${escapeHtml(candidate.salary_expectation || '')}" placeholder="e.g. £450 per day">
+            <label>Salary / rate expectation
+              <input type="text" name="salary_expectation" value="${escapeHtml(candidate.salary_expectation || '')}" placeholder="e.g. 75000 per year or 450 per day">
             </label>
             <label>LinkedIn
               <input type="url" name="linkedin_url" value="${escapeHtml(candidate.linkedin_url || '')}" placeholder="https://linkedin.com/in/your-profile">
@@ -1260,6 +1292,7 @@ import {
 
   function buildCandidateSyncPayload(formData, submissionId) {
     const rightToWorkRegions = normaliseSkillList(formData.get('right_to_work'));
+    const salaryExpectationUnit = normaliseSalaryExpectationUnit(formData.get('salary_expectation_unit'));
     const candidate = {
       first_name: formData.get('first_name'),
       surname: formData.get('surname'),
@@ -1285,7 +1318,8 @@ import {
       sector_experience: formData.get('sector_experience'),
       availability: formData.get('availability'),
       notice_period: formData.get('notice_period'),
-      salary_expectation: formData.get('salary_expectation'),
+      salary_expectation: formatSalaryExpectation(formData.get('salary_expectation'), salaryExpectationUnit),
+      salary_expectation_unit: salaryExpectationUnit,
       relocation: formData.get('relocation'),
       linkedin: formData.get('linkedin'),
       message: formData.get('message'),

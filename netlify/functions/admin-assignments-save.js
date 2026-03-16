@@ -30,6 +30,9 @@ const baseHandler = async (event, context) => {
 
     const payload = {
       id: assignment.id != null ? Number(assignment.id) : undefined,
+      candidate_id: assignment.candidate_id == null || String(assignment.candidate_id).trim() === ''
+        ? null
+        : String(assignment.candidate_id).trim(),
       contractor_id: asNumber(assignment.contractor_id),
       project_id: asNumber(assignment.project_id),
       site_id: asNumber(assignment.site_id),
@@ -84,8 +87,8 @@ const baseHandler = async (event, context) => {
       payload.active = true;
     }
 
-    if (!payload.contractor_id || !payload.project_id || !payload.start_date) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'contractor_id, project_id, start_date are required' }) };
+    if ((!payload.contractor_id && !payload.candidate_id) || !payload.project_id || !payload.start_date) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'candidate_id or contractor_id, project_id, start_date are required' }) };
     }
     if (payload.rate_std == null) {
       return { statusCode: 400, body: JSON.stringify({ error: 'rate_std is required' }) };

@@ -46,7 +46,6 @@ const baseHandler = async (event, context) => {
       ['job_title', 'job title'],
       ['project_id', 'project'],
       ['start_date', 'start date'],
-      ['contractor_id', 'candidate'],
     ];
 
     const assignmentMissing = listMissing(assignment, requiredAssignment);
@@ -54,8 +53,22 @@ const baseHandler = async (event, context) => {
       assignmentMissing.push('pay rate');
     }
 
+    if (!assignment.candidate_id && !assignment.contractor_id) {
+      assignmentMissing.push('candidate');
+    }
+
     let candidateProfile = null;
-    if (assignment.contractor_id) {
+    if (assignment.candidate_id) {
+      const { data: candidateRow, error: candidateError } = await supabase
+        .from('candidates')
+        .select('id,full_name,first_name,last_name,email,phone,status,payroll_ref')
+        .eq('id', assignment.candidate_id)
+        .maybeSingle();
+      if (candidateError) throw candidateError;
+      candidateProfile = candidateRow || null;
+    }
+
+    if (!candidateProfile && assignment.contractor_id) {
       const { data: contractor, error: contractorError } = await supabase
         .from('contractors')
         .select('id,name,email,phone,payroll_ref')
@@ -102,7 +115,8 @@ const baseHandler = async (event, context) => {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const baseRef = `LIVE-${now.getFullYear()}${month}`;
     const paddedId = String(id).padStart(4, '0');
-    const candidatePart = assignment.contractor_id ? `-${assignment.contractor_id}` : '';
+    const candidateRefKey = assignment.candidate_id || assignment.contractor_id || '';
+    const candidatePart = candidateRefKey ? `-${candidateRefKey}` : '';
     const asRef = assignment.as_ref && /^LIVE-/i.test(assignment.as_ref)
       ? assignment.as_ref
       : `${baseRef}-${paddedId}${candidatePart}`;

@@ -317,6 +317,8 @@ alter table if exists public.candidates
   add column if not exists relocation_preference text;
 alter table if exists public.candidates
   add column if not exists salary_expectation text;
+alter table if exists public.candidates
+  add column if not exists salary_expectation_unit text;
 
 update public.candidates
 set
@@ -346,6 +348,15 @@ set
   sector_experience = nullif(trim(sector_experience), ''),
   relocation_preference = nullif(trim(relocation_preference), ''),
   salary_expectation = nullif(trim(salary_expectation), ''),
+  salary_expectation_unit = case
+    when lower(nullif(trim(salary_expectation_unit), '')) in ('annual', 'per_year', 'year', 'annual_salary') then 'annual'
+    when lower(nullif(trim(salary_expectation_unit), '')) in ('daily', 'per_day', 'day') then 'daily'
+    when lower(nullif(trim(salary_expectation_unit), '')) in ('hourly', 'per_hour', 'hour') then 'hourly'
+    when salary_expectation ilike '%per year%' then 'annual'
+    when salary_expectation ilike '%per day%' then 'daily'
+    when salary_expectation ilike '%per hour%' then 'hourly'
+    else null
+  end,
   headline_role = nullif(trim(headline_role), ''),
   sector_focus = nullif(trim(sector_focus), ''),
   summary = nullif(trim(summary), ''),

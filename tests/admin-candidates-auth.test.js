@@ -12,12 +12,13 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=7/);
+  assert.match(html, /\/admin\/candidates\.js\?v=8/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
   assert.match(html, /id="candidate-template-xlsx"/);
   assert.match(html, /id="btn-refresh-tsp"/);
+  assert.match(html, /id="dw-assignments"/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
@@ -73,6 +74,14 @@ test('candidate admin UI exposes onboarding reminder controls and uses the remin
   assert.match(source, /data-onboarding-action="send-doc-request"/);
   assert.match(source, /function selectMissingRtw/);
   assert.match(source, /function sendDocumentRequests/);
+});
+
+test('candidate admin UI renders and binds assignment pairing controls in the drawer', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /elements\.dwAssignments = qs\('#dw-assignments'\);/);
+  assert.match(source, /function renderAssignments/);
+  assert.match(source, /data-assignment-link/);
+  assert.match(source, /admin-candidate-assignment-link/);
 });
 
 test('candidate admin UI exposes import and timesheet portal comparison controls', () => {

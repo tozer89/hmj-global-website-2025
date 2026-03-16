@@ -130,12 +130,53 @@ function parsePositiveInteger(value) {
   return parsed;
 }
 
+function normaliseSalaryExpectationUnit(value) {
+  const raw = String(value == null ? '' : value).trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'hour' || raw === 'hourly' || raw === 'per_hour') return 'hourly';
+  if (raw === 'day' || raw === 'daily' || raw === 'per_day') return 'daily';
+  if (raw === 'year' || raw === 'annual_salary' || raw === 'per_year') return 'annual';
+  return ['annual', 'daily', 'hourly'].includes(raw) ? raw : null;
+}
+
+function salaryExpectationSuffix(unit) {
+  if (unit === 'hourly') return 'per hour';
+  if (unit === 'daily') return 'per day';
+  if (unit === 'annual') return 'per year';
+  return '';
+}
+
+function formatSalaryExpectation(value, unit) {
+  const raw = trimString(value, 160);
+  if (!raw) return null;
+  if (/per\s+(hour|day|year)/i.test(raw)) return raw;
+  const normalizedUnit = normaliseSalaryExpectationUnit(unit);
+  if (!normalizedUnit) return raw;
+  const numeric = Number(String(raw).replace(/,/g, ''));
+  if (!Number.isFinite(numeric)) {
+    return `${raw} ${salaryExpectationSuffix(normalizedUnit)}`.trim();
+  }
+  const maxFractionDigits = normalizedUnit === 'annual' || Number.isInteger(numeric) ? 0 : 2;
+  const formatted = new Intl.NumberFormat('en-GB', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxFractionDigits,
+  }).format(numeric);
+  return `${formatted} ${salaryExpectationSuffix(normalizedUnit)}`;
+}
+
 function buildCandidateWritePayload(input = {}, options = {}) {
   const includeNulls = !!options.includeNulls;
   const now = options.now || new Date().toISOString();
   const authUser = options.authUser || null;
   const authUserId = trimString(options.authUserId || authUser?.id || input.auth_user_id, 120);
   const email = lowerEmail(pickFirst(input.email, authUser?.email));
+  const salaryExpectationUnit = normaliseSalaryExpectationUnit(
+    pickFirst(input.salary_expectation_unit, input.salary_unit, input.salary_expectation_basis)
+  );
+  const salaryExpectation = formatSalaryExpectation(
+    pickFirst(input.salary_expectation_amount, input.salary_expectation),
+    salaryExpectationUnit
+  );
   const fullNameSource = pickFirst(
     input.full_name,
     input.name,
@@ -273,8 +314,25 @@ function buildCandidateWritePayload(input = {}, options = {}) {
   );
   assign(
     'salary_expectation',
-    trimString(input.salary_expectation, 160),
-    { hasValue: hasOwn(input, 'salary_expectation') }
+    salaryExpectation,
+    {
+      hasValue:
+        hasOwn(input, 'salary_expectation')
+        || hasOwn(input, 'salary_expectation_amount')
+        || hasOwn(input, 'salary_expectation_unit')
+        || hasOwn(input, 'salary_unit')
+        || hasOwn(input, 'salary_expectation_basis'),
+    }
+  );
+  assign(
+    'salary_expectation_unit',
+    salaryExpectationUnit,
+    {
+      hasValue:
+        hasOwn(input, 'salary_expectation_unit')
+        || hasOwn(input, 'salary_unit')
+        || hasOwn(input, 'salary_expectation_basis'),
+    }
   );
   assign(
     'experience_years',
@@ -695,6 +753,7 @@ module.exports = {
   buildCandidateWritePayload,
   buildJobApplicationPayload,
   dropUnknownColumnAndRetry,
+  formatSalaryExpectation,
   getCandidateByAuthUserId,
   getCandidateByEmail,
   insertJobApplication,
@@ -703,6 +762,7 @@ module.exports = {
   lowerEmail,
   normaliseApplicationStatus,
   normaliseDocumentType,
+  normaliseSalaryExpectationUnit,
   normaliseSkillList,
   recordCandidateActivity,
   resolveSupabaseAuthUser,

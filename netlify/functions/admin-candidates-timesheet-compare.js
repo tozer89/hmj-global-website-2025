@@ -49,27 +49,44 @@ const baseHandler = async (event, context) => {
     };
   }
 
-  const [websiteCandidates, tspData] = await Promise.all([
-    loadWebsiteCandidates(supabase),
-    listTimesheetPortalContractors(config, { take: 1000 }),
-  ]);
-  const comparison = compareCandidates(websiteCandidates, tspData.contractors);
+  try {
+    const [websiteCandidates, tspData] = await Promise.all([
+      loadWebsiteCandidates(supabase),
+      listTimesheetPortalContractors(config, { take: 1000 }),
+    ]);
+    const comparison = compareCandidates(websiteCandidates, tspData.contractors);
 
-  return {
-    statusCode: 200,
-    headers: {
-      'content-type': 'application/json',
-      'cache-control': 'no-store',
-    },
-    body: JSON.stringify({
-      ok: true,
-      configured: true,
-      comparedAt: new Date().toISOString(),
-      candidatePath: tspData.discovery.candidatePath,
-      attempts: tspData.discovery.attempts,
-      ...comparison,
-    }),
-  };
+    return {
+      statusCode: 200,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+      },
+      body: JSON.stringify({
+        ok: true,
+        configured: true,
+        comparedAt: new Date().toISOString(),
+        candidatePath: tspData.discovery.candidatePath,
+        attempts: tspData.discovery.attempts,
+        ...comparison,
+      }),
+    };
+  } catch (error) {
+    return {
+      statusCode: 200,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+      },
+      body: JSON.stringify({
+        ok: false,
+        configured: true,
+        message: error?.message || 'Timesheet Portal comparison failed.',
+        code: error?.code || 'timesheet_portal_compare_failed',
+        attempts: Array.isArray(error?.attempts) ? error.attempts : [],
+      }),
+    };
+  }
 };
 
 exports.handler = withAdminCors(baseHandler, { requireToken: false });
