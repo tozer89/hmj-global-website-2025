@@ -484,6 +484,8 @@ async function fetchStoredSeoSuggestion(supabase, jobId) {
     .from('job_seo_suggestions')
     .select('*')
     .eq('job_id', jobId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (result.error) {

@@ -5,6 +5,7 @@ const {
   buildFallbackSeoSuggestion,
   optimiseJobSeo,
   sanitiseSeoSuggestion,
+  fetchStoredSeoSuggestion,
   toSeoDbPayload,
   fromSeoRow,
 } = require('../netlify/functions/_job-seo-optimizer.js');
@@ -103,4 +104,61 @@ test('toSeoDbPayload and fromSeoRow preserve the SEO suggestion shape', () => {
   assert.equal(output.optimized_title, input.optimized_title);
   assert.deepEqual(output.optimized_responsibilities, input.optimized_responsibilities);
   assert.equal(output.source, 'openai');
+});
+
+test('fetchStoredSeoSuggestion prefers the most recently updated row and tolerates duplicate history', async () => {
+  const supabase = {
+    from(table) {
+      assert.equal(table, 'job_seo_suggestions');
+      return {
+        select(fields) {
+          assert.equal(fields, '*');
+          return {
+            eq(column, value) {
+              assert.equal(column, 'job_id');
+              assert.equal(value, 'job-77');
+              return {
+                order(orderColumn, options) {
+                  assert.equal(orderColumn, 'updated_at');
+                  assert.deepEqual(options, { ascending: false });
+                  return {
+                    limit(limitValue) {
+                      assert.equal(limitValue, 1);
+                      return {
+                        maybeSingle() {
+                          return Promise.resolve({
+                            data: {
+                              job_id: 'job-77',
+                              optimized_title: 'CSA Engineer - Amsterdam',
+                              meta_title: 'CSA Engineer - Amsterdam | HMJ Global',
+                              meta_description: 'CSA Engineer role in Amsterdam supporting mission critical delivery.',
+                              slug_hint: 'csa-engineer-amsterdam',
+                              sector_focus: 'Data Centre',
+                              optimized_overview: 'HMJ Global is recruiting a CSA Engineer in Amsterdam.',
+                              optimized_responsibilities: ['Own package coordination'],
+                              optimized_requirements: ['CSA delivery background'],
+                              schema_missing_fields: ['salary'],
+                              source: 'openai',
+                              model: 'gpt-5-mini',
+                              updated_at: '2026-03-16T11:45:00.000Z',
+                            },
+                            error: null,
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  const result = await fetchStoredSeoSuggestion(supabase, 'job-77');
+  assert.equal(result.missingTable, false);
+  assert.equal(result.suggestion.optimized_title, 'CSA Engineer - Amsterdam');
+  assert.equal(result.suggestion.source, 'openai');
 });

@@ -122,7 +122,7 @@ exports.handler = async (event) => {
         .from('job_specs')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (isSchemaError(error) || isMissingTableError(error, 'job_specs')) {
