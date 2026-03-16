@@ -19,6 +19,14 @@ function splitFullName(value) {
   };
 }
 
+function hasOwn(source, key) {
+  return Object.prototype.hasOwnProperty.call(source, key);
+}
+
+function shouldRequireNameValidation(body) {
+  return !body?.id || hasOwn(body, 'first_name') || hasOwn(body, 'last_name') || hasOwn(body, 'full_name');
+}
+
 const baseHandler = async (event, context) => {
   try {
     // ✅ IMPORTANT: pass (event, context, { requireAdmin:true })
@@ -56,7 +64,7 @@ const baseHandler = async (event, context) => {
       }
     };
 
-    const hasSkills = Object.prototype.hasOwnProperty.call(body, 'skills');
+    const hasSkills = hasOwn(body, 'skills');
     const skillsArray = Array.isArray(body.skills)
       ? body.skills.filter((s) => !!s).map((s) => String(s).trim()).filter(Boolean)
       : String(body.skills || '')
@@ -64,49 +72,57 @@ const baseHandler = async (event, context) => {
           .map((part) => part.trim())
           .filter(Boolean);
 
-    const rec = {
-      id: body.id ?? undefined,
-      ref: trim(body.ref),
-      user_id: trim(body.user_id),
-      full_name: trim(body.full_name),
-      first_name: (body.first_name || '').trim(),
-      last_name: (body.last_name || '').trim(),
-      email: trim(body.email),
-      phone: trim(body.phone),
-      status: trim(body.status),
-      job_title: trim(body.job_title),
-      client_name: trim(body.client_name),
-      pay_type: trim(body.pay_type),
-      payroll_ref: trim(body.payroll_ref),
-      internal_ref: trim(body.internal_ref),
-      address: trim(body.address),
-      address1: trim(body.address1),
-      address2: trim(body.address2),
-      town: trim(body.town),
-      county: trim(body.county),
-      postcode: trim(body.postcode),
-      country: trim(body.country) || 'United Kingdom',
-      address_json: parseJson(body.address_json),
-      bank_name: trim(body.bank_name),
-      bank_sort: trim(body.bank_sort),
-      bank_sort_code: trim(body.bank_sort_code),
-      bank_account: trim(body.bank_account),
-      bank_iban: trim(body.bank_iban),
-      bank_swift: trim(body.bank_swift),
-      emergency_name: trim(body.emergency_name),
-      emergency_phone: trim(body.emergency_phone),
-      rtw_url: trim(body.rtw_url),
-      contract_url: trim(body.contract_url),
-      terms_ok: !!body.terms_ok,
-      right_to_work: toBool(body.right_to_work ?? body.rtw_ok),
-      role: trim(body.role),
-      availability_date: trim(body.availability_on ?? body.availability_date),
-      start_date: trim(body.start_date ?? body.availability_on ?? body.availability_date),
-      end_date: trim(body.end_date),
-      timesheet_status: trim(body.timesheet_status),
-      tax_id: trim(body.tax_id),
-      notes: trim(body.notes),
+    const rec = { id: body.id ?? undefined };
+
+    const assignTrim = (targetKey, sourceKey = targetKey) => {
+      if (!hasOwn(body, sourceKey)) return;
+      rec[targetKey] = trim(body[sourceKey]);
     };
+
+    assignTrim('ref');
+    assignTrim('user_id');
+    assignTrim('full_name');
+    if (hasOwn(body, 'first_name')) rec.first_name = String(body.first_name || '').trim();
+    if (hasOwn(body, 'last_name')) rec.last_name = String(body.last_name || '').trim();
+    assignTrim('email');
+    assignTrim('phone');
+    assignTrim('status');
+    assignTrim('job_title');
+    assignTrim('client_name');
+    assignTrim('pay_type');
+    assignTrim('payroll_ref');
+    assignTrim('internal_ref');
+    assignTrim('address');
+    assignTrim('address1');
+    assignTrim('address2');
+    assignTrim('town');
+    assignTrim('county');
+    assignTrim('postcode');
+    if (hasOwn(body, 'country')) rec.country = trim(body.country) || 'United Kingdom';
+    if (hasOwn(body, 'address_json')) rec.address_json = parseJson(body.address_json);
+    assignTrim('bank_name');
+    assignTrim('bank_sort');
+    assignTrim('bank_sort_code');
+    assignTrim('bank_account');
+    assignTrim('bank_iban');
+    assignTrim('bank_swift');
+    assignTrim('emergency_name');
+    assignTrim('emergency_phone');
+    assignTrim('rtw_url');
+    assignTrim('contract_url');
+    if (hasOwn(body, 'terms_ok')) rec.terms_ok = !!body.terms_ok;
+    if (hasOwn(body, 'right_to_work') || hasOwn(body, 'rtw_ok')) rec.right_to_work = toBool(body.right_to_work ?? body.rtw_ok);
+    assignTrim('role');
+    if (hasOwn(body, 'availability_on') || hasOwn(body, 'availability_date')) {
+      rec.availability_date = trim(body.availability_on ?? body.availability_date);
+    }
+    if (hasOwn(body, 'start_date') || hasOwn(body, 'availability_on') || hasOwn(body, 'availability_date')) {
+      rec.start_date = trim(body.start_date ?? body.availability_on ?? body.availability_date);
+    }
+    assignTrim('end_date');
+    assignTrim('timesheet_status');
+    assignTrim('tax_id');
+    assignTrim('notes');
 
     if (hasSkills) {
       rec.skills = skillsArray.length ? skillsArray : [];
@@ -116,21 +132,23 @@ const baseHandler = async (event, context) => {
       delete rec.right_to_work;
     }
 
-    if (!Object.prototype.hasOwnProperty.call(body, 'address_json')) {
+    if (!hasOwn(body, 'address_json')) {
       delete rec.address_json;
     }
 
-    if (!Object.prototype.hasOwnProperty.call(body, 'terms_ok')) {
+    if (!hasOwn(body, 'terms_ok')) {
       delete rec.terms_ok;
     }
 
-    if ((!rec.first_name || !rec.last_name) && rec.full_name) {
+    const requiresNameValidation = shouldRequireNameValidation(body);
+
+    if (requiresNameValidation && (!rec.first_name || !rec.last_name) && rec.full_name) {
       const parsed = splitFullName(rec.full_name);
       rec.first_name = rec.first_name || parsed.first_name;
       rec.last_name = rec.last_name || parsed.last_name;
     }
 
-    if ((!rec.first_name || !rec.last_name) && rec.id) {
+    if (requiresNameValidation && (!rec.first_name || !rec.last_name) && rec.id) {
       const { data: existingCandidate } = await supabase
         .from('candidates')
         .select('first_name,last_name,full_name')
@@ -148,7 +166,9 @@ const baseHandler = async (event, context) => {
       }
     }
 
-    if (!rec.first_name || !rec.last_name) throw coded(400, 'First & last name are required');
+    if (requiresNameValidation && (!rec.first_name || !rec.last_name)) {
+      throw coded(400, 'First & last name are required');
+    }
 
     const t0 = Date.now();
 
@@ -177,7 +197,7 @@ const baseHandler = async (event, context) => {
     const working = { ...rec };
     const dropped = new Set();
 
-    while (attempt < 5) {
+    while (attempt < 30) {
       attempt += 1;
       ({ data: result, error } = await doUpsert(working));
       if (!error) break;
@@ -253,4 +273,4 @@ const baseHandler = async (event, context) => {
 };
 
 exports.handler = withAdminCors(baseHandler, { requireToken: false });
-exports._test = { splitFullName };
+exports._test = { splitFullName, shouldRequireNameValidation };

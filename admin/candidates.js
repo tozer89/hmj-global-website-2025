@@ -1083,28 +1083,24 @@
   }
 
   function buildSavePayload(candidate, patch) {
-    const first = patch.first_name !== undefined ? patch.first_name : candidate.first_name;
-    const last = patch.last_name !== undefined ? patch.last_name : candidate.last_name;
-    return {
-      id: candidate.id,
-      first_name: first,
-      last_name: last,
-      ref: patch.ref !== undefined ? patch.ref : candidate.ref,
-      email: patch.email !== undefined ? patch.email : candidate.email,
-      phone: patch.phone !== undefined ? patch.phone : candidate.phone,
-      status: patch.status !== undefined ? patch.status : candidate.status,
-      role: patch.role !== undefined ? patch.role : candidate.role,
-      region: patch.region !== undefined ? patch.region : candidate.region,
-      full_name: patch.full_name !== undefined ? patch.full_name : candidate.full_name,
-      availability_on: patch.availability_on !== undefined ? patch.availability_on : candidate.availability_on,
-      skills: patch.skills !== undefined ? parseSkills(patch.skills) : candidate.skills,
-      notes: patch.notes !== undefined ? patch.notes : candidate.notes?.map((note) => note.body).join('\n') || ''
-    };
+    const payload = { id: candidate.id };
+    for (const [field, rawValue] of Object.entries(patch || {})) {
+      if (field === 'skills') {
+        payload.skills = parseSkills(rawValue);
+        continue;
+      }
+      payload[field] = rawValue;
+    }
+    if (!payload.first_name && candidate.first_name) payload.first_name = candidate.first_name;
+    if (!payload.last_name && candidate.last_name) payload.last_name = candidate.last_name;
+    if (!payload.full_name && candidate.full_name) payload.full_name = candidate.full_name;
+    return payload;
   }
 
   async function callSave(payload) {
     try {
       pushLog({ action: 'save', detail: `Candidate ${payload.id}` });
+      console.info('[candidates] save payload', payload);
       return await state.helpers.api('admin-candidates-save', 'POST', payload);
     } catch (err) {
       if (/supabase/i.test(String(err.message))) state.supabaseMode = 'error';
@@ -1134,6 +1130,7 @@
       return true;
     } catch (err) {
       console.error('[candidates] save failed', err);
+      pushLog({ action: 'save:error', detail: err?.message || 'Save failed' });
       showToast(err.message || 'Save failed', 'error');
       return false;
     }

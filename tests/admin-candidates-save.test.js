@@ -23,3 +23,12 @@ test('splitFullName handles a single-word name safely', () => {
     last_name: '',
   });
 });
+
+test('name validation is skipped for existing status-only updates', () => {
+  assert.equal(_test.shouldRequireNameValidation({ id: 'candidate-1', status: 'archived' }), false);
+});
+
+test('name validation is still required for inserts and explicit name edits', () => {
+  assert.equal(_test.shouldRequireNameValidation({ status: 'active' }), true);
+  assert.equal(_test.shouldRequireNameValidation({ id: 'candidate-1', full_name: 'Joseph Tozer' }), true);
+});

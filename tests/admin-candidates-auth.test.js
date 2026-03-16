@@ -12,6 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
+  assert.match(html, /\/admin\/candidates\.js\?v=2/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
