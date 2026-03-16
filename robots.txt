@@ -1,7 +1,8 @@
 User-agent: *
 Allow: /
+Allow: /.netlify/functions/sitemap
 Disallow: /admin/
 Disallow: /admin-v2/
 Disallow: /.netlify/
 
-Sitemap: https://hmjg.netlify.app/sitemap.xml
+Sitemap: https://hmjg.netlify.app/.netlify/functions/sitemap
