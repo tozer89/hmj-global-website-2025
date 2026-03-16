@@ -693,27 +693,27 @@ import {
         <div class="candidate-dashboard-card">
           <div class="candidate-dashboard-card__head">
             <h3>Documents</h3>
-            <p>Upload your latest CV and supporting documents into your private candidate area.</p>
+            <p>Upload your CV, passport, visa, and other supporting documents into your private candidate area.</p>
           </div>
           <div class="candidate-inline-panel candidate-inline-panel--subtle">
             <strong>Accepted files</strong>
-            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB.</p>
+            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB. Use Right to work for passports, visas, share codes, or permit evidence.</p>
           </div>
           <form class="candidate-dashboard-form candidate-dashboard-form--documents" data-dashboard-form="documents">
             <label>Document type
               <select name="document_type" required>
                 <option value="cv">CV</option>
                 <option value="certificate">Certificate</option>
-                <option value="right_to_work">Right to work</option>
+                <option value="right_to_work">Passport / right to work</option>
                 <option value="other">Other</option>
               </select>
             </label>
             <label>Label
-              <input type="text" name="label" placeholder="Updated March CV">
+              <input type="text" name="label" placeholder="Passport, share code, March CV">
             </label>
             <label class="candidate-dashboard-form__full">File
               <input type="file" name="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" required>
-              <span class="candidate-field-help">The file will be linked to your candidate record and available to HMJ recruiters.</span>
+              <span class="candidate-field-help">The file will be linked to your candidate record and stored in HMJ's private candidate document area.</span>
             </label>
             <div class="candidate-dashboard-actions candidate-dashboard-form__full">
               <button class="candidate-portal-btn" type="submit" ${state.documentsBusy ? 'disabled' : ''}>${state.documentsBusy ? 'Uploading…' : 'Upload document'}</button>
@@ -875,14 +875,22 @@ import {
 
     try {
       const candidate = await loadCandidateProfile();
-      const [applications, documents] = await Promise.all([
+      const [applicationsResult, documentsResult] = await Promise.allSettled([
         loadCandidateApplications(candidate.id),
         loadCandidateDocuments(candidate.id),
       ]);
+      const applications = applicationsResult.status === 'fulfilled' ? applicationsResult.value : [];
+      const documents = documentsResult.status === 'fulfilled' ? documentsResult.value : [];
       state.candidate = candidate;
       state.applications = applications;
       state.documents = documents;
       state.dashboardError = '';
+      if (applicationsResult.status === 'rejected' || documentsResult.status === 'rejected') {
+        state.authMessage = {
+          tone: 'warn',
+          text: 'Some candidate dashboard sections are temporarily unavailable, but your profile area is still available.',
+        };
+      }
     } catch (error) {
       state.dashboardError = error?.message || 'Candidate dashboard unavailable.';
       state.authMessage = {

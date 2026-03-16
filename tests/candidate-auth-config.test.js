@@ -86,10 +86,10 @@ test('candidate auth config falls back to the production HMJ domain when only lo
       },
     });
 
-    assert.equal(baseUrl, 'https://hmjg.netlify.app');
+    assert.equal(baseUrl, 'https://www.hmj-global.com');
     assert.equal(
       _buildRedirectUrl(baseUrl, '/candidates.html?candidate_auth=verified'),
-      'https://hmjg.netlify.app/candidates.html?candidate_auth=verified'
+      'https://www.hmj-global.com/candidates.html?candidate_auth=verified'
     );
   });
 });

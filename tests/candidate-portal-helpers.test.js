@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 const {
   buildCandidateWritePayload,
   buildJobApplicationPayload,
+  extractMissingColumnName,
   normaliseSkillList,
+  recordCandidateActivity,
   splitName,
 } = require('../netlify/functions/_candidate-portal.js');
 
@@ -165,4 +167,74 @@ test('buildCandidateWritePayload maps the richer registration fields into the ca
     created_at: '2026-03-15T11:00:00.000Z',
     status: 'active',
   });
+});
+
+test('extractMissingColumnName supports Postgres and Supabase schema cache errors', () => {
+  assert.equal(
+    extractMissingColumnName({ message: 'column "full_name" does not exist' }),
+    'full_name'
+  );
+
+  assert.equal(
+    extractMissingColumnName({ message: "Could not find the 'last_portal_login_at' column of 'candidates' in the schema cache" }),
+    'last_portal_login_at'
+  );
+});
+
+test('recordCandidateActivity falls back to the legacy activity schema when newer audit columns are missing', async () => {
+  let insertCall = 0;
+  const insertedPayloads = [];
+
+  function buildInsertResult(error, data) {
+    return {
+      select() {
+        return {
+          maybeSingle: async () => ({ data, error }),
+        };
+      },
+    };
+  }
+
+  const supabase = {
+    from(table) {
+      assert.equal(table, 'candidate_activity');
+      return {
+        insert(payload) {
+          insertCall += 1;
+          insertedPayloads.push(payload);
+          if (insertCall === 1) {
+            return buildInsertResult(
+              { message: "Could not find the 'actor_identifier' column of 'candidate_activity' in the schema cache" },
+              null
+            );
+          }
+          return buildInsertResult(null, { id: 'activity-1', ...payload });
+        },
+      };
+    },
+  };
+
+  const result = await recordCandidateActivity(
+    supabase,
+    'candidate-1',
+    'profile_updated',
+    'Profile updated from the candidate dashboard.',
+    {
+      actorRole: 'candidate',
+      actorIdentifier: 'user-1',
+      meta: { source: 'candidate_dashboard' },
+      now: '2026-03-15T20:20:00.000Z',
+    }
+  );
+
+  assert.equal(insertCall, 2);
+  assert.deepEqual(insertedPayloads[1], {
+    candidate_id: 'candidate-1',
+    activity_type: 'profile_updated',
+    description: 'Profile updated from the candidate dashboard.',
+    actor_role: 'candidate',
+    meta: { source: 'candidate_dashboard' },
+    created_at: '2026-03-15T20:20:00.000Z',
+  });
+  assert.equal(result.id, 'activity-1');
 });

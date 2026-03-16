@@ -805,6 +805,22 @@ tbody tr:hover,
   color: var(--highlight);
 }
 
+/* The overview shell uses dark-surface text, but its nested bullet/status cards
+   are intentionally light surfaces and need explicit contrast protection. */
+.auth-overview :is(.auth-bullet, .auth-status, .auth-step-list li, .auth-link-card) {
+  color: var(--hmj-admin-ink);
+}
+
+.auth-overview :is(.auth-bullet, .auth-status, .auth-step-list li, .auth-link-card)
+  :is(h1, h2, h3, h4, strong, label, button, a) {
+  color: var(--hmj-admin-ink);
+}
+
+.auth-overview :is(.auth-bullet, .auth-status, .auth-step-list li, .auth-link-card)
+  :is(p, span, .muted, .auth-inline-hint, .auth-card__intro) {
+  color: var(--hmj-admin-muted);
+}
+
 #sidePanel {
   background:
     radial-gradient(circle at top right, rgba(122, 154, 243, 0.16), transparent 36%),

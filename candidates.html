@@ -3,12 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Candidates | HMJ-Global</title>
+  <title>Candidates | Register for Technical & Construction Jobs | HMJ Global</title>
+  <meta name="description" content="Register with HMJ Global to access technical, engineering, construction and data centre job opportunities across the UK and Europe." />
+  <link rel="canonical" href="https://www.hmj-global.com/candidates" />
+  <meta property="og:site_name" content="HMJ Global" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Candidates | Register for Technical & Construction Jobs | HMJ Global" />
+  <meta property="og:description" content="Register with HMJ Global to access technical, engineering, construction and data centre job opportunities across the UK and Europe." />
+  <meta property="og:url" content="https://www.hmj-global.com/candidates" />
+  <meta property="og:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Candidates | Register for Technical & Construction Jobs | HMJ Global" />
+  <meta name="twitter:description" content="Register with HMJ Global to access technical, engineering, construction and data centre job opportunities across the UK and Europe." />
+  <meta name="twitter:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.hmj-global.com/"},
+            {"@type": "ListItem", "position": 2, "name": "Candidates", "item": "https://www.hmj-global.com/candidates"}
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do you place across Europe?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. HMJ Global supports roles across the UK, Ireland, the Nordics, Benelux, Germany and Southern Europe, with compliant cross-border mobilisation support."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How often is payroll?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Payroll is weekly for contractors, with clear rates and payment timelines."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What types of roles?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "HMJ Global supports CSA, electrical and mechanical MEP, commissioning, security and cabling, HV and substations, pharma and CQV, and critical facilities roles."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  </script>
   <script src="js/hmj-identity.js"></script>
   <script defer src="js/hmj-auth-flow.js"></script>
-  <script defer src="js/hmj-auth-handoff.js" data-hmj-auth-destination="/admin/" data-hmj-auth-invite-destination="/admin/complete-account.html" data-hmj-auth-recovery-destination="/admin/reset-password.html"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-nav.js?v=2"></script>
   <script defer src="js/hmj-analytics.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="stylesheet" href="css/style.css" />
@@ -92,8 +146,8 @@
     }
     .toast.show{ opacity:1; transform:translateY(0); }
   </style>
-  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/public.harmony.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/public.harmony.css?v=2" />
 </head>
 
 <body class="public-page candidates-page">
@@ -107,7 +161,7 @@
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">
       <a class="hmj-logo" href="index.html">
-        <img src="images/logo.png" alt="HMJ-Global Logo" />
+        <img src="images/logo.png" alt="HMJ Global logo" />
       </a>
 
       <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
@@ -127,7 +181,7 @@
     </nav>
   </header>
 
-  
+  <main>
 
 <!-- ===== Hero ===== -->
   <section class="entry-hero entry-hero--candidates entry-hero--align-left">
@@ -574,6 +628,8 @@
     </div>
   </section>
 
+  </main>
+
   <!-- ===== Footer ===== -->
   <footer>
     <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
@@ -585,39 +641,6 @@
   <!-- ===== Scripts ===== -->
   <script>
     (function(){
-      /* ---------- Nav ---------- */
-      const burger = document.querySelector('.hmj-burger');
-      const menu   = document.getElementById('hmj-menu');
-      const scrim  = document.querySelector('.hmj-scrim');
-
-      // highlight current page
-      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'candidates.html').toLowerCase();
-      const currentNormalized = currentSegment.replace(/^\//, '');
-      menu.querySelectorAll('a[href]').forEach(a=>{
-        const href = (a.getAttribute('href') || '').trim();
-        if (!href || href.includes('://')) return;
-        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
-        if(target === currentNormalized){ a.setAttribute('aria-current','page'); }
-      });
-
-      function openMenu(open){
-        burger.setAttribute('aria-expanded', String(open));
-        menu.classList.toggle('open', open);
-        scrim.hidden = !open;
-        document.documentElement.style.overflow = open ? 'hidden' : '';
-      }
-      burger.addEventListener('click', ()=>openMenu(burger.getAttribute('aria-expanded') !== 'true'));
-      scrim.addEventListener('click', ()=>openMenu(false));
-      // Close the panel *after* the browser handles link navigation.
-      // Using rAF prevents rare iOS/Safari cases where DOM changes interrupt the click.
-      menu.addEventListener('click', (e) => {
-        const link = e.target.closest('a[href]');
-        if(!link) return;
-        requestAnimationFrame(() => openMenu(false));
-      });
-
-      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') openMenu(false); });
-
       /* ---------- Scroll reveal ---------- */
       const toReveal = document.querySelectorAll('.reveal');
       if('IntersectionObserver' in window){

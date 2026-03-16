@@ -3,14 +3,36 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Timesheets | HMJ-Global</title>
+  <title>Timesheets | Contractor Payroll & Timesheet Portal | HMJ Global</title>
+  <meta name="description" content="Access HMJ Global contractor timesheets, payroll summaries and week-by-week submission status through the secure timesheet portal." />
+  <link rel="canonical" href="https://www.hmj-global.com/timesheets" />
+  <meta property="og:site_name" content="HMJ Global" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Timesheets | Contractor Payroll & Timesheet Portal | HMJ Global" />
+  <meta property="og:description" content="Access HMJ Global contractor timesheets, payroll summaries and week-by-week submission status through the secure timesheet portal." />
+  <meta property="og:url" content="https://www.hmj-global.com/timesheets" />
+  <meta property="og:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Timesheets | Contractor Payroll & Timesheet Portal | HMJ Global" />
+  <meta name="twitter:description" content="Access HMJ Global contractor timesheets, payroll summaries and week-by-week submission status through the secure timesheet portal." />
+  <meta name="twitter:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.hmj-global.com/"},
+        {"@type": "ListItem", "position": 2, "name": "Timesheets", "item": "https://www.hmj-global.com/timesheets"}
+      ]
+    }
+  </script>
 
   <!-- Identity MUST load before our script -->
   <script src="js/hmj-identity.js"></script>
   <script defer src="js/hmj-auth-flow.js"></script>
   <script defer src="js/hmj-auth-handoff.js" data-hmj-auth-destination="/admin/" data-hmj-auth-invite-destination="/admin/complete-account.html" data-hmj-auth-recovery-destination="/admin/reset-password.html"></script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-nav.js?v=2"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="stylesheet" href="assets/css/public.facelift.css" />
 
@@ -193,7 +215,7 @@
       .wrap{ margin-bottom:120px; }
     }
   </style>
-  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
 </head>
 <body class="public-page timesheets-page">
   <!-- Announcement -->
@@ -205,7 +227,7 @@
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">
       <a class="hmj-logo" href="index.html">
-        <img src="images/logo.png" alt="HMJ-Global Logo" />
+        <img src="images/logo.png" alt="HMJ Global logo" />
       </a>
 
       <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
@@ -225,6 +247,7 @@
     </nav>
   </header>
 
+  <main>
   <section class="timesheet-hero" aria-label="Timesheet portal overview">
     <div class="timesheet-hero__panel">
       <div class="timesheet-hero__meta">
@@ -250,40 +273,6 @@
       </div>
     </div>
   </section>
-
-<script>
-    (function(){
-      const burger = document.querySelector('.hmj-burger');
-      const menu = document.getElementById('hmj-menu');
-      const scrim = document.querySelector('.hmj-scrim');
-      if(!burger || !menu || !scrim) return;
-
-      const currentSegment = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'timesheets.html').toLowerCase();
-      const currentNormalized = currentSegment.replace(/^\//, '');
-      menu.querySelectorAll('a[href]').forEach(a => {
-        const href = (a.getAttribute('href') || '').trim();
-        if (!href || href.includes('://')) return;
-        const target = (href.split('#')[0] || '').replace(/^\//, '').toLowerCase() || 'index.html';
-        if (target === currentNormalized) a.setAttribute('aria-current', 'page');
-      });
-
-      function openMenu(open){
-        burger.setAttribute('aria-expanded', String(open));
-        menu.classList.toggle('open', open);
-        scrim.hidden = !open;
-        document.documentElement.style.overflow = open ? 'hidden' : '';
-      }
-
-      burger.addEventListener('click', () => openMenu(burger.getAttribute('aria-expanded') !== 'true'));
-      scrim.addEventListener('click', () => openMenu(false));
-      menu.addEventListener('click', (e) => {
-        const link = e.target.closest('a[href]');
-        if (!link) return;
-        requestAnimationFrame(() => openMenu(false));
-      });
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openMenu(false); });
-    })();
-  </script>
 
   <div class="topbar">
     <div class="toprow">
@@ -391,6 +380,8 @@
       <div class="ft"><span class="muted" id="slipFootnote"></span></div>
     </div>
   </div>
+
+  </main>
 
   <script>
     // ---------- small DOM helpers ----------

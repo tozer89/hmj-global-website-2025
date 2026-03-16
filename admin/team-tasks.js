@@ -9,11 +9,43 @@
   const SUPABASE_ESM_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
   const CONFIG_ENDPOINT = '/admin-team-tasks-config';
   const SETTINGS_SAVE_ENDPOINT = '/admin-settings-save';
+  const NOTIFY_ENDPOINT = '/admin-team-tasks-notify-activity';
+  const ATTACHMENT_DELETE_ENDPOINT = '/admin-team-task-attachment-delete';
+  const ATTACHMENT_URL_ENDPOINT = '/admin-team-task-attachment-url';
+  const CALENDAR_STATUS_ENDPOINT = '/admin-team-tasks-calendar-status';
+  const CALENDAR_DISCONNECT_ENDPOINT = '/admin-team-tasks-calendar-disconnect';
+  const TASK_ATTACHMENTS_BUCKET = 'task-files';
+  const ATTACHMENT_MAX_BYTES = 15 * 1024 * 1024;
+  const OWNER_COLORS = ['#24489e', '#138254', '#b33228', '#9b6a00', '#6c3fc7', '#006d8f', '#cf6a00', '#1b6f4f'];
+  const ATTACHMENT_EXTENSION_TO_MIME = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    avif: 'image/avif',
+    gif: 'image/gif',
+  };
+  const ATTACHMENT_MIME_WHITELIST = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/avif',
+    'image/gif',
+  ]);
 
   const DEFAULT_SETTINGS = {
     dueSoonDays: 3,
     collapseDoneByDefault: true,
     reminderRecipientMode: 'assignee_creator_watchers',
+    activityRecipientMode: 'assignee_creator_watchers',
+    activityEmailNotifications: true,
+    mentionEmailNotifications: true,
     defaultPriority: 'medium',
   };
 
@@ -66,17 +98,30 @@
     members: [],
     tasks: [],
     comments: [],
+    commentMentions: [],
     watchers: [],
+    attachments: [],
     reminders: [],
     audit: [],
     selectedTaskId: '',
     commentEditId: '',
+    attachmentUploadBusy: false,
+    countdownTimer: 0,
     filters: {
       query: '',
       scope: 'all',
       assignee: 'all',
       sort: 'urgency',
       showDone: false,
+    },
+    calendar: {
+      weekStart: '',
+      loading: false,
+      settings: null,
+      diagnostics: null,
+      connections: [],
+      events: [],
+      notice: '',
     },
   };
 
@@ -120,6 +165,17 @@
       'assigneeFilter',
       'sortFilter',
       'scopeChips',
+      'plannerPrevWeekBtn',
+      'plannerTodayBtn',
+      'plannerNextWeekBtn',
+      'plannerSetupLink',
+      'plannerConnectBtn',
+      'plannerWeekLabel',
+      'plannerConnectionBadge',
+      'plannerStatusNote',
+      'plannerLegend',
+      'plannerGrid',
+      'plannerUnscheduledList',
       'tasksList',
       'tasksEmpty',
       'boardColumns',
@@ -132,9 +188,16 @@
       'settingDueSoonDays',
       'settingDefaultPriority',
       'settingReminderRecipients',
+      'settingActivityRecipients',
       'settingCollapseDone',
+      'settingActivityEmails',
+      'settingMentionEmails',
       'emailStatusNote',
       'schemaStatusNote',
+      'calendarRuntimeNote',
+      'calendarConnectionSummary',
+      'connectCalendarBtn',
+      'disconnectCalendarBtn',
       'detailDrawerShell',
       'drawerBackdrop',
       'drawerTitle',
@@ -159,9 +222,14 @@
       'commentsEmpty',
       'commentForm',
       'commentBody',
+      'commentMentions',
       'commentSubmitBtn',
       'cancelCommentEditBtn',
       'commentEditMeta',
+      'attachmentFiles',
+      'uploadAttachmentBtn',
+      'attachmentsList',
+      'attachmentsEmpty',
       'drawerAuditList',
       'deleteTaskBtn',
       'archiveTaskBtn',
@@ -257,6 +325,83 @@
     }
   }
 
+  function startOfWeekIso(value) {
+    const source = value ? new Date(value) : new Date();
+    if (Number.isNaN(source.getTime())) return '';
+    const date = new Date(source);
+    date.setHours(0, 0, 0, 0);
+    const day = date.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + offset);
+    return date.toISOString();
+  }
+
+  function addDaysIso(value, days) {
+    const date = new Date(value || '');
+    if (Number.isNaN(date.getTime())) return '';
+    date.setDate(date.getDate() + Number(days || 0));
+    return date.toISOString();
+  }
+
+  function formatWeekLabel(startIso) {
+    const start = new Date(startIso || '');
+    if (Number.isNaN(start.getTime())) return 'This week';
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const startLabel = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: sameYear ? undefined : 'numeric',
+    }).format(start);
+    const endLabel = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: sameMonth ? undefined : 'short',
+      year: 'numeric',
+    }).format(end);
+    return `${startLabel} to ${endLabel}`;
+  }
+
+  function dateKey(value) {
+    const date = new Date(value || '');
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function isSameDay(value, compare) {
+    return dateKey(value) === dateKey(compare);
+  }
+
+  function ownerColor(value) {
+    const key = trimText(value, 240).toLowerCase();
+    if (!key) return OWNER_COLORS[0];
+    let hash = 0;
+    for (let index = 0; index < key.length; index += 1) {
+      hash = ((hash << 5) - hash) + key.charCodeAt(index);
+      hash |= 0;
+    }
+    return OWNER_COLORS[Math.abs(hash) % OWNER_COLORS.length];
+  }
+
+  function plannerNoticeFromQuery() {
+    try {
+      const url = new URL(window.location.href);
+      const status = trimText(url.searchParams.get('calendar_status'), 60);
+      const message = trimText(url.searchParams.get('calendar_message'), 260);
+      if (!status) return;
+      state.calendar.notice = status === 'connected'
+        ? 'Microsoft calendar connected.'
+        : (message || 'Microsoft calendar update failed.');
+      url.searchParams.delete('calendar_status');
+      url.searchParams.delete('calendar_message');
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+  }
+
   function normaliseSettings(value) {
     const input = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     const dueSoonDays = Math.min(14, Math.max(1, Number.parseInt(input.dueSoonDays, 10) || DEFAULT_SETTINGS.dueSoonDays));
@@ -267,11 +412,15 @@
       ? String(input.defaultPriority).toLowerCase()
       : DEFAULT_SETTINGS.defaultPriority;
     const reminderRecipientMode = trimText(input.reminderRecipientMode, 64) || DEFAULT_SETTINGS.reminderRecipientMode;
+    const activityRecipientMode = trimText(input.activityRecipientMode, 64) || DEFAULT_SETTINGS.activityRecipientMode;
     return {
       dueSoonDays,
       collapseDoneByDefault,
       defaultPriority,
       reminderRecipientMode,
+      activityRecipientMode,
+      activityEmailNotifications: input.activityEmailNotifications === false ? false : DEFAULT_SETTINGS.activityEmailNotifications,
+      mentionEmailNotifications: input.mentionEmailNotifications === false ? false : DEFAULT_SETTINGS.mentionEmailNotifications,
     };
   }
 
@@ -424,8 +573,20 @@
       .sort((left, right) => new Date(left.created_at || 0).getTime() - new Date(right.created_at || 0).getTime());
   }
 
+  function commentMentions(commentId) {
+    return state.commentMentions
+      .filter((mention) => mention.comment_id === commentId)
+      .sort((left, right) => new Date(left.created_at || 0).getTime() - new Date(right.created_at || 0).getTime());
+  }
+
   function taskWatchers(taskId) {
     return state.watchers.filter((watcher) => watcher.task_id === taskId);
+  }
+
+  function taskAttachments(taskId) {
+    return state.attachments
+      .filter((attachment) => attachment.task_id === taskId)
+      .sort((left, right) => new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime());
   }
 
   function taskReminders(taskId) {
@@ -463,6 +624,8 @@
     return raw
       .replace(/^task_/, '')
       .replace(/^comment_/, 'comment ')
+      .replace(/^attachment_/, 'attachment ')
+      .replace(/^mention_/, 'mention ')
       .replace(/^reminder_/, 'reminder ')
       .replace(/^watcher_/, 'watcher ')
       .replace(/_/g, ' ')
@@ -483,6 +646,32 @@
       out.push(item);
     });
     return out;
+  }
+
+  function formatFileSize(bytes) {
+    const size = Number(bytes);
+    if (!Number.isFinite(size) || size <= 0) return 'Unknown size';
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+  }
+
+  function normaliseFileName(name) {
+    const raw = trimText(name, 220);
+    if (!raw) return 'task-file';
+    return raw
+      .replace(/[^\w.\-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase() || 'task-file';
+  }
+
+  function resolveAttachmentMimeType(file) {
+    const direct = trimText(file?.type, 120).toLowerCase();
+    if (ATTACHMENT_MIME_WHITELIST.has(direct)) return direct;
+    const fileName = trimText(file?.name, 220).toLowerCase();
+    const extension = fileName.includes('.') ? fileName.split('.').pop() : '';
+    return ATTACHMENT_EXTENSION_TO_MIME[extension] || '';
   }
 
   function dedupeRecipients(rows = []) {
@@ -556,6 +745,36 @@
     return dedupeRecipients(recipients);
   }
 
+  function buildActivityRecipients(task, watcherRows = []) {
+    const recipients = [];
+    const mode = trimText(state.settings.activityRecipientMode, 64) || state.settings.reminderRecipientMode;
+    const includeAssignee = mode === 'assignee_creator_watchers' || mode === 'assignee_only';
+    const includeCreator = mode === 'assignee_creator_watchers' || mode === 'creator_only';
+    const includeWatchers = mode === 'assignee_creator_watchers' || mode === 'watchers_only';
+
+    if (includeAssignee && (trimText(task.assigned_to, 120) || lowerEmail(task.assigned_to_email))) {
+      recipients.push({
+        userId: trimText(task.assigned_to, 120),
+        email: lowerEmail(task.assigned_to_email),
+      });
+    }
+    if (includeCreator && (trimText(task.created_by, 120) || lowerEmail(task.created_by_email))) {
+      recipients.push({
+        userId: trimText(task.created_by, 120),
+        email: lowerEmail(task.created_by_email),
+      });
+    }
+    if (includeWatchers) {
+      watcherRows.forEach((watcher) => {
+        recipients.push({
+          userId: trimText(watcher.user_id, 120),
+          email: lowerEmail(watcher.user_email),
+        });
+      });
+    }
+    return dedupeRecipients(recipients);
+  }
+
   function startOfToday() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -587,6 +806,36 @@
     }
   }
 
+  function taskCountdown(task) {
+    const raw = trimText(task?.due_at, 120);
+    if (!raw) return null;
+    const due = new Date(raw);
+    if (Number.isNaN(due.getTime())) return null;
+    const diff = due.getTime() - Date.now();
+    const abs = Math.abs(diff);
+    const dayMs = 24 * 60 * 60 * 1000;
+    const hourMs = 60 * 60 * 1000;
+    const minuteMs = 60 * 1000;
+    const days = Math.floor(abs / dayMs);
+    const hours = Math.floor((abs % dayMs) / hourMs);
+    const minutes = Math.max(1, Math.ceil((abs % hourMs) / minuteMs));
+    const compact = days > 0
+      ? `${days}d ${hours}h`
+      : (hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`);
+    return {
+      overdue: diff < 0,
+      compact,
+      label: diff < 0 ? `Overdue by ${compact}` : `Due in ${compact}`,
+      badgeClass: diff < 0 ? 'badge--danger' : 'badge--soon',
+    };
+  }
+
+  function taskCountdownBadge(task) {
+    const countdown = taskCountdown(task);
+    if (!countdown || ['done', 'archived'].includes(trimText(task?.status, 40))) return '';
+    return `<span class="badge ${escapeHtml(countdown.badgeClass)}">${escapeHtml(countdown.label)}</span>`;
+  }
+
   function comparePriority(left, right) {
     return PRIORITY_ORDER.indexOf(trimText(left, 40)) - PRIORITY_ORDER.indexOf(trimText(right, 40));
   }
@@ -608,6 +857,7 @@
 
   function taskSearchHaystack(task) {
     const commentText = taskComments(task.id).map((comment) => comment.comment_body || '').join(' ');
+    const attachmentText = taskAttachments(task.id).map((attachment) => attachment.file_name || '').join(' ');
     return [
       task.title,
       task.description,
@@ -617,6 +867,7 @@
       memberDisplayName(task.created_by, task.created_by_email),
       memberDisplayName(task.assigned_to, task.assigned_to_email),
       commentText,
+      attachmentText,
     ].join(' ').toLowerCase();
   }
 
@@ -789,6 +1040,9 @@
     if (els.detailWatchers) {
       els.detailWatchers.innerHTML = watcherOptionsHtml;
     }
+    if (els.commentMentions) {
+      els.commentMentions.innerHTML = watcherOptionsHtml;
+    }
   }
 
   function setMultiSelectValues(select, values) {
@@ -797,6 +1051,210 @@
     Array.from(select.options || []).forEach((option) => {
       option.selected = chosen.has(trimText(option.value, 120));
     });
+  }
+
+  function plannerWeekStart() {
+    if (!state.calendar.weekStart) {
+      state.calendar.weekStart = startOfWeekIso();
+    }
+    return state.calendar.weekStart;
+  }
+
+  function plannerRange() {
+    const startAt = plannerWeekStart();
+    return {
+      startAt,
+      endAt: addDaysIso(startAt, 7),
+    };
+  }
+
+  function plannerDayEntries() {
+    const startAt = new Date(plannerWeekStart() || '');
+    if (Number.isNaN(startAt.getTime())) return [];
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(startAt);
+      date.setDate(date.getDate() + index);
+      return {
+        key: dateKey(date.toISOString()),
+        date,
+      };
+    });
+  }
+
+  function taskOwnerIdentity(task) {
+    const userId = trimText(task?.assigned_to, 120) || trimText(task?.created_by, 120);
+    const email = lowerEmail(task?.assigned_to_email) || lowerEmail(task?.created_by_email);
+    return {
+      userId,
+      email,
+      label: trimText(task?.assigned_to, 120) || lowerEmail(task?.assigned_to_email)
+        ? memberDisplayName(task?.assigned_to, task?.assigned_to_email)
+        : memberDisplayName(task?.created_by, task?.created_by_email),
+    };
+  }
+
+  function connectedCalendarLabel() {
+    const connections = Array.isArray(state.calendar.connections) ? state.calendar.connections : [];
+    const count = connections.filter((connection) => connection.connected).length;
+    if (!count) return 'No calendars connected';
+    return `${pluralize(count, 'calendar')} connected`;
+  }
+
+  function plannerOwners() {
+    const owners = [];
+    const seen = new Set();
+    filteredTasks().forEach((task) => {
+      const owner = taskOwnerIdentity(task);
+      const key = owner.userId || owner.email;
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      owners.push({
+        key,
+        label: owner.label || 'Unassigned',
+        color: ownerColor(key),
+      });
+    });
+
+    (state.calendar.connections || []).forEach((connection) => {
+      const key = trimText(connection.userId, 240) || lowerEmail(connection.userEmail);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      owners.push({
+        key,
+        label: trimText(connection.userDisplayName, 240) || trimText(connection.userEmail, 240) || 'Connected calendar',
+        color: ownerColor(key),
+      });
+    });
+    return owners.sort((left, right) => left.label.localeCompare(right.label, 'en-GB', { sensitivity: 'base' }));
+  }
+
+  function taskPlannerCard(task) {
+    const owner = taskOwnerIdentity(task);
+    const ownerKey = owner.userId || owner.email || task.id;
+    const color = ownerColor(ownerKey);
+    const countdown = taskCountdown(task);
+    return `
+      <article class="planner-item planner-item--task" style="--owner-color:${escapeHtml(color)}">
+        <div class="planner-item__kicker">Task</div>
+        <div class="planner-item__title">${escapeHtml(task.title)}</div>
+        <div class="planner-item__meta">${escapeHtml(task.due_at ? formatDateTime(task.due_at) : 'No due date')}${countdown ? ` · ${escapeHtml(countdown.shortLabel || countdown.label)}` : ''}</div>
+        <div class="planner-item__owner">
+          <span><span class="planner-dot" style="--owner-color:${escapeHtml(color)}"></span> ${escapeHtml(owner.label || 'Unassigned')}</span>
+          <button class="btn secondary small" type="button" data-action="open" data-id="${escapeHtml(task.id)}">Open</button>
+        </div>
+      </article>
+    `;
+  }
+
+  function externalPlannerCard(eventItem) {
+    const ownerKey = trimText(eventItem.ownerUserId, 240) || lowerEmail(eventItem.ownerEmail) || eventItem.id;
+    const color = ownerColor(ownerKey);
+    const timeLabel = eventItem.isAllDay
+      ? 'All day'
+      : `${formatDateTime(eventItem.startAt)} to ${formatDateTime(eventItem.endAt)}`;
+    const location = trimText(eventItem.location, 240);
+    const action = trimText(eventItem.webLink, 2000)
+      ? `<a class="planner-link" href="${escapeHtml(eventItem.webLink)}" target="_blank" rel="noreferrer">Open event</a>`
+      : '';
+    return `
+      <article class="planner-item planner-item--event" style="--owner-color:${escapeHtml(color)}">
+        <div class="planner-item__kicker">Calendar</div>
+        <div class="planner-item__title">${escapeHtml(eventItem.title || 'Busy')}</div>
+        <div class="planner-item__meta">${escapeHtml(timeLabel)}${location ? ` · ${escapeHtml(location)}` : ''}</div>
+        <div class="planner-item__owner">
+          <span><span class="planner-dot" style="--owner-color:${escapeHtml(color)}"></span> ${escapeHtml(eventItem.ownerDisplayName || eventItem.ownerEmail || 'Connected calendar')}</span>
+          ${action}
+        </div>
+      </article>
+    `;
+  }
+
+  function renderWeeklyPlanner() {
+    if (!els.plannerGrid || !els.plannerWeekLabel || !els.plannerStatusNote) return;
+
+    const startAt = plannerWeekStart();
+    const days = plannerDayEntries();
+    const range = plannerRange();
+    const items = filteredTasks().filter((task) => {
+      if (!trimText(task?.due_at, 120)) return false;
+      const due = new Date(task.due_at);
+      if (Number.isNaN(due.getTime())) return false;
+      return due >= new Date(range.startAt) && due < new Date(range.endAt);
+    });
+    const unscheduled = filteredTasks().filter((task) => !trimText(task?.due_at, 120) && task.status !== 'archived').slice(0, 9);
+    const externalEvents = Array.isArray(state.calendar.events) ? state.calendar.events : [];
+
+    els.plannerWeekLabel.textContent = formatWeekLabel(startAt);
+    if (els.plannerConnectionBadge) {
+      els.plannerConnectionBadge.textContent = connectedCalendarLabel();
+    }
+
+    const diagnostics = state.calendar.diagnostics || {};
+    const currentConnection = (state.calendar.connections || []).find((connection) => connection.isCurrentUser && connection.connected);
+    const eventCount = externalEvents.length;
+    if (state.calendar.loading) {
+      els.plannerStatusNote.textContent = 'Loading the current Team Tasks week and connected diary events…';
+    } else if (!diagnostics.enabled) {
+      els.plannerStatusNote.textContent = 'Microsoft diary sync is currently disabled. Tasks still show here, and the setup wizard lives in Admin Settings when you are ready to turn diary sync on.';
+    } else if (!diagnostics.setupReady) {
+      els.plannerStatusNote.textContent = 'Microsoft diary sync is not fully configured yet. Add the client ID, client secret, and callback URL in Admin Settings before connecting calendars.';
+    } else if (!currentConnection) {
+      els.plannerStatusNote.textContent = 'Your own Outlook / Teams diary is not connected yet. Use the connect button to link it, or open Admin Settings if the Microsoft app setup still needs work.';
+    } else if (!eventCount) {
+      els.plannerStatusNote.textContent = state.calendar.notice || 'No live Outlook / Teams diary events were returned for this week. Due tasks still show below.';
+    } else {
+      els.plannerStatusNote.textContent = state.calendar.notice || `${pluralize(eventCount, 'diary event')} loaded for this week across ${connectedCalendarLabel().toLowerCase()}.`;
+    }
+
+    if (els.plannerLegend) {
+      const owners = plannerOwners();
+      els.plannerLegend.innerHTML = owners.length
+        ? owners.map((owner) => `
+            <span class="badge"><span class="planner-dot" style="--owner-color:${escapeHtml(owner.color)}"></span> ${escapeHtml(owner.label)}</span>
+          `).join('')
+        : '<span class="badge">No owners to show yet</span>';
+    }
+
+    els.plannerGrid.innerHTML = days.map((day) => {
+      const dayTasks = items
+        .filter((task) => isSameDay(task.due_at, day.date))
+        .sort((left, right) => new Date(left.due_at || 0).getTime() - new Date(right.due_at || 0).getTime());
+      const dayEvents = externalEvents
+        .filter((eventItem) => isSameDay(eventItem.startAt, day.date))
+        .sort((left, right) => new Date(left.startAt || 0).getTime() - new Date(right.startAt || 0).getTime());
+      const cards = [
+        ...dayTasks.map((task) => taskPlannerCard(task)),
+        ...dayEvents.map((eventItem) => externalPlannerCard(eventItem)),
+      ];
+
+      return `
+        <section class="planner-day${isSameDay(day.date, new Date()) ? ' is-today' : ''}">
+          <div class="planner-day__head">
+            <div class="planner-day__eyebrow">${escapeHtml(new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(day.date))}</div>
+            <div class="planner-day__date">${escapeHtml(new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(day.date))}</div>
+          </div>
+          <div class="planner-day__items">
+            ${cards.length ? cards.join('') : '<div class="planner-empty">No due tasks or diary events for this day.</div>'}
+          </div>
+        </section>
+      `;
+    }).join('');
+
+    if (els.plannerUnscheduledList) {
+      els.plannerUnscheduledList.innerHTML = unscheduled.length
+        ? unscheduled.map((task) => taskPlannerCard(task)).join('')
+        : '<div class="planner-empty">Every visible task currently has a due date.</div>';
+    }
+
+    if (els.plannerConnectBtn) {
+      els.plannerConnectBtn.disabled = !(diagnostics.setupReady && diagnostics.enabled);
+    }
+    if (els.connectCalendarBtn) {
+      els.connectCalendarBtn.disabled = !(diagnostics.setupReady && diagnostics.enabled);
+    }
+    if (els.disconnectCalendarBtn) {
+      els.disconnectCalendarBtn.disabled = !currentConnection;
+    }
   }
 
   function selectedValues(select) {
@@ -870,11 +1328,13 @@
   function renderTaskCard(task) {
     const commentsCount = taskComments(task.id).length;
     const watchersCount = taskWatchers(task.id).length;
+    const attachmentsCount = taskAttachments(task.id).length;
     const creatorName = memberDisplayName(task.created_by, task.created_by_email);
     const assigneeName = trimText(task.assigned_to, 120) || lowerEmail(task.assigned_to_email)
       ? memberDisplayName(task.assigned_to, task.assigned_to_email)
       : 'Unassigned';
     const dueText = task.due_at ? formatDateTime(task.due_at) : 'No due date';
+    const countdown = taskCountdown(task);
     const statusOptions = STATUS_ORDER.map((status) => (
       `<option value="${status}"${task.status === status ? ' selected' : ''}>${STATUS_LABELS[status]}</option>`
     )).join('');
@@ -895,6 +1355,7 @@
                 <span class="badge badge--status-${escapeHtml(task.status)}">${escapeHtml(STATUS_LABELS[task.status] || 'Open')}</span>
                 <span class="badge badge--priority-${escapeHtml(task.priority)}">${escapeHtml(PRIORITY_LABELS[task.priority] || 'Medium')}</span>
                 ${taskUrgencyBadge(task)}
+                ${taskCountdownBadge(task)}
                 ${reminderIndicator(task)}
                 ${linkedBadge}
                 ${tagBadges}
@@ -905,9 +1366,10 @@
           <div class="task-card__footer">
             <span>Creator: <strong>${escapeHtml(creatorName)}</strong></span>
             <span>Assigned: <strong>${escapeHtml(assigneeName)}</strong></span>
-            <span>Due: <strong>${escapeHtml(dueText)}</strong></span>
+            <span>Due: <strong>${escapeHtml(dueText)}</strong>${countdown ? ` · ${escapeHtml(countdown.label)}` : ''}</span>
             <span>${pluralize(commentsCount, 'comment')}</span>
             <span>${pluralize(watchersCount, 'watcher')}</span>
+            <span>${pluralize(attachmentsCount, 'file')}</span>
           </div>
         </div>
         <div class="task-card__side">
@@ -943,13 +1405,14 @@
               <div class="task-card__meta">
                 <span class="badge badge--priority-${escapeHtml(task.priority)}">${escapeHtml(PRIORITY_LABELS[task.priority] || 'Medium')}</span>
                 ${taskUrgencyBadge(task)}
+                ${taskCountdownBadge(task)}
               </div>
               <p>Assigned: ${escapeHtml(
                 trimText(task.assigned_to, 120) || lowerEmail(task.assigned_to_email)
                   ? memberDisplayName(task.assigned_to, task.assigned_to_email)
                   : 'Unassigned'
               )}</p>
-              <p>Due: ${escapeHtml(task.due_at ? formatDateTime(task.due_at) : 'No due date')}</p>
+              <p>Due: ${escapeHtml(task.due_at ? formatDateTime(task.due_at) : 'No due date')}${taskCountdown(task) ? ` · ${escapeHtml(taskCountdown(task).label)}` : ''}</p>
               <button class="btn secondary small" type="button" data-action="open" data-id="${escapeHtml(task.id)}">Open</button>
             </article>
           `).join('')
@@ -1013,6 +1476,7 @@
         <div class="task-card__meta">
           <span class="badge badge--status-${escapeHtml(task.status)}">${escapeHtml(STATUS_LABELS[task.status] || 'Open')}</span>
           ${taskUrgencyBadge(task)}
+          ${taskCountdownBadge(task)}
         </div>
         <button class="btn secondary small" type="button" data-action="open" data-id="${escapeHtml(task.id)}">Open</button>
       </article>
@@ -1033,14 +1497,34 @@
     els.settingDueSoonDays.value = String(state.settings.dueSoonDays);
     els.settingDefaultPriority.value = state.settings.defaultPriority;
     els.settingReminderRecipients.value = state.settings.reminderRecipientMode;
+    els.settingActivityRecipients.value = state.settings.activityRecipientMode || state.settings.reminderRecipientMode;
     els.settingCollapseDone.checked = state.settings.collapseDoneByDefault;
+    els.settingActivityEmails.checked = state.settings.activityEmailNotifications !== false;
+    els.settingMentionEmails.checked = state.settings.mentionEmailNotifications !== false;
     els.emailStatusNote.textContent = state.emailConfigured
-      ? 'Reminder email environment variables are present.'
-      : 'Reminder email delivery is not fully configured yet.';
+      ? 'Team Tasks reminder and activity email variables are present.'
+      : 'Team Tasks email delivery is not fully configured yet.';
     els.emailStatusNote.style.color = state.emailConfigured ? 'var(--ok)' : 'var(--warn)';
     els.schemaStatusNote.textContent = state.schemaReady
       ? 'Supabase schema checks passed for Team Tasks.'
       : (state.schemaMessage || 'Team Tasks schema is still missing required tables or columns.');
+    const diagnostics = state.calendar.diagnostics || {};
+    const connections = Array.isArray(state.calendar.connections) ? state.calendar.connections : [];
+    const currentConnection = connections.find((connection) => connection.isCurrentUser && connection.connected) || null;
+    if (els.calendarRuntimeNote) {
+      if (!diagnostics.enabled) {
+        els.calendarRuntimeNote.textContent = 'Microsoft calendar sync is disabled. Turn it on in Admin Settings after the app details are ready.';
+      } else if (!diagnostics.setupReady) {
+        els.calendarRuntimeNote.textContent = 'Microsoft calendar sync is not fully configured yet. Save the app details in Admin Settings before connecting calendars.';
+      } else {
+        els.calendarRuntimeNote.textContent = 'Microsoft calendar sync is configured. Connected Outlook / Teams diaries can now feed into the weekly planner.';
+      }
+    }
+    if (els.calendarConnectionSummary) {
+      els.calendarConnectionSummary.textContent = currentConnection
+        ? `Your calendar is connected as ${currentConnection.externalAccountEmail || currentConnection.userEmail}. ${pluralize(connections.filter((connection) => connection.connected).length, 'team calendar')} currently feed into the weekly planner.`
+        : `${pluralize(connections.filter((connection) => connection.connected).length, 'team calendar')} currently connected. Use the connect button here or in the weekly planner to link your own Outlook / Teams diary.`;
+    }
   }
 
   function renderTabs() {
@@ -1076,6 +1560,12 @@
     els.commentsList.innerHTML = comments.map((comment) => {
       const author = memberDisplayName(comment.created_by, comment.created_by_email);
       const canEdit = isCommentAuthor(comment);
+      const mentions = commentMentions(comment.id);
+      const mentionHtml = mentions.length
+        ? `<div class="comment__mentions">${mentions.map((mention) => (
+          `<span class="badge">${escapeHtml(trimText(mention.mentioned_display_name, 160) || memberDisplayName(mention.mentioned_user_id, mention.mentioned_email))}</span>`
+        )).join('')}</div>`
+        : '';
       return `
         <article class="comment">
           <div class="comment__top">
@@ -1086,6 +1576,7 @@
             ${canEdit ? `<div class="comment__actions"><button class="btn secondary small" type="button" data-action="edit-comment" data-id="${escapeHtml(comment.id)}">Edit</button></div>` : ''}
           </div>
           <p class="comment__body">${escapeHtml(comment.comment_body)}</p>
+          ${mentionHtml}
         </article>
       `;
     }).join('');
@@ -1093,17 +1584,52 @@
 
     if (state.commentEditId) {
       const comment = state.comments.find((item) => item.id === state.commentEditId);
+      const mentionValues = comment ? commentMentions(comment.id).map((mention) => (
+        resolveMemberOptionValue(mention.mentioned_user_id, mention.mentioned_email)
+      )).filter(Boolean) : [];
       els.commentEditMeta.textContent = comment ? `Editing your comment from ${formatDateTime(comment.updated_at || comment.created_at)}` : '';
       els.cancelCommentEditBtn.hidden = !comment;
       els.commentSubmitBtn.textContent = comment ? 'Save comment' : 'Post comment';
       if (comment && els.commentBody.value !== comment.comment_body) {
         els.commentBody.value = comment.comment_body || '';
       }
+      setMultiSelectValues(els.commentMentions, mentionValues);
     } else {
       els.commentEditMeta.textContent = '';
       els.cancelCommentEditBtn.hidden = true;
       els.commentSubmitBtn.textContent = 'Post comment';
+      setMultiSelectValues(els.commentMentions, []);
     }
+  }
+
+  function attachmentUrl(attachment, download) {
+    const id = trimText(attachment?.id, 120);
+    if (!id) return '#';
+    return `${ATTACHMENT_URL_ENDPOINT}?id=${encodeURIComponent(id)}${download ? '&download=1' : ''}`;
+  }
+
+  function renderAttachments(task) {
+    const attachments = taskAttachments(task.id);
+    els.attachmentsList.innerHTML = attachments.map((attachment) => {
+      const uploader = memberDisplayName(attachment.uploaded_by, attachment.uploaded_by_email);
+      const createdAt = formatDateTime(attachment.created_at);
+      return `
+        <article class="attachment">
+          <div class="attachment__top">
+            <div>
+              <div class="attachment__name">${escapeHtml(attachment.file_name || 'Task file')}</div>
+              <div class="attachment__meta">${escapeHtml(formatFileSize(attachment.file_size_bytes))} · ${escapeHtml(trimText(attachment.mime_type, 120) || 'unknown type')} · Uploaded by ${escapeHtml(uploader)} · ${escapeHtml(createdAt)}</div>
+            </div>
+            <div class="attachment__actions">
+              <a class="btn secondary small" href="${escapeHtml(attachmentUrl(attachment, false))}" target="_blank" rel="noreferrer">Open</a>
+              <a class="btn soft small" href="${escapeHtml(attachmentUrl(attachment, true))}" rel="noreferrer">Download</a>
+              <button class="btn danger small" type="button" data-action="delete-attachment" data-id="${escapeHtml(attachment.id)}">Delete</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+    els.attachmentsEmpty.hidden = attachments.length > 0;
   }
 
   function renderDrawerAudit(task) {
@@ -1123,6 +1649,7 @@
     const creatorName = memberDisplayName(task.created_by, task.created_by_email);
     const canEditSource = isTaskCreator(task);
     const reminderMode = REMINDER_MODES.includes(task.reminder_mode) ? task.reminder_mode : 'none';
+    const countdown = taskCountdown(task);
     const watcherValues = taskWatchers(task.id)
       .map((watcher) => resolveMemberOptionValue(watcher.user_id, watcher.user_email))
       .filter(Boolean);
@@ -1130,6 +1657,7 @@
       `<span class="badge">${escapeHtml(creatorName)}</span>`,
       `<span class="badge">Created ${escapeHtml(formatDateTime(task.created_at))}</span>`,
       `<span class="badge">Updated ${escapeHtml(formatDateTime(task.updated_at || task.created_at))}</span>`,
+      countdown && !['done', 'archived'].includes(task.status) ? `<span class="badge ${escapeHtml(countdown.badgeClass)}">${escapeHtml(countdown.label)}</span>` : '',
       task.completed_at ? `<span class="badge badge--status-done">Completed ${escapeHtml(formatDateTime(task.completed_at))}</span>` : '',
     ].filter(Boolean).join('');
 
@@ -1148,6 +1676,7 @@
     els.detailLinkedUrl.value = task.linked_url || '';
     els.detailTags.value = (task.tags || []).join(', ');
     setMultiSelectValues(els.detailWatchers, watcherValues);
+    els.uploadAttachmentBtn.disabled = state.attachmentUploadBusy;
 
     ['detailTitle', 'detailDescription', 'detailLinkedModule', 'detailLinkedUrl', 'detailTags'].forEach((id) => {
       if (els[id]) {
@@ -1159,6 +1688,7 @@
     els.archiveTaskBtn.textContent = task.status === 'archived' ? 'Restore task' : 'Archive task';
     els.markDoneBtn.hidden = task.status === 'done' || task.status === 'archived';
     renderComments(task);
+    renderAttachments(task);
     renderDrawerAudit(task);
 
     els.detailDrawerShell.classList.add('is-open');
@@ -1176,6 +1706,7 @@
     renderAuditTab();
     renderMineTab();
     renderSettingsTab();
+    renderWeeklyPlanner();
     renderTabs();
     if (state.selectedTaskId) {
       renderDrawer();
@@ -1216,6 +1747,63 @@
       try {
         state.client.realtime.setAuth(state.accessToken);
       } catch {}
+    }
+  }
+
+  async function loadCalendarStatus(options = {}) {
+    if (!state.helpers?.api) return;
+    const { silent = false } = options;
+    const range = plannerRange();
+    try {
+      state.calendar.loading = true;
+      if (!silent) renderWeeklyPlanner();
+      const payload = await state.helpers.api(CALENDAR_STATUS_ENDPOINT, 'POST', {
+        startAt: range.startAt,
+        endAt: range.endAt,
+        includeEvents: true,
+      });
+      state.calendar.settings = payload?.settings || state.calendar.settings;
+      state.calendar.diagnostics = payload?.diagnostics || state.calendar.diagnostics;
+      state.calendar.connections = Array.isArray(payload?.connections) ? payload.connections : [];
+      state.calendar.events = Array.isArray(payload?.events) ? payload.events : [];
+    } catch (error) {
+      state.calendar.events = [];
+      state.calendar.connections = [];
+      state.calendar.notice = error?.message || 'Unable to load Outlook / Teams diary data.';
+    } finally {
+      state.calendar.loading = false;
+      renderWeeklyPlanner();
+      renderSettingsTab();
+    }
+  }
+
+  async function startCalendarConnectFlow() {
+    const diagnostics = state.calendar.diagnostics || {};
+    if (!(diagnostics.setupReady && diagnostics.enabled)) {
+      state.helpers?.toast?.err('Finish the Microsoft calendar setup in Admin Settings first.', 4200);
+      return;
+    }
+    try {
+      const payload = await state.helpers.api('admin-team-tasks-calendar-connect', 'POST', {
+        returnTo: `${window.location.origin}/admin/team-tasks.html`,
+      });
+      if (!trimText(payload?.url, 4000)) {
+        throw new Error('Microsoft calendar connection URL was not returned.');
+      }
+      window.location.href = payload.url;
+    } catch (error) {
+      state.helpers?.toast?.err(error?.message || 'Unable to start Microsoft calendar connection.', 5200);
+    }
+  }
+
+  async function disconnectCalendarConnection() {
+    try {
+      await state.helpers.api(CALENDAR_DISCONNECT_ENDPOINT, 'POST', {});
+      state.calendar.notice = 'Microsoft calendar disconnected.';
+      await loadCalendarStatus({ silent: true });
+      state.helpers.toast.ok('Calendar disconnected.', 2400);
+    } catch (error) {
+      state.helpers.toast.err(error?.message || 'Unable to disconnect Microsoft calendar.', 5200);
     }
   }
 
@@ -1280,22 +1868,34 @@
     try {
       await fetchConfig(false);
       const client = await ensureClient();
-      const [tasksResult, commentsResult, watchersResult, remindersResult, auditResult] = await Promise.all([
+      const [
+        tasksResult,
+        commentsResult,
+        commentMentionsResult,
+        watchersResult,
+        attachmentsResult,
+        remindersResult,
+        auditResult,
+      ] = await Promise.all([
         client.from('task_items').select('*').order('archived_at', { ascending: true, nullsFirst: true }).order('updated_at', { ascending: false }),
         client.from('task_comments').select('*').order('created_at', { ascending: true }),
+        client.from('task_comment_mentions').select('*').order('created_at', { ascending: true }),
         client.from('task_watchers').select('*').order('created_at', { ascending: true }),
+        client.from('task_attachments').select('*').order('created_at', { ascending: false }),
         client.from('task_reminders').select('*').order('send_at', { ascending: true }),
         client.from('task_audit_log').select('*').order('created_at', { ascending: false }).limit(300),
       ]);
 
-      const firstError = [tasksResult, commentsResult, watchersResult, remindersResult, auditResult]
+      const firstError = [tasksResult, commentsResult, commentMentionsResult, watchersResult, attachmentsResult, remindersResult, auditResult]
         .map((result) => result.error)
         .find(Boolean);
       if (firstError) throw firstError;
 
       state.tasks = Array.isArray(tasksResult.data) ? tasksResult.data : [];
       state.comments = Array.isArray(commentsResult.data) ? commentsResult.data : [];
+      state.commentMentions = Array.isArray(commentMentionsResult.data) ? commentMentionsResult.data : [];
       state.watchers = Array.isArray(watchersResult.data) ? watchersResult.data : [];
+      state.attachments = Array.isArray(attachmentsResult.data) ? attachmentsResult.data : [];
       state.reminders = Array.isArray(remindersResult.data) ? remindersResult.data : [];
       state.audit = Array.isArray(auditResult.data) ? auditResult.data : [];
       renderAll();
@@ -1325,7 +1925,7 @@
     if (!client || state.realtimeChannel) return;
 
     const channel = client.channel('hmj-team-tasks-live');
-    ['task_items', 'task_comments', 'task_watchers', 'task_reminders', 'task_audit_log'].forEach((table) => {
+    ['task_items', 'task_comments', 'task_comment_mentions', 'task_watchers', 'task_attachments', 'task_reminders', 'task_audit_log'].forEach((table) => {
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
         scheduleReload();
       });
@@ -1440,6 +2040,155 @@
       .from('task_reminders')
       .insert(inserts);
     if (error) throw error;
+  }
+
+  async function syncCommentMentions(commentId, taskId, mentionKeys) {
+    const client = await ensureClient();
+    const existing = commentMentions(commentId);
+    const desiredMentions = dedupeRecipients((mentionKeys || []).map((value) => {
+      const member = findMemberByKey(value);
+      return member || { userId: value, email: lowerEmail(value) };
+    }));
+
+    const removeIds = existing
+      .filter((mention) => !desiredMentions.some((member) => sameActor(
+        member.userId,
+        member.email,
+        mention.mentioned_user_id,
+        mention.mentioned_email
+      )))
+      .map((mention) => mention.id);
+    if (removeIds.length) {
+      const { error } = await client
+        .from('task_comment_mentions')
+        .delete()
+        .in('id', removeIds);
+      if (error) throw error;
+    }
+
+    const inserts = desiredMentions
+      .filter((member) => !existing.some((mention) => sameActor(
+        member.userId,
+        member.email,
+        mention.mentioned_user_id,
+        mention.mentioned_email
+      )))
+      .map((member) => ({
+        task_id: taskId,
+        comment_id: commentId,
+        mentioned_user_id: trimText(member.userId, 120) || null,
+        mentioned_email: lowerEmail(member.email) || null,
+        mentioned_display_name: trimText(member.displayName, 160) || null,
+        created_by: trimText(currentUser().userId, 120) || lowerEmail(currentUser().email) || null,
+        created_by_email: lowerEmail(currentUser().email) || null,
+      }));
+    if (inserts.length) {
+      const { error } = await client
+        .from('task_comment_mentions')
+        .insert(inserts);
+      if (error) throw error;
+    }
+  }
+
+  async function notifyTaskActivity(payload) {
+    if (!state.emailConfigured) return;
+    try {
+      await state.helpers.api(NOTIFY_ENDPOINT, 'POST', payload);
+    } catch (error) {
+      state.helpers.toast.err(error?.message || 'Task notification email could not be sent.', 4200);
+    }
+  }
+
+  function attachmentStorageKey(taskId, fileName) {
+    const now = new Date();
+    const year = String(now.getUTCFullYear());
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const suffix = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID().slice(0, 8)
+      : String(Date.now()).slice(-8);
+    return `tasks/${taskId}/${year}/${month}/${Date.now()}-${suffix}-${normaliseFileName(fileName)}`;
+  }
+
+  async function uploadTaskAttachments() {
+    const task = currentTask();
+    const files = Array.from(els.attachmentFiles?.files || []);
+    if (!task || !files.length) {
+      state.helpers.toast.err('Choose at least one file first.', 3200);
+      return;
+    }
+
+    const invalid = files.find((file) => file.size > ATTACHMENT_MAX_BYTES || !resolveAttachmentMimeType(file));
+    if (invalid) {
+      state.helpers.toast.err('Files must be PDF, Word, or image formats and 15MB or smaller.', 5200);
+      return;
+    }
+
+    state.attachmentUploadBusy = true;
+    els.uploadAttachmentBtn.disabled = true;
+    try {
+      const client = await ensureClient();
+      for (const file of files) {
+        const mimeType = resolveAttachmentMimeType(file) || 'application/octet-stream';
+        const storagePath = attachmentStorageKey(task.id, file.name);
+        const uploadResult = await client.storage.from(TASK_ATTACHMENTS_BUCKET).upload(storagePath, file, {
+          contentType: mimeType,
+          upsert: false,
+        });
+        if (uploadResult.error) throw uploadResult.error;
+
+        const insertPayload = {
+          task_id: task.id,
+          file_name: trimText(file.name, 220) || 'task-file',
+          mime_type: mimeType,
+          file_size_bytes: file.size,
+          storage_bucket: TASK_ATTACHMENTS_BUCKET,
+          storage_path: storagePath,
+          storage_key: storagePath,
+          uploaded_by: trimText(currentUser().userId, 120) || lowerEmail(currentUser().email) || null,
+          uploaded_by_email: lowerEmail(currentUser().email) || null,
+        };
+        const { data, error } = await client
+          .from('task_attachments')
+          .insert(insertPayload)
+          .select('*')
+          .single();
+        if (error) {
+          await client.storage.from(TASK_ATTACHMENTS_BUCKET).remove([storagePath]).catch(() => {});
+          throw error;
+        }
+
+        await notifyTaskActivity({
+          eventType: 'attachment_added',
+          taskId: task.id,
+          attachmentId: data.id,
+        });
+      }
+
+      els.attachmentFiles.value = '';
+      state.helpers.toast.ok(files.length === 1 ? 'File uploaded.' : `${files.length} files uploaded.`, 3200);
+      await loadAllData({ silent: true });
+      openDrawer(task.id);
+    } catch (error) {
+      state.helpers.toast.err(error?.message || 'Unable to upload task files.', 5400);
+    } finally {
+      state.attachmentUploadBusy = false;
+      els.uploadAttachmentBtn.disabled = false;
+    }
+  }
+
+  async function deleteTaskAttachment(attachmentId) {
+    const attachment = state.attachments.find((item) => item.id === attachmentId);
+    const task = currentTask();
+    if (!attachment || !task) return;
+    if (!window.confirm(`Delete "${attachment.file_name}" from this task?`)) return;
+    try {
+      await state.helpers.api(ATTACHMENT_DELETE_ENDPOINT, 'POST', { id: attachmentId });
+      state.helpers.toast.ok('File removed.', 2800);
+      await loadAllData({ silent: true });
+      openDrawer(task.id);
+    } catch (error) {
+      state.helpers.toast.err(error?.message || 'Unable to delete this file.', 5200);
+    }
   }
 
   function quickTaskPayload() {
@@ -1633,31 +2382,57 @@
     const task = currentTask();
     if (!task) return;
     const body = trimText(els.commentBody.value, 5000);
+    const mentionKeys = selectedValues(els.commentMentions);
     if (!body) {
       state.helpers.toast.err('Write a comment first.', 3200);
       return;
     }
     try {
       const client = await ensureClient();
+      let commentId = state.commentEditId;
+      const isEditing = !!state.commentEditId;
       if (state.commentEditId) {
-        const { error } = await client
+        const { data, error } = await client
           .from('task_comments')
           .update({ comment_body: body })
-          .eq('id', state.commentEditId);
+          .eq('id', state.commentEditId)
+          .select('id')
+          .single();
         if (error) throw error;
+        commentId = data?.id || commentId;
         state.helpers.toast.ok('Comment updated.', 2800);
       } else {
-        const { error } = await client
+        const { data, error } = await client
           .from('task_comments')
           .insert({
             task_id: task.id,
             comment_body: body,
-          });
+          })
+          .select('id')
+          .single();
         if (error) throw error;
+        commentId = data?.id || commentId;
         state.helpers.toast.ok('Comment added.', 2800);
+      }
+      if (commentId) {
+        await syncCommentMentions(commentId, task.id, mentionKeys);
       }
       state.commentEditId = '';
       els.commentBody.value = '';
+      setMultiSelectValues(els.commentMentions, []);
+      if (!isEditing && commentId) {
+        await notifyTaskActivity({
+          eventType: 'comment_added',
+          taskId: task.id,
+          commentId,
+        });
+      } else if (isEditing && mentionKeys.length && commentId) {
+        await notifyTaskActivity({
+          eventType: 'mention',
+          taskId: task.id,
+          commentId,
+        });
+      }
       await loadAllData({ silent: true });
       openDrawer(task.id);
     } catch (error) {
@@ -1686,6 +2461,9 @@
       dueSoonDays: Math.min(14, Math.max(1, Number.parseInt(els.settingDueSoonDays.value, 10) || DEFAULT_SETTINGS.dueSoonDays)),
       defaultPriority: PRIORITY_LABELS[els.settingDefaultPriority.value] ? els.settingDefaultPriority.value : DEFAULT_SETTINGS.defaultPriority,
       reminderRecipientMode: trimText(els.settingReminderRecipients.value, 64) || DEFAULT_SETTINGS.reminderRecipientMode,
+      activityRecipientMode: trimText(els.settingActivityRecipients.value, 64) || DEFAULT_SETTINGS.activityRecipientMode,
+      activityEmailNotifications: els.settingActivityEmails.checked,
+      mentionEmailNotifications: els.settingMentionEmails.checked,
       collapseDoneByDefault: els.settingCollapseDone.checked,
     };
     try {
@@ -1714,6 +2492,9 @@
   function closeDrawer() {
     state.selectedTaskId = '';
     state.commentEditId = '';
+    if (els.attachmentFiles) {
+      els.attachmentFiles.value = '';
+    }
     if (els.detailDrawerShell) {
       els.detailDrawerShell.classList.remove('is-open');
       els.detailDrawerShell.setAttribute('aria-hidden', 'true');
@@ -1751,7 +2532,25 @@
     });
     els.quickAddForm.addEventListener('submit', handleQuickAddSubmit);
     els.quickResetBtn.addEventListener('click', resetQuickForm);
-    els.refreshBtn.addEventListener('click', () => loadAllData({ silent: false }));
+    els.refreshBtn.addEventListener('click', async () => {
+      await loadAllData({ silent: false });
+      await loadCalendarStatus({ silent: true });
+    });
+    els.plannerPrevWeekBtn?.addEventListener('click', () => {
+      state.calendar.weekStart = addDaysIso(plannerWeekStart(), -7);
+      loadCalendarStatus({ silent: false });
+    });
+    els.plannerTodayBtn?.addEventListener('click', () => {
+      state.calendar.weekStart = startOfWeekIso();
+      loadCalendarStatus({ silent: false });
+    });
+    els.plannerNextWeekBtn?.addEventListener('click', () => {
+      state.calendar.weekStart = addDaysIso(plannerWeekStart(), 7);
+      loadCalendarStatus({ silent: false });
+    });
+    els.plannerConnectBtn?.addEventListener('click', startCalendarConnectFlow);
+    els.connectCalendarBtn?.addEventListener('click', startCalendarConnectFlow);
+    els.disconnectCalendarBtn?.addEventListener('click', disconnectCalendarConnection);
     els.toggleDoneBtn.addEventListener('click', () => {
       state.filters.showDone = !state.filters.showDone;
       renderAll();
@@ -1786,6 +2585,8 @@
     });
 
     bindListOpeners(els.tasksList);
+    bindListOpeners(els.plannerGrid);
+    bindListOpeners(els.plannerUnscheduledList);
     bindListOpeners(els.boardColumns);
     bindListOpeners(els.auditList);
     bindListOpeners(els.mineAssignedList);
@@ -1810,10 +2611,16 @@
     els.deleteTaskBtn.addEventListener('click', handleDeleteTask);
     els.commentForm.addEventListener('submit', handleCommentSubmit);
     els.cancelCommentEditBtn.addEventListener('click', cancelCommentEdit);
+    els.uploadAttachmentBtn.addEventListener('click', uploadTaskAttachments);
     els.commentsList.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-action="edit-comment"][data-id]');
       if (!button) return;
       beginCommentEdit(button.getAttribute('data-id'));
+    });
+    els.attachmentsList.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action="delete-attachment"][data-id]');
+      if (!button) return;
+      deleteTaskAttachment(button.getAttribute('data-id'));
     });
     els.settingsForm.addEventListener('submit', handleSettingsSave);
   }
@@ -1822,15 +2629,21 @@
     state.helpers = helpers;
     state.who = await helpers.identity('admin');
     els.welcomeMeta.textContent = `Signed in as ${state.who?.email || state.currentUser.email || 'admin user'}`;
+    plannerNoticeFromQuery();
 
     await fetchConfig(true);
     els.welcomeMeta.textContent = `Signed in as ${state.currentUser.email || state.who?.email || 'admin user'}`;
     renderAll();
+    await loadCalendarStatus({ silent: false });
 
     if (state.schemaReady) {
       await ensureClient();
       await setupRealtime();
       await loadAllData({ silent: false });
+      window.clearInterval(state.countdownTimer);
+      state.countdownTimer = window.setInterval(() => {
+        renderAll();
+      }, 60000);
       const queryTaskId = readQueryTaskId();
       if (queryTaskId && findTask(queryTaskId)) {
         openDrawer(queryTaskId);

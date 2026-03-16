@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin-v2/
+Disallow: /.netlify/
+
+Sitemap: https://www.hmj-global.com/sitemap.xml

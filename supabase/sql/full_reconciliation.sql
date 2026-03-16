@@ -2561,6 +2561,69 @@ begin
 end
 $$;
 
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'task_items'
+  ) then
+    execute 'drop policy if exists "task_items_select_admins" on public.task_items';
+    execute 'drop policy if exists "task_items_insert_admins" on public.task_items';
+    execute 'drop policy if exists "task_items_update_admins" on public.task_items';
+    execute 'drop policy if exists "task_items_delete_creator_only" on public.task_items';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'task_comments'
+  ) then
+    execute 'drop policy if exists "task_comments_select_admins" on public.task_comments';
+    execute 'drop policy if exists "task_comments_insert_admins" on public.task_comments';
+    execute 'drop policy if exists "task_comments_update_author_only" on public.task_comments';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'task_watchers'
+  ) then
+    execute 'drop policy if exists "task_watchers_select_admins" on public.task_watchers';
+    execute 'drop policy if exists "task_watchers_insert_admins" on public.task_watchers';
+    execute 'drop policy if exists "task_watchers_update_admins" on public.task_watchers';
+    execute 'drop policy if exists "task_watchers_delete_admins_or_self" on public.task_watchers';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'task_reminders'
+  ) then
+    execute 'drop policy if exists "task_reminders_select_admins" on public.task_reminders';
+    execute 'drop policy if exists "task_reminders_insert_admins" on public.task_reminders';
+    execute 'drop policy if exists "task_reminders_update_admins" on public.task_reminders';
+    execute 'drop policy if exists "task_reminders_delete_admins" on public.task_reminders';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'task_audit_log'
+  ) then
+    execute 'drop policy if exists "task_audit_log_select_admins" on public.task_audit_log';
+    execute 'drop policy if exists "task_audit_log_no_direct_insert" on public.task_audit_log';
+    execute 'drop policy if exists "task_audit_log_no_direct_update" on public.task_audit_log';
+    execute 'drop policy if exists "task_audit_log_no_direct_delete" on public.task_audit_log';
+  end if;
+end
+$$;
+
 create table if not exists public.task_items (
   id uuid primary key default gen_random_uuid(),
   title text not null,
@@ -2608,6 +2671,36 @@ alter table if exists public.task_items add column if not exists tags text[];
 alter table if exists public.task_items add column if not exists sort_order integer;
 alter table if exists public.task_items add column if not exists created_at timestamptz;
 alter table if exists public.task_items add column if not exists updated_at timestamptz;
+
+alter table if exists public.task_items drop constraint if exists task_items_created_by_fkey;
+alter table if exists public.task_items drop constraint if exists task_items_assigned_to_fkey;
+alter table if exists public.task_items drop constraint if exists task_items_reminder_mode_check;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'task_items'
+      and column_name = 'created_by'
+      and data_type <> 'text'
+  ) then
+    execute 'alter table public.task_items alter column created_by type text using created_by::text';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'task_items'
+      and column_name = 'assigned_to'
+      and data_type <> 'text'
+  ) then
+    execute 'alter table public.task_items alter column assigned_to type text using assigned_to::text';
+  end if;
+end
+$$;
 
 update public.task_items
 set
@@ -2658,6 +2751,23 @@ alter table if exists public.task_comments add column if not exists updated_by_e
 alter table if exists public.task_comments add column if not exists created_at timestamptz;
 alter table if exists public.task_comments add column if not exists updated_at timestamptz;
 
+alter table if exists public.task_comments drop constraint if exists task_comments_created_by_fkey;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'task_comments'
+      and column_name = 'created_by'
+      and data_type <> 'text'
+  ) then
+    execute 'alter table public.task_comments alter column created_by type text using created_by::text';
+  end if;
+end
+$$;
+
 update public.task_comments
 set
   created_at = coalesce(created_at, now()),
@@ -2679,6 +2789,23 @@ alter table if exists public.task_watchers add column if not exists user_email t
 alter table if exists public.task_watchers add column if not exists created_by text;
 alter table if exists public.task_watchers add column if not exists created_by_email text;
 alter table if exists public.task_watchers add column if not exists created_at timestamptz;
+
+alter table if exists public.task_watchers drop constraint if exists task_watchers_user_id_fkey;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'task_watchers'
+      and column_name = 'user_id'
+      and data_type <> 'text'
+  ) then
+    execute 'alter table public.task_watchers alter column user_id type text using user_id::text';
+  end if;
+end
+$$;
 
 update public.task_watchers
 set
@@ -2716,6 +2843,23 @@ alter table if exists public.task_reminders add column if not exists updated_by 
 alter table if exists public.task_reminders add column if not exists updated_by_email text;
 alter table if exists public.task_reminders add column if not exists created_at timestamptz;
 alter table if exists public.task_reminders add column if not exists updated_at timestamptz;
+
+alter table if exists public.task_reminders drop constraint if exists task_reminders_recipient_user_id_fkey;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'task_reminders'
+      and column_name = 'recipient_user_id'
+      and data_type <> 'text'
+  ) then
+    execute 'alter table public.task_reminders alter column recipient_user_id type text using recipient_user_id::text';
+  end if;
+end
+$$;
 
 update public.task_reminders
 set
@@ -2766,6 +2910,24 @@ alter table if exists public.task_audit_log add column if not exists old_data js
 alter table if exists public.task_audit_log add column if not exists new_data jsonb;
 alter table if exists public.task_audit_log add column if not exists metadata jsonb;
 alter table if exists public.task_audit_log add column if not exists created_at timestamptz;
+
+alter table if exists public.task_audit_log drop constraint if exists task_audit_log_actor_user_id_fkey;
+alter table if exists public.task_audit_log drop constraint if exists task_audit_log_task_id_fkey;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'task_audit_log'
+      and column_name = 'actor_user_id'
+      and data_type <> 'text'
+  ) then
+    execute 'alter table public.task_audit_log alter column actor_user_id type text using actor_user_id::text';
+  end if;
+end
+$$;
 
 update public.task_audit_log
 set

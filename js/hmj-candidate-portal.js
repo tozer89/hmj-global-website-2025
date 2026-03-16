@@ -1,6 +1,7 @@
 const CONFIG_ENDPOINT = '/.netlify/functions/candidate-auth-config';
 const SYNC_ENDPOINT = '/.netlify/functions/candidate-portal-sync';
 const DELETE_ENDPOINT = '/.netlify/functions/candidate-account-delete';
+const DOCUMENTS_ENDPOINT = '/.netlify/functions/candidate-documents';
 const STORAGE_PREFIX = 'portal';
 const CANDIDATE_DOCS_BUCKET = 'candidate-docs';
 const MAX_DOCUMENT_SIZE_BYTES = 15 * 1024 * 1024;
@@ -280,7 +281,19 @@ function normaliseDocumentType(value) {
 }
 
 function missingColumnError(error) {
-  return /column "?[a-zA-Z0-9_]+"? does not exist/i.test(String(error?.message || ''));
+  const message = String(error?.message || '');
+  return (
+    /column "?[a-zA-Z0-9_]+"? does not exist/i.test(message)
+    || /Could not find the '[a-zA-Z0-9_]+' column of '[^']+' in the schema cache/i.test(message)
+  );
+}
+
+function extractMissingColumnName(error) {
+  const message = String(error?.message || '');
+  const postgresMatch = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(message);
+  if (postgresMatch) return postgresMatch[1];
+  const schemaCacheMatch = /Could not find the '([a-zA-Z0-9_]+)' column of '[^']+' in the schema cache/i.exec(message);
+  return schemaCacheMatch ? schemaCacheMatch[1] : null;
 }
 
 function missingRelationError(error) {
@@ -499,6 +512,18 @@ async function syncCandidateProfileViaFunction(seed = {}) {
   }, session.access_token);
 }
 
+async function candidateDocumentsRequest(action, payload = {}) {
+  const { session } = await getCandidatePortalContext();
+  if (!session?.access_token) {
+    throw new Error('candidate_not_authenticated');
+  }
+  return postCandidatePortalJson(DOCUMENTS_ENDPOINT, {
+    action,
+    ...payload,
+    access_token: session.access_token,
+  }, session.access_token);
+}
+
 async function loadCandidateRowByAuthUserId(client, authUserId) {
   const { data, error } = await client
     .from('candidates')
@@ -607,22 +632,10 @@ async function insertCandidateDocumentRecord(client, payload) {
 }
 
 async function queryCandidateDocuments(client, candidateId) {
-  const withDeletedFilter = await client
-    .from('candidate_documents')
-    .select('*')
-    .eq('candidate_id', String(candidateId))
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false });
-
-  if (!withDeletedFilter.error || !missingColumnError(withDeletedFilter.error)) {
-    return withDeletedFilter;
-  }
-
   return client
     .from('candidate_documents')
     .select('*')
-    .eq('candidate_id', String(candidateId))
-    .order('created_at', { ascending: false });
+    .eq('candidate_id', String(candidateId));
 }
 
 async function retryWithoutUnknownColumns(run, payload) {
@@ -631,9 +644,9 @@ async function retryWithoutUnknownColumns(run, payload) {
     const result = await run(working);
     if (!result?.error) return result;
     if (!missingColumnError(result.error)) return result;
-    const match = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(result.error.message || '');
-    if (!match || !(match[1] in working)) return result;
-    delete working[match[1]];
+    const missingColumn = extractMissingColumnName(result.error);
+    if (!missingColumn || !(missingColumn in working)) return result;
+    delete working[missingColumn];
   }
   return run(working);
 }
@@ -777,6 +790,9 @@ export async function loadCandidateApplications(candidateIdInput) {
     .eq('candidate_id', String(candidate.id))
     .order('applied_at', { ascending: false });
 
+  if (error && (missingRelationError(error) || missingColumnError(error))) {
+    return [];
+  }
   if (error) throw error;
   return Array.isArray(data) ? data : [];
 }
@@ -802,10 +818,27 @@ export async function loadCandidateDocuments(candidateIdInput) {
     );
   }
 
-  const { client } = await getCandidatePortalContext();
+  const { client, session } = await getCandidatePortalContext();
+  if (session?.access_token) {
+    try {
+      const response = await candidateDocumentsRequest('list');
+      const documents = Array.isArray(response?.documents) ? response.documents : [];
+      return documents.sort((left, right) => {
+        const leftDate = String(left?.uploaded_at || left?.created_at || '');
+        const rightDate = String(right?.uploaded_at || right?.created_at || '');
+        return rightDate.localeCompare(leftDate);
+      });
+    } catch (error) {
+      console.warn('[candidate-portal] document list endpoint failed, falling back to direct query', error?.message || error);
+    }
+  }
+
   const candidate = candidateIdInput ? { id: candidateIdInput } : await ensureCandidateProfileRow();
   const { data, error } = await queryCandidateDocuments(client, candidate.id);
 
+  if (error && (missingRelationError(error) || missingColumnError(error))) {
+    return [];
+  }
   if (error) throw error;
 
   const rows = Array.isArray(data) ? data : [];
@@ -816,7 +849,11 @@ export async function loadCandidateDocuments(candidateIdInput) {
       : (row.url || ''),
   })));
 
-  return withUrls;
+  return withUrls.sort((left, right) => {
+    const leftDate = String(left?.uploaded_at || left?.created_at || '');
+    const rightDate = String(right?.uploaded_at || right?.created_at || '');
+    return rightDate.localeCompare(leftDate);
+  });
 }
 
 export async function uploadCandidateDocument({ file, documentType, label }) {
@@ -852,9 +889,64 @@ export async function uploadCandidateDocument({ file, documentType, label }) {
     return cloneMockRecord(documentRow);
   }
 
-  const { client, user } = await getCandidatePortalContext();
-  const candidate = await ensureCandidateProfileRow();
+  const { client, user, session } = await getCandidatePortalContext();
   validateCandidateDocument(file);
+
+  let signedUploadCompleted = false;
+  let signedUploadPath = '';
+  if (session?.access_token && user?.id) {
+    try {
+      const prepared = await candidateDocumentsRequest('prepare_upload', {
+        file_name: trimText(file?.name, 280) || 'document',
+        mime_type: trimText(file?.type, 120) || null,
+        size_bytes: Number(file?.size || 0) || 0,
+        document_type: documentType,
+        label,
+      });
+      const uploadTarget = prepared?.upload || {};
+      signedUploadPath = trimText(uploadTarget.path, 500) || '';
+      if (!signedUploadPath || !trimText(uploadTarget.token, 2000)) {
+        throw new Error('A secure upload link could not be prepared.');
+      }
+
+      const signedUpload = await client
+        .storage
+        .from(trimText(uploadTarget.bucket, 120) || CANDIDATE_DOCS_BUCKET)
+        .uploadToSignedUrl(
+          signedUploadPath,
+          uploadTarget.token,
+          file,
+          {
+            cacheControl: '3600',
+            contentType: trimText(file?.type, 120) || undefined,
+          }
+        );
+
+      if (signedUpload.error) throw signedUpload.error;
+      signedUploadCompleted = true;
+
+      const completed = await candidateDocumentsRequest('finalize_upload', {
+        storage_path: signedUploadPath,
+        file_name: trimText(file?.name, 280) || 'document',
+        mime_type: trimText(file?.type, 120) || null,
+        size_bytes: Number(file?.size || 0) || 0,
+        document_type: documentType,
+        label,
+      });
+
+      if (!completed?.document) {
+        throw new Error('Document upload completed but the candidate record could not be updated.');
+      }
+      return completed.document;
+    } catch (error) {
+      if (signedUploadCompleted) {
+        throw error;
+      }
+      console.warn('[candidate-portal] signed document upload failed, falling back to direct Supabase upload', error?.message || error);
+    }
+  }
+
+  const candidate = await ensureCandidateProfileRow();
   const safeName = slugifyFilename(file?.name || 'document');
   const storageKey = `${STORAGE_PREFIX}/${user.id}/${Date.now()}-${safeName}`;
 
@@ -908,12 +1000,23 @@ export async function deleteCandidateDocument(documentRecord) {
     return true;
   }
 
-  const { client, user } = await getCandidatePortalContext();
+  const { client, user, session } = await getCandidatePortalContext();
   const candidate = await ensureCandidateProfileRow();
   const documentId = documentRecord?.id;
   const storageKey = trimText(documentRecord?.storage_path || documentRecord?.storage_key, 500);
   if (!documentId) {
     throw new Error('candidate_document_id_required');
+  }
+
+  if (session?.access_token) {
+    try {
+      await candidateDocumentsRequest('delete', {
+        document_id: documentId,
+      });
+      return true;
+    } catch (error) {
+      console.warn('[candidate-portal] document delete endpoint failed, falling back to direct delete', error?.message || error);
+    }
   }
 
   if (storageKey && storageKey.startsWith(`${STORAGE_PREFIX}/${user.id}/`)) {

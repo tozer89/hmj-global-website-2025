@@ -28,7 +28,12 @@ try {
   } else {
     supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
     if (DEBUG) console.log('[supa] Client created OK');
-    if (!process.env.SUPABASE_SERVICE_KEY && process.env.SUPABASE_ANON_KEY) {
+    if (
+      !process.env.SUPABASE_SERVICE_KEY &&
+      !process.env.SUPABASE_SERVICE_ROLE_KEY &&
+      !process.env.SUPABASE_SERVICE_ROLE &&
+      process.env.SUPABASE_ANON_KEY
+    ) {
       console.warn('[supa] Using ANON key server-side. Prefer SERVICE key for functions.');
     }
   }

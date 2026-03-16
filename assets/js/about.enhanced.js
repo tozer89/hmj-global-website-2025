@@ -185,13 +185,15 @@
       });
     }
 
-    if (!burger || !menu || !scrim) return;
+    if (!burger || !menu || !scrim || burger.dataset.hmjNavBound === 'true') return;
+    burger.dataset.hmjNavBound = 'true';
 
     const setOpen = (open) => {
       burger.setAttribute('aria-expanded', String(open));
       menu.classList.toggle('open', open);
       scrim.hidden = !open;
       document.documentElement.style.overflow = open ? 'hidden' : '';
+      document.body.style.overflow = open ? 'hidden' : '';
     };
 
     burger.addEventListener('click', () => {

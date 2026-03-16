@@ -142,6 +142,53 @@ test('statement import case 4: weak PDF structure falls back to review-first mod
   assert.ok(draft.warnings.length >= 1);
 });
 
+test('statement import case 4b: invoice-ledger PDFs keep full four and five digit amounts', () => {
+  const pdfText = [
+    'Date Reference Due Date Original Total Debit Credit Balance',
+    '07/11/2025 SI 1478918 10/11/2025 3843.00 3843.00 3843.00',
+    '07/11/2025 SI 1478919 10/11/2025 18606.00 18606.00 22449.00',
+    '14/11/2025 SI 1484142 17/11/2025 12782.40 12782.40 35231.40',
+  ].join('\n');
+
+  const draft = parsePdfText(pdfText, {
+    fileName: 'ledger-statement.pdf',
+    scenarioCurrency: 'GBP',
+    forecastStartDate: '2026-01-05',
+    paymentTerms: { type: '14_net', customNetDays: 21, receiptLagDays: 0 },
+  });
+
+  assert.equal(draft.parseMethod, 'statement_ledger_lines');
+  assert.equal(draft.includedRowCount, 3);
+  assert.equal(draft.rows[0].invoiceRef, 'SI 1478918');
+  assert.equal(draft.rows[0].outstandingAmount, 3843);
+  assert.equal(draft.rows[1].outstandingAmount, 18606);
+  assert.equal(draft.rows[2].outstandingAmount, 12782.4);
+  assert.equal(draft.importedTotal, 35231.4);
+});
+
+test('statement import case 4c: aged-debt summary PDFs are flagged instead of generating fake invoice rows', () => {
+  const pdfText = [
+    'Debtors Summary Report 21/11/2025',
+    'HMJ Global Limited',
+    'As of November 21, 2025',
+    'CUSTOMER CURRENT 1 - 30 31 - 60 61 - 90 91 AND OVER TOTAL',
+    'Gleave Partnership Limited £3,840.00 £3,840.00',
+    'TOTAL £3,840.00 £3,840.00',
+  ].join('\n');
+
+  const draft = parsePdfText(pdfText, {
+    fileName: 'debtors-summary.pdf',
+    scenarioCurrency: 'GBP',
+    forecastStartDate: '2026-01-05',
+    paymentTerms: { type: '30_eom', customNetDays: 21, receiptLagDays: 0 },
+  });
+
+  assert.equal(draft.parseMethod, 'summary_report');
+  assert.equal(draft.includedRowCount, 0);
+  assert.equal(draft.confidence, 'low');
+  assert.match(draft.warnings.join(' '), /customer summary|aged-debt report/i);
+});
+
 test('statement import case 5: reconciliation summary shows variance clearly', () => {
   const reconciliation = buildReconciliationSummary({
     importedTotal: 76000,

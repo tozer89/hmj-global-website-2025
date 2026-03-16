@@ -3,9 +3,27 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Job Spec | HMJ Global</title>
+  <title>Job Details | HMJ Global</title>
+  <meta name="description" content="Explore specialist technical, engineering, construction and data centre jobs with HMJ Global across the UK and Europe." id="metaDescriptionTag"/>
+  <link rel="canonical" href="https://www.hmj-global.com/jobs/spec.html" id="canonicalTag"/>
+  <meta property="og:site_name" content="HMJ Global"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:title" content="Job Details | HMJ Global" id="ogTitleTag"/>
+  <meta property="og:description" content="Explore specialist technical, engineering, construction and data centre jobs with HMJ Global across the UK and Europe." id="ogDescriptionTag"/>
+  <meta property="og:url" content="https://www.hmj-global.com/jobs/spec.html" id="ogUrlTag"/>
+  <meta property="og:image" content="https://www.hmj-global.com/images/hero.jpg" id="ogImageTag"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Job Details | HMJ Global" id="twitterTitleTag"/>
+  <meta name="twitter:description" content="Explore specialist technical, engineering, construction and data centre jobs with HMJ Global across the UK and Europe." id="twitterDescriptionTag"/>
+  <meta name="twitter:image" content="https://www.hmj-global.com/images/hero.jpg" id="twitterImageTag"/>
   <script defer src="../js/hmj-analytics.js"></script>
   <link rel="stylesheet" href="../css/style.css"/>
+  <script type="application/ld+json" id="breadcrumbSchemaTag">
+    {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.hmj-global.com/"},{"@type":"ListItem","position":2,"name":"Jobs","item":"https://www.hmj-global.com/jobs"},{"@type":"ListItem","position":3,"name":"Job details","item":"https://www.hmj-global.com/jobs/spec.html"}]}
+  </script>
+  <script type="application/ld+json" id="jobPostingSchemaTag">
+    {"@context":"https://schema.org","@type":"WebPage","name":"HMJ Global job details","url":"https://www.hmj-global.com/jobs/spec.html"}
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -709,8 +727,94 @@
 
     .print-summary {
       gap: 14px;
-      padding: 22px 24px;
+      padding: 26px 28px;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+      border: 1px solid rgba(33, 66, 148, 0.16);
+    }
+
+    .print-summary__brand {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(15, 27, 63, 0.1);
+    }
+
+    .print-summary__identity {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .print-summary__logo {
+      width: 128px;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .print-summary__identity-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .print-summary__identity-copy strong {
+      color: var(--hmj-navy);
+      font-size: 1.12rem;
+      line-height: 1.1;
+      font-weight: 900;
+    }
+
+    .print-summary__identity-copy span {
+      color: var(--hmj-muted);
+      font-size: 0.88rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .print-summary__stamp {
+      display: grid;
+      gap: 6px;
+      justify-items: end;
+      color: var(--hmj-muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .print-summary__lead {
+      display: grid;
+      gap: 10px;
+    }
+
+    .print-summary__eyebrow {
+      margin: 0;
+      color: var(--hmj-blue);
+      font-size: 0.82rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+
+    .print-summary__title {
+      margin: 0;
+      color: var(--hmj-navy);
+      font-size: clamp(2rem, 3.8vw, 2.8rem);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .print-summary__intro {
+      margin: 0;
+      color: var(--hmj-copy);
+      font-size: 1rem;
+      line-height: 1.6;
+      max-width: 72ch;
     }
 
     .print-summary__meta {
@@ -752,6 +856,52 @@
       font-size: 0.94rem;
       font-weight: 700;
       word-break: break-word;
+      text-decoration: none;
+    }
+
+    .print-summary__item a:hover,
+    .print-summary__item a:focus-visible {
+      text-decoration: underline;
+    }
+
+    .print-footer {
+      gap: 10px;
+      padding: 20px 22px;
+      background: linear-gradient(180deg, rgba(18, 37, 86, 0.98), rgba(11, 23, 58, 0.98));
+      border-color: rgba(18, 37, 86, 0.88);
+      color: #eef3ff;
+    }
+
+    .print-footer__eyebrow {
+      margin: 0;
+      color: #b7caf8;
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+
+    .print-footer__title {
+      margin: 0;
+      color: #fff;
+      font-size: 1.28rem;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .print-footer__copy {
+      margin: 0;
+      color: #dbe6ff;
+      font-size: 0.98rem;
+      line-height: 1.6;
+      font-weight: 600;
+      max-width: 74ch;
+    }
+
+    .print-footer__copy a {
+      color: #fff;
+      font-weight: 800;
+      text-decoration: none;
     }
 
     .sr-only {
@@ -918,9 +1068,13 @@
         border-radius: 18px;
       }
 
+      .topbar,
       .topbar__actions,
       .action-row,
       .action-column,
+      .hero__main,
+      .content-side,
+      .cta-band,
       .cta-band__actions,
       .sticky-cta,
       .toast,
@@ -934,12 +1088,24 @@
         display: grid !important;
       }
 
+      .hero {
+        display: grid !important;
+      }
+
+      .hero__side {
+        display: grid !important;
+        padding: 16px 18px;
+      }
+
       .hero,
       .content-grid,
-      .print-summary__grid,
       .fact-grid,
       .system-grid {
         grid-template-columns: 1fr !important;
+      }
+
+      .print-summary__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       }
 
       .hero,
@@ -948,9 +1114,49 @@
         gap: 14px;
       }
 
-      .hero__title {
-        max-width: none;
-        font-size: 24pt;
+      .print-summary {
+        padding: 0 0 18px;
+        border: none !important;
+        border-bottom: 2px solid rgba(33, 66, 148, 0.14) !important;
+      }
+
+      .print-summary__brand {
+        padding-bottom: 14px;
+      }
+
+      .print-summary__logo {
+        width: 112px;
+      }
+
+      .print-summary__title {
+        font-size: 26pt;
+      }
+
+      .print-summary__intro {
+        font-size: 11.5pt;
+      }
+
+      .hero__title,
+      .hero__intro,
+      .hero__note,
+      .hero__eyebrow,
+      .fact-grid,
+      #tagsGroup {
+        display: none !important;
+      }
+
+      .section-card {
+        padding: 14px 0 0;
+        border: none !important;
+        border-radius: 0;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+
+      .section-card + .section-card {
+        margin-top: 4px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(15, 27, 63, 0.12) !important;
       }
 
       .hero__intro,
@@ -961,17 +1167,91 @@
       .detail-card__text,
       .system-meta,
       .cta-band__copy p,
-      .hero__note {
+      .hero__note,
+      .print-footer__copy,
+      .print-summary__item span,
+      .print-summary__item a {
         color: #273246 !important;
+        font-size: 10.8pt !important;
+        line-height: 1.55 !important;
       }
 
       .btn,
       a {
         box-shadow: none !important;
       }
+
+      .rich-text {
+        font-size: 11.2pt;
+      }
+
+      .section-card__head {
+        margin-bottom: 12px;
+      }
+
+      .section-card h2,
+      .print-footer__title {
+        font-size: 17pt !important;
+        line-height: 1.18 !important;
+      }
+
+      .section-kicker,
+      .print-footer__eyebrow,
+      .print-summary__eyebrow,
+      .print-summary__item strong,
+      .side__eyebrow {
+        color: #41567f !important;
+      }
+
+      .side__title {
+        margin: 4px 0 12px;
+        color: #12213f !important;
+        font-size: 17pt !important;
+        line-height: 1.18 !important;
+      }
+
+      .list-card ul li {
+        padding-left: 1.3rem;
+        break-inside: avoid;
+      }
+
+      .list-card ul li::before {
+        width: 0.5rem;
+        height: 0.5rem;
+        top: 0.45rem;
+      }
+
+      .list-card ul {
+        columns: 2;
+        column-gap: 24px;
+      }
+
+      .print-footer {
+        display: grid !important;
+        margin-top: 12px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #15285b, #0f1b3f) !important;
+        border-color: rgba(15, 27, 63, 0.88) !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .print-footer__eyebrow {
+        color: #b7caf8 !important;
+      }
+
+      .print-footer__title {
+        color: #fff !important;
+      }
+
+      .print-footer__copy,
+      .print-footer__copy a {
+        color: #dbe6ff !important;
+      }
     }
   </style>
-  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
 </head>
 <body>
   <div class="page-shell">
@@ -984,7 +1264,7 @@
           <img src="../images/logo.png" alt="HMJ Global logo"/>
           <span class="brand__label">
             <strong>HMJ Global</strong>
-            <span>Role advert</span>
+            <span>Candidate brief</span>
           </span>
         </a>
         <div class="topbar__actions">
@@ -995,9 +1275,23 @@
       </header>
 
       <section class="panel print-summary print-only">
-        <div class="print-summary__meta">
-          <span>HMJ Global printable job specification</span>
-          <span id="printPreparedOn"></span>
+        <div class="print-summary__brand">
+          <div class="print-summary__identity">
+            <img class="print-summary__logo" src="../images/logo.png" alt="HMJ Global logo" />
+            <div class="print-summary__identity-copy">
+              <strong>HMJ Global</strong>
+              <span>Candidate role brief</span>
+            </div>
+          </div>
+          <div class="print-summary__stamp">
+            <span>Printable job specification</span>
+            <span id="printPreparedOn"></span>
+          </div>
+        </div>
+        <div class="print-summary__lead">
+          <p class="print-summary__eyebrow">Role overview</p>
+          <h1 id="printTitle" class="print-summary__title"></h1>
+          <p id="printIntro" class="print-summary__intro"></p>
         </div>
         <div class="print-summary__grid">
           <div class="print-summary__item">
@@ -1005,16 +1299,36 @@
             <span id="printReference">Shared role spec</span>
           </div>
           <div class="print-summary__item">
-            <strong>Spec copy</strong>
-            <span id="printCopyMode">Role advert copy</span>
+            <strong>Brief type</strong>
+            <span id="printCopyMode">Candidate role brief</span>
           </div>
           <div class="print-summary__item">
-            <strong>Share link</strong>
-            <a id="printShareLink" href="#"></a>
+            <strong>Location</strong>
+            <span id="printLocation">Discuss with HMJ</span>
           </div>
           <div class="print-summary__item">
-            <strong>Apply link</strong>
-            <a id="printApplyLink" href="#"></a>
+            <strong>Employment</strong>
+            <span id="printEmployment">Discuss with HMJ</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Package</strong>
+            <span id="printPay">Discuss with HMJ</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Discipline</strong>
+            <span id="printDiscipline">Specialist recruitment</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Sector focus</strong>
+            <span id="printSector">Technical delivery</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Skills focus</strong>
+            <span id="printSkills">Discuss with HMJ</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Apply through</strong>
+            <span id="printApplyRoute">HMJ Global jobs team</span>
           </div>
         </div>
       </section>
@@ -1076,7 +1390,7 @@
           </div>
 
           <div id="benefitsCard" class="detail-card" style="display:none">
-            <span class="detail-card__label">Benefits</span>
+            <span class="detail-card__label">Package and support</span>
             <div id="benefits" class="benefit-list" style="margin-top:10px"></div>
           </div>
         </aside>
@@ -1135,10 +1449,10 @@
             </section>
 
             <section id="metaPanel" class="panel system-panel" style="display:none">
-              <p class="section-kicker">Role page details</p>
+              <p class="section-kicker">HMJ Global brief</p>
               <div class="system-grid">
                 <div class="system-item">
-                  <span>Advertised by</span>
+                  <span>Prepared by</span>
                   <strong id="metaPublisher">HMJ Global</strong>
                 </div>
                 <div class="system-item">
@@ -1169,6 +1483,17 @@
           <a class="btn btn-secondary" data-email-share data-analytics-event="email_link_clicked" href="#">Share by email</a>
           <a class="btn btn-ghost" href="../jobs.html">Back to live jobs</a>
         </div>
+      </section>
+
+      <section class="panel print-footer print-only">
+        <p class="print-footer__eyebrow">Next step</p>
+        <h2 class="print-footer__title">Talk to HMJ Global about this opportunity</h2>
+        <p class="print-footer__copy">
+          For a confidential conversation or to register your interest, contact
+          <a href="mailto:info@hmj-global.com">info@hmj-global.com</a>
+          and quote <span id="printFooterReference">this role brief</span>.
+          Further live vacancies are available at <a href="https://www.hmj-global.com/jobs.html">hmj-global.com/jobs</a>.
+        </p>
       </section>
     </main>
   </div>
@@ -1574,6 +1899,20 @@
 
       function buildHighlights(details) {
         const cards = [];
+        if (details.sectorText) {
+          cards.push({
+            label: 'Sector focus',
+            value: details.sectorText,
+            text: 'The role is positioned within a clear project or market context.',
+          });
+        }
+        if (details.disciplineText && (!details.sectorText || details.disciplineText !== details.sectorText)) {
+          cards.push({
+            label: 'Discipline',
+            value: details.disciplineText,
+            text: 'The brief makes the core specialist focus clear from the outset.',
+          });
+        }
         if (details.payText) {
           cards.push({
             label: 'Package',
@@ -1624,6 +1963,317 @@
           });
         }
         return cards.slice(0, 4);
+      }
+
+      function pickFirstList(...sources) {
+        for (const source of sources) {
+          if (Array.isArray(source)) {
+            const cleaned = source.filter(Boolean).map((item) => trimString(item, 220)).filter(Boolean);
+            if (cleaned.length) return cleaned;
+          }
+        }
+        return [];
+      }
+
+      function buildSpecViewModel(job = {}, meta = {}, seo = null) {
+        const publicPageConfig = normalizePublicPageConfig(job.publicPageConfig || job.public_page_config);
+        const shareSpec = job.shareSpec && typeof job.shareSpec === 'object' ? job.shareSpec : null;
+        const payText = job.payText || buildPayText(job);
+        const locationText = trimString(job.locationText || '', 180) || 'Flexible / discussed with HMJ';
+        const rawEmploymentType = String(job.type || '').trim();
+        const employmentText = rawEmploymentType ? toTitleCase(rawEmploymentType) : 'Discuss with HMJ';
+        const sectorText = trimString(seo?.sector_focus || job.sectionLabel || job.section, 120);
+        const disciplineText = trimString(job.discipline || sectorText, 120);
+        const customerText = String(job.customer || '').trim();
+        const benefits = Array.isArray(job.benefits) ? job.benefits.filter(Boolean) : [];
+        const tags = Array.isArray(job.tags) ? job.tags.filter(Boolean) : [];
+        const reference = trimString(meta.jobId || job.id || '', 120);
+        const optimizedOverview = trimString(seo?.optimized_overview || '', 2200);
+        const overviewText = trimString(shareSpec?.overview || optimizedOverview || job.overview || '', 2200);
+        const visiblePayText = publicPageConfig.showPay ? payText : '';
+        const visibleCustomerText = publicPageConfig.showCustomer ? customerText : '';
+        const visibleBenefits = publicPageConfig.showBenefits ? benefits : [];
+        const visibleTags = publicPageConfig.showTags ? tags : [];
+        const visibleReference = publicPageConfig.showReference ? reference : '';
+        const respItems = publicPageConfig.showResponsibilities
+          ? pickFirstList(
+            shareSpec?.responsibilities,
+            seo?.optimized_responsibilities,
+            job.responsibilities
+          )
+          : [];
+        const reqItems = publicPageConfig.showRequirements
+          ? pickFirstList(
+            shareSpec?.requirements,
+            seo?.optimized_requirements,
+            job.requirements
+          )
+          : [];
+        const showOverview = publicPageConfig.showOverview && !!overviewText;
+        const title = trimString(seo?.optimized_title || job.title || '', 180) || 'Role';
+        const skillsSummary = trimString(
+          visibleTags.length
+            ? visibleTags.slice(0, 4).join(' • ')
+            : [disciplineText, sectorText].filter(Boolean).join(' • '),
+          180
+        );
+        const intro = showOverview
+          ? truncateText(overviewText, 210)
+          : `Explore this HMJ Global opportunity${locationText ? ` in ${locationText}` : ''} and move straight into the application flow with the role context attached.`;
+        const details = {
+          title,
+          locationText,
+          rawEmploymentType,
+          employmentText,
+          payText: visiblePayText,
+          customerText: visibleCustomerText,
+          benefits: visibleBenefits,
+          tags: visibleTags,
+          reference: visibleReference,
+          sectorText,
+          disciplineText,
+          skillsSummary,
+          shareLink: location.href,
+        };
+
+        const metaBits = [];
+        if (visibleReference) metaBits.push(`Role reference: ${visibleReference}`);
+        const refreshed = formatDate(meta.refreshed_at || job.updatedAt || meta.created_at || job.createdAt, true);
+        if (refreshed) metaBits.push(`Updated ${refreshed}`);
+        metaBits.push(shareSpec?.enhanced || seo?.source === 'openai'
+          ? 'Prepared as a candidate-facing HMJ brief'
+          : 'Prepared from the live HMJ Global advert');
+
+        return {
+          publicPageConfig,
+          shareSpec,
+          details,
+          overviewText,
+          respItems,
+          reqItems,
+          showOverview,
+          intro,
+          highlights: publicPageConfig.showRoleHighlights ? buildHighlights(details) : [],
+          copyMode: shareSpec?.enhanced || seo?.source === 'openai' ? 'Candidate role brief' : 'Role advert',
+          metaText: metaBits.join(' • '),
+          printableApplyRoute: 'HMJ Global jobs team',
+        };
+      }
+
+      function buildPrintableBaseUrl() {
+        const host = String(location.hostname || '').toLowerCase();
+        if (host && /(^|\.)hmj-global\.com$/.test(host)) {
+          return `${location.protocol}//${location.host}`;
+        }
+        return 'https://www.hmj-global.com';
+      }
+
+      function buildPrintableRoleLink(meta = {}, job = {}) {
+        const baseUrl = buildPrintableBaseUrl();
+        const slug = trimString(meta.slug || localSlug || '', 120);
+        if (slug) {
+          return `${baseUrl}/go/${encodeURIComponent(slug)}`;
+        }
+        const jobId = trimString(meta.jobId || job.id || '', 120);
+        if (jobId) {
+          return `${baseUrl}/jobs/spec.html?id=${encodeURIComponent(jobId)}`;
+        }
+        return `${baseUrl}/jobs.html`;
+      }
+
+      function buildPrintableApplyLink() {
+        return `${buildPrintableBaseUrl()}/contact.html`;
+      }
+
+      function slugifyText(value) {
+        return String(value || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 120);
+      }
+
+      function buildCanonicalSeoSlug(job = {}, seo = {}, details = {}) {
+        const suggested = trimString(seo?.slug_hint || '', 120);
+        if (suggested) return suggested;
+        const title = trimString(job.title || details.title || '', 180);
+        const location = trimString(details.locationText || job.locationText || '', 120);
+        let source = title;
+        if (location) {
+          const normalizedTitle = title.toLowerCase();
+          const normalizedLocation = location.toLowerCase();
+          const locationHead = normalizedLocation.split(',')[0].trim();
+          if (
+            normalizedLocation &&
+            !normalizedTitle.includes(normalizedLocation) &&
+            (!locationHead || !normalizedTitle.includes(locationHead))
+          ) {
+            source = `${source} ${location}`;
+          }
+        }
+        return slugifyText(source);
+      }
+
+      function formatPrintableLinkLabel(url) {
+        try {
+          const parsed = new URL(url, buildPrintableBaseUrl());
+          const path = parsed.pathname.replace(/\/$/, '') || '/';
+          return `${parsed.host}${path}`;
+        } catch (_error) {
+          return trimString(url, 240);
+        }
+      }
+
+      function setMetaContent(id, value) {
+        const node = document.getElementById(id);
+        if (node) node.setAttribute('content', value || '');
+      }
+
+      function setCanonicalHref(value) {
+        const node = document.getElementById('canonicalTag');
+        if (node) node.setAttribute('href', value || `${buildPrintableBaseUrl()}/jobs`);
+      }
+
+      function upsertJsonLd(id, payload) {
+        const node = document.getElementById(id);
+        if (node) node.textContent = JSON.stringify(payload);
+      }
+
+      function inferEmploymentType(raw) {
+        const value = trimString(raw, 80).toLowerCase();
+        if (value === 'permanent') return 'FULL_TIME';
+        if (value === 'contract') return 'CONTRACTOR';
+        if (value === 'fixed-term') return 'TEMPORARY';
+        return '';
+      }
+
+      function buildCanonicalJobUrl(meta = {}, job = {}) {
+        const baseUrl = buildPrintableBaseUrl();
+        const jobId = trimString(meta.jobId || job.id || '', 120);
+        if (jobId) {
+          const params = new URLSearchParams();
+          params.set('id', jobId);
+          const canonicalSlug = buildCanonicalSeoSlug(job, meta.seo || {}, meta.details || {});
+          if (canonicalSlug) params.set('slug', canonicalSlug);
+          return `${baseUrl}/jobs/spec.html?${params.toString()}`;
+        }
+        return `${baseUrl}/jobs`;
+      }
+
+      function buildSeoDescription(details, job, seo, overviewText) {
+        const suggested = trimString(seo?.meta_description || '', 156);
+        if (suggested) return suggested;
+        const overview = trimString(seo?.optimized_overview || overviewText || job.overview || '', 220);
+        const bits = [details.title, details.locationText, details.employmentText, details.payText].filter(Boolean);
+        const summary = trimString(bits.join(' | '), overview ? 88 : 156);
+        return trimString(`${summary}. ${overview}`.replace(/^\.\s*/, ''), 156);
+      }
+
+      function buildSchemaDescription(overview, responsibilities, requirements) {
+        const parts = [];
+        if (overview) parts.push(overview);
+        if (responsibilities.length) parts.push(`Responsibilities: ${responsibilities.join('; ')}.`);
+        if (requirements.length) parts.push(`Requirements: ${requirements.join('; ')}.`);
+        return trimString(parts.join(' '), 5000);
+      }
+
+      function buildJobPostingSchema(job, meta, details, seo, overviewText, respItems, reqItems) {
+        const schema = {
+          '@context': 'https://schema.org',
+          '@type': 'JobPosting',
+          title: trimString(seo?.optimized_title || details.title, 120) || details.title,
+          description: buildSchemaDescription(overviewText, respItems, reqItems),
+          datePosted: job.createdAt || meta.created_at || undefined,
+          validThrough: meta.expires_at || undefined,
+          employmentType: inferEmploymentType(details.rawEmploymentType) || undefined,
+          hiringOrganization: {
+            '@type': 'Organization',
+            name: 'HMJ Global',
+            sameAs: buildPrintableBaseUrl(),
+            logo: `${buildPrintableBaseUrl()}/images/logo.png`,
+          },
+          identifier: {
+            '@type': 'PropertyValue',
+            name: 'HMJ Global',
+            value: meta.jobId || job.id || details.reference || details.title,
+          },
+          url: buildCanonicalJobUrl(meta, job),
+        };
+
+        if (details.locationText) {
+          schema.jobLocation = {
+            '@type': 'Place',
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: details.locationText,
+            },
+          };
+        }
+
+        if (job.payType === 'salary_range' && (job.salaryMin || job.salaryMax)) {
+          schema.baseSalary = {
+            '@type': 'MonetaryAmount',
+            currency: job.currency || 'GBP',
+            value: {
+              '@type': 'QuantitativeValue',
+              minValue: job.salaryMin || undefined,
+              maxValue: job.salaryMax || undefined,
+              unitText: 'YEAR',
+            },
+          };
+        } else if (job.payType === 'day_rate' && (job.dayRateMin || job.dayRateMax)) {
+          schema.baseSalary = {
+            '@type': 'MonetaryAmount',
+            currency: job.currency || 'GBP',
+            value: {
+              '@type': 'QuantitativeValue',
+              minValue: job.dayRateMin || undefined,
+              maxValue: job.dayRateMax || undefined,
+              unitText: 'DAY',
+            },
+          };
+        } else if (job.payType === 'hourly_range' && (job.hourlyMin || job.hourlyMax)) {
+          schema.baseSalary = {
+            '@type': 'MonetaryAmount',
+            currency: job.currency || 'GBP',
+            value: {
+              '@type': 'QuantitativeValue',
+              minValue: job.hourlyMin || undefined,
+              maxValue: job.hourlyMax || undefined,
+              unitText: 'HOUR',
+            },
+          };
+        }
+
+        return schema;
+      }
+
+      function updateSeoMeta(job, meta, details, seo, overviewText, respItems, reqItems) {
+        const canonicalUrl = buildCanonicalJobUrl({ ...meta, seo, details }, job);
+        const seoTitle = trimString(seo?.meta_title || `${seo?.optimized_title || details.title} | HMJ Global`, 68);
+        const seoDescription = buildSeoDescription(details, job, seo, overviewText);
+
+        document.title = seoTitle;
+        setCanonicalHref(canonicalUrl);
+        setMetaContent('metaDescriptionTag', seoDescription);
+        setMetaContent('ogTitleTag', seoTitle);
+        setMetaContent('ogDescriptionTag', seoDescription);
+        setMetaContent('ogUrlTag', canonicalUrl);
+        setMetaContent('ogImageTag', `${buildPrintableBaseUrl()}/images/hero.jpg`);
+        setMetaContent('twitterTitleTag', seoTitle);
+        setMetaContent('twitterDescriptionTag', seoDescription);
+        setMetaContent('twitterImageTag', `${buildPrintableBaseUrl()}/images/hero.jpg`);
+
+        upsertJsonLd('breadcrumbSchemaTag', {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${buildPrintableBaseUrl()}/` },
+            { '@type': 'ListItem', position: 2, name: 'Jobs', item: `${buildPrintableBaseUrl()}/jobs` },
+            { '@type': 'ListItem', position: 3, name: details.title, item: canonicalUrl },
+          ],
+        });
+        upsertJsonLd('jobPostingSchemaTag', buildJobPostingSchema(job, meta, details, seo, overviewText, respItems, reqItems));
       }
 
       function setText(id, value) {
@@ -1683,7 +2333,7 @@
       }
 
       function buildEmailHref(details) {
-        if (!details.shareLink) return '#';
+        if (!details.printableShareLink) return '#';
         const lines = [
           'I thought this HMJ Global role might be relevant.',
           '',
@@ -1691,56 +2341,39 @@
           details.locationText ? `Location: ${details.locationText}` : '',
           details.employmentText ? `Employment: ${details.employmentText}` : '',
           details.payText ? `Package: ${details.payText}` : '',
+          details.reference ? `Reference: ${details.reference}` : '',
           '',
-          `View role: ${details.shareLink}`,
-          details.applyUrl ? `Apply: ${new URL(details.applyUrl, location.origin).href}` : '',
+          `View role: ${details.printableShareLink}`,
+          details.printableApplyLink ? `Register interest: ${details.printableApplyLink}` : '',
+          'Contact HMJ: info@hmj-global.com',
         ].filter(Boolean);
         const subject = `HMJ Global role: ${details.title}`;
         return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
       }
 
-      function renderSpec(job, meta){
-        const publicPageConfig = normalizePublicPageConfig(job.publicPageConfig || job.public_page_config);
-        const shareSpec = job.shareSpec && typeof job.shareSpec === 'object' ? job.shareSpec : null;
-        const payText = job.payText || buildPayText(job);
-        const locationText = job.locationText || 'Flexible / discussed with HMJ';
-        const rawEmploymentType = String(job.type || '').trim();
-        const employmentText = rawEmploymentType ? toTitleCase(rawEmploymentType) : 'Discuss with HMJ';
-        const customerText = String(job.customer || '').trim();
-        const benefits = Array.isArray(job.benefits) ? job.benefits.filter(Boolean) : [];
-        const tags = Array.isArray(job.tags) ? job.tags.filter(Boolean) : [];
-        const reference = meta.jobId || job.id || '';
-        const overviewText = trimString(shareSpec?.overview || job.overview || '', 2200);
-        const visiblePayText = publicPageConfig.showPay ? payText : '';
-        const visibleCustomerText = publicPageConfig.showCustomer ? customerText : '';
-        const visibleBenefits = publicPageConfig.showBenefits ? benefits : [];
-        const visibleTags = publicPageConfig.showTags ? tags : [];
-        const visibleReference = publicPageConfig.showReference ? reference : '';
-        const showOverview = publicPageConfig.showOverview && !!overviewText;
-        const intro = showOverview
-          ? truncateText(overviewText, 210)
-          : `Explore this HMJ Global opportunity${locationText ? ` in ${locationText}` : ''} and move straight into the application flow with the role context attached.`;
-
-        const details = {
-          title: job.title || 'Role',
-          locationText,
-          rawEmploymentType,
-          employmentText,
-          payText: visiblePayText,
-          customerText: visibleCustomerText,
-          benefits: visibleBenefits,
-          tags: visibleTags,
-          reference: visibleReference,
-          shareLink: location.href,
-        };
+      function renderSpec(job, meta, seo){
+        const view = buildSpecViewModel(job, meta, seo);
+        const {
+          publicPageConfig,
+          shareSpec,
+          details,
+          overviewText,
+          respItems,
+          reqItems,
+          showOverview,
+          intro,
+          highlights,
+          copyMode,
+          metaText,
+          printableApplyRoute,
+        } = view;
 
         const applyUrl = buildApplyUrl(job, meta, details);
         details.applyUrl = applyUrl;
+        details.printableShareLink = buildPrintableRoleLink(meta, job);
+        details.printableApplyLink = buildPrintableApplyLink();
 
         const emailHref = buildEmailHref(details);
-        const highlights = publicPageConfig.showRoleHighlights ? buildHighlights(details) : [];
-
-        document.title = `${details.title} | HMJ Global`;
 
         const statusEl = document.getElementById('status');
         const status = String(job.status || 'live').toLowerCase();
@@ -1753,8 +2386,8 @@
         setText('location', details.locationText);
         setText('employment', details.employmentText);
         setText('overview', overviewText || 'HMJ Global will share further detail during the application conversation.');
-        setText('reference', visibleReference);
-        setText('customer', visibleCustomerText);
+        setText('reference', details.reference);
+        setText('customer', details.customerText);
         setText('metaPublisher', 'HMJ Global');
         setText('metaStatus', statusText);
         setText('metaUpdated', formatDate(meta.refreshed_at || job.updatedAt || meta.created_at || job.createdAt, true) || 'Current');
@@ -1762,8 +2395,18 @@
         setText('stickyTitle', details.title);
         setText('stickyMeta', [details.locationText, details.employmentText, details.payText, details.reference].filter(Boolean).join(' • ') || 'Apply directly with HMJ Global');
         setText('printPreparedOn', formatDate(new Date().toISOString(), true) || 'Current');
-        setText('printReference', visibleReference || 'Shared role spec');
-        setText('printCopyMode', shareSpec?.enhanced ? 'AI-polished share copy' : 'Role advert copy');
+        setText('printTitle', details.title);
+        setText('printIntro', intro);
+        setText('printReference', details.reference || 'Shared role spec');
+        setText('printCopyMode', copyMode);
+        setText('printLocation', details.locationText || 'Discuss with HMJ');
+        setText('printEmployment', details.employmentText || 'Discuss with HMJ');
+        setText('printPay', details.payText || 'Discuss with HMJ');
+        setText('printDiscipline', details.disciplineText || 'Specialist recruitment');
+        setText('printSector', details.sectorText || 'Technical delivery');
+        setText('printSkills', details.skillsSummary || 'Discuss with HMJ');
+        setText('printApplyRoute', printableApplyRoute);
+        setText('printFooterReference', details.reference || details.title || 'this role brief');
 
         const heroSection = document.getElementById('heroSection');
         const heroSide = document.getElementById('heroSide');
@@ -1774,19 +2417,17 @@
         const metaPanel = document.getElementById('metaPanel');
         const metaSummary = document.getElementById('meta');
         const ctaBand = document.getElementById('ctaBand');
-        const printShareLink = document.getElementById('printShareLink');
-        const printApplyLink = document.getElementById('printApplyLink');
 
         const payCard = document.getElementById('payCard');
-        if (visiblePayText) {
-          setText('pay', visiblePayText);
+        if (details.payText) {
+          setText('pay', details.payText);
           applyNodeVisibility(payCard, true);
         } else {
           applyNodeVisibility(payCard, false);
         }
 
         const referenceCard = document.getElementById('referenceCard');
-        applyNodeVisibility(referenceCard, !!visibleReference);
+        applyNodeVisibility(referenceCard, !!details.reference);
 
         const sectionBadge = document.getElementById('sectionBadge');
         if (job.sectionLabel || job.section) {
@@ -1797,8 +2438,8 @@
         }
 
         const tagsGroup = document.getElementById('tagsGroup');
-        if (visibleTags.length) {
-          setHtmlList('tags', visibleTags, 'chip');
+        if (details.tags.length) {
+          setHtmlList('tags', details.tags, 'chip');
           applyNodeVisibility(tagsGroup, true);
         } else {
           document.getElementById('tags').innerHTML = '';
@@ -1816,42 +2457,32 @@
         applyNodeVisibility(highlightsNode, highlights.length > 0);
 
         const customerCard = document.getElementById('customerCard');
-        const showCustomerCard = !!visibleCustomerText;
+        const showCustomerCard = !!details.customerText;
         applyNodeVisibility(customerCard, showCustomerCard);
 
         const benefitsCard = document.getElementById('benefitsCard');
-        if (visibleBenefits.length) {
-          setHtmlList('benefits', visibleBenefits, 'benefit-pill');
+        if (details.benefits.length) {
+          setHtmlList('benefits', details.benefits, 'benefit-pill');
           applyNodeVisibility(benefitsCard, true);
         } else {
           document.getElementById('benefits').innerHTML = '';
           applyNodeVisibility(benefitsCard, false);
         }
-        const showHeroSide = highlights.length > 0 || showCustomerCard || visibleBenefits.length > 0;
+        const showHeroSide = highlights.length > 0 || showCustomerCard || details.benefits.length > 0;
         applyNodeVisibility(heroSide, showHeroSide);
         heroSection.classList.toggle('hero--single', !showHeroSide);
 
-        const respItems = Array.isArray(shareSpec?.responsibilities) && shareSpec.responsibilities.length
-          ? shareSpec.responsibilities.filter(Boolean)
-          : Array.isArray(job.responsibilities) ? job.responsibilities.filter(Boolean) : [];
         const respSection = document.getElementById('responsibilitiesSection');
         const respList = document.getElementById('respList');
         respList.innerHTML = respItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-        applyNodeVisibility(respSection, publicPageConfig.showResponsibilities && respItems.length > 0);
+        applyNodeVisibility(respSection, respItems.length > 0);
 
-        const reqItems = Array.isArray(shareSpec?.requirements) && shareSpec.requirements.length
-          ? shareSpec.requirements.filter(Boolean)
-          : Array.isArray(job.requirements) ? job.requirements.filter(Boolean) : [];
         const reqSection = document.getElementById('requirementsSection');
         const reqList = document.getElementById('reqList');
         reqList.innerHTML = reqItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-        applyNodeVisibility(reqSection, publicPageConfig.showRequirements && reqItems.length > 0);
+        applyNodeVisibility(reqSection, reqItems.length > 0);
         applyNodeVisibility(overviewSection, showOverview);
 
-        const metaBits = [];
-        if (visibleReference) metaBits.push(`Role reference: ${visibleReference}`);
-        if (shareSpec?.enhanced) metaBits.push('AI-polished share copy active');
-        const metaText = metaBits.join(' • ');
         setText('meta', metaText);
         applyNodeVisibility(metaSummary, !!metaText);
 
@@ -1876,15 +2507,6 @@
           emailHref,
           applyUrl,
         };
-
-        if (printShareLink) {
-          printShareLink.href = location.href;
-          printShareLink.textContent = location.href;
-        }
-        if (printApplyLink) {
-          printApplyLink.href = applyUrl;
-          printApplyLink.textContent = new URL(applyUrl, location.origin).href;
-        }
 
         const analyticsPayload = {
           job_id: meta.jobId || job.id || '',
@@ -1916,6 +2538,8 @@
         if (stickyCta) {
           stickyCta.style.display = '';
         }
+
+        updateSeoMeta(job, meta, details, seo, overviewText, respItems, reqItems);
       }
 
       function showError(message) {
@@ -1940,7 +2564,7 @@
               console.warn('[spec] unable to sync local share cache', err);
             }
           }
-          renderSpec(payload.job, meta);
+          renderSpec(payload.job, meta, payload.seo || payload.meta?.seo || null);
           loading.style.display = 'none';
           page.style.display = 'grid';
           maybeAutoPrint();
@@ -1961,7 +2585,7 @@
             expires_at: localEntry.expiresAt || null,
             refreshed_at: localEntry.updatedAt || null,
             last_accessed: localEntry.lastAccessed || null,
-          });
+          }, localEntry.seo || null);
           loading.style.display = 'none';
           page.style.display = 'grid';
           maybeAutoPrint();
@@ -1990,7 +2614,7 @@
         if (!data?.job) {
           throw new Error('Job not found');
         }
-        renderSpec(data.job, data);
+        renderSpec(data.job, data, data.seo || null);
         loading.style.display = 'none';
         page.style.display = 'grid';
         maybeAutoPrint();

@@ -15,6 +15,25 @@ const PUBLIC_PAGES = [
   'jobs/gold-card-electrician-slough/index.html',
 ];
 
+test('public pages use the shared nav script and do not embed legacy mobile-menu handlers', () => {
+  PUBLIC_PAGES.forEach((page) => {
+    const html = fs.readFileSync(path.join(process.cwd(), page), 'utf8');
+
+    assert.match(html, /<script[^>]+src=["'][^"']*hmj-nav\.js[^"']*["']/i, `${page} should load the shared nav script`);
+    assert.doesNotMatch(html, /const burger\s*=\s*document\.querySelector\(['"]\.hmj-burger['"]\)/i, `${page} should not embed a page-specific burger binding`);
+    assert.match(html, /class="hmj-scrim"/i, `${page} should include the shared nav scrim`);
+  });
+});
+
+test('shared nav script owns burger toggle and page highlighting', () => {
+  const script = fs.readFileSync(path.join(process.cwd(), 'js/hmj-nav.js'), 'utf8');
+
+  assert.match(script, /function|\=\>\s*\(?openMenu/i, 'shared nav script should define a menu toggle flow');
+  assert.match(script, /aria-expanded/i, 'shared nav script should manage burger expanded state');
+  assert.match(script, /classList\.toggle\(['"]open['"]/i, 'shared nav script should open and close the mobile menu');
+  assert.match(script, /aria-current['"],\s*['"]page/i, 'shared nav script should mark the current public page');
+});
+
 test('public mobile menu buttons use consistent three-line markup', () => {
   PUBLIC_PAGES.forEach((page) => {
     const html = fs.readFileSync(path.join(process.cwd(), page), 'utf8');

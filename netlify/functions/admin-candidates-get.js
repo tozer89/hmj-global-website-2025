@@ -3,6 +3,11 @@ const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
 const { presentCandidateDocuments } = require('./_candidate-docs.js');
+const {
+  ensureCandidateFromAuthUser,
+  resolvePortalAuthUser,
+  summarisePortalAuthUser,
+} = require('./_candidate-account-admin.js');
 
 function buildLegacyDocs(record) {
   return [
@@ -51,6 +56,7 @@ const baseHandler = async (event, context) => {
     if (!err) return false;
     const msg = String(err.message || err);
     if (/column .+ does not exist/i.test(msg)) return true;
+    if (/Could not find the '.+' column of '.+' in the schema cache/i.test(msg)) return true;
     if (/relation .+ does not exist/i.test(msg)) return true;
     if (/permission denied/i.test(msg)) return true;
     if (/violates row-level security/i.test(msg)) return true;
@@ -79,18 +85,35 @@ const baseHandler = async (event, context) => {
       return serveStatic('not_found', { ok: false, status: 404, error: 'Candidate not found' });
     }
 
-    const full = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim();
+    let candidateData = data;
+    let authUser = null;
+    try {
+      authUser = await resolvePortalAuthUser(supabase, data, data.email);
+      if (authUser && !data.auth_user_id) {
+        const repaired = await ensureCandidateFromAuthUser(supabase, authUser, data);
+        candidateData = repaired?.candidate || data;
+      }
+    } catch (authError) {
+      console.warn('[candidates] portal auth lookup failed (%s)', authError?.message || authError);
+    }
+
+    const full = candidateData.full_name || `${candidateData.first_name || ''} ${candidateData.last_name || ''}`.trim();
+    const portalAuth = summarisePortalAuthUser(authUser);
     const record = {
-      ...toCandidate(data),
-      full_name: full || data.full_name || null,
+      ...toCandidate(candidateData),
+      full_name: full || candidateData.full_name || null,
       source: 'supabase',
       readOnly: false,
-      has_portal_account: !!data.auth_user_id,
-      portal_account_state: data.auth_user_id
+      has_portal_account: !!(candidateData.auth_user_id || portalAuth.exists),
+      portal_account_state: candidateData.auth_user_id
         ? 'linked'
-        : data.portal_account_closed_at
+        : candidateData.portal_account_closed_at
         ? 'closed'
+        : portalAuth.exists
+        ? 'linked'
         : 'none',
+      portal_auth: portalAuth,
+      last_portal_login_at: candidateData.last_portal_login_at || portalAuth.last_sign_in_at || null,
     };
     let storedDocs = [];
     let applicationRows = [];
@@ -156,4 +179,4 @@ const baseHandler = async (event, context) => {
   }
 };
 
-exports.handler = withAdminCors(baseHandler);
+exports.handler = withAdminCors(baseHandler, { requireToken: false });

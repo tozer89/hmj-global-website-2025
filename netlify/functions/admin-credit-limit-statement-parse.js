@@ -254,8 +254,11 @@ async function callOpenAIStatementAssist(extractedText, options, overrides) {
 function shouldUseAiAssist(draft, extraction) {
   const confidence = trimString(draft && draft.confidence);
   const includedRowCount = Number(draft && draft.includedRowCount) || 0;
+  const parseMethod = trimString(draft && draft.parseMethod);
+  const nativeQuality = trimString(extraction && extraction.nativeQuality);
   if (!includedRowCount) return true;
   if (confidence === 'low') return true;
+  if (parseMethod === 'heuristic_lines' && confidence !== 'high' && nativeQuality === 'weak_native_text') return true;
   return extraction && trimString(extraction.strategy) === 'ocr_pdf_text' && confidence !== 'high';
 }
 

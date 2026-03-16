@@ -706,6 +706,8 @@ body:not(.public-page):not(.clients-body) :is(
     flex: 1 1 auto;
     width: auto;
     min-width: 0;
+    font-size: 0.95rem;
+    line-height: 1.2;
   }
 
   .top .row.hmj-admin-mobile-nav-ready .pill {
@@ -757,13 +759,13 @@ body:not(.public-page):not(.clients-body) :is(
   }
 
   .hmj-admin-mobile-heading strong {
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.2;
     color: var(--ink, #0f1b3f);
   }
 
   .hmj-admin-mobile-heading span {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.45;
     color: var(--muted, #5d6f9e);
   }

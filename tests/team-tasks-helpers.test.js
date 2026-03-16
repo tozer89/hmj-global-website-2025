@@ -6,7 +6,11 @@ const {
   computeReminderSendAt,
   dedupeReminderRecipients,
   dedupeMembers,
+  buildTaskRecipients,
+  describeTaskDueCountdown,
+  formatFileSize,
   buildReminderEmail,
+  buildTaskActivityEmail,
 } = require('../netlify/functions/_team-tasks-helpers.js');
 
 test('normalizeTaskSettings falls back cleanly and preserves valid values', () => {
@@ -15,12 +19,18 @@ test('normalizeTaskSettings falls back cleanly and preserves valid values', () =
       dueSoonDays: '5',
       collapseDoneByDefault: false,
       reminderRecipientMode: 'assignee_only',
+      activityRecipientMode: 'watchers_only',
+      activityEmailNotifications: false,
+      mentionEmailNotifications: false,
       defaultPriority: 'urgent',
     }),
     {
       dueSoonDays: 5,
       collapseDoneByDefault: false,
       reminderRecipientMode: 'assignee_only',
+      activityRecipientMode: 'watchers_only',
+      activityEmailNotifications: false,
+      mentionEmailNotifications: false,
       defaultPriority: 'urgent',
     }
   );
@@ -36,6 +46,9 @@ test('normalizeTaskSettings falls back cleanly and preserves valid values', () =
       dueSoonDays: 3,
       collapseDoneByDefault: true,
       reminderRecipientMode: 'assignee_creator_watchers',
+      activityRecipientMode: 'assignee_creator_watchers',
+      activityEmailNotifications: true,
+      mentionEmailNotifications: true,
       defaultPriority: 'medium',
     }
   );
@@ -112,4 +125,90 @@ test('buildReminderEmail includes admin deep link and task context', () => {
   assert.match(message.text, /Chase updated payroll sign-off/);
   assert.match(message.text, /https:\/\/hmj-global\.com\/admin\/team-tasks\.html\?task=task-1/);
   assert.match(message.html, /Open task in HMJ Admin/);
+});
+
+test('buildTaskRecipients respects mode and dedupes watchers', () => {
+  const recipients = buildTaskRecipients({
+    task: {
+      created_by: 'creator-1',
+      created_by_email: 'creator@hmj-global.com',
+      assigned_to: 'assignee-1',
+      assigned_to_email: 'assignee@hmj-global.com',
+    },
+    watchers: [
+      { user_id: 'watcher-1', user_email: 'watcher@hmj-global.com' },
+      { user_id: 'watcher-1', user_email: 'WATCHER@hmj-global.com' },
+    ],
+    mode: 'assignee_creator_watchers',
+  });
+
+  assert.deepEqual(
+    recipients.map((recipient) => recipient.email),
+    ['assignee@hmj-global.com', 'creator@hmj-global.com', 'watcher@hmj-global.com']
+  );
+});
+
+test('describeTaskDueCountdown and formatFileSize return human-readable values', () => {
+  const countdown = describeTaskDueCountdown('2026-03-20T15:30:00.000Z', {
+    now: new Date('2026-03-19T10:15:00.000Z'),
+  });
+
+  assert.equal(countdown.overdue, false);
+  assert.match(countdown.label, /Due in/);
+  assert.equal(formatFileSize(1536), '1.5 KB');
+});
+
+test('buildTaskActivityEmail covers mentions and attachments with branded context', () => {
+  const mentionMessage = buildTaskActivityEmail({
+    eventType: 'mention',
+    task: {
+      id: 'task-1',
+      title: 'Approve contractor docs',
+      status: 'waiting',
+      priority: 'high',
+      due_at: '2026-03-20T15:30:00.000Z',
+    },
+    recipient: {
+      email: 'nick@hmj-global.com',
+      displayName: 'Nick Chamberlain',
+    },
+    actor: {
+      email: 'joe@hmj-global.com',
+      displayName: "Joe Tozer-O'Sullivan",
+    },
+    comment: {
+      comment_body: 'Please review the uploaded contract wording before noon.',
+    },
+    siteUrl: 'https://hmj-global.com',
+  });
+
+  assert.match(mentionMessage.subject, /You were tagged/);
+  assert.match(mentionMessage.text, /Please review the uploaded contract wording/);
+
+  const attachmentMessage = buildTaskActivityEmail({
+    eventType: 'attachment_added',
+    task: {
+      id: 'task-1',
+      title: 'Approve contractor docs',
+      status: 'waiting',
+      priority: 'high',
+      due_at: '2026-03-20T15:30:00.000Z',
+    },
+    recipient: {
+      email: 'info@hmj-global.com',
+      displayName: 'Info@HMJ',
+    },
+    actor: {
+      email: 'joe@hmj-global.com',
+      displayName: "Joe Tozer-O'Sullivan",
+    },
+    attachment: {
+      file_name: 'contract-pack.docx',
+      file_size_bytes: 204800,
+    },
+    siteUrl: 'https://hmj-global.com',
+  });
+
+  assert.match(attachmentMessage.subject, /New file/);
+  assert.match(attachmentMessage.text, /contract-pack\.docx/);
 });

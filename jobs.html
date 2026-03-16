@@ -3,12 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Jobs | HMJ-Global</title>
+  <title>Jobs | Technical, Engineering & Data Centre Roles | HMJ Global</title>
+  <meta name="description" content="Browse HMJ Global jobs across data centres, engineering, construction, commissioning and specialist technical delivery in the UK and Europe." />
+  <link rel="canonical" href="https://www.hmj-global.com/jobs" />
+  <meta property="og:site_name" content="HMJ Global" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Jobs | Technical, Engineering & Data Centre Roles | HMJ Global" />
+  <meta property="og:description" content="Browse HMJ Global jobs across data centres, engineering, construction, commissioning and specialist technical delivery in the UK and Europe." />
+  <meta property="og:url" content="https://www.hmj-global.com/jobs" />
+  <meta property="og:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Jobs | Technical, Engineering & Data Centre Roles | HMJ Global" />
+  <meta name="twitter:description" content="Browse HMJ Global jobs across data centres, engineering, construction, commissioning and specialist technical delivery in the UK and Europe." />
+  <meta name="twitter:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <script type="application/ld+json" id="jobsBreadcrumbSchema">
+    {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.hmj-global.com/"},{"@type":"ListItem","position":2,"name":"Jobs","item":"https://www.hmj-global.com/jobs"}]}
+  </script>
+  <script type="application/ld+json" id="jobsListSchema">
+    {"@context":"https://schema.org","@type":"ItemList","name":"HMJ Global live jobs","itemListElement":[]}
+  </script>
   <script src="js/hmj-identity.js"></script>
   <script defer src="js/hmj-auth-flow.js"></script>
   <script defer src="js/hmj-auth-handoff.js" data-hmj-auth-destination="/admin/" data-hmj-auth-invite-destination="/admin/complete-account.html" data-hmj-auth-recovery-destination="/admin/reset-password.html"></script>
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-nav.js?v=2"></script>
   <script defer src="js/hmj-analytics.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
@@ -50,11 +68,12 @@
     }
     .filter-control{display:grid;gap:6px;min-width:0}
     .filter-control__label{
-      font-size:.68rem;
+      font-size:.76rem;
       letter-spacing:.08em;
       text-transform:uppercase;
       font-weight:800;
       color:var(--muted);
+      line-height:1.25;
     }
     .filter-pill-group{
       display:flex;
@@ -212,11 +231,12 @@
     }
     .filter-panel-eyebrow{
       margin:0;
-      font-size:.72rem;
+      font-size:.78rem;
       letter-spacing:.08em;
       text-transform:uppercase;
       font-weight:800;
       color:#4c5e86;
+      line-height:1.25;
     }
     .filter-advanced__top h2{
       margin:4px 0 0;
@@ -393,11 +413,12 @@
     }
     body.jobs-page .section-title__eyebrow{
       margin:0;
-      font-size:.68rem;
+      font-size:.76rem;
       letter-spacing:.12em;
       text-transform:uppercase;
       font-weight:900;
       color:#64769b;
+      line-height:1.25;
     }
     body.jobs-page .section-title h2{
       margin:0;
@@ -525,7 +546,7 @@
       padding:6px 11px;
       border-radius:999px;
       border:1px solid rgba(58,102,179,.16);
-      font-size:.75rem;
+      font-size:.79rem;
       line-height:1.1;
       font-weight:800;
       white-space:nowrap;
@@ -552,11 +573,12 @@
     }
     body.jobs-page .job-kicker{
       margin:0;
-      font-size:.7rem;
+      font-size:.78rem;
       letter-spacing:.12em;
       text-transform:uppercase;
       font-weight:900;
       color:#64769b;
+      line-height:1.25;
     }
     body.jobs-page .job h3{
       margin:0;
@@ -609,10 +631,11 @@
       font-weight:700;
     }
     body.jobs-page .job-meta-pill strong{
-      font-size:.64rem;
+      font-size:.76rem;
       letter-spacing:.1em;
       text-transform:uppercase;
       color:#6b7894;
+      line-height:1.2;
     }
     body.jobs-page .job-meta-pill span{
       min-width:0;
@@ -638,11 +661,12 @@
       display:inline-flex;
       align-items:center;
       padding:4px 0;
-      font-size:.65rem;
+      font-size:.76rem;
       font-weight:900;
       color:#6b7894;
       letter-spacing:.12em;
       text-transform:uppercase;
+      line-height:1.2;
     }
     body.jobs-page .tag{
       display:inline-flex;
@@ -655,9 +679,9 @@
       border:1px solid rgba(58,102,179,.12);
       background:rgba(58,102,179,.09);
       color:#355291;
-      font-size:.72rem;
+      font-size:.76rem;
       font-weight:800;
-      line-height:1;
+      line-height:1.15;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
@@ -904,7 +928,7 @@
       body.jobs-page .job-card-link{gap:12px;margin:-1px -1px 8px;padding:1px;border-radius:14px}
       body.jobs-page .status,
       body.jobs-page .job-badge,
-      body.jobs-page .job-pay-highlight{min-height:30px;padding:5px 9px;font-size:.72rem}
+      body.jobs-page .job-pay-highlight{min-height:30px;padding:5px 9px;font-size:.76rem}
       body.jobs-page .job h3{font-size:1.08rem}
       body.jobs-page .job-summary,
       body.jobs-page .job-customer{font-size:.87rem;line-height:1.5}
@@ -934,7 +958,7 @@
       .filters-inner{padding:6px 9px 8px}
       .filters .btn{min-height:33px;padding:7px 9px;font-size:.8rem}
       body.jobs-page .section-title__inner{gap:8px}
-      body.jobs-page .section-title__count{min-height:28px;padding:4px 9px;font-size:.7rem}
+      body.jobs-page .section-title__count{min-height:28px;padding:4px 9px;font-size:.76rem}
       body.jobs-page .job{padding:13px}
       body.jobs-page .job-meta,
       body.jobs-page .job-secondary-actions,
@@ -943,8 +967,8 @@
       body.jobs-page .job-card-footer{align-items:flex-start}
     }
   </style>
-  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/public.harmony.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/public.harmony.css?v=2" />
 </head>
 <body class="public-page jobs-page">
   <!-- Announcement -->
@@ -957,7 +981,7 @@
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">
       <a class="hmj-logo" href="index.html">
-        <img src="images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
+        <img src="images/logo.png" alt="HMJ Global logo" loading="eager" decoding="async" />
       </a>
       <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
         <span></span><span></span><span></span>
@@ -975,7 +999,7 @@
     </nav>
   </header>
 
-  
+  <main>
 
 <!-- ===== Page header ===== -->
   <section class="entry-hero entry-hero--compact entry-hero--jobs entry-hero--align-left">
@@ -1160,6 +1184,8 @@
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite">Link copied!</div>
 
+  </main>
+
   <!-- ===== Footer ===== -->
   <footer>
     <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
@@ -1174,6 +1200,7 @@
     /* ------ Load live jobs from the canonical Netlify Functions endpoint ------ */
     const SHORTLIST_KEY = 'hmj_pinned_jobs_v1';
     const LIVE_JOBS_ENDPOINT = '/.netlify/functions/jobs-list';
+    const JOBS_CANONICAL_BASE = 'https://www.hmj-global.com';
 
     const jobsState = {
       all: [],
@@ -1184,6 +1211,7 @@
       source: '',
       schema: false,
     };
+    const jobsListSchemaTag = document.getElementById('jobsListSchema');
     const jobsContainer = document.getElementById('jobsDynamic');
     const jobsFallbackNotice = document.getElementById('jobsFallbackNotice');
     const dataSourceIndicator = document.getElementById('dataSourceIndicator');
@@ -1480,6 +1508,23 @@
       if (!jobId || job.published === false) return '';
       const params = new URLSearchParams();
       params.set('id', jobId);
+      const rawTitle = (job.title || '').toString().trim();
+      const rawLocation = (job.locationText || '').toString().trim();
+      let slugSource = rawTitle;
+      if (rawLocation) {
+        const normalizedTitle = rawTitle.toLowerCase();
+        const normalizedLocation = rawLocation.toLowerCase();
+        const locationHead = normalizedLocation.split(',')[0].trim();
+        if (
+          normalizedLocation &&
+          !normalizedTitle.includes(normalizedLocation) &&
+          (!locationHead || !normalizedTitle.includes(locationHead))
+        ) {
+          slugSource = `${slugSource} ${rawLocation}`;
+        }
+      }
+      const detailSlug = slugify(slugSource || jobId);
+      if (detailSlug) params.set('slug', detailSlug);
       return `/jobs/spec.html?${params.toString()}`;
     }
 
@@ -2013,6 +2058,22 @@
       </div>`;
     }
 
+    function updateJobsItemListSchema(jobs){
+      if (!jobsListSchemaTag) return;
+      const itemListElement = (Array.isArray(jobs) ? jobs : []).slice(0, 24).map((job, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${JOBS_CANONICAL_BASE}${resolvePublicDetailUrl(job) || '/jobs'}`,
+        name: job.title || 'HMJ Global role',
+      }));
+      jobsListSchemaTag.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'HMJ Global live jobs',
+        itemListElement,
+      });
+    }
+
     function paintJobs(jobs){
       if (!jobsContainer) return;
       jobsContainer.innerHTML = '';
@@ -2121,6 +2182,7 @@
         jobsState.schema = !!schema;
         updateDataSourceIndicator();
         jobsState.all = published.map(normaliseJob);
+        updateJobsItemListSchema(jobsState.all);
         buildDerivedCollections(jobsState.all);
         paintJobs(jobsState.all);
         updateFilterSources();
@@ -2150,6 +2212,7 @@
         }
       } catch (err) {
         console.error('jobs render failed', err);
+        updateJobsItemListSchema([]);
         if (notice) {
           notice.hidden = false;
           notice.dataset.tone = 'error';
@@ -2175,23 +2238,6 @@
 
     showLoadingState();
     bootstrapJobs();
-    /* ---------- Nav ---------- */
-    const burger=document.querySelector('.hmj-burger');
-    const menu=document.getElementById('hmj-menu');
-    const scrim=document.querySelector('.hmj-scrim');
-    const currentSegment=(location.pathname.replace(/\/+$/, '').split('/').pop()||'jobs.html').toLowerCase();
-    const currentNormalized=currentSegment.replace(/^\//,'');
-    menu.querySelectorAll('a[href]').forEach(a=>{
-      const href=(a.getAttribute('href')||'').trim();
-      if(!href || href.includes('://')) return;
-      const target=(href.split('#')[0]||'').replace(/^\//,'').toLowerCase()||'index.html';
-      if(target===currentNormalized) a.setAttribute('aria-current','page');
-    });
-    function openMenu(open){ burger.setAttribute('aria-expanded',String(open)); menu.classList.toggle('open',open); scrim.hidden=!open; document.documentElement.style.overflow=open?'hidden':''; }
-    burger.addEventListener('click',()=>openMenu(burger.getAttribute('aria-expanded')!=='true'));
-    scrim.addEventListener('click',()=>openMenu(false));
-    menu.addEventListener('click',(e)=>{ const link=e.target.closest('a[href]'); if(!link) return; requestAnimationFrame(()=>openMenu(false)); });
-    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') openMenu(false); });
 
     /* ---------- Reveal-on-scroll ---------- */
     bindRevealElements(document);

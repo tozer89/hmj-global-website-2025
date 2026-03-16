@@ -15,6 +15,7 @@ const {
   isMissingTableError,
   isPublicJob,
   isPublishedLiveJob,
+  buildPublicJobSeoSlug,
   buildPublicJobDetailPath,
   PUBLIC_PAGE_DEFAULTS,
   normalisePublicPageConfig,
@@ -182,7 +183,7 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
   assert.deepEqual(job.benefits, ['Accommodation']);
   assert.equal(job.payType, 'hourly_range');
   assert.equal(job.payText, '£28 - £35 per hour');
-  assert.equal(job.publicDetailPath, '/jobs/spec.html?id=role-3');
+  assert.equal(job.publicDetailPath, '/jobs/spec.html?id=role-3&slug=planner');
   assert.deepEqual(job.publicPageConfig, PUBLIC_PAGE_DEFAULTS);
   assert.deepEqual(job.shareSpec, {
     enhanced: true,
@@ -238,8 +239,9 @@ test('public helper exposes stable public detail paths for any published job', (
   assert.equal(isPublicJob({ id: 'role-1', status: 'closed', published: true }), true);
   assert.equal(isPublicJob({ id: 'role-1', status: 'live', published: false }), false);
   assert.equal(isPublishedLiveJob({ id: 'role-1', status: 'interviewing', published: true }), true);
-  assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'live', published: true }), '/jobs/spec.html?id=role-1');
-  assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'closed', published: true }), '/jobs/spec.html?id=role-1');
+  assert.equal(buildPublicJobSeoSlug({ id: 'role-1', title: 'Electrical Supervisor', locationText: 'Frankfurt, Germany', status: 'live', published: true }), 'electrical-supervisor-frankfurt-germany');
+  assert.equal(buildPublicJobDetailPath({ id: 'role-1', title: 'Electrical Supervisor', locationText: 'Frankfurt, Germany', status: 'live', published: true }), '/jobs/spec.html?id=role-1&slug=electrical-supervisor-frankfurt-germany');
+  assert.equal(buildPublicJobDetailPath({ id: 'role-1', title: 'Electrical Supervisor - Frankfurt', locationText: 'Frankfurt, Germany', status: 'closed', published: true }), '/jobs/spec.html?id=role-1&slug=electrical-supervisor-frankfurt');
   assert.equal(buildPublicJobDetailPath({ id: 'role-1', status: 'live', published: false }), '');
 });
 

@@ -2,6 +2,7 @@
 const { getSupabase } = require('./_supabase.js');
 const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError, isPublicJob } = require('./_jobs-helpers.js');
 const { verifyShareAccessToken } = require('./_job-detail-tokens.js');
+const { fetchStoredSeoSuggestion } = require('./_job-seo-optimizer.js');
 
 function parseBody(body) {
   if (!body) return {};
@@ -70,6 +71,13 @@ exports.handler = async (event) => {
     return guard(data);
   }
 
+  async function fetchSeo(jobId) {
+    if (!supabase || !jobId) {
+      return { suggestion: null, missingTable: false };
+    }
+    return fetchStoredSeoSuggestion(supabase, jobId);
+  }
+
   try {
     if (!slug && jobIdParam) {
       const result = await fetchJobById(jobIdParam, { allowRestrictedShare: hasShareAccessToken });
@@ -81,6 +89,7 @@ exports.handler = async (event) => {
       if (!supabase) {
         return respondFallback(result, { publicDetail: !hasShareAccessToken });
       }
+      const seo = await fetchSeo(result.id);
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -88,9 +97,11 @@ exports.handler = async (event) => {
           jobId: result.id,
           title: result.title,
           job: result,
+          seo: seo.suggestion,
           expires_at: null,
           created_at: result.updatedAt || result.createdAt || null,
           publicDetail: !hasShareAccessToken,
+          schema: seo.missingTable || undefined,
         }),
       };
     }
@@ -111,7 +122,7 @@ exports.handler = async (event) => {
         .from('job_specs')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (isSchemaError(error) || isMissingTableError(error, 'job_specs')) {
@@ -155,6 +166,7 @@ exports.handler = async (event) => {
       const expiresAt = expiresColumn;
       const jobId = data.job_id ?? data.job ?? data.jobId ?? (job ? job.id : null);
       const title = data.title ?? job?.title ?? jobId ?? slug;
+      const seo = await fetchSeo(jobId);
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -162,8 +174,10 @@ exports.handler = async (event) => {
           jobId,
           title,
           job,
+          seo: seo.suggestion,
           expires_at: expiresAt,
           created_at: data.created_at,
+          schema: seo.missingTable || undefined,
         }),
       };
     } catch (err) {

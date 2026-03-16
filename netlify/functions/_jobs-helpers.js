@@ -454,11 +454,34 @@ function isPublishedLiveJob(row = {}) {
   return isPublicJob(row);
 }
 
+function buildPublicJobSeoSlug(row = {}) {
+  const job = toJob(row);
+  if (!job.id) return '';
+  const title = asString(job.title);
+  const location = asString(job.locationText);
+  let source = title;
+  if (location) {
+    const normalizedTitle = title.toLowerCase();
+    const normalizedLocation = location.toLowerCase();
+    const locationHead = normalizedLocation.split(',')[0].trim();
+    if (
+      normalizedLocation &&
+      !normalizedTitle.includes(normalizedLocation) &&
+      (!locationHead || !normalizedTitle.includes(locationHead))
+    ) {
+      source = `${source} ${location}`;
+    }
+  }
+  return slugify(source) || slugify(job.id);
+}
+
 function buildPublicJobDetailPath(row = {}) {
   const job = toJob(row);
   if (!job.id || !isPublicJob(job)) return '';
   const params = new URLSearchParams();
   params.set('id', job.id);
+  const slug = buildPublicJobSeoSlug(job);
+  if (slug) params.set('slug', slug);
   return `/jobs/spec.html?${params.toString()}`;
 }
 
@@ -606,5 +629,6 @@ module.exports = {
   normalisePublicPageConfig,
   isPublicJob,
   isPublishedLiveJob,
+  buildPublicJobSeoSlug,
   buildPublicJobDetailPath,
 };

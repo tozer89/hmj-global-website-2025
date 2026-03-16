@@ -1,17 +1,33 @@
 'use strict';
 
 const TEAM_TASKS_SETTINGS_KEY = 'team_tasks_settings';
+const HMJ_EMAIL_BRAND = {
+  eyebrow: 'HMJ Team Tasks',
+  bg: '#f4f6ff',
+  panel: '#ffffff',
+  border: '#d7def3',
+  accent: '#2f4ea2',
+  accentDeep: '#0f1b3f',
+  muted: '#6072a2',
+  badgeBg: '#f7f9ff',
+  badgeBorder: '#d9e1f4',
+};
 
 const DEFAULT_TEAM_TASK_SETTINGS = {
   dueSoonDays: 3,
   collapseDoneByDefault: true,
   reminderRecipientMode: 'assignee_creator_watchers',
+  activityRecipientMode: 'assignee_creator_watchers',
+  activityEmailNotifications: true,
+  mentionEmailNotifications: true,
   defaultPriority: 'medium',
 };
 
 const TASK_STATUSES = ['open', 'in_progress', 'waiting', 'done', 'archived'];
 const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const REMINDER_MODES = ['none', 'due_date_9am', '1_day_before', '2_days_before', 'custom'];
+const RECIPIENT_MODES = ['assignee_creator_watchers', 'assignee_only', 'creator_only', 'watchers_only'];
+const TASK_ACTIVITY_TYPES = ['comment_added', 'attachment_added', 'mention'];
 
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
@@ -62,8 +78,24 @@ function normalizeTaskSettings(value) {
       settings.collapseDoneByDefault,
       DEFAULT_TEAM_TASK_SETTINGS.collapseDoneByDefault
     ),
-    reminderRecipientMode: trimString(settings.reminderRecipientMode, 64)
-      || DEFAULT_TEAM_TASK_SETTINGS.reminderRecipientMode,
+    reminderRecipientMode: normaliseEnum(
+      settings.reminderRecipientMode,
+      RECIPIENT_MODES,
+      DEFAULT_TEAM_TASK_SETTINGS.reminderRecipientMode
+    ),
+    activityRecipientMode: normaliseEnum(
+      settings.activityRecipientMode,
+      RECIPIENT_MODES,
+      DEFAULT_TEAM_TASK_SETTINGS.activityRecipientMode
+    ),
+    activityEmailNotifications: coerceBoolean(
+      settings.activityEmailNotifications,
+      DEFAULT_TEAM_TASK_SETTINGS.activityEmailNotifications
+    ),
+    mentionEmailNotifications: coerceBoolean(
+      settings.mentionEmailNotifications,
+      DEFAULT_TEAM_TASK_SETTINGS.mentionEmailNotifications
+    ),
     defaultPriority: normaliseEnum(
       settings.defaultPriority,
       TASK_PRIORITIES,
@@ -98,8 +130,8 @@ function memberDisplayName(member = {}) {
 }
 
 function coerceMemberRow(row = {}) {
-  const email = lowerEmail(row.email || row.actor_email);
-  const userId = trimString(row.userId || row.user_id || row.id, 120);
+  const email = lowerEmail(row.email || row.actor_email || row.user_email || row.recipient_email || row.mentioned_email);
+  const userId = trimString(row.userId || row.user_id || row.id || row.actor_user_id || row.mentioned_user_id, 120);
   return {
     id: trimString(row.id, 120) || userId || email,
     userId: userId || email,
@@ -115,7 +147,7 @@ function dedupeMembers(rows = []) {
   const seen = new Set();
   rows.forEach((row) => {
     const member = coerceMemberRow(row);
-    const key = member.userId || member.email;
+    const key = member.email || member.userId;
     if (!key || seen.has(key)) return;
     seen.add(key);
     out.push(member);
@@ -125,6 +157,10 @@ function dedupeMembers(rows = []) {
 
 function normalizeReminderMode(value) {
   return normaliseEnum(value, REMINDER_MODES, 'none');
+}
+
+function normalizeRecipientMode(value, fallback = DEFAULT_TEAM_TASK_SETTINGS.reminderRecipientMode) {
+  return normaliseEnum(value, RECIPIENT_MODES, fallback);
 }
 
 function computeReminderSendAt({ dueAt, reminderMode, customAt }) {
@@ -158,8 +194,8 @@ function dedupeReminderRecipients(recipients = []) {
   const out = [];
   const seen = new Set();
   recipients.forEach((row) => {
-    const email = lowerEmail(row.email || row.recipient_email);
-    const userId = trimString(row.userId || row.user_id || row.id, 120);
+    const email = lowerEmail(row.email || row.recipient_email || row.mentioned_email);
+    const userId = trimString(row.userId || row.user_id || row.id || row.mentioned_user_id, 120);
     const key = email || userId;
     if (!key || seen.has(key)) return;
     seen.add(key);
@@ -170,6 +206,46 @@ function dedupeReminderRecipients(recipients = []) {
     });
   });
   return out;
+}
+
+function buildTaskRecipients({ task = {}, watchers = [], mode }) {
+  const recipients = [];
+  const recipientMode = normalizeRecipientMode(mode);
+  const includeAssignee = recipientMode === 'assignee_creator_watchers' || recipientMode === 'assignee_only';
+  const includeCreator = recipientMode === 'assignee_creator_watchers' || recipientMode === 'creator_only';
+  const includeWatchers = recipientMode === 'assignee_creator_watchers' || recipientMode === 'watchers_only';
+
+  if (includeAssignee && (trimString(task.assigned_to, 120) || lowerEmail(task.assigned_to_email))) {
+    recipients.push({
+      userId: trimString(task.assigned_to, 120),
+      email: lowerEmail(task.assigned_to_email),
+      displayName: memberDisplayName({
+        userId: task.assigned_to,
+        email: task.assigned_to_email,
+      }),
+    });
+  }
+  if (includeCreator && (trimString(task.created_by, 120) || lowerEmail(task.created_by_email))) {
+    recipients.push({
+      userId: trimString(task.created_by, 120),
+      email: lowerEmail(task.created_by_email),
+      displayName: memberDisplayName({
+        userId: task.created_by,
+        email: task.created_by_email,
+      }),
+    });
+  }
+  if (includeWatchers) {
+    watchers.forEach((watcher) => {
+      recipients.push({
+        userId: trimString(watcher.user_id || watcher.userId, 120),
+        email: lowerEmail(watcher.user_email || watcher.email),
+        displayName: memberDisplayName(watcher),
+      });
+    });
+  }
+
+  return dedupeReminderRecipients(recipients);
 }
 
 function formatDateTime(value) {
@@ -186,6 +262,57 @@ function formatDateTime(value) {
   }
 }
 
+function formatCountdownParts(ms) {
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  let remaining = Math.max(0, Math.abs(ms));
+  const days = Math.floor(remaining / day);
+  remaining -= days * day;
+  const hours = Math.floor(remaining / hour);
+  remaining -= hours * hour;
+  const minutes = Math.max(0, Math.ceil(remaining / minute));
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${Math.max(1, minutes)}m`;
+}
+
+function describeTaskDueCountdown(value, options = {}) {
+  const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+  const due = new Date(value || '');
+  if (Number.isNaN(due.getTime())) {
+    return {
+      active: false,
+      overdue: false,
+      compact: '',
+      label: 'No due date',
+      shortLabel: '',
+      ms: 0,
+    };
+  }
+
+  const diff = due.getTime() - now.getTime();
+  const overdue = diff < 0;
+  const compact = formatCountdownParts(diff);
+  return {
+    active: true,
+    overdue,
+    compact,
+    label: overdue ? `Overdue by ${compact}` : `Due in ${compact}`,
+    shortLabel: overdue ? `${compact} overdue` : `${compact} left`,
+    ms: diff,
+  };
+}
+
+function formatFileSize(bytes) {
+  const size = Number(bytes);
+  if (!Number.isFinite(size) || size <= 0) return 'Unknown size';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+}
+
 function escapeHtml(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -195,66 +322,185 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function buildReminderEmail({ task = {}, recipient = {}, siteUrl = '' } = {}) {
-  const taskTitle = trimString(task.title, 180) || 'HMJ task';
-  const status = normaliseEnum(task.status, TASK_STATUSES, 'open').replace(/_/g, ' ');
-  const priority = normaliseEnum(task.priority, TASK_PRIORITIES, 'medium');
-  const assignee = trimString(task.assigned_to_email || task.assignedToEmail || task.assigned_to || '');
-  const dueAt = formatDateTime(task.due_at || task.dueAt);
-  const preview = trimString(task.description, 500)
-    || 'Open HMJ Admin to review the latest notes, comments, and owner updates.';
-  const taskPath = trimString(task.taskPath || '', 500);
-  const taskUrl = taskPath && siteUrl
-    ? `${String(siteUrl).replace(/\/$/, '')}${taskPath.startsWith('/') ? taskPath : `/${taskPath}`}`
+function buildTaskUrl(task = {}, siteUrl = '') {
+  const taskId = trimString(task.id, 120);
+  const safeSiteUrl = trimString(siteUrl, 500).replace(/\/$/, '');
+  const taskPath = trimString(task.taskPath, 500);
+  if (!safeSiteUrl) return '';
+  if (taskPath) {
+    return `${safeSiteUrl}${taskPath.startsWith('/') ? taskPath : `/${taskPath}`}`;
+  }
+  if (!taskId) return '';
+  return `${safeSiteUrl}/admin/team-tasks.html?task=${encodeURIComponent(taskId)}`;
+}
+
+function buildEmailShell({
+  eyebrow,
+  heading,
+  intro,
+  summaryRows = [],
+  bodyHtml = '',
+  bodyText = '',
+  ctaLabel = 'Open task in HMJ Admin',
+  ctaUrl = '',
+}) {
+  const summaryHtml = summaryRows.length
+    ? [
+      '<div style="display:grid;gap:10px;margin:0 0 20px;padding:18px;border-radius:18px;background:#f7f9ff;border:1px solid #d9e1f4">',
+      ...summaryRows.map((row) => `<div><strong>${escapeHtml(row.label)}:</strong> ${escapeHtml(row.value)}</div>`),
+      '</div>',
+    ].join('')
     : '';
-  const greeting = trimString(recipient.displayName || recipient.email, 160) || 'HMJ team';
-  const subject = `[HMJ Team Tasks] ${taskTitle}`;
-  const text = [
-    `Hello ${greeting},`,
-    '',
-    `Task: ${taskTitle}`,
-    `Status: ${status}`,
-    `Priority: ${priority}`,
-    `Due: ${dueAt}`,
-    assignee ? `Assigned to: ${assignee}` : '',
-    '',
-    preview,
-    '',
-    taskUrl ? `Open in HMJ Admin: ${taskUrl}` : '',
-  ].filter(Boolean).join('\n');
+
   const html = [
-    '<div style="font-family:Inter,Segoe UI,Arial,sans-serif;background:#f4f6ff;padding:24px;color:#13203f">',
-    '<div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #d7def3;border-radius:20px;padding:28px;box-shadow:0 18px 38px rgba(15,27,63,.10)">',
-    '<p style="margin:0 0 12px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#2f4ea2;font-weight:800">HMJ Team Tasks</p>',
-    `<h1 style="margin:0 0 12px;font-size:28px;line-height:1.1;color:#0f1b3f">${escapeHtml(taskTitle)}</h1>`,
-    `<p style="margin:0 0 20px;color:#6072a2">Hello ${escapeHtml(greeting)}, here is a reminder for one of your HMJ team tasks.</p>`,
-    '<div style="display:grid;gap:10px;margin:0 0 20px;padding:18px;border-radius:18px;background:#f7f9ff;border:1px solid #d9e1f4">',
-    `<div><strong>Status:</strong> ${escapeHtml(status)}</div>`,
-    `<div><strong>Priority:</strong> ${escapeHtml(priority)}</div>`,
-    `<div><strong>Due:</strong> ${escapeHtml(dueAt)}</div>`,
-    assignee ? `<div><strong>Assigned to:</strong> ${escapeHtml(assignee)}</div>` : '',
-    '</div>',
-    `<p style="margin:0 0 18px;color:#0f1b3f;line-height:1.6">${escapeHtml(preview)}</p>`,
-    taskUrl
-      ? `<p style="margin:0"><a href="${escapeHtml(taskUrl)}" style="display:inline-block;padding:12px 16px;border-radius:12px;background:#2f4ea2;color:#ffffff;text-decoration:none;font-weight:700">Open task in HMJ Admin</a></p>`
+    `<div style="font-family:Inter,Segoe UI,Arial,sans-serif;background:${HMJ_EMAIL_BRAND.bg};padding:24px;color:${HMJ_EMAIL_BRAND.accentDeep}">`,
+    `<div style="max-width:640px;margin:0 auto;background:${HMJ_EMAIL_BRAND.panel};border:1px solid ${HMJ_EMAIL_BRAND.border};border-radius:20px;padding:28px;box-shadow:0 18px 38px rgba(15,27,63,.10)">`,
+    `<p style="margin:0 0 12px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:${HMJ_EMAIL_BRAND.accent};font-weight:800">${escapeHtml(eyebrow || HMJ_EMAIL_BRAND.eyebrow)}</p>`,
+    `<h1 style="margin:0 0 12px;font-size:28px;line-height:1.1;color:${HMJ_EMAIL_BRAND.accentDeep}">${escapeHtml(heading)}</h1>`,
+    `<p style="margin:0 0 20px;color:${HMJ_EMAIL_BRAND.muted};line-height:1.6">${escapeHtml(intro)}</p>`,
+    summaryHtml,
+    bodyHtml,
+    ctaUrl
+      ? `<p style="margin:22px 0 0"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:12px 16px;border-radius:12px;background:${HMJ_EMAIL_BRAND.accent};color:#ffffff;text-decoration:none;font-weight:700">${escapeHtml(ctaLabel)}</a></p>`
       : '',
     '</div>',
     '</div>',
   ].filter(Boolean).join('');
-  return { subject, text, html };
+
+  const text = [
+    eyebrow || HMJ_EMAIL_BRAND.eyebrow,
+    heading,
+    '',
+    intro,
+    '',
+    ...summaryRows.map((row) => `${row.label}: ${row.value}`),
+    summaryRows.length ? '' : null,
+    bodyText,
+    '',
+    ctaUrl ? `${ctaLabel}: ${ctaUrl}` : '',
+  ].filter((value) => value != null && value !== '').join('\n');
+
+  return { html, text };
+}
+
+function taskSummaryRows(task = {}) {
+  const countdown = describeTaskDueCountdown(task.due_at || task.dueAt);
+  const assignee = trimString(task.assigned_to_email || task.assignedToEmail || task.assigned_to || task.assignedTo, 160);
+  return [
+    { label: 'Status', value: normaliseEnum(task.status, TASK_STATUSES, 'open').replace(/_/g, ' ') },
+    { label: 'Priority', value: normaliseEnum(task.priority, TASK_PRIORITIES, 'medium') },
+    { label: 'Due', value: formatDateTime(task.due_at || task.dueAt) },
+    ...(countdown.active ? [{ label: 'Countdown', value: countdown.label }] : []),
+    ...(assignee ? [{ label: 'Assigned to', value: assignee }] : []),
+  ];
+}
+
+function buildReminderEmail({ task = {}, recipient = {}, siteUrl = '' } = {}) {
+  const taskTitle = trimString(task.title, 180) || 'HMJ task';
+  const preview = trimString(task.description, 500)
+    || 'Open HMJ Admin to review the latest notes, comments, and owner updates.';
+  const greeting = trimString(recipient.displayName || recipient.email, 160) || 'HMJ team';
+  const subject = `[HMJ Team Tasks] Reminder: ${taskTitle}`;
+  const taskUrl = buildTaskUrl(task, siteUrl);
+  const shell = buildEmailShell({
+    eyebrow: HMJ_EMAIL_BRAND.eyebrow,
+    heading: taskTitle,
+    intro: `Hello ${greeting}, this is a reminder for one of your HMJ team tasks.`,
+    summaryRows: taskSummaryRows(task),
+    bodyHtml: `<p style="margin:0;color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6">${escapeHtml(preview)}</p>`,
+    bodyText: preview,
+    ctaLabel: 'Open task in HMJ Admin',
+    ctaUrl: taskUrl,
+  });
+
+  return {
+    subject,
+    text: shell.text,
+    html: shell.html,
+  };
+}
+
+function buildTaskActivityEmail({
+  eventType,
+  task = {},
+  recipient = {},
+  actor = {},
+  comment = {},
+  attachment = {},
+  siteUrl = '',
+} = {}) {
+  const type = normaliseEnum(eventType, TASK_ACTIVITY_TYPES, 'comment_added');
+  const taskTitle = trimString(task.title, 180) || 'HMJ task';
+  const actorName = trimString(actor.displayName || actor.email, 160) || 'An HMJ admin';
+  const greeting = trimString(recipient.displayName || recipient.email, 160) || 'HMJ team';
+  const taskUrl = buildTaskUrl(task, siteUrl);
+  const commentPreview = trimString(comment.comment_body || comment.commentBody, 600)
+    || 'Open HMJ Admin to read the latest comment.';
+  const attachmentName = trimString(attachment.file_name || attachment.original_filename || attachment.name, 220) || 'Task file';
+  const attachmentSize = formatFileSize(attachment.file_size_bytes || attachment.fileSizeBytes);
+
+  let subject = `[HMJ Team Tasks] Update on ${taskTitle}`;
+  let intro = `Hello ${greeting}, there is a new update on one of your HMJ team tasks.`;
+  let bodyHtml = '';
+  let bodyText = '';
+  let ctaLabel = 'Open task in HMJ Admin';
+
+  if (type === 'mention') {
+    subject = `[HMJ Team Tasks] You were tagged in ${taskTitle}`;
+    intro = `Hello ${greeting}, ${actorName} tagged you in a Team Tasks comment.`;
+    bodyHtml = `<p style="margin:0;color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6">${escapeHtml(commentPreview)}</p>`;
+    bodyText = commentPreview;
+  } else if (type === 'attachment_added') {
+    subject = `[HMJ Team Tasks] New file on ${taskTitle}`;
+    intro = `Hello ${greeting}, ${actorName} added a file to this task.`;
+    bodyHtml = [
+      `<p style="margin:0 0 12px;color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6">A new attachment was added to this task.</p>`,
+      `<p style="margin:0;color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6"><strong>File:</strong> ${escapeHtml(attachmentName)}${attachmentSize ? ` (${escapeHtml(attachmentSize)})` : ''}</p>`,
+    ].join('');
+    bodyText = `A new attachment was added.\nFile: ${attachmentName}${attachmentSize ? ` (${attachmentSize})` : ''}`;
+    ctaLabel = 'Open task files';
+  } else {
+    subject = `[HMJ Team Tasks] New comment on ${taskTitle}`;
+    intro = `Hello ${greeting}, ${actorName} added a comment to this task.`;
+    bodyHtml = `<p style="margin:0;color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6">${escapeHtml(commentPreview)}</p>`;
+    bodyText = commentPreview;
+  }
+
+  const shell = buildEmailShell({
+    eyebrow: HMJ_EMAIL_BRAND.eyebrow,
+    heading: taskTitle,
+    intro,
+    summaryRows: taskSummaryRows(task),
+    bodyHtml,
+    bodyText,
+    ctaLabel,
+    ctaUrl: taskUrl,
+  });
+
+  return {
+    subject,
+    text: shell.text,
+    html: shell.html,
+  };
 }
 
 module.exports = {
   TEAM_TASKS_SETTINGS_KEY,
   DEFAULT_TEAM_TASK_SETTINGS,
+  TASK_ACTIVITY_TYPES,
   normalizeTaskSettings,
   normalizeReminderMode,
+  normalizeRecipientMode,
   computeReminderSendAt,
   dedupeReminderRecipients,
   dedupeMembers,
   coerceMemberRow,
   memberDisplayName,
+  buildTaskRecipients,
+  describeTaskDueCountdown,
+  formatFileSize,
   buildReminderEmail,
+  buildTaskActivityEmail,
   trimString,
   lowerEmail,
   toIsoTimestamp,

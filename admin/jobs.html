@@ -9,8 +9,8 @@
   <script src="/admin/__env.js"></script>
   <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="../js/identity-loader.js"></script>
-  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="../js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
 
   <style>
     :root{
@@ -170,6 +170,24 @@
     .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--ink);font-weight:600;font-size:14px}
     .field textarea{min-height:110px;resize:vertical}
     .field-note{margin:0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5;text-transform:none;letter-spacing:0}
+    .smart-field{position:relative}
+    .smart-field__control{display:flex;align-items:stretch;gap:8px}
+    .smart-field__control input,.smart-field__control select{flex:1}
+    .smart-field__toggle{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:0 12px;border-radius:12px;border:1px solid rgba(47,78,162,.18);background:#f7f9ff;color:var(--highlight);font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .smart-field__toggle:hover{transform:translateY(-1px);box-shadow:0 12px 22px rgba(47,78,162,.14);border-color:rgba(47,78,162,.38)}
+    .smart-field__actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .smart-link{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;color:var(--highlight);font:inherit;font-size:12px;font-weight:800;letter-spacing:.02em;cursor:pointer}
+    .smart-link:hover{text-decoration:underline}
+    .smart-field__menu{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:12;display:grid;gap:4px;padding:10px;border-radius:16px;border:1px solid rgba(47,78,162,.18);background:rgba(255,255,255,.98);box-shadow:0 20px 42px rgba(15,27,63,.16);backdrop-filter:blur(16px);max-height:260px;overflow:auto}
+    .smart-field__menu[hidden]{display:none !important}
+    .smart-field__menu-label{padding:2px 4px 6px;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+    .smart-field__option{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:12px;border:1px solid transparent;background:#fff;color:var(--ink);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+    .smart-field__option:hover,.smart-field__option:focus-visible{border-color:rgba(47,78,162,.28);background:#f5f8ff;outline:none}
+    .smart-field__option small{display:block;margin-top:3px;color:var(--muted);font-size:11px;font-weight:700;line-height:1.4}
+    .smart-field__option--create{background:rgba(47,78,162,.06);color:var(--highlight)}
+    .smart-field__empty{padding:8px 10px;color:var(--muted);font-size:12px;font-weight:700;line-height:1.5}
+    .smart-field__custom{display:grid;gap:8px}
+    .smart-field__custom.is-hidden{display:none}
     .switch{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--highlight)}
     .switch input{width:18px;height:18px}
     .tag-editor{display:flex;flex-wrap:wrap;gap:8px;background:#f4f6ff;border:1px solid rgba(47,78,162,.18);border-radius:12px;padding:10px}
@@ -191,6 +209,18 @@
     .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
     .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
     .share-box .share-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .seo-assist{display:grid;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(47,78,162,.18);background:#f8faff}
+    .seo-assist__head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start}
+    .seo-assist__copy{display:grid;gap:5px}
+    .seo-assist__copy strong{font-size:14px;color:var(--ink)}
+    .seo-assist__copy p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+    .seo-assist__actions{display:flex;flex-wrap:wrap;gap:8px}
+    .seo-assist__status{display:flex;flex-wrap:wrap;gap:8px}
+    .seo-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.04em}
+    .seo-badge[data-tone="ok"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.24);color:var(--ok)}
+    .seo-badge[data-tone="warn"]{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.32);color:#8a5a00}
+    .seo-badge[data-tone="error"]{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.28);color:var(--danger)}
+    .seo-note{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
     .board.busy{opacity:.7;pointer-events:none;transition:opacity .18s ease}
     .drawer[data-busy="true"] .drawer-foot,
     .drawer[data-busy="true"] .drawer-head{opacity:.92}
@@ -450,6 +480,7 @@
         <button class="editor-jump" type="button" data-editor-jump="placement">Location &amp; client</button>
         <button class="editor-jump" type="button" data-editor-jump="pay">Pay</button>
         <button class="editor-jump" type="button" data-editor-jump="content">Content</button>
+        <button class="editor-jump" type="button" data-editor-jump="seo">SEO</button>
         <button class="editor-jump" type="button" data-editor-jump="visibility">Visibility</button>
         <button class="editor-jump" type="button" data-editor-jump="sharing">Sharing</button>
       </div>
@@ -467,9 +498,50 @@
               <div class="field"><label for="edId">Job slug / ID</label><input id="edId" placeholder="auto"/></div>
               <div class="field field--wide"><label for="edTitle">Title</label><input id="edTitle" required/></div>
               <div class="field"><label for="edStatus">Status</label><select id="edStatus"><option value="live">Live</option><option value="interviewing">Interviewing</option><option value="closed">Closed</option></select></div>
-              <div class="field"><label for="edSection">Category heading</label><input id="edSection" list="sectionOptions" placeholder="e.g. Data Centre Delivery"/></div>
-              <div class="field"><label for="edDiscipline">Discipline</label><input id="edDiscipline"/></div>
-              <div class="field"><label for="edType">Employment type</label><select id="edType"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="fixed-term">Fixed term</option></select></div>
+              <div class="field smart-field" data-smart-field="section">
+                <label for="edSection">Category heading</label>
+                <div class="smart-field__control">
+                  <input id="edSection" list="sectionOptions" placeholder="e.g. Data Centre Delivery" autocomplete="off"/>
+                  <button class="smart-field__toggle" type="button" data-smart-toggle="section" aria-label="Show saved category suggestions">▾</button>
+                </div>
+                <div class="smart-field__menu" id="smartMenuSection" hidden></div>
+                <div class="smart-field__actions">
+                  <button class="smart-link" type="button" data-smart-clear="section">+ Enter new category</button>
+                  <span class="field-note">Suggestions come from live jobs already in the board.</span>
+                </div>
+              </div>
+              <div class="field smart-field" data-smart-field="discipline">
+                <label for="edDiscipline">Discipline</label>
+                <div class="smart-field__control">
+                  <input id="edDiscipline" list="disciplineOptions" autocomplete="off"/>
+                  <button class="smart-field__toggle" type="button" data-smart-toggle="discipline" aria-label="Show saved discipline suggestions">▾</button>
+                </div>
+                <div class="smart-field__menu" id="smartMenuDiscipline" hidden></div>
+                <div class="smart-field__actions">
+                  <button class="smart-link" type="button" data-smart-clear="discipline">+ Enter new discipline</button>
+                  <span class="field-note">Pick an existing discipline or enter a new one.</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="edType">Employment type</label>
+                <div class="smart-field__custom">
+                  <div class="smart-field__control">
+                    <select id="edType"><option value="permanent">Permanent</option><option value="contract">Contract</option><option value="fixed-term">Fixed term</option></select>
+                    <button class="smart-field__toggle" id="btnTypeCustomToggle" type="button" aria-expanded="false">+</button>
+                  </div>
+                  <div class="smart-field__custom is-hidden" id="edTypeCustomWrap">
+                    <input id="edTypeCustom" list="typeOptions" placeholder="e.g. freelance" autocomplete="off"/>
+                    <div class="smart-field__actions">
+                      <button class="smart-link" id="btnTypeUseStandard" type="button">Use standard type instead</button>
+                      <span class="field-note">Custom types save as entered and remain fully editable later.</span>
+                    </div>
+                  </div>
+                  <div class="smart-field__actions">
+                    <button class="smart-link" id="btnTypeEnterNew" type="button">+ Enter new employment type</button>
+                    <span class="field-note">Keep the standard values where possible for cleaner filtering.</span>
+                  </div>
+                </div>
+              </div>
               <div class="field"><label for="edSortOrder">Sort weight</label><input id="edSortOrder" type="number" step="1" min="0"/></div>
             </div>
           </div>
@@ -485,9 +557,16 @@
           </summary>
           <div class="editor-section__body">
             <div class="grid">
-              <div class="field">
+              <div class="field smart-field" data-smart-field="customer">
                 <label for="edCustomer">Customer</label>
-                <input id="edCustomer" placeholder="Shown publicly if populated"/>
+                <div class="smart-field__control">
+                  <input id="edCustomer" list="customerOptions" placeholder="Shown publicly if populated" autocomplete="off"/>
+                  <button class="smart-field__toggle" type="button" data-smart-toggle="customer" aria-label="Show saved customer suggestions">▾</button>
+                </div>
+                <div class="smart-field__menu" id="smartMenuCustomer" hidden></div>
+                <div class="smart-field__actions">
+                  <button class="smart-link" type="button" data-smart-clear="customer">+ Enter new customer label</button>
+                </div>
                 <p class="field-note">Public. This appears on the jobs page and shared spec if entered.</p>
               </div>
               <div class="field">
@@ -495,8 +574,28 @@
                 <input id="edClientName" placeholder="Internal client reference"/>
                 <p class="field-note">Internal only. Never shown on public job cards or share/spec pages.</p>
               </div>
-              <div class="field"><label for="edLocationText">Location (display)</label><input id="edLocationText"/></div>
-              <div class="field"><label for="edLocationCode">Location code</label><input id="edLocationCode" placeholder="slug for filters"/></div>
+              <div class="field smart-field" data-smart-field="locationText">
+                <label for="edLocationText">Location (display)</label>
+                <div class="smart-field__control">
+                  <input id="edLocationText" list="locationTextOptions" autocomplete="off"/>
+                  <button class="smart-field__toggle" type="button" data-smart-toggle="locationText" aria-label="Show saved display locations">▾</button>
+                </div>
+                <div class="smart-field__menu" id="smartMenuLocationText" hidden></div>
+                <div class="smart-field__actions">
+                  <button class="smart-link" type="button" data-smart-clear="locationText">+ Enter new display location</button>
+                </div>
+              </div>
+              <div class="field smart-field" data-smart-field="locationCode">
+                <label for="edLocationCode">Location code</label>
+                <div class="smart-field__control">
+                  <input id="edLocationCode" list="locationCodeOptions" placeholder="slug for filters" autocomplete="off"/>
+                  <button class="smart-field__toggle" type="button" data-smart-toggle="locationCode" aria-label="Show saved location codes">▾</button>
+                </div>
+                <div class="smart-field__menu" id="smartMenuLocationCode" hidden></div>
+                <div class="smart-field__actions">
+                  <button class="smart-link" type="button" data-smart-clear="locationCode">+ Enter new location code</button>
+                </div>
+              </div>
               <div class="field field--wide"><label for="edApply">Apply URL</label><input id="edApply" placeholder="Defaults to contact form"/></div>
             </div>
           </div>
@@ -526,9 +625,16 @@
             </div>
 
             <div class="grid" id="payFieldGrid">
-              <div class="field pay-field is-hidden" data-pay-types="day_rate salary_range hourly_range">
+              <div class="field pay-field is-hidden smart-field" data-pay-types="day_rate salary_range hourly_range" data-smart-field="currency">
                 <label for="edCurrency">Currency code</label>
-                <input id="edCurrency" placeholder="GBP"/>
+                <div class="smart-field__control">
+                  <input id="edCurrency" list="currencyOptions" placeholder="GBP" autocomplete="off"/>
+                  <button class="smart-field__toggle" type="button" data-smart-toggle="currency" aria-label="Show saved currency codes">▾</button>
+                </div>
+                <div class="smart-field__menu" id="smartMenuCurrency" hidden></div>
+                <div class="smart-field__actions">
+                  <button class="smart-link" type="button" data-smart-clear="currency">+ Enter new currency code</button>
+                </div>
                 <p class="field-note">Optional. Defaults to GBP when a pay range is shown.</p>
               </div>
               <div class="field pay-field is-hidden" data-pay-types="day_rate">
@@ -570,12 +676,13 @@
           <div class="editor-section__body">
             <div class="field">
               <label>Tags</label>
-              <div class="tag-editor" id="tagEditor"><input id="tagInput" placeholder="Type tag and press Enter"/></div>
+              <div class="tag-editor" id="tagEditor"><input id="tagInput" list="tagSuggestions" placeholder="Type tag and press Enter"/></div>
+              <p class="field-note">Suggestions come from existing jobs. Press Enter to add a suggested or brand new tag.</p>
             </div>
 
             <div class="field">
               <label>Benefits</label>
-              <div class="tag-editor" id="benefitsEditor"><input id="benefitInput" placeholder="Type benefit and press Enter"/></div>
+              <div class="tag-editor" id="benefitsEditor"><input id="benefitInput" list="benefitSuggestions" placeholder="Type benefit and press Enter"/></div>
               <p class="field-note">Public. Benefits are shown on public job cards and the shared job spec when present.</p>
             </div>
 
@@ -584,6 +691,46 @@
             <div class="grid">
               <div class="field"><label for="edResponsibilities">Responsibilities (one per line)</label><textarea id="edResponsibilities"></textarea></div>
               <div class="field"><label for="edRequirements">Requirements (one per line)</label><textarea id="edRequirements"></textarea></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-section" data-editor-section="seo">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>SEO assistant</strong>
+              <small>Search-ready suggestions for titles, descriptions, and public job copy.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummarySeo">Save a live job to generate an SEO draft</span>
+          </summary>
+          <div class="editor-section__body">
+            <section class="seo-assist">
+              <div class="seo-assist__head">
+                <div class="seo-assist__copy">
+                  <strong>GPT-assisted job SEO</strong>
+                  <p>Suggestions stay separate from the live job record. Use them for metadata automatically, and apply the copy suggestions only if they improve clarity.</p>
+                </div>
+                <div class="seo-assist__actions">
+                  <button class="btn ghost small" type="button" id="btnSeoRefresh" data-readonly="soft">Refresh SEO draft</button>
+                  <button class="btn ghost small" type="button" id="btnSeoApply" data-readonly="soft">Apply suggested copy</button>
+                </div>
+              </div>
+              <div class="seo-assist__status">
+                <span class="seo-badge" id="seoStatusBadge" data-tone="neutral">No draft yet</span>
+                <span class="seo-badge" id="seoStorageBadge" data-tone="neutral">Not stored</span>
+              </div>
+              <p class="seo-note" id="seoStatusNote">Save a live job first, then refresh the SEO draft. If GPT is unavailable, the editor falls back to a local suggestion so the workflow still continues.</p>
+            </section>
+            <div class="grid">
+              <div class="field field--wide"><label for="seoOptimizedTitle">Suggested search title</label><textarea id="seoOptimizedTitle" readonly></textarea></div>
+              <div class="field"><label for="seoMetaTitle">Meta title</label><input id="seoMetaTitle" readonly/></div>
+              <div class="field"><label for="seoSlugHint">Slug hint</label><input id="seoSlugHint" readonly/></div>
+              <div class="field field--wide"><label for="seoMetaDescription">Meta description</label><textarea id="seoMetaDescription" readonly></textarea></div>
+              <div class="field"><label for="seoSectorFocus">Sector focus</label><input id="seoSectorFocus" readonly/></div>
+              <div class="field"><label for="seoSchemaReadiness">Schema readiness</label><input id="seoSchemaReadiness" readonly/></div>
+              <div class="field field--wide"><label for="seoOverviewSuggestion">Suggested overview</label><textarea id="seoOverviewSuggestion" readonly></textarea></div>
+              <div class="field"><label for="seoResponsibilitiesSuggestion">Suggested responsibilities</label><textarea id="seoResponsibilitiesSuggestion" readonly></textarea></div>
+              <div class="field"><label for="seoRequirementsSuggestion">Suggested requirements</label><textarea id="seoRequirementsSuggestion" readonly></textarea></div>
             </div>
           </div>
         </details>
@@ -698,6 +845,14 @@
   </aside>
 
   <datalist id="sectionOptions"></datalist>
+  <datalist id="disciplineOptions"></datalist>
+  <datalist id="typeOptions"></datalist>
+  <datalist id="customerOptions"></datalist>
+  <datalist id="locationTextOptions"></datalist>
+  <datalist id="locationCodeOptions"></datalist>
+  <datalist id="currencyOptions"></datalist>
+  <datalist id="tagSuggestions"></datalist>
+  <datalist id="benefitSuggestions"></datalist>
   <div class="modal-shell" id="batchModalShell" hidden inert aria-hidden="true" data-open="false">
     <div class="modal-backdrop" data-batch-close></div>
     <section class="modal-panel" id="batchModal" role="dialog" aria-modal="true" aria-labelledby="batchModalTitle" aria-describedby="batchSelectedSummary" tabindex="-1">
@@ -1047,6 +1202,25 @@
 
   <script>
   (function startJobs(){
+    let startupSettled = false;
+
+    function revealStartupFallback(message) {
+      if (startupSettled) return;
+      const gate = document.getElementById('gate');
+      const app = document.getElementById('app');
+      const why = gate ? gate.querySelector('.why') : null;
+      const loginButton = gate ? gate.querySelector('[data-admin-login-primary], button[data-admin-login], button') : null;
+      if (app) app.style.display = 'none';
+      if (gate) gate.style.display = '';
+      if (why) {
+        why.textContent = message || 'HMJ admin did not finish loading cleanly. Refresh and try again, or sign in again on this host.';
+      }
+      if (loginButton) {
+        loginButton.type = 'button';
+        loginButton.textContent = 'Go to admin sign-in';
+      }
+    }
+
     function applyClosedBatchUiDomState() {
       const shells = [
         document.getElementById('batchModalShell'),
@@ -1124,10 +1298,25 @@
         selectedIds: new Set(),
         sectionOrder: [],
         tags: [],
+        suggestions: {
+          section: [],
+          discipline: [],
+          type: [],
+          customer: [],
+          locationText: [],
+          locationCode: [],
+          currency: [],
+          tags: [],
+          benefits: [],
+        },
         dragging: null,
         editing: null,
         editingTags: [],
         editingBenefits: [],
+        seoDraft: null,
+        seoDrafts: new Map(),
+        seoLoading: false,
+        seoRequestSeq: 0,
         shareLink: null,
         diagnostics: false,
         readOnly: false,
@@ -1182,6 +1371,14 @@
       const newSectionInput = sel('#newSectionInput');
       const addSectionBtn = addSectionForm?.querySelector('button[type="submit"]') || null;
       const sectionOptions = sel('#sectionOptions');
+      const disciplineOptions = sel('#disciplineOptions');
+      const typeOptions = sel('#typeOptions');
+      const customerOptions = sel('#customerOptions');
+      const locationTextOptions = sel('#locationTextOptions');
+      const locationCodeOptions = sel('#locationCodeOptions');
+      const currencyOptions = sel('#currencyOptions');
+      const tagSuggestions = sel('#tagSuggestions');
+      const benefitSuggestions = sel('#benefitSuggestions');
       const drawer = sel('#drawer');
       const drawerTitle = sel('#drawerTitle');
       const drawerMeta = sel('#drawerMeta');
@@ -1192,12 +1389,38 @@
       const shareUrl = sel('#shareUrl');
       const shareDescription = sel('#shareDescription');
       const shareAiPolish = sel('#shareAiPolish');
+      const btnSeoRefresh = sel('#btnSeoRefresh');
+      const btnSeoApply = sel('#btnSeoApply');
+      const seoStatusBadge = sel('#seoStatusBadge');
+      const seoStorageBadge = sel('#seoStorageBadge');
+      const seoStatusNote = sel('#seoStatusNote');
+      const seoOptimizedTitle = sel('#seoOptimizedTitle');
+      const seoMetaTitle = sel('#seoMetaTitle');
+      const seoSlugHint = sel('#seoSlugHint');
+      const seoMetaDescription = sel('#seoMetaDescription');
+      const seoSectorFocus = sel('#seoSectorFocus');
+      const seoSchemaReadiness = sel('#seoSchemaReadiness');
+      const seoOverviewSuggestion = sel('#seoOverviewSuggestion');
+      const seoResponsibilitiesSuggestion = sel('#seoResponsibilitiesSuggestion');
+      const seoRequirementsSuggestion = sel('#seoRequirementsSuggestion');
       const btnRefreshShare = sel('#btnRefreshShare');
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
       const benefitsEditor = sel('#benefitsEditor');
       const benefitInput = sel('#benefitInput');
+      const btnTypeCustomToggle = sel('#btnTypeCustomToggle');
+      const btnTypeEnterNew = sel('#btnTypeEnterNew');
+      const btnTypeUseStandard = sel('#btnTypeUseStandard');
+      const typeCustomWrap = sel('#edTypeCustomWrap');
       const payFields = Array.from(document.querySelectorAll('.pay-field'));
+      const smartMenuSection = sel('#smartMenuSection');
+      const smartMenuDiscipline = sel('#smartMenuDiscipline');
+      const smartMenuCustomer = sel('#smartMenuCustomer');
+      const smartMenuLocationText = sel('#smartMenuLocationText');
+      const smartMenuLocationCode = sel('#smartMenuLocationCode');
+      const smartMenuCurrency = sel('#smartMenuCurrency');
+      const smartFieldToggleButtons = Array.from(document.querySelectorAll('[data-smart-toggle]'));
+      const smartFieldClearButtons = Array.from(document.querySelectorAll('[data-smart-clear]'));
       const readOnlyNotice = sel('#readOnlyNotice');
       const readOnlyTitle = sel('#readOnlyTitle');
       const readOnlyBody = sel('#readOnlyBody');
@@ -1250,6 +1473,7 @@
         placement: sel('#editorSummaryPlacement'),
         pay: sel('#editorSummaryPay'),
         content: sel('#editorSummaryContent'),
+        seo: sel('#editorSummarySeo'),
         visibility: sel('#editorSummaryVisibility'),
         sharing: sel('#editorSummarySharing'),
       };
@@ -1374,6 +1598,242 @@
           .trim();
       }
 
+      function cleanSuggestionValue(value, options = {}) {
+        const collapseWhitespace = options.collapseWhitespace !== false;
+        let next = String(value || '');
+        if (collapseWhitespace) next = next.replace(/\s+/g, ' ');
+        next = next.trim();
+        if (options.uppercase) next = next.toUpperCase();
+        if (options.lowercase) next = next.toLowerCase();
+        return next;
+      }
+
+      function isIgnoredSuggestionValue(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        return !normalized || ['n/a', 'na', 'null', 'undefined', 'none'].includes(normalized);
+      }
+
+      function collectSuggestionValues(values, options = {}) {
+        const map = new Map();
+        values.forEach((value) => {
+          const cleaned = cleanSuggestionValue(value, options);
+          if (isIgnoredSuggestionValue(cleaned)) return;
+          const key = cleaned.toLowerCase();
+          if (!map.has(key)) map.set(key, cleaned);
+        });
+        return Array.from(map.values()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      }
+
+      function findSuggestionValue(values, value) {
+        const cleaned = cleanSuggestionValue(value);
+        if (!cleaned) return '';
+        const matched = (Array.isArray(values) ? values : []).find((item) => String(item || '').trim().toLowerCase() === cleaned.toLowerCase());
+        return matched || cleaned;
+      }
+
+      function normalizeEmploymentTypeValue(value) {
+        return cleanSuggestionValue(value, { lowercase: true });
+      }
+
+      function getEmploymentTypeValue() {
+        const custom = normalizeEmploymentTypeValue(form.typeCustom?.value || '');
+        return custom || normalizeEmploymentTypeValue(form.type?.value || '') || 'permanent';
+      }
+
+      function setEmploymentTypeMode(mode, value = '') {
+        const isCustom = mode === 'custom';
+        if (typeCustomWrap) {
+          typeCustomWrap.classList.toggle('is-hidden', !isCustom);
+        }
+        if (btnTypeCustomToggle) {
+          btnTypeCustomToggle.textContent = isCustom ? '−' : '+';
+          btnTypeCustomToggle.setAttribute('aria-expanded', isCustom ? 'true' : 'false');
+          btnTypeCustomToggle.setAttribute('aria-label', isCustom ? 'Hide custom employment type' : 'Enter custom employment type');
+        }
+        if (btnTypeEnterNew) {
+          btnTypeEnterNew.style.display = isCustom ? 'none' : '';
+        }
+        if (btnTypeUseStandard) {
+          btnTypeUseStandard.style.display = isCustom ? '' : 'none';
+        }
+        if (isCustom) {
+          if (form.typeCustom) {
+            form.typeCustom.value = value || form.typeCustom.value || '';
+          }
+        } else if (form.typeCustom) {
+          form.typeCustom.value = '';
+        }
+      }
+
+      function fillEmploymentType(value) {
+        const normalized = normalizeEmploymentTypeValue(value);
+        if (!normalized || DEFAULT_EMPLOYMENT_TYPES.includes(normalized)) {
+          if (form.type) form.type.value = normalized || 'permanent';
+          setEmploymentTypeMode('standard');
+          return;
+        }
+        if (form.type) form.type.value = 'permanent';
+        setEmploymentTypeMode('custom', normalized);
+      }
+
+      function getSmartFieldConfig(key) {
+        const configs = {
+          section: {
+            input: form.section,
+            menu: smartMenuSection,
+            label: 'category',
+            suggestions: () => state.sectionOrder.map((section) => section.label),
+          },
+          discipline: {
+            input: form.discipline,
+            menu: smartMenuDiscipline,
+            label: 'discipline',
+            suggestions: () => state.suggestions.discipline,
+          },
+          customer: {
+            input: form.customer,
+            menu: smartMenuCustomer,
+            label: 'customer',
+            suggestions: () => state.suggestions.customer,
+          },
+          locationText: {
+            input: form.locationText,
+            menu: smartMenuLocationText,
+            label: 'display location',
+            suggestions: () => state.suggestions.locationText,
+          },
+          locationCode: {
+            input: form.locationCode,
+            menu: smartMenuLocationCode,
+            label: 'location code',
+            suggestions: () => state.suggestions.locationCode,
+          },
+          currency: {
+            input: form.currency,
+            menu: smartMenuCurrency,
+            label: 'currency code',
+            suggestions: () => state.suggestions.currency,
+          },
+        };
+        return configs[key] || null;
+      }
+
+      function setSmartFieldValue(key, value) {
+        const config = getSmartFieldConfig(key);
+        if (!config?.input) return;
+        config.input.value = findSuggestionValue(config.suggestions(), value);
+        config.input.dispatchEvent(new Event('input', { bubbles: true }));
+        config.input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      function closeSmartMenus(exceptKey = '') {
+        ['section', 'discipline', 'customer', 'locationText', 'locationCode', 'currency'].forEach((key) => {
+          if (key === exceptKey) return;
+          const menu = getSmartFieldConfig(key)?.menu;
+          if (menu) menu.hidden = true;
+        });
+      }
+
+      function renderSmartMenu(key, options = {}) {
+        const config = getSmartFieldConfig(key);
+        if (!config?.menu || !config.input) return;
+        const query = cleanSuggestionValue((options.query ?? config.input.value) || '');
+        const suggestions = collectSuggestionValues(config.suggestions());
+        const matches = query
+          ? suggestions.filter((value) => value.toLowerCase().includes(query.toLowerCase()))
+          : suggestions;
+
+        closeSmartMenus(key);
+        config.menu.innerHTML = '';
+
+        const label = document.createElement('div');
+        label.className = 'smart-field__menu-label';
+        label.textContent = `Existing ${config.label} values`;
+        config.menu.appendChild(label);
+
+        const hasExactMatch = !!(query && suggestions.some((value) => value.toLowerCase() === query.toLowerCase()));
+        if (query && !hasExactMatch) {
+          const createBtn = document.createElement('button');
+          createBtn.type = 'button';
+          createBtn.className = 'smart-field__option smart-field__option--create';
+          createBtn.innerHTML = `<span>+ Use "${query}"</span><small>Save this as a new ${config.label}</small>`;
+          createBtn.addEventListener('click', () => {
+            setSmartFieldValue(key, query);
+            config.menu.hidden = true;
+            config.input.focus();
+          });
+          config.menu.appendChild(createBtn);
+        }
+
+        if (!matches.length) {
+          const empty = document.createElement('div');
+          empty.className = 'smart-field__empty';
+          empty.textContent = query
+            ? `No saved ${config.label} values match "${query}".`
+            : `No saved ${config.label} values yet.`;
+          config.menu.appendChild(empty);
+        } else {
+          matches.forEach((value) => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'smart-field__option';
+            option.innerHTML = `<span>${value}</span><small>Reuse on this job</small>`;
+            option.addEventListener('click', () => {
+              setSmartFieldValue(key, value);
+              config.menu.hidden = true;
+              config.input.focus();
+            });
+            config.menu.appendChild(option);
+          });
+        }
+
+        const enterNew = document.createElement('button');
+        enterNew.type = 'button';
+        enterNew.className = 'smart-field__option';
+        enterNew.innerHTML = `<span>Enter a new ${config.label}</span><small>Keep typing to save a brand new value</small>`;
+        enterNew.addEventListener('click', () => {
+          config.menu.hidden = true;
+          config.input.focus();
+        });
+        config.menu.appendChild(enterNew);
+        config.menu.hidden = false;
+      }
+
+      function buildSuggestionCatalog() {
+        const jobs = Array.isArray(state.jobs) ? state.jobs : [];
+        state.suggestions = {
+          section: collectSuggestionValues([
+            ...state.sectionOrder.map((section) => section.label),
+            ...jobs.map((job) => job.sectionLabel || job.section),
+          ]),
+          discipline: collectSuggestionValues(jobs.map((job) => job.discipline)),
+          type: collectSuggestionValues([...DEFAULT_EMPLOYMENT_TYPES, ...jobs.map((job) => normalizeEmploymentTypeValue(job.type))], { lowercase: true }),
+          customer: collectSuggestionValues(jobs.map((job) => job.customer)),
+          locationText: collectSuggestionValues(jobs.map((job) => job.locationText)),
+          locationCode: collectSuggestionValues(jobs.map((job) => job.locationCode)),
+          currency: collectSuggestionValues([...DEFAULT_CURRENCIES, ...jobs.map((job) => normaliseCurrency(job.currency))], { uppercase: true }),
+          tags: collectSuggestionValues(jobs.flatMap((job) => Array.isArray(job.tags) ? job.tags : [])),
+          benefits: collectSuggestionValues(jobs.flatMap((job) => Array.isArray(job.benefits) ? job.benefits : [])),
+        };
+
+        if (disciplineOptions) disciplineOptions.innerHTML = state.suggestions.discipline.map((value) => `<option value="${value}">`).join('');
+        if (typeOptions) typeOptions.innerHTML = state.suggestions.type.map((value) => `<option value="${value}">`).join('');
+        if (customerOptions) customerOptions.innerHTML = state.suggestions.customer.map((value) => `<option value="${value}">`).join('');
+        if (locationTextOptions) locationTextOptions.innerHTML = state.suggestions.locationText.map((value) => `<option value="${value}">`).join('');
+        if (locationCodeOptions) locationCodeOptions.innerHTML = state.suggestions.locationCode.map((value) => `<option value="${value}">`).join('');
+        if (currencyOptions) currencyOptions.innerHTML = state.suggestions.currency.map((value) => `<option value="${value}">`).join('');
+        if (tagSuggestions) tagSuggestions.innerHTML = state.suggestions.tags.map((value) => `<option value="${value}">`).join('');
+        if (benefitSuggestions) benefitSuggestions.innerHTML = state.suggestions.benefits.map((value) => `<option value="${value}">`).join('');
+      }
+
+      function addUniqueEditorToken(list, rawValue, suggestions = []) {
+        const cleaned = cleanSuggestionValue(rawValue);
+        if (!cleaned) return false;
+        if (list.some((item) => item.toLowerCase() === cleaned.toLowerCase())) return false;
+        list.push(findSuggestionValue(suggestions, cleaned));
+        return true;
+      }
+
       function getStatusLabel(value) {
         const normalized = String(value || 'draft').trim().toLowerCase();
         if (normalized === 'live') return 'Live';
@@ -1488,6 +1948,24 @@
           editorSectionSummaries.visibility.textContent = `${visibleCount} public item${visibleCount === 1 ? '' : 's'} enabled`;
         }
 
+        if (editorSectionSummaries.seo) {
+          if (state.seoLoading) {
+            editorSectionSummaries.seo.textContent = 'Refreshing SEO draft…';
+          } else if (state.seoDraft?.optimized_title) {
+            const sourceLabel = state.seoDraft.source === 'openai' ? 'GPT-assisted' : 'Heuristic';
+            const storageLabel = state.seoDraft.__stored
+              ? 'stored'
+              : state.editing?.id
+                ? 'preview only'
+                : 'save to store';
+            editorSectionSummaries.seo.textContent = `${sourceLabel} draft ready · ${storageLabel}`;
+          } else {
+            editorSectionSummaries.seo.textContent = state.editing?.id
+              ? 'Refresh the SEO draft to review the latest suggestion'
+              : 'Save a live job to generate an SEO draft';
+          }
+        }
+
         if (editorSectionSummaries.sharing) {
           let sharingSummary = 'Save the job when you are ready to share it';
           if (shareUrl?.value) {
@@ -1506,6 +1984,269 @@
           editorStatusPill.textContent = published ? statusLabel : 'Draft';
           editorStatusPill.dataset.tone = getEditorStatusTone(status, published);
         }
+      }
+
+      function seoDraftCacheKey(job = null) {
+        const input = job || state.editing || null;
+        const id = String(input?.id || '').trim();
+        return id || '';
+      }
+
+      function defaultSeoNote() {
+        if (state.seoLoading) {
+          return 'Refreshing the SEO draft using the current job details. This does not change the live role until you apply the suggestion and save the job.';
+        }
+        if (state.editing?.id) {
+          return 'Refresh the SEO draft to review the latest title, meta description, slug hint, and candidate-facing copy. Apply only the parts you want to keep.';
+        }
+        return 'Save a live job first, then refresh the SEO draft. If GPT is unavailable, the editor falls back to a local suggestion so the workflow still continues.';
+      }
+
+      function setSeoFieldValue(element, value) {
+        if (!element) return;
+        element.value = String(value || '').trim();
+      }
+
+      function clearSeoDraftView(options = {}) {
+        if (!options.keepCached) {
+          state.seoDraft = null;
+        }
+        setSeoFieldValue(seoOptimizedTitle, '');
+        setSeoFieldValue(seoMetaTitle, '');
+        setSeoFieldValue(seoSlugHint, '');
+        setSeoFieldValue(seoMetaDescription, '');
+        setSeoFieldValue(seoSectorFocus, '');
+        setSeoFieldValue(seoSchemaReadiness, '');
+        setSeoFieldValue(seoOverviewSuggestion, '');
+        setSeoFieldValue(seoResponsibilitiesSuggestion, '');
+        setSeoFieldValue(seoRequirementsSuggestion, '');
+        if (seoStatusBadge) {
+          seoStatusBadge.textContent = options.loading ? 'Refreshing…' : 'No draft yet';
+          seoStatusBadge.dataset.tone = options.loading ? 'info' : 'neutral';
+        }
+        if (seoStorageBadge) {
+          seoStorageBadge.textContent = 'Not stored';
+          seoStorageBadge.dataset.tone = 'neutral';
+        }
+        if (seoStatusNote) {
+          seoStatusNote.textContent = defaultSeoNote();
+        }
+        updateEditorSummaries();
+        updateControlState();
+      }
+
+      function normaliseSeoDraftPayload(payload = {}, meta = {}) {
+        if (!payload || typeof payload !== 'object') return null;
+        const responsibilities = Array.isArray(payload.optimized_responsibilities)
+          ? payload.optimized_responsibilities.map((item) => String(item || '').trim()).filter(Boolean)
+          : [];
+        const requirements = Array.isArray(payload.optimized_requirements)
+          ? payload.optimized_requirements.map((item) => String(item || '').trim()).filter(Boolean)
+          : [];
+        const missing = Array.isArray(payload.schema_missing_fields)
+          ? payload.schema_missing_fields.map((item) => String(item || '').trim()).filter(Boolean)
+          : [];
+        const source = String(meta.source || payload.source || 'heuristic').trim().toLowerCase() || 'heuristic';
+        return {
+          optimized_title: String(payload.optimized_title || '').trim(),
+          meta_title: String(payload.meta_title || '').trim(),
+          meta_description: String(payload.meta_description || '').trim(),
+          slug_hint: String(payload.slug_hint || '').trim(),
+          sector_focus: String(payload.sector_focus || '').trim(),
+          optimized_overview: String(payload.optimized_overview || '').trim(),
+          optimized_responsibilities: responsibilities,
+          optimized_requirements: requirements,
+          schema_missing_fields: missing,
+          schema_ready: typeof payload.schema_ready === 'boolean' ? payload.schema_ready : missing.length === 0,
+          source,
+          model: String(meta.model || payload.model || '').trim(),
+          generated_at: String(meta.generated_at || payload.generated_at || '').trim(),
+          __stored: !!(meta.stored ?? payload.__stored),
+          __missingTable: !!(meta.missingTable ?? payload.__missingTable),
+          __error: String(meta.error || payload.__error || '').trim(),
+        };
+      }
+
+      function rememberSeoDraft(job, draft) {
+        const normalized = normaliseSeoDraftPayload(draft, draft);
+        state.seoDraft = normalized;
+        const key = seoDraftCacheKey(job);
+        if (key && normalized) {
+          state.seoDrafts.set(key, normalized);
+        }
+        return normalized;
+      }
+
+      function renderSeoDraft(draft = null, options = {}) {
+        const normalized = normaliseSeoDraftPayload(draft, options);
+        state.seoDraft = normalized;
+        if (!normalized) {
+          clearSeoDraftView({ keepCached: true });
+          return;
+        }
+
+        setSeoFieldValue(seoOptimizedTitle, normalized.optimized_title);
+        setSeoFieldValue(seoMetaTitle, normalized.meta_title);
+        setSeoFieldValue(seoSlugHint, normalized.slug_hint);
+        setSeoFieldValue(seoMetaDescription, normalized.meta_description);
+        setSeoFieldValue(seoSectorFocus, normalized.sector_focus);
+        setSeoFieldValue(
+          seoSchemaReadiness,
+          normalized.schema_ready
+            ? 'Ready for JobPosting schema'
+            : `Missing: ${normalized.schema_missing_fields.join(', ')}`
+        );
+        setSeoFieldValue(seoOverviewSuggestion, normalized.optimized_overview);
+        setSeoFieldValue(seoResponsibilitiesSuggestion, normalized.optimized_responsibilities.join('\n'));
+        setSeoFieldValue(seoRequirementsSuggestion, normalized.optimized_requirements.join('\n'));
+
+        if (seoStatusBadge) {
+          const sourceLabel = normalized.source === 'openai' ? 'GPT-assisted' : 'Heuristic';
+          seoStatusBadge.textContent = normalized.__error ? `${sourceLabel} fallback` : sourceLabel;
+          seoStatusBadge.dataset.tone = normalized.source === 'openai' ? 'ok' : normalized.__error ? 'warn' : 'info';
+        }
+
+        if (seoStorageBadge) {
+          if (normalized.__missingTable) {
+            seoStorageBadge.textContent = 'Storage table missing';
+            seoStorageBadge.dataset.tone = 'warn';
+          } else if (normalized.__stored) {
+            seoStorageBadge.textContent = 'Stored draft';
+            seoStorageBadge.dataset.tone = 'ok';
+          } else {
+            seoStorageBadge.textContent = state.editing?.id ? 'Preview only' : 'Save to store';
+            seoStorageBadge.dataset.tone = 'neutral';
+          }
+        }
+
+        if (seoStatusNote) {
+          const notes = [];
+          if (normalized.source === 'openai') {
+            notes.push(normalized.model ? `Generated by ${normalized.model}.` : 'Generated with the HMJ GPT SEO helper.');
+          } else {
+            notes.push('Generated from the local fallback rules so the workflow can continue without GPT.');
+          }
+          if (normalized.__error) {
+            notes.push(`Fallback reason: ${normalized.__error.replace(/_/g, ' ')}.`);
+          }
+          if (normalized.__missingTable) {
+            notes.push('Run the SEO suggestions migration to persist drafts in Supabase.');
+          } else if (!normalized.__stored && state.editing?.id) {
+            notes.push('Refresh again after saving if you want the latest draft stored against the live job.');
+          }
+          seoStatusNote.textContent = notes.join(' ');
+        }
+
+        updateEditorSummaries();
+        updateControlState();
+      }
+
+      async function requestSeoDraft(options = {}) {
+        const mode = options.mode === 'optimize' ? 'optimize' : 'load';
+        const draft = options.job || getCurrentEditorDraft() || state.editing || readForm();
+        const cacheKey = seoDraftCacheKey(draft);
+        const requestSeq = ++state.seoRequestSeq;
+
+        if (!options.silent) {
+          state.seoLoading = true;
+          clearSeoDraftView({ loading: true, keepCached: true });
+          setLastAction(mode === 'optimize' ? 'Refreshing SEO draft…' : 'Loading SEO draft…', 'neutral');
+          updateStatusPanel();
+        }
+
+        try {
+          const endpoint = mode === 'optimize' ? 'admin-jobs-seo-optimize' : 'admin-jobs-seo-get';
+          const response = await api(endpoint, 'POST', {
+            jobId: draft?.id || undefined,
+            job: draft,
+          });
+          const responseSource = response?.stored && response?.suggestion?.source
+            ? response.suggestion.source
+            : (response?.source || response?.suggestion?.source || 'heuristic');
+
+          if (requestSeq !== state.seoRequestSeq) return null;
+
+          const normalized = rememberSeoDraft(draft, normaliseSeoDraftPayload(response?.suggestion || {}, {
+            source: responseSource,
+            model: response?.model || response?.suggestion?.model || '',
+            generated_at: response?.suggestion?.generated_at || '',
+            stored: !!response?.stored,
+            missingTable: !!response?.schema,
+            error: response?.error || '',
+          }));
+
+          if (cacheKey && normalized) {
+            state.seoDrafts.set(cacheKey, normalized);
+          }
+
+          const currentKey = seoDraftCacheKey();
+          const unsavedEditorActive = !!drawer?.classList.contains('open') && !currentKey;
+          if ((currentKey && currentKey === cacheKey) || (!cacheKey && unsavedEditorActive)) {
+            renderSeoDraft(normalized, normalized);
+          }
+          setLastAction(mode === 'optimize' ? 'SEO draft refreshed' : 'SEO draft loaded', normalized?.source === 'openai' ? 'ok' : 'neutral');
+          updateStatusPanel();
+          return normalized;
+        } catch (error) {
+          if (requestSeq !== state.seoRequestSeq) return null;
+          console.error('[jobs] seo draft failed', error);
+          if (!options.silent) {
+            if (seoStatusBadge) {
+              seoStatusBadge.textContent = 'Draft unavailable';
+              seoStatusBadge.dataset.tone = 'error';
+            }
+            if (seoStorageBadge) {
+              seoStorageBadge.textContent = 'Not stored';
+              seoStorageBadge.dataset.tone = 'neutral';
+            }
+            if (seoStatusNote) {
+              seoStatusNote.textContent = `SEO draft failed: ${error.message || error}.`;
+            }
+            setLastAction('SEO draft failed', 'error');
+            updateEditorSummaries();
+            updateStatusPanel();
+            toast(`SEO draft failed: ${error.message || error}`, 'error', 3600);
+          }
+          return null;
+        } finally {
+          if (requestSeq === state.seoRequestSeq) {
+            state.seoLoading = false;
+            updateEditorSummaries();
+            updateControlState();
+            updateStatusPanel();
+          }
+        }
+      }
+
+      function applySeoDraftToEditor() {
+        const draft = state.seoDraft;
+        if (!draft) {
+          toast('Refresh the SEO draft first', 'warn', 2200);
+          return;
+        }
+        let applied = 0;
+        if (draft.optimized_title) {
+          form.title.value = draft.optimized_title;
+          applied += 1;
+        }
+        if (draft.optimized_overview) {
+          form.overview.value = draft.optimized_overview;
+          applied += 1;
+        }
+        if (draft.optimized_responsibilities.length) {
+          form.responsibilities.value = draft.optimized_responsibilities.join('\n');
+          applied += 1;
+        }
+        if (draft.optimized_requirements.length) {
+          form.requirements.value = draft.optimized_requirements.join('\n');
+          applied += 1;
+        }
+        if (!applied) {
+          toast('No suggested copy available to apply', 'warn', 2200);
+          return;
+        }
+        updateEditorSummaries();
+        toast('Suggested SEO copy applied to the editor', 'ok', 2200);
       }
 
       function setChip(el, text, tone = 'neutral') {
@@ -1644,6 +2385,16 @@
         if (btnRefreshShare) {
           btnRefreshShare.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving || !shareUrl?.value;
         }
+        if (btnSeoRefresh) {
+          if (!btnSeoRefresh.dataset.defaultLabel) btnSeoRefresh.dataset.defaultLabel = btnSeoRefresh.textContent;
+          btnSeoRefresh.textContent = state.seoLoading ? 'Refreshing…' : btnSeoRefresh.dataset.defaultLabel;
+          btnSeoRefresh.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving || !((form.title?.value || '').trim());
+        }
+        if (btnSeoApply) {
+          if (!btnSeoApply.dataset.defaultLabel) btnSeoApply.dataset.defaultLabel = btnSeoApply.textContent;
+          btnSeoApply.textContent = btnSeoApply.dataset.defaultLabel;
+          btnSeoApply.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving || state.seoLoading || !state.seoDraft;
+        }
         if (btnClose) {
           btnClose.disabled = state.saving || state.deleting || state.batchSaving;
         }
@@ -1775,6 +2526,7 @@
         section: sel('#edSection'),
         discipline: sel('#edDiscipline'),
         type: sel('#edType'),
+        typeCustom: sel('#edTypeCustom'),
         customer: sel('#edCustomer'),
         clientName: sel('#edClientName'),
         payType: sel('#edPayType'),
@@ -1863,6 +2615,9 @@
         showPageMeta: false,
         showReference: false,
       });
+
+      const DEFAULT_EMPLOYMENT_TYPES = Object.freeze(['permanent', 'contract', 'fixed-term']);
+      const DEFAULT_CURRENCIES = Object.freeze(['GBP', 'EUR', 'USD']);
 
       const statusBadgeClass = (status) => {
         const v = (status || '').toLowerCase();
@@ -2916,6 +3671,7 @@
       }
 
       function openDrawer() {
+        closeSmartMenus();
         syncEditorSections('basics');
         updateEditorSummaries();
         drawer.classList.add('open');
@@ -2924,12 +3680,16 @@
       }
 
       function closeDrawer() {
+        closeSmartMenus();
         drawer.classList.remove('open');
         drawer.setAttribute('aria-hidden', 'true');
         setTimeout(() => {
+          state.seoRequestSeq += 1;
           state.editing = null;
           state.editingTags = [];
           state.editingBenefits = [];
+          state.seoDraft = null;
+          state.seoLoading = false;
           shareBox.style.display = 'none';
           shareUrl.value = '';
           shareMeta.textContent = '';
@@ -2943,6 +3703,7 @@
               ? 'This console is in read-only mode, so share links stay local to this browser for 30 days.'
               : 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
           }
+          clearSeoDraftView();
           updatePayFieldVisibility();
           syncEditorSections('basics');
           updateEditorSummaries();
@@ -2956,7 +3717,7 @@
         form.status.value = (job?.status || 'live').toLowerCase();
         form.section.value = job?.sectionLabel || job?.section || '';
         form.discipline.value = job?.discipline || '';
-        form.type.value = (job?.type || 'permanent').toLowerCase();
+        fillEmploymentType(job?.type || 'permanent');
         form.customer.value = job?.customer || '';
         form.clientName.value = job?.clientName || '';
         form.payType.value = job?.payType || '';
@@ -2986,6 +3747,7 @@
 
       function openEditor(job) {
         state.editing = job ? { ...job } : null;
+        state.seoLoading = false;
         drawerTitle.textContent = job?.title || 'New job';
         if (state.readOnly) {
           drawerMeta.textContent = `Live jobs unavailable · ${friendlySourceLabel(state.fallbackSource)} · Changes cannot be saved from this page`;
@@ -3013,9 +3775,18 @@
         if (shareAiPolish) {
           shareAiPolish.checked = !state.readOnly;
         }
+        const cachedSeoDraft = job?.id ? state.seoDrafts.get(String(job.id).trim()) : null;
+        if (cachedSeoDraft) {
+          renderSeoDraft(cachedSeoDraft, cachedSeoDraft);
+        } else {
+          clearSeoDraftView();
+        }
         syncEditorSections('basics');
         updateEditorSummaries();
         openDrawer();
+        if (job?.id) {
+          requestSeoDraft({ mode: 'load', silent: !!cachedSeoDraft });
+        }
       }
 
       function readForm() {
@@ -3025,11 +3796,11 @@
           status: form.status.value,
           section: form.section.value.trim(),
           discipline: form.discipline.value.trim(),
-          type: form.type.value,
+          type: getEmploymentTypeValue(),
           customer: form.customer.value.trim(),
           clientName: form.clientName.value.trim(),
           payType: form.payType.value,
-          currency: form.currency.value.trim(),
+          currency: normaliseCurrency(form.currency.value.trim()),
           dayRateMin: form.dayRateMin.value,
           dayRateMax: form.dayRateMax.value,
           salaryMin: form.salaryMin.value,
@@ -3448,8 +4219,18 @@
           if (updated) {
             const existing = state.jobs.find((item) => item.id === updated.id);
             if (existing) Object.assign(existing, updated);
+            if (updated.id) {
+              requestSeoDraft({
+                mode: 'optimize',
+                job: updated,
+                silent: true,
+              }).catch((error) => {
+                console.warn('[jobs] background seo refresh failed', error);
+              });
+            }
             buildSections();
             buildTags();
+            buildSuggestionCatalog();
             state.lastLoadedAt = new Date().toISOString();
             setLastAction(`Updated ${updated.title || 'job'}`, 'ok');
             toast('Card updated', 'ok', 1500);
@@ -3537,6 +4318,7 @@
             }
             buildSections();
             buildTags();
+            buildSuggestionCatalog();
             renderAll();
             openEditor(hydrated);
             toast(
@@ -3555,6 +4337,17 @@
                 : `Saved ${hydrated.title || 'job'}`,
               schemaAdjusted ? 'warn' : 'ok'
             );
+            requestSeoDraft({
+              mode: 'optimize',
+              job: hydrated,
+              silent: true,
+            }).then((draft) => {
+              if (draft && state.editing?.id === hydrated.id) {
+                renderSeoDraft(draft, draft);
+              }
+            }).catch((error) => {
+              console.warn('[jobs] background seo refresh failed', error);
+            });
           }
         } catch (e) {
           console.error('[jobs] save failed', e);
@@ -3584,6 +4377,7 @@
           state.jobs = state.jobs.filter((j) => j.id !== state.editing.id);
           buildSections();
           buildTags();
+          buildSuggestionCatalog();
           renderAll();
           closeDrawer();
           toast('Job deleted', 'ok', 1800);
@@ -3820,6 +4614,7 @@
           }
           buildSections();
           buildTags();
+          buildSuggestionCatalog();
           renderAll();
         } catch (e) {
           console.error('[jobs] load failed', e);
@@ -3831,6 +4626,7 @@
           state.schemaMismatch = !!(e?.details?.schema || e?.status === 409);
           buildSections();
           buildTags();
+          buildSuggestionCatalog();
           renderAll();
           setLastAction('Live jobs unavailable', 'error');
           if (resultMeta) resultMeta.textContent = 'Live jobs system unavailable';
@@ -3918,6 +4714,18 @@
           refreshLocalShare();
         };
       }
+      if (btnSeoRefresh) {
+        btnSeoRefresh.onclick = (e) => {
+          e.preventDefault();
+          requestSeoDraft({ mode: 'optimize' });
+        };
+      }
+      if (btnSeoApply) {
+        btnSeoApply.onclick = (e) => {
+          e.preventDefault();
+          applySeoDraftToEditor();
+        };
+      }
       if (densityToggle) {
         densityToggle.onclick = () => {
           state.preferences.denseCards = !state.preferences.denseCards;
@@ -3998,6 +4806,90 @@
         field.addEventListener('change', updateEditorSummaries);
       });
 
+      smartFieldToggleButtons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          const key = button.dataset.smartToggle || '';
+          const config = getSmartFieldConfig(key);
+          if (!config?.menu) return;
+          if (!config.menu.hidden) {
+            config.menu.hidden = true;
+            return;
+          }
+          renderSmartMenu(key);
+        });
+      });
+
+      smartFieldClearButtons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          const key = button.dataset.smartClear || '';
+          const config = getSmartFieldConfig(key);
+          if (!config?.input) return;
+          config.input.value = '';
+          config.input.dispatchEvent(new Event('input', { bubbles: true }));
+          config.input.dispatchEvent(new Event('change', { bubbles: true }));
+          closeSmartMenus();
+          config.input.focus();
+        });
+      });
+
+      ['section', 'discipline', 'customer', 'locationText', 'locationCode', 'currency'].forEach((key) => {
+        const config = getSmartFieldConfig(key);
+        if (!config?.input) return;
+        config.input.addEventListener('focus', () => {
+          if (config.input.value.trim()) {
+            renderSmartMenu(key);
+          }
+        });
+        config.input.addEventListener('input', () => {
+          if (!config.menu?.hidden) {
+            renderSmartMenu(key, { query: config.input.value });
+          }
+        });
+        config.input.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            closeSmartMenus();
+            event.preventDefault();
+          } else if (event.key === 'Escape') {
+            closeSmartMenus();
+          } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            renderSmartMenu(key);
+          }
+        });
+      });
+
+      document.addEventListener('click', (event) => {
+        if (event.target.closest('[data-smart-field]') || event.target.closest('[data-smart-toggle]')) return;
+        closeSmartMenus();
+      });
+
+      btnTypeCustomToggle?.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (typeCustomWrap?.classList.contains('is-hidden')) {
+          setEmploymentTypeMode('custom');
+          form.typeCustom?.focus();
+        } else {
+          setEmploymentTypeMode('standard');
+          form.type?.focus();
+        }
+        updateEditorSummaries();
+      });
+
+      btnTypeEnterNew?.addEventListener('click', (event) => {
+        event.preventDefault();
+        setEmploymentTypeMode('custom');
+        form.typeCustom?.focus();
+      });
+
+      btnTypeUseStandard?.addEventListener('click', (event) => {
+        event.preventDefault();
+        setEmploymentTypeMode('standard');
+        form.type?.focus();
+        updateEditorSummaries();
+      });
+
       if (editorCompactMedia?.addEventListener) {
         editorCompactMedia.addEventListener('change', () => syncEditorSections('basics'));
       } else if (editorCompactMedia?.addListener) {
@@ -4009,8 +4901,7 @@
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
           const value = tagInput.value.trim();
-          if (value && !state.editingTags.includes(value)) {
-            state.editingTags.push(value);
+          if (addUniqueEditorToken(state.editingTags, value, state.suggestions.tags)) {
             renderTagTokens();
           }
           tagInput.value = '';
@@ -4025,8 +4916,7 @@
         if (e.key === 'Enter' || e.key === ',') {
           e.preventDefault();
           const value = benefitInput.value.trim();
-          if (value && !state.editingBenefits.includes(value)) {
-            state.editingBenefits.push(value);
+          if (addUniqueEditorToken(state.editingBenefits, value, state.suggestions.benefits)) {
             renderBenefitTokens();
           }
           benefitInput.value = '';
@@ -4038,6 +4928,13 @@
 
       form.payType?.addEventListener('change', () => {
         updatePayFieldVisibility();
+        updateEditorSummaries();
+      });
+
+      form.type?.addEventListener('change', () => {
+        if (!typeCustomWrap?.classList.contains('is-hidden')) {
+          setEmploymentTypeMode('standard');
+        }
         updateEditorSummaries();
       });
 
@@ -4126,6 +5023,10 @@
       updateStatusPanel();
       applyReadOnly();
       await loadJobs();
+      startupSettled = true;
+    }).catch((error) => {
+      console.error('[jobs] bootstrap failed', error);
+      revealStartupFallback('The jobs console hit a startup error. Refresh this page, then try again.');
     });
   })();
   </script>

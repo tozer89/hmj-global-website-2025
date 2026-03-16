@@ -3,9 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Apply | HMJ-Global</title>
+  <title>Apply for Technical & Construction Jobs | HMJ Global</title>
+  <meta name="description" content="Apply for HMJ Global jobs or register your interest in technical, engineering, construction and mission-critical roles across the UK and Europe." />
+  <link rel="canonical" href="https://www.hmj-global.com/contact" />
+  <meta property="og:site_name" content="HMJ Global" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Apply for Technical & Construction Jobs | HMJ Global" />
+  <meta property="og:description" content="Apply for HMJ Global jobs or register your interest in technical, engineering, construction and mission-critical roles across the UK and Europe." />
+  <meta property="og:url" content="https://www.hmj-global.com/contact" />
+  <meta property="og:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Apply for Technical & Construction Jobs | HMJ Global" />
+  <meta name="twitter:description" content="Apply for HMJ Global jobs or register your interest in technical, engineering, construction and mission-critical roles across the UK and Europe." />
+  <meta name="twitter:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.hmj-global.com/"},
+        {"@type": "ListItem", "position": 2, "name": "Apply", "item": "https://www.hmj-global.com/contact"}
+      ]
+    }
+  </script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
-  <script defer src="js/hmj-nav.js"></script>
+  <script defer src="js/hmj-nav.js?v=2"></script>
   <script defer src="js/hmj-analytics.js"></script>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="assets/css/public.facelift.css" />
@@ -107,7 +129,7 @@
       padding:14px 14px 15px;border-radius:14px;background:#fff;border:1px solid rgba(58,102,179,.14);
       box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
     }
-    .job-context__label{display:block;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#64748b}
+    .job-context__label{display:block;font-size:.79rem;line-height:1.25;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#526684}
     .job-context__value{display:block;margin-top:6px;font-weight:800;color:var(--ink);line-height:1.4}
     .job-context__note{margin:0;color:#475569;font-weight:600}
 
@@ -209,8 +231,8 @@
     /* Footer (match site) */
     footer{ text-align:center; padding:28px 16px; background:#0f1322; color:#cfd7ff; border-top:1px solid rgba(255,255,255,.06) }
   </style>
-  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/public.harmony.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/public.harmony.css?v=2" />
 </head>
 <body class="public-page contact-page">
   <!-- Announcement -->
@@ -223,7 +245,7 @@
   <header class="hmj-header">
     <nav class="hmj-nav" aria-label="Main">
       <a class="hmj-logo" href="index.html">
-        <img src="images/logo.png" alt="HMJ-Global Logo" loading="eager" decoding="async" />
+        <img src="images/logo.png" alt="HMJ Global logo" loading="eager" decoding="async" />
       </a>
       <button class="hmj-burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="hmj-menu">
         <span></span><span></span><span></span>
@@ -241,6 +263,7 @@
     </nav>
   </header>
 
+  <main>
   <!-- ===== Page header ===== -->
   <section class="entry-hero entry-hero--compact entry-hero--apply entry-hero--align-left">
     <div class="entry-hero__wrap">
@@ -483,6 +506,8 @@
     </div>
   </section>
 
+  </main>
+
   <!-- ===== Footer ===== -->
   <footer>
     <p><strong>HMJ-Global Ltd</strong> — Data Centre &amp; Infrastructure Recruitment Specialists</p>
@@ -494,19 +519,6 @@
   <!-- ===== Scripts ===== -->
   <script src="js/job-application-context.js"></script>
   <script>
-    /* ---------- Nav ---------- */
-    const burger = document.querySelector('.hmj-burger');
-    const menu   = document.getElementById('hmj-menu');
-    const scrim  = document.querySelector('.hmj-scrim');
-    function openMenu(open){
-      burger.setAttribute('aria-expanded', String(open));
-      menu.classList.toggle('open', open);
-      scrim.hidden = !open;
-      document.documentElement.style.overflow = open ? 'hidden' : '';
-    }
-    burger.addEventListener('click', ()=>openMenu(burger.getAttribute('aria-expanded')!=='true'));
-    scrim.addEventListener('click', ()=>openMenu(false));
-
     /* ---------- Floating labels / filled state ---------- */
     const fields = document.querySelectorAll('.field input, .field textarea, .field select');
     const setFilled = el => el.closest('.field').classList.toggle('filled', !!el.value);
