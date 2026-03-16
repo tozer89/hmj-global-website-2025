@@ -1200,7 +1200,7 @@
     /* ------ Load live jobs from the canonical Netlify Functions endpoint ------ */
     const SHORTLIST_KEY = 'hmj_pinned_jobs_v1';
     const LIVE_JOBS_ENDPOINT = '/.netlify/functions/jobs-list';
-    const JOBS_CANONICAL_BASE = 'https://www.hmj-global.com';
+    const JOBS_CANONICAL_BASE = (window.location && window.location.origin) || 'https://hmjg.netlify.app';
 
     const jobsState = {
       all: [],
@@ -2521,7 +2521,7 @@
       const text=`${title} at HMJ-Global\n${loc ? 'Location: '+loc+'\n' : ''}${detailUrl ? 'View full role details' : 'Apply or learn more'}: ${url}`;
       if(navigator.share){ navigator.share({title,text,url}).catch(()=>{}); }
       else{
-        const full=`${title}\n${text}\n— HMJ-Global • https://www.hmj-global.com`;
+        const full=`${title}\n${text}\n— HMJ-Global • ${location.origin}`;
         if(navigator.clipboard?.writeText){ navigator.clipboard.writeText(full).then(()=>showToast(),()=>showToast('Copy failed')); }
         else{ const ta=document.createElement('textarea'); ta.value=full; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); showToast(); }catch(e){ showToast('Copy failed'); } document.body.removeChild(ta); }
       }

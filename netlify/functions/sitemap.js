@@ -3,7 +3,26 @@
 const { getSupabase, hasSupabase } = require('./_supabase.js');
 const { toPublicJob } = require('./_jobs-helpers.js');
 
-const SITE_URL = 'https://www.hmj-global.com';
+const DEFAULT_SITE_URL = 'https://hmjg.netlify.app';
+
+function resolveSiteUrl(event = {}) {
+  const envCandidates = [
+    process.env.HMJ_CANONICAL_SITE_URL,
+    process.env.URL,
+    process.env.DEPLOY_PRIME_URL,
+    DEFAULT_SITE_URL,
+  ];
+
+  const forwardedProto = String(event?.headers?.['x-forwarded-proto'] || event?.headers?.['X-Forwarded-Proto'] || 'https').trim();
+  const forwardedHost = String(event?.headers?.['x-forwarded-host'] || event?.headers?.host || event?.headers?.Host || '').trim();
+
+  if (forwardedHost) {
+    return `${forwardedProto || 'https'}://${forwardedHost}`.replace(/\/$/, '');
+  }
+
+  const fallback = envCandidates.find((value) => typeof value === 'string' && value.trim());
+  return String(fallback || DEFAULT_SITE_URL).replace(/\/$/, '');
+}
 
 function xmlEscape(value) {
   return String(value || '')
@@ -33,16 +52,17 @@ function uniqueByLoc(entries = []) {
 }
 
 exports.handler = async (event) => {
+  const siteUrl = resolveSiteUrl(event);
   const entries = [
-    { loc: `${SITE_URL}/`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/about`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/clients`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/jobs`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/candidates`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/contact`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/client-contact`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/timesheets`, lastmod: new Date().toISOString() },
-    { loc: `${SITE_URL}/jobs/gold-card-electrician-slough/`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/about`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/clients`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/jobs`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/candidates`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/contact`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/client-contact`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/timesheets`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/jobs/gold-card-electrician-slough/`, lastmod: new Date().toISOString() },
   ];
 
   if (hasSupabase()) {
@@ -59,7 +79,7 @@ exports.handler = async (event) => {
           .filter((job) => job && job.published !== false && job.id)
           .forEach((job) => {
             entries.push({
-              loc: `${SITE_URL}${job.publicDetailPath || `/jobs/spec.html?id=${encodeURIComponent(job.id)}`}`,
+              loc: `${siteUrl}${job.publicDetailPath || `/jobs/spec.html?id=${encodeURIComponent(job.id)}`}`,
               lastmod: job.updatedAt || job.createdAt || null,
             });
           });

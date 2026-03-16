@@ -1492,7 +1492,7 @@
           For a confidential conversation or to register your interest, contact
           <a href="mailto:info@hmj-global.com">info@hmj-global.com</a>
           and quote <span id="printFooterReference">this role brief</span>.
-          Further live vacancies are available at <a href="https://www.hmj-global.com/jobs.html">hmj-global.com/jobs</a>.
+          Further live vacancies are available at <a href="/jobs.html">hmjg.netlify.app/jobs</a>.
         </p>
       </section>
     </main>
@@ -2061,22 +2061,21 @@
       }
 
       function buildPrintableBaseUrl() {
-        const host = String(location.hostname || '').toLowerCase();
-        if (host && /(^|\.)hmj-global\.com$/.test(host)) {
-          return `${location.protocol}//${location.host}`;
+        if (location?.origin && /^https?:/i.test(location.origin)) {
+          return String(location.origin).replace(/\/$/, '');
         }
-        return 'https://www.hmj-global.com';
+        return 'https://hmjg.netlify.app';
       }
 
       function buildPrintableRoleLink(meta = {}, job = {}) {
         const baseUrl = buildPrintableBaseUrl();
-        const slug = trimString(meta.slug || localSlug || '', 120);
-        if (slug) {
-          return `${baseUrl}/go/${encodeURIComponent(slug)}`;
-        }
         const jobId = trimString(meta.jobId || job.id || '', 120);
         if (jobId) {
-          return `${baseUrl}/jobs/spec.html?id=${encodeURIComponent(jobId)}`;
+          const params = new URLSearchParams();
+          params.set('id', jobId);
+          const canonicalSlug = buildCanonicalSeoSlug(job, meta.seo || {}, meta.details || {});
+          if (canonicalSlug) params.set('slug', canonicalSlug);
+          return `${baseUrl}/jobs/spec.html?${params.toString()}`;
         }
         return `${baseUrl}/jobs.html`;
       }

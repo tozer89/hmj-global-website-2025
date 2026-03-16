@@ -114,7 +114,7 @@ test('job spec page renders printable share copy from payload without fetching',
   assert.equal(dom.window.document.title, 'Senior Planning Engineer | HMJ Global');
   assert.match(document.getElementById('metaDescriptionTag').getAttribute('content'), /Senior Planning Engineer/);
   assert.match(document.getElementById('metaDescriptionTag').getAttribute('content'), /Polished HMJ share-spec overview/);
-  assert.equal(document.getElementById('canonicalTag').getAttribute('href'), 'https://www.hmj-global.com/jobs/spec.html?id=spec-role-1&slug=senior-planning-engineer-london-uk');
+  assert.equal(document.getElementById('canonicalTag').getAttribute('href'), 'https://example.com/jobs/spec.html?id=spec-role-1&slug=senior-planning-engineer-london-uk');
   assert.equal(document.getElementById('ogTitleTag').getAttribute('content'), 'Senior Planning Engineer | HMJ Global');
   assert.equal(document.getElementById('twitterTitleTag').getAttribute('content'), 'Senior Planning Engineer | HMJ Global');
   assert.equal(document.getElementById('loading').style.display, 'none');
@@ -146,8 +146,8 @@ test('job spec page renders printable share copy from payload without fetching',
 
   const emailShareHref = document.querySelector('[data-email-share]').href;
   const emailBody = new URLSearchParams(emailShareHref.split('?')[1]).get('body') || '';
-  assert.match(emailBody, /https:\/\/www\.hmj-global\.com\/go\/spec-role-1/);
-  assert.match(emailBody, /https:\/\/www\.hmj-global\.com\/contact\.html/);
+  assert.match(emailBody, /https:\/\/example\.com\/jobs\/spec\.html\?id=spec-role-1&slug=senior-planning-engineer-london-uk/);
+  assert.match(emailBody, /https:\/\/example\.com\/contact\.html/);
   assert.doesNotMatch(emailBody, /payload=/);
 
   const responsibilityItems = Array.from(document.querySelectorAll('#respList li')).map((node) => node.textContent.trim());

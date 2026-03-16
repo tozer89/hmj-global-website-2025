@@ -3,6 +3,7 @@ const {
   mergeDestinationQuery,
   normaliseShortLinkSlug,
 } = require('../../lib/short-links.js');
+const { toPublicJob } = require('./_jobs-helpers.js');
 
 function html(statusCode, title, message) {
   return {
@@ -86,6 +87,51 @@ async function updateUsage(supabase, row) {
   }
 }
 
+function fallbackJobLocation(job = {}) {
+  const publicJob = toPublicJob(job);
+  if (!publicJob?.id || publicJob.published === false) return '';
+  return publicJob.publicDetailPath || `/jobs/spec.html?id=${encodeURIComponent(publicJob.id)}`;
+}
+
+async function findFallbackLocation(supabase, slug) {
+  const exact = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('published', true)
+    .eq('id', slug)
+    .limit(1)
+    .maybeSingle();
+
+  if (!exact.error && exact.data) {
+    return fallbackJobLocation(exact.data);
+  }
+
+  const result = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('published', true)
+    .order('updated_at', { ascending: false })
+    .limit(500);
+
+  if (result.error || !Array.isArray(result.data)) {
+    return '';
+  }
+
+  const normalizedSlug = String(slug || '').toLowerCase();
+  for (const row of result.data) {
+    const publicJob = toPublicJob(row);
+    const detailPath = String(publicJob?.publicDetailPath || '');
+    if (!detailPath) continue;
+    const params = detailPath.includes('?') ? new URLSearchParams(detailPath.slice(detailPath.indexOf('?') + 1)) : new URLSearchParams();
+    const jobSlug = String(params.get('slug') || '').toLowerCase();
+    if (jobSlug && jobSlug === normalizedSlug) {
+      return detailPath;
+    }
+  }
+
+  return '';
+}
+
 exports.handler = async (event) => {
   const slug = requestedSlug(event);
   if (!slug) {
@@ -122,6 +168,14 @@ exports.handler = async (event) => {
   }
 
   if (!data || data.is_active === false) {
+    try {
+      const fallbackLocation = await findFallbackLocation(supabase, slug);
+      if (fallbackLocation) {
+        return redirect(fallbackLocation);
+      }
+    } catch (error) {
+      console.warn('[short-link-go] fallback lookup failed', error?.message || error);
+    }
     return html(404, 'Link unavailable', 'This HMJ short link is not available.');
   }
 

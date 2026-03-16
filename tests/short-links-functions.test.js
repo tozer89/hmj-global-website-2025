@@ -264,3 +264,85 @@ test('public short-link redirect resolves the slug, appends passthrough query pa
     assert.ok(updates[0].last_used_at);
   });
 });
+
+test('public short-link redirect falls back to a published job detail route when no stored short link exists', async () => {
+  const supabase = {
+    from(table) {
+      if (table === 'short_links') {
+        return {
+          select(fields) {
+            assert.equal(fields, 'slug, destination_url, is_active, click_count');
+            return {
+              eq(column, value) {
+                assert.equal(column, 'slug');
+                assert.equal(value, 'planner-dublin');
+                return {
+                  limit(limitValue) {
+                    assert.equal(limitValue, 1);
+                    return {
+                      maybeSingle() {
+                        return Promise.resolve({ data: null, error: null });
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      }
+
+      assert.equal(table, 'jobs');
+      return {
+        select() {
+          return {
+            eq(column, value) {
+              assert.equal(column, 'published');
+              assert.equal(value, true);
+              return {
+                eq(innerColumn, innerValue) {
+                  assert.equal(innerColumn, 'id');
+                  assert.equal(innerValue, 'planner-dublin');
+                  return {
+                    limit(limitValue) {
+                      assert.equal(limitValue, 1);
+                      return {
+                        maybeSingle() {
+                          return Promise.resolve({
+                            data: {
+                              id: 'planner-dublin',
+                              title: 'Project Planner — Data Centre',
+                              location_text: 'Dublin, Ireland Data Centre',
+                              published: true,
+                            },
+                            error: null,
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  await withMockedModule(redirectFunctionPath, {
+    [supabasePath]: { getSupabase: () => supabase },
+  }, async (mod) => {
+    const response = await mod.handler({
+      queryStringParameters: {
+        slug: 'planner-dublin',
+      },
+    });
+
+    assert.equal(response.statusCode, 302);
+    assert.equal(
+      response.headers.location,
+      '/jobs/spec.html?id=planner-dublin&slug=project-planner-data-centre-dublin-ireland-data-centre'
+    );
+  });
+});
