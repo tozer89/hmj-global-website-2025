@@ -9,8 +9,8 @@
   <script src="/admin/__env.js"></script>
   <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="../js/identity-loader.js"></script>
-  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="../js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
 
   <style>
     :root{
@@ -1100,6 +1100,25 @@
 
   <script>
   (function startJobs(){
+    let startupSettled = false;
+
+    function revealStartupFallback(message) {
+      if (startupSettled) return;
+      const gate = document.getElementById('gate');
+      const app = document.getElementById('app');
+      const why = gate ? gate.querySelector('.why') : null;
+      const loginButton = gate ? gate.querySelector('[data-admin-login-primary], button[data-admin-login], button') : null;
+      if (app) app.style.display = 'none';
+      if (gate) gate.style.display = '';
+      if (why) {
+        why.textContent = message || 'HMJ admin did not finish loading cleanly. Refresh and try again, or sign in again on this host.';
+      }
+      if (loginButton) {
+        loginButton.type = 'button';
+        loginButton.textContent = 'Go to admin sign-in';
+      }
+    }
+
     function applyClosedBatchUiDomState() {
       const shells = [
         document.getElementById('batchModalShell'),
@@ -1127,11 +1146,17 @@
 
     applyClosedBatchUiDomState();
 
+    const startupFallbackTimer = window.setTimeout(() => {
+      revealStartupFallback('The jobs console did not finish loading. Refresh this page, then sign in again if needed.');
+    }, 4500);
+
     if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
       return setTimeout(startJobs, 40);
     }
 
     window.Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
+      startupSettled = true;
+      window.clearTimeout(startupFallbackTimer);
       const PREFS_KEY = 'hmj.jobs.admin.preferences:v1';
       const DEFAULT_FILTERS = Object.freeze({
         q: '',
@@ -4535,6 +4560,9 @@
       updateStatusPanel();
       applyReadOnly();
       await loadJobs();
+    }).catch((error) => {
+      console.error('[jobs] bootstrap failed', error);
+      revealStartupFallback('The jobs console hit a startup error. Refresh this page, then try again.');
     });
   })();
   </script>
