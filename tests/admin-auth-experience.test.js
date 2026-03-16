@@ -1,16 +1,20 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { JSDOM } = require('jsdom');
 
 const {
   ADMIN_ROUTES,
   PASSWORD_MIN_LENGTH,
+  STANDALONE_AUTH_VIEWS,
   buildAdminEntryUrl,
   buildIntentDestination,
   classifyIdentityError,
+  isStandaloneAuthView,
   normaliseIdentityError,
   normaliseNextTarget,
   resolveAuthenticatedAdminRedirect,
   readNotice,
+  suppressIdentityWidgetChrome,
   validatePasswordPair,
 } = require('../assets/js/admin.auth.experience.js');
 
@@ -111,4 +115,38 @@ test('resolveAuthenticatedAdminRedirect keeps signed-in admins on the dashboard 
   assert.equal(resolveAuthenticatedAdminRedirect('complete-account', '', false), '/admin/');
   assert.equal(resolveAuthenticatedAdminRedirect('reset-password', '', false), '/admin/');
   assert.equal(resolveAuthenticatedAdminRedirect('reset-password', '', true), '');
+});
+
+test('standalone auth views are limited to forgot, invite completion, and reset pages', () => {
+  assert.deepEqual(Array.from(STANDALONE_AUTH_VIEWS).sort(), ['complete-account', 'forgot-password', 'reset-password']);
+  assert.equal(isStandaloneAuthView('reset-password'), true);
+  assert.equal(isStandaloneAuthView('complete-account'), true);
+  assert.equal(isStandaloneAuthView('forgot-password'), true);
+  assert.equal(isStandaloneAuthView('login'), false);
+});
+
+test('suppressIdentityWidgetChrome hides injected Netlify identity overlays on standalone auth pages', () => {
+  const dom = new JSDOM(`
+    <!doctype html>
+    <html>
+      <body data-auth-view="reset-password">
+        <iframe title="Netlify identity widget"></iframe>
+        <iframe src="https://identity.netlify.com/widget"></iframe>
+        <div class="netlify-identity-widget"></div>
+      </body>
+    </html>
+  `);
+
+  global.document = dom.window.document;
+
+  const hidden = suppressIdentityWidgetChrome(dom.window.document, 'reset-password');
+  assert.equal(hidden, 3);
+
+  const widgetFrame = dom.window.document.querySelector('iframe[title="Netlify identity widget"]');
+  const widgetDiv = dom.window.document.querySelector('.netlify-identity-widget');
+  assert.equal(widgetFrame.hidden, true);
+  assert.equal(widgetFrame.getAttribute('aria-hidden'), 'true');
+  assert.equal(widgetDiv.hidden, true);
+
+  delete global.document;
 });
