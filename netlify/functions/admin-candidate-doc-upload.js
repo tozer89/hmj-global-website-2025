@@ -35,7 +35,7 @@ async function insertDocumentRecord(supabase, payload) {
   const richInsert = await supabase
     .from('candidate_documents')
     .insert(payload)
-    .select('id,candidate_id,label,filename,url,storage_key,created_at,meta')
+    .select('id,candidate_id,document_type,label,filename,original_filename,url,storage_path,storage_key,uploaded_at,created_at,updated_at,meta')
     .single();
 
   if (!richInsert.error) return richInsert;
@@ -45,21 +45,25 @@ async function insertDocumentRecord(supabase, payload) {
     .from('candidate_documents')
     .insert({
       candidate_id: payload.candidate_id,
+      document_type: payload.document_type,
       label: payload.label,
+      original_filename: payload.original_filename,
       filename: payload.filename,
+      storage_path: payload.storage_path,
       storage_key: payload.storage_key,
+      uploaded_at: payload.uploaded_at,
       url: null,
       meta: payload.meta,
       created_at: payload.uploaded_at,
     })
-    .select('id,candidate_id,label,filename,url,storage_key,created_at,meta')
+    .select('id,candidate_id,document_type,label,filename,original_filename,url,storage_path,storage_key,uploaded_at,created_at,updated_at,meta')
     .single();
 }
 
 const baseHandler = async (event, context) => {
   try {
     const { supabase, user } = await getContext(event, context, { requireAdmin: true });
-    const { candidateId, name, contentType, data, label } = JSON.parse(event.body || '{}');
+    const { candidateId, name, contentType, data, label, documentType: requestedDocumentType } = JSON.parse(event.body || '{}');
 
     if (!candidateId || !data || !name) {
       return { statusCode: 400, body: JSON.stringify({ error: 'candidateId, name, data required' }) };
@@ -74,7 +78,9 @@ const baseHandler = async (event, context) => {
     const ext = (name.includes('.') ? name.split('.').pop() : 'dat') || 'dat';
     const key = `candidate-${candidateId}/${Date.now()}-${randomUUID().slice(0, 8)}-${safeName}.${ext}`;
     const uploadedAt = new Date().toISOString();
-    const documentType = inferDocumentType(name, label);
+    const documentType = typeof requestedDocumentType === 'string' && requestedDocumentType.trim()
+      ? requestedDocumentType.trim().toLowerCase()
+      : inferDocumentType(name, label);
 
     const storage = supabase.storage.from(CANDIDATE_DOCS_BUCKET);
     const uploadRes = await storage.upload(key, buffer, {

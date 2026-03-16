@@ -13,7 +13,7 @@ const baseHandler = async (event, context) => {
 
     const { data, error } = await supabase
       .from('candidate_documents')
-      .select('id,candidate_id,label,filename,url,storage_key,created_at,meta')
+      .select('id,candidate_id,document_type,label,filename,original_filename,url,storage_path,storage_key,uploaded_at,created_at,updated_at,meta')
       .eq('candidate_id', candidateId)
       .order('created_at', { ascending: false });
 

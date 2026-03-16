@@ -149,8 +149,17 @@
     .summary-tile span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
     .summary-tile strong{font-size:1rem;color:var(--ink)}
     .summary-tile p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .payment-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .payment-sensitive-grid{display:grid;gap:12px}
+    .payment-sensitive-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .tag-row{display:flex;gap:8px;flex-wrap:wrap}
     .doc-list,.notes,.note-list,.audit-list{display:grid;gap:12px}
+    .doc-groups{display:grid;gap:16px}
+    .doc-group{display:grid;gap:12px;padding:14px 16px;border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,#fcfdff,#f7faff)}
+    .doc-group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .doc-group h4{margin:0 0 4px;color:var(--ink)}
+    .doc-group p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .doc-upload-controls{display:grid;grid-template-columns:minmax(170px,200px) minmax(200px,1fr) auto;gap:8px;align-items:end;min-width:min(520px,100%)}
     .doc-row,.note,.audit-row{padding:14px 16px;border:1px solid var(--stroke);border-radius:16px;background:#fbfdff}
     .doc-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .note{display:grid;gap:10px}
@@ -176,6 +185,8 @@
       .ops-grid{grid-template-columns:1fr}
       .thead,.trow{grid-template-columns:40px 84px minmax(220px,1.2fr) minmax(220px,1fr) minmax(200px,1fr) 120px 230px}
       .summary-grid{grid-template-columns:1fr}
+      .payment-summary{grid-template-columns:1fr}
+      .payment-sensitive-fields,.doc-upload-controls{grid-template-columns:1fr}
     }
     @media (max-width:720px){
       header.card.intro{padding:18px}
@@ -191,6 +202,7 @@
       .profile-grid{grid-template-columns:1fr}
       .drawer-toolbar{justify-content:flex-start}
       .doc-row{display:grid}
+      .payment-sensitive-fields{grid-template-columns:1fr}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
@@ -376,6 +388,7 @@
       </div>
     </div>
     <div class="sec" id="dw-profile"></div>
+    <div class="sec" id="dw-payment"></div>
     <div class="sec" id="dw-assignments"></div>
     <div class="sec" id="dw-docs"></div>
     <div class="sec" id="dw-notes"></div>
@@ -385,6 +398,6 @@
   <button class="fab" id="fab-new">+ New candidate</button>
   <div class="toast" id="toast"></div>
 
-  <script defer src="/admin/candidates.js?v=8"></script>
+  <script defer src="/admin/candidates.js?v=9"></script>
 </body>
 </html>

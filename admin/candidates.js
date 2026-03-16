@@ -56,6 +56,25 @@
   };
 
   const REQUESTABLE_DOC_TYPES = ['passport', 'qualification_certificate', 'reference', 'right_to_work', 'visa_permit', 'bank_document'];
+  const DOCUMENT_TYPE_OPTIONS = [
+    { value: 'passport', label: 'Passport' },
+    { value: 'right_to_work', label: 'Right to work' },
+    { value: 'visa_permit', label: 'Visa / permit' },
+    { value: 'qualification_certificate', label: 'Qualification / certificate' },
+    { value: 'reference', label: 'Reference' },
+    { value: 'bank_document', label: 'Bank document' },
+    { value: 'cv', label: 'CV / resume' },
+    { value: 'cover_letter', label: 'Cover letter' },
+    { value: 'other', label: 'Other' }
+  ];
+  const DOCUMENT_GROUPS = [
+    { title: 'Right to work', description: 'Passports, RTW evidence, visas, and immigration files.', types: ['passport', 'right_to_work', 'visa_permit'] },
+    { title: 'Qualifications & certificates', description: 'Tickets, cards, qualifications, and certification evidence.', types: ['qualification_certificate'] },
+    { title: 'References', description: 'Reference letters or supporting referee documents.', types: ['reference'] },
+    { title: 'Bank documents', description: 'Void cheque or other supporting payroll documents if required.', types: ['bank_document'] },
+    { title: 'CV & cover letters', description: 'General candidate profile documents.', types: ['cv', 'cover_letter'] },
+    { title: 'Other documents', description: 'Anything that does not fit the core onboarding categories.', types: ['other'] }
+  ];
 
   function qs(sel, root = document) {
     return root.querySelector(sel);
@@ -152,12 +171,23 @@
   }
 
   function documentRequestLabel(value) {
+    if (value === 'passport') return 'Passport';
     if (value === 'qualification_certificate') return 'Qualification / certificate';
     if (value === 'right_to_work') return 'Right to work';
     if (value === 'visa_permit') return 'Visa / permit';
     if (value === 'bank_document') return 'Bank document';
     if (value === 'reference') return 'Reference';
-    return 'Passport';
+    if (value === 'cv') return 'CV / resume';
+    if (value === 'cover_letter') return 'Cover letter';
+    if (value === 'other') return 'Other';
+    return 'Document';
+  }
+
+  function documentTypeLabel(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 'Other';
+    const normalized = normalizeDocumentRequestType(raw) || raw.replace(/\s+/g, '_');
+    return documentRequestLabel(normalized);
   }
 
   function formatDocumentRequestList(list) {
@@ -186,11 +216,14 @@
     const complete = summary?.completion?.complete === true
       || (!!String(row?.bank_name || '').trim() && !!(String(row?.bank_account || '').trim() || String(row?.bank_iban || '').trim()));
     return {
+      id: String(summary?.id || '').trim(),
       accountCurrency: String(summary?.accountCurrency || (row?.bank_iban ? 'EUR' : 'GBP') || 'GBP').trim() || 'GBP',
+      paymentMethod: String(summary?.paymentMethod || (row?.bank_iban ? 'iban_swift' : 'gbp_local') || 'gbp_local').trim() || 'gbp_local',
       bankName: String(summary?.bankName || row?.bank_name || '').trim(),
       bankLocationOrCountry: String(summary?.bankLocationOrCountry || '').trim(),
       accountHolderName: String(summary?.accountHolderName || '').trim(),
       lastFour,
+      legacyFallback: summary?.legacyFallback === true,
       updatedAt: summary?.updatedAt || row?.updated_at || row?.created_at || '',
       completion: {
         complete,
@@ -478,6 +511,9 @@
           full_name: storedFullName || derivedFullName || null,
         };
     const paymentSummary = normalisePaymentSummary(row);
+    const paymentDetailsAdmin = row.payment_details_admin && typeof row.payment_details_admin === 'object'
+      ? { ...row.payment_details_admin }
+      : null;
     const onboarding = normaliseOnboarding(row, docs, paymentSummary);
     return {
       ...row,
@@ -510,6 +546,7 @@
       assignment_linking_available: row.assignment_linking_available !== false,
       onboarding,
       payment_summary: paymentSummary,
+      payment_details_admin: paymentDetailsAdmin,
       notes,
       audit: Array.isArray(row.audit) ? row.audit : [],
       applications: Array.isArray(row.applications) ? row.applications : [],
@@ -788,6 +825,76 @@
     return lastFour ? `••••${lastFour}` : 'Pending';
   }
 
+  function paymentMethodLabel(value) {
+    return String(value || '').toLowerCase() === 'iban_swift' ? 'IBAN / SWIFT' : 'Sort code / account number';
+  }
+
+  function documentGroupKey(type) {
+    const raw = normalizeDocumentRequestType(type) || String(type || '').trim().toLowerCase().replace(/\s+/g, '_');
+    if (raw === 'passport' || raw === 'right_to_work' || raw === 'visa_permit') return 'right_to_work';
+    if (raw === 'qualification_certificate') return 'qualifications';
+    if (raw === 'reference') return 'references';
+    if (raw === 'bank_document') return 'bank';
+    if (raw === 'cv' || raw === 'cover_letter') return 'cv';
+    return 'other';
+  }
+
+  function groupDocuments(docs) {
+    const groups = new Map(DOCUMENT_GROUPS.map((group) => [documentGroupKey(group.types[0]), { ...group, items: [] }]));
+    (Array.isArray(docs) ? docs : []).forEach((doc) => {
+      const key = documentGroupKey(doc?.document_type || doc?.kind);
+      const group = groups.get(key) || groups.get('other');
+      if (group) group.items.push(doc);
+    });
+    return Array.from(groups.values());
+  }
+
+  function buildPaymentDraft(candidate) {
+    const existing = candidate?.payment_details_admin && typeof candidate.payment_details_admin === 'object'
+      ? candidate.payment_details_admin
+      : null;
+    const summary = candidate?.payment_summary || {};
+    const method = String(existing?.paymentMethod || summary.paymentMethod || 'gbp_local').toLowerCase() === 'iban_swift'
+      ? 'iban_swift'
+      : 'gbp_local';
+    return {
+      id: existing?.id || summary.id || '',
+      accountCurrency: String(existing?.accountCurrency || summary.accountCurrency || 'GBP').trim() || 'GBP',
+      paymentMethod: method,
+      accountHolderName: String(existing?.accountHolderName || summary.accountHolderName || '').trim(),
+      bankName: String(existing?.bankName || summary.bankName || '').trim(),
+      bankLocationOrCountry: String(existing?.bankLocationOrCountry || summary.bankLocationOrCountry || '').trim(),
+      accountType: String(existing?.accountType || '').trim(),
+      values: {
+        sortCode: String(existing?.values?.sortCode || '').trim(),
+        accountNumber: String(existing?.values?.accountNumber || '').trim(),
+        iban: String(existing?.values?.iban || '').trim(),
+        swiftBic: String(existing?.values?.swiftBic || '').trim(),
+      },
+      masked: {
+        sortCode: String(existing?.masked?.sortCode || summary.masked?.sortCode || '').trim(),
+        accountNumber: String(existing?.masked?.accountNumber || summary.masked?.accountNumber || '').trim(),
+        iban: String(existing?.masked?.iban || summary.masked?.iban || '').trim(),
+        swiftBic: String(existing?.masked?.swiftBic || summary.masked?.swiftBic || '').trim(),
+      },
+      lastFour: String(existing?.lastFour || summary.lastFour || '').trim(),
+      verifiedAt: existing?.verifiedAt || summary.verifiedAt || null,
+      updatedAt: existing?.updatedAt || summary.updatedAt || '',
+      loadedSensitive: existing?.loadedSensitive === true,
+      legacyFallback: existing?.legacyFallback === true || summary.legacyFallback === true,
+      completion: summary.completion || existing?.completion || { complete: false, missing: ['payment_details'] },
+    };
+  }
+
+  function ensurePaymentDraft(candidate) {
+    candidate.payment_details_admin = buildPaymentDraft(candidate);
+    return candidate.payment_details_admin;
+  }
+
+  function hasDirtyPaymentFields() {
+    return !!elements.dwPayment?.querySelector('[data-payment-field][data-dirty="true"]');
+  }
+
   function buildRow(candidate, index) {
     const row = document.createElement('div');
     row.className = 'trow';
@@ -1064,8 +1171,8 @@
   }
 
   function closeDrawer() {
-    if (elements.dwProfile?.querySelector('[data-field][data-dirty="true"]')) {
-      showToast('Unsaved changes in this profile. Use Save changes before closing.', 'warn', 3600);
+    if (elements.dwProfile?.querySelector('[data-field][data-dirty="true"]') || hasDirtyPaymentFields()) {
+      showToast('Unsaved profile or payment changes. Save them before closing.', 'warn', 3600);
       return;
     }
     state.drawerId = null;
@@ -1075,6 +1182,7 @@
   function renderDrawerSkeleton() {
     elements.dwName.textContent = 'Loading…';
     elements.dwProfile.innerHTML = '<div class="skeleton-card"></div>';
+    elements.dwPayment.innerHTML = '';
     elements.dwAssignments.innerHTML = '';
     elements.dwDocs.innerHTML = '';
     elements.dwNotes.innerHTML = '';
@@ -1103,6 +1211,8 @@
     elements.dwBlock.onclick = () => toggleBlock(candidate);
     elements.dwProfile.innerHTML = renderProfile(candidate);
     bindProfileEditors(candidate);
+    elements.dwPayment.innerHTML = renderPayment(candidate);
+    bindPaymentEditors(candidate);
     elements.dwAssignments.innerHTML = renderAssignments(candidate);
     bindAssignmentActions(candidate);
     elements.dwDocs.innerHTML = renderDocs(candidate);
@@ -1195,6 +1305,105 @@
       </div>`;
   }
 
+  function renderPayment(candidate) {
+    const payment = ensurePaymentDraft(candidate);
+    const isIban = payment.paymentMethod === 'iban_swift';
+    const helperMessage = payment.loadedSensitive
+      ? 'Secure values are loaded for this admin session. Save changes to update the stored payment record.'
+      : payment.completion?.complete
+      ? 'Sensitive values stay masked by default. Load secure values if you need to inspect or edit the existing account identifiers.'
+      : 'No payment record is saved yet. Enter the required details and save them securely.';
+    const identifierHint = payment.loadedSensitive
+      ? 'Leave a value in place to keep it, or replace it and save.'
+      : 'Leave sensitive fields blank to keep the stored masked values unchanged.';
+    return `
+      <div class="drawer-section">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <h3 style="margin:0 0 4px">Bank / payment details</h3>
+            <div class="muted" style="font-size:13px">${helperMessage}</div>
+          </div>
+          <div class="tag-row">
+            <span class="chip ${payment.completion?.complete ? 'green' : 'orange'}">${payment.completion?.complete ? 'On file' : 'Pending'}</span>
+            ${payment.legacyFallback ? '<span class="chip gray">Legacy fallback</span>' : ''}
+          </div>
+        </div>
+        <div class="payment-summary">
+          <div class="summary-tile">
+            <span>Account format</span>
+            <strong>${paymentMethodLabel(payment.paymentMethod)}</strong>
+            <p>${escapeHtml(payment.accountCurrency || 'GBP')} · ${payment.bankName ? escapeHtml(payment.bankName) : 'Bank pending'}</p>
+          </div>
+          <div class="summary-tile">
+            <span>Stored reference</span>
+            <strong>${escapeHtml(payment.lastFour ? `••••${payment.lastFour}` : 'Pending')}</strong>
+            <p>${escapeHtml(payment.masked.accountNumber || payment.masked.iban || payment.masked.sortCode || 'No sensitive identifiers saved yet.')}</p>
+          </div>
+        </div>
+        <div class="profile-grid">
+          <label class="drawer-field">
+            <span>Account currency</span>
+            <select class="drawer-input" data-payment-field="accountCurrency">
+              ${['GBP', 'EUR', 'USD', 'AED', 'SAR', 'OTHER'].map((code) => `<option value="${code}" ${code === payment.accountCurrency ? 'selected' : ''}>${code}</option>`).join('')}
+            </select>
+          </label>
+          <label class="drawer-field">
+            <span>Payment method</span>
+            <select class="drawer-input" data-payment-field="paymentMethod">
+              <option value="gbp_local" ${payment.paymentMethod === 'gbp_local' ? 'selected' : ''}>Sort code / account number</option>
+              <option value="iban_swift" ${payment.paymentMethod === 'iban_swift' ? 'selected' : ''}>IBAN / SWIFT</option>
+            </select>
+          </label>
+          <label class="drawer-field">
+            <span>Account holder name</span>
+            <input class="drawer-input" data-payment-field="accountHolderName" value="${escapeHtml(payment.accountHolderName || '')}" />
+          </label>
+          <label class="drawer-field">
+            <span>Bank name</span>
+            <input class="drawer-input" data-payment-field="bankName" value="${escapeHtml(payment.bankName || '')}" />
+          </label>
+          <label class="drawer-field">
+            <span>Bank location / country</span>
+            <input class="drawer-input" data-payment-field="bankLocationOrCountry" value="${escapeHtml(payment.bankLocationOrCountry || '')}" />
+          </label>
+          <label class="drawer-field">
+            <span>Account type</span>
+            <input class="drawer-input" data-payment-field="accountType" value="${escapeHtml(payment.accountType || '')}" placeholder="Optional" />
+          </label>
+        </div>
+        <div class="payment-sensitive-grid">
+          <div class="payment-sensitive-fields" data-payment-method-panel="gbp_local" ${isIban ? 'hidden' : ''}>
+            <label class="drawer-field">
+              <span>Sort code</span>
+              <input class="drawer-input" data-payment-field="sortCode" value="${escapeHtml(payment.values.sortCode || '')}" placeholder="${escapeHtml(payment.masked.sortCode || '00-00-00')}" />
+            </label>
+            <label class="drawer-field">
+              <span>Account number</span>
+              <input class="drawer-input" data-payment-field="accountNumber" value="${escapeHtml(payment.values.accountNumber || '')}" placeholder="${escapeHtml(payment.masked.accountNumber || '12345678')}" />
+            </label>
+          </div>
+          <div class="payment-sensitive-fields" data-payment-method-panel="iban_swift" ${isIban ? '' : 'hidden'}>
+            <label class="drawer-field">
+              <span>IBAN</span>
+              <input class="drawer-input" data-payment-field="iban" value="${escapeHtml(payment.values.iban || '')}" placeholder="${escapeHtml(payment.masked.iban || 'GB00BANK00000000000000')}" />
+            </label>
+            <label class="drawer-field">
+              <span>SWIFT / BIC</span>
+              <input class="drawer-input" data-payment-field="swiftBic" value="${escapeHtml(payment.values.swiftBic || '')}" placeholder="${escapeHtml(payment.masked.swiftBic || 'BANKGB22')}" />
+            </label>
+          </div>
+        </div>
+        <div class="muted" style="font-size:12px">${identifierHint}</div>
+        <div class="drawer-savebar" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+          <div class="muted" data-payment-save-status>${payment.verifiedAt ? `Verified ${formatDateTime(payment.verifiedAt)}` : 'Payment details are stored separately from the main candidate profile.'}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${payment.completion?.complete && !payment.loadedSensitive ? '<button class="btn ghost" type="button" data-action="load-payment-details">Load secure values</button>' : ''}
+            <button class="btn" type="button" data-action="save-payment-details" disabled>Save payment details</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function editableField(label, field, value, type = 'text') {
     const val = value ? (type === 'date' ? value.slice(0, 10) : value) : '';
     return `
@@ -1220,41 +1429,63 @@
 
   function renderDocs(candidate) {
     const docs = Array.isArray(candidate.docs) ? candidate.docs : [];
-    const rows = docs.length
-      ? docs
-      .map((doc) => {
-        const href = doc.url || doc.access_url || '';
-        const label = doc.kind || doc.label || doc.filename || doc.name || 'Document';
-        const uploaded = formatDateTime(doc.uploaded_at || doc.created_at);
-        const action = href
-          ? `<a href="${href}" target="_blank" rel="noopener">Open</a>`
-          : '<span class="muted">Unavailable</span>';
-        const canDelete = !!(doc.id && (doc.storage_path || doc.storage_key || doc.candidate_id || doc.meta));
-        const remove = canDelete
-          ? `<button class="btn ghost small" type="button" data-doc-delete="${doc.id}">Delete</button>`
-          : '';
-        return `<div class="doc-row">
-          <div style="min-width:0">
-            <div style="font-weight:700;word-break:break-word">${label}</div>
-            <div class="muted" style="font-size:12px">${uploaded || 'Uploaded recently'}</div>
+    const groups = groupDocuments(docs);
+    const rows = groups.map((group) => {
+      const itemsMarkup = group.items.length
+        ? group.items.map((doc) => {
+            const href = doc.url || doc.access_url || '';
+            const label = doc.label || doc.kind || doc.original_filename || doc.filename || doc.name || documentTypeLabel(doc.document_type);
+            const uploaded = formatDateTime(doc.uploaded_at || doc.created_at);
+            const typeLabel = documentTypeLabel(doc.document_type || doc.kind);
+            const action = href
+              ? `<a href="${href}" target="_blank" rel="noopener">Open</a>`
+              : '<span class="muted">Unavailable</span>';
+            const canDelete = !!(doc.id && (doc.storage_path || doc.storage_key || doc.candidate_id || doc.meta));
+            const remove = canDelete
+              ? `<button class="btn ghost small" type="button" data-doc-delete="${doc.id}">Delete</button>`
+              : '';
+            return `<div class="doc-row">
+              <div style="min-width:0">
+                <div style="font-weight:700;word-break:break-word">${escapeHtml(label)}</div>
+                <div class="muted" style="font-size:12px">${escapeHtml(typeLabel)}${uploaded ? ` · ${escapeHtml(uploaded)}` : ''}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${action}${remove}</div>
+            </div>`;
+          }).join('')
+        : '<div class="muted">Nothing uploaded in this section yet.</div>';
+      return `
+        <section class="doc-group">
+          <div class="doc-group-head">
+            <div>
+              <h4>${escapeHtml(group.title)}</h4>
+              <p>${escapeHtml(group.description)}</p>
+            </div>
+            ${group.items.length ? `<span class="chip blue">${group.items.length}</span>` : ''}
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${action}${remove}</div>
-        </div>`;
-      }).join('')
-      : '<div class="muted">No documents uploaded.</div>';
+          <div class="doc-list">${itemsMarkup}</div>
+        </section>`;
+    }).join('');
+
+    const optionMarkup = DOCUMENT_TYPE_OPTIONS
+      .map((option) => `<option value="${option.value}">${option.label}</option>`)
+      .join('');
+
     return `
       <div class="drawer-section">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
           <div>
             <h3 style="margin:0 0 4px">Documents</h3>
-            <div class="muted" style="font-size:13px">Upload CVs, passports, right-to-work files, or other supporting documents.</div>
+            <div class="muted" style="font-size:13px">Upload CVs, passports, right-to-work files, qualifications, references, and other supporting documents.</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="doc-upload-controls">
+            <select class="drawer-input" data-doc-type>${optionMarkup}</select>
+            <input class="drawer-input" data-doc-label placeholder="Label e.g. Passport photo page" />
             <button class="btn" type="button" data-doc-upload>Upload document</button>
             <input type="file" data-doc-input hidden accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" />
           </div>
         </div>
-        <div class="doc-list">${rows}</div>
+        <div class="muted" style="font-size:12px">Choose a document type before uploading so right-to-work and certificate items stay grouped correctly in the onboarding record.</div>
+        <div class="doc-groups">${rows}</div>
       </div>`;
   }
 
@@ -1399,13 +1630,16 @@
   async function refreshCandidateDocuments(candidate) {
     const response = await state.helpers.api('admin-candidate-docs-list', 'POST', { candidateId: candidate.id });
     candidate.docs = Array.isArray(response?.documents) ? response.documents : [];
+    candidate.onboarding = normaliseOnboarding(candidate, candidate.docs, candidate.payment_summary);
     const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
     if (index >= 0) state.raw[index] = { ...candidate };
+    applyFilters();
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
+    refreshDrawerProfile(candidate, { preserveDirty: true });
   }
 
-  async function uploadCandidateDocument(candidate, file, label) {
+  async function uploadCandidateDocument(candidate, file, label, documentType) {
     if (!candidate?.id || !file) return;
     const base64 = await readFileAsBase64(file);
     const response = await state.helpers.api('admin-candidate-doc-upload', 'POST', {
@@ -1414,13 +1648,17 @@
       contentType: file.type || 'application/octet-stream',
       data: base64,
       label: label || file.name,
+      documentType: documentType || 'other',
     });
     if (response?.document) {
       candidate.docs = [response.document].concat(Array.isArray(candidate.docs) ? candidate.docs : []);
+      candidate.onboarding = normaliseOnboarding(candidate, candidate.docs, candidate.payment_summary);
       const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
       if (index >= 0) state.raw[index] = { ...candidate };
+      applyFilters();
       elements.dwDocs.innerHTML = renderDocs(candidate);
       bindDocumentActions(candidate);
+      refreshDrawerProfile(candidate, { preserveDirty: true });
     } else {
       await refreshCandidateDocuments(candidate);
     }
@@ -1430,10 +1668,13 @@
     if (!documentId) return;
     await state.helpers.api('admin-candidate-doc-delete', 'POST', { id: documentId });
     candidate.docs = (candidate.docs || []).filter((doc) => String(doc.id) !== String(documentId));
+    candidate.onboarding = normaliseOnboarding(candidate, candidate.docs, candidate.payment_summary);
     const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
     if (index >= 0) state.raw[index] = { ...candidate };
+    applyFilters();
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
+    refreshDrawerProfile(candidate, { preserveDirty: true });
   }
 
   function bindDocumentActions(candidate) {
@@ -1441,16 +1682,19 @@
     if (!host) return;
     const uploadBtn = qs('[data-doc-upload]', host);
     const fileInput = qs('[data-doc-input]', host);
+    const typeInput = qs('[data-doc-type]', host);
+    const labelInput = qs('[data-doc-label]', host);
     if (uploadBtn && fileInput) {
       uploadBtn.addEventListener('click', () => fileInput.click());
       fileInput.addEventListener('change', async () => {
         const [file] = Array.from(fileInput.files || []);
         if (!file) return;
-        const defaultLabel = file.name.replace(/\.[^.]+$/, '');
-        const label = window.prompt('Document label', defaultLabel) || defaultLabel;
+        const selectedType = String(typeInput?.value || 'other').trim().toLowerCase() || 'other';
+        const defaultLabel = file.name.replace(/\.[^.]+$/, '') || documentTypeLabel(selectedType);
+        const label = String(labelInput?.value || '').trim() || defaultLabel;
         uploadBtn.disabled = true;
         try {
-          await uploadCandidateDocument(candidate, file, label);
+          await uploadCandidateDocument(candidate, file, label, selectedType);
           showToast(`Uploaded ${file.name}`, 'info', 2400);
         } catch (err) {
           console.error('[candidates] document upload failed', err);
@@ -1458,6 +1702,7 @@
         } finally {
           uploadBtn.disabled = false;
           fileInput.value = '';
+          if (labelInput) labelInput.value = '';
         }
       });
     }
@@ -1477,6 +1722,147 @@
         }
       });
     });
+  }
+
+  function refreshDrawerProfile(candidate, { preserveDirty = false } = {}) {
+    if (!candidate || !state.drawerId || String(state.drawerId) !== String(candidate.id)) return;
+    if (preserveDirty && elements.dwProfile?.querySelector('[data-field][data-dirty="true"]')) return;
+    elements.dwProfile.innerHTML = renderProfile(candidate);
+    bindProfileEditors(candidate);
+  }
+
+  function refreshDrawerPayment(candidate) {
+    if (!candidate || !state.drawerId || String(state.drawerId) !== String(candidate.id)) return;
+    elements.dwPayment.innerHTML = renderPayment(candidate);
+    bindPaymentEditors(candidate);
+  }
+
+  function readPaymentDraft(candidate, host = elements.dwPayment) {
+    const draft = ensurePaymentDraft(candidate);
+    const next = {
+      ...draft,
+      values: { ...(draft.values || {}) },
+      masked: { ...(draft.masked || {}) },
+    };
+    if (!host) return next;
+    host.querySelectorAll('[data-payment-field]').forEach((input) => {
+      const field = input.dataset.paymentField;
+      const value = String(input.value || '').trim();
+      if (field === 'sortCode' || field === 'accountNumber' || field === 'iban' || field === 'swiftBic') {
+        next.values[field] = value;
+      } else {
+        next[field] = value;
+      }
+    });
+    return next;
+  }
+
+  function syncPaymentPanels(host) {
+    if (!host) return;
+    const method = String(qs('[data-payment-field="paymentMethod"]', host)?.value || 'gbp_local').trim().toLowerCase() === 'iban_swift'
+      ? 'iban_swift'
+      : 'gbp_local';
+    host.querySelectorAll('[data-payment-method-panel]').forEach((panel) => {
+      panel.hidden = panel.dataset.paymentMethodPanel !== method;
+    });
+  }
+
+  async function loadPaymentDetails(candidate) {
+    const response = await state.helpers.api('admin-candidate-payment-details', 'POST', {
+      action: 'get',
+      candidateId: candidate.id,
+    });
+    candidate.payment_details_admin = response?.paymentDetails ? { ...response.paymentDetails } : buildPaymentDraft(candidate);
+    if (response?.paymentSummary) candidate.payment_summary = normalisePaymentSummary({ payment_summary: response.paymentSummary });
+    if (response?.onboarding) candidate.onboarding = response.onboarding;
+    const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
+    if (index >= 0) state.raw[index] = { ...candidate };
+    refreshDrawerPayment(candidate);
+    refreshDrawerProfile(candidate, { preserveDirty: true });
+  }
+
+  async function savePaymentDetails(candidate) {
+    const draft = readPaymentDraft(candidate);
+    const response = await state.helpers.api('admin-candidate-payment-details', 'POST', {
+      action: 'save',
+      candidateId: candidate.id,
+      account_currency: draft.accountCurrency,
+      payment_method: draft.paymentMethod,
+      account_holder_name: draft.accountHolderName,
+      bank_name: draft.bankName,
+      bank_location_or_country: draft.bankLocationOrCountry,
+      account_type: draft.accountType,
+      sort_code: draft.values.sortCode,
+      account_number: draft.values.accountNumber,
+      iban: draft.values.iban,
+      swift_bic: draft.values.swiftBic,
+    });
+    candidate.payment_details_admin = response?.paymentDetails ? { ...response.paymentDetails } : buildPaymentDraft(candidate);
+    if (response?.paymentSummary) candidate.payment_summary = normalisePaymentSummary({ payment_summary: response.paymentSummary });
+    if (response?.onboarding) candidate.onboarding = response.onboarding;
+    const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
+    if (index >= 0) state.raw[index] = { ...candidate };
+    refreshDrawerPayment(candidate);
+    refreshDrawerProfile(candidate, { preserveDirty: true });
+    applyFilters();
+    showToast(response?.message || 'Payment details saved.', 'info', 2400);
+  }
+
+  function bindPaymentEditors(candidate) {
+    const host = elements.dwPayment;
+    if (!host) return;
+    const inputs = host.querySelectorAll('[data-payment-field]');
+    const saveButton = host.querySelector('[data-action="save-payment-details"]');
+    const loadButton = host.querySelector('[data-action="load-payment-details"]');
+    const saveStatus = host.querySelector('[data-payment-save-status]');
+
+    const updateSaveState = (message) => {
+      const pending = Array.from(inputs).filter((input) => input.dataset.dirty === 'true');
+      if (saveButton) saveButton.disabled = pending.length === 0;
+      if (saveStatus) {
+        if (message) saveStatus.textContent = message;
+        else if (pending.length) saveStatus.textContent = `${pending.length} unsaved payment field${pending.length === 1 ? '' : 's'}.`;
+      }
+    };
+
+    inputs.forEach((input) => {
+      const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+      input.addEventListener(eventName, () => {
+        input.dataset.dirty = 'true';
+        candidate.payment_details_admin = readPaymentDraft(candidate, host);
+        if (input.dataset.paymentField === 'paymentMethod') syncPaymentPanels(host);
+        updateSaveState();
+      });
+    });
+    syncPaymentPanels(host);
+    if (loadButton) {
+      loadButton.addEventListener('click', async () => {
+        loadButton.disabled = true;
+        updateSaveState('Loading secure payment values…');
+        try {
+          await loadPaymentDetails(candidate);
+        } catch (err) {
+          console.error('[candidates] payment detail load failed', err);
+          showToast(err.message || 'Could not load payment details.', 'error', 4200);
+          updateSaveState('Could not load secure payment values.');
+          loadButton.disabled = false;
+        }
+      });
+    }
+    if (saveButton) {
+      saveButton.addEventListener('click', async () => {
+        saveButton.disabled = true;
+        updateSaveState('Saving payment details…');
+        try {
+          await savePaymentDetails(candidate);
+        } catch (err) {
+          console.error('[candidates] payment save failed', err);
+          showToast(err.message || 'Could not save payment details.', 'error', 4200);
+          saveButton.disabled = false;
+          updateSaveState('Save failed. Review the payment fields and try again.');
+        }
+      });
+    }
   }
 
   function renderNotes(candidate) {
@@ -2378,6 +2764,7 @@
     elements.drawer = qs('#drawer');
     elements.dwName = qs('#dw-name');
     elements.dwProfile = qs('#dw-profile');
+    elements.dwPayment = qs('#dw-payment');
     elements.dwAssignments = qs('#dw-assignments');
     elements.dwDocs = qs('#dw-docs');
     elements.dwNotes = qs('#dw-notes');

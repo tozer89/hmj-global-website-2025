@@ -12,12 +12,13 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=8/);
+  assert.match(html, /\/admin\/candidates\.js\?v=9/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
   assert.match(html, /id="candidate-template-xlsx"/);
   assert.match(html, /id="btn-refresh-tsp"/);
+  assert.match(html, /id="dw-payment"/);
   assert.match(html, /id="dw-assignments"/);
 });
 
@@ -58,13 +59,32 @@ test('candidate normalizer keeps synthetic display names out of persisted full_n
   assert.match(source, /name: displayName/);
 });
 
-test('candidate drawer includes admin document upload controls and avoids deleting legacy link-only docs', () => {
+test('candidate drawer includes admin payment editing plus typed document upload controls', () => {
   const source = read('admin/candidates.js');
+  assert.match(source, /function renderPayment/);
+  assert.match(source, /admin-candidate-payment-details/);
+  assert.match(source, /data-action="save-payment-details"/);
+  assert.match(source, /data-action="load-payment-details"/);
   assert.match(source, /data-doc-upload/);
   assert.match(source, /data-doc-input/);
+  assert.match(source, /data-doc-type/);
+  assert.match(source, /data-doc-label/);
+  assert.match(source, /Right to work/);
+  assert.match(source, /Qualifications & certificates/);
   assert.match(source, /admin-candidate-doc-upload/);
   assert.match(source, /admin-candidate-doc-delete/);
   assert.match(source, /const canDelete = !!\(doc\.id && \(doc\.storage_path \|\| doc\.storage_key \|\| doc\.candidate_id \|\| doc\.meta\)\);/);
+});
+
+test('candidate admin document endpoints request and return typed document metadata', () => {
+  const uploadSource = read('netlify/functions/admin-candidate-doc-upload.js');
+  const listSource = read('netlify/functions/admin-candidate-docs-list.js');
+  const getSource = read('netlify/functions/admin-candidates-get.js');
+
+  assert.match(uploadSource, /requestedDocumentType/);
+  assert.match(uploadSource, /document_type: documentType/);
+  assert.match(listSource, /document_type,label,filename,original_filename,url,storage_path,storage_key,uploaded_at/);
+  assert.match(getSource, /document_type,label,filename,original_filename,url,storage_path,storage_key,uploaded_at/);
 });
 
 test('candidate admin UI exposes onboarding reminder controls and uses the reminder endpoint', () => {
@@ -97,5 +117,5 @@ test('candidate drawer exposes an explicit save path instead of relying on blur 
   const source = read('admin/candidates.js');
   assert.match(source, /data-action="save-profile"/);
   assert.match(source, /function saveCandidatePatch/);
-  assert.match(source, /Use Save changes before closing/);
+  assert.match(source, /Unsaved profile or payment changes/);
 });
