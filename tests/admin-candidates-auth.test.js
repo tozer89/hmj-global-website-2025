@@ -36,3 +36,9 @@ test('candidate admin functions allow valid cookie-backed admin sessions without
     assert.match(source, /withAdminCors\(baseHandler,\s*\{\s*requireToken:\s*false\s*\}\)/, `${file} should disable the preflight token gate`);
   });
 });
+
+test('candidate row actions use closest() event delegation so button text clicks still resolve the action', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /target\.closest\('\[data-role\]'\)/);
+  assert.match(source, /rawTarget && rawTarget\.parentElement instanceof Element/);
+});

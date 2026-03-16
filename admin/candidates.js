@@ -666,9 +666,9 @@
       <div><span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span></div>
       <div>${candidate.role || '—'}</div>
       <div class="row-actions">
-        <button class="btn ghost small" data-role="open" data-id="${candidate.id}">Open</button>
-        <button class="btn ghost small" data-role="${archiveRole}" data-id="${candidate.id}">${archiveLabel}</button>
-        <button class="btn ghost small" data-role="pdf" data-id="${candidate.id}" ${disabledActions ? 'disabled' : ''}>PDF</button>
+        <button class="btn ghost small" type="button" data-role="open" data-id="${candidate.id}">Open</button>
+        <button class="btn ghost small" type="button" data-role="${archiveRole}" data-id="${candidate.id}">${archiveLabel}</button>
+        <button class="btn ghost small" type="button" data-role="pdf" data-id="${candidate.id}" ${disabledActions ? 'disabled' : ''}>PDF</button>
       </div>`;
     return row;
   }
@@ -737,17 +737,24 @@
   }
 
   function handleRowClick(event) {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    const role = target.dataset.role;
-    const id = target.dataset.id || target.closest('.trow')?.dataset.id;
+    const rawTarget = event.target;
+    const target = rawTarget instanceof Element
+      ? rawTarget
+      : rawTarget && rawTarget.parentElement instanceof Element
+      ? rawTarget.parentElement
+      : null;
+    if (!target) return;
+    const action = target.closest('[data-role]');
+    const row = target.closest('.trow');
+    const role = action?.dataset.role || '';
+    const id = action?.dataset.id || row?.dataset.id;
     if (!role) {
       if (id) openDrawer(id);
       return;
     }
     if (!id) return;
     if (role === 'select') {
-      updateSelection(id, target.checked);
+      updateSelection(id, action instanceof HTMLInputElement ? action.checked : false);
       return;
     }
     if (role === 'open') {
@@ -1088,6 +1095,7 @@
       status: patch.status !== undefined ? patch.status : candidate.status,
       role: patch.role !== undefined ? patch.role : candidate.role,
       region: patch.region !== undefined ? patch.region : candidate.region,
+      full_name: patch.full_name !== undefined ? patch.full_name : candidate.full_name,
       availability_on: patch.availability_on !== undefined ? patch.availability_on : candidate.availability_on,
       skills: patch.skills !== undefined ? parseSkills(patch.skills) : candidate.skills,
       notes: patch.notes !== undefined ? patch.notes : candidate.notes?.map((note) => note.body).join('\n') || ''

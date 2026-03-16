@@ -8,6 +8,17 @@ const {
   syncPortalAuthUserFromCandidate,
 } = require('./_candidate-account-admin.js');
 
+function splitFullName(value) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!text) return { first_name: '', last_name: '' };
+  const parts = text.split(' ');
+  if (parts.length === 1) return { first_name: parts[0], last_name: '' };
+  return {
+    first_name: parts.shift() || '',
+    last_name: parts.join(' ').trim(),
+  };
+}
+
 const baseHandler = async (event, context) => {
   try {
     // ✅ IMPORTANT: pass (event, context, { requireAdmin:true })
@@ -57,6 +68,7 @@ const baseHandler = async (event, context) => {
       id: body.id ?? undefined,
       ref: trim(body.ref),
       user_id: trim(body.user_id),
+      full_name: trim(body.full_name),
       first_name: (body.first_name || '').trim(),
       last_name: (body.last_name || '').trim(),
       email: trim(body.email),
@@ -110,6 +122,30 @@ const baseHandler = async (event, context) => {
 
     if (!Object.prototype.hasOwnProperty.call(body, 'terms_ok')) {
       delete rec.terms_ok;
+    }
+
+    if ((!rec.first_name || !rec.last_name) && rec.full_name) {
+      const parsed = splitFullName(rec.full_name);
+      rec.first_name = rec.first_name || parsed.first_name;
+      rec.last_name = rec.last_name || parsed.last_name;
+    }
+
+    if ((!rec.first_name || !rec.last_name) && rec.id) {
+      const { data: existingCandidate } = await supabase
+        .from('candidates')
+        .select('first_name,last_name,full_name')
+        .eq('id', rec.id)
+        .maybeSingle();
+
+      if (existingCandidate) {
+        rec.first_name = rec.first_name || String(existingCandidate.first_name || '').trim();
+        rec.last_name = rec.last_name || String(existingCandidate.last_name || '').trim();
+        if ((!rec.first_name || !rec.last_name) && existingCandidate.full_name) {
+          const parsedExisting = splitFullName(existingCandidate.full_name);
+          rec.first_name = rec.first_name || parsedExisting.first_name;
+          rec.last_name = rec.last_name || parsedExisting.last_name;
+        }
+      }
     }
 
     if (!rec.first_name || !rec.last_name) throw coded(400, 'First & last name are required');
@@ -217,3 +253,4 @@ const baseHandler = async (event, context) => {
 };
 
 exports.handler = withAdminCors(baseHandler, { requireToken: false });
+exports._test = { splitFullName };
