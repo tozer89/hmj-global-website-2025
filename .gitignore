@@ -14,3 +14,5 @@ hmj 2.env
 tmp/pdfs/review/
 tmp/supabase-mailer-sample2/
 .DS_Store
+.DS_Store
+netlify/.DS_Store
