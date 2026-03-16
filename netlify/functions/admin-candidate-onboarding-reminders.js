@@ -12,6 +12,7 @@ const {
   requestedDocumentLabel,
   summariseCandidatesOnboardingMap,
 } = require('./_candidate-onboarding.js');
+const { isMissingRelationError } = require('./_candidate-portal.js');
 const { paymentDetailsSummary } = require('./_candidate-payment-details.js');
 const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-delivery.js');
 
@@ -43,7 +44,7 @@ async function loadDocumentsByCandidateId(supabase, candidateIds = []) {
     .from('candidate_documents')
     .select('id,candidate_id,document_type,label,filename,original_filename,uploaded_at,created_at')
     .in('candidate_id', candidateIds.map(String));
-  if (error && !/relation .+ does not exist/i.test(error.message || '')) throw error;
+  if (error && !isMissingRelationError(error)) throw error;
   const map = new Map();
   (Array.isArray(data) ? data : []).forEach((row) => {
     const key = String(row.candidate_id);
@@ -60,7 +61,7 @@ async function loadPaymentsByCandidateId(supabase, candidateIds = []) {
     .from('candidate_payment_details')
     .select('*')
     .in('candidate_id', candidateIds.map(String));
-  if (error && !/relation .+ does not exist/i.test(error.message || '')) throw error;
+  if (error && !isMissingRelationError(error)) throw error;
   const map = new Map();
   (Array.isArray(data) ? data : []).forEach((row) => {
     map.set(String(row.candidate_id), paymentDetailsSummary(row));
@@ -77,7 +78,7 @@ async function loadRecentReminderMap(supabase, candidateIds = []) {
     .in('candidate_id', candidateIds.map(String))
     .in('activity_type', ['rtw_reminder_sent', 'candidate_document_request_sent'])
     .gte('created_at', since);
-  if (error && !/relation .+ does not exist/i.test(error.message || '')) throw error;
+  if (error && !isMissingRelationError(error)) throw error;
   const map = new Map();
   (Array.isArray(data) ? data : []).forEach((row) => {
     const key = String(row.candidate_id);

@@ -8,6 +8,8 @@ const {
   paymentDetailsSummary,
   presentCandidatePaymentDetails,
 } = require('../netlify/functions/_candidate-payment-details.js');
+const { isMissingRelationError } = require('../netlify/functions/_candidate-portal.js');
+const { withAdminCors } = require('../netlify/functions/_http.js');
 
 test('buildPaymentWritePayload encrypts and masks GBP account details', () => {
   const payload = buildPaymentWritePayload('candidate-1', 'auth-1', {
@@ -73,4 +75,27 @@ test('paymentDetailsSummary falls back to masked legacy candidate bank data with
   assert.equal(summary.masked.sortCode, '••-••-56');
   assert.equal(summary.masked.accountNumber, '••••5678');
   assert.equal(summary.completion.complete, true);
+});
+
+test('isMissingRelationError treats PostgREST schema-cache table misses as missing relations', () => {
+  assert.equal(
+    isMissingRelationError({
+      code: 'PGRST205',
+      message: "Could not find the table 'public.candidate_payment_details' in the schema cache",
+    }),
+    true,
+  );
+});
+
+test('withAdminCors falls back to HTTP 500 when an error code is a non-numeric string', async () => {
+  const handler = withAdminCors(async () => {
+    const error = new Error('payment details unavailable');
+    error.code = 'candidate_payment_validation_failed';
+    throw error;
+  }, { requireToken: false });
+
+  const response = await handler({ httpMethod: 'GET', headers: {} }, {});
+
+  assert.equal(response.statusCode, 500);
+  assert.match(response.body, /payment details unavailable/);
 });

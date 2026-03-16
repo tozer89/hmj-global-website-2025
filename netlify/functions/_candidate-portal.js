@@ -448,8 +448,14 @@ function buildCandidateActivityPayload(candidateId, activityType, description, o
 }
 
 function isMissingRelationError(error) {
+  const code = String(error?.code || '').toUpperCase();
   const message = String(error?.message || '');
-  return /relation .+ does not exist/i.test(message);
+  return (
+    code === '42P01'
+    || code === 'PGRST205'
+    || /relation .+ does not exist/i.test(message)
+    || /Could not find the table '.+' in the schema cache/i.test(message)
+  );
 }
 
 function isMissingColumnError(error) {

@@ -83,7 +83,11 @@ function withAdminCors(handler, options = {}) {
       return next;
     } catch (err) {
       console.error('[#hmjg] admin function error', err?.message || err);
-      const statusCode = err?.code || err?.statusCode || err?.status || 500;
+      const rawStatus = err?.statusCode ?? err?.status ?? err?.code;
+      const parsedStatus = Number.parseInt(String(rawStatus ?? ''), 10);
+      const statusCode = Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
+        ? parsedStatus
+        : 500;
       const payload = err?.body || JSON.stringify({ ok: false, error: err?.message || 'server_error' });
       const headers = Object.assign({}, cors);
       if (trace) headers['x-trace'] = trace;

@@ -1,5 +1,15 @@
 begin;
 
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
 alter table if exists public.candidate_documents
   drop constraint if exists candidate_documents_document_type_check;
 
@@ -22,7 +32,7 @@ alter table if exists public.candidate_documents
 
 create table if not exists public.candidate_payment_details (
   id uuid primary key default gen_random_uuid(),
-  candidate_id text not null,
+  candidate_id uuid not null references public.candidates(id) on delete cascade,
   auth_user_id uuid null,
   account_currency text not null default 'GBP',
   payment_method text not null default 'gbp_local',
@@ -106,28 +116,19 @@ create unique index if not exists candidate_payment_details_candidate_uidx
 create index if not exists candidate_payment_details_auth_user_idx
   on public.candidate_payment_details(auth_user_id);
 
-create or replace function public.candidate_payment_details_touch_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-
 drop trigger if exists candidate_payment_details_touch_updated_at on public.candidate_payment_details;
 
 create trigger candidate_payment_details_touch_updated_at
 before update on public.candidate_payment_details
 for each row
-execute function public.candidate_payment_details_touch_updated_at();
+execute function public.set_updated_at();
 
 alter table public.candidate_payment_details enable row level security;
 
 revoke all on public.candidate_payment_details from anon;
 revoke all on public.candidate_payment_details from authenticated;
 grant select, insert, update on public.candidate_payment_details to authenticated;
+grant all on public.candidate_payment_details to service_role;
 
 drop policy if exists candidate_payment_details_select_own on public.candidate_payment_details;
 create policy candidate_payment_details_select_own
@@ -159,5 +160,7 @@ create policy candidate_payment_details_update_own
     auth.uid() is not null
     and auth.uid() = auth_user_id
   );
+
+notify pgrst, 'reload schema';
 
 commit;
