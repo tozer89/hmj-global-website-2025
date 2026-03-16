@@ -3,7 +3,7 @@
 const { buildCors } = require('./_http.js');
 const { getSupabaseUrl, getSupabaseAnonKey } = require('./_supabase-env.js');
 
-const DEFAULT_CANDIDATE_SITE_URL = 'https://www.hmj-global.com';
+const DEFAULT_CANDIDATE_SITE_URL = 'https://hmjg.netlify.app';
 
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
@@ -70,9 +70,9 @@ function requestOrigin(event = {}) {
 
 function resolveCandidatePortalBaseUrl(event = {}) {
   const candidates = [
+    requestOrigin(event),
     process.env.HMJ_CANDIDATE_PORTAL_SITE_URL,
     process.env.HMJ_CANONICAL_SITE_URL,
-    requestOrigin(event),
     process.env.DEPLOY_PRIME_URL,
     process.env.URL,
     process.env.SITE_URL,

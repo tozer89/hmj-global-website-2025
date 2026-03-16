@@ -489,8 +489,16 @@
                     <input id="notice" name="notice_period" type="text" placeholder="e.g. Immediate, 2 weeks">
                   </div>
                   <div class="candidate-field">
-                    <label for="salary">Salary / day rate expectation</label>
-                    <input id="salary" name="salary_expectation" type="number" min="0" step="100">
+                    <label for="salary">Pay expectation</label>
+                    <div class="candidate-field__compound">
+                      <input id="salary" name="salary_expectation" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 75000">
+                      <select id="salaryUnit" name="salary_expectation_unit" aria-label="Pay expectation unit">
+                        <option value="annual" selected>Per year</option>
+                        <option value="daily">Per day</option>
+                        <option value="hourly">Per hour</option>
+                      </select>
+                    </div>
+                    <p class="small">Use annual salary for permanent roles, or switch to daily/hourly for contract expectations.</p>
                   </div>
                   <div class="candidate-field">
                     <label for="reloc">Open to relocation *</label>
@@ -670,6 +678,6 @@
   </script>
   <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=10">
   <script defer src="assets/js/candidates.enhanced.js?v=3"></script>
-  <script type="module" src="assets/js/candidates.portal.js?v=7"></script>
+  <script type="module" src="assets/js/candidates.portal.js?v=8"></script>
 </body>
 </html>

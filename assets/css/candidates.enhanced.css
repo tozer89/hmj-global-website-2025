@@ -1689,6 +1689,13 @@
   min-width: 0;
 }
 
+.candidates-page .candidate-field__compound {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 10px;
+  align-items: stretch;
+}
+
 .candidates-page .candidate-field--full,
 .candidates-page .candidate-form__actions {
   grid-column: 1 / -1;
@@ -1746,6 +1753,10 @@
     linear-gradient(180deg, #ffffff, rgba(245, 248, 255, 0.98));
   background-position: right 14px center, center;
   background-repeat: no-repeat;
+}
+
+.candidates-page .candidate-field__compound select {
+  min-width: 0;
 }
 
 .candidates-page .cv-form input[type="file"] {
@@ -2438,6 +2449,10 @@
 }
 
 @media (max-width: 720px) {
+  .candidates-page .candidate-field__compound {
+    grid-template-columns: 1fr;
+  }
+
   .candidates-page .candidate-profile-section__head {
     margin-bottom: 18px;
   }

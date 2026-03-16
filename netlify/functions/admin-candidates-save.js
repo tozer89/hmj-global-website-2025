@@ -92,6 +92,8 @@ const baseHandler = async (event, context) => {
     assignTrim('client_name');
     assignTrim('pay_type');
     assignTrim('payroll_ref');
+    assignTrim('salary_expectation');
+    assignTrim('salary_expectation_unit');
     assignTrim('internal_ref');
     assignTrim('address');
     assignTrim('address1');

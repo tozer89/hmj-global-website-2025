@@ -6,6 +6,14 @@ const {
 } = require('./candidate-auth-config.js');
 
 const RTW_DOCUMENT_TYPES = new Set(['right_to_work', 'passport', 'visa_permit']);
+const REQUESTABLE_DOCUMENT_TYPES = new Set([
+  'passport',
+  'right_to_work',
+  'visa_permit',
+  'qualification_certificate',
+  'reference',
+  'bank_document',
+]);
 const ONBOARDING_DOCUMENT_TYPES = new Set([
   'cv',
   'cover_letter',
@@ -14,6 +22,7 @@ const ONBOARDING_DOCUMENT_TYPES = new Set([
   'passport',
   'right_to_work',
   'visa_permit',
+  'reference',
   'bank_document',
   'other',
 ]);
@@ -41,6 +50,7 @@ function normaliseDocumentType(value, fallbackLabel = '') {
   if (raw === 'qualification_certificate' || raw === 'qualification / certificate') return 'qualification_certificate';
   if (raw === 'passport') return 'passport';
   if (raw === 'right_to_work' || raw === 'right to work') return 'right_to_work';
+  if (raw === 'reference' || raw === 'references') return 'reference';
   if (raw === 'visa_permit' || raw === 'visa / permit' || raw === 'visa' || raw === 'permit') return 'visa_permit';
   if (raw === 'bank_document' || raw === 'bank document') return 'bank_document';
 
@@ -49,6 +59,7 @@ function normaliseDocumentType(value, fallbackLabel = '') {
   if (/\b(passport)\b/.test(raw)) return 'passport';
   if (/right[\s_-]?to[\s_-]?work|share[\s_-]?code/.test(raw)) return 'right_to_work';
   if (/\b(visa|permit|brp|residence)\b/.test(raw)) return 'visa_permit';
+  if (/\b(reference|references|referee)\b/.test(raw)) return 'reference';
   if (/\b(cert|certificate|qualification|ticket|card)\b/.test(raw)) return 'qualification_certificate';
   if (/\b(bank|void cheque|void check)\b/.test(raw)) return 'bank_document';
   return 'other';
@@ -148,10 +159,49 @@ function summariseCandidatesOnboardingMap(candidates = [], options = {}) {
 function normaliseCandidatePortalTarget(input = {}) {
   const tab = trimString(input.tab, 64).toLowerCase() || 'documents';
   const focus = trimString(input.focus, 80).toLowerCase() || '';
+  const requestedDocuments = Array.isArray(input.documents)
+    ? input.documents
+        .map((value) => normaliseDocumentType(value))
+        .filter((value, index, list) => REQUESTABLE_DOCUMENT_TYPES.has(value) && list.indexOf(value) === index)
+    : [];
   return {
     tab,
     focus,
+    requestedDocuments,
   };
+}
+
+function requestedDocumentLabel(value) {
+  const type = normaliseDocumentType(value);
+  if (type === 'qualification_certificate') return 'Qualification / certificate';
+  if (type === 'right_to_work') return 'Right to work';
+  if (type === 'visa_permit') return 'Visa / permit';
+  if (type === 'bank_document') return 'Bank document';
+  if (type === 'reference') return 'Reference';
+  if (type === 'passport') return 'Passport';
+  return 'Document';
+}
+
+function missingRequestedDocuments(candidate = {}, documents = [], requested = [], paymentDetails = null) {
+  const requestedTypes = Array.isArray(requested)
+    ? requested
+        .map((value) => normaliseDocumentType(value))
+        .filter((value, index, list) => REQUESTABLE_DOCUMENT_TYPES.has(value) && list.indexOf(value) === index)
+    : [];
+  if (!requestedTypes.length) return [];
+
+  const docTypes = new Set(listDocumentTypes(documents));
+  const onboarding = summariseOnboarding({ candidate, documents, paymentDetails });
+
+  return requestedTypes.filter((type) => {
+    if (type === 'right_to_work') return onboarding.hasRightToWork === false;
+    if (type === 'passport') return !docTypes.has('passport');
+    if (type === 'qualification_certificate') return !docTypes.has('qualification_certificate') && !docTypes.has('certificate');
+    if (type === 'reference') return !docTypes.has('reference');
+    if (type === 'visa_permit') return !docTypes.has('visa_permit');
+    if (type === 'bank_document') return !docTypes.has('bank_document');
+    return !docTypes.has(type);
+  });
 }
 
 function buildCandidatePortalDeepLink(event, input = {}) {
@@ -161,19 +211,23 @@ function buildCandidatePortalDeepLink(event, input = {}) {
   if (target.tab) params.set('candidate_tab', target.tab);
   if (target.focus) params.set('candidate_focus', target.focus);
   if (input.onboarding === true) params.set('candidate_onboarding', '1');
+  if (target.requestedDocuments.length) params.set('candidate_docs', target.requestedDocuments.join(','));
   const suffix = params.toString();
   return buildRedirectUrl(baseUrl, `/candidates.html${suffix ? `?${suffix}` : ''}`);
 }
 
 module.exports = {
   ONBOARDING_DOCUMENT_TYPES,
+  REQUESTABLE_DOCUMENT_TYPES,
   RTW_DOCUMENT_TYPES,
   buildCandidatePortalDeepLink,
   hasPaymentDetails,
   hasRightToWorkEvidence,
+  missingRequestedDocuments,
   normaliseCandidatePortalTarget,
   normaliseDocumentRow,
   normaliseDocumentType,
+  requestedDocumentLabel,
   summariseCandidatesOnboardingMap,
   summariseOnboarding,
   trimString,

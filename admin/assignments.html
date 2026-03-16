@@ -10,10 +10,10 @@
   <script src="/admin/__env.js"></script>
   <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="../js/identity-loader.js?v=3"></script>
 
   <!-- Shared Admin bootstrap + helpers -->
-  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="/admin/common.js?v=34"></script>
 
   <style>
     :root{
@@ -116,7 +116,7 @@
     <div class="sp"></div>
     <a class='btn ghost small' href='/'>← Website</a>
     <div id="diagChips" class="chips"></div>
-    <a class="btn ghost" href="./">⟵ Dashboard</a>
+    <a class="btn ghost" href="./">⟵ Return to Admin Dash</a>
     <button class="btn light" type="button" data-admin-logout>Sign out</button>
   </div></div>
 
@@ -261,7 +261,7 @@
       let activeStatus = '';
       let editing = null;
       let currentTab = 'Basics';
-      let dropdowns = { contractors: [], clients: [], projects: [], sites: [] };
+      let dropdowns = { contractors: [], candidates: [], clients: [], projects: [], sites: [] };
       let quickRecord = null;
 
       const columns = [
@@ -344,8 +344,9 @@
             : '—';
 
           let candCell = r.candidate_name || '—';
-          if (r.contractor_id) {
-            const label = r.candidate_name || r.contractor_name || `Candidate #${r.contractor_id}`;
+          if (r.candidate_id || r.contractor_id) {
+            const candidateLabel = r.candidate_name || (r.candidate_id ? `Candidate ${r.candidate_id}` : null) || r.contractor_name || `Candidate #${r.contractor_id}`;
+            const label = candidateLabel;
             const query = encodeURIComponent(label);
             candCell = `<a class="link" href="/admin/candidates.html?q=${query}" target="_blank" rel="noopener">${label}</a>`;
           } else if (r.candidate_name) {
@@ -560,8 +561,8 @@
           `;
         }
 
-        const link = r.contractor_id
-          ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name || '')}`
+        const link = (r.candidate_id || r.contractor_id)
+          ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name || r.candidate_id || r.contractor_id || '')}`
           : r.candidate_name
             ? `/admin/candidates.html?q=${encodeURIComponent(r.candidate_name)}`
             : null;
@@ -611,7 +612,9 @@
           ['job_title','Job title'],
           ['status','Status','select','live,draft,pending,complete,closed'],
           ['as_ref','Assignment ref'], ['po_number','PO number'],
-          ['candidate_name','Candidate name'], ['contractor_id','Candidate ID'],
+          ['candidate_name','Candidate name'],
+          ['candidate_id','Website candidate'],
+          ['contractor_id','Contractor / TSP ID'],
           ['client_name','Client'], ['client_site','Client site'],
           ['project_id','Project ID'], ['site_id','Site ID'],
           ['consultant_name','Consultant']
@@ -640,10 +643,17 @@
 
       function fieldHtml([key,label,type='text',extra]){
         const id='f_'+key;
-        if(['contractor_id','project_id','site_id'].includes(key)){
-          const source = key==='contractor_id' ? 'contractors' : key==='project_id' ? 'projects' : 'sites';
+        if(['candidate_id','contractor_id','project_id','site_id'].includes(key)){
+          const source = key==='candidate_id'
+            ? 'candidates'
+            : key==='contractor_id'
+            ? 'contractors'
+            : key==='project_id'
+            ? 'projects'
+            : 'sites';
           const listId = `dl_${key}`;
           const hints = {
+            candidate_id: 'Search by website candidate name or email. Selecting fills candidate name automatically.',
             contractor_id: 'Search by contractor name or ID. Selecting will fill candidate name when possible.',
             project_id: 'Choose the project this assignment belongs to. Client field updates automatically.',
             site_id: 'Filter by project, then pick a site/location. Optional if not tracked.'
@@ -683,14 +693,21 @@
         const clientNameInput = root.querySelector('[name="client_name"]');
         const clientSiteInput = root.querySelector('[name="client_site"]');
 
+        const candidateInput = root.querySelector('input[name="candidate_id"][data-source]');
         const contractorInput = root.querySelector('input[name="contractor_id"][data-source]');
         const projectInput = root.querySelector('input[name="project_id"][data-source]');
         const siteInput = root.querySelector('input[name="site_id"][data-source]');
 
+        const candidateHint = root.querySelector('[data-hint-for="candidate_id"]');
         const contractorHint = root.querySelector('[data-hint-for="contractor_id"]');
         const projectHint = root.querySelector('[data-hint-for="project_id"]');
         const siteHint = root.querySelector('[data-hint-for="site_id"]');
 
+        const labelCandidate = (candidate) => {
+          const base = candidate.name || candidate.full_name || candidate.email || `Candidate ${candidate.id}`;
+          const extra = [candidate.email, candidate.status].filter(Boolean).join(' · ');
+          return extra ? `${base} · ${extra}` : base;
+        };
         const labelContractor = (c) => {
           const name = c.name || `Contractor #${c.id}`;
           return c.email ? `${name} · ${c.email}` : name;
@@ -705,6 +722,7 @@
           return project ? `${base} · ${project.name || `Project #${project.id}`}` : base;
         };
 
+        const candidateMap = new Map(dropdowns.candidates.map((candidate) => [String(candidate.id), candidate]));
         const contractorMap = new Map(dropdowns.contractors.map((c) => [String(c.id), c]));
         const projectMap = new Map(dropdowns.projects.map((p) => [String(p.id), p]));
         const siteMap = new Map(dropdowns.sites.map((s) => [String(s.id), s]));
@@ -721,6 +739,26 @@
           if (!listId) return null;
           return root.querySelector(`#${listId}`);
         };
+
+        function handleCandidateChange(){
+          if (!candidateInput) return;
+          const raw = candidateInput.value.trim();
+          const match = candidateMap.get(raw);
+          if (match) {
+            setHint(candidateHint, `Candidate: ${labelCandidate(match)}`);
+            if (candidateNameInput && !candidateNameInput.value) {
+              candidateNameInput.value = match.name || match.full_name || candidateNameInput.value;
+            }
+            if (contractorInput && !contractorInput.value && match.payroll_ref && /^\d+$/.test(String(match.payroll_ref).trim())) {
+              contractorInput.value = String(match.payroll_ref).trim();
+              handleContractorChange();
+            }
+          } else if (raw) {
+            setHint(candidateHint, `ID ${raw} not in list`);
+          } else {
+            setHint(candidateHint);
+          }
+        }
 
         function handleContractorChange(){
           if (!contractorInput) return;
@@ -794,6 +832,16 @@
           }
         }
 
+        function fillCandidates(selected){
+          if (!candidateInput) return;
+          const host = getHost(candidateInput);
+          if (host) {
+            host.innerHTML = dropdowns.candidates.map((candidate) => `<option value="${candidate.id}" label="${esc(labelCandidate(candidate))}"></option>`).join('');
+          }
+          if (selected) candidateInput.value = norm(selected);
+          handleCandidateChange();
+        }
+
         function fillContractors(selected){
           if (!contractorInput) return;
           const host = getHost(contractorInput);
@@ -815,6 +863,11 @@
           handleProjectChange();
         }
 
+        if (candidateInput) {
+          candidateInput.addEventListener('change', handleCandidateChange);
+          candidateInput.addEventListener('input', handleCandidateChange);
+          candidateInput.addEventListener('blur', handleCandidateChange);
+        }
         if (contractorInput) {
           contractorInput.addEventListener('change', handleContractorChange);
           contractorInput.addEventListener('input', handleContractorChange);
@@ -831,6 +884,7 @@
           siteInput.addEventListener('blur', handleSiteChange);
         }
 
+        fillCandidates(norm(values.candidate_id));
         fillContractors(norm(values.contractor_id));
         fillProjects(norm(values.project_id), norm(values.site_id));
         if (!values.project_id && siteInput && siteInput.value) {
@@ -839,6 +893,7 @@
             projectInput.value = String(match.project_id);
           }
         }
+        handleCandidateChange();
         handleContractorChange();
         handleProjectChange();
         handleSiteChange();
@@ -914,13 +969,14 @@
       openDrawer();
     }
 
-    function normalizeAssignmentPayload(form){
+      function normalizeAssignmentPayload(form){
       const payload = { ...form };
       const num = (v) => {
         if (v === null || v === undefined || v === '') return null;
         const n = Number(v);
         return Number.isFinite(n) ? n : null;
       };
+      payload.candidate_id = form.candidate_id == null || String(form.candidate_id).trim() === '' ? null : String(form.candidate_id).trim();
       payload.contractor_id = num(form.contractor_id);
       payload.project_id = num(form.project_id);
       payload.site_id = num(form.site_id);
@@ -936,12 +992,14 @@
         try{
           const res = await api('admin-assignments-dropdowns','POST',{});
           dropdowns.contractors = Array.isArray(res?.contractors) ? res.contractors : [];
+          dropdowns.candidates = Array.isArray(res?.candidates) ? res.candidates : [];
           dropdowns.clients = Array.isArray(res?.clients) ? res.clients : [];
           dropdowns.projects = Array.isArray(res?.projects) ? res.projects : [];
           dropdowns.sites = Array.isArray(res?.sites) ? res.sites : [];
           chip('dropdowns: ok','ok');
           const formEl = $('#frm');
           const current = formEl ? {
+            candidate_id: formEl.querySelector('[name="candidate_id"]')?.value,
             contractor_id: formEl.querySelector('[name="contractor_id"]')?.value,
             project_id: formEl.querySelector('[name="project_id"]')?.value,
             site_id: formEl.querySelector('[name="site_id"]')?.value,
@@ -962,17 +1020,36 @@
           const form = readForm();
           const body = normalizeAssignmentPayload(form);
           if (editing?.id) body.id = editing.id;
+        const num = (v) => {
+          if (v === null || v === undefined || v === '') return null;
+          const n = Number(v);
+          return Number.isFinite(n) ? n : null;
+        };
         const matchName = (list, target) => {
           if (!target) return null;
           const lower = String(target).toLowerCase().trim();
           return list.find((item) => {
             if (String(item.id) === lower) return true;
             const values = [item.name, item.email, item.client_name, item.title, item.label]
+              .concat(item.full_name ? [item.full_name] : [])
+              .concat(item.status ? [item.status] : [])
+              .concat(item.payroll_ref ? [item.payroll_ref] : [])
               .filter(Boolean)
               .map((v) => String(v).toLowerCase().trim());
             return values.includes(lower);
           }) || null;
         };
+        if (!body.candidate_id && Array.isArray(dropdowns.candidates)) {
+          const match = matchName(dropdowns.candidates, form.candidate_id || form.candidate_name || editing?.candidate_name);
+          const resolved = match ? String(match.id || '').trim() : '';
+          if (resolved) body.candidate_id = resolved;
+          if (!body.candidate_name && match) {
+            body.candidate_name = match.name || match.full_name || body.candidate_name || null;
+          }
+          if (!body.contractor_id && match?.payroll_ref && /^\d+$/.test(String(match.payroll_ref).trim())) {
+            body.contractor_id = Number(String(match.payroll_ref).trim());
+          }
+        }
         if (!body.contractor_id && Array.isArray(dropdowns.contractors)) {
           const match = matchName(dropdowns.contractors, form.contractor_id || form.candidate_name || editing?.candidate_name);
           const resolved = match ? num(match.id ?? match.contractor_id) : null;
@@ -988,6 +1065,7 @@
           const resolved = match ? num(match.id ?? match.site_id) : null;
           if (resolved != null) body.site_id = resolved;
         }
+        if (!body.candidate_id && editing?.candidate_id) body.candidate_id = String(editing.candidate_id);
         if (!body.contractor_id && editing?.contractor_id) body.contractor_id = Number(editing.contractor_id);
         if (!body.project_id && editing?.project_id) body.project_id = Number(editing.project_id);
         if (!body.site_id && editing?.site_id) body.site_id = Number(editing.site_id);

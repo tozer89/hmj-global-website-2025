@@ -162,6 +162,7 @@ const baseHandler = async (event, context) => {
         .select(
           [
             'id',
+            'candidate_id',
             'contractor_id',
             'project_id',
             'site_id',

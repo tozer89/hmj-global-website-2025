@@ -22,7 +22,7 @@ import {
   updateCandidatePassword,
   saveCandidatePaymentDetails,
   uploadCandidateDocument,
-} from '../../js/hmj-candidate-portal.js?v=4';
+} from '../../js/hmj-candidate-portal.js?v=5';
 import {
   classifyCandidateSignupResult,
   validateCandidatePassword,
@@ -58,6 +58,84 @@ import {
         return search.has(key) || hash.has(key);
       },
     };
+  }
+
+  function normaliseRequestedDocumentType(value) {
+    const raw = trimText(value, 80).toLowerCase();
+    if (!raw) return '';
+    if (raw === 'right_to_work' || raw === 'right to work' || raw === 'rtw') return 'right_to_work';
+    if (raw === 'qualification_certificate' || raw === 'qualification / certificate' || raw === 'certificate') return 'qualification_certificate';
+    if (raw === 'visa_permit' || raw === 'visa / permit' || raw === 'visa' || raw === 'permit') return 'visa_permit';
+    if (raw === 'bank_document' || raw === 'bank document') return 'bank_document';
+    if (raw === 'reference' || raw === 'references') return 'reference';
+    if (raw === 'passport') return 'passport';
+    if (raw === 'cv') return 'cv';
+    return '';
+  }
+
+  function parseRequestedDocumentList(value) {
+    return String(value || '')
+      .split(/[\n,]/)
+      .map((entry) => normaliseRequestedDocumentType(entry))
+      .filter((entry, index, list) => entry && list.indexOf(entry) === index);
+  }
+
+  function requestedDocumentLabel(value) {
+    if (value === 'right_to_work') return 'right to work';
+    if (value === 'qualification_certificate') return 'qualification / certificate';
+    if (value === 'visa_permit') return 'visa / permit';
+    if (value === 'bank_document') return 'bank document';
+    if (value === 'reference') return 'reference';
+    if (value === 'passport') return 'passport';
+    return 'document';
+  }
+
+  function requestedDocumentListText(list) {
+    const labels = (Array.isArray(list) ? list : []).map((item) => requestedDocumentLabel(item));
+    if (!labels.length) return '';
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+    return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
+  }
+
+  function normaliseSalaryExpectationUnit(value) {
+    const raw = trimText(value, 40).toLowerCase();
+    if (!raw) return 'annual';
+    if (raw === 'hour' || raw === 'hourly' || raw === 'per_hour') return 'hourly';
+    if (raw === 'day' || raw === 'daily' || raw === 'per_day') return 'daily';
+    if (raw === 'year' || raw === 'annual_salary' || raw === 'per_year') return 'annual';
+    return ['annual', 'daily', 'hourly'].includes(raw) ? raw : 'annual';
+  }
+
+  function salaryExpectationSuffix(unit) {
+    if (unit === 'hourly') return 'per hour';
+    if (unit === 'daily') return 'per day';
+    return 'per year';
+  }
+
+  function formatSalaryExpectation(value, unit) {
+    const raw = trimText(value, 80);
+    if (!raw) return '';
+    const normalisedUnit = normaliseSalaryExpectationUnit(unit);
+    if (/per\s+(hour|day|year)/i.test(raw)) return raw;
+    const numeric = Number(String(raw).replace(/,/g, ''));
+    if (!Number.isFinite(numeric)) {
+      return `${raw} ${salaryExpectationSuffix(normalisedUnit)}`.trim();
+    }
+    const maxFractionDigits = normalisedUnit === 'annual' || Number.isInteger(numeric) ? 0 : 2;
+    const formatted = new Intl.NumberFormat('en-GB', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: maxFractionDigits,
+    }).format(numeric);
+    return `${formatted} ${salaryExpectationSuffix(normalisedUnit)}`;
+  }
+
+  function remainingRequestedDocuments(documents, requestedDocuments) {
+    const uploaded = new Set((Array.isArray(documents) ? documents : [])
+      .map((row) => normaliseRequestedDocumentType(row?.document_type || row?.label || ''))
+      .filter(Boolean));
+    return (Array.isArray(requestedDocuments) ? requestedDocuments : [])
+      .filter((type) => type && !uploaded.has(type));
   }
 
   function isLocalCandidateMockMode() {
@@ -182,6 +260,7 @@ import {
       ? trimText(params.get('candidate_tab'), 40).toLowerCase()
       : 'profile',
     requestedFocus: trimText(params.get('candidate_focus'), 80).toLowerCase(),
+    requestedDocuments: parseRequestedDocumentList(params.get('candidate_docs')),
     onboardingPrompt: params.get('candidate_onboarding') === '1',
     user: null,
     session: null,
@@ -368,6 +447,11 @@ import {
         url.searchParams.set('candidate_onboarding', '1');
       } else {
         url.searchParams.delete('candidate_onboarding');
+      }
+      if (state.requestedDocuments.length) {
+        url.searchParams.set('candidate_docs', state.requestedDocuments.join(','));
+      } else {
+        url.searchParams.delete('candidate_docs');
       }
       window.history.replaceState({}, '', url.toString());
     } catch (error) {
@@ -617,7 +701,9 @@ import {
     const onboarding = onboardingSummary();
     const paymentMethod = paymentDetails.paymentMethod || (paymentDetails.accountCurrency === 'GBP' ? 'gbp_local' : 'iban_swift');
     const showGbpFields = paymentMethod === 'gbp_local';
-    const documentTypeSelection = state.requestedFocus === 'right_to_work' ? 'right_to_work' : 'cv';
+    const requestedDocFocus = state.requestedDocuments[0] || (state.requestedFocus === 'right_to_work' ? 'right_to_work' : '');
+    const documentTypeSelection = requestedDocFocus || 'cv';
+    const requestedDocsText = requestedDocumentListText(state.requestedDocuments);
     const onboardingBanner = (!onboarding.complete || state.onboardingPrompt)
       ? `
         <div class="candidate-onboarding-banner">
@@ -626,7 +712,7 @@ import {
             <h3>${onboarding.complete ? 'Your onboarding profile is ready' : 'Complete the final onboarding details'}</h3>
             <p>${onboarding.complete
               ? 'HMJ has the key information needed in your portal.'
-              : `${!onboarding.hasRightToWork ? 'Upload passport or right-to-work evidence. ' : ''}${!onboarding.hasPayment ? 'Add your payment details for payroll.' : ''}`}</p>
+              : `${requestedDocsText ? `HMJ has requested ${requestedDocsText}. ` : ''}${!onboarding.hasRightToWork ? 'Upload passport or right-to-work evidence. ' : ''}${!onboarding.hasPayment ? 'Add your payment details for payroll.' : ''}`}</p>
           </div>
           <div class="candidate-onboarding-banner__actions">
             ${!onboarding.hasRightToWork ? '<button class="candidate-portal-btn candidate-portal-btn--ghost" type="button" data-dashboard-tab="documents" data-dashboard-focus="right_to_work">Upload right-to-work</button>' : ''}
@@ -719,8 +805,8 @@ import {
             <label>Relocation preference
               <input type="text" name="relocation_preference" value="${escapeHtml(candidate.relocation_preference || '')}" placeholder="Yes, maybe, or no">
             </label>
-            <label>Salary / day rate expectation
-              <input type="text" name="salary_expectation" value="${escapeHtml(candidate.salary_expectation || '')}" placeholder="e.g. £450 per day">
+            <label>Salary / rate expectation
+              <input type="text" name="salary_expectation" value="${escapeHtml(candidate.salary_expectation || '')}" placeholder="e.g. 75000 per year or 450 per day">
             </label>
             <label>LinkedIn
               <input type="url" name="linkedin_url" value="${escapeHtml(candidate.linkedin_url || '')}" placeholder="https://linkedin.com/in/your-profile">
@@ -794,6 +880,12 @@ import {
                 <p>Upload your passport, visa, permit, or right-to-work evidence here so HMJ can complete onboarding.</p>
               </div>`
             : ''}
+          ${state.requestedDocuments.length
+            ? `<div class="candidate-inline-panel candidate-inline-panel--subtle">
+                <strong>Requested documents</strong>
+                <p>HMJ has asked you to upload ${escapeHtml(requestedDocsText)}. Upload each file here and label it clearly so the team can review it quickly.</p>
+              </div>`
+            : ''}
           <div class="candidate-inline-panel candidate-inline-panel--subtle">
             <strong>Accepted files</strong>
             <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB. Use Passport, Right to work, or Visa / permit for onboarding evidence.</p>
@@ -804,9 +896,10 @@ import {
                 <option value="cv" ${documentTypeSelection === 'cv' ? 'selected' : ''}>CV</option>
                 <option value="passport" ${documentTypeSelection === 'passport' ? 'selected' : ''}>Passport</option>
                 <option value="right_to_work" ${documentTypeSelection === 'right_to_work' ? 'selected' : ''}>Right to work</option>
-                <option value="visa_permit">Visa / permit</option>
-                <option value="qualification_certificate">Qualification / certificate</option>
-                <option value="bank_document">Bank document</option>
+                <option value="visa_permit" ${documentTypeSelection === 'visa_permit' ? 'selected' : ''}>Visa / permit</option>
+                <option value="qualification_certificate" ${documentTypeSelection === 'qualification_certificate' ? 'selected' : ''}>Qualification / certificate</option>
+                <option value="reference" ${documentTypeSelection === 'reference' ? 'selected' : ''}>Reference</option>
+                <option value="bank_document" ${documentTypeSelection === 'bank_document' ? 'selected' : ''}>Bank document</option>
                 <option value="other">Other</option>
               </select>
             </label>
@@ -1077,6 +1170,10 @@ import {
       state.applications = applications;
       state.documents = documents;
       state.paymentDetails = paymentDetails;
+      state.requestedDocuments = remainingRequestedDocuments(documents, state.requestedDocuments);
+      if (!state.requestedDocuments.length && onboardingSummary().complete) {
+        state.onboardingPrompt = false;
+      }
       state.dashboardError = '';
       if (
         applicationsResult.status === 'rejected'
@@ -1195,6 +1292,7 @@ import {
 
   function buildCandidateSyncPayload(formData, submissionId) {
     const rightToWorkRegions = normaliseSkillList(formData.get('right_to_work'));
+    const salaryExpectationUnit = normaliseSalaryExpectationUnit(formData.get('salary_expectation_unit'));
     const candidate = {
       first_name: formData.get('first_name'),
       surname: formData.get('surname'),
@@ -1220,7 +1318,8 @@ import {
       sector_experience: formData.get('sector_experience'),
       availability: formData.get('availability'),
       notice_period: formData.get('notice_period'),
-      salary_expectation: formData.get('salary_expectation'),
+      salary_expectation: formatSalaryExpectation(formData.get('salary_expectation'), salaryExpectationUnit),
+      salary_expectation_unit: salaryExpectationUnit,
       relocation: formData.get('relocation'),
       linkedin: formData.get('linkedin'),
       message: formData.get('message'),
@@ -1415,10 +1514,15 @@ import {
         });
         state.authMessage = { tone: 'success', text: 'Document uploaded and linked to your candidate profile.' };
         state.documents = await loadCandidateDocuments(state.candidate?.id);
+        const uploadedType = normaliseRequestedDocumentType(formData.get('document_type'));
+        if (uploadedType) {
+          state.requestedDocuments = state.requestedDocuments.filter((type) => type !== uploadedType);
+        }
         const onboarding = onboardingSummary();
         if (onboarding.hasPayment && onboarding.hasRightToWork) {
           state.onboardingPrompt = false;
         }
+        updateDashboardLocation(state.activeTab, state.requestedFocus);
       } else if (formType === 'payment') {
         state.paymentBusy = true;
         render();
@@ -1443,6 +1547,7 @@ import {
           state.onboardingPrompt = false;
           state.requestedFocus = '';
         }
+        updateDashboardLocation(state.activeTab, state.requestedFocus);
       } else if (formType === 'email') {
         state.settingsBusy = true;
         render();
@@ -1525,6 +1630,9 @@ import {
       }
       if (nextTab !== 'payment' && state.requestedFocus === 'payment_details') {
         state.requestedFocus = '';
+      }
+      if (nextTab !== 'documents' && !state.onboardingPrompt) {
+        state.requestedDocuments = [];
       }
       updateDashboardLocation(state.activeTab, state.requestedFocus);
       render();
@@ -1741,6 +1849,7 @@ import {
         state.documents = [];
         state.paymentDetails = null;
         state.activeTab = 'profile';
+        state.requestedDocuments = parseRequestedDocumentList(params.get('candidate_docs'));
         state.closeConfirm = false;
         render();
       }

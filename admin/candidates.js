@@ -48,11 +48,26 @@
     lastQueryMs: 0,
     logs: [],
     debugOpen: false,
-    metrics: { total: 0, progress: 0, archived: 0, blocked: 0 }
+    metrics: { total: 0, progress: 0, archived: 0, blocked: 0 },
+    importFile: null,
+    importFileData: '',
+    importPreview: null,
+    tspCompare: null
   };
+
+  const REQUESTABLE_DOC_TYPES = ['passport', 'qualification_certificate', 'reference', 'right_to_work', 'visa_permit', 'bank_document'];
 
   function qs(sel, root = document) {
     return root.querySelector(sel);
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function loadFilters() {
@@ -124,6 +139,45 @@
       .filter(Boolean);
   }
 
+  function normalizeDocumentRequestType(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw === 'qualification' || raw === 'qualification certificate' || raw === 'certificate' || raw === 'certificates') return 'qualification_certificate';
+    if (raw === 'right to work' || raw === 'right-to-work' || raw === 'rtw') return 'right_to_work';
+    if (raw === 'visa' || raw === 'permit' || raw === 'visa / permit') return 'visa_permit';
+    if (raw === 'reference' || raw === 'references' || raw === 'referee') return 'reference';
+    if (raw === 'bank' || raw === 'bank document') return 'bank_document';
+    if (raw === 'passport') return 'passport';
+    return '';
+  }
+
+  function documentRequestLabel(value) {
+    if (value === 'qualification_certificate') return 'Qualification / certificate';
+    if (value === 'right_to_work') return 'Right to work';
+    if (value === 'visa_permit') return 'Visa / permit';
+    if (value === 'bank_document') return 'Bank document';
+    if (value === 'reference') return 'Reference';
+    return 'Passport';
+  }
+
+  function formatDocumentRequestList(list) {
+    const labels = (Array.isArray(list) ? list : []).map((item) => documentRequestLabel(item));
+    if (!labels.length) return 'documents';
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+    return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
+  }
+
+  function parseDocumentRequestList(value) {
+    const source = Array.isArray(value) ? value : String(value || '').split(/[\n,]/);
+    const out = [];
+    source.forEach((entry) => {
+      const type = normalizeDocumentRequestType(entry);
+      if (type && !out.includes(type)) out.push(type);
+    });
+    return out;
+  }
+
   function normalisePaymentSummary(row) {
     const summary = row?.payment_summary && typeof row.payment_summary === 'object'
       ? row.payment_summary
@@ -192,6 +246,26 @@
     } catch {
       return value;
     }
+  }
+
+  function formatMoneyAmount(value, currency = 'GBP') {
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) return '';
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: String(currency || 'GBP').toUpperCase(),
+        maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+      }).format(amount);
+    } catch {
+      return `${amount} ${currency || 'GBP'}`.trim();
+    }
+  }
+
+  function formatAssignmentPay(row) {
+    const pay = row?.rate_pay ?? row?.rate_std;
+    const text = formatMoneyAmount(pay, row?.currency || 'GBP');
+    return text ? `${text} pay` : 'Rate pending';
   }
 
   function ensureDebugPanel() {
@@ -426,9 +500,14 @@
       headline_role: row.headline_role || row.role || row.job_title || '',
       location: row.location || row.region || row.county || row.country || '',
       sector_focus: row.sector_focus || '',
+      salary_expectation: row.salary_expectation || '',
+      salary_expectation_unit: row.salary_expectation_unit || '',
       skills: skillList,
       tags,
       docs,
+      assignments: Array.isArray(row.assignments) ? row.assignments.slice() : [],
+      assignment_options: Array.isArray(row.assignment_options) ? row.assignment_options.slice() : [],
+      assignment_linking_available: row.assignment_linking_available !== false,
       onboarding,
       payment_summary: paymentSummary,
       notes,
@@ -818,6 +897,110 @@
     setTimeout(() => host.classList.remove('show'), ms);
   }
 
+  function updateImportButtons() {
+    if (elements.importPreview) elements.importPreview.disabled = !state.importFile;
+    if (elements.importConfirm) {
+      const validRows = Number(state.importPreview?.validRows || 0);
+      elements.importConfirm.disabled = !state.importFile || !state.importPreview || validRows <= 0;
+    }
+  }
+
+  function renderImportState() {
+    const statusHost = elements.importStatus;
+    const summaryHost = elements.importSummary;
+    const mappingHost = elements.importMapping;
+    if (!statusHost || !summaryHost || !mappingHost) return;
+
+    const file = state.importFile;
+    const preview = state.importPreview;
+    if (!file) {
+      statusHost.textContent = 'No import file selected. Upload a CSV or Excel workbook, preview the mapping, then confirm the import.';
+      summaryHost.innerHTML = '';
+      mappingHost.innerHTML = '';
+      updateImportButtons();
+      return;
+    }
+
+    statusHost.textContent = preview
+      ? `${file.name} ready. ${preview.validRows} valid row${preview.validRows === 1 ? '' : 's'}, ${preview.errorRows} row error${preview.errorRows === 1 ? '' : 's'}.`
+      : `${file.name} selected. Preview the mapping before importing.`;
+
+    if (!preview) {
+      summaryHost.innerHTML = '';
+      mappingHost.innerHTML = '';
+      updateImportButtons();
+      return;
+    }
+
+    summaryHost.innerHTML = `
+      <div class="mapping-row compact">
+        <div><strong>Import summary</strong><span>${preview.totalRows} parsed row${preview.totalRows === 1 ? '' : 's'} · ${preview.insertRows} insert · ${preview.updateRows} update</span></div>
+        <div><strong>Columns</strong><span>${preview.mappedColumns.length} mapped${preview.unmappedColumns.length ? ` · ${preview.unmappedColumns.length} unmapped` : ''}</span></div>
+      </div>
+      ${preview.unmappedColumns.length ? `<div class="mapping-item"><strong>Unmapped columns</strong><p>${preview.unmappedColumns.join(', ')}</p></div>` : ''}
+    `;
+
+    const mappingRows = preview.mappedColumns
+      .map((column) => `
+        <div class="mapping-row">
+          <div><strong>Source column</strong><code>${column.source || '—'}</code></div>
+          <div><strong>HMJ field</strong><code>${column.field || 'ignored'}</code></div>
+          <div><strong>Preview</strong><span>${column.field ? `Imports into ${column.field}.` : 'This column will be ignored unless renamed to a supported field.'}</span></div>
+        </div>
+      `)
+      .join('');
+    const previewRows = preview.rows
+      .slice(0, 8)
+      .map((row) => `
+        <div class="mapping-item">
+          <strong>Row ${row.rowNumber} · ${row.action === 'update' ? 'Update' : 'Insert'}${row.existing ? ` · ${row.existing.name}` : ''}</strong>
+          <p>${row.identity.email || row.identity.ref || row.identity.id || 'No match key'}${row.errors.length ? ` · Errors: ${row.errors.join(' ')}` : ''}${row.warnings.length ? ` · Warnings: ${row.warnings.join(' ')}` : ''}</p>
+        </div>
+      `)
+      .join('');
+    mappingHost.innerHTML = `${mappingRows}${previewRows ? `<div class="mapping-list">${previewRows}</div>` : ''}`;
+    updateImportButtons();
+  }
+
+  function renderTspSummary() {
+    const statusHost = elements.tspStatus;
+    const summaryHost = elements.tspSummary;
+    if (!statusHost || !summaryHost) return;
+    const compare = state.tspCompare;
+    if (!compare) {
+      statusHost.textContent = 'Checking Timesheet Portal configuration…';
+      summaryHost.innerHTML = '';
+      return;
+    }
+    if (compare.configured === false) {
+      statusHost.textContent = compare.message || 'Timesheet Portal is not configured for this environment.';
+      summaryHost.innerHTML = '';
+      return;
+    }
+    if (!compare.summary) {
+      statusHost.textContent = compare.message || 'Timesheet Portal comparison is unavailable right now.';
+      const attempts = Array.isArray(compare.attempts) ? compare.attempts.slice(0, 4) : [];
+      summaryHost.innerHTML = attempts.length
+        ? `<div class="mapping-item"><strong>Latest TSP checks</strong><p>${attempts.map((attempt) => `${attempt.path} → ${attempt.status}${attempt.authScheme ? ` (${attempt.authScheme})` : ''}`).join(' · ')}</p></div>`
+        : '';
+      return;
+    }
+    statusHost.textContent = `Compared ${compare.summary.websiteTotal} website candidates against ${compare.summary.timesheetPortalTotal} Timesheet Portal profiles.`;
+    summaryHost.innerHTML = `
+      <div class="mapping-row compact">
+        <div><strong>Matched</strong><span>${compare.summary.matched}</span></div>
+        <div><strong>Differences</strong><span>${compare.summary.mismatched}</span></div>
+      </div>
+      <div class="mapping-row compact">
+        <div><strong>Website only</strong><span>${compare.summary.websiteOnly}</span></div>
+        <div><strong>TSP only</strong><span>${compare.summary.timesheetPortalOnly}</span></div>
+      </div>
+      ${compare.mismatches?.length ? `<div class="mapping-item"><strong>Sample mismatches</strong><p>${compare.mismatches.slice(0, 3).map((row) => `${row.name || row.email}: ${row.differences.join(', ')}`).join(' · ')}</p></div>` : ''}
+      ${compare.websiteOnly?.length ? `<div class="mapping-item"><strong>Website only</strong><p>${compare.websiteOnly.slice(0, 3).map((row) => row.name || row.email).join(' · ')}</p></div>` : ''}
+      ${compare.timesheetPortalOnly?.length ? `<div class="mapping-item"><strong>TSP only</strong><p>${compare.timesheetPortalOnly.slice(0, 3).map((row) => row.name || row.email).join(' · ')}</p></div>` : ''}
+    `;
+  }
+
   function selectedCandidates() {
     return state.filtered.filter((row) => selectionHas(row.id));
   }
@@ -881,6 +1064,10 @@
   }
 
   function closeDrawer() {
+    if (elements.dwProfile?.querySelector('[data-field][data-dirty="true"]')) {
+      showToast('Unsaved changes in this profile. Use Save changes before closing.', 'warn', 3600);
+      return;
+    }
     state.drawerId = null;
     if (elements.drawer) elements.drawer.classList.remove('open');
   }
@@ -888,6 +1075,7 @@
   function renderDrawerSkeleton() {
     elements.dwName.textContent = 'Loading…';
     elements.dwProfile.innerHTML = '<div class="skeleton-card"></div>';
+    elements.dwAssignments.innerHTML = '';
     elements.dwDocs.innerHTML = '';
     elements.dwNotes.innerHTML = '';
     elements.dwAudit.innerHTML = '';
@@ -915,6 +1103,8 @@
     elements.dwBlock.onclick = () => toggleBlock(candidate);
     elements.dwProfile.innerHTML = renderProfile(candidate);
     bindProfileEditors(candidate);
+    elements.dwAssignments.innerHTML = renderAssignments(candidate);
+    bindAssignmentActions(candidate);
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
     elements.dwNotes.innerHTML = renderNotes(candidate);
@@ -983,12 +1173,17 @@
           <label class="muted" style="display:block;margin-bottom:4px">Skills / tags</label>
           <textarea data-field="skills" rows="2" class="drawer-input">${candidate.skills.join(', ')}</textarea>
         </div>
+        <div class="drawer-savebar" style="margin-top:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+          <div class="muted" data-save-status>Edit a field, then use Save changes to confirm the update.</div>
+          <button class="btn" type="button" data-action="save-profile" disabled>Save changes</button>
+        </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
           <a class="btn ghost" target="_blank" rel="noopener" href="/admin/timesheets.html?candidate=${candidate.id}">Timesheet history</a>
           <button class="btn" type="button" data-action="download-pdf">Download summary PDF</button>
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn ghost" type="button" data-account-action="inspect">Refresh portal status</button>
+          <button class="btn ghost" type="button" data-onboarding-action="send-doc-request" ${!candidate.email || isArchived(candidate) ? 'disabled' : ''}>Request documents</button>
           <button class="btn ghost" type="button" data-onboarding-action="send-rtw-reminder" ${canSendReminder ? '' : 'disabled'}>Send RTW reminder</button>
           <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
           <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
@@ -1061,6 +1256,131 @@
         </div>
         <div class="doc-list">${rows}</div>
       </div>`;
+  }
+
+  function renderAssignments(candidate) {
+    const linked = Array.isArray(candidate.assignments) ? candidate.assignments : [];
+    const options = Array.isArray(candidate.assignment_options) ? candidate.assignment_options : [];
+    const linkingAvailable = candidate.assignment_linking_available !== false;
+    const optionMarkup = options
+      .filter((assignment) => String(assignment.candidate_id || '') !== String(candidate.id))
+      .map((assignment) => {
+        const bits = [
+          assignment.as_ref || `AS-${assignment.id}`,
+          assignment.job_title || 'Assignment',
+          assignment.client_name || null,
+          statusLabel(assignment.status),
+        ].filter(Boolean);
+        return `<option value="${assignment.id}">${escapeHtml(bits.join(' • '))}</option>`;
+      }).join('');
+
+    const linkedMarkup = linked.length
+      ? linked.map((assignment) => `
+          <div class="doc-row">
+            <div style="min-width:0">
+              <div style="font-weight:700;word-break:break-word">${escapeHtml(assignment.job_title || assignment.as_ref || `Assignment #${assignment.id}`)}</div>
+              <div class="muted" style="font-size:12px;line-height:1.45">
+                ${escapeHtml([
+                  assignment.as_ref || null,
+                  assignment.client_name || null,
+                  assignment.client_site || null,
+                  assignment.start_date ? `${formatDate(assignment.start_date)}${assignment.end_date ? ` – ${formatDate(assignment.end_date)}` : ''}` : null,
+                  formatAssignmentPay(assignment),
+                ].filter(Boolean).join(' • '))}
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              <a class="btn ghost small" href="/admin/assignments.html?q=${encodeURIComponent(assignment.as_ref || assignment.job_title || assignment.client_name || assignment.id)}" target="_blank" rel="noopener">Open</a>
+              ${linkingAvailable ? `<button class="btn ghost small" type="button" data-assignment-unlink="${assignment.id}">Unlink</button>` : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<div class="muted">No linked assignments yet.</div>';
+
+    return `
+      <div class="drawer-section">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <h3 style="margin:0 0 4px">Assignments</h3>
+            <div class="muted" style="font-size:13px">Pair this candidate to live or active assignments without leaving the candidate workspace.</div>
+          </div>
+          ${linkingAvailable ? `
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:min(360px,100%)">
+              <select class="drawer-input" data-assignment-select>
+                <option value="">Select assignment…</option>
+                ${optionMarkup}
+              </select>
+              <button class="btn" type="button" data-assignment-link ${optionMarkup ? '' : 'disabled'}>Link assignment</button>
+            </div>
+          ` : `
+            <div class="muted" style="font-size:13px;max-width:320px">Assignment pairing will appear here after the latest Supabase assignments reconciliation is applied.</div>
+          `}
+        </div>
+        <div class="doc-list">${linkedMarkup}</div>
+      </div>`;
+  }
+
+  async function refreshCandidateAssignments(candidate) {
+    const refreshed = await fetchCandidate(candidate.id);
+    if (!refreshed) return;
+    Object.assign(candidate, refreshed);
+    if (state.drawerId && String(state.drawerId) === String(candidate.id)) {
+      renderDrawer(candidate);
+    }
+  }
+
+  async function updateCandidateAssignment(candidate, assignmentId, action) {
+    const response = await state.helpers.api('admin-candidate-assignment-link', 'POST', {
+      action,
+      candidateId: candidate.id,
+      assignmentId,
+    });
+    await refreshCandidateAssignments(candidate);
+    showToast(
+      response?.message || (action === 'unlink' ? 'Assignment unlinked.' : 'Assignment linked.'),
+      'info',
+      2800,
+    );
+  }
+
+  function bindAssignmentActions(candidate) {
+    const host = elements.dwAssignments;
+    if (!host) return;
+    const select = qs('[data-assignment-select]', host);
+    const linkButton = qs('[data-assignment-link]', host);
+    if (linkButton && select) {
+      linkButton.addEventListener('click', async () => {
+        const assignmentId = String(select.value || '').trim();
+        if (!assignmentId) {
+          showToast('Select an assignment first.', 'warn', 2800);
+          return;
+        }
+        linkButton.disabled = true;
+        try {
+          await updateCandidateAssignment(candidate, assignmentId, 'link');
+        } catch (err) {
+          console.error('[candidates] assignment link failed', err);
+          showToast(err.message || 'Could not link the assignment.', 'error', 4200);
+        } finally {
+          linkButton.disabled = false;
+        }
+      });
+    }
+    host.querySelectorAll('[data-assignment-unlink]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const assignmentId = button.dataset.assignmentUnlink;
+        if (!assignmentId) return;
+        button.disabled = true;
+        try {
+          await updateCandidateAssignment(candidate, assignmentId, 'unlink');
+        } catch (err) {
+          console.error('[candidates] assignment unlink failed', err);
+          showToast(err.message || 'Could not unlink the assignment.', 'error', 4200);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
   }
 
   async function readFileAsBase64(file) {
@@ -1202,13 +1522,81 @@
   function bindProfileEditors(candidate) {
     const section = elements.dwProfile;
     const inputs = section.querySelectorAll('[data-field]');
+    const saveButton = section.querySelector('[data-action="save-profile"]');
+    const saveStatus = section.querySelector('[data-save-status]');
+
+    const readFieldValue = (input) => (input.type === 'date' ? input.value : input.value.trim());
+    const clearDirty = (input) => {
+      delete input.dataset.dirty;
+      delete input.dataset.saving;
+    };
+    const dirtyInputs = () => Array.from(inputs).filter((input) => input.dataset.dirty === 'true');
+    const updateSaveState = (message) => {
+      const pending = dirtyInputs();
+      if (saveButton) {
+        saveButton.disabled = pending.length === 0 || pending.some((input) => input.dataset.saving === 'true');
+      }
+      if (!saveStatus) return;
+      if (message) {
+        saveStatus.textContent = message;
+        return;
+      }
+      if (!pending.length) {
+        saveStatus.textContent = 'All visible changes are saved to Supabase.';
+        return;
+      }
+      saveStatus.textContent = `${pending.length} unsaved field${pending.length === 1 ? '' : 's'} in this profile.`;
+    };
+
     inputs.forEach((input) => {
+      const markDirty = () => {
+        input.dataset.dirty = 'true';
+        updateSaveState();
+      };
+      input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', markDirty);
       input.addEventListener('blur', async (ev) => {
         const field = ev.target.dataset.field;
-        const value = ev.target.type === 'date' ? ev.target.value : ev.target.value.trim();
-        await saveField(candidate, field, value);
+        if (ev.target.dataset.dirty !== 'true' || ev.target.dataset.saving === 'true') return;
+        const value = readFieldValue(ev.target);
+        ev.target.dataset.saving = 'true';
+        updateSaveState('Saving field…');
+        const saved = await saveField(candidate, field, value, { quiet: true });
+        if (saved) {
+          clearDirty(ev.target);
+          updateSaveState('Field saved.');
+        } else {
+          delete ev.target.dataset.saving;
+          updateSaveState('Save failed. Use Save changes to retry.');
+        }
       });
     });
+    if (saveButton) {
+      saveButton.addEventListener('click', async () => {
+        const pending = dirtyInputs();
+        if (!pending.length) {
+          updateSaveState('All visible changes are already saved.');
+          return;
+        }
+        const patch = {};
+        pending.forEach((input) => {
+          patch[input.dataset.field] = readFieldValue(input);
+          input.dataset.saving = 'true';
+        });
+        updateSaveState('Saving changes…');
+        const saved = await saveCandidatePatch(candidate, patch, { quiet: true });
+        if (saved) {
+          pending.forEach((input) => clearDirty(input));
+          updateSaveState('Changes saved to Supabase.');
+          showToast('Candidate profile updated', 'info', 2200);
+          if (state.drawerId && String(state.drawerId) === String(candidate.id)) {
+            renderDrawer(candidate);
+          }
+        } else {
+          pending.forEach((input) => { delete input.dataset.saving; });
+          updateSaveState('Save failed. Review the fields and try again.');
+        }
+      });
+    }
     const pdfBtn = section.querySelector('[data-action="download-pdf"]');
     if (pdfBtn) pdfBtn.addEventListener('click', () => generatePdf(candidate));
     section.querySelectorAll('[data-onboarding-action]').forEach((btn) => {
@@ -1223,6 +1611,18 @@
           } finally {
             btn.disabled = false;
           }
+          return;
+        }
+        if (btn.dataset.onboardingAction === 'send-doc-request') {
+          btn.disabled = true;
+          try {
+            await sendDocumentRequests([candidate.id]);
+          } catch (err) {
+            console.error('[candidates] document request failed', err);
+            showToast(err.message || 'Could not send the document request.', 'error', 4200);
+          } finally {
+            btn.disabled = false;
+          }
         }
       });
     });
@@ -1233,6 +1633,7 @@
         await runPortalAccountAction(candidate, action, btn);
       });
     });
+    updateSaveState();
   }
 
   async function copyText(text) {
@@ -1355,10 +1756,14 @@
   }
 
   async function saveField(candidate, field, value, { quiet = false } = {}) {
-    const patch = buildSavePayload(candidate, { [field]: value });
+    return saveCandidatePatch(candidate, { [field]: value }, { quiet });
+  }
+
+  async function saveCandidatePatch(candidate, patch, { quiet = false } = {}) {
+    const payload = buildSavePayload(candidate, patch);
     try {
-      const response = await callSave(patch);
-      const nextRecord = response?.candidate ? normalizeCandidate(response.candidate) : { ...candidate, ...patch, [field]: value };
+      const response = await callSave(payload);
+      const nextRecord = response?.candidate ? normalizeCandidate(response.candidate) : { ...candidate, ...payload, ...patch };
       if (response?.portal_auth) {
         nextRecord.portal_auth = response.portal_auth;
         nextRecord.auth_user_id = nextRecord.auth_user_id || response.portal_auth.user_id || null;
@@ -1572,6 +1977,7 @@
     elements.bulkStatus.addEventListener('click', () => bulkStatus());
     elements.bulkBlock.addEventListener('click', () => bulkStatus('blocked'));
     elements.bulkArchive.addEventListener('click', () => bulkStatus('archived'));
+    elements.bulkDocRequest.addEventListener('click', () => bulkDocumentRequest());
     elements.bulkReminder.addEventListener('click', () => bulkReminder());
     elements.bulkExport.addEventListener('click', () => exportCsv({ mode: 'selected' }));
     elements.bulkClear.addEventListener('click', () => clearSelection());
@@ -1634,29 +2040,85 @@
     clearSelection();
   }
 
-  async function sendRtwReminders(candidateIds) {
+  function promptDocumentRequestTypes(defaultTypes) {
+    const fallback = Array.isArray(defaultTypes) && defaultTypes.length
+      ? defaultTypes
+      : ['passport', 'qualification_certificate', 'reference'];
+    const answer = window.prompt(
+      'Document types to request (comma separated: passport, qualification_certificate, reference, right_to_work, visa_permit, bank_document)',
+      fallback.join(', '),
+    );
+    if (answer == null) return null;
+    const requested = parseDocumentRequestList(answer);
+    if (!requested.length) {
+      showToast('Enter at least one supported document type.', 'warn', 3200);
+      return null;
+    }
+    return requested;
+  }
+
+  async function sendOnboardingRequest({ candidateIds, requestType = 'rtw', documentTypes = [] }) {
     const payloadIds = Array.isArray(candidateIds) && candidateIds.length
       ? candidateIds.map((id) => String(id))
       : [];
     const preview = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
       action: 'preview',
       candidateIds: payloadIds,
+      requestType,
+      documentTypes,
     });
     const eligible = Array.isArray(preview?.candidates) ? preview.candidates : [];
     if (!eligible.length) {
-      showToast('No selected candidates are currently missing right-to-work documents.', 'warn', 3600);
+      showToast(
+        requestType === 'rtw'
+          ? 'No selected candidates are currently missing right-to-work documents.'
+          : 'No selected candidates are missing the requested onboarding documents.',
+        'warn',
+        3600,
+      );
       return;
     }
     const sampleNames = eligible.slice(0, 3).map((candidate) => candidate.full_name || candidate.email).join(', ');
     const previewText = eligible.length > 3 ? `${sampleNames}, and ${eligible.length - 3} more` : sampleNames;
-    const confirmed = window.confirm(`Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`);
+    const confirmed = window.confirm(
+      requestType === 'rtw'
+        ? `Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`
+        : `Send secure ${formatDocumentRequestList(documentTypes).toLowerCase()} requests to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`,
+    );
     if (!confirmed) return;
     const response = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
       action: 'send',
       candidateIds: payloadIds,
+      requestType,
+      documentTypes,
     });
-    pushLog({ action: 'rtw:reminders', detail: response?.message || `Sent ${response?.sentCount || 0}` });
-    showToast(response?.message || 'Right-to-work reminders sent.', 'info', 4200);
+    pushLog({
+      action: requestType === 'rtw' ? 'rtw:reminders' : 'docs:request',
+      detail: response?.message || `Sent ${response?.sentCount || 0}`,
+    });
+    showToast(
+      response?.message || (requestType === 'rtw' ? 'Right-to-work reminders sent.' : 'Document requests sent.'),
+      'info',
+      4200,
+    );
+  }
+
+  async function sendRtwReminders(candidateIds) {
+    await sendOnboardingRequest({
+      candidateIds,
+      requestType: 'rtw',
+      documentTypes: ['right_to_work'],
+    });
+  }
+
+  async function sendDocumentRequests(candidateIds, defaultTypes) {
+    const requested = promptDocumentRequestTypes(defaultTypes);
+    if (!requested) return;
+    await sendOnboardingRequest({
+      candidateIds,
+      requestType: 'documents',
+      documentTypes: requested,
+    });
   }
 
   async function bulkReminder() {
@@ -1669,6 +2131,102 @@
     } catch (err) {
       console.error('[candidates] reminder send failed', err);
       showToast(err.message || 'Right-to-work reminder send failed.', 'error', 4200);
+    }
+  }
+
+  async function bulkDocumentRequest(candidateIds) {
+    const ids = Array.isArray(candidateIds) && candidateIds.length ? candidateIds : Array.from(state.selection);
+    if (!ids.length) {
+      showToast('Select candidates first', 'warn');
+      return;
+    }
+    try {
+      await sendDocumentRequests(ids);
+    } catch (err) {
+      console.error('[candidates] document request send failed', err);
+      showToast(err.message || 'Document request send failed.', 'error', 4200);
+    }
+  }
+
+  async function refreshTimesheetPortalCompare() {
+    if (!elements.tspStatus) return;
+    elements.tspStatus.textContent = 'Refreshing Timesheet Portal comparison…';
+    try {
+      const response = await state.helpers.api('admin-candidates-timesheet-compare', 'POST', {});
+      state.tspCompare = response;
+      renderTspSummary();
+    } catch (err) {
+      console.error('[candidates] TSP comparison failed', err);
+      state.tspCompare = {
+        configured: true,
+        message: err.message || 'Timesheet Portal comparison failed.',
+      };
+      renderTspSummary();
+    }
+  }
+
+  async function previewCandidateImport() {
+    if (!state.importFile) {
+      showToast('Choose an import file first.', 'warn', 2800);
+      return;
+    }
+    if (!state.importFileData) {
+      state.importFileData = await readFileAsBase64(state.importFile);
+    }
+    elements.importPreview.disabled = true;
+    try {
+      const response = await state.helpers.api('admin-candidates-import', 'POST', {
+        action: 'preview',
+        fileName: state.importFile.name,
+        fileData: state.importFileData,
+      });
+      state.importPreview = response?.preview || null;
+      renderImportState();
+      showToast('Import mapping preview ready.', 'info', 2200);
+    } catch (err) {
+      console.error('[candidates] import preview failed', err);
+      state.importPreview = null;
+      renderImportState();
+      showToast(err.message || 'Candidate import preview failed.', 'error', 4200);
+    } finally {
+      elements.importPreview.disabled = false;
+      updateImportButtons();
+    }
+  }
+
+  async function confirmCandidateImport() {
+    if (!state.importFile || !state.importPreview) {
+      showToast('Preview the import before confirming it.', 'warn', 2800);
+      return;
+    }
+    const validRows = Number(state.importPreview.validRows || 0);
+    if (!validRows) {
+      showToast('No valid rows were available to import.', 'warn', 3200);
+      return;
+    }
+    const confirmed = window.confirm(`Import ${validRows} valid candidate row${validRows === 1 ? '' : 's'} into HMJ?`);
+    if (!confirmed) return;
+    elements.importConfirm.disabled = true;
+    try {
+      const response = await state.helpers.api('admin-candidates-import', 'POST', {
+        action: 'import',
+        fileName: state.importFile.name,
+        fileData: state.importFileData,
+      });
+      showToast(response?.message || 'Candidate import complete.', response?.failed ? 'warn' : 'info', 4200);
+      await loadCandidates({ silent: true });
+      await refreshTimesheetPortalCompare();
+      state.importPreview = null;
+      state.importFile = null;
+      state.importFileData = '';
+      if (elements.importFile) elements.importFile.value = '';
+      renderImportState();
+    } catch (err) {
+      console.error('[candidates] import failed', err);
+      showToast(err.message || 'Candidate import failed.', 'error', 4200);
+    } finally {
+      elements.importConfirm.disabled = false;
+      updateImportButtons();
     }
   }
 
@@ -1807,6 +2365,7 @@
     elements.bulkStatus = qs('#bulk-status');
     elements.bulkBlock = qs('#bulk-block');
     elements.bulkArchive = qs('#bulk-archive');
+    elements.bulkDocRequest = qs('#bulk-doc-request');
     elements.bulkReminder = qs('#bulk-rtw-reminder');
     elements.bulkExport = qs('#bulk-export');
     elements.bulkClear = qs('#bulk-clear');
@@ -1819,6 +2378,7 @@
     elements.drawer = qs('#drawer');
     elements.dwName = qs('#dw-name');
     elements.dwProfile = qs('#dw-profile');
+    elements.dwAssignments = qs('#dw-assignments');
     elements.dwDocs = qs('#dw-docs');
     elements.dwNotes = qs('#dw-notes');
     elements.dwAudit = qs('#dw-audit');
@@ -1840,6 +2400,17 @@
     elements.applyFilters = qs('#btn-apply');
     elements.clearFilters = qs('#btn-clear');
     elements.selectMissingRtw = qs('#btn-select-missing-rtw');
+    elements.importFile = qs('#candidate-import-file');
+    elements.importFileButton = qs('#btn-import-file');
+    elements.importPreview = qs('#btn-import-preview');
+    elements.importConfirm = qs('#btn-import-confirm');
+    elements.importStatus = qs('#import-status');
+    elements.importSummary = qs('#import-summary');
+    elements.importMapping = qs('#import-mapping');
+    elements.refreshTsp = qs('#btn-refresh-tsp');
+    elements.visibleDocRequest = qs('#btn-visible-doc-request');
+    elements.tspStatus = qs('#tsp-status');
+    elements.tspSummary = qs('#tsp-summary');
   }
 
   function bindEvents() {
@@ -1850,6 +2421,39 @@
     elements.refresh.addEventListener('click', () => loadCandidates({ silent: false }));
     if (elements.selectMissingRtw) {
       elements.selectMissingRtw.addEventListener('click', () => selectMissingRtw());
+    }
+    if (elements.importFileButton && elements.importFile) {
+      elements.importFileButton.addEventListener('click', () => elements.importFile.click());
+      elements.importFile.addEventListener('change', async () => {
+        const [file] = Array.from(elements.importFile.files || []);
+        state.importFile = file || null;
+        state.importFileData = '';
+        state.importPreview = null;
+        renderImportState();
+      });
+    }
+    if (elements.importPreview) {
+      elements.importPreview.addEventListener('click', () => previewCandidateImport());
+    }
+    if (elements.importConfirm) {
+      elements.importConfirm.addEventListener('click', () => confirmCandidateImport());
+    }
+    if (elements.refreshTsp) {
+      elements.refreshTsp.addEventListener('click', () => refreshTimesheetPortalCompare());
+    }
+    if (elements.visibleDocRequest) {
+      elements.visibleDocRequest.addEventListener('click', async () => {
+        if (!state.filtered.length) {
+          showToast('No visible candidates are available for a document request.', 'warn', 3200);
+          return;
+        }
+        try {
+          await sendDocumentRequests(state.filtered.map((candidate) => candidate.id));
+        } catch (err) {
+          console.error('[candidates] visible document request failed', err);
+          showToast(err.message || 'Document request send failed.', 'error', 4200);
+        }
+      });
     }
     elements.dwClose.addEventListener('click', () => closeDrawer());
     elements.fab.addEventListener('click', () => createNewCandidate());
@@ -1864,9 +2468,12 @@
     ensureDebugPanel();
     detectVersion();
     applyFilterInputs();
+    renderImportState();
+    renderTspSummary();
     bindEvents();
     bindKeyboardShortcuts();
     loadCandidates();
+    refreshTimesheetPortalCompare();
   }
 
   function ready() {

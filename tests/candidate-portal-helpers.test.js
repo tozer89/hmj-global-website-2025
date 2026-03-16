@@ -169,6 +169,24 @@ test('buildCandidateWritePayload maps the richer registration fields into the ca
   });
 });
 
+test('buildCandidateWritePayload formats annual salary expectations and stores the selected unit', () => {
+  const payload = buildCandidateWritePayload({
+    first_name: 'Sam',
+    surname: 'Walker',
+    email: 'sam@example.com',
+    salary_expectation: '75000',
+    salary_expectation_unit: 'annual',
+  }, {
+    authUserId: 'user-88',
+    now: '2026-03-16T09:30:00.000Z',
+    includeNulls: false,
+    isNew: true,
+  });
+
+  assert.equal(payload.salary_expectation, '75,000 per year');
+  assert.equal(payload.salary_expectation_unit, 'annual');
+});
+
 test('extractMissingColumnName supports Postgres and Supabase schema cache errors', () => {
   assert.equal(
     extractMissingColumnName({ message: 'column "full_name" does not exist' }),

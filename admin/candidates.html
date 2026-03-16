@@ -80,6 +80,24 @@
     .search input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
     .totals{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .ops-card{padding:18px 20px}
+    .ops-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px}
+    .ops-panel{display:grid;gap:14px;padding:18px;border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fbff)}
+    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .panel-head h2{margin:4px 0 6px;font-size:20px;line-height:1.2}
+    .panel-head p{margin:0;color:var(--muted)}
+    .ops-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .import-meta{padding:12px 14px;border-radius:14px;border:1px dashed rgba(47,78,162,.18);background:#fff;color:var(--muted);font-weight:600}
+    .mapping-table{display:grid;gap:10px}
+    .mapping-row{display:grid;grid-template-columns:minmax(120px,180px) minmax(120px,180px) 1fr;gap:10px;align-items:start;padding:12px 14px;border:1px solid var(--stroke);border-radius:14px;background:#fff}
+    .mapping-row strong{display:block;color:var(--ink)}
+    .mapping-row span{display:block;color:var(--muted);font-size:13px;line-height:1.45}
+    .mapping-row code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-word}
+    .mapping-row.compact{grid-template-columns:minmax(120px,1fr) 1fr}
+    .mapping-list{display:grid;gap:8px}
+    .mapping-item{padding:12px 14px;border:1px solid var(--stroke);border-radius:14px;background:#fff}
+    .mapping-item strong{display:block;margin-bottom:4px;color:var(--ink)}
+    .mapping-item p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 
     .table{display:flex;flex-direction:column;min-height:520px}
     .thead,.trow{display:grid;grid-template-columns:40px 84px minmax(250px,1.2fr) minmax(240px,1fr) minmax(230px,1fr) 128px 248px;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--stroke)}
@@ -155,11 +173,15 @@
       .row{flex-wrap:wrap}
       .search{min-width:100%}
       .sidebar{position:static}
+      .ops-grid{grid-template-columns:1fr}
       .thead,.trow{grid-template-columns:40px 84px minmax(220px,1.2fr) minmax(220px,1fr) minmax(200px,1fr) 120px 230px}
       .summary-grid{grid-template-columns:1fr}
     }
     @media (max-width:720px){
       header.card.intro{padding:18px}
+      .ops-card{padding:16px}
+      .ops-panel{padding:16px}
+      .mapping-row,.mapping-row.compact{grid-template-columns:1fr}
       .thead,.trow{grid-template-columns:40px minmax(0,1fr) 120px 152px}
       .thead > :nth-child(2),.trow > :nth-child(2),
       .thead > :nth-child(4),.trow > :nth-child(4),
@@ -183,7 +205,7 @@
     </div>
     <div class="sp"></div>
     <a class="btn ghost small" href="/">← Website</a>
-    <a class="btn ghost" href="./">⟵ Dashboard</a>
+    <a class="btn ghost" href="./">⟵ Return to Admin Dash</a>
     <button class="btn light" type="button" data-admin-logout>Sign out</button>
   </div></div>
 
@@ -255,6 +277,49 @@
 
     <!-- Main -->
     <main class="grid">
+      <section class="card ops-card">
+        <div class="ops-grid">
+          <article class="ops-panel">
+            <div class="panel-head">
+              <div>
+                <p class="crumbs" style="margin:0">Candidate data</p>
+                <h2>Import &amp; templates</h2>
+                <p>Download the HMJ candidate template, preview field mapping, then import safe inserts and updates into the live candidate module.</p>
+              </div>
+              <div class="toolbar-actions">
+                <a class="btn ghost small" id="candidate-template-xlsx" href="/.netlify/functions/admin-candidates-import?action=template&amp;format=xlsx">Download XLSX template</a>
+                <a class="btn ghost small" id="candidate-template-csv" href="/.netlify/functions/admin-candidates-import?action=template&amp;format=csv">Download CSV template</a>
+              </div>
+            </div>
+            <div class="ops-actions">
+              <button class="btn" id="btn-import-file" type="button">Choose import file</button>
+              <button class="btn ghost" id="btn-import-preview" type="button" disabled>Preview mapping</button>
+              <button class="btn" id="btn-import-confirm" type="button" disabled>Import valid rows</button>
+              <input id="candidate-import-file" type="file" hidden accept=".csv,.xlsx,.xls" />
+            </div>
+            <div class="import-meta" id="import-status">No import file selected. Upload a CSV or Excel workbook, preview the mapping, then confirm the import.</div>
+            <div class="mapping-table" id="import-summary"></div>
+            <div class="mapping-table" id="import-mapping"></div>
+          </article>
+
+          <article class="ops-panel">
+            <div class="panel-head">
+              <div>
+                <p class="crumbs" style="margin:0">Operations</p>
+                <h2>Timesheet Portal &amp; outreach</h2>
+                <p>Compare website candidates against Timesheet Portal and send bulk onboarding document requests from the same workspace.</p>
+              </div>
+              <div class="toolbar-actions">
+                <button class="btn ghost small" id="btn-refresh-tsp" type="button">Refresh TSP compare</button>
+                <button class="btn ghost small" id="btn-visible-doc-request" type="button">Request docs from visible list</button>
+              </div>
+            </div>
+            <div class="import-meta" id="tsp-status">Checking Timesheet Portal configuration…</div>
+            <div class="mapping-table" id="tsp-summary"></div>
+          </article>
+        </div>
+      </section>
+
       <section class="card table-card">
         <div class="toolbar">
           <div class="search">
@@ -285,6 +350,7 @@
             <div style="display:flex;gap:8px">
               <button class="btn" id="bulk-assign">Assign recruiter</button>
               <button class="btn" id="bulk-status">Update status</button>
+              <button class="btn" id="bulk-doc-request">Send document request</button>
               <button class="btn" id="bulk-rtw-reminder">Send RTW reminder</button>
               <button class="btn red" id="bulk-block">Block</button>
               <button class="btn" id="bulk-archive">Archive</button>
@@ -310,6 +376,7 @@
       </div>
     </div>
     <div class="sec" id="dw-profile"></div>
+    <div class="sec" id="dw-assignments"></div>
     <div class="sec" id="dw-docs"></div>
     <div class="sec" id="dw-notes"></div>
     <div class="sec" id="dw-audit"></div>
@@ -318,6 +385,6 @@
   <button class="fab" id="fab-new">+ New candidate</button>
   <div class="toast" id="toast"></div>
 
-  <script defer src="/admin/candidates.js?v=5"></script>
+  <script defer src="/admin/candidates.js?v=8"></script>
 </body>
 </html>

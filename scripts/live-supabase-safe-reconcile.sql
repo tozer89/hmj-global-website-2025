@@ -128,6 +128,7 @@ alter table public.candidate_documents
     'passport',
     'right_to_work',
     'visa_permit',
+    'reference',
     'bank_document',
     'other'
   ));
@@ -424,6 +425,8 @@ alter table if exists public.candidates
 alter table if exists public.candidates
   add column if not exists salary_expectation text;
 alter table if exists public.candidates
+  add column if not exists salary_expectation_unit text;
+alter table if exists public.candidates
   add column if not exists archived_at timestamptz;
 alter table if exists public.candidates
   add column if not exists portal_account_closed_at timestamptz;
@@ -458,6 +461,15 @@ set
   sector_experience = nullif(trim(sector_experience), ''),
   relocation_preference = nullif(trim(relocation_preference), ''),
   salary_expectation = nullif(trim(salary_expectation), ''),
+  salary_expectation_unit = case
+    when lower(nullif(trim(salary_expectation_unit), '')) in ('annual', 'per_year', 'year', 'annual_salary') then 'annual'
+    when lower(nullif(trim(salary_expectation_unit), '')) in ('daily', 'per_day', 'day') then 'daily'
+    when lower(nullif(trim(salary_expectation_unit), '')) in ('hourly', 'per_hour', 'hour') then 'hourly'
+    when salary_expectation ilike '%per year%' then 'annual'
+    when salary_expectation ilike '%per day%' then 'daily'
+    when salary_expectation ilike '%per hour%' then 'hourly'
+    else null
+  end,
   headline_role = nullif(trim(headline_role), ''),
   sector_focus = nullif(trim(sector_focus), ''),
   summary = nullif(trim(summary), ''),
@@ -473,6 +485,12 @@ alter table if exists public.candidates
   alter column created_at set default now();
 alter table if exists public.candidates
   alter column updated_at set default now();
+
+alter table if exists public.assignments
+  add column if not exists candidate_id text;
+
+create index if not exists idx_assignments_candidate_id
+  on public.assignments(candidate_id);
 alter table if exists public.candidates
   alter column skills set default '{}'::text[];
 alter table if exists public.candidates
