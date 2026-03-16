@@ -14,6 +14,7 @@ alter table if exists public.candidate_documents
       'passport',
       'right_to_work',
       'visa_permit',
+      'reference',
       'bank_document',
       'other'
     )

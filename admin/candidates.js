@@ -48,8 +48,14 @@
     lastQueryMs: 0,
     logs: [],
     debugOpen: false,
-    metrics: { total: 0, progress: 0, archived: 0, blocked: 0 }
+    metrics: { total: 0, progress: 0, archived: 0, blocked: 0 },
+    importFile: null,
+    importFileData: '',
+    importPreview: null,
+    tspCompare: null
   };
+
+  const REQUESTABLE_DOC_TYPES = ['passport', 'qualification_certificate', 'reference', 'right_to_work', 'visa_permit', 'bank_document'];
 
   function qs(sel, root = document) {
     return root.querySelector(sel);
@@ -122,6 +128,45 @@
       .split(/[\n,]/)
       .map((part) => part.trim())
       .filter(Boolean);
+  }
+
+  function normalizeDocumentRequestType(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw === 'qualification' || raw === 'qualification certificate' || raw === 'certificate' || raw === 'certificates') return 'qualification_certificate';
+    if (raw === 'right to work' || raw === 'right-to-work' || raw === 'rtw') return 'right_to_work';
+    if (raw === 'visa' || raw === 'permit' || raw === 'visa / permit') return 'visa_permit';
+    if (raw === 'reference' || raw === 'references' || raw === 'referee') return 'reference';
+    if (raw === 'bank' || raw === 'bank document') return 'bank_document';
+    if (raw === 'passport') return 'passport';
+    return '';
+  }
+
+  function documentRequestLabel(value) {
+    if (value === 'qualification_certificate') return 'Qualification / certificate';
+    if (value === 'right_to_work') return 'Right to work';
+    if (value === 'visa_permit') return 'Visa / permit';
+    if (value === 'bank_document') return 'Bank document';
+    if (value === 'reference') return 'Reference';
+    return 'Passport';
+  }
+
+  function formatDocumentRequestList(list) {
+    const labels = (Array.isArray(list) ? list : []).map((item) => documentRequestLabel(item));
+    if (!labels.length) return 'documents';
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+    return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
+  }
+
+  function parseDocumentRequestList(value) {
+    const source = Array.isArray(value) ? value : String(value || '').split(/[\n,]/);
+    const out = [];
+    source.forEach((entry) => {
+      const type = normalizeDocumentRequestType(entry);
+      if (type && !out.includes(type)) out.push(type);
+    });
+    return out;
   }
 
   function normalisePaymentSummary(row) {
@@ -818,6 +863,107 @@
     setTimeout(() => host.classList.remove('show'), ms);
   }
 
+  function updateImportButtons() {
+    if (elements.importPreview) elements.importPreview.disabled = !state.importFile;
+    if (elements.importConfirm) {
+      const validRows = Number(state.importPreview?.validRows || 0);
+      elements.importConfirm.disabled = !state.importFile || !state.importPreview || validRows <= 0;
+    }
+  }
+
+  function renderImportState() {
+    const statusHost = elements.importStatus;
+    const summaryHost = elements.importSummary;
+    const mappingHost = elements.importMapping;
+    if (!statusHost || !summaryHost || !mappingHost) return;
+
+    const file = state.importFile;
+    const preview = state.importPreview;
+    if (!file) {
+      statusHost.textContent = 'No import file selected. Upload a CSV or Excel workbook, preview the mapping, then confirm the import.';
+      summaryHost.innerHTML = '';
+      mappingHost.innerHTML = '';
+      updateImportButtons();
+      return;
+    }
+
+    statusHost.textContent = preview
+      ? `${file.name} ready. ${preview.validRows} valid row${preview.validRows === 1 ? '' : 's'}, ${preview.errorRows} row error${preview.errorRows === 1 ? '' : 's'}.`
+      : `${file.name} selected. Preview the mapping before importing.`;
+
+    if (!preview) {
+      summaryHost.innerHTML = '';
+      mappingHost.innerHTML = '';
+      updateImportButtons();
+      return;
+    }
+
+    summaryHost.innerHTML = `
+      <div class="mapping-row compact">
+        <div><strong>Import summary</strong><span>${preview.totalRows} parsed row${preview.totalRows === 1 ? '' : 's'} · ${preview.insertRows} insert · ${preview.updateRows} update</span></div>
+        <div><strong>Columns</strong><span>${preview.mappedColumns.length} mapped${preview.unmappedColumns.length ? ` · ${preview.unmappedColumns.length} unmapped` : ''}</span></div>
+      </div>
+      ${preview.unmappedColumns.length ? `<div class="mapping-item"><strong>Unmapped columns</strong><p>${preview.unmappedColumns.join(', ')}</p></div>` : ''}
+    `;
+
+    const mappingRows = preview.mappedColumns
+      .map((column) => `
+        <div class="mapping-row">
+          <div><strong>Source column</strong><code>${column.source || '—'}</code></div>
+          <div><strong>HMJ field</strong><code>${column.field || 'ignored'}</code></div>
+          <div><strong>Preview</strong><span>${column.field ? `Imports into ${column.field}.` : 'This column will be ignored unless renamed to a supported field.'}</span></div>
+        </div>
+      `)
+      .join('');
+    const previewRows = preview.rows
+      .slice(0, 8)
+      .map((row) => `
+        <div class="mapping-item">
+          <strong>Row ${row.rowNumber} · ${row.action === 'update' ? 'Update' : 'Insert'}${row.existing ? ` · ${row.existing.name}` : ''}</strong>
+          <p>${row.identity.email || row.identity.ref || row.identity.id || 'No match key'}${row.errors.length ? ` · Errors: ${row.errors.join(' ')}` : ''}${row.warnings.length ? ` · Warnings: ${row.warnings.join(' ')}` : ''}</p>
+        </div>
+      `)
+      .join('');
+    mappingHost.innerHTML = `${mappingRows}${previewRows ? `<div class="mapping-list">${previewRows}</div>` : ''}`;
+    updateImportButtons();
+  }
+
+  function renderTspSummary() {
+    const statusHost = elements.tspStatus;
+    const summaryHost = elements.tspSummary;
+    if (!statusHost || !summaryHost) return;
+    const compare = state.tspCompare;
+    if (!compare) {
+      statusHost.textContent = 'Checking Timesheet Portal configuration…';
+      summaryHost.innerHTML = '';
+      return;
+    }
+    if (compare.configured === false) {
+      statusHost.textContent = compare.message || 'Timesheet Portal is not configured for this environment.';
+      summaryHost.innerHTML = '';
+      return;
+    }
+    if (!compare.summary) {
+      statusHost.textContent = compare.message || 'Timesheet Portal comparison is unavailable right now.';
+      summaryHost.innerHTML = '';
+      return;
+    }
+    statusHost.textContent = `Compared ${compare.summary.websiteTotal} website candidates against ${compare.summary.timesheetPortalTotal} Timesheet Portal profiles.`;
+    summaryHost.innerHTML = `
+      <div class="mapping-row compact">
+        <div><strong>Matched</strong><span>${compare.summary.matched}</span></div>
+        <div><strong>Differences</strong><span>${compare.summary.mismatched}</span></div>
+      </div>
+      <div class="mapping-row compact">
+        <div><strong>Website only</strong><span>${compare.summary.websiteOnly}</span></div>
+        <div><strong>TSP only</strong><span>${compare.summary.timesheetPortalOnly}</span></div>
+      </div>
+      ${compare.mismatches?.length ? `<div class="mapping-item"><strong>Sample mismatches</strong><p>${compare.mismatches.slice(0, 3).map((row) => `${row.name || row.email}: ${row.differences.join(', ')}`).join(' · ')}</p></div>` : ''}
+      ${compare.websiteOnly?.length ? `<div class="mapping-item"><strong>Website only</strong><p>${compare.websiteOnly.slice(0, 3).map((row) => row.name || row.email).join(' · ')}</p></div>` : ''}
+      ${compare.timesheetPortalOnly?.length ? `<div class="mapping-item"><strong>TSP only</strong><p>${compare.timesheetPortalOnly.slice(0, 3).map((row) => row.name || row.email).join(' · ')}</p></div>` : ''}
+    `;
+  }
+
   function selectedCandidates() {
     return state.filtered.filter((row) => selectionHas(row.id));
   }
@@ -989,6 +1135,7 @@
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn ghost" type="button" data-account-action="inspect">Refresh portal status</button>
+          <button class="btn ghost" type="button" data-onboarding-action="send-doc-request" ${!candidate.email || isArchived(candidate) ? 'disabled' : ''}>Request documents</button>
           <button class="btn ghost" type="button" data-onboarding-action="send-rtw-reminder" ${canSendReminder ? '' : 'disabled'}>Send RTW reminder</button>
           <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
           <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
@@ -1220,6 +1367,18 @@
           } catch (err) {
             console.error('[candidates] onboarding action failed', err);
             showToast(err.message || 'Could not send right-to-work reminder.', 'error', 4200);
+          } finally {
+            btn.disabled = false;
+          }
+          return;
+        }
+        if (btn.dataset.onboardingAction === 'send-doc-request') {
+          btn.disabled = true;
+          try {
+            await sendDocumentRequests([candidate.id]);
+          } catch (err) {
+            console.error('[candidates] document request failed', err);
+            showToast(err.message || 'Could not send the document request.', 'error', 4200);
           } finally {
             btn.disabled = false;
           }
@@ -1572,6 +1731,7 @@
     elements.bulkStatus.addEventListener('click', () => bulkStatus());
     elements.bulkBlock.addEventListener('click', () => bulkStatus('blocked'));
     elements.bulkArchive.addEventListener('click', () => bulkStatus('archived'));
+    elements.bulkDocRequest.addEventListener('click', () => bulkDocumentRequest());
     elements.bulkReminder.addEventListener('click', () => bulkReminder());
     elements.bulkExport.addEventListener('click', () => exportCsv({ mode: 'selected' }));
     elements.bulkClear.addEventListener('click', () => clearSelection());
@@ -1634,29 +1794,85 @@
     clearSelection();
   }
 
-  async function sendRtwReminders(candidateIds) {
+  function promptDocumentRequestTypes(defaultTypes) {
+    const fallback = Array.isArray(defaultTypes) && defaultTypes.length
+      ? defaultTypes
+      : ['passport', 'qualification_certificate', 'reference'];
+    const answer = window.prompt(
+      'Document types to request (comma separated: passport, qualification_certificate, reference, right_to_work, visa_permit, bank_document)',
+      fallback.join(', '),
+    );
+    if (answer == null) return null;
+    const requested = parseDocumentRequestList(answer);
+    if (!requested.length) {
+      showToast('Enter at least one supported document type.', 'warn', 3200);
+      return null;
+    }
+    return requested;
+  }
+
+  async function sendOnboardingRequest({ candidateIds, requestType = 'rtw', documentTypes = [] }) {
     const payloadIds = Array.isArray(candidateIds) && candidateIds.length
       ? candidateIds.map((id) => String(id))
       : [];
     const preview = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
       action: 'preview',
       candidateIds: payloadIds,
+      requestType,
+      documentTypes,
     });
     const eligible = Array.isArray(preview?.candidates) ? preview.candidates : [];
     if (!eligible.length) {
-      showToast('No selected candidates are currently missing right-to-work documents.', 'warn', 3600);
+      showToast(
+        requestType === 'rtw'
+          ? 'No selected candidates are currently missing right-to-work documents.'
+          : 'No selected candidates are missing the requested onboarding documents.',
+        'warn',
+        3600,
+      );
       return;
     }
     const sampleNames = eligible.slice(0, 3).map((candidate) => candidate.full_name || candidate.email).join(', ');
     const previewText = eligible.length > 3 ? `${sampleNames}, and ${eligible.length - 3} more` : sampleNames;
-    const confirmed = window.confirm(`Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`);
+    const confirmed = window.confirm(
+      requestType === 'rtw'
+        ? `Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`
+        : `Send secure ${formatDocumentRequestList(documentTypes).toLowerCase()} requests to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`,
+    );
     if (!confirmed) return;
     const response = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
       action: 'send',
       candidateIds: payloadIds,
+      requestType,
+      documentTypes,
     });
-    pushLog({ action: 'rtw:reminders', detail: response?.message || `Sent ${response?.sentCount || 0}` });
-    showToast(response?.message || 'Right-to-work reminders sent.', 'info', 4200);
+    pushLog({
+      action: requestType === 'rtw' ? 'rtw:reminders' : 'docs:request',
+      detail: response?.message || `Sent ${response?.sentCount || 0}`,
+    });
+    showToast(
+      response?.message || (requestType === 'rtw' ? 'Right-to-work reminders sent.' : 'Document requests sent.'),
+      'info',
+      4200,
+    );
+  }
+
+  async function sendRtwReminders(candidateIds) {
+    await sendOnboardingRequest({
+      candidateIds,
+      requestType: 'rtw',
+      documentTypes: ['right_to_work'],
+    });
+  }
+
+  async function sendDocumentRequests(candidateIds, defaultTypes) {
+    const requested = promptDocumentRequestTypes(defaultTypes);
+    if (!requested) return;
+    await sendOnboardingRequest({
+      candidateIds,
+      requestType: 'documents',
+      documentTypes: requested,
+    });
   }
 
   async function bulkReminder() {
@@ -1669,6 +1885,102 @@
     } catch (err) {
       console.error('[candidates] reminder send failed', err);
       showToast(err.message || 'Right-to-work reminder send failed.', 'error', 4200);
+    }
+  }
+
+  async function bulkDocumentRequest(candidateIds) {
+    const ids = Array.isArray(candidateIds) && candidateIds.length ? candidateIds : Array.from(state.selection);
+    if (!ids.length) {
+      showToast('Select candidates first', 'warn');
+      return;
+    }
+    try {
+      await sendDocumentRequests(ids);
+    } catch (err) {
+      console.error('[candidates] document request send failed', err);
+      showToast(err.message || 'Document request send failed.', 'error', 4200);
+    }
+  }
+
+  async function refreshTimesheetPortalCompare() {
+    if (!elements.tspStatus) return;
+    elements.tspStatus.textContent = 'Refreshing Timesheet Portal comparison…';
+    try {
+      const response = await state.helpers.api('admin-candidates-timesheet-compare', 'POST', {});
+      state.tspCompare = response;
+      renderTspSummary();
+    } catch (err) {
+      console.error('[candidates] TSP comparison failed', err);
+      state.tspCompare = {
+        configured: true,
+        message: err.message || 'Timesheet Portal comparison failed.',
+      };
+      renderTspSummary();
+    }
+  }
+
+  async function previewCandidateImport() {
+    if (!state.importFile) {
+      showToast('Choose an import file first.', 'warn', 2800);
+      return;
+    }
+    if (!state.importFileData) {
+      state.importFileData = await readFileAsBase64(state.importFile);
+    }
+    elements.importPreview.disabled = true;
+    try {
+      const response = await state.helpers.api('admin-candidates-import', 'POST', {
+        action: 'preview',
+        fileName: state.importFile.name,
+        fileData: state.importFileData,
+      });
+      state.importPreview = response?.preview || null;
+      renderImportState();
+      showToast('Import mapping preview ready.', 'info', 2200);
+    } catch (err) {
+      console.error('[candidates] import preview failed', err);
+      state.importPreview = null;
+      renderImportState();
+      showToast(err.message || 'Candidate import preview failed.', 'error', 4200);
+    } finally {
+      elements.importPreview.disabled = false;
+      updateImportButtons();
+    }
+  }
+
+  async function confirmCandidateImport() {
+    if (!state.importFile || !state.importPreview) {
+      showToast('Preview the import before confirming it.', 'warn', 2800);
+      return;
+    }
+    const validRows = Number(state.importPreview.validRows || 0);
+    if (!validRows) {
+      showToast('No valid rows were available to import.', 'warn', 3200);
+      return;
+    }
+    const confirmed = window.confirm(`Import ${validRows} valid candidate row${validRows === 1 ? '' : 's'} into HMJ?`);
+    if (!confirmed) return;
+    elements.importConfirm.disabled = true;
+    try {
+      const response = await state.helpers.api('admin-candidates-import', 'POST', {
+        action: 'import',
+        fileName: state.importFile.name,
+        fileData: state.importFileData,
+      });
+      showToast(response?.message || 'Candidate import complete.', response?.failed ? 'warn' : 'info', 4200);
+      await loadCandidates({ silent: true });
+      await refreshTimesheetPortalCompare();
+      state.importPreview = null;
+      state.importFile = null;
+      state.importFileData = '';
+      if (elements.importFile) elements.importFile.value = '';
+      renderImportState();
+    } catch (err) {
+      console.error('[candidates] import failed', err);
+      showToast(err.message || 'Candidate import failed.', 'error', 4200);
+    } finally {
+      elements.importConfirm.disabled = false;
+      updateImportButtons();
     }
   }
 
@@ -1807,6 +2119,7 @@
     elements.bulkStatus = qs('#bulk-status');
     elements.bulkBlock = qs('#bulk-block');
     elements.bulkArchive = qs('#bulk-archive');
+    elements.bulkDocRequest = qs('#bulk-doc-request');
     elements.bulkReminder = qs('#bulk-rtw-reminder');
     elements.bulkExport = qs('#bulk-export');
     elements.bulkClear = qs('#bulk-clear');
@@ -1840,6 +2153,17 @@
     elements.applyFilters = qs('#btn-apply');
     elements.clearFilters = qs('#btn-clear');
     elements.selectMissingRtw = qs('#btn-select-missing-rtw');
+    elements.importFile = qs('#candidate-import-file');
+    elements.importFileButton = qs('#btn-import-file');
+    elements.importPreview = qs('#btn-import-preview');
+    elements.importConfirm = qs('#btn-import-confirm');
+    elements.importStatus = qs('#import-status');
+    elements.importSummary = qs('#import-summary');
+    elements.importMapping = qs('#import-mapping');
+    elements.refreshTsp = qs('#btn-refresh-tsp');
+    elements.visibleDocRequest = qs('#btn-visible-doc-request');
+    elements.tspStatus = qs('#tsp-status');
+    elements.tspSummary = qs('#tsp-summary');
   }
 
   function bindEvents() {
@@ -1850,6 +2174,39 @@
     elements.refresh.addEventListener('click', () => loadCandidates({ silent: false }));
     if (elements.selectMissingRtw) {
       elements.selectMissingRtw.addEventListener('click', () => selectMissingRtw());
+    }
+    if (elements.importFileButton && elements.importFile) {
+      elements.importFileButton.addEventListener('click', () => elements.importFile.click());
+      elements.importFile.addEventListener('change', async () => {
+        const [file] = Array.from(elements.importFile.files || []);
+        state.importFile = file || null;
+        state.importFileData = '';
+        state.importPreview = null;
+        renderImportState();
+      });
+    }
+    if (elements.importPreview) {
+      elements.importPreview.addEventListener('click', () => previewCandidateImport());
+    }
+    if (elements.importConfirm) {
+      elements.importConfirm.addEventListener('click', () => confirmCandidateImport());
+    }
+    if (elements.refreshTsp) {
+      elements.refreshTsp.addEventListener('click', () => refreshTimesheetPortalCompare());
+    }
+    if (elements.visibleDocRequest) {
+      elements.visibleDocRequest.addEventListener('click', async () => {
+        if (!state.filtered.length) {
+          showToast('No visible candidates are available for a document request.', 'warn', 3200);
+          return;
+        }
+        try {
+          await sendDocumentRequests(state.filtered.map((candidate) => candidate.id));
+        } catch (err) {
+          console.error('[candidates] visible document request failed', err);
+          showToast(err.message || 'Document request send failed.', 'error', 4200);
+        }
+      });
     }
     elements.dwClose.addEventListener('click', () => closeDrawer());
     elements.fab.addEventListener('click', () => createNewCandidate());
@@ -1864,9 +2221,12 @@
     ensureDebugPanel();
     detectVersion();
     applyFilterInputs();
+    renderImportState();
+    renderTspSummary();
     bindEvents();
     bindKeyboardShortcuts();
     loadCandidates();
+    refreshTimesheetPortalCompare();
   }
 
   function ready() {

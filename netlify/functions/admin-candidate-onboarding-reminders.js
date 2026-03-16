@@ -6,7 +6,12 @@ const {
   buildEmailTemplate,
   readCandidateEmailSettings,
 } = require('./_candidate-email-settings.js');
-const { buildCandidatePortalDeepLink, summariseCandidatesOnboardingMap } = require('./_candidate-onboarding.js');
+const {
+  buildCandidatePortalDeepLink,
+  missingRequestedDocuments,
+  requestedDocumentLabel,
+  summariseCandidatesOnboardingMap,
+} = require('./_candidate-onboarding.js');
 const { paymentDetailsSummary } = require('./_candidate-payment-details.js');
 const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-delivery.js');
 
@@ -68,9 +73,9 @@ async function loadRecentReminderMap(supabase, candidateIds = []) {
   const since = new Date(Date.now() - ACTIVITY_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from('candidate_activity')
-    .select('candidate_id,activity_type,created_at')
+    .select('candidate_id,activity_type,created_at,meta')
     .in('candidate_id', candidateIds.map(String))
-    .eq('activity_type', 'rtw_reminder_sent')
+    .in('activity_type', ['rtw_reminder_sent', 'candidate_document_request_sent'])
     .gte('created_at', since);
   if (error && !/relation .+ does not exist/i.test(error.message || '')) throw error;
   const map = new Map();
@@ -92,19 +97,32 @@ function displayCandidateName(candidate = {}) {
   ) || 'there';
 }
 
-function buildReminderContent(settings, candidateName, actionUrl) {
-  const heading = 'Complete your right-to-work documents';
-  const intro = `HMJ Global needs your passport or right-to-work evidence to keep your onboarding moving. Use the secure HMJ link below to open your candidate account and upload the required file.`;
+function documentListText(documentTypes = []) {
+  const labels = documentTypes.map((type) => requestedDocumentLabel(type));
+  if (!labels.length) return 'documents';
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
+}
+
+function buildReminderContent(settings, candidateName, actionUrl, documentTypes = ['right_to_work']) {
+  const labelsText = documentListText(documentTypes);
+  const isRightToWorkOnly = documentTypes.length === 1 && documentTypes[0] === 'right_to_work';
+  const heading = isRightToWorkOnly ? 'Complete your right-to-work documents' : 'Complete your HMJ onboarding documents';
+  const intro = isRightToWorkOnly
+    ? 'HMJ Global needs your passport or right-to-work evidence to keep your onboarding moving. Use the secure HMJ link below to open your candidate account and upload the required file.'
+    : `HMJ Global needs your ${labelsText.toLowerCase()} to complete onboarding. Use the secure HMJ link below to open your candidate account and upload the requested documents.`;
   const html = buildEmailTemplate(settings, {
     heading,
     intro,
-    actionLabel: 'Upload right-to-work documents',
+    actionLabel: isRightToWorkOnly ? 'Upload right-to-work documents' : 'Open onboarding uploads',
     actionUrl,
   }).replace(
     '</table>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>',
     `<tr><td style="padding:0 32px 28px;color:#42557f;font-size:15px;line-height:1.6">
       <p style="margin:0 0 12px">Hi ${candidateName},</p>
-      <p style="margin:0 0 12px">HMJ uses this area for onboarding documents such as passports, visas, permits, and share-code evidence.</p>
+      <p style="margin:0 0 12px">HMJ uses this area for onboarding documents such as passports, certificates, references, visas, and share-code evidence.</p>
+      ${isRightToWorkOnly ? '' : `<p style="margin:0 0 12px">Requested documents: <strong>${labelsText}</strong>.</p>`}
       <p style="margin:0">If you have already uploaded the right file, you can ignore this reminder.</p>
     </td></tr>
           </table>
@@ -115,20 +133,25 @@ function buildReminderContent(settings, candidateName, actionUrl) {
 </html>`,
   );
   return {
-    subject: 'Action required: upload your HMJ right-to-work documents',
+    subject: isRightToWorkOnly
+      ? 'Action required: upload your HMJ right-to-work documents'
+      : 'Action required: upload your HMJ onboarding documents',
     html,
   };
 }
 
-async function recordReminderActivity(supabase, candidateId, actorEmail) {
+async function recordReminderActivity(supabase, candidateId, actorEmail, activityType, meta) {
   await supabase.from('candidate_activity').insert({
     candidate_id: String(candidateId),
-    activity_type: 'rtw_reminder_sent',
-    description: 'Right-to-work reminder email sent from admin candidates.',
+    activity_type: activityType,
+    description: activityType === 'rtw_reminder_sent'
+      ? 'Right-to-work reminder email sent from admin candidates.'
+      : 'Candidate document request email sent from admin candidates.',
     actor_role: 'admin',
     actor_identifier: actorEmail || null,
     meta: {
       source: 'admin_candidates_bulk',
+      ...(meta || {}),
     },
     created_at: new Date().toISOString(),
   }).catch(() => null);
@@ -140,6 +163,10 @@ const baseHandler = async (event, context) => {
 
   const body = JSON.parse(event.body || '{}');
   const action = trimString(body.action, 80).toLowerCase() || 'preview';
+  const requestType = trimString(body.requestType, 40).toLowerCase() || 'rtw';
+  const requestedDocuments = Array.isArray(body.documentTypes)
+    ? body.documentTypes.map((value) => trimString(value, 80).toLowerCase()).filter(Boolean)
+    : [];
 
   const candidates = await loadCandidates(supabase, body);
   const candidateIds = candidates.map((row) => String(row.id));
@@ -156,11 +183,19 @@ const baseHandler = async (event, context) => {
     .map((candidate) => ({
       candidate,
       onboarding: onboardingByCandidateId.get(String(candidate.id)) || null,
+      missingDocuments: missingRequestedDocuments(
+        candidate,
+        docsByCandidateId.get(String(candidate.id)) || [],
+        requestType === 'rtw' ? ['right_to_work'] : requestedDocuments,
+        paymentsByCandidateId.get(String(candidate.id)) || null,
+      ),
     }))
-    .filter(({ candidate, onboarding }) => {
+    .filter(({ candidate, onboarding, missingDocuments }) => {
       if (!candidate?.id || !lowerEmail(candidate.email)) return false;
       if (String(candidate.status || '').toLowerCase() === 'archived') return false;
-      return !!onboarding && onboarding.hasRightToWork === false;
+      if (!onboarding) return false;
+      if (requestType === 'rtw') return onboarding.hasRightToWork === false;
+      return missingDocuments.length > 0;
     });
 
   if (action === 'preview') {
@@ -175,7 +210,17 @@ const baseHandler = async (event, context) => {
           full_name: displayCandidateName(candidate),
           email: lowerEmail(candidate.email),
           onboarding,
+          missingDocuments: requestType === 'rtw'
+            ? ['right_to_work']
+            : missingRequestedDocuments(
+              candidate,
+              docsByCandidateId.get(String(candidate.id)) || [],
+              requestedDocuments,
+              paymentsByCandidateId.get(String(candidate.id)) || null,
+            ),
         })),
+        requestType,
+        documentTypes: requestType === 'rtw' ? ['right_to_work'] : requestedDocuments,
       }),
     };
   }
@@ -189,6 +234,8 @@ const baseHandler = async (event, context) => {
   const recentReminderMap = await loadRecentReminderMap(supabase, eligible.map(({ candidate }) => candidate.id));
   const sent = [];
   const skipped = [];
+  const actionDocuments = requestType === 'rtw' ? ['right_to_work'] : requestedDocuments;
+  const activityType = requestType === 'rtw' ? 'rtw_reminder_sent' : 'candidate_document_request_sent';
 
   for (const entry of eligible) {
     const candidate = entry.candidate;
@@ -204,10 +251,11 @@ const baseHandler = async (event, context) => {
 
     const actionUrl = buildCandidatePortalDeepLink(event, {
       tab: 'documents',
-      focus: 'right_to_work',
+      focus: requestType === 'rtw' ? 'right_to_work' : 'documents',
       onboarding: true,
+      documents: actionDocuments,
     });
-    const content = buildReminderContent(settings, displayCandidateName(candidate), actionUrl);
+    const content = buildReminderContent(settings, displayCandidateName(candidate), actionUrl, actionDocuments);
 
     await sendTransactionalEmail({
       toEmail: lowerEmail(candidate.email),
@@ -218,7 +266,9 @@ const baseHandler = async (event, context) => {
       html: content.html,
       smtpSettings: settings,
     });
-    await recordReminderActivity(supabase, candidate.id, user?.email || null);
+    await recordReminderActivity(supabase, candidate.id, user?.email || null, activityType, {
+      document_types: actionDocuments,
+    });
     sent.push({
       id: candidate.id,
       email: lowerEmail(candidate.email),
@@ -233,9 +283,15 @@ const baseHandler = async (event, context) => {
       skippedCount: skipped.length,
       sent,
       skipped,
+      requestType,
+      documentTypes: actionDocuments,
       message: sent.length
-        ? `Sent ${sent.length} right-to-work reminder email${sent.length === 1 ? '' : 's'}.`
-        : 'No right-to-work reminders were sent.',
+        ? (requestType === 'rtw'
+          ? `Sent ${sent.length} right-to-work reminder email${sent.length === 1 ? '' : 's'}.`
+          : `Sent ${sent.length} onboarding document request email${sent.length === 1 ? '' : 's'}.`)
+        : (requestType === 'rtw'
+          ? 'No right-to-work reminders were sent.'
+          : 'No onboarding document requests were sent.'),
     }),
   };
 };

@@ -128,6 +128,7 @@ alter table public.candidate_documents
     'passport',
     'right_to_work',
     'visa_permit',
+    'reference',
     'bank_document',
     'other'
   ));

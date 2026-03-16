@@ -12,6 +12,7 @@ test('normaliseDocumentType recognises onboarding document categories', () => {
   assert.equal(normaliseDocumentType('Visa / permit'), 'visa_permit');
   assert.equal(normaliseDocumentType('Qualification certificate'), 'qualification_certificate');
   assert.equal(normaliseDocumentType('Bank document'), 'bank_document');
+  assert.equal(normaliseDocumentType('Reference'), 'reference');
 });
 
 test('summariseOnboarding flags missing RTW and payment details cleanly', () => {
@@ -46,10 +47,12 @@ test('buildCandidatePortalDeepLink routes users back into the onboarding documen
     tab: 'documents',
     focus: 'right_to_work',
     onboarding: true,
+    documents: ['passport', 'reference'],
   });
 
   assert.match(url, /^https:\/\/preview\.hmj-global\.com\/candidates\.html\?/);
   assert.match(url, /candidate_tab=documents/);
   assert.match(url, /candidate_focus=right_to_work/);
   assert.match(url, /candidate_onboarding=1/);
+  assert.match(url, /candidate_docs=passport%2Creference|candidate_docs=passport,reference/);
 });

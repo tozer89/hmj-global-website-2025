@@ -36,6 +36,7 @@ function resolveLocalTarget(fromFile, href, redirects) {
   if (!href) return true;
   if (href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) return true;
   if (/^https?:\/\//i.test(href)) return true;
+  if (href.startsWith('/.netlify/functions/')) return true;
 
   const clean = href.split('#')[0].split('?')[0];
   if (!clean) return true;

@@ -99,9 +99,12 @@ function normaliseDocumentType(value) {
   if (raw === 'qualification_certificate' || raw === 'qualification / certificate') return 'qualification_certificate';
   if (raw === 'passport') return 'passport';
   if (raw === 'right to work' || raw === 'right_to_work') return 'right_to_work';
+  if (raw === 'reference' || raw === 'references') return 'reference';
   if (raw === 'visa / permit' || raw === 'visa_permit' || raw === 'visa' || raw === 'permit') return 'visa_permit';
   if (raw === 'bank document' || raw === 'bank_document') return 'bank_document';
   if (/\bpassport\b/.test(raw)) return 'passport';
+  if (/right[\s_-]?to[\s_-]?work|share[\s_-]?code/.test(raw)) return 'right_to_work';
+  if (/\b(reference|references|referee)\b/.test(raw)) return 'reference';
   if (/\bvisa\b|\bpermit\b/.test(raw)) return 'visa_permit';
   if (/\bqualification\b|\bcertificate\b|\bcertification\b|\bcard\b|\bticket\b/.test(raw)) return 'qualification_certificate';
   return 'other';

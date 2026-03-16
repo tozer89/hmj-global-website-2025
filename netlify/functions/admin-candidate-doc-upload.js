@@ -25,6 +25,7 @@ function inferDocumentType(name, label) {
   if (/\bpassport\b/.test(raw)) return 'passport';
   if (/right[\s_-]?to[\s_-]?work/.test(raw)) return 'right_to_work';
   if (/\b(visa|permit|brp|residence)\b/.test(raw)) return 'visa_permit';
+  if (/\b(reference|references|referee)\b/.test(raw)) return 'reference';
   if (/\b(cert|certificate|certification|qualification|ticket|card)\b/.test(raw)) return 'qualification_certificate';
   if (/\b(bank|void cheque|void check)\b/.test(raw)) return 'bank_document';
   return 'other';

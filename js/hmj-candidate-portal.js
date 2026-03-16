@@ -348,7 +348,12 @@ function normaliseDocumentType(value) {
   if (raw === 'cv' || raw === 'resume') return 'cv';
   if (raw === 'cover letter' || raw === 'cover_letter') return 'cover_letter';
   if (raw === 'certification' || raw === 'certificate') return 'certificate';
+  if (raw === 'qualification_certificate' || raw === 'qualification / certificate') return 'qualification_certificate';
+  if (raw === 'passport') return 'passport';
   if (raw === 'right to work' || raw === 'right_to_work') return 'right_to_work';
+  if (raw === 'visa_permit' || raw === 'visa / permit' || raw === 'visa' || raw === 'permit') return 'visa_permit';
+  if (raw === 'reference' || raw === 'references') return 'reference';
+  if (raw === 'bank_document' || raw === 'bank document') return 'bank_document';
   return 'other';
 }
 

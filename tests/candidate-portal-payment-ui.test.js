@@ -17,4 +17,8 @@ test('candidate portal exposes the payment tab and deep-link onboarding controls
   assert.match(source, /saveCandidatePaymentDetails/);
   assert.match(source, /candidate_tab/);
   assert.match(source, /candidate_focus/);
+  assert.match(source, /candidate_docs/);
+  assert.match(source, /parseRequestedDocumentList/);
+  assert.match(source, /requestedDocumentListText/);
+  assert.match(source, /value="reference"/);
 });
