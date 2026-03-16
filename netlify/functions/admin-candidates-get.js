@@ -179,4 +179,4 @@ const baseHandler = async (event, context) => {
   }
 };
 
-exports.handler = withAdminCors(baseHandler);
+exports.handler = withAdminCors(baseHandler, { requireToken: false });

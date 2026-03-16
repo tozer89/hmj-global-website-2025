@@ -419,8 +419,16 @@
       identityPill.className = info?.ok ? 'pill ok' : 'pill warn';
     }
     if (tokenPill) {
-      tokenPill.textContent = info?.token ? 'token: ok' : 'token: missing';
-      tokenPill.className = info?.token ? 'pill ok' : 'pill warn';
+      if (info?.token) {
+        tokenPill.textContent = 'token: ok';
+        tokenPill.className = 'pill ok';
+      } else if (info?.ok) {
+        tokenPill.textContent = 'auth: cookie session';
+        tokenPill.className = 'pill ok';
+      } else {
+        tokenPill.textContent = 'token: missing';
+        tokenPill.className = 'pill warn';
+      }
     }
     if (rolePill) {
       rolePill.textContent = `role: ${info?.role || 'unknown'}`;
@@ -429,7 +437,9 @@
     const identDetail = qs('#dbg-ident-value');
     if (identDetail) identDetail.textContent = info?.email || '—';
     const tokenDetail = qs('#dbg-token-value');
-    if (tokenDetail) tokenDetail.textContent = info?.token ? 'attached' : 'missing';
+    if (tokenDetail) {
+      tokenDetail.textContent = info?.token ? 'attached' : (info?.ok ? 'cookie-backed session' : 'missing');
+    }
   }
 
   async function detectVersion() {

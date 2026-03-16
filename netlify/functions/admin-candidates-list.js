@@ -293,4 +293,4 @@ const baseHandler = async (event, context) => {
   return { statusCode: 200, headers: baseHeaders, body: JSON.stringify(response) };
 };
 
-exports.handler = withAdminCors(baseHandler);
+exports.handler = withAdminCors(baseHandler, { requireToken: false });
