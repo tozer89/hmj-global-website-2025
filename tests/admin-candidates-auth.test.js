@@ -12,7 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=2/);
+  assert.match(html, /\/admin\/candidates\.js\?v=3/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
@@ -42,4 +42,12 @@ test('candidate row actions use closest() event delegation so button text clicks
   const source = read('admin/candidates.js');
   assert.match(source, /target\.closest\('\[data-role\]'\)/);
   assert.match(source, /rawTarget && rawTarget\.parentElement instanceof Element/);
+});
+
+test('candidate normalizer keeps synthetic display names out of persisted full_name payloads', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /const storedFullName = row\.full_name \|\| row\.fullName \|\| '';/);
+  assert.match(source, /const displayName = storedFullName \|\| derivedFullName \|\| 'Candidate';/);
+  assert.match(source, /full_name: storedFullName \|\| ''/);
+  assert.match(source, /name: displayName/);
 });

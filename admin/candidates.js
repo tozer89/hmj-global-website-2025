@@ -319,7 +319,9 @@
     if (!row) return null;
     const first = row.first_name || row.firstName || '';
     const last = row.last_name || row.lastName || '';
-    const full = row.full_name || row.fullName || `${first} ${last}`.trim();
+    const storedFullName = row.full_name || row.fullName || '';
+    const derivedFullName = `${first} ${last}`.trim();
+    const displayName = storedFullName || derivedFullName || 'Candidate';
     const status = String(row.status || 'in progress').toLowerCase();
     const docs = Array.isArray(row.docs)
       ? row.docs.slice()
@@ -351,7 +353,7 @@
           last_sign_in_at: row.last_portal_login_at || null,
           created_at: null,
           updated_at: null,
-          full_name: full || null,
+          full_name: storedFullName || derivedFullName || null,
         };
     return {
       ...row,
@@ -364,8 +366,8 @@
       last_portal_login_at: row.last_portal_login_at || portalAuth.last_sign_in_at || '',
       first_name: first,
       last_name: last,
-      full_name: full || `${first} ${last}`.trim() || 'Candidate',
-      name: full || `${first} ${last}`.trim() || 'Candidate',
+      full_name: storedFullName || '',
+      name: displayName,
       email: row.email || '',
       phone: row.phone || '',
       status,
