@@ -30,6 +30,23 @@
   box-shadow: var(--hmj-auth-shadow);
 }
 
+body[data-auth-view="reset-password"] iframe[title="Netlify identity widget"],
+body[data-auth-view="complete-account"] iframe[title="Netlify identity widget"],
+body[data-auth-view="forgot-password"] iframe[title="Netlify identity widget"],
+body[data-auth-view="reset-password"] iframe[src*="identity.netlify.com"],
+body[data-auth-view="complete-account"] iframe[src*="identity.netlify.com"],
+body[data-auth-view="forgot-password"] iframe[src*="identity.netlify.com"],
+body[data-auth-view="reset-password"] .netlify-identity-widget,
+body[data-auth-view="complete-account"] .netlify-identity-widget,
+body[data-auth-view="forgot-password"] .netlify-identity-widget,
+body[data-auth-view="reset-password"] #netlify-identity-widget,
+body[data-auth-view="complete-account"] #netlify-identity-widget,
+body[data-auth-view="forgot-password"] #netlify-identity-widget {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .auth-surface::before {
   content: "";
   position: absolute;

@@ -21,6 +21,7 @@
     reset: '/admin/reset-password.html',
     account: '/admin/account.html'
   };
+  const STANDALONE_AUTH_VIEWS = new Set(['forgot-password', 'complete-account', 'reset-password']);
 
   const copyByIntent = {
     invite: {
@@ -99,6 +100,11 @@
     return safeString(document.body?.dataset?.authView).trim().toLowerCase();
   }
 
+  function isStandaloneAuthView(view) {
+    const target = safeString(view || currentView()).trim().toLowerCase();
+    return STANDALONE_AUTH_VIEWS.has(target);
+  }
+
   function emitAuthEvent(eventName, details) {
     try {
       window.HMJAdminAuthDiagnostics?.emit?.(eventName, details || {});
@@ -114,6 +120,60 @@
       return;
     }
     callback();
+  }
+
+  function hideIdentityNode(node) {
+    if (!node || typeof node !== 'object') return false;
+    try {
+      node.hidden = true;
+      if (typeof node.setAttribute === 'function') {
+        node.setAttribute('aria-hidden', 'true');
+      }
+      if (node.style && typeof node.style.setProperty === 'function') {
+        node.style.setProperty('display', 'none', 'important');
+        node.style.setProperty('visibility', 'hidden', 'important');
+        node.style.setProperty('pointer-events', 'none', 'important');
+      }
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function suppressIdentityWidgetChrome(rootNode, view) {
+    const standalone = isStandaloneAuthView(view);
+    if (!standalone) return 0;
+    const scope = rootNode || (typeof document !== 'undefined' ? document : null);
+    if (!scope) return 0;
+
+    let hiddenCount = 0;
+    const selectors = [
+      'iframe[title="Netlify identity widget"]',
+      'iframe[src*="identity.netlify.com"]',
+      '.netlify-identity-widget',
+      '#netlify-identity-widget'
+    ];
+
+    selectors.forEach((selector) => {
+      selectAll(selector, scope).forEach((node) => {
+        if (hideIdentityNode(node)) hiddenCount += 1;
+      });
+    });
+
+    return hiddenCount;
+  }
+
+  function watchIdentityWidgetChrome(view) {
+    if (!isStandaloneAuthView(view) || typeof MutationObserver === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    suppressIdentityWidgetChrome(document, view);
+    const root = document.documentElement || document.body;
+    if (!root) return;
+    const observer = new MutationObserver(() => {
+      suppressIdentityWidgetChrome(document, view);
+    });
+    observer.observe(root, { childList: true, subtree: true });
   }
 
   function currentLocation() {
@@ -726,6 +786,7 @@
   }
 
   async function tryAutoLogin(email, password) {
+    if (isStandaloneAuthView()) return false;
     const user = await signInWithPassword(email, password);
     return !!user;
   }
@@ -1415,12 +1476,15 @@
 
     ensureSupportLinks();
     bindPasswordToggles();
+    suppressIdentityWidgetChrome(document, view);
 
     const state = parseAuthState();
     if (maybeRedirectByIntent(state, view)) {
       return;
     }
     onReady(async () => {
+      watchIdentityWidgetChrome(view);
+      suppressIdentityWidgetChrome(document, view);
       if (await maybeRedirectAuthenticatedAdmin(view, state)) {
         return;
       }
@@ -1454,14 +1518,17 @@
   return {
     ADMIN_ROUTES,
     PASSWORD_MIN_LENGTH,
+    STANDALONE_AUTH_VIEWS,
     boot,
     buildAdminEntryUrl,
     buildIntentDestination,
     classifyIdentityError,
+    isStandaloneAuthView,
     normaliseIdentityError,
     normaliseNextTarget,
     resolveAuthenticatedAdminRedirect,
     readNotice,
+    suppressIdentityWidgetChrome,
     validatePasswordPair
   };
 });

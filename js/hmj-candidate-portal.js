@@ -2,6 +2,7 @@ const CONFIG_ENDPOINT = '/.netlify/functions/candidate-auth-config';
 const SYNC_ENDPOINT = '/.netlify/functions/candidate-portal-sync';
 const DELETE_ENDPOINT = '/.netlify/functions/candidate-account-delete';
 const DOCUMENTS_ENDPOINT = '/.netlify/functions/candidate-documents';
+const PAYMENT_DETAILS_ENDPOINT = '/.netlify/functions/candidate-payment-details';
 const STORAGE_PREFIX = 'portal';
 const CANDIDATE_DOCS_BUCKET = 'candidate-docs';
 const MAX_DOCUMENT_SIZE_BYTES = 15 * 1024 * 1024;
@@ -38,6 +39,7 @@ function getMockStore() {
       candidate: null,
       applications: [],
       documents: [],
+      paymentDetails: null,
       verificationEmailsSent: 0,
       resetEmailsSent: 0,
       subscribers: new Set(),
@@ -222,6 +224,76 @@ function normaliseTextList(value, maxLength = 120) {
     out.push(entry);
   });
   return out;
+}
+
+function normalisePaymentMethodInput(value, currency) {
+  const raw = trimText(value, 40).toLowerCase();
+  if (raw === 'gbp_local' || raw === 'gbp') return 'gbp_local';
+  if (raw === 'iban_swift' || raw === 'international' || raw === 'eur') return 'iban_swift';
+  return trimText(currency, 12).toUpperCase() === 'GBP' ? 'gbp_local' : 'iban_swift';
+}
+
+function maskValue(value, visible = 4) {
+  const text = trimText(value, 80);
+  if (!text) return '';
+  if (text.length <= visible) return text;
+  return `${'•'.repeat(Math.max(0, text.length - visible))}${text.slice(-visible)}`;
+}
+
+function maskSortCode(sortCode) {
+  const digits = trimText(sortCode, 24).replace(/\D+/g, '');
+  if (!digits) return '';
+  return digits.length >= 2 ? `••-••-${digits.slice(-2)}` : maskValue(digits, 1);
+}
+
+function maskIban(iban) {
+  const clean = trimText(iban, 64).replace(/\s+/g, '').toUpperCase();
+  if (!clean) return '';
+  if (clean.length <= 8) return maskValue(clean, 4);
+  return `${clean.slice(0, 4)} ${'•'.repeat(Math.max(0, clean.length - 8))}${clean.slice(-4)}`;
+}
+
+function mockPaymentSummary(input = {}, existing = null) {
+  const accountCurrency = trimText(input.account_currency || input.payment_currency || existing?.accountCurrency, 12).toUpperCase() || 'GBP';
+  const paymentMethod = normalisePaymentMethodInput(input.payment_method || existing?.paymentMethod, accountCurrency);
+  const sortCode = trimText(input.sort_code || '', 24).replace(/\D+/g, '');
+  const accountNumber = trimText(input.account_number || '', 24).replace(/\D+/g, '');
+  const iban = trimText(input.iban || '', 64).replace(/\s+/g, '').toUpperCase();
+  const swiftBic = trimText(input.swift_bic || '', 32).replace(/\s+/g, '').toUpperCase();
+  const complete = paymentMethod === 'gbp_local'
+    ? !!(trimText(input.account_holder_name || existing?.accountHolderName, 160)
+      && trimText(input.bank_name || existing?.bankName, 160)
+      && trimText(input.bank_location_or_country || existing?.bankLocationOrCountry, 160)
+      && sortCode.length === 6
+      && accountNumber.length >= 6)
+    : !!(trimText(input.account_holder_name || existing?.accountHolderName, 160)
+      && trimText(input.bank_name || existing?.bankName, 160)
+      && trimText(input.bank_location_or_country || existing?.bankLocationOrCountry, 160)
+      && iban.length >= 15
+      && swiftBic.length >= 8);
+  return {
+    id: existing?.id || `payment-${Date.now()}`,
+    candidateId: existing?.candidateId || null,
+    accountCurrency,
+    paymentMethod,
+    accountHolderName: trimText(input.account_holder_name || existing?.accountHolderName, 160),
+    bankName: trimText(input.bank_name || existing?.bankName, 160),
+    bankLocationOrCountry: trimText(input.bank_location_or_country || existing?.bankLocationOrCountry, 160),
+    accountType: trimText(input.account_type || existing?.accountType, 80),
+    masked: {
+      sortCode: sortCode ? maskSortCode(sortCode) : (existing?.masked?.sortCode || ''),
+      accountNumber: accountNumber ? maskValue(accountNumber, 4) : (existing?.masked?.accountNumber || ''),
+      iban: iban ? maskIban(iban) : (existing?.masked?.iban || ''),
+      swiftBic: swiftBic ? maskValue(swiftBic, 4) : (existing?.masked?.swiftBic || ''),
+    },
+    lastFour: accountNumber ? accountNumber.slice(-4) : (iban ? iban.slice(-4) : (existing?.lastFour || '')),
+    verifiedAt: existing?.verifiedAt || null,
+    updatedAt: new Date().toISOString(),
+    completion: {
+      complete,
+      missing: complete ? [] : ['payment_details'],
+    },
+  };
 }
 
 function parsePositiveInteger(value) {
@@ -518,6 +590,18 @@ async function candidateDocumentsRequest(action, payload = {}) {
     throw new Error('candidate_not_authenticated');
   }
   return postCandidatePortalJson(DOCUMENTS_ENDPOINT, {
+    action,
+    ...payload,
+    access_token: session.access_token,
+  }, session.access_token);
+}
+
+async function candidatePaymentRequest(action, payload = {}) {
+  const { session } = await getCandidatePortalContext();
+  if (!session?.access_token) {
+    throw new Error('candidate_not_authenticated');
+  }
+  return postCandidatePortalJson(PAYMENT_DETAILS_ENDPOINT, {
     action,
     ...payload,
     access_token: session.access_token,
@@ -854,6 +938,49 @@ export async function loadCandidateDocuments(candidateIdInput) {
     const rightDate = String(right?.uploaded_at || right?.created_at || '');
     return rightDate.localeCompare(leftDate);
   });
+}
+
+export async function loadCandidatePaymentDetails() {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    return cloneMockRecord(store.paymentDetails || {
+      accountCurrency: 'GBP',
+      paymentMethod: 'gbp_local',
+      accountHolderName: '',
+      bankName: '',
+      bankLocationOrCountry: '',
+      accountType: '',
+      masked: {
+        sortCode: '',
+        accountNumber: '',
+        iban: '',
+        swiftBic: '',
+      },
+      lastFour: '',
+      verifiedAt: null,
+      updatedAt: null,
+      completion: {
+        complete: false,
+        missing: ['payment_details'],
+      },
+    });
+  }
+
+  const response = await candidatePaymentRequest('get');
+  return response?.paymentDetails || null;
+}
+
+export async function saveCandidatePaymentDetails(input = {}) {
+  if (isLocalCandidateMockMode()) {
+    const store = getMockStore();
+    store.paymentDetails = mockPaymentSummary(input, store.paymentDetails);
+    return cloneMockRecord(store.paymentDetails);
+  }
+
+  const response = await candidatePaymentRequest('save', {
+    paymentDetails: input,
+  });
+  return response?.paymentDetails || null;
 }
 
 export async function uploadCandidateDocument({ file, documentType, label }) {

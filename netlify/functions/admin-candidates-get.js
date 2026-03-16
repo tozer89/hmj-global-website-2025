@@ -2,6 +2,7 @@
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
+const { attachOnboardingSummaries } = require('./_candidate-onboarding-admin.js');
 const { presentCandidateDocuments } = require('./_candidate-docs.js');
 const {
   ensureCandidateFromAuthUser,
@@ -173,7 +174,9 @@ const baseHandler = async (event, context) => {
     record.applications = applicationRows;
     record.audit = activityRows;
 
-    return { statusCode: 200, body: JSON.stringify(record) };
+    const [enriched] = await attachOnboardingSummaries(supabase, [record]);
+
+    return { statusCode: 200, body: JSON.stringify(enriched || record) };
   } catch (e) {
     return serveStatic(e?.message || 'unhandled', { ok: false, status: e?.code || 500, error: e?.message || String(e) });
   }
