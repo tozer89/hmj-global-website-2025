@@ -18,12 +18,6 @@
   status = 200
 
 [[redirects]]
-  from = "/robots.txt"
-  to = "/.netlify/functions/robots"
-  status = 200
-  force = true
-
-[[redirects]]
   from = "/about"
   to = "/about.html"
   status = 200
@@ -62,12 +56,6 @@
   from = "/timesheets"
   to = "/timesheets.html"
   status = 200
-
-[[redirects]]
-  from = "/sitemap.xml"
-  to = "/.netlify/functions/sitemap"
-  status = 200
-  force = true
 
 # Keep /admin/ public as the single sign-in entry, but require an admin
 # role for the actual tool pages. Non-admin visitors are sent back to the
