@@ -12,7 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=3/);
+  assert.match(html, /\/admin\/candidates\.js\?v=4/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
@@ -50,4 +50,13 @@ test('candidate normalizer keeps synthetic display names out of persisted full_n
   assert.match(source, /const displayName = storedFullName \|\| derivedFullName \|\| 'Candidate';/);
   assert.match(source, /full_name: storedFullName \|\| ''/);
   assert.match(source, /name: displayName/);
+});
+
+test('candidate drawer includes admin document upload controls and avoids deleting legacy link-only docs', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /data-doc-upload/);
+  assert.match(source, /data-doc-input/);
+  assert.match(source, /admin-candidate-doc-upload/);
+  assert.match(source, /admin-candidate-doc-delete/);
+  assert.match(source, /const canDelete = !!\(doc\.id && \(doc\.storage_path \|\| doc\.storage_key \|\| doc\.candidate_id \|\| doc\.meta\)\);/);
 });

@@ -832,6 +832,7 @@
     elements.dwProfile.innerHTML = renderProfile(candidate);
     bindProfileEditors(candidate);
     elements.dwDocs.innerHTML = renderDocs(candidate);
+    bindDocumentActions(candidate);
     elements.dwNotes.innerHTML = renderNotes(candidate);
     bindNoteActions(candidate);
     elements.dwAudit.innerHTML = renderAudit(candidate);
@@ -918,17 +919,139 @@
   }
 
   function renderDocs(candidate) {
-    if (!candidate.docs || !candidate.docs.length) return '<div class="muted">No documents uploaded.</div>';
-    return `<div class="doc-list">${candidate.docs
+    const docs = Array.isArray(candidate.docs) ? candidate.docs : [];
+    const rows = docs.length
+      ? docs
       .map((doc) => {
         const href = doc.url || doc.access_url || '';
         const label = doc.kind || doc.label || doc.filename || doc.name || 'Document';
+        const uploaded = formatDateTime(doc.uploaded_at || doc.created_at);
         const action = href
           ? `<a href="${href}" target="_blank" rel="noopener">Open</a>`
           : '<span class="muted">Unavailable</span>';
-        return `<div class="doc-row"><span>${label}</span>${action}</div>`;
-      })
-      .join('')}</div>`;
+        const canDelete = !!(doc.id && (doc.storage_path || doc.storage_key || doc.candidate_id || doc.meta));
+        const remove = canDelete
+          ? `<button class="btn ghost small" type="button" data-doc-delete="${doc.id}">Delete</button>`
+          : '';
+        return `<div class="doc-row">
+          <div style="min-width:0">
+            <div style="font-weight:700;word-break:break-word">${label}</div>
+            <div class="muted" style="font-size:12px">${uploaded || 'Uploaded recently'}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${action}${remove}</div>
+        </div>`;
+      }).join('')
+      : '<div class="muted">No documents uploaded.</div>';
+    return `
+      <div class="drawer-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <h3 style="margin:0 0 4px">Documents</h3>
+            <div class="muted" style="font-size:13px">Upload CVs, passports, right-to-work files, or other supporting documents.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" type="button" data-doc-upload>Upload document</button>
+            <input type="file" data-doc-input hidden accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" />
+          </div>
+        </div>
+        <div class="doc-list">${rows}</div>
+      </div>`;
+  }
+
+  async function readFileAsBase64(file) {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        const base64 = result.includes(',') ? result.split(',').pop() : result;
+        resolve(base64 || '');
+      };
+      reader.onerror = () => reject(reader.error || new Error('File read failed'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function refreshCandidateDocuments(candidate) {
+    const response = await state.helpers.api('admin-candidate-docs-list', 'POST', { candidateId: candidate.id });
+    candidate.docs = Array.isArray(response?.documents) ? response.documents : [];
+    const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
+    if (index >= 0) state.raw[index] = { ...candidate };
+    elements.dwDocs.innerHTML = renderDocs(candidate);
+    bindDocumentActions(candidate);
+  }
+
+  async function uploadCandidateDocument(candidate, file, label) {
+    if (!candidate?.id || !file) return;
+    const base64 = await readFileAsBase64(file);
+    const response = await state.helpers.api('admin-candidate-doc-upload', 'POST', {
+      candidateId: candidate.id,
+      name: file.name,
+      contentType: file.type || 'application/octet-stream',
+      data: base64,
+      label: label || file.name,
+    });
+    if (response?.document) {
+      candidate.docs = [response.document].concat(Array.isArray(candidate.docs) ? candidate.docs : []);
+      const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
+      if (index >= 0) state.raw[index] = { ...candidate };
+      elements.dwDocs.innerHTML = renderDocs(candidate);
+      bindDocumentActions(candidate);
+    } else {
+      await refreshCandidateDocuments(candidate);
+    }
+  }
+
+  async function deleteCandidateDocument(candidate, documentId) {
+    if (!documentId) return;
+    await state.helpers.api('admin-candidate-doc-delete', 'POST', { id: documentId });
+    candidate.docs = (candidate.docs || []).filter((doc) => String(doc.id) !== String(documentId));
+    const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
+    if (index >= 0) state.raw[index] = { ...candidate };
+    elements.dwDocs.innerHTML = renderDocs(candidate);
+    bindDocumentActions(candidate);
+  }
+
+  function bindDocumentActions(candidate) {
+    const host = elements.dwDocs;
+    if (!host) return;
+    const uploadBtn = qs('[data-doc-upload]', host);
+    const fileInput = qs('[data-doc-input]', host);
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', async () => {
+        const [file] = Array.from(fileInput.files || []);
+        if (!file) return;
+        const defaultLabel = file.name.replace(/\.[^.]+$/, '');
+        const label = window.prompt('Document label', defaultLabel) || defaultLabel;
+        uploadBtn.disabled = true;
+        try {
+          await uploadCandidateDocument(candidate, file, label);
+          showToast(`Uploaded ${file.name}`, 'info', 2400);
+        } catch (err) {
+          console.error('[candidates] document upload failed', err);
+          showToast(err.message || 'Document upload failed', 'error', 4200);
+        } finally {
+          uploadBtn.disabled = false;
+          fileInput.value = '';
+        }
+      });
+    }
+    host.querySelectorAll('[data-doc-delete]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const documentId = button.dataset.docDelete;
+        if (!documentId) return;
+        if (!window.confirm('Delete this document?')) return;
+        button.disabled = true;
+        try {
+          await deleteCandidateDocument(candidate, documentId);
+          showToast('Document deleted', 'info', 2200);
+        } catch (err) {
+          console.error('[candidates] document delete failed', err);
+          showToast(err.message || 'Document delete failed', 'error', 4200);
+          button.disabled = false;
+        }
+      });
+    });
   }
 
   function renderNotes(candidate) {
