@@ -1072,8 +1072,7 @@
       .topbar__actions,
       .action-row,
       .action-column,
-      .hero,
-      .hero__side,
+      .hero__main,
       .content-side,
       .cta-band,
       .cta-band__actions,
@@ -1087,6 +1086,15 @@
 
       .print-only {
         display: grid !important;
+      }
+
+      .hero {
+        display: grid !important;
+      }
+
+      .hero__side {
+        display: grid !important;
+        padding: 16px 18px;
       }
 
       .hero,
@@ -1190,8 +1198,16 @@
       .section-kicker,
       .print-footer__eyebrow,
       .print-summary__eyebrow,
-      .print-summary__item strong {
+      .print-summary__item strong,
+      .side__eyebrow {
         color: #41567f !important;
+      }
+
+      .side__title {
+        margin: 4px 0 12px;
+        color: #12213f !important;
+        font-size: 17pt !important;
+        line-height: 1.18 !important;
       }
 
       .list-card ul li {
@@ -1248,7 +1264,7 @@
           <img src="../images/logo.png" alt="HMJ Global logo"/>
           <span class="brand__label">
             <strong>HMJ Global</strong>
-            <span>Role advert</span>
+            <span>Candidate brief</span>
           </span>
         </a>
         <div class="topbar__actions">
@@ -1283,7 +1299,7 @@
             <span id="printReference">Shared role spec</span>
           </div>
           <div class="print-summary__item">
-            <strong>Prepared as</strong>
+            <strong>Brief type</strong>
             <span id="printCopyMode">Candidate role brief</span>
           </div>
           <div class="print-summary__item">
@@ -1299,16 +1315,20 @@
             <span id="printPay">Discuss with HMJ</span>
           </div>
           <div class="print-summary__item">
-            <strong>Role page</strong>
-            <a id="printShareLink" href="#"></a>
+            <strong>Discipline</strong>
+            <span id="printDiscipline">Specialist recruitment</span>
           </div>
           <div class="print-summary__item">
-            <strong>Apply online</strong>
-            <a id="printApplyLink" href="#"></a>
+            <strong>Sector focus</strong>
+            <span id="printSector">Technical delivery</span>
           </div>
           <div class="print-summary__item">
-            <strong>Talk to HMJ</strong>
-            <a id="printContactEmail" href="mailto:info@hmj-global.com">info@hmj-global.com</a>
+            <strong>Skills focus</strong>
+            <span id="printSkills">Discuss with HMJ</span>
+          </div>
+          <div class="print-summary__item">
+            <strong>Apply through</strong>
+            <span id="printApplyRoute">HMJ Global jobs team</span>
           </div>
         </div>
       </section>
@@ -1370,7 +1390,7 @@
           </div>
 
           <div id="benefitsCard" class="detail-card" style="display:none">
-            <span class="detail-card__label">Benefits</span>
+            <span class="detail-card__label">Package and support</span>
             <div id="benefits" class="benefit-list" style="margin-top:10px"></div>
           </div>
         </aside>
@@ -1429,10 +1449,10 @@
             </section>
 
             <section id="metaPanel" class="panel system-panel" style="display:none">
-              <p class="section-kicker">Role page details</p>
+              <p class="section-kicker">HMJ Global brief</p>
               <div class="system-grid">
                 <div class="system-item">
-                  <span>Advertised by</span>
+                  <span>Prepared by</span>
                   <strong id="metaPublisher">HMJ Global</strong>
                 </div>
                 <div class="system-item">
@@ -1467,12 +1487,12 @@
 
       <section class="panel print-footer print-only">
         <p class="print-footer__eyebrow">Next step</p>
-        <h2 class="print-footer__title">Talk to HMJ Global about this role</h2>
+        <h2 class="print-footer__title">Talk to HMJ Global about this opportunity</h2>
         <p class="print-footer__copy">
-          For a confidential conversation or to register your interest, email
+          For a confidential conversation or to register your interest, contact
           <a href="mailto:info@hmj-global.com">info@hmj-global.com</a>
-          or visit <a href="https://www.hmj-global.com/jobs.html">www.hmj-global.com/jobs.html</a>.
-          Quote <span id="printFooterReference">this role brief</span> so the HMJ team can route your enquiry quickly.
+          and quote <span id="printFooterReference">this role brief</span>.
+          Further live vacancies are available at <a href="https://www.hmj-global.com/jobs.html">hmj-global.com/jobs</a>.
         </p>
       </section>
     </main>
@@ -1879,6 +1899,20 @@
 
       function buildHighlights(details) {
         const cards = [];
+        if (details.sectorText) {
+          cards.push({
+            label: 'Sector focus',
+            value: details.sectorText,
+            text: 'The role is positioned within a clear project or market context.',
+          });
+        }
+        if (details.disciplineText && (!details.sectorText || details.disciplineText !== details.sectorText)) {
+          cards.push({
+            label: 'Discipline',
+            value: details.disciplineText,
+            text: 'The brief makes the core specialist focus clear from the outset.',
+          });
+        }
         if (details.payText) {
           cards.push({
             label: 'Package',
@@ -1929,6 +1963,101 @@
           });
         }
         return cards.slice(0, 4);
+      }
+
+      function pickFirstList(...sources) {
+        for (const source of sources) {
+          if (Array.isArray(source)) {
+            const cleaned = source.filter(Boolean).map((item) => trimString(item, 220)).filter(Boolean);
+            if (cleaned.length) return cleaned;
+          }
+        }
+        return [];
+      }
+
+      function buildSpecViewModel(job = {}, meta = {}, seo = null) {
+        const publicPageConfig = normalizePublicPageConfig(job.publicPageConfig || job.public_page_config);
+        const shareSpec = job.shareSpec && typeof job.shareSpec === 'object' ? job.shareSpec : null;
+        const payText = job.payText || buildPayText(job);
+        const locationText = trimString(job.locationText || '', 180) || 'Flexible / discussed with HMJ';
+        const rawEmploymentType = String(job.type || '').trim();
+        const employmentText = rawEmploymentType ? toTitleCase(rawEmploymentType) : 'Discuss with HMJ';
+        const sectorText = trimString(seo?.sector_focus || job.sectionLabel || job.section, 120);
+        const disciplineText = trimString(job.discipline || sectorText, 120);
+        const customerText = String(job.customer || '').trim();
+        const benefits = Array.isArray(job.benefits) ? job.benefits.filter(Boolean) : [];
+        const tags = Array.isArray(job.tags) ? job.tags.filter(Boolean) : [];
+        const reference = trimString(meta.jobId || job.id || '', 120);
+        const optimizedOverview = trimString(seo?.optimized_overview || '', 2200);
+        const overviewText = trimString(shareSpec?.overview || optimizedOverview || job.overview || '', 2200);
+        const visiblePayText = publicPageConfig.showPay ? payText : '';
+        const visibleCustomerText = publicPageConfig.showCustomer ? customerText : '';
+        const visibleBenefits = publicPageConfig.showBenefits ? benefits : [];
+        const visibleTags = publicPageConfig.showTags ? tags : [];
+        const visibleReference = publicPageConfig.showReference ? reference : '';
+        const respItems = publicPageConfig.showResponsibilities
+          ? pickFirstList(
+            shareSpec?.responsibilities,
+            seo?.optimized_responsibilities,
+            job.responsibilities
+          )
+          : [];
+        const reqItems = publicPageConfig.showRequirements
+          ? pickFirstList(
+            shareSpec?.requirements,
+            seo?.optimized_requirements,
+            job.requirements
+          )
+          : [];
+        const showOverview = publicPageConfig.showOverview && !!overviewText;
+        const title = trimString(seo?.optimized_title || job.title || '', 180) || 'Role';
+        const skillsSummary = trimString(
+          visibleTags.length
+            ? visibleTags.slice(0, 4).join(' • ')
+            : [disciplineText, sectorText].filter(Boolean).join(' • '),
+          180
+        );
+        const intro = showOverview
+          ? truncateText(overviewText, 210)
+          : `Explore this HMJ Global opportunity${locationText ? ` in ${locationText}` : ''} and move straight into the application flow with the role context attached.`;
+        const details = {
+          title,
+          locationText,
+          rawEmploymentType,
+          employmentText,
+          payText: visiblePayText,
+          customerText: visibleCustomerText,
+          benefits: visibleBenefits,
+          tags: visibleTags,
+          reference: visibleReference,
+          sectorText,
+          disciplineText,
+          skillsSummary,
+          shareLink: location.href,
+        };
+
+        const metaBits = [];
+        if (visibleReference) metaBits.push(`Role reference: ${visibleReference}`);
+        const refreshed = formatDate(meta.refreshed_at || job.updatedAt || meta.created_at || job.createdAt, true);
+        if (refreshed) metaBits.push(`Updated ${refreshed}`);
+        metaBits.push(shareSpec?.enhanced || seo?.source === 'openai'
+          ? 'Prepared as a candidate-facing HMJ brief'
+          : 'Prepared from the live HMJ Global advert');
+
+        return {
+          publicPageConfig,
+          shareSpec,
+          details,
+          overviewText,
+          respItems,
+          reqItems,
+          showOverview,
+          intro,
+          highlights: publicPageConfig.showRoleHighlights ? buildHighlights(details) : [],
+          copyMode: shareSpec?.enhanced || seo?.source === 'openai' ? 'Candidate role brief' : 'Role advert',
+          metaText: metaBits.join(' • '),
+          printableApplyRoute: 'HMJ Global jobs team',
+        };
       }
 
       function buildPrintableBaseUrl() {
@@ -2223,39 +2352,21 @@
       }
 
       function renderSpec(job, meta, seo){
-        const publicPageConfig = normalizePublicPageConfig(job.publicPageConfig || job.public_page_config);
-        const shareSpec = job.shareSpec && typeof job.shareSpec === 'object' ? job.shareSpec : null;
-        const payText = job.payText || buildPayText(job);
-        const locationText = job.locationText || 'Flexible / discussed with HMJ';
-        const rawEmploymentType = String(job.type || '').trim();
-        const employmentText = rawEmploymentType ? toTitleCase(rawEmploymentType) : 'Discuss with HMJ';
-        const customerText = String(job.customer || '').trim();
-        const benefits = Array.isArray(job.benefits) ? job.benefits.filter(Boolean) : [];
-        const tags = Array.isArray(job.tags) ? job.tags.filter(Boolean) : [];
-        const reference = meta.jobId || job.id || '';
-        const overviewText = trimString(shareSpec?.overview || job.overview || '', 2200);
-        const visiblePayText = publicPageConfig.showPay ? payText : '';
-        const visibleCustomerText = publicPageConfig.showCustomer ? customerText : '';
-        const visibleBenefits = publicPageConfig.showBenefits ? benefits : [];
-        const visibleTags = publicPageConfig.showTags ? tags : [];
-        const visibleReference = publicPageConfig.showReference ? reference : '';
-        const showOverview = publicPageConfig.showOverview && !!overviewText;
-        const intro = showOverview
-          ? truncateText(overviewText, 210)
-          : `Explore this HMJ Global opportunity${locationText ? ` in ${locationText}` : ''} and move straight into the application flow with the role context attached.`;
-
-        const details = {
-          title: job.title || 'Role',
-          locationText,
-          rawEmploymentType,
-          employmentText,
-          payText: visiblePayText,
-          customerText: visibleCustomerText,
-          benefits: visibleBenefits,
-          tags: visibleTags,
-          reference: visibleReference,
-          shareLink: location.href,
-        };
+        const view = buildSpecViewModel(job, meta, seo);
+        const {
+          publicPageConfig,
+          shareSpec,
+          details,
+          overviewText,
+          respItems,
+          reqItems,
+          showOverview,
+          intro,
+          highlights,
+          copyMode,
+          metaText,
+          printableApplyRoute,
+        } = view;
 
         const applyUrl = buildApplyUrl(job, meta, details);
         details.applyUrl = applyUrl;
@@ -2263,7 +2374,6 @@
         details.printableApplyLink = buildPrintableApplyLink();
 
         const emailHref = buildEmailHref(details);
-        const highlights = publicPageConfig.showRoleHighlights ? buildHighlights(details) : [];
 
         const statusEl = document.getElementById('status');
         const status = String(job.status || 'live').toLowerCase();
@@ -2276,8 +2386,8 @@
         setText('location', details.locationText);
         setText('employment', details.employmentText);
         setText('overview', overviewText || 'HMJ Global will share further detail during the application conversation.');
-        setText('reference', visibleReference);
-        setText('customer', visibleCustomerText);
+        setText('reference', details.reference);
+        setText('customer', details.customerText);
         setText('metaPublisher', 'HMJ Global');
         setText('metaStatus', statusText);
         setText('metaUpdated', formatDate(meta.refreshed_at || job.updatedAt || meta.created_at || job.createdAt, true) || 'Current');
@@ -2287,12 +2397,16 @@
         setText('printPreparedOn', formatDate(new Date().toISOString(), true) || 'Current');
         setText('printTitle', details.title);
         setText('printIntro', intro);
-        setText('printReference', visibleReference || 'Shared role spec');
-        setText('printCopyMode', shareSpec?.enhanced ? 'Candidate role brief' : 'Role advert');
+        setText('printReference', details.reference || 'Shared role spec');
+        setText('printCopyMode', copyMode);
         setText('printLocation', details.locationText || 'Discuss with HMJ');
         setText('printEmployment', details.employmentText || 'Discuss with HMJ');
         setText('printPay', details.payText || 'Discuss with HMJ');
-        setText('printFooterReference', visibleReference || details.title || 'this role brief');
+        setText('printDiscipline', details.disciplineText || 'Specialist recruitment');
+        setText('printSector', details.sectorText || 'Technical delivery');
+        setText('printSkills', details.skillsSummary || 'Discuss with HMJ');
+        setText('printApplyRoute', printableApplyRoute);
+        setText('printFooterReference', details.reference || details.title || 'this role brief');
 
         const heroSection = document.getElementById('heroSection');
         const heroSide = document.getElementById('heroSide');
@@ -2303,20 +2417,17 @@
         const metaPanel = document.getElementById('metaPanel');
         const metaSummary = document.getElementById('meta');
         const ctaBand = document.getElementById('ctaBand');
-        const printShareLink = document.getElementById('printShareLink');
-        const printApplyLink = document.getElementById('printApplyLink');
-        const printContactEmail = document.getElementById('printContactEmail');
 
         const payCard = document.getElementById('payCard');
-        if (visiblePayText) {
-          setText('pay', visiblePayText);
+        if (details.payText) {
+          setText('pay', details.payText);
           applyNodeVisibility(payCard, true);
         } else {
           applyNodeVisibility(payCard, false);
         }
 
         const referenceCard = document.getElementById('referenceCard');
-        applyNodeVisibility(referenceCard, !!visibleReference);
+        applyNodeVisibility(referenceCard, !!details.reference);
 
         const sectionBadge = document.getElementById('sectionBadge');
         if (job.sectionLabel || job.section) {
@@ -2327,8 +2438,8 @@
         }
 
         const tagsGroup = document.getElementById('tagsGroup');
-        if (visibleTags.length) {
-          setHtmlList('tags', visibleTags, 'chip');
+        if (details.tags.length) {
+          setHtmlList('tags', details.tags, 'chip');
           applyNodeVisibility(tagsGroup, true);
         } else {
           document.getElementById('tags').innerHTML = '';
@@ -2346,42 +2457,32 @@
         applyNodeVisibility(highlightsNode, highlights.length > 0);
 
         const customerCard = document.getElementById('customerCard');
-        const showCustomerCard = !!visibleCustomerText;
+        const showCustomerCard = !!details.customerText;
         applyNodeVisibility(customerCard, showCustomerCard);
 
         const benefitsCard = document.getElementById('benefitsCard');
-        if (visibleBenefits.length) {
-          setHtmlList('benefits', visibleBenefits, 'benefit-pill');
+        if (details.benefits.length) {
+          setHtmlList('benefits', details.benefits, 'benefit-pill');
           applyNodeVisibility(benefitsCard, true);
         } else {
           document.getElementById('benefits').innerHTML = '';
           applyNodeVisibility(benefitsCard, false);
         }
-        const showHeroSide = highlights.length > 0 || showCustomerCard || visibleBenefits.length > 0;
+        const showHeroSide = highlights.length > 0 || showCustomerCard || details.benefits.length > 0;
         applyNodeVisibility(heroSide, showHeroSide);
         heroSection.classList.toggle('hero--single', !showHeroSide);
 
-        const respItems = Array.isArray(shareSpec?.responsibilities) && shareSpec.responsibilities.length
-          ? shareSpec.responsibilities.filter(Boolean)
-          : Array.isArray(job.responsibilities) ? job.responsibilities.filter(Boolean) : [];
         const respSection = document.getElementById('responsibilitiesSection');
         const respList = document.getElementById('respList');
         respList.innerHTML = respItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-        applyNodeVisibility(respSection, publicPageConfig.showResponsibilities && respItems.length > 0);
+        applyNodeVisibility(respSection, respItems.length > 0);
 
-        const reqItems = Array.isArray(shareSpec?.requirements) && shareSpec.requirements.length
-          ? shareSpec.requirements.filter(Boolean)
-          : Array.isArray(job.requirements) ? job.requirements.filter(Boolean) : [];
         const reqSection = document.getElementById('requirementsSection');
         const reqList = document.getElementById('reqList');
         reqList.innerHTML = reqItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-        applyNodeVisibility(reqSection, publicPageConfig.showRequirements && reqItems.length > 0);
+        applyNodeVisibility(reqSection, reqItems.length > 0);
         applyNodeVisibility(overviewSection, showOverview);
 
-        const metaBits = [];
-        if (visibleReference) metaBits.push(`Role reference: ${visibleReference}`);
-        if (shareSpec?.enhanced) metaBits.push('AI-polished share copy active');
-        const metaText = metaBits.join(' • ');
         setText('meta', metaText);
         applyNodeVisibility(metaSummary, !!metaText);
 
@@ -2406,21 +2507,6 @@
           emailHref,
           applyUrl,
         };
-
-        const printableRoleLink = details.printableShareLink;
-        const printableApplyLink = details.printableApplyLink;
-        if (printShareLink) {
-          printShareLink.href = printableRoleLink;
-          printShareLink.textContent = formatPrintableLinkLabel(printableRoleLink);
-        }
-        if (printApplyLink) {
-          printApplyLink.href = printableApplyLink;
-          printApplyLink.textContent = formatPrintableLinkLabel(printableApplyLink);
-        }
-        if (printContactEmail) {
-          printContactEmail.href = 'mailto:info@hmj-global.com';
-          printContactEmail.textContent = 'info@hmj-global.com';
-        }
 
         const analyticsPayload = {
           job_id: meta.jobId || job.id || '',
