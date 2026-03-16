@@ -49,7 +49,7 @@ const baseHandler = async (event, context) => {
       end_date: assignment.end_date || null,
       days_per_week: asNumber(assignment.days_per_week),
       hours_per_day: asNumber(assignment.hours_per_day),
-      currency: assignment.currency || null,
+      currency: assignment.currency || 'GBP',
       rate_std: asNumber(assignment.rate_std) ?? asNumber(assignment.rate_pay),
       rate_ot: asNumber(assignment.rate_ot),
       charge_std: asNumber(assignment.charge_std),
