@@ -1,6 +1,6 @@
 // netlify/functions/jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
-const { toPublicJob, isSchemaError } = require('./_jobs-helpers.js');
+const { toPublicJob, isSchemaError, resolvePublicSiteUrl } = require('./_jobs-helpers.js');
 
 const JOB_SELECT = '*';
 
@@ -23,6 +23,7 @@ function buildLocalDebugPayload(error) {
 }
 
 exports.handler = async (event) => {
+  const siteUrl = resolvePublicSiteUrl(event);
   if (!hasSupabase()) {
     return {
       statusCode: 503,
@@ -51,7 +52,7 @@ exports.handler = async (event) => {
     if (error) throw error;
 
     const jobs = Array.isArray(data)
-      ? data.map(toPublicJob).filter((job) => job && job.published !== false)
+      ? data.map((row) => toPublicJob(row, { siteUrl })).filter((job) => job && job.published !== false)
       : [];
     return {
       statusCode: 200,

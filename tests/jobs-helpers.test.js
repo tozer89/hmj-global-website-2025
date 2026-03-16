@@ -19,6 +19,7 @@ const {
   buildPublicJobDetailPath,
   PUBLIC_PAGE_DEFAULTS,
   normalisePublicPageConfig,
+  normaliseInternalApplyUrl,
 } = require('../netlify/functions/_jobs-helpers.js');
 
 test('toJob normalises database row fields and derives tags/section meta', () => {
@@ -194,6 +195,23 @@ test('toPublicJob strips internal-only fields while preserving public pay and cu
     requirements: ['Advanced Primavera P6'],
     generatedAt: null,
   });
+});
+
+test('toPublicJob rewrites legacy internal contact URLs to the active site host', () => {
+  const job = toPublicJob({
+    id: 'role-4',
+    title: 'Project Planner',
+    published: true,
+    apply_url: 'https://hmj-global.com/contact.html?role=Project%20Planner',
+  }, {
+    siteUrl: 'https://hmjg.netlify.app',
+  });
+
+  assert.equal(job.applyUrl, 'https://hmjg.netlify.app/contact.html?role=Project%20Planner');
+  assert.equal(
+    normaliseInternalApplyUrl('https://www.hmj-global.com/contact.html?role=Planner', 'https://hmjg.netlify.app'),
+    'https://hmjg.netlify.app/contact.html?role=Planner'
+  );
 });
 
 test('normalisePublicPageConfig applies defaults and understands string booleans', () => {

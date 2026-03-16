@@ -31,6 +31,8 @@ const PAY_TYPE_SET = new Set([
   'negotiable',
 ]);
 
+const DEFAULT_PUBLIC_SITE_URL = 'https://hmjg.netlify.app';
+
 const PUBLIC_PAGE_DEFAULTS = Object.freeze({
   showOverview: true,
   showPay: true,
@@ -260,6 +262,68 @@ function asString(value) {
   return String(value).trim();
 }
 
+function normalisePublicUrl(value) {
+  const raw = asString(value);
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    if (!/^https?:$/i.test(url.protocol)) return '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  } catch (_error) {
+    return '';
+  }
+}
+
+function resolvePublicSiteUrl(event = null) {
+  const rawUrl = normalisePublicUrl(event?.rawUrl);
+  if (rawUrl) return rawUrl;
+
+  const forwardedProto = asString(
+    event?.headers?.['x-forwarded-proto'] ||
+    event?.headers?.['X-Forwarded-Proto'] ||
+    'https'
+  ).toLowerCase();
+  const forwardedHost = asString(
+    event?.headers?.['x-forwarded-host'] ||
+    event?.headers?.host ||
+    event?.headers?.Host
+  );
+  if (forwardedHost) {
+    return normalisePublicUrl(`${forwardedProto || 'https'}://${forwardedHost}`) || DEFAULT_PUBLIC_SITE_URL;
+  }
+
+  const envCandidates = [
+    process.env.URL,
+    process.env.DEPLOY_PRIME_URL,
+    process.env.HMJ_CANONICAL_SITE_URL,
+    DEFAULT_PUBLIC_SITE_URL,
+  ];
+  const fallback = envCandidates.find((value) => normalisePublicUrl(value));
+  return normalisePublicUrl(fallback) || DEFAULT_PUBLIC_SITE_URL;
+}
+
+function normaliseInternalApplyUrl(value, siteUrl = DEFAULT_PUBLIC_SITE_URL) {
+  const raw = asString(value);
+  if (!raw) return '';
+  try {
+    const base = new URL(normalisePublicUrl(siteUrl) || DEFAULT_PUBLIC_SITE_URL);
+    const parsed = new URL(raw, base.origin);
+    const sameOrigin = parsed.origin === base.origin;
+    const hmjDomain = /(?:^|\.)hmj-global\.com$/i.test(parsed.hostname);
+    const pathname = parsed.pathname.replace(/^\/+/, '').toLowerCase();
+    if ((sameOrigin || hmjDomain) && pathname === 'contact.html') {
+      const rewritten = new URL('/contact.html', base.origin);
+      rewritten.search = parsed.search;
+      rewritten.hash = parsed.hash;
+      return rewritten.toString();
+    }
+    return parsed.toString();
+  } catch (_error) {
+    return raw;
+  }
+}
+
 function asNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -485,8 +549,9 @@ function buildPublicJobDetailPath(row = {}) {
   return `/jobs/spec.html?${params.toString()}`;
 }
 
-function toPublicJob(row = {}) {
+function toPublicJob(row = {}, options = {}) {
   const job = toJob(row);
+  const siteUrl = normalisePublicUrl(options.siteUrl) || DEFAULT_PUBLIC_SITE_URL;
   return {
     id: job.id,
     title: job.title,
@@ -514,7 +579,7 @@ function toPublicJob(row = {}) {
     hourlyMax: job.hourlyMax,
     currency: job.currency,
     payText: job.payText,
-    applyUrl: job.applyUrl,
+    applyUrl: normaliseInternalApplyUrl(job.applyUrl, siteUrl),
     published: job.published,
     sortOrder: job.sortOrder,
     createdAt: job.createdAt,
@@ -631,4 +696,6 @@ module.exports = {
   isPublishedLiveJob,
   buildPublicJobSeoSlug,
   buildPublicJobDetailPath,
+  resolvePublicSiteUrl,
+  normaliseInternalApplyUrl,
 };

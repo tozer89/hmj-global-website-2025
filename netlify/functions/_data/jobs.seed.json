@@ -1,7 +1,7 @@
 {
   "jobs": [
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20London%2C%20UK",
+      "applyUrl": "/contact.html?role=Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20London%2C%20UK",
       "locationText": "London, UK Data Centre",
       "locationCode": "london",
       "section": "commercial",
@@ -31,7 +31,7 @@
       "id": "qs-london-dc"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=MEP%20Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Eemshaven%2C%20Netherlands",
+      "applyUrl": "/contact.html?role=MEP%20Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Eemshaven%2C%20Netherlands",
       "locationText": "Eemshaven, Netherlands Data Centre",
       "locationCode": "eemshaven",
       "section": "commercial",
@@ -59,7 +59,7 @@
       "id": "mep-sqs-eem"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=CSA%20Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Eemshaven%2C%20Netherlands",
+      "applyUrl": "/contact.html?role=CSA%20Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Eemshaven%2C%20Netherlands",
       "locationText": "Eemshaven, Netherlands Data Centre",
       "locationCode": "eemshaven",
       "section": "commercial",
@@ -86,7 +86,7 @@
       "id": "csa-sqs-eem"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
+      "applyUrl": "/contact.html?role=Senior%20Quantity%20Surveyor%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
       "locationText": "Dublin, Ireland Data Centre",
       "locationCode": "dublin",
       "section": "commercial",
@@ -113,7 +113,7 @@
       "id": "sqs-dublin"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Project%20Planner%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
+      "applyUrl": "/contact.html?role=Project%20Planner%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
       "locationText": "Dublin, Ireland Data Centre",
       "locationCode": "dublin",
       "section": "dc",
@@ -140,7 +140,7 @@
       "id": "planner-dublin"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Electrician%20%E2%80%94%20Data%20Centre%20Construction%20%E2%80%94%20Amsterdam%2C%20Netherlands",
+      "applyUrl": "/contact.html?role=Electrician%20%E2%80%94%20Data%20Centre%20Construction%20%E2%80%94%20Amsterdam%2C%20Netherlands",
       "locationText": "Amsterdam, Netherlands Data Centre",
       "locationCode": "amsterdam",
       "section": "dc",
@@ -167,7 +167,7 @@
       "id": "electrician-amsterdam"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Electrical%20Project%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Frankfurt%2C%20Germany",
+      "applyUrl": "/contact.html?role=Electrical%20Project%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Frankfurt%2C%20Germany",
       "locationText": "Frankfurt, Germany Data Centre",
       "locationCode": "frankfurt",
       "section": "dc",
@@ -194,7 +194,7 @@
       "id": "epm-frankfurt"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Project%20Director%20%E2%80%94%20Data%20Centre%20(Europe)%20%E2%80%94%20Dublin%2C%20Ireland",
+      "applyUrl": "/contact.html?role=Project%20Director%20%E2%80%94%20Data%20Centre%20(Europe)%20%E2%80%94%20Dublin%2C%20Ireland",
       "locationText": "Dublin, Ireland Data Centre",
       "locationCode": "dublin",
       "section": "dc",
@@ -221,7 +221,7 @@
       "id": "proj-dir-eu"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=BMS%20Engineer%20(Building%20Management%20Systems)%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
+      "applyUrl": "/contact.html?role=BMS%20Engineer%20(Building%20Management%20Systems)%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
       "locationText": "Dublin, Ireland Data Centre",
       "locationCode": "dublin",
       "section": "dc",
@@ -248,7 +248,7 @@
       "id": "bms-eng-dub"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=CSA%20Package%20Manager%20(Fit-Out)%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
+      "applyUrl": "/contact.html?role=CSA%20Package%20Manager%20(Fit-Out)%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Dublin%2C%20Ireland",
       "locationText": "Dublin, Ireland Data Centre",
       "locationCode": "dublin",
       "section": "dc",
@@ -275,7 +275,7 @@
       "id": "csa-fit-dub"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=OFCI%20Package%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Espoo%2C%20Finland",
+      "applyUrl": "/contact.html?role=OFCI%20Package%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Espoo%2C%20Finland",
       "locationText": "Espoo, Finland Data Centre",
       "locationCode": "espoo",
       "section": "dc",
@@ -302,7 +302,7 @@
       "id": "ofci-espoo"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Electrical%20Construction%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Helsinki%2C%20Finland",
+      "applyUrl": "/contact.html?role=Electrical%20Construction%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Helsinki%2C%20Finland",
       "locationText": "Helsinki, Finland Data Centre",
       "locationCode": "helsinki",
       "section": "dc",
@@ -329,7 +329,7 @@
       "id": "ecm-hel"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Mechanical%20Construction%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Helsinki%2C%20Finland",
+      "applyUrl": "/contact.html?role=Mechanical%20Construction%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20Helsinki%2C%20Finland",
       "locationText": "Helsinki, Finland Data Centre",
       "locationCode": "helsinki",
       "section": "dc",
@@ -356,7 +356,7 @@
       "id": "mcm-hel"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Electrical%20Engineer%20%2F%20Electrician%20%E2%80%94%20Data%20Centre%20Construction%20%E2%80%94%20Groningen%2C%20Netherlands",
+      "applyUrl": "/contact.html?role=Electrical%20Engineer%20%2F%20Electrician%20%E2%80%94%20Data%20Centre%20Construction%20%E2%80%94%20Groningen%2C%20Netherlands",
       "locationText": "Groningen, Netherlands Data Centre",
       "locationCode": "groningen",
       "section": "dc",
@@ -383,7 +383,7 @@
       "id": "elec-gron"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Permit%20Engineer%20%2F%20Permitting%20Specialist%20%E2%80%94%20Substations%20%E2%80%94%20Europe%20(Travel)",
+      "applyUrl": "/contact.html?role=Permit%20Engineer%20%2F%20Permitting%20Specialist%20%E2%80%94%20Substations%20%E2%80%94%20Europe%20(Travel)",
       "locationText": "Europe (Travel) Substation",
       "locationCode": "europe",
       "section": "substations",
@@ -410,7 +410,7 @@
       "id": "permit-eng-eu"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=MEP%20Cost%20Estimator%20%2F%20QS%20%E2%80%94%20Substation%20%26%20BESS%20%E2%80%94%20UK%20(Hybrid)",
+      "applyUrl": "/contact.html?role=MEP%20Cost%20Estimator%20%2F%20QS%20%E2%80%94%20Substation%20%26%20BESS%20%E2%80%94%20UK%20(Hybrid)",
       "locationText": "UK (Hybrid) Substation",
       "locationCode": "uk",
       "section": "substations",
@@ -437,7 +437,7 @@
       "id": "estimator-uk"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Senior%20Planner%20%E2%80%94%20Life%20Sciences%20%E2%80%94%20Macclesfield%2C%20UK",
+      "applyUrl": "/contact.html?role=Senior%20Planner%20%E2%80%94%20Life%20Sciences%20%E2%80%94%20Macclesfield%2C%20UK",
       "locationText": "Macclesfield, UK Life Sciences",
       "locationCode": "macclesfield",
       "section": "pharma",
@@ -464,7 +464,7 @@
       "id": "planner-macc"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=Electrician%20%E2%80%94%20Pharmaceutical%20Construction%20%E2%80%94%20Hull%20(commutable)%2C%20UK",
+      "applyUrl": "/contact.html?role=Electrician%20%E2%80%94%20Pharmaceutical%20Construction%20%E2%80%94%20Hull%20(commutable)%2C%20UK",
       "locationText": "Hull (commutable), UK Pharma",
       "locationCode": "hull",
       "section": "pharma",
@@ -491,7 +491,7 @@
       "id": "elec-pharma"
     },
     {
-      "applyUrl": "https://hmj-global.com/contact.html?role=BMS%20Commissioning%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20UK%20(Various%20%2F%20Travel)",
+      "applyUrl": "/contact.html?role=BMS%20Commissioning%20Manager%20%E2%80%94%20Data%20Centre%20%E2%80%94%20UK%20(Various%20%2F%20Travel)",
       "locationText": "UK (Various / Travel) Data Centre",
       "locationCode": "uk",
       "section": "ict",

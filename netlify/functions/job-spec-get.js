@@ -1,6 +1,6 @@
 // netlify/functions/job-spec-get.js
 const { getSupabase } = require('./_supabase.js');
-const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError, isPublicJob } = require('./_jobs-helpers.js');
+const { toPublicJob, findStaticJob, isSchemaError, isMissingTableError, isPublicJob, resolvePublicSiteUrl } = require('./_jobs-helpers.js');
 const { verifyShareAccessToken } = require('./_job-detail-tokens.js');
 const { fetchStoredSeoSuggestion } = require('./_job-seo-optimizer.js');
 
@@ -14,6 +14,7 @@ function parseBody(body) {
 }
 
 exports.handler = async (event) => {
+  const siteUrl = resolvePublicSiteUrl(event);
   const params = event.queryStringParameters || {};
   const body = parseBody(event.body);
   const slug = params.slug || body.slug || null;
@@ -53,7 +54,7 @@ exports.handler = async (event) => {
     const guard = (job) => {
       if (!job) return null;
       if (allowRestrictedShare || isPublicJob(job)) {
-        return toPublicJob(job);
+        return toPublicJob(job, { siteUrl });
       }
       return null;
     };
@@ -83,7 +84,7 @@ exports.handler = async (event) => {
       const result = await fetchJobById(jobIdParam, { allowRestrictedShare: hasShareAccessToken });
       if (!result) {
         const fallback = findStaticJob(jobIdParam);
-        const tokenFallback = hasShareAccessToken && fallback ? toPublicJob(fallback) : null;
+        const tokenFallback = hasShareAccessToken && fallback ? toPublicJob(fallback, { siteUrl }) : null;
         return respondFallback(tokenFallback);
       }
       if (!supabase) {
@@ -112,7 +113,7 @@ exports.handler = async (event) => {
 
     if (!supabase) {
       const fallback = findStaticJob(slug) || findStaticJob(jobIdParam);
-      const publicFallback = fallback && isPublicJob(fallback) ? toPublicJob(fallback) : null;
+      const publicFallback = fallback && isPublicJob(fallback) ? toPublicJob(fallback, { siteUrl }) : null;
       return respondFallback(publicFallback);
     }
 
@@ -152,7 +153,7 @@ exports.handler = async (event) => {
           }
         }
         const staticJob = findStaticJob(slug);
-        const publicFallback = staticJob && isPublicJob(staticJob) ? toPublicJob(staticJob) : null;
+        const publicFallback = staticJob && isPublicJob(staticJob) ? toPublicJob(staticJob, { siteUrl }) : null;
         return respondFallback(publicFallback);
       }
 
@@ -162,7 +163,7 @@ exports.handler = async (event) => {
       }
 
       const storedPayload = data.payload ?? data.job_payload ?? data.job ?? null;
-      const job = storedPayload ? toPublicJob(storedPayload) : null;
+      const job = storedPayload ? toPublicJob(storedPayload, { siteUrl }) : null;
       const expiresAt = expiresColumn;
       const jobId = data.job_id ?? data.job ?? data.jobId ?? (job ? job.id : null);
       const title = data.title ?? job?.title ?? jobId ?? slug;
@@ -188,7 +189,7 @@ exports.handler = async (event) => {
       if (!fallback) {
         const staticFallback = findStaticJob(slug || jobIdParam);
         const publicFallback = (staticFallback && (hasShareAccessToken || isPublicJob(staticFallback)))
-          ? toPublicJob(staticFallback)
+          ? toPublicJob(staticFallback, { siteUrl })
           : null;
         return respondFallback(publicFallback, { schema: schemaMismatch || missingTable || undefined });
       }
