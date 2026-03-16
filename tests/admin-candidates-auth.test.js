@@ -12,7 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=6/);
+  assert.match(html, /\/admin\/candidates\.js\?v=7/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
@@ -82,4 +82,11 @@ test('candidate admin UI exposes import and timesheet portal comparison controls
   assert.match(source, /function previewCandidateImport/);
   assert.match(source, /function confirmCandidateImport/);
   assert.match(source, /function refreshTimesheetPortalCompare/);
+});
+
+test('candidate drawer exposes an explicit save path instead of relying on blur only', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /data-action="save-profile"/);
+  assert.match(source, /function saveCandidatePatch/);
+  assert.match(source, /Use Save changes before closing/);
 });

@@ -1027,6 +1027,10 @@
   }
 
   function closeDrawer() {
+    if (elements.dwProfile?.querySelector('[data-field][data-dirty="true"]')) {
+      showToast('Unsaved changes in this profile. Use Save changes before closing.', 'warn', 3600);
+      return;
+    }
     state.drawerId = null;
     if (elements.drawer) elements.drawer.classList.remove('open');
   }
@@ -1128,6 +1132,10 @@
         <div style="margin-top:12px">
           <label class="muted" style="display:block;margin-bottom:4px">Skills / tags</label>
           <textarea data-field="skills" rows="2" class="drawer-input">${candidate.skills.join(', ')}</textarea>
+        </div>
+        <div class="drawer-savebar" style="margin-top:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+          <div class="muted" data-save-status>Edit a field, then use Save changes to confirm the update.</div>
+          <button class="btn" type="button" data-action="save-profile" disabled>Save changes</button>
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
           <a class="btn ghost" target="_blank" rel="noopener" href="/admin/timesheets.html?candidate=${candidate.id}">Timesheet history</a>
@@ -1349,13 +1357,81 @@
   function bindProfileEditors(candidate) {
     const section = elements.dwProfile;
     const inputs = section.querySelectorAll('[data-field]');
+    const saveButton = section.querySelector('[data-action="save-profile"]');
+    const saveStatus = section.querySelector('[data-save-status]');
+
+    const readFieldValue = (input) => (input.type === 'date' ? input.value : input.value.trim());
+    const clearDirty = (input) => {
+      delete input.dataset.dirty;
+      delete input.dataset.saving;
+    };
+    const dirtyInputs = () => Array.from(inputs).filter((input) => input.dataset.dirty === 'true');
+    const updateSaveState = (message) => {
+      const pending = dirtyInputs();
+      if (saveButton) {
+        saveButton.disabled = pending.length === 0 || pending.some((input) => input.dataset.saving === 'true');
+      }
+      if (!saveStatus) return;
+      if (message) {
+        saveStatus.textContent = message;
+        return;
+      }
+      if (!pending.length) {
+        saveStatus.textContent = 'All visible changes are saved to Supabase.';
+        return;
+      }
+      saveStatus.textContent = `${pending.length} unsaved field${pending.length === 1 ? '' : 's'} in this profile.`;
+    };
+
     inputs.forEach((input) => {
+      const markDirty = () => {
+        input.dataset.dirty = 'true';
+        updateSaveState();
+      };
+      input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', markDirty);
       input.addEventListener('blur', async (ev) => {
         const field = ev.target.dataset.field;
-        const value = ev.target.type === 'date' ? ev.target.value : ev.target.value.trim();
-        await saveField(candidate, field, value);
+        if (ev.target.dataset.dirty !== 'true' || ev.target.dataset.saving === 'true') return;
+        const value = readFieldValue(ev.target);
+        ev.target.dataset.saving = 'true';
+        updateSaveState('Saving field…');
+        const saved = await saveField(candidate, field, value, { quiet: true });
+        if (saved) {
+          clearDirty(ev.target);
+          updateSaveState('Field saved.');
+        } else {
+          delete ev.target.dataset.saving;
+          updateSaveState('Save failed. Use Save changes to retry.');
+        }
       });
     });
+    if (saveButton) {
+      saveButton.addEventListener('click', async () => {
+        const pending = dirtyInputs();
+        if (!pending.length) {
+          updateSaveState('All visible changes are already saved.');
+          return;
+        }
+        const patch = {};
+        pending.forEach((input) => {
+          patch[input.dataset.field] = readFieldValue(input);
+          input.dataset.saving = 'true';
+        });
+        updateSaveState('Saving changes…');
+        const saved = await saveCandidatePatch(candidate, patch, { quiet: true });
+        if (saved) {
+          pending.forEach((input) => clearDirty(input));
+          updateSaveState('Changes saved to Supabase.');
+          showToast('Candidate profile updated', 'info', 2200);
+          if (state.drawerId && String(state.drawerId) === String(candidate.id)) {
+            renderDrawer(candidate);
+          }
+        } else {
+          pending.forEach((input) => { delete input.dataset.saving; });
+          updateSaveState('Save failed. Review the fields and try again.');
+        }
+      });
+    }
     const pdfBtn = section.querySelector('[data-action="download-pdf"]');
     if (pdfBtn) pdfBtn.addEventListener('click', () => generatePdf(candidate));
     section.querySelectorAll('[data-onboarding-action]').forEach((btn) => {
@@ -1392,6 +1468,7 @@
         await runPortalAccountAction(candidate, action, btn);
       });
     });
+    updateSaveState();
   }
 
   async function copyText(text) {
@@ -1514,10 +1591,14 @@
   }
 
   async function saveField(candidate, field, value, { quiet = false } = {}) {
-    const patch = buildSavePayload(candidate, { [field]: value });
+    return saveCandidatePatch(candidate, { [field]: value }, { quiet });
+  }
+
+  async function saveCandidatePatch(candidate, patch, { quiet = false } = {}) {
+    const payload = buildSavePayload(candidate, patch);
     try {
-      const response = await callSave(patch);
-      const nextRecord = response?.candidate ? normalizeCandidate(response.candidate) : { ...candidate, ...patch, [field]: value };
+      const response = await callSave(payload);
+      const nextRecord = response?.candidate ? normalizeCandidate(response.candidate) : { ...candidate, ...payload, ...patch };
       if (response?.portal_auth) {
         nextRecord.portal_auth = response.portal_auth;
         nextRecord.auth_user_id = nextRecord.auth_user_id || response.portal_auth.user_id || null;
