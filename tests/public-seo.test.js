@@ -15,6 +15,7 @@ const PAGES = [
   'timesheets.html',
   path.join('jobs', 'gold-card-electrician-slough', 'index.html'),
 ];
+const EXPECTED_HOST = 'https://hmjg.netlify.app';
 
 function readDom(file) {
   const html = fs.readFileSync(path.join(process.cwd(), file), 'utf8');
@@ -43,5 +44,22 @@ test('priority public pages expose unique SEO foundation metadata', () => {
     assert.equal(h1Count, 1, `${file} should have one h1`);
     assert.equal(seenTitles.has(title), false, `${file} should not duplicate another priority-page title`);
     seenTitles.add(title);
+  });
+});
+
+test('priority public pages use the live host consistently', () => {
+  PAGES.forEach((file) => {
+    const document = readDom(file);
+    const canonical = document.querySelector('link[rel="canonical"]')?.getAttribute('href')?.trim() || '';
+    const ogUrl = document.querySelector('meta[property="og:url"]')?.getAttribute('content')?.trim() || '';
+    const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content')?.trim() || '';
+    const twitterImage = document.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
+    const html = document.documentElement.outerHTML;
+
+    assert.ok(canonical.startsWith(EXPECTED_HOST), `${file} canonical should use the live host`);
+    assert.ok(ogUrl.startsWith(EXPECTED_HOST), `${file} og:url should use the live host`);
+    assert.ok(ogImage.startsWith(EXPECTED_HOST), `${file} og:image should use the live host`);
+    assert.ok(twitterImage.startsWith(EXPECTED_HOST), `${file} twitter:image should use the live host`);
+    assert.equal(/https:\/\/www\.hmj-global\.com/i.test(html), false, `${file} should not hardcode the dead legacy host`);
   });
 });
