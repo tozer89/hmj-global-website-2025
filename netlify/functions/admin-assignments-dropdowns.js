@@ -1,15 +1,25 @@
 // netlify/functions/admin-assignments-dropdowns.js
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
+const { loadStaticClients } = require('./_clients-helpers.js');
 
-async function safeSelect(run) {
+function isMissingRelationError(error) {
+  const message = String(error?.message || '');
+  return /Could not find the table 'public\.[^']+' in the schema cache/i.test(message)
+    || /relation .+ does not exist/i.test(message);
+}
+
+async function safeSelect(run, { fallback = [], quietOnMissing = false } = {}) {
   try {
     const { data, error } = await run();
     if (error) throw error;
     return Array.isArray(data) ? data : [];
   } catch (err) {
+    if (quietOnMissing && isMissingRelationError(err)) {
+      return Array.isArray(fallback) ? fallback : [];
+    }
     console.error('[assignments-dropdowns] select failed:', err.message || err);
-    return [];
+    return Array.isArray(fallback) ? fallback : [];
   }
 }
 
@@ -19,7 +29,7 @@ const baseHandler = async (event, context) => {
 
     const contractors = await safeSelect(() =>
       supabase.from('contractors').select('id,name,email').order('name', { ascending: true })
-    );
+    , { quietOnMissing: true });
 
     const candidatesRaw = await safeSelect(() =>
       supabase
@@ -31,22 +41,22 @@ const baseHandler = async (event, context) => {
 
     const clients = await safeSelect(() =>
       supabase.from('clients').select('id,name').order('name', { ascending: true })
-    );
+    , { fallback: loadStaticClients(), quietOnMissing: true });
 
     const projectsRaw = await safeSelect(() =>
       supabase.from('projects').select('id,name,client_id').order('name', { ascending: true })
-    );
+    , { quietOnMissing: true });
 
     const siteRows = await safeSelect(() =>
       supabase.from('sites').select('id,name,client_id').order('name', { ascending: true })
-    );
+    , { quietOnMissing: true });
 
     const assignmentSites = await safeSelect(() =>
       supabase
         .from('assignments')
         .select('site_id,client_site,client_name,project_id')
         .not('site_id', 'is', null)
-    );
+    , { quietOnMissing: true });
 
     const clientMap = new Map(clients.map((c) => [c.id, c]));
 

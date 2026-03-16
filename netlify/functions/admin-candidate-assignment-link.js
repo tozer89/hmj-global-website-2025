@@ -9,6 +9,12 @@ const {
   normaliseAssignmentSummary,
 } = require('./_candidate-assignments.js');
 
+function isMissingAssignmentsSchemaError(error) {
+  const message = String(error?.message || '');
+  return /Could not find the table 'public\.assignments' in the schema cache/i.test(message)
+    || /relation "?assignments"? does not exist/i.test(message);
+}
+
 async function loadCandidate(supabase, candidateId) {
   const { data, error } = await supabase
     .from('candidates')
@@ -42,10 +48,19 @@ const baseHandler = async (event, context) => {
   if (!candidateId) throw coded(400, 'candidateId is required.');
   if (!assignmentId) throw coded(400, 'assignmentId is required.');
 
-  const [candidate, assignment] = await Promise.all([
-    loadCandidate(supabase, candidateId),
-    loadAssignment(supabase, assignmentId),
-  ]);
+  let candidate;
+  let assignment;
+  try {
+    [candidate, assignment] = await Promise.all([
+      loadCandidate(supabase, candidateId),
+      loadAssignment(supabase, assignmentId),
+    ]);
+  } catch (error) {
+    if (isMissingAssignmentsSchemaError(error)) {
+      throw coded(409, 'Assignment pairing requires the latest Supabase assignments table patch. Apply the candidate/assignment schema repair first.');
+    }
+    throw error;
+  }
 
   if (!candidate) throw coded(404, 'Candidate not found.');
   if (!assignment) throw coded(404, 'Assignment not found.');
@@ -74,6 +89,9 @@ const baseHandler = async (event, context) => {
     if (error) throw error;
     updated = data;
   } catch (error) {
+    if (isMissingAssignmentsSchemaError(error)) {
+      throw coded(409, 'Assignment pairing requires the latest Supabase assignments table patch. Apply the candidate/assignment schema repair first.');
+    }
     if (isMissingColumnError(error, 'candidate_id')) {
       throw coded(409, 'Assignment pairing requires the latest Supabase assignments patch. Apply the candidate/assignment linking SQL first.');
     }
