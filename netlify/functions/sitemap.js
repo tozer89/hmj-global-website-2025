@@ -5,7 +5,34 @@ const { toPublicJob } = require('./_jobs-helpers.js');
 
 const DEFAULT_SITE_URL = 'https://hmjg.netlify.app';
 
+function normaliseUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+
+  try {
+    const url = new URL(value.trim());
+    if (!/^https?:$/i.test(url.protocol)) return '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  } catch (_error) {
+    return '';
+  }
+}
+
+function originFromUrl(value) {
+  const url = normaliseUrl(value);
+  if (!url) return '';
+
+  try {
+    return new URL(url).origin;
+  } catch (_error) {
+    return '';
+  }
+}
+
 function resolveSiteUrl(event = {}) {
+  const rawUrl = originFromUrl(event?.rawUrl);
+  if (rawUrl) return rawUrl;
+
   const envCandidates = [
     process.env.HMJ_CANONICAL_SITE_URL,
     process.env.URL,
@@ -17,11 +44,11 @@ function resolveSiteUrl(event = {}) {
   const forwardedHost = String(event?.headers?.['x-forwarded-host'] || event?.headers?.host || event?.headers?.Host || '').trim();
 
   if (forwardedHost) {
-    return `${forwardedProto || 'https'}://${forwardedHost}`.replace(/\/$/, '');
+    return normaliseUrl(`${forwardedProto || 'https'}://${forwardedHost}`) || DEFAULT_SITE_URL;
   }
 
   const fallback = envCandidates.find((value) => typeof value === 'string' && value.trim());
-  return String(fallback || DEFAULT_SITE_URL).replace(/\/$/, '');
+  return normaliseUrl(String(fallback || DEFAULT_SITE_URL)) || DEFAULT_SITE_URL;
 }
 
 function xmlEscape(value) {

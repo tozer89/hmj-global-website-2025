@@ -19,3 +19,17 @@ test('sitemap function returns a crawlable XML sitemap with key public URLs', as
   assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/candidates/);
   assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/jobs\/gold-card-electrician-slough\//);
 });
+
+test('sitemap function prefers the request rawUrl host when provided', async () => {
+  const { handler } = require('../netlify/functions/sitemap.js');
+  const response = await handler({
+    rawUrl: 'https://hmjg.netlify.app/.netlify/functions/sitemap',
+    headers: {
+      'x-forwarded-proto': 'https',
+    },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/about/);
+  assert.equal(/https:\/\/www\.hmj-global\.com/i.test(response.body), false);
+});
