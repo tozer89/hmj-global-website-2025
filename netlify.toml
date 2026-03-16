@@ -57,11 +57,6 @@
   to = "/timesheets.html"
   status = 200
 
-[[redirects]]
-  from = "/sitemap.xml"
-  to = "/.netlify/functions/sitemap"
-  status = 200
-
 # Keep /admin/ public as the single sign-in entry, but require an admin
 # role for the actual tool pages. Non-admin visitors are sent back to the
 # dashboard gate with a safe continuation target.
