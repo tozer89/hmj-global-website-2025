@@ -119,6 +119,29 @@ test('readTimesheetPortalConfig accepts legacy TSP_* env aliases used in Netlify
   }
 });
 
+test('readTimesheetPortalConfig normalises legacy token paths and trims copied OAuth credentials', () => {
+  const previous = {
+    clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
+    clientSecret: process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
+    tokenPath: process.env.TIMESHEET_PORTAL_TOKEN_PATH,
+  };
+
+  process.env.TIMESHEET_PORTAL_CLIENT_ID = 'client-id\n';
+  process.env.TIMESHEET_PORTAL_CLIENT_SECRET = 'secret-value\r\n';
+  process.env.TIMESHEET_PORTAL_TOKEN_PATH = '/connect/token';
+
+  try {
+    const config = readTimesheetPortalConfig();
+    assert.equal(config.clientId, 'client-id');
+    assert.equal(config.clientSecret, 'secret-value');
+    assert.equal(config.tokenPath, '/oauth/token');
+  } finally {
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_ID', previous.clientId);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_SECRET', previous.clientSecret);
+    restoreEnv('TIMESHEET_PORTAL_TOKEN_PATH', previous.tokenPath);
+  }
+});
+
 test('readTimesheetPortalConfig includes documented /users endpoint in default candidate discovery paths', () => {
   const config = readTimesheetPortalConfig();
   assert.equal(config.candidatePaths[0], '/users');

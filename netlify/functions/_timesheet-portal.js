@@ -43,6 +43,10 @@ function lowerEmail(value) {
   return email ? email.toLowerCase() : '';
 }
 
+function normalizeCredential(value) {
+  return String(value == null ? '' : value).replace(/[\r\n]+/g, '').trim();
+}
+
 function normalizeBaseUrl(value) {
   return trimString(value || DEFAULT_BASE_URL, 2000).replace(/\/+$/, '') || DEFAULT_BASE_URL;
 }
@@ -61,10 +65,18 @@ function truthyEnv(value) {
 
 function firstEnv(...values) {
   for (const value of values) {
-    const text = trimString(value, 4000);
+    const text = normalizeCredential(value).slice(0, 4000);
     if (text) return text;
   }
   return '';
+}
+
+function normalizeTokenPath(value) {
+  const tokenPath = trimString(value, 240);
+  if (!tokenPath || tokenPath === '/connect/token' || tokenPath === '/connect/token/') {
+    return DEFAULT_TOKEN_PATH;
+  }
+  return tokenPath;
 }
 
 function readTimesheetPortalConfig() {
@@ -90,11 +102,11 @@ function readTimesheetPortalConfig() {
     process.env.TIMESHEET_PORTAL_API_TOKEN,
     process.env.TSP_API_KEY,
   );
-  const tokenPath = trimString(firstEnv(
+  const tokenPath = normalizeTokenPath(firstEnv(
     process.env.TIMESHEET_PORTAL_TOKEN_PATH,
     process.env.TSP_TOKEN_URL,
     DEFAULT_TOKEN_PATH,
-  ), 240) || DEFAULT_TOKEN_PATH;
+  )) || DEFAULT_TOKEN_PATH;
   const scope = trimString(firstEnv(
     process.env.TIMESHEET_PORTAL_SCOPE,
     process.env.TSP_SCOPE,
