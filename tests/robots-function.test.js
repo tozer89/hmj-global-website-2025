@@ -13,5 +13,5 @@ test('robots function returns a sitemap URL on the active host', async () => {
   assert.equal(response.statusCode, 200);
   assert.match(response.headers['content-type'], /text\/plain/);
   assert.match(response.body, /Disallow: \/admin\//);
-  assert.match(response.body, /Sitemap: https:\/\/hmjg\.netlify\.app\/sitemap\.xml/);
+  assert.match(response.body, /Sitemap: https:\/\/hmjg\.netlify\.app\/\.netlify\/functions\/sitemap/);
 });

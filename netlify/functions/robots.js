@@ -35,7 +35,7 @@ exports.handler = async (event) => {
       'Disallow: /admin-v2/',
       'Disallow: /.netlify/',
       '',
-      `Sitemap: ${siteUrl}/sitemap.xml`,
+      `Sitemap: ${siteUrl}/.netlify/functions/sitemap`,
       '',
     ].join('\n'),
   };

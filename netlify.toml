@@ -67,6 +67,7 @@
   from = "/sitemap.xml"
   to = "/.netlify/functions/sitemap"
   status = 200
+  force = true
 
 # Keep /admin/ public as the single sign-in entry, but require an admin
 # role for the actual tool pages. Non-admin visitors are sent back to the
