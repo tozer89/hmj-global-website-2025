@@ -1,5 +1,5 @@
--- Candidate/assignment schema repair.
--- Safe to re-run in production.
+-- Candidate/assignment production schema repair.
+-- Aligns live Supabase with admin candidates, TSP comparison, and assignment linking code.
 
 create or replace function public.set_updated_at()
 returns trigger

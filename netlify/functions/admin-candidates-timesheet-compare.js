@@ -8,17 +8,52 @@ const {
   readTimesheetPortalConfig,
 } = require('./_timesheet-portal.js');
 
+function isMissingColumnError(error, columnName) {
+  const message = String(error?.message || '');
+  if (!message) return false;
+  if (columnName) {
+    return new RegExp(`column "?${columnName}"? does not exist`, 'i').test(message)
+      || new RegExp(`Could not find the '${columnName}' column of`, 'i').test(message);
+  }
+  return /column "?[a-zA-Z0-9_]+"? does not exist/i.test(message)
+    || /Could not find the '[a-zA-Z0-9_]+' column of/i.test(message);
+}
+
+async function fetchCandidatePage(supabase, from, to, { includePayrollRef = true } = {}) {
+  const columns = [
+    'id',
+    'email',
+    'first_name',
+    'last_name',
+    'full_name',
+    'phone',
+    includePayrollRef && 'payroll_ref',
+    'status',
+    'updated_at',
+  ].filter(Boolean).join(',');
+
+  return supabase
+    .from('candidates')
+    .select(columns)
+    .order('updated_at', { ascending: false, nullsFirst: false })
+    .range(from, to);
+}
+
 async function loadWebsiteCandidates(supabase) {
   const rows = [];
   let from = 0;
   const pageSize = 1000;
+  let includePayrollRef = true;
   while (from < 10000) {
     const to = from + pageSize - 1;
-    const { data, error } = await supabase
-      .from('candidates')
-      .select('id,email,first_name,last_name,full_name,phone,payroll_ref,status,updated_at')
-      .order('updated_at', { ascending: false, nullsFirst: false })
-      .range(from, to);
+    let { data, error } = await fetchCandidatePage(supabase, from, to, { includePayrollRef });
+    if (error && includePayrollRef && isMissingColumnError(error, 'payroll_ref')) {
+      includePayrollRef = false;
+      ({ data, error } = await fetchCandidatePage(supabase, from, to, { includePayrollRef: false }));
+      if (!error && Array.isArray(data)) {
+        data = data.map((row) => ({ ...row, payroll_ref: null }));
+      }
+    }
     if (error) throw error;
     const page = Array.isArray(data) ? data : [];
     rows.push(...page);

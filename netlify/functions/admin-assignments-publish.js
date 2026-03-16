@@ -44,7 +44,6 @@ const baseHandler = async (event, context) => {
 
     const requiredAssignment = [
       ['job_title', 'job title'],
-      ['project_id', 'project'],
       ['start_date', 'start date'],
     ];
 

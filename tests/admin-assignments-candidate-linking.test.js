@@ -30,7 +30,7 @@ test('assignment save, list and publish flows preserve candidate_id', () => {
   const publishSource = read('netlify/functions/admin-assignments-publish.js');
 
   assert.match(saveSource, /candidate_id:/);
-  assert.match(saveSource, /candidate_id or contractor_id, project_id, start_date are required/);
+  assert.match(saveSource, /candidate_id or contractor_id, job_title, start_date are required/);
   assert.match(listSource, /'candidate_id',/);
   assert.match(publishSource, /if \(!assignment\.candidate_id && !assignment\.contractor_id\)/);
   assert.match(publishSource, /\.eq\('id', assignment\.candidate_id\)/);
