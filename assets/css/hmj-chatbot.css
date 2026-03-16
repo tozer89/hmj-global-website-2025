@@ -69,9 +69,9 @@
 }
 
 .hmj-chatbot__launcher-meta {
-  font-size: 0.72rem;
-  color: rgba(244, 247, 255, 0.72);
-  line-height: 1.1;
+  font-size: 0.78rem;
+  color: rgba(244, 247, 255, 0.82);
+  line-height: 1.2;
 }
 
 .hmj-chatbot__launcher-icon {
@@ -149,9 +149,10 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 0.7rem;
+  font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 

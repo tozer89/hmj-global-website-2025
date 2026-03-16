@@ -112,14 +112,43 @@ test('job spec page renders printable share copy from payload without fetching',
 
   const { document } = dom.window;
   assert.equal(dom.window.document.title, 'Senior Planning Engineer | HMJ Global');
+  assert.match(document.getElementById('metaDescriptionTag').getAttribute('content'), /Senior Planning Engineer/);
+  assert.match(document.getElementById('metaDescriptionTag').getAttribute('content'), /Polished HMJ share-spec overview/);
+  assert.equal(document.getElementById('canonicalTag').getAttribute('href'), 'https://www.hmj-global.com/jobs/spec.html?id=spec-role-1&slug=senior-planning-engineer-london-uk');
+  assert.equal(document.getElementById('ogTitleTag').getAttribute('content'), 'Senior Planning Engineer | HMJ Global');
+  assert.equal(document.getElementById('twitterTitleTag').getAttribute('content'), 'Senior Planning Engineer | HMJ Global');
   assert.equal(document.getElementById('loading').style.display, 'none');
   assert.equal(document.getElementById('error').style.display, 'none');
   assert.equal(document.getElementById('specPage').style.display, 'grid');
   assert.equal(document.getElementById('title').textContent, 'Senior Planning Engineer');
   assert.equal(document.getElementById('overview').textContent, 'Polished HMJ share-spec overview for candidates and print output.');
-  assert.equal(document.getElementById('printCopyMode').textContent, 'AI-polished share copy');
+  assert.equal(document.getElementById('printCopyMode').textContent, 'Candidate role brief');
+  assert.equal(document.getElementById('printTitle').textContent, 'Senior Planning Engineer');
+  assert.match(document.getElementById('printIntro').textContent, /Polished HMJ share-spec overview/);
+  assert.equal(document.getElementById('printLocation').textContent, 'London, UK');
+  assert.equal(document.getElementById('printEmployment').textContent, 'Contract');
+  assert.equal(document.getElementById('printPay').textContent, 'Competitive day rate');
+  assert.equal(document.getElementById('printFooterReference').textContent, 'spec-role-1');
+  assert.equal(document.getElementById('printShareLink').textContent, 'www.hmj-global.com/go/spec-role-1');
+  assert.equal(document.getElementById('printApplyLink').textContent, 'www.hmj-global.com/contact.html');
+  assert.equal(document.getElementById('printContactEmail').textContent, 'info@hmj-global.com');
+  assert.doesNotMatch(document.getElementById('printShareLink').textContent, /payload=/);
   assert.match(document.getElementById('meta').textContent, /AI-polished share copy active/);
-  assert.match(document.getElementById('printApplyLink').href, /\/contact\.html\?role=Senior%20Planning%20Engineer$/);
+  assert.equal(document.getElementById('printApplyLink').href, 'https://www.hmj-global.com/contact.html');
+
+  const breadcrumbSchema = JSON.parse(document.getElementById('breadcrumbSchemaTag').textContent);
+  const jobPostingSchema = JSON.parse(document.getElementById('jobPostingSchemaTag').textContent);
+  assert.equal(breadcrumbSchema['@type'], 'BreadcrumbList');
+  assert.equal(jobPostingSchema['@type'], 'JobPosting');
+  assert.equal(jobPostingSchema.title, 'Senior Planning Engineer');
+  assert.equal(jobPostingSchema.jobLocation.address.addressLocality, 'London, UK');
+  assert.equal(jobPostingSchema.employmentType, 'CONTRACTOR');
+
+  const emailShareHref = document.querySelector('[data-email-share]').href;
+  const emailBody = new URLSearchParams(emailShareHref.split('?')[1]).get('body') || '';
+  assert.match(emailBody, /https:\/\/www\.hmj-global\.com\/go\/spec-role-1/);
+  assert.match(emailBody, /https:\/\/www\.hmj-global\.com\/contact\.html/);
+  assert.doesNotMatch(emailBody, /payload=/);
 
   const responsibilityItems = Array.from(document.querySelectorAll('#respList li')).map((node) => node.textContent.trim());
   const requirementItems = Array.from(document.querySelectorAll('#reqList li')).map((node) => node.textContent.trim());

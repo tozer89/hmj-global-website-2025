@@ -341,14 +341,27 @@
         : [];
     const skillList = parseSkills(row.skills || row.skill_tags || row.tags);
     const tags = skillList.map((skill) => ({ id: `${row.id}-tag-${skill}`, name: skill, color: '#3a66b3' }));
+    const portalAuth = row.portal_auth && typeof row.portal_auth === 'object'
+      ? row.portal_auth
+      : {
+          exists: !!(row.has_portal_account || row.auth_user_id),
+          user_id: row.auth_user_id || null,
+          email: row.email || null,
+          email_confirmed_at: null,
+          last_sign_in_at: row.last_portal_login_at || null,
+          created_at: null,
+          updated_at: null,
+          full_name: full || null,
+        };
     return {
       ...row,
       id: row.id ?? row.ref ?? `tmp-${Math.random().toString(36).slice(2)}`,
       ref: row.ref || null,
-      auth_user_id: row.auth_user_id || null,
-      has_portal_account: !!(row.has_portal_account || row.auth_user_id),
+      auth_user_id: row.auth_user_id || portalAuth.user_id || null,
+      has_portal_account: !!(row.has_portal_account || row.auth_user_id || portalAuth.exists),
       portal_account_state: row.portal_account_state || (row.auth_user_id ? 'linked' : 'none'),
-      last_portal_login_at: row.last_portal_login_at || '',
+      portal_auth: portalAuth,
+      last_portal_login_at: row.last_portal_login_at || portalAuth.last_sign_in_at || '',
       first_name: first,
       last_name: last,
       full_name: full || `${first} ${last}`.trim() || 'Candidate',
@@ -608,6 +621,14 @@
     return state.selection.has(String(id));
   }
 
+  function isArchived(candidate) {
+    return String(candidate?.status || '').toLowerCase() === 'archived';
+  }
+
+  function isBlocked(candidate) {
+    return String(candidate?.status || '').toLowerCase() === 'blocked';
+  }
+
   function buildRow(candidate, index) {
     const row = document.createElement('div');
     row.className = 'trow';
@@ -615,7 +636,9 @@
     row.style.position = 'absolute';
     row.style.top = `${index * ROW_HEIGHT}px`;
     const selected = selectionHas(candidate.id) ? 'checked' : '';
-    const disabledActions = candidate.status === 'blocked';
+    const disabledActions = isBlocked(candidate);
+    const archiveRole = isArchived(candidate) ? 'restore' : 'archive';
+    const archiveLabel = isArchived(candidate) ? 'Restore' : 'Archive';
     const portalChip = candidate.has_portal_account
       ? '<span class="chip blue" style="margin-top:4px">Portal linked</span>'
       : candidate.portal_account_state === 'closed'
@@ -633,8 +656,9 @@
       <div><span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span></div>
       <div>${candidate.role || '—'}</div>
       <div class="row-actions">
-        <button class="btn ghost" data-role="open" data-id="${candidate.id}">Open</button>
-        <button class="btn ghost" data-role="pdf" data-id="${candidate.id}" ${disabledActions ? 'disabled' : ''}>PDF</button>
+        <button class="btn ghost small" data-role="open" data-id="${candidate.id}">Open</button>
+        <button class="btn ghost small" data-role="${archiveRole}" data-id="${candidate.id}">${archiveLabel}</button>
+        <button class="btn ghost small" data-role="pdf" data-id="${candidate.id}" ${disabledActions ? 'disabled' : ''}>PDF</button>
       </div>`;
     return row;
   }
@@ -720,6 +744,11 @@
       openDrawer(id);
       return;
     }
+    if (role === 'archive' || role === 'restore') {
+      const candidate = findCandidate(id);
+      if (candidate) toggleArchive(candidate);
+      return;
+    }
     if (role === 'pdf') {
       const candidate = findCandidate(id);
       if (candidate) generatePdf(candidate);
@@ -764,9 +793,14 @@
   function renderDrawer(candidate) {
     if (!candidate) return;
     elements.dwName.textContent = candidate.name || 'Candidate';
-    const blocked = candidate.status === 'blocked';
+    const blocked = isBlocked(candidate);
+    const archived = isArchived(candidate);
     elements.dwEmail.disabled = blocked;
     elements.dwCall.disabled = blocked;
+    elements.dwArchive.textContent = archived ? 'Restore' : 'Archive';
+    elements.dwArchive.classList.toggle('red', !archived);
+    elements.dwArchive.classList.toggle('ghost', archived);
+    elements.dwBlock.disabled = archived;
     elements.dwBlock.textContent = blocked ? 'Unblock' : 'Block';
     elements.dwEmail.onclick = () => {
       if (candidate.email && !blocked) window.location.href = `mailto:${candidate.email}`;
@@ -774,6 +808,7 @@
     elements.dwCall.onclick = () => {
       if (candidate.phone && !blocked) window.location.href = `tel:${candidate.phone.replace(/\s+/g, '')}`;
     };
+    elements.dwArchive.onclick = () => toggleArchive(candidate);
     elements.dwBlock.onclick = () => toggleBlock(candidate);
     elements.dwProfile.innerHTML = renderProfile(candidate);
     bindProfileEditors(candidate);
@@ -784,11 +819,16 @@
   }
 
   function renderProfile(candidate) {
+    const portalAuth = candidate.portal_auth || { exists: false };
     const portalStatus = candidate.has_portal_account
       ? 'Portal linked'
       : candidate.portal_account_state === 'closed'
       ? 'Portal account closed'
       : 'No portal account';
+    const confirmationStatus = portalAuth.exists
+      ? (portalAuth.email_confirmed_at ? 'Verified' : 'Verification pending')
+      : 'Not created';
+    const accountEmail = portalAuth.email || candidate.email || '—';
     return `
       <div class="drawer-section">
         <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">
@@ -808,7 +848,10 @@
         </div>
         <div class="profile-grid" style="margin-top:12px">
           <div class="drawer-field"><span>Portal account</span><strong>${portalStatus}</strong></div>
-          <div class="drawer-field"><span>Portal last seen</span><strong>${formatDateTime(candidate.last_portal_login_at)}</strong></div>
+          <div class="drawer-field"><span>Portal email</span><strong>${accountEmail}</strong></div>
+          <div class="drawer-field"><span>Verification</span><strong>${confirmationStatus}</strong></div>
+          <div class="drawer-field"><span>Portal last seen</span><strong>${formatDateTime(candidate.last_portal_login_at || portalAuth.last_sign_in_at)}</strong></div>
+          <div class="drawer-field"><span>Portal created</span><strong>${formatDateTime(portalAuth.created_at)}</strong></div>
           <div class="drawer-field"><span>Location</span><strong>${candidate.location || '—'}</strong></div>
           <div class="drawer-field"><span>Sector focus</span><strong>${candidate.sector_focus || '—'}</strong></div>
         </div>
@@ -819,6 +862,14 @@
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
           <a class="btn ghost" target="_blank" rel="noopener" href="/admin/timesheets.html?candidate=${candidate.id}">Timesheet history</a>
           <button class="btn" type="button" data-action="download-pdf">Download summary PDF</button>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost" type="button" data-account-action="inspect">Refresh portal status</button>
+          <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
+          <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
+          <button class="btn ghost" type="button" data-account-action="send_password_reset" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Email reset link</button>
+          <button class="btn ghost" type="button" data-account-action="copy_password_reset_link" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Copy secure reset link</button>
+          <button class="btn ghost" type="button" data-account-action="resend_verification" ${!accountEmail || portalAuth.email_confirmed_at ? 'disabled' : ''}>Resend verification</button>
         </div>
         <div class="tag-row">${(candidate.tags || []).map((tag) => `<span class="chip blue">${tag.name}</span>`).join(' ')}</div>
       </div>`;
@@ -913,6 +964,82 @@
     });
     const pdfBtn = section.querySelector('[data-action="download-pdf"]');
     if (pdfBtn) pdfBtn.addEventListener('click', () => generatePdf(candidate));
+    section.querySelectorAll('[data-account-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.accountAction;
+        if (!action) return;
+        await runPortalAccountAction(candidate, action, btn);
+      });
+    });
+  }
+
+  async function copyText(text) {
+    const value = String(text || '').trim();
+    if (!value) return false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch (err) {
+      console.warn('[candidates] clipboard write failed', err);
+    }
+    window.prompt('Copy this link', value);
+    return true;
+  }
+
+  async function runPortalAccountAction(candidate, action, button) {
+    const label = button?.textContent || 'Action';
+    let password = null;
+    if (action === 'set_temporary_password') {
+      const firstEntry = window.prompt('Enter a temporary password for this candidate.\nUse at least 8 characters, including one letter and one number.');
+      if (firstEntry == null) return;
+      const secondEntry = window.prompt('Re-enter the temporary password to confirm it.');
+      if (secondEntry == null) return;
+      if (String(firstEntry) !== String(secondEntry)) {
+        showToast('The temporary password entries did not match.', 'error', 3200);
+        return;
+      }
+      password = String(firstEntry);
+    }
+    if (button) button.disabled = true;
+    try {
+      const response = await state.helpers.api('admin-candidate-account', 'POST', {
+        action,
+        candidateId: candidate.id,
+        email: candidate.email,
+        password,
+      });
+      if (response?.reset_link) {
+        await copyText(response.reset_link);
+      }
+      if (response?.candidate) {
+        const record = normalizeCandidate(response.candidate);
+        if (response.auth) {
+          record.portal_auth = response.auth;
+          record.auth_user_id = record.auth_user_id || response.auth.user_id || null;
+          record.has_portal_account = !!response.auth.exists;
+          record.last_portal_login_at = record.last_portal_login_at || response.auth.last_sign_in_at || '';
+        }
+        const index = state.raw.findIndex((row) => String(row.id) === String(record.id));
+        if (index >= 0) state.raw[index] = record;
+        else state.raw.unshift(record);
+        applyFilters();
+        renderDrawer(record);
+      } else if (response?.auth) {
+        candidate.portal_auth = response.auth;
+        candidate.auth_user_id = candidate.auth_user_id || response.auth.user_id || null;
+        candidate.has_portal_account = !!response.auth.exists;
+        candidate.last_portal_login_at = candidate.last_portal_login_at || response.auth.last_sign_in_at || '';
+        renderDrawer(candidate);
+      }
+      showToast(response?.message || `${label} complete.`, 'info', 2800);
+    } catch (err) {
+      console.error('[candidates] portal account action failed', err);
+      showToast(err.message || `${label} failed.`, 'error', 4200);
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
 
   function bindNoteActions(candidate) {
@@ -960,7 +1087,7 @@
   async function callSave(payload) {
     try {
       pushLog({ action: 'save', detail: `Candidate ${payload.id}` });
-      await state.helpers.api('admin-candidates-save', 'POST', payload);
+      return await state.helpers.api('admin-candidates-save', 'POST', payload);
     } catch (err) {
       if (/supabase/i.test(String(err.message))) state.supabaseMode = 'error';
       updateSupabaseBadge();
@@ -968,18 +1095,29 @@
     }
   }
 
-  async function saveField(candidate, field, value) {
+  async function saveField(candidate, field, value, { quiet = false } = {}) {
     const patch = buildSavePayload(candidate, { [field]: value });
     try {
-      await callSave(patch);
-      Object.assign(candidate, patch, { [field]: value });
+      const response = await callSave(patch);
+      const nextRecord = response?.candidate ? normalizeCandidate(response.candidate) : { ...candidate, ...patch, [field]: value };
+      if (response?.portal_auth) {
+        nextRecord.portal_auth = response.portal_auth;
+        nextRecord.auth_user_id = nextRecord.auth_user_id || response.portal_auth.user_id || null;
+        nextRecord.has_portal_account = !!response.portal_auth.exists;
+        nextRecord.last_portal_login_at = nextRecord.last_portal_login_at || response.portal_auth.last_sign_in_at || '';
+      }
+      Object.assign(candidate, nextRecord);
       const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
       if (index >= 0) state.raw[index] = { ...candidate };
       applyFilters();
-      showToast('Saved', 'info', 1600);
+      if (!quiet) {
+        showToast(response?.warning || 'Saved', response?.warning ? 'warn' : 'info', response?.warning ? 3600 : 1600);
+      }
+      return true;
     } catch (err) {
       console.error('[candidates] save failed', err);
       showToast(err.message || 'Save failed', 'error');
+      return false;
     }
   }
 
@@ -987,7 +1125,8 @@
     const author = state.identity?.email || 'admin';
     const updated = [...(candidate.notes || []), { id: `${candidate.id}-note-${Date.now()}`, body: text, author_email: author, created_at: new Date().toISOString() }];
     const payload = updated.map((note) => note.body).join('\n');
-    await saveField(candidate, 'notes', payload);
+    const saved = await saveField(candidate, 'notes', payload);
+    if (!saved) return;
     candidate.notes = updated;
     renderDrawer(candidate);
   }
@@ -995,16 +1134,41 @@
   async function deleteNote(candidate, noteId) {
     const remaining = (candidate.notes || []).filter((note) => String(note.id) !== String(noteId));
     const payload = remaining.map((note) => note.body).join('\n');
-    await saveField(candidate, 'notes', payload);
+    const saved = await saveField(candidate, 'notes', payload);
+    if (!saved) return;
     candidate.notes = remaining;
     renderDrawer(candidate);
   }
 
   async function toggleBlock(candidate) {
     const next = candidate.status === 'blocked' ? 'in progress' : 'blocked';
-    await saveField(candidate, 'status', next);
-    candidate.status = next;
-    renderDrawer(candidate);
+    await updateStatus(candidate, next, {
+      successMessage: next === 'blocked' ? 'Candidate blocked' : 'Candidate unblocked',
+    });
+  }
+
+  async function updateStatus(candidate, nextStatus, { successMessage, confirmMessage } = {}) {
+    if (!candidate || !nextStatus || String(candidate.status || '').toLowerCase() === String(nextStatus).toLowerCase()) {
+      return;
+    }
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
+    const saved = await saveField(candidate, 'status', nextStatus, { quiet: true });
+    if (!saved) return;
+    candidate.status = nextStatus;
+    if (state.drawerId && String(state.drawerId) === String(candidate.id)) {
+      renderDrawer(candidate);
+    }
+    showToast(successMessage || `Candidate moved to ${statusLabel(nextStatus)}`, 'info', 2200);
+  }
+
+  async function toggleArchive(candidate) {
+    const archived = isArchived(candidate);
+    const next = archived ? 'active' : 'archived';
+    const successMessage = archived ? 'Candidate restored to active' : 'Candidate archived';
+    const confirmMessage = archived
+      ? ''
+      : `Archive ${candidate.name || 'this candidate'}? They will stay in the system and can be restored later.`;
+    await updateStatus(candidate, next, { successMessage, confirmMessage });
   }
 
   async function fetchCandidate(id) {
@@ -1167,11 +1331,16 @@
     const status = promptStatus(forceStatus);
     if (!status) return;
     const rows = selectedCandidates();
+    let savedCount = 0;
     for (const row of rows) {
       // eslint-disable-next-line no-await-in-loop
-      await saveField(row, 'status', status);
+      const saved = await saveField(row, 'status', status, { quiet: true });
+      if (saved) savedCount += 1;
     }
-    showToast(`Updated ${rows.length} candidates`, 'info');
+    showToast(
+      savedCount === rows.length ? `Updated ${rows.length} candidates` : `Updated ${savedCount} of ${rows.length} candidates`,
+      savedCount === rows.length ? 'info' : 'warn'
+    );
     clearSelection();
   }
 
@@ -1341,6 +1510,7 @@
     elements.dwAudit = qs('#dw-audit');
     elements.dwEmail = qs('#dw-email');
     elements.dwCall = qs('#dw-call');
+    elements.dwArchive = qs('#dw-archive');
     elements.dwBlock = qs('#dw-block');
     elements.dwClose = qs('#dw-close');
     elements.fab = qs('#fab-new');

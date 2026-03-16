@@ -59,7 +59,8 @@ a {
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.35);
   color: #ffffff;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
+  line-height: 1.2;
 }
 
 /* Header / Navigation */
@@ -1177,4 +1178,3 @@ footer {
 #toast{position:fixed;right:16px;bottom:16px;display:grid;gap:8px;z-index:9999}
 #toast .toast{background:#0f172a;color:#e6edf6;border:1px solid #233044;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 #toast .toast.error{border-color:#5b2b2b}
-

@@ -55,6 +55,78 @@ $$;
 
 alter type public.task_reminder_status add value if not exists 'processing';
 
+do $$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'task_items'
+  ) then
+    execute 'drop policy if exists "task_items_select_admins" on public.task_items';
+    execute 'drop policy if exists "task_items_insert_admins" on public.task_items';
+    execute 'drop policy if exists "task_items_update_admins" on public.task_items';
+    execute 'drop policy if exists "task_items_delete_creator_only" on public.task_items';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'task_comments'
+  ) then
+    execute 'drop policy if exists "task_comments_select_admins" on public.task_comments';
+    execute 'drop policy if exists "task_comments_insert_admins" on public.task_comments';
+    execute 'drop policy if exists "task_comments_update_author_only" on public.task_comments';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'task_comment_mentions'
+  ) then
+    execute 'drop policy if exists "task_comment_mentions_select_admins" on public.task_comment_mentions';
+    execute 'drop policy if exists "task_comment_mentions_insert_author_only" on public.task_comment_mentions';
+    execute 'drop policy if exists "task_comment_mentions_update_author_only" on public.task_comment_mentions';
+    execute 'drop policy if exists "task_comment_mentions_delete_author_only" on public.task_comment_mentions';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'task_watchers'
+  ) then
+    execute 'drop policy if exists "task_watchers_select_admins" on public.task_watchers';
+    execute 'drop policy if exists "task_watchers_insert_admins" on public.task_watchers';
+    execute 'drop policy if exists "task_watchers_update_admins" on public.task_watchers';
+    execute 'drop policy if exists "task_watchers_delete_admins_or_self" on public.task_watchers';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'task_attachments'
+  ) then
+    execute 'drop policy if exists "task_attachments_select_admins" on public.task_attachments';
+    execute 'drop policy if exists "task_attachments_insert_admins" on public.task_attachments';
+    execute 'drop policy if exists "task_attachments_delete_admins" on public.task_attachments';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'task_reminders'
+  ) then
+    execute 'drop policy if exists "task_reminders_select_admins" on public.task_reminders';
+    execute 'drop policy if exists "task_reminders_insert_admins" on public.task_reminders';
+    execute 'drop policy if exists "task_reminders_update_admins" on public.task_reminders';
+    execute 'drop policy if exists "task_reminders_delete_admins" on public.task_reminders';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'task_audit_log'
+  ) then
+    execute 'drop policy if exists "task_audit_log_select_admins" on public.task_audit_log';
+    execute 'drop policy if exists "task_audit_log_no_direct_insert" on public.task_audit_log';
+    execute 'drop policy if exists "task_audit_log_no_direct_update" on public.task_audit_log';
+    execute 'drop policy if exists "task_audit_log_no_direct_delete" on public.task_audit_log';
+  end if;
+end
+$$;
+
 create table if not exists public.task_items (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(trim(title)) between 1 and 180),
@@ -270,6 +342,118 @@ before update on public.task_comments
 for each row
 execute function public.set_updated_at();
 
+create table if not exists public.task_comment_mentions (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references public.task_items(id) on delete cascade,
+  comment_id uuid not null references public.task_comments(id) on delete cascade,
+  mentioned_user_id text,
+  mentioned_email text,
+  mentioned_display_name text,
+  created_by text not null,
+  created_by_email text not null default '',
+  notification_sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint task_comment_mentions_target_check
+    check (mentioned_user_id is not null or mentioned_email is not null)
+);
+
+alter table public.task_comment_mentions add column if not exists task_id uuid;
+alter table public.task_comment_mentions add column if not exists comment_id uuid;
+alter table public.task_comment_mentions add column if not exists mentioned_user_id text;
+alter table public.task_comment_mentions add column if not exists mentioned_email text;
+alter table public.task_comment_mentions add column if not exists mentioned_display_name text;
+alter table public.task_comment_mentions add column if not exists created_by text;
+alter table public.task_comment_mentions add column if not exists created_by_email text default '';
+alter table public.task_comment_mentions add column if not exists notification_sent_at timestamptz;
+alter table public.task_comment_mentions add column if not exists created_at timestamptz default now();
+
+update public.task_comment_mentions
+set
+  created_by = coalesce(nullif(created_by, ''), 'legacy-' || encode(gen_random_bytes(6), 'hex')),
+  created_by_email = coalesce(created_by_email, ''),
+  created_at = coalesce(created_at, now())
+where
+  created_by is null
+  or created_by = ''
+  or created_by_email is null
+  or created_at is null;
+
+alter table public.task_comment_mentions
+  alter column created_by set not null;
+alter table public.task_comment_mentions
+  alter column created_by_email set not null;
+alter table public.task_comment_mentions
+  alter column created_at set not null;
+
+create index if not exists idx_task_comment_mentions_task_id on public.task_comment_mentions(task_id);
+create index if not exists idx_task_comment_mentions_comment_id on public.task_comment_mentions(comment_id);
+create index if not exists idx_task_comment_mentions_email on public.task_comment_mentions(lower(mentioned_email));
+
+create table if not exists public.task_attachments (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references public.task_items(id) on delete cascade,
+  file_name text not null check (char_length(trim(file_name)) between 1 and 220),
+  mime_type text not null default 'application/octet-stream',
+  file_size_bytes bigint not null check (file_size_bytes > 0),
+  storage_bucket text not null default 'task-files',
+  storage_path text not null,
+  storage_key text,
+  uploaded_by text not null,
+  uploaded_by_email text not null default '',
+  meta jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.task_attachments add column if not exists task_id uuid;
+alter table public.task_attachments add column if not exists file_name text;
+alter table public.task_attachments add column if not exists mime_type text default 'application/octet-stream';
+alter table public.task_attachments add column if not exists file_size_bytes bigint;
+alter table public.task_attachments add column if not exists storage_bucket text default 'task-files';
+alter table public.task_attachments add column if not exists storage_path text;
+alter table public.task_attachments add column if not exists storage_key text;
+alter table public.task_attachments add column if not exists uploaded_by text;
+alter table public.task_attachments add column if not exists uploaded_by_email text default '';
+alter table public.task_attachments add column if not exists meta jsonb default '{}'::jsonb;
+alter table public.task_attachments add column if not exists created_at timestamptz default now();
+
+update public.task_attachments
+set
+  mime_type = coalesce(nullif(trim(mime_type), ''), 'application/octet-stream'),
+  storage_bucket = coalesce(nullif(trim(storage_bucket), ''), 'task-files'),
+  storage_key = coalesce(nullif(trim(storage_key), ''), nullif(trim(storage_path), '')),
+  uploaded_by = coalesce(nullif(uploaded_by, ''), 'legacy-' || encode(gen_random_bytes(6), 'hex')),
+  uploaded_by_email = coalesce(uploaded_by_email, ''),
+  meta = coalesce(meta, '{}'::jsonb),
+  created_at = coalesce(created_at, now())
+where
+  mime_type is null
+  or mime_type = ''
+  or storage_bucket is null
+  or storage_bucket = ''
+  or uploaded_by is null
+  or uploaded_by = ''
+  or uploaded_by_email is null
+  or meta is null
+  or created_at is null;
+
+alter table public.task_attachments
+  alter column mime_type set not null;
+alter table public.task_attachments
+  alter column storage_bucket set not null;
+alter table public.task_attachments
+  alter column uploaded_by set not null;
+alter table public.task_attachments
+  alter column uploaded_by_email set not null;
+alter table public.task_attachments
+  alter column meta set not null;
+alter table public.task_attachments
+  alter column created_at set not null;
+
+create unique index if not exists idx_task_attachments_storage_uidx
+  on public.task_attachments(storage_bucket, storage_path);
+create index if not exists idx_task_attachments_task_id on public.task_attachments(task_id);
+create index if not exists idx_task_attachments_uploaded_email on public.task_attachments(lower(uploaded_by_email));
+
 create table if not exists public.task_watchers (
   id uuid primary key default gen_random_uuid(),
   task_id uuid not null references public.task_items(id) on delete cascade,
@@ -398,6 +582,114 @@ create index if not exists idx_task_reminders_recipient_email on public.task_rem
 drop trigger if exists trg_task_reminders_updated_at on public.task_reminders;
 create trigger trg_task_reminders_updated_at
 before update on public.task_reminders
+for each row
+execute function public.set_updated_at();
+
+create table if not exists public.task_calendar_connections (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null default 'microsoft',
+  user_id text not null,
+  user_email text not null default '',
+  user_display_name text not null default '',
+  external_account_id text not null default '',
+  external_account_email text not null default '',
+  external_display_name text not null default '',
+  access_token text not null default '',
+  refresh_token text not null default '',
+  access_token_expires_at timestamptz,
+  scope text[] not null default '{}'::text[],
+  sync_enabled boolean not null default true,
+  last_synced_at timestamptz,
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.task_calendar_connections add column if not exists provider text default 'microsoft';
+alter table public.task_calendar_connections add column if not exists user_id text;
+alter table public.task_calendar_connections add column if not exists user_email text default '';
+alter table public.task_calendar_connections add column if not exists user_display_name text default '';
+alter table public.task_calendar_connections add column if not exists external_account_id text default '';
+alter table public.task_calendar_connections add column if not exists external_account_email text default '';
+alter table public.task_calendar_connections add column if not exists external_display_name text default '';
+alter table public.task_calendar_connections add column if not exists access_token text default '';
+alter table public.task_calendar_connections add column if not exists refresh_token text default '';
+alter table public.task_calendar_connections add column if not exists access_token_expires_at timestamptz;
+alter table public.task_calendar_connections add column if not exists scope text[] default '{}'::text[];
+alter table public.task_calendar_connections add column if not exists sync_enabled boolean default true;
+alter table public.task_calendar_connections add column if not exists last_synced_at timestamptz;
+alter table public.task_calendar_connections add column if not exists last_error text;
+alter table public.task_calendar_connections add column if not exists created_at timestamptz default now();
+alter table public.task_calendar_connections add column if not exists updated_at timestamptz default now();
+
+update public.task_calendar_connections
+set
+  provider = coalesce(nullif(provider, ''), 'microsoft'),
+  user_email = coalesce(user_email, ''),
+  user_display_name = coalesce(user_display_name, ''),
+  external_account_id = coalesce(external_account_id, ''),
+  external_account_email = coalesce(external_account_email, ''),
+  external_display_name = coalesce(external_display_name, ''),
+  access_token = coalesce(access_token, ''),
+  refresh_token = coalesce(refresh_token, ''),
+  scope = coalesce(scope, '{}'::text[]),
+  sync_enabled = coalesce(sync_enabled, true),
+  created_at = coalesce(created_at, now()),
+  updated_at = coalesce(updated_at, now())
+where
+  provider is null
+  or provider = ''
+  or user_email is null
+  or user_display_name is null
+  or external_account_id is null
+  or external_account_email is null
+  or external_display_name is null
+  or access_token is null
+  or refresh_token is null
+  or scope is null
+  or sync_enabled is null
+  or created_at is null
+  or updated_at is null;
+
+alter table public.task_calendar_connections
+  alter column provider set not null;
+alter table public.task_calendar_connections
+  alter column user_id set not null;
+alter table public.task_calendar_connections
+  alter column user_email set not null;
+alter table public.task_calendar_connections
+  alter column user_display_name set not null;
+alter table public.task_calendar_connections
+  alter column external_account_id set not null;
+alter table public.task_calendar_connections
+  alter column external_account_email set not null;
+alter table public.task_calendar_connections
+  alter column external_display_name set not null;
+alter table public.task_calendar_connections
+  alter column access_token set not null;
+alter table public.task_calendar_connections
+  alter column refresh_token set not null;
+alter table public.task_calendar_connections
+  alter column scope set not null;
+alter table public.task_calendar_connections
+  alter column sync_enabled set not null;
+alter table public.task_calendar_connections
+  alter column created_at set not null;
+alter table public.task_calendar_connections
+  alter column updated_at set not null;
+
+create unique index if not exists idx_task_calendar_connections_provider_user_uidx
+  on public.task_calendar_connections(provider, user_id);
+create index if not exists idx_task_calendar_connections_user_email
+  on public.task_calendar_connections(lower(user_email));
+create index if not exists idx_task_calendar_connections_external_email
+  on public.task_calendar_connections(lower(external_account_email));
+create index if not exists idx_task_calendar_connections_sync_enabled
+  on public.task_calendar_connections(sync_enabled);
+
+drop trigger if exists trg_task_calendar_connections_updated_at on public.task_calendar_connections;
+create trigger trg_task_calendar_connections_updated_at
+before update on public.task_calendar_connections
 for each row
 execute function public.set_updated_at();
 
@@ -1012,6 +1304,84 @@ after insert or update or delete on public.task_comments
 for each row
 execute function public.task_comments_audit_trigger();
 
+create or replace function public.task_comment_mentions_audit_trigger()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' then
+    perform public.log_task_audit(
+      new.task_id,
+      'mention_added',
+      '{}'::jsonb,
+      to_jsonb(new),
+      jsonb_build_object('mention_id', new.id, 'comment_id', new.comment_id),
+      'task_comment_mentions.insert',
+      'mention',
+      new.id::text
+    );
+    return new;
+  end if;
+
+  perform public.log_task_audit(
+    old.task_id,
+    'mention_removed',
+    to_jsonb(old),
+    '{}'::jsonb,
+    jsonb_build_object('mention_id', old.id, 'comment_id', old.comment_id),
+    'task_comment_mentions.delete',
+    'mention',
+    old.id::text
+  );
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_task_comment_mentions_audit on public.task_comment_mentions;
+create trigger trg_task_comment_mentions_audit
+after insert or delete on public.task_comment_mentions
+for each row
+execute function public.task_comment_mentions_audit_trigger();
+
+create or replace function public.task_attachments_audit_trigger()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' then
+    perform public.log_task_audit(
+      new.task_id,
+      'attachment_added',
+      '{}'::jsonb,
+      to_jsonb(new),
+      jsonb_build_object('attachment_id', new.id),
+      'task_attachments.insert',
+      'attachment',
+      new.id::text
+    );
+    return new;
+  end if;
+
+  perform public.log_task_audit(
+    old.task_id,
+    'attachment_deleted',
+    to_jsonb(old),
+    '{}'::jsonb,
+    jsonb_build_object('attachment_id', old.id),
+    'task_attachments.delete',
+    'attachment',
+    old.id::text
+  );
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_task_attachments_audit on public.task_attachments;
+create trigger trg_task_attachments_audit
+after insert or delete on public.task_attachments
+for each row
+execute function public.task_attachments_audit_trigger();
+
 create or replace function public.task_reminders_audit_trigger()
 returns trigger
 language plpgsql
@@ -1122,15 +1492,80 @@ before update or delete on public.task_audit_log
 for each row
 execute function public.guard_task_audit_log_mutation();
 
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'task-files',
+  'task-files',
+  false,
+  15728640,
+  array[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/avif',
+    'image/gif'
+  ]::text[]
+)
+on conflict (id) do update
+set
+  name = excluded.name,
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Task files admin select" on storage.objects;
+create policy "Task files admin select"
+  on storage.objects
+  for select
+  to authenticated
+  using (
+    bucket_id = 'task-files'
+    and public.hmj_task_is_admin()
+  );
+
+drop policy if exists "Task files admin insert" on storage.objects;
+create policy "Task files admin insert"
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    bucket_id = 'task-files'
+    and public.hmj_task_is_admin()
+  );
+
+drop policy if exists "Task files admin delete" on storage.objects;
+create policy "Task files admin delete"
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    bucket_id = 'task-files'
+    and public.hmj_task_is_admin()
+  );
+
 alter table public.task_items enable row level security;
 alter table public.task_comments enable row level security;
+alter table public.task_comment_mentions enable row level security;
 alter table public.task_watchers enable row level security;
+alter table public.task_attachments enable row level security;
 alter table public.task_reminders enable row level security;
+alter table public.task_calendar_connections enable row level security;
 alter table public.task_audit_log enable row level security;
 
 grant select, insert, update, delete on public.task_items to authenticated;
 grant select, insert, update on public.task_comments to authenticated;
+grant select, insert, update, delete on public.task_comment_mentions to authenticated;
 grant select, insert, update, delete on public.task_watchers to authenticated;
+grant select, insert, delete on public.task_attachments to authenticated;
 grant select, insert, update, delete on public.task_reminders to authenticated;
 grant select on public.task_audit_log to authenticated;
 
@@ -1185,6 +1620,38 @@ to authenticated
 using (public.hmj_task_is_creator(created_by, created_by_email))
 with check (public.hmj_task_is_creator(created_by, created_by_email));
 
+drop policy if exists "task_comment_mentions_select_admins" on public.task_comment_mentions;
+create policy "task_comment_mentions_select_admins"
+on public.task_comment_mentions
+for select
+to authenticated
+using (public.hmj_task_is_admin());
+
+drop policy if exists "task_comment_mentions_insert_author_only" on public.task_comment_mentions;
+create policy "task_comment_mentions_insert_author_only"
+on public.task_comment_mentions
+for insert
+to authenticated
+with check (
+  public.hmj_task_is_admin()
+  and public.hmj_task_is_creator(created_by, created_by_email)
+);
+
+drop policy if exists "task_comment_mentions_update_author_only" on public.task_comment_mentions;
+create policy "task_comment_mentions_update_author_only"
+on public.task_comment_mentions
+for update
+to authenticated
+using (public.hmj_task_is_creator(created_by, created_by_email))
+with check (public.hmj_task_is_creator(created_by, created_by_email));
+
+drop policy if exists "task_comment_mentions_delete_author_only" on public.task_comment_mentions;
+create policy "task_comment_mentions_delete_author_only"
+on public.task_comment_mentions
+for delete
+to authenticated
+using (public.hmj_task_is_creator(created_by, created_by_email));
+
 drop policy if exists "task_watchers_select_admins" on public.task_watchers;
 create policy "task_watchers_select_admins"
 on public.task_watchers
@@ -1216,6 +1683,27 @@ using (
   public.hmj_task_is_admin()
   or public.hmj_task_is_creator(user_id, user_email)
 );
+
+drop policy if exists "task_attachments_select_admins" on public.task_attachments;
+create policy "task_attachments_select_admins"
+on public.task_attachments
+for select
+to authenticated
+using (public.hmj_task_is_admin());
+
+drop policy if exists "task_attachments_insert_admins" on public.task_attachments;
+create policy "task_attachments_insert_admins"
+on public.task_attachments
+for insert
+to authenticated
+with check (public.hmj_task_is_admin());
+
+drop policy if exists "task_attachments_delete_admins" on public.task_attachments;
+create policy "task_attachments_delete_admins"
+on public.task_attachments
+for delete
+to authenticated
+using (public.hmj_task_is_admin());
 
 drop policy if exists "task_reminders_select_admins" on public.task_reminders;
 create policy "task_reminders_select_admins"
@@ -1336,7 +1824,49 @@ values (
     'dueSoonDays', 3,
     'collapseDoneByDefault', true,
     'reminderRecipientMode', 'assignee_creator_watchers',
+    'activityRecipientMode', 'assignee_creator_watchers',
+    'activityEmailNotifications', true,
+    'mentionEmailNotifications', true,
     'defaultPriority', 'medium'
   )
 )
 on conflict (key) do nothing;
+
+insert into public.admin_settings (key, value)
+values (
+  'team_tasks_calendar_settings',
+  jsonb_build_object(
+    'enabled', false,
+    'provider', 'microsoft',
+    'tenantId', 'common',
+    'clientId', '',
+    'clientSecret', '',
+    'scopes', jsonb_build_array('offline_access', 'openid', 'profile', 'User.Read', 'Calendars.Read'),
+    'showExternalEvents', true,
+    'showTeamConnections', true,
+    'syncEnabled', true,
+    'weekStartsOn', 'monday'
+  )
+)
+on conflict (key) do nothing;
+
+update public.admin_settings
+set value = coalesce(value, '{}'::jsonb)
+  || jsonb_build_object(
+    'activityRecipientMode', coalesce(value -> 'activityRecipientMode', to_jsonb('assignee_creator_watchers'::text)),
+    'activityEmailNotifications', coalesce(value -> 'activityEmailNotifications', 'true'::jsonb),
+    'mentionEmailNotifications', coalesce(value -> 'mentionEmailNotifications', 'true'::jsonb)
+  )
+where key = 'team_tasks_settings';
+
+update public.admin_settings
+set value = coalesce(value, '{}'::jsonb)
+  || jsonb_build_object(
+    'provider', coalesce(value -> 'provider', to_jsonb('microsoft'::text)),
+    'tenantId', coalesce(value -> 'tenantId', to_jsonb('common'::text)),
+    'showExternalEvents', coalesce(value -> 'showExternalEvents', 'true'::jsonb),
+    'showTeamConnections', coalesce(value -> 'showTeamConnections', 'true'::jsonb),
+    'syncEnabled', coalesce(value -> 'syncEnabled', 'true'::jsonb),
+    'weekStartsOn', coalesce(value -> 'weekStartsOn', to_jsonb('monday'::text))
+  )
+where key = 'team_tasks_calendar_settings';

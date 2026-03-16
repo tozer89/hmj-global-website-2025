@@ -191,6 +191,18 @@
     .share-box code{word-break:break-all;font-size:13px;background:#e8ecff;padding:6px 8px;border-radius:10px;border:1px solid rgba(47,78,162,.15)}
     .share-box input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600}
     .share-box .share-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .seo-assist{display:grid;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(47,78,162,.18);background:#f8faff}
+    .seo-assist__head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start}
+    .seo-assist__copy{display:grid;gap:5px}
+    .seo-assist__copy strong{font-size:14px;color:var(--ink)}
+    .seo-assist__copy p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+    .seo-assist__actions{display:flex;flex-wrap:wrap;gap:8px}
+    .seo-assist__status{display:flex;flex-wrap:wrap;gap:8px}
+    .seo-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.04em}
+    .seo-badge[data-tone="ok"]{background:rgba(19,135,84,.12);border-color:rgba(19,135,84,.24);color:var(--ok)}
+    .seo-badge[data-tone="warn"]{background:rgba(250,204,21,.16);border-color:rgba(250,204,21,.32);color:#8a5a00}
+    .seo-badge[data-tone="error"]{background:rgba(180,35,24,.12);border-color:rgba(180,35,24,.28);color:var(--danger)}
+    .seo-note{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
     .board.busy{opacity:.7;pointer-events:none;transition:opacity .18s ease}
     .drawer[data-busy="true"] .drawer-foot,
     .drawer[data-busy="true"] .drawer-head{opacity:.92}
@@ -450,6 +462,7 @@
         <button class="editor-jump" type="button" data-editor-jump="placement">Location &amp; client</button>
         <button class="editor-jump" type="button" data-editor-jump="pay">Pay</button>
         <button class="editor-jump" type="button" data-editor-jump="content">Content</button>
+        <button class="editor-jump" type="button" data-editor-jump="seo">SEO</button>
         <button class="editor-jump" type="button" data-editor-jump="visibility">Visibility</button>
         <button class="editor-jump" type="button" data-editor-jump="sharing">Sharing</button>
       </div>
@@ -584,6 +597,46 @@
             <div class="grid">
               <div class="field"><label for="edResponsibilities">Responsibilities (one per line)</label><textarea id="edResponsibilities"></textarea></div>
               <div class="field"><label for="edRequirements">Requirements (one per line)</label><textarea id="edRequirements"></textarea></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-section" data-editor-section="seo">
+          <summary class="editor-section__summary">
+            <span class="editor-section__summary-copy">
+              <strong>SEO assistant</strong>
+              <small>Search-ready suggestions for titles, descriptions, and public job copy.</small>
+            </span>
+            <span class="editor-section__meta" id="editorSummarySeo">Save a live job to generate an SEO draft</span>
+          </summary>
+          <div class="editor-section__body">
+            <section class="seo-assist">
+              <div class="seo-assist__head">
+                <div class="seo-assist__copy">
+                  <strong>GPT-assisted job SEO</strong>
+                  <p>Suggestions stay separate from the live job record. Use them for metadata automatically, and apply the copy suggestions only if they improve clarity.</p>
+                </div>
+                <div class="seo-assist__actions">
+                  <button class="btn ghost small" type="button" id="btnSeoRefresh" data-readonly="soft">Refresh SEO draft</button>
+                  <button class="btn ghost small" type="button" id="btnSeoApply" data-readonly="soft">Apply suggested copy</button>
+                </div>
+              </div>
+              <div class="seo-assist__status">
+                <span class="seo-badge" id="seoStatusBadge" data-tone="neutral">No draft yet</span>
+                <span class="seo-badge" id="seoStorageBadge" data-tone="neutral">Not stored</span>
+              </div>
+              <p class="seo-note" id="seoStatusNote">Save a live job first, then refresh the SEO draft. If GPT is unavailable, the editor falls back to a local suggestion so the workflow still continues.</p>
+            </section>
+            <div class="grid">
+              <div class="field field--wide"><label for="seoOptimizedTitle">Suggested search title</label><textarea id="seoOptimizedTitle" readonly></textarea></div>
+              <div class="field"><label for="seoMetaTitle">Meta title</label><input id="seoMetaTitle" readonly/></div>
+              <div class="field"><label for="seoSlugHint">Slug hint</label><input id="seoSlugHint" readonly/></div>
+              <div class="field field--wide"><label for="seoMetaDescription">Meta description</label><textarea id="seoMetaDescription" readonly></textarea></div>
+              <div class="field"><label for="seoSectorFocus">Sector focus</label><input id="seoSectorFocus" readonly/></div>
+              <div class="field"><label for="seoSchemaReadiness">Schema readiness</label><input id="seoSchemaReadiness" readonly/></div>
+              <div class="field field--wide"><label for="seoOverviewSuggestion">Suggested overview</label><textarea id="seoOverviewSuggestion" readonly></textarea></div>
+              <div class="field"><label for="seoResponsibilitiesSuggestion">Suggested responsibilities</label><textarea id="seoResponsibilitiesSuggestion" readonly></textarea></div>
+              <div class="field"><label for="seoRequirementsSuggestion">Suggested requirements</label><textarea id="seoRequirementsSuggestion" readonly></textarea></div>
             </div>
           </div>
         </details>
@@ -1128,6 +1181,10 @@
         editing: null,
         editingTags: [],
         editingBenefits: [],
+        seoDraft: null,
+        seoDrafts: new Map(),
+        seoLoading: false,
+        seoRequestSeq: 0,
         shareLink: null,
         diagnostics: false,
         readOnly: false,
@@ -1192,6 +1249,20 @@
       const shareUrl = sel('#shareUrl');
       const shareDescription = sel('#shareDescription');
       const shareAiPolish = sel('#shareAiPolish');
+      const btnSeoRefresh = sel('#btnSeoRefresh');
+      const btnSeoApply = sel('#btnSeoApply');
+      const seoStatusBadge = sel('#seoStatusBadge');
+      const seoStorageBadge = sel('#seoStorageBadge');
+      const seoStatusNote = sel('#seoStatusNote');
+      const seoOptimizedTitle = sel('#seoOptimizedTitle');
+      const seoMetaTitle = sel('#seoMetaTitle');
+      const seoSlugHint = sel('#seoSlugHint');
+      const seoMetaDescription = sel('#seoMetaDescription');
+      const seoSectorFocus = sel('#seoSectorFocus');
+      const seoSchemaReadiness = sel('#seoSchemaReadiness');
+      const seoOverviewSuggestion = sel('#seoOverviewSuggestion');
+      const seoResponsibilitiesSuggestion = sel('#seoResponsibilitiesSuggestion');
+      const seoRequirementsSuggestion = sel('#seoRequirementsSuggestion');
       const btnRefreshShare = sel('#btnRefreshShare');
       const tagEditor = sel('#tagEditor');
       const tagInput = sel('#tagInput');
@@ -1250,6 +1321,7 @@
         placement: sel('#editorSummaryPlacement'),
         pay: sel('#editorSummaryPay'),
         content: sel('#editorSummaryContent'),
+        seo: sel('#editorSummarySeo'),
         visibility: sel('#editorSummaryVisibility'),
         sharing: sel('#editorSummarySharing'),
       };
@@ -1488,6 +1560,24 @@
           editorSectionSummaries.visibility.textContent = `${visibleCount} public item${visibleCount === 1 ? '' : 's'} enabled`;
         }
 
+        if (editorSectionSummaries.seo) {
+          if (state.seoLoading) {
+            editorSectionSummaries.seo.textContent = 'Refreshing SEO draft…';
+          } else if (state.seoDraft?.optimized_title) {
+            const sourceLabel = state.seoDraft.source === 'openai' ? 'GPT-assisted' : 'Heuristic';
+            const storageLabel = state.seoDraft.__stored
+              ? 'stored'
+              : state.editing?.id
+                ? 'preview only'
+                : 'save to store';
+            editorSectionSummaries.seo.textContent = `${sourceLabel} draft ready · ${storageLabel}`;
+          } else {
+            editorSectionSummaries.seo.textContent = state.editing?.id
+              ? 'Refresh the SEO draft to review the latest suggestion'
+              : 'Save a live job to generate an SEO draft';
+          }
+        }
+
         if (editorSectionSummaries.sharing) {
           let sharingSummary = 'Save the job when you are ready to share it';
           if (shareUrl?.value) {
@@ -1506,6 +1596,269 @@
           editorStatusPill.textContent = published ? statusLabel : 'Draft';
           editorStatusPill.dataset.tone = getEditorStatusTone(status, published);
         }
+      }
+
+      function seoDraftCacheKey(job = null) {
+        const input = job || state.editing || null;
+        const id = String(input?.id || '').trim();
+        return id || '';
+      }
+
+      function defaultSeoNote() {
+        if (state.seoLoading) {
+          return 'Refreshing the SEO draft using the current job details. This does not change the live role until you apply the suggestion and save the job.';
+        }
+        if (state.editing?.id) {
+          return 'Refresh the SEO draft to review the latest title, meta description, slug hint, and candidate-facing copy. Apply only the parts you want to keep.';
+        }
+        return 'Save a live job first, then refresh the SEO draft. If GPT is unavailable, the editor falls back to a local suggestion so the workflow still continues.';
+      }
+
+      function setSeoFieldValue(element, value) {
+        if (!element) return;
+        element.value = String(value || '').trim();
+      }
+
+      function clearSeoDraftView(options = {}) {
+        if (!options.keepCached) {
+          state.seoDraft = null;
+        }
+        setSeoFieldValue(seoOptimizedTitle, '');
+        setSeoFieldValue(seoMetaTitle, '');
+        setSeoFieldValue(seoSlugHint, '');
+        setSeoFieldValue(seoMetaDescription, '');
+        setSeoFieldValue(seoSectorFocus, '');
+        setSeoFieldValue(seoSchemaReadiness, '');
+        setSeoFieldValue(seoOverviewSuggestion, '');
+        setSeoFieldValue(seoResponsibilitiesSuggestion, '');
+        setSeoFieldValue(seoRequirementsSuggestion, '');
+        if (seoStatusBadge) {
+          seoStatusBadge.textContent = options.loading ? 'Refreshing…' : 'No draft yet';
+          seoStatusBadge.dataset.tone = options.loading ? 'info' : 'neutral';
+        }
+        if (seoStorageBadge) {
+          seoStorageBadge.textContent = 'Not stored';
+          seoStorageBadge.dataset.tone = 'neutral';
+        }
+        if (seoStatusNote) {
+          seoStatusNote.textContent = defaultSeoNote();
+        }
+        updateEditorSummaries();
+        updateControlState();
+      }
+
+      function normaliseSeoDraftPayload(payload = {}, meta = {}) {
+        if (!payload || typeof payload !== 'object') return null;
+        const responsibilities = Array.isArray(payload.optimized_responsibilities)
+          ? payload.optimized_responsibilities.map((item) => String(item || '').trim()).filter(Boolean)
+          : [];
+        const requirements = Array.isArray(payload.optimized_requirements)
+          ? payload.optimized_requirements.map((item) => String(item || '').trim()).filter(Boolean)
+          : [];
+        const missing = Array.isArray(payload.schema_missing_fields)
+          ? payload.schema_missing_fields.map((item) => String(item || '').trim()).filter(Boolean)
+          : [];
+        const source = String(meta.source || payload.source || 'heuristic').trim().toLowerCase() || 'heuristic';
+        return {
+          optimized_title: String(payload.optimized_title || '').trim(),
+          meta_title: String(payload.meta_title || '').trim(),
+          meta_description: String(payload.meta_description || '').trim(),
+          slug_hint: String(payload.slug_hint || '').trim(),
+          sector_focus: String(payload.sector_focus || '').trim(),
+          optimized_overview: String(payload.optimized_overview || '').trim(),
+          optimized_responsibilities: responsibilities,
+          optimized_requirements: requirements,
+          schema_missing_fields: missing,
+          schema_ready: typeof payload.schema_ready === 'boolean' ? payload.schema_ready : missing.length === 0,
+          source,
+          model: String(meta.model || payload.model || '').trim(),
+          generated_at: String(meta.generated_at || payload.generated_at || '').trim(),
+          __stored: !!(meta.stored ?? payload.__stored),
+          __missingTable: !!(meta.missingTable ?? payload.__missingTable),
+          __error: String(meta.error || payload.__error || '').trim(),
+        };
+      }
+
+      function rememberSeoDraft(job, draft) {
+        const normalized = normaliseSeoDraftPayload(draft, draft);
+        state.seoDraft = normalized;
+        const key = seoDraftCacheKey(job);
+        if (key && normalized) {
+          state.seoDrafts.set(key, normalized);
+        }
+        return normalized;
+      }
+
+      function renderSeoDraft(draft = null, options = {}) {
+        const normalized = normaliseSeoDraftPayload(draft, options);
+        state.seoDraft = normalized;
+        if (!normalized) {
+          clearSeoDraftView({ keepCached: true });
+          return;
+        }
+
+        setSeoFieldValue(seoOptimizedTitle, normalized.optimized_title);
+        setSeoFieldValue(seoMetaTitle, normalized.meta_title);
+        setSeoFieldValue(seoSlugHint, normalized.slug_hint);
+        setSeoFieldValue(seoMetaDescription, normalized.meta_description);
+        setSeoFieldValue(seoSectorFocus, normalized.sector_focus);
+        setSeoFieldValue(
+          seoSchemaReadiness,
+          normalized.schema_ready
+            ? 'Ready for JobPosting schema'
+            : `Missing: ${normalized.schema_missing_fields.join(', ')}`
+        );
+        setSeoFieldValue(seoOverviewSuggestion, normalized.optimized_overview);
+        setSeoFieldValue(seoResponsibilitiesSuggestion, normalized.optimized_responsibilities.join('\n'));
+        setSeoFieldValue(seoRequirementsSuggestion, normalized.optimized_requirements.join('\n'));
+
+        if (seoStatusBadge) {
+          const sourceLabel = normalized.source === 'openai' ? 'GPT-assisted' : 'Heuristic';
+          seoStatusBadge.textContent = normalized.__error ? `${sourceLabel} fallback` : sourceLabel;
+          seoStatusBadge.dataset.tone = normalized.source === 'openai' ? 'ok' : normalized.__error ? 'warn' : 'info';
+        }
+
+        if (seoStorageBadge) {
+          if (normalized.__missingTable) {
+            seoStorageBadge.textContent = 'Storage table missing';
+            seoStorageBadge.dataset.tone = 'warn';
+          } else if (normalized.__stored) {
+            seoStorageBadge.textContent = 'Stored draft';
+            seoStorageBadge.dataset.tone = 'ok';
+          } else {
+            seoStorageBadge.textContent = state.editing?.id ? 'Preview only' : 'Save to store';
+            seoStorageBadge.dataset.tone = 'neutral';
+          }
+        }
+
+        if (seoStatusNote) {
+          const notes = [];
+          if (normalized.source === 'openai') {
+            notes.push(normalized.model ? `Generated by ${normalized.model}.` : 'Generated with the HMJ GPT SEO helper.');
+          } else {
+            notes.push('Generated from the local fallback rules so the workflow can continue without GPT.');
+          }
+          if (normalized.__error) {
+            notes.push(`Fallback reason: ${normalized.__error.replace(/_/g, ' ')}.`);
+          }
+          if (normalized.__missingTable) {
+            notes.push('Run the SEO suggestions migration to persist drafts in Supabase.');
+          } else if (!normalized.__stored && state.editing?.id) {
+            notes.push('Refresh again after saving if you want the latest draft stored against the live job.');
+          }
+          seoStatusNote.textContent = notes.join(' ');
+        }
+
+        updateEditorSummaries();
+        updateControlState();
+      }
+
+      async function requestSeoDraft(options = {}) {
+        const mode = options.mode === 'optimize' ? 'optimize' : 'load';
+        const draft = options.job || getCurrentEditorDraft() || state.editing || readForm();
+        const cacheKey = seoDraftCacheKey(draft);
+        const requestSeq = ++state.seoRequestSeq;
+
+        if (!options.silent) {
+          state.seoLoading = true;
+          clearSeoDraftView({ loading: true, keepCached: true });
+          setLastAction(mode === 'optimize' ? 'Refreshing SEO draft…' : 'Loading SEO draft…', 'neutral');
+          updateStatusPanel();
+        }
+
+        try {
+          const endpoint = mode === 'optimize' ? 'admin-jobs-seo-optimize' : 'admin-jobs-seo-get';
+          const response = await api(endpoint, 'POST', {
+            jobId: draft?.id || undefined,
+            job: draft,
+          });
+          const responseSource = response?.stored && response?.suggestion?.source
+            ? response.suggestion.source
+            : (response?.source || response?.suggestion?.source || 'heuristic');
+
+          if (requestSeq !== state.seoRequestSeq) return null;
+
+          const normalized = rememberSeoDraft(draft, normaliseSeoDraftPayload(response?.suggestion || {}, {
+            source: responseSource,
+            model: response?.model || response?.suggestion?.model || '',
+            generated_at: response?.suggestion?.generated_at || '',
+            stored: !!response?.stored,
+            missingTable: !!response?.schema,
+            error: response?.error || '',
+          }));
+
+          if (cacheKey && normalized) {
+            state.seoDrafts.set(cacheKey, normalized);
+          }
+
+          const currentKey = seoDraftCacheKey();
+          const unsavedEditorActive = !!drawer?.classList.contains('open') && !currentKey;
+          if ((currentKey && currentKey === cacheKey) || (!cacheKey && unsavedEditorActive)) {
+            renderSeoDraft(normalized, normalized);
+          }
+          setLastAction(mode === 'optimize' ? 'SEO draft refreshed' : 'SEO draft loaded', normalized?.source === 'openai' ? 'ok' : 'neutral');
+          updateStatusPanel();
+          return normalized;
+        } catch (error) {
+          if (requestSeq !== state.seoRequestSeq) return null;
+          console.error('[jobs] seo draft failed', error);
+          if (!options.silent) {
+            if (seoStatusBadge) {
+              seoStatusBadge.textContent = 'Draft unavailable';
+              seoStatusBadge.dataset.tone = 'error';
+            }
+            if (seoStorageBadge) {
+              seoStorageBadge.textContent = 'Not stored';
+              seoStorageBadge.dataset.tone = 'neutral';
+            }
+            if (seoStatusNote) {
+              seoStatusNote.textContent = `SEO draft failed: ${error.message || error}.`;
+            }
+            setLastAction('SEO draft failed', 'error');
+            updateEditorSummaries();
+            updateStatusPanel();
+            toast(`SEO draft failed: ${error.message || error}`, 'error', 3600);
+          }
+          return null;
+        } finally {
+          if (requestSeq === state.seoRequestSeq) {
+            state.seoLoading = false;
+            updateEditorSummaries();
+            updateControlState();
+            updateStatusPanel();
+          }
+        }
+      }
+
+      function applySeoDraftToEditor() {
+        const draft = state.seoDraft;
+        if (!draft) {
+          toast('Refresh the SEO draft first', 'warn', 2200);
+          return;
+        }
+        let applied = 0;
+        if (draft.optimized_title) {
+          form.title.value = draft.optimized_title;
+          applied += 1;
+        }
+        if (draft.optimized_overview) {
+          form.overview.value = draft.optimized_overview;
+          applied += 1;
+        }
+        if (draft.optimized_responsibilities.length) {
+          form.responsibilities.value = draft.optimized_responsibilities.join('\n');
+          applied += 1;
+        }
+        if (draft.optimized_requirements.length) {
+          form.requirements.value = draft.optimized_requirements.join('\n');
+          applied += 1;
+        }
+        if (!applied) {
+          toast('No suggested copy available to apply', 'warn', 2200);
+          return;
+        }
+        updateEditorSummaries();
+        toast('Suggested SEO copy applied to the editor', 'ok', 2200);
       }
 
       function setChip(el, text, tone = 'neutral') {
@@ -1643,6 +1996,16 @@
         }
         if (btnRefreshShare) {
           btnRefreshShare.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving || !shareUrl?.value;
+        }
+        if (btnSeoRefresh) {
+          if (!btnSeoRefresh.dataset.defaultLabel) btnSeoRefresh.dataset.defaultLabel = btnSeoRefresh.textContent;
+          btnSeoRefresh.textContent = state.seoLoading ? 'Refreshing…' : btnSeoRefresh.dataset.defaultLabel;
+          btnSeoRefresh.disabled = state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving || !((form.title?.value || '').trim());
+        }
+        if (btnSeoApply) {
+          if (!btnSeoApply.dataset.defaultLabel) btnSeoApply.dataset.defaultLabel = btnSeoApply.textContent;
+          btnSeoApply.textContent = btnSeoApply.dataset.defaultLabel;
+          btnSeoApply.disabled = state.readOnly || state.loadingJobs || state.saving || state.deleting || state.reordering || state.sharing || state.batchSaving || state.seoLoading || !state.seoDraft;
         }
         if (btnClose) {
           btnClose.disabled = state.saving || state.deleting || state.batchSaving;
@@ -2927,9 +3290,12 @@
         drawer.classList.remove('open');
         drawer.setAttribute('aria-hidden', 'true');
         setTimeout(() => {
+          state.seoRequestSeq += 1;
           state.editing = null;
           state.editingTags = [];
           state.editingBenefits = [];
+          state.seoDraft = null;
+          state.seoLoading = false;
           shareBox.style.display = 'none';
           shareUrl.value = '';
           shareMeta.textContent = '';
@@ -2943,6 +3309,7 @@
               ? 'This console is in read-only mode, so share links stay local to this browser for 30 days.'
               : 'Generate a public/shareable role page for this job. In live mode the link is stored in Supabase. In read-only mode you can only create a local preview in this browser for 30 days.';
           }
+          clearSeoDraftView();
           updatePayFieldVisibility();
           syncEditorSections('basics');
           updateEditorSummaries();
@@ -2986,6 +3353,7 @@
 
       function openEditor(job) {
         state.editing = job ? { ...job } : null;
+        state.seoLoading = false;
         drawerTitle.textContent = job?.title || 'New job';
         if (state.readOnly) {
           drawerMeta.textContent = `Live jobs unavailable · ${friendlySourceLabel(state.fallbackSource)} · Changes cannot be saved from this page`;
@@ -3013,9 +3381,18 @@
         if (shareAiPolish) {
           shareAiPolish.checked = !state.readOnly;
         }
+        const cachedSeoDraft = job?.id ? state.seoDrafts.get(String(job.id).trim()) : null;
+        if (cachedSeoDraft) {
+          renderSeoDraft(cachedSeoDraft, cachedSeoDraft);
+        } else {
+          clearSeoDraftView();
+        }
         syncEditorSections('basics');
         updateEditorSummaries();
         openDrawer();
+        if (job?.id) {
+          requestSeoDraft({ mode: 'load', silent: !!cachedSeoDraft });
+        }
       }
 
       function readForm() {
@@ -3448,6 +3825,15 @@
           if (updated) {
             const existing = state.jobs.find((item) => item.id === updated.id);
             if (existing) Object.assign(existing, updated);
+            if (updated.id) {
+              requestSeoDraft({
+                mode: 'optimize',
+                job: updated,
+                silent: true,
+              }).catch((error) => {
+                console.warn('[jobs] background seo refresh failed', error);
+              });
+            }
             buildSections();
             buildTags();
             state.lastLoadedAt = new Date().toISOString();
@@ -3555,6 +3941,17 @@
                 : `Saved ${hydrated.title || 'job'}`,
               schemaAdjusted ? 'warn' : 'ok'
             );
+            requestSeoDraft({
+              mode: 'optimize',
+              job: hydrated,
+              silent: true,
+            }).then((draft) => {
+              if (draft && state.editing?.id === hydrated.id) {
+                renderSeoDraft(draft, draft);
+              }
+            }).catch((error) => {
+              console.warn('[jobs] background seo refresh failed', error);
+            });
           }
         } catch (e) {
           console.error('[jobs] save failed', e);
@@ -3916,6 +4313,18 @@
         btnRefreshShare.onclick = (e) => {
           e.preventDefault();
           refreshLocalShare();
+        };
+      }
+      if (btnSeoRefresh) {
+        btnSeoRefresh.onclick = (e) => {
+          e.preventDefault();
+          requestSeoDraft({ mode: 'optimize' });
+        };
+      }
+      if (btnSeoApply) {
+        btnSeoApply.onclick = (e) => {
+          e.preventDefault();
+          applySeoDraftToEditor();
         };
       }
       if (densityToggle) {

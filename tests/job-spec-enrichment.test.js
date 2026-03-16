@@ -118,6 +118,8 @@ test('enrichJobSpec returns structured share spec content from the Responses API
 
     assert.equal(requestBody.model, 'gpt-5-mini');
     assert.equal(requestBody.text.format.type, 'json_schema');
+    assert.match(requestBody.input[0].content[0].text, /expand shorthand into clearer candidate-facing wording/i);
+    assert.match(requestBody.input[1].content[0].text, /Prefer plain English over shorthand/i);
     assert.equal(result.ok, true);
     assert.equal(result.shareSpec.enhanced, true);
     assert.equal(result.shareSpec.source, 'openai');

@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
-  <script defer src="/admin/settings.js?v=1"></script>
+  <script defer src="/admin/settings.js?v=2"></script>
 
   <style>
     :root{
@@ -89,6 +89,46 @@
     .link-card span{color:var(--muted)}
     .link-card__eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--highlight)}
 
+    .settings-stack{display:grid;gap:18px}
+    .settings-card{padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.12);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,249,255,.98));display:grid;gap:16px}
+    .settings-card h3{margin:0;font-size:20px;line-height:1.2}
+    .settings-card p{margin:0}
+    .settings-grid{display:grid;gap:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .settings-field{display:grid;gap:6px}
+    .settings-field--full{grid-column:1/-1}
+    .settings-field label{font-weight:800;color:var(--ink)}
+    .settings-field input,
+    .settings-field select,
+    .settings-field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:#fff;color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+    .settings-field textarea{min-height:110px;resize:vertical}
+    .settings-field small{color:var(--muted);font-size:13px;line-height:1.55}
+    .settings-toggle{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;border:1px solid rgba(47,78,162,.12);background:rgba(63,102,199,.06)}
+    .settings-toggle input{margin-top:3px}
+    .settings-toggle strong{display:block;font-size:15px}
+    .settings-toggle span{display:block;color:var(--muted);font-size:13px;line-height:1.55}
+    .settings-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .status-list{display:grid;gap:10px}
+    .status-item{padding:12px 14px;border-radius:14px;border:1px solid rgba(47,78,162,.12);background:rgba(63,102,199,.05)}
+    .status-item strong{display:block;margin-bottom:4px}
+    .status-item p{color:var(--muted)}
+    .status-item[data-tone="ok"]{background:rgba(19,135,84,.09);border-color:rgba(19,135,84,.18)}
+    .status-item[data-tone="warn"]{background:rgba(243,187,47,.10);border-color:rgba(214,156,23,.22)}
+    .status-item[data-tone="danger"]{background:rgba(180,35,24,.08);border-color:rgba(180,35,24,.16)}
+    .settings-alert{padding:14px 16px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(63,102,199,.05);color:var(--ink)}
+    .settings-alert strong{display:block;margin-bottom:4px}
+    .settings-alert p{margin:0;color:var(--muted)}
+    .settings-alert[data-tone="warn"]{background:rgba(243,187,47,.12);border-color:rgba(214,156,23,.22)}
+    .settings-alert[data-tone="success"]{background:rgba(19,135,84,.1);border-color:rgba(19,135,84,.18)}
+    .settings-alert[data-tone="danger"]{background:rgba(180,35,24,.08);border-color:rgba(180,35,24,.18)}
+    .preview-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .preview-frame{border:1px solid rgba(47,78,162,.12);border-radius:20px;overflow:hidden;background:#eef2fb}
+    .preview-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(47,78,162,.12);background:#fff}
+    .preview-meta strong{font-size:14px}
+    .preview-meta span{font-size:13px;color:var(--muted)}
+    .preview-pane{padding:14px;background:#eef2fb}
+    .preview-pane iframe{width:100%;min-height:640px;border:0;background:#fff;border-radius:14px}
+    .settings-code{margin:0;padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(245,248,255,.96);font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;color:var(--muted);white-space:pre-wrap;overflow:auto}
+
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.22);box-shadow:0 18px 32px rgba(15,27,63,.2);font-weight:800}
 
@@ -100,6 +140,11 @@
       .wrap{padding:0 14px}
       .row{padding:12px 14px}
       .link-grid{grid-template-columns:1fr}
+      .settings-grid{grid-template-columns:1fr}
+      .settings-actions .btn,
+      .action-row .btn,
+      .hero-actions .btn,
+      .preview-toolbar .btn{width:100%}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
@@ -180,6 +225,354 @@
         </div>
         <p class="section-note muted">This browser-only history has been moved off the dashboard so it stays available without taking up the main landing-page layout.</p>
         <ul class="activity-list" id="activityList" aria-live="polite"></ul>
+      </section>
+    </section>
+
+    <section class="content-grid" aria-label="Candidate email settings">
+      <section class="panel" aria-labelledby="candidateEmailHeading">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Candidate account email</p>
+            <h2 id="candidateEmailHeading">SMTP and Supabase auth email settings</h2>
+          </div>
+          <p class="muted">Save the sender details, SMTP settings, and branded copy used for candidate verification and password reset emails. This is where you can finish the missing production email setup later without editing code.</p>
+        </div>
+        <div id="candidateEmailNotice" class="settings-alert" data-tone="warn" hidden></div>
+        <form id="candidateEmailSettingsForm" class="settings-stack" novalidate>
+          <section class="settings-card" aria-labelledby="candidateEmailSenderHeading">
+            <div>
+              <h3 id="candidateEmailSenderHeading">Sender and portal details</h3>
+              <p class="muted">These details shape the HMJ candidate account emails and the verification or recovery links inside them.</p>
+            </div>
+            <div class="settings-grid">
+              <div class="settings-field">
+                <label for="candidateEmailProvider">Email provider preset</label>
+                <select id="candidateEmailProvider" name="smtpProvider">
+                  <option value="godaddy_microsoft365">GoDaddy / Microsoft 365</option>
+                  <option value="custom">Custom SMTP</option>
+                  <option value="supabase_default">Supabase default mailer</option>
+                </select>
+                <small>GoDaddy domains often route candidate email through Microsoft 365. This preset fills the common host and port values.</small>
+              </div>
+              <div class="settings-field">
+                <label for="candidateSenderName">Sender name</label>
+                <input id="candidateSenderName" name="senderName" type="text" maxlength="160" placeholder="HMJ Global">
+              </div>
+              <div class="settings-field">
+                <label for="candidateSenderEmail">Sender email</label>
+                <input id="candidateSenderEmail" name="senderEmail" type="email" maxlength="320" placeholder="info@hmj-global.com">
+              </div>
+              <div class="settings-field">
+                <label for="candidateSupportEmail">Support email</label>
+                <input id="candidateSupportEmail" name="supportEmail" type="email" maxlength="320" placeholder="info@hmj-global.com">
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="candidateSiteUrl">Canonical candidate site URL</label>
+                <input id="candidateSiteUrl" name="siteUrl" type="url" maxlength="1000" placeholder="https://www.hmj-global.com">
+                <small>Use the public HMJ domain that should appear in candidate verification and password reset emails.</small>
+              </div>
+              <div class="settings-field">
+                <label for="candidateVerificationRedirect">Verification redirect URL</label>
+                <input id="candidateVerificationRedirect" name="verificationRedirectUrl" type="url" maxlength="1000">
+              </div>
+              <div class="settings-field">
+                <label for="candidateRecoveryRedirect">Password reset redirect URL</label>
+                <input id="candidateRecoveryRedirect" name="recoveryRedirectUrl" type="url" maxlength="1000">
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-card" aria-labelledby="candidateSmtpHeading">
+            <div>
+              <h3 id="candidateSmtpHeading">Custom SMTP</h3>
+              <p class="muted">Real public candidate email delivery requires custom SMTP. Supabase’s default mailer is suitable for testing only.</p>
+            </div>
+            <label class="settings-toggle" for="candidateCustomSmtpEnabled">
+              <input id="candidateCustomSmtpEnabled" name="customSmtpEnabled" type="checkbox" value="1">
+              <span>
+                <strong>Use custom SMTP for candidate account emails</strong>
+                <span>Turn this on once you have the real mailbox credentials for `info@hmj-global.com` or another HMJ sender account.</span>
+              </span>
+            </label>
+            <div class="settings-grid">
+              <div class="settings-field">
+                <label for="candidateSmtpHost">SMTP host</label>
+                <input id="candidateSmtpHost" name="smtpHost" type="text" maxlength="320" placeholder="smtp.office365.com">
+              </div>
+              <div class="settings-field">
+                <label for="candidateSmtpPort">SMTP port</label>
+                <input id="candidateSmtpPort" name="smtpPort" type="number" min="1" max="65535" placeholder="587">
+              </div>
+              <div class="settings-field">
+                <label for="candidateSmtpEncryption">Encryption</label>
+                <select id="candidateSmtpEncryption" name="smtpEncryption">
+                  <option value="starttls">STARTTLS</option>
+                  <option value="ssl">SSL / TLS</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+              <div class="settings-field">
+                <label for="candidateSmtpUser">SMTP username</label>
+                <input id="candidateSmtpUser" name="smtpUser" type="text" maxlength="320" placeholder="info@hmj-global.com">
+              </div>
+              <div class="settings-field">
+                <label for="candidateSmtpPassword">SMTP password or app password</label>
+                <input id="candidateSmtpPassword" name="smtpPassword" type="password" maxlength="4000" autocomplete="new-password" placeholder="Leave blank to keep the saved password">
+                <small id="candidateSmtpPasswordHint">If a password is already saved, leave this blank to keep it unchanged.</small>
+              </div>
+              <div class="settings-field">
+                <label for="candidateClearSmtpPassword">Stored password</label>
+                <label class="settings-toggle" for="candidateClearSmtpPassword">
+                  <input id="candidateClearSmtpPassword" name="clearSmtpPassword" type="checkbox" value="1">
+                  <span>
+                    <strong>Clear the saved SMTP password</strong>
+                    <span>Tick this only if you want to remove the existing SMTP password from HMJ admin settings.</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-card" aria-labelledby="candidateCopyHeading">
+            <div>
+              <h3 id="candidateCopyHeading">Email wording and branding</h3>
+              <p class="muted">This copy is used to build the HMJ-branded HTML templates for candidate signup, password reset, and email change confirmation.</p>
+            </div>
+            <div class="settings-grid">
+              <div class="settings-field">
+                <label for="candidateConfirmationSubject">Verification email subject</label>
+                <input id="candidateConfirmationSubject" name="confirmationSubject" type="text" maxlength="160">
+              </div>
+              <div class="settings-field">
+                <label for="candidateRecoverySubject">Password reset subject</label>
+                <input id="candidateRecoverySubject" name="recoverySubject" type="text" maxlength="160">
+              </div>
+              <div class="settings-field">
+                <label for="candidateEmailChangeSubject">Email change subject</label>
+                <input id="candidateEmailChangeSubject" name="emailChangeSubject" type="text" maxlength="160">
+              </div>
+              <div class="settings-field">
+                <label for="candidatePreheader">Preheader text</label>
+                <input id="candidatePreheader" name="preheader" type="text" maxlength="220">
+              </div>
+              <div class="settings-field">
+                <label for="candidateConfirmationHeading">Verification heading</label>
+                <input id="candidateConfirmationHeading" name="confirmationHeading" type="text" maxlength="160">
+              </div>
+              <div class="settings-field">
+                <label for="candidateRecoveryHeading">Password reset heading</label>
+                <input id="candidateRecoveryHeading" name="recoveryHeading" type="text" maxlength="160">
+              </div>
+              <div class="settings-field">
+                <label for="candidateEmailChangeHeading">Email change heading</label>
+                <input id="candidateEmailChangeHeading" name="emailChangeHeading" type="text" maxlength="160">
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="candidateIntroCopy">Verification email intro</label>
+                <textarea id="candidateIntroCopy" name="introCopy" maxlength="320"></textarea>
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="candidateRecoveryCopy">Password reset intro</label>
+                <textarea id="candidateRecoveryCopy" name="recoveryCopy" maxlength="320"></textarea>
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="candidateHelpCopy">Help text</label>
+                <textarea id="candidateHelpCopy" name="helpCopy" maxlength="320"></textarea>
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="candidateFooterTagline">Footer tagline</label>
+                <input id="candidateFooterTagline" name="footerTagline" type="text" maxlength="220">
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn primary" id="btnSaveCandidateEmailSettings" type="submit">Save candidate email settings</button>
+              <button class="btn ghost" id="btnApplyCandidateEmailSettings" type="button">Apply to Supabase Auth</button>
+            </div>
+          </section>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="candidateEmailStatusHeading">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Candidate email status</p>
+            <h2 id="candidateEmailStatusHeading">Readiness and apply status</h2>
+          </div>
+          <p class="muted">This panel shows whether candidate verification and recovery email are ready for real-world use, not just internal testing.</p>
+        </div>
+        <div class="settings-stack">
+          <div class="settings-alert" id="candidateEmailStatusSummary" data-tone="warn">
+            <strong>Loading candidate email status…</strong>
+            <p>Checking the saved configuration now.</p>
+          </div>
+          <div class="status-list" id="candidateEmailStatusList" aria-live="polite"></div>
+          <div class="settings-card">
+            <h3>Supabase apply payload preview</h3>
+            <p class="muted">This is the redacted auth-config payload generated from the form. SMTP passwords are never shown back in the browser.</p>
+            <pre class="settings-code" id="candidateEmailPatchPreview">Loading preview…</pre>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel" aria-labelledby="candidateEmailPreviewHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Candidate email preview</p>
+          <h2 id="candidateEmailPreviewHeading">HMJ email template preview</h2>
+        </div>
+        <p class="muted">Preview the branded verification and password reset emails before applying them to Supabase Auth.</p>
+      </div>
+      <div class="preview-toolbar">
+        <button class="btn ghost small" type="button" data-email-preview="confirmation">Verification email</button>
+        <button class="btn ghost small" type="button" data-email-preview="recovery">Password reset email</button>
+        <button class="btn ghost small" type="button" data-email-preview="email_change">Email change email</button>
+      </div>
+      <div class="preview-frame">
+        <div class="preview-meta">
+          <strong id="candidateEmailPreviewTitle">Verification email</strong>
+          <span id="candidateEmailPreviewMeta">Live preview generated from the saved settings.</span>
+        </div>
+        <div class="preview-pane">
+          <iframe id="candidateEmailPreviewFrame" title="Candidate email preview"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-grid" id="taskCalendarSettings" aria-label="Team Tasks calendar settings">
+      <section class="panel" aria-labelledby="taskCalendarHeading">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Team Tasks calendar sync</p>
+            <h2 id="taskCalendarHeading">Outlook and Teams diary setup</h2>
+          </div>
+          <p class="muted">Connect Microsoft 365 calendars so Team Tasks can show live diary commitments next to due dates. Teams meetings live inside Outlook calendars, so this one setup covers both.</p>
+        </div>
+        <div id="taskCalendarNotice" class="settings-alert" data-tone="warn" hidden></div>
+        <form id="taskCalendarSettingsForm" class="settings-stack" novalidate>
+          <section class="settings-card" aria-labelledby="taskCalendarAppHeading">
+            <div>
+              <h3 id="taskCalendarAppHeading">Microsoft app details</h3>
+              <p class="muted">Register one Microsoft Entra application for HMJ, then save the app details here. Individual admins can connect their own calendars afterwards from Team Tasks.</p>
+            </div>
+            <label class="settings-toggle" for="taskCalendarEnabled">
+              <input id="taskCalendarEnabled" name="enabled" type="checkbox" value="1">
+              <span>
+                <strong>Enable Outlook / Teams calendar sync for Team Tasks</strong>
+                <span>Turn this on only after the Microsoft app is ready and the callback URL below has been added inside Entra.</span>
+              </span>
+            </label>
+            <div class="settings-grid">
+              <div class="settings-field">
+                <label for="taskCalendarTenantId">Tenant ID</label>
+                <input id="taskCalendarTenantId" name="tenantId" type="text" maxlength="160" placeholder="common">
+                <small>Use `common` for mixed Microsoft accounts, or your tenant ID if you want to lock this to one organisation.</small>
+              </div>
+              <div class="settings-field">
+                <label for="taskCalendarClientId">Application client ID</label>
+                <input id="taskCalendarClientId" name="clientId" type="text" maxlength="240" placeholder="Microsoft application client ID">
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="taskCalendarClientSecret">Client secret</label>
+                <input id="taskCalendarClientSecret" name="clientSecret" type="password" maxlength="4000" autocomplete="new-password" placeholder="Leave blank to keep the saved secret">
+                <small id="taskCalendarClientSecretHint">If a client secret is already saved, leave this blank to keep it unchanged.</small>
+              </div>
+              <div class="settings-field">
+                <label for="taskCalendarClearClientSecret">Stored secret</label>
+                <label class="settings-toggle" for="taskCalendarClearClientSecret">
+                  <input id="taskCalendarClearClientSecret" name="clearClientSecret" type="checkbox" value="1">
+                  <span>
+                    <strong>Clear the saved Microsoft client secret</strong>
+                    <span>Tick this only if you are deliberately replacing or removing the current secret.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="taskCalendarCallbackUrl">OAuth callback URL</label>
+                <input id="taskCalendarCallbackUrl" type="url" readonly>
+                <small>Add this exact URL as a Web redirect URI inside the Microsoft Entra app registration.</small>
+              </div>
+              <div class="settings-field settings-field--full">
+                <label for="taskCalendarScopes">Delegated Graph scopes</label>
+                <input id="taskCalendarScopes" type="text" readonly>
+                <small>Recommended delegated permissions: `User.Read`, `Calendars.Read`, `offline_access`, `openid`, and `profile`.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-card" aria-labelledby="taskCalendarBehaviourHeading">
+            <div>
+              <h3 id="taskCalendarBehaviourHeading">Planner behaviour</h3>
+              <p class="muted">Control how Microsoft diary data appears inside the Team Tasks weekly planner.</p>
+            </div>
+            <div class="settings-grid">
+              <div class="settings-field settings-field--full">
+                <label class="settings-toggle" for="taskCalendarShowExternalEvents">
+                  <input id="taskCalendarShowExternalEvents" name="showExternalEvents" type="checkbox" value="1">
+                  <span>
+                    <strong>Show Outlook / Teams events in the Team Tasks weekly planner</strong>
+                    <span>Diary blocks are displayed beside due tasks so managers can see workload clashes at a glance.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="settings-field settings-field--full">
+                <label class="settings-toggle" for="taskCalendarShowTeamConnections">
+                  <input id="taskCalendarShowTeamConnections" name="showTeamConnections" type="checkbox" value="1">
+                  <span>
+                    <strong>Show connected team members in the Team Tasks planner</strong>
+                    <span>Use this to surface which people have linked their Microsoft calendars already.</span>
+                  </span>
+                </label>
+              </div>
+              <div class="settings-field settings-field--full">
+                <label class="settings-toggle" for="taskCalendarSyncEnabled">
+                  <input id="taskCalendarSyncEnabled" name="syncEnabled" type="checkbox" value="1">
+                  <span>
+                    <strong>Allow live Microsoft calendar pulls</strong>
+                    <span>If you switch this off, existing connections stay stored but Team Tasks stops fetching live diary events.</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn primary" id="btnSaveTaskCalendarSettings" type="submit">Save calendar setup</button>
+              <a class="btn ghost" href="/admin/team-tasks.html">Open Team Tasks</a>
+              <button class="btn soft" id="btnTaskCalendarConnect" type="button">Connect my Outlook / Teams calendar</button>
+              <button class="btn soft" id="btnTaskCalendarDisconnect" type="button">Disconnect my calendar</button>
+            </div>
+          </section>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="taskCalendarStatusHeading">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Setup wizard</p>
+            <h2 id="taskCalendarStatusHeading">Readiness and connection status</h2>
+          </div>
+          <p class="muted">This covers both the global Microsoft app setup and your own personal calendar connection as an admin user.</p>
+        </div>
+        <div class="settings-stack">
+          <div class="settings-alert" id="taskCalendarStatusSummary" data-tone="warn">
+            <strong>Loading Team Tasks calendar status…</strong>
+            <p>Checking the saved Microsoft setup now.</p>
+          </div>
+          <div class="status-list" id="taskCalendarStatusList" aria-live="polite"></div>
+          <div class="settings-card">
+            <h3>Setup steps</h3>
+            <ol class="muted" style="margin:0;padding-left:18px;display:grid;gap:10px">
+              <li>Create or open an app registration in Microsoft Entra.</li>
+              <li>Add the callback URL shown on this page as a Web redirect URI.</li>
+              <li>Add delegated permissions for `User.Read`, `Calendars.Read`, `offline_access`, `openid`, and `profile`.</li>
+              <li>Create a client secret, then save the tenant ID, client ID, and client secret here.</li>
+              <li>Enable calendar sync, then connect your own Outlook / Teams diary from Team Tasks or this page.</li>
+            </ol>
+          </div>
+          <div class="settings-card">
+            <h3>What the planner will show</h3>
+            <p class="muted" id="taskCalendarCurrentConnection">Loading current connection details…</p>
+          </div>
+        </div>
       </section>
     </section>
 

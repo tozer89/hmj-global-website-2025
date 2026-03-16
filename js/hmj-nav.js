@@ -102,7 +102,69 @@
     }
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
+  const normalizePath = (value) => {
+    const text = String(value || '').trim();
+    if (!text || text.includes('://') || text.startsWith('mailto:') || text.startsWith('tel:')) {
+      return '';
+    }
+    try {
+      const url = new URL(text, window.location.origin);
+      let path = String(url.pathname || '/').replace(/\/+$/, '') || '/';
+      if (path === '/') return '/index.html';
+      return path.toLowerCase();
+    } catch {
+      return '';
+    }
+  };
+
+  const bindMobileMenu = () => {
+    const burger = document.querySelector('.hmj-burger');
+    const menu = document.getElementById('hmj-menu');
+    const scrim = document.querySelector('.hmj-scrim');
+    if (!burger || !menu || !scrim || burger.dataset.hmjNavBound === 'true') return;
+
+    burger.dataset.hmjNavBound = 'true';
+    const currentPath = normalizePath(window.location.pathname || '/');
+
+    menu.querySelectorAll('a[href]').forEach((link) => {
+      const targetPath = normalizePath(link.getAttribute('href') || '');
+      if (targetPath && targetPath === currentPath) {
+        link.setAttribute('aria-current', 'page');
+      }
+    });
+
+    const openMenu = (open) => {
+      burger.setAttribute('aria-expanded', String(!!open));
+      menu.classList.toggle('open', !!open);
+      scrim.hidden = !open;
+      document.documentElement.style.overflow = open ? 'hidden' : '';
+      if (document.body) {
+        document.body.style.overflow = open ? 'hidden' : '';
+      }
+    };
+
+    burger.addEventListener('click', () => {
+      openMenu(burger.getAttribute('aria-expanded') !== 'true');
+    });
+
+    scrim.addEventListener('click', () => openMenu(false));
+
+    menu.addEventListener('click', (event) => {
+      const link = event.target.closest('a[href]');
+      if (!link) return;
+      requestAnimationFrame(() => openMenu(false));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') openMenu(false);
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 900) openMenu(false);
+    });
+  };
+
+  const init = () => {
     const adminLink = document.getElementById('nav-admin');
     const timesheetsLink = document.getElementById('nav-timesheets');
 
@@ -128,7 +190,14 @@
     });
 
     attachAndRender(ensureIdentity());
+    bindMobileMenu();
     ensureAnalyticsAssets();
     ensureChatbotAssets();
-  });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
 })();

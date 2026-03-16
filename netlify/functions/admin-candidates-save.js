@@ -1,6 +1,12 @@
 // netlify/functions/admin-candidates-save.js
 const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
+const {
+  ensureCandidateFromAuthUser,
+  resolvePortalAuthUser,
+  summarisePortalAuthUser,
+  syncPortalAuthUserFromCandidate,
+} = require('./_candidate-account-admin.js');
 
 const baseHandler = async (event, context) => {
   try {
@@ -82,7 +88,8 @@ const baseHandler = async (event, context) => {
       terms_ok: !!body.terms_ok,
       right_to_work: toBool(body.right_to_work ?? body.rtw_ok),
       role: trim(body.role),
-      start_date: trim(body.start_date),
+      availability_date: trim(body.availability_on ?? body.availability_date),
+      start_date: trim(body.start_date ?? body.availability_on ?? body.availability_date),
       end_date: trim(body.end_date),
       timesheet_status: trim(body.timesheet_status),
       tax_id: trim(body.tax_id),
@@ -118,13 +125,13 @@ const baseHandler = async (event, context) => {
           .from('candidates')
           .update(copy)
           .eq('id', id)
-          .select('id')
+          .select('*')
           .maybeSingle();
       }
       return supabase
         .from('candidates')
         .insert(copy)
-        .select('id')
+        .select('*')
         .single();
     };
 
@@ -139,7 +146,8 @@ const baseHandler = async (event, context) => {
       ({ data: result, error } = await doUpsert(working));
       if (!error) break;
 
-      const match = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(error.message || '');
+      const match = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(error.message || '')
+        || /Could not find the '([a-zA-Z0-9_]+)' column of '[^']+' in the schema cache/i.exec(error.message || '');
       if (match) {
         const missingColumn = match[1];
         if (missingColumn && missingColumn in working && !dropped.has(missingColumn)) {
@@ -155,18 +163,53 @@ const baseHandler = async (event, context) => {
 
     if (error) throw coded(500, error.message);
 
+    let savedCandidate = result;
+    let portalAuth = null;
+    let warning = '';
+
+    try {
+      let authUser = await resolvePortalAuthUser(supabase, savedCandidate, rec.email);
+      if (authUser && !savedCandidate?.auth_user_id) {
+        const repaired = await ensureCandidateFromAuthUser(supabase, authUser, savedCandidate);
+        savedCandidate = repaired?.candidate || savedCandidate;
+      }
+      authUser = await resolvePortalAuthUser(supabase, savedCandidate, rec.email);
+      if (authUser) {
+        authUser = await syncPortalAuthUserFromCandidate(
+          supabase,
+          savedCandidate,
+          authUser,
+          { syncEmail: Object.prototype.hasOwnProperty.call(body, 'email') }
+        );
+        portalAuth = summarisePortalAuthUser(authUser);
+      }
+    } catch (portalError) {
+      warning = portalError?.message || 'Candidate record saved, but the linked portal account could not be updated.';
+      console.warn('[candidates] portal auth sync failed (%s)', warning);
+    }
+
     // Optional: audit trail
     await supabase.from('admin_audit_logs').insert({
       actor_email: user.email,
       actor_id: user.sub || user.id || null,
       action: rec.id ? 'candidate.update' : 'candidate.insert',
       target_type: 'candidate',
-      target_id: String(result.id),
-      meta: { ...working, id: result.id },
+      target_id: String(savedCandidate.id),
+      meta: { ...working, id: savedCandidate.id },
     });
 
     const took_ms = Date.now() - t0;
-    return { statusCode: 200, body: JSON.stringify({ id: result.id, ok: true, took_ms }) };
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        id: savedCandidate.id,
+        ok: true,
+        took_ms,
+        candidate: savedCandidate,
+        portal_auth: portalAuth,
+        warning: warning || null,
+      }),
+    };
   } catch (e) {
     const status = e.code || 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message || 'Error', readOnly: status === 503 }) };

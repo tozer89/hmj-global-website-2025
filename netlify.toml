@@ -1,5 +1,5 @@
 [build]
-  publish = "/"
+  publish = "."
   functions = "netlify/functions"
 
 [build.environment]
@@ -45,6 +45,21 @@
 [[redirects]]
   from = "/apply"
   to = "/contact.html"
+  status = 200
+
+[[redirects]]
+  from = "/client-contact"
+  to = "/client-contact.html"
+  status = 200
+
+[[redirects]]
+  from = "/timesheets"
+  to = "/timesheets.html"
+  status = 200
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
   status = 200
 
 # Keep /admin/ public as the single sign-in entry, but require an admin
@@ -222,10 +237,10 @@
   functions = "netlify/functions"
 
 [context.deploy-preview]
-  functions = "admin-v2/functions"
+  functions = "netlify/functions"
 
 [context.branch-deploy]
-  functions = "admin-v2/functions"
+  functions = "netlify/functions"
 
 [context.dev]
-  functions = "admin-v2/functions"
+  functions = "netlify/functions"

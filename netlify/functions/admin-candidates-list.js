@@ -4,6 +4,7 @@
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
+const { syncPortalAuthUsersToCandidates } = require('./_candidate-account-admin.js');
 
 // Small helper to coalesce falsy/empty strings to null
 const nz = (s) => (s === undefined || s === null || String(s).trim() === '' ? null : s);
@@ -164,6 +165,7 @@ const baseHandler = async (event, context) => {
     if (!err) return false;
     const msg = String(err.message || err);
     if (/column .+ does not exist/i.test(msg)) return true;
+    if (/Could not find the '.+' column of '.+' in the schema cache/i.test(msg)) return true;
     if (/relation .+ does not exist/i.test(msg)) return true;
     if (/permission denied/i.test(msg)) return true;
     if (/violates row-level security/i.test(msg)) return true;
@@ -209,28 +211,30 @@ const baseHandler = async (event, context) => {
     return serveStatic(supabaseError?.message || 'supabase_unavailable');
   }
 
-  let query = supabase
-    .from('candidates')
-    .select('*', { count: 'exact' });
-
-  // Filters
-  const orFilter = buildOrFilter({ q: nz(q), emailHas: nz(emailHas), job: nz(job) });
-  if (orFilter) query = query.or(orFilter);
-
-  if (nz(type))   query = query.eq('pay_type', type);
-  if (nz(status)) query = query.eq('status', status);
-
-  // Sorting
   const sortable = new Set(['id', 'created_at', 'updated_at', 'first_name', 'last_name', 'email', 'status', 'pay_type']);
   const sortKey = sortable.has(sort?.key) ? sort.key : 'id';
   const sortAsc = String(sort?.dir || '').toLowerCase() !== 'desc';
-  query = query.order(sortKey, { ascending: sortAsc, nullsFirst: true });
 
-  // Pagination
-  query = query.range(from, to);
+  function buildQuery() {
+    let query = supabase
+      .from('candidates')
+      .select('*', { count: 'exact' });
+
+    const orFilter = buildOrFilter({ q: nz(q), emailHas: nz(emailHas), job: nz(job) });
+    if (orFilter) query = query.or(orFilter);
+
+    if (nz(type)) query = query.eq('pay_type', type);
+    if (nz(status)) query = query.eq('status', status);
+
+    return query
+      .order(sortKey, { ascending: sortAsc, nullsFirst: true })
+      .range(from, to);
+  }
+
+  let query = buildQuery();
 
   // Execute
-  const { data: rows, count, error } = await query;
+  let { data: rows, count, error } = await query;
 
   if (error) {
     console.warn('[candidates] supabase query failed — falling back to static data', error.message || error);
@@ -238,6 +242,21 @@ const baseHandler = async (event, context) => {
       console.warn('[candidates] forcing fallback for unexpected error');
     }
     return serveStatic(error.message);
+  }
+
+  if ((!rows || !rows.length) && Number(count || 0) === 0 && from === 0) {
+    try {
+      const reconciled = await syncPortalAuthUsersToCandidates(supabase, { maxPages: 10, perPage: 100 });
+      if (reconciled.length) {
+        const rerun = await buildQuery();
+        if (!rerun.error) {
+          rows = rerun.data;
+          count = rerun.count;
+        }
+      }
+    } catch (repairError) {
+      console.warn('[candidates] auth->candidate reconciliation failed', repairError?.message || repairError);
+    }
   }
 
   // Compute meta

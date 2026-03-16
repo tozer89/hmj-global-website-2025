@@ -613,6 +613,90 @@ create index if not exists job_specs_job_id_idx
 create index if not exists job_specs_expires_at_idx
   on public.job_specs (expires_at);
 
+create table if not exists public.job_seo_suggestions (
+  job_id text primary key references public.jobs(id) on delete cascade,
+  optimized_title text,
+  meta_title text,
+  meta_description text,
+  slug_hint text,
+  sector_focus text,
+  optimized_overview text,
+  optimized_responsibilities jsonb not null default '[]'::jsonb,
+  optimized_requirements jsonb not null default '[]'::jsonb,
+  schema_missing_fields jsonb not null default '[]'::jsonb,
+  source text not null default 'heuristic',
+  model text,
+  payload jsonb not null default '{}'::jsonb,
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table if exists public.job_seo_suggestions
+  add column if not exists optimized_title text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists meta_title text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists meta_description text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists slug_hint text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists sector_focus text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists optimized_overview text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists optimized_responsibilities jsonb;
+alter table if exists public.job_seo_suggestions
+  add column if not exists optimized_requirements jsonb;
+alter table if exists public.job_seo_suggestions
+  add column if not exists schema_missing_fields jsonb;
+alter table if exists public.job_seo_suggestions
+  add column if not exists source text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists model text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists payload jsonb;
+alter table if exists public.job_seo_suggestions
+  add column if not exists last_error text;
+alter table if exists public.job_seo_suggestions
+  add column if not exists created_at timestamptz;
+alter table if exists public.job_seo_suggestions
+  add column if not exists updated_at timestamptz;
+
+update public.job_seo_suggestions
+set
+  optimized_responsibilities = coalesce(optimized_responsibilities, '[]'::jsonb),
+  optimized_requirements = coalesce(optimized_requirements, '[]'::jsonb),
+  schema_missing_fields = coalesce(schema_missing_fields, '[]'::jsonb),
+  source = coalesce(nullif(source, ''), 'heuristic'),
+  payload = coalesce(payload, '{}'::jsonb),
+  created_at = coalesce(created_at, now()),
+  updated_at = coalesce(updated_at, now());
+
+do $$
+begin
+  if to_regclass('public.job_seo_suggestions') is not null
+     and not exists (
+       select 1
+       from pg_trigger
+       where tgrelid = to_regclass('public.job_seo_suggestions')
+         and tgname = 'job_seo_suggestions_set_updated_at'
+     )
+  then
+    create trigger job_seo_suggestions_set_updated_at
+      before update on public.job_seo_suggestions
+      for each row
+      execute function public.set_row_updated_at();
+  end if;
+end
+$$;
+
+create index if not exists job_seo_suggestions_source_idx
+  on public.job_seo_suggestions (source);
+
+create index if not exists job_seo_suggestions_updated_idx
+  on public.job_seo_suggestions (updated_at desc);
+
 -- -----------------------------------------------------------------------------
 -- Candidate matcher
 -- -----------------------------------------------------------------------------

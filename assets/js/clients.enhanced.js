@@ -525,7 +525,8 @@
     const burger = doc.querySelector('.hmj-burger');
     const menu = doc.getElementById('hmj-menu');
     const scrim = doc.querySelector('.hmj-scrim');
-    if (!burger || !menu || !scrim) return;
+    if (!burger || !menu || !scrim || burger.dataset.hmjNavBound === 'true') return;
+    burger.dataset.hmjNavBound = 'true';
 
     const close = () => {
       burger.setAttribute('aria-expanded', 'false');

@@ -460,6 +460,43 @@ body:not(.public-page):not(.clients-body) .status-shell {
     padding-inline: 14px;
   }
 
+  :is(body.public-page, .clients-body, .about-page) .hmj-burger {
+    display: inline-flex !important;
+  }
+
+  :is(body.public-page, .clients-body, .about-page) .hmj-menu {
+    position: fixed;
+    right: 16px;
+    left: 16px;
+    top: 70px;
+    display: grid;
+    gap: 6px;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    background: rgba(15, 19, 34, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+    z-index: 1002;
+    margin-left: 0;
+  }
+
+  :is(body.public-page, .clients-body, .about-page) .hmj-menu.open,
+  :is(body.public-page, .clients-body, .about-page) .hmj-menu.is-open {
+    max-height: 70vh;
+    padding: 12px;
+  }
+
+  :is(body.public-page, .clients-body, .about-page) .hmj-menu a {
+    width: 100%;
+    padding: 14px 12px;
+  }
+
+  :is(body.public-page, .clients-body, .about-page) .hmj-scrim {
+    z-index: 1000;
+  }
+
   body.public-page .entry-hero,
   .clients-body .client-hero,
   .about-page .about-hero {
@@ -611,8 +648,9 @@ body:not(.public-page):not(.clients-body) .status-shell {
 
   body.public-page .entry-hero__chip,
   body.public-page .public-pill {
-    padding: 6px 10px;
-    font-size: 0.77rem;
+    padding: 7px 11px;
+    font-size: 0.82rem;
+    line-height: 1.3;
   }
 
   body.public-page .entry-hero__card,
@@ -709,8 +747,8 @@ body:not(.public-page):not(.clients-body) .status-shell {
 
   body.public-page.jobs-page .entry-hero--jobs .entry-hero__chip {
     flex: 0 0 auto;
-    padding: 5px 8px;
-    font-size: 0.72rem;
+    padding: 6px 9px;
+    font-size: 0.79rem;
   }
 
   body.public-page.jobs-page .entry-hero--jobs .entry-hero__meta::-webkit-scrollbar {
@@ -822,7 +860,8 @@ body:not(.public-page):not(.clients-body) .status-shell {
 
   .announce .badge {
     padding: 2px 6px;
-    font-size: 0.68rem;
+    font-size: 0.76rem;
+    line-height: 1.2;
   }
 
   .hmj-logo img {
@@ -851,7 +890,8 @@ body:not(.public-page):not(.clients-body) .status-shell {
 
   body.public-page .entry-hero__chip,
   body.public-page .public-pill {
-    font-size: 0.73rem;
+    font-size: 0.79rem;
+    line-height: 1.3;
   }
 
   .home-page .section,

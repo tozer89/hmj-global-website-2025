@@ -135,8 +135,11 @@ async function readSchemaStatus(supabase) {
     const checks = await Promise.all([
       supabase.from('task_items').select('id,created_by,created_by_email,assigned_to,assigned_to_email,updated_by_email,linked_module,linked_url,tags').limit(1),
       supabase.from('task_comments').select('id,created_by,created_by_email,updated_by_email').limit(1),
+      supabase.from('task_comment_mentions').select('id,comment_id,mentioned_user_id,mentioned_email,notification_sent_at').limit(1),
+      supabase.from('task_attachments').select('id,task_id,file_name,mime_type,file_size_bytes,storage_bucket,storage_path').limit(1),
       supabase.from('task_reminders').select('id,recipient_user_id,recipient_email,created_by_email,updated_by_email,reminder_mode').limit(1),
       supabase.from('task_audit_log').select('id,entity_type,entity_id,source_action').limit(1),
+      supabase.storage.listBuckets(),
     ]);
 
     const firstError = checks.find((result) => result?.error)?.error || null;
@@ -144,6 +147,14 @@ async function readSchemaStatus(supabase) {
       return {
         ready: false,
         message: firstError.message || 'Team Tasks schema is not ready yet.',
+      };
+    }
+    const buckets = Array.isArray(checks[6]?.data) ? checks[6].data : [];
+    const hasTaskFilesBucket = buckets.some((bucket) => bucket?.id === 'task-files');
+    if (!hasTaskFilesBucket) {
+      return {
+        ready: false,
+        message: 'The Team Tasks file storage bucket is missing. Apply the latest Team Tasks SQL before using attachments.',
       };
     }
     return { ready: true, message: '' };

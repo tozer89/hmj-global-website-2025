@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js?v=3"></script>
   <script defer src="/admin/common.js?v=34"></script>
-  <script defer src="/admin/team-tasks.js?v=1"></script>
+  <script defer src="/admin/team-tasks.js?v=2"></script>
 
   <style>
     :root{
@@ -205,6 +205,34 @@
     .settings-card h3{margin:0;font-size:20px}
     .settings-actions{display:flex;gap:10px;flex-wrap:wrap}
 
+    .planner-shell{display:grid;gap:16px;padding:18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,250,255,.96));border:1px solid rgba(36,72,158,.10);box-shadow:var(--shadow-soft)}
+    .planner-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+    .planner-head h3{margin:4px 0 0;font-size:24px;line-height:1.08}
+    .planner-head p{margin:0}
+    .planner-actions,.planner-nav,.planner-legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .planner-nav strong{font-size:14px;color:var(--highlight)}
+    .planner-status{padding:12px 14px;border-radius:16px;background:rgba(36,72,158,.06);border:1px solid rgba(36,72,158,.12);color:var(--muted)}
+    .planner-scroll{overflow:auto;padding-bottom:4px}
+    .planner-grid{display:grid;grid-template-columns:repeat(7,minmax(200px,1fr));gap:12px;min-width:1420px}
+    .planner-day{display:grid;grid-template-rows:auto 1fr;gap:10px;padding:14px;border-radius:20px;background:#fff;border:1px solid rgba(36,72,158,.10);min-height:420px}
+    .planner-day.is-today{border-color:rgba(36,86,182,.28);box-shadow:0 12px 24px rgba(36,86,182,.10)}
+    .planner-day__head{display:grid;gap:4px}
+    .planner-day__eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .planner-day__date{font-size:20px;font-weight:800;line-height:1.1}
+    .planner-day__items{display:grid;gap:8px;align-content:start}
+    .planner-item{display:grid;gap:8px;padding:12px;border-radius:16px;background:var(--panel-strong);border:1px solid rgba(36,72,158,.10);border-left:5px solid var(--owner-color,var(--highlight))}
+    .planner-item--task{background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(239,245,255,.96))}
+    .planner-item--event{background:linear-gradient(180deg,rgba(255,250,238,.98),rgba(255,255,255,.98))}
+    .planner-item__kicker{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .planner-item__title{font-weight:800;font-size:15px;line-height:1.28}
+    .planner-item__meta{color:var(--muted);font-size:13px;line-height:1.45}
+    .planner-item__owner{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .planner-dot{display:inline-block;width:12px;height:12px;border-radius:999px;background:var(--owner-color,var(--highlight));border:1px solid rgba(16,32,74,.12)}
+    .planner-empty{padding:14px;border-radius:16px;border:1px dashed rgba(36,72,158,.18);background:rgba(255,255,255,.8);color:var(--muted);font-size:13px}
+    .planner-unscheduled{display:grid;gap:10px}
+    .planner-unscheduled__list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .planner-link{color:var(--highlight);font-weight:800}
+
     .drawer-shell{position:fixed;inset:0;display:none;z-index:320}
     .drawer-shell.is-open{display:block}
     .drawer-backdrop{position:absolute;inset:0;background:rgba(8,20,48,.42);backdrop-filter:blur(4px)}
@@ -227,6 +255,16 @@
     .comment__meta{color:var(--muted);font-size:13px}
     .comment__body{margin:0;white-space:pre-wrap;color:var(--ink)}
     .comment__actions{display:flex;gap:8px;flex-wrap:wrap}
+    .comment__mentions,.attachment-list{display:flex;gap:8px;flex-wrap:wrap}
+    .comment__mentions .badge{background:#eef4ff}
+    .attachment-list{flex-direction:column}
+    .attachment{display:grid;gap:10px;padding:14px;border-radius:16px;background:#fff;border:1px solid rgba(36,72,158,.10)}
+    .attachment__top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .attachment__name{font-weight:800;word-break:break-word}
+    .attachment__meta{color:var(--muted);font-size:13px}
+    .attachment__actions{display:flex;gap:8px;flex-wrap:wrap}
+    .upload-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .upload-row input[type="file"]{flex:1;min-width:min(280px,100%)}
 
     .multi-select{min-height:140px}
     .stack{display:grid;gap:12px}
@@ -240,7 +278,7 @@
     @media (max-width:1240px){
       .hero{grid-template-columns:1fr}
       .hero-card{position:relative;top:auto}
-      .metrics,.board,.mine-grid,.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .metrics,.board,.mine-grid,.settings-grid,.planner-unscheduled__list{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
 
     @media (max-width:960px){
@@ -255,11 +293,11 @@
     @media (max-width:760px){
       .wrap{padding:0 14px}
       .row{padding:12px 14px}
-      .metrics,.board,.mine-grid,.settings-grid,.task-card__side{grid-template-columns:1fr}
+      .metrics,.board,.mine-grid,.settings-grid,.task-card__side,.planner-unscheduled__list{grid-template-columns:1fr}
       .hero-copy{padding:20px}
       .drawer{width:100vw}
-      .toolbar-selects,.hero-actions,.drawer-actions,.drawer-actions__group{width:100%}
-      .toolbar-selects select,.hero-actions .btn,.drawer-actions .btn,.drawer-actions__group .btn{width:100%}
+      .toolbar-selects,.hero-actions,.drawer-actions,.drawer-actions__group,.planner-actions,.planner-nav{width:100%}
+      .toolbar-selects select,.hero-actions .btn,.drawer-actions .btn,.drawer-actions__group .btn,.planner-actions .btn,.planner-nav .btn{width:100%}
       .search{min-width:0}
     }
   </style>
@@ -459,6 +497,38 @@
       </div>
 
       <section class="tab-panel" id="tabTasks" role="tabpanel" aria-labelledby="tabBtnTasks">
+        <section class="planner-shell" aria-labelledby="weeklyPlannerHeading">
+          <div class="planner-head">
+            <div>
+              <p class="eyebrow">Weekly planner</p>
+              <h3 id="weeklyPlannerHeading">Task and diary week view</h3>
+              <p class="muted">See due work and connected Outlook / Teams diary events side by side. Teams meetings are pulled from connected Outlook calendars.</p>
+            </div>
+            <div class="planner-actions">
+              <button class="btn soft small" id="plannerPrevWeekBtn" type="button">Previous week</button>
+              <button class="btn secondary small" id="plannerTodayBtn" type="button">This week</button>
+              <button class="btn soft small" id="plannerNextWeekBtn" type="button">Next week</button>
+              <a class="btn ghost small" id="plannerSetupLink" href="/admin/settings.html#taskCalendarSettings">Calendar setup</a>
+              <button class="btn primary small" id="plannerConnectBtn" type="button">Connect my calendar</button>
+            </div>
+          </div>
+          <div class="planner-nav">
+            <strong id="plannerWeekLabel">Loading week…</strong>
+            <span class="badge" id="plannerConnectionBadge">Checking connections…</span>
+          </div>
+          <div class="planner-status" id="plannerStatusNote">Loading Team Tasks weekly planner…</div>
+          <div class="planner-legend" id="plannerLegend" aria-label="Planner colour legend"></div>
+          <div class="planner-scroll">
+            <div class="planner-grid" id="plannerGrid"></div>
+          </div>
+          <section class="planner-unscheduled" aria-labelledby="plannerUnscheduledHeading">
+            <div>
+              <p class="eyebrow">Unscheduled</p>
+              <h3 id="plannerUnscheduledHeading" style="margin:4px 0 0;font-size:20px;line-height:1.08">Tasks without a due date</h3>
+            </div>
+            <div class="planner-unscheduled__list" id="plannerUnscheduledList"></div>
+          </section>
+        </section>
         <div class="task-list" id="tasksList"></div>
         <div class="empty" id="tasksEmpty" hidden>
           <strong>No tasks match these filters.</strong>
@@ -526,9 +596,30 @@
                 </select>
               </div>
               <div class="field field--wide">
+                <label for="settingActivityRecipients">Comment/file notification recipients</label>
+                <select id="settingActivityRecipients">
+                  <option value="assignee_creator_watchers">Assignee + creator + watchers</option>
+                  <option value="assignee_only">Assignee only</option>
+                  <option value="creator_only">Creator only</option>
+                  <option value="watchers_only">Watchers only</option>
+                </select>
+              </div>
+              <div class="field field--wide">
                 <label class="checkline" for="settingCollapseDone">
                   <input id="settingCollapseDone" type="checkbox"/>
                   Collapse done items by default
+                </label>
+              </div>
+              <div class="field field--wide">
+                <label class="checkline" for="settingActivityEmails">
+                  <input id="settingActivityEmails" type="checkbox"/>
+                  Send email notifications when comments or files are added
+                </label>
+              </div>
+              <div class="field field--wide">
+                <label class="checkline" for="settingMentionEmails">
+                  <input id="settingMentionEmails" type="checkbox"/>
+                  Send email notifications when someone is tagged in a comment
                 </label>
               </div>
             </div>
@@ -544,10 +635,27 @@
             </div>
             <div class="stack--tight stack">
               <div class="status-note" id="emailStatusNote">Checking reminder email configuration…</div>
-              <div class="status-note">The scheduled reminder runner is configured hourly in Netlify and sends due reminder emails through the secure server-side path only.</div>
+              <div class="status-note">The scheduled reminder runner sends due reminders hourly, and the Team Tasks activity notifier sends branded emails for comments, file uploads, and @mentions through the secure server-side path.</div>
               <div class="status-note" id="schemaStatusNote">Checking schema status…</div>
             </div>
             <p class="footnote">Environment variables still needed for live reminder delivery: `SUPABASE_JWT_SECRET`, `RESEND_API_KEY`, `TASK_REMINDER_FROM_EMAIL`, and optionally `TASK_REMINDER_REPLY_TO` plus `TASK_REMINDER_CRON_SECRET` for protected manual runs.</p>
+          </section>
+
+          <section class="settings-card">
+            <div>
+              <p class="eyebrow">Outlook / Teams diaries</p>
+              <h3>Calendar sync</h3>
+            </div>
+            <div class="stack--tight stack">
+              <div class="status-note" id="calendarRuntimeNote">Checking Microsoft calendar setup…</div>
+              <div class="status-note" id="calendarConnectionSummary">Loading connected diary status…</div>
+              <div class="status-note">Use the weekly planner in the Tasks view to compare due work with connected Outlook / Teams commitments. App setup lives in Admin Settings so secrets stay out of the browser.</div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn primary small" id="connectCalendarBtn" type="button">Connect my calendar</button>
+              <button class="btn soft small" id="disconnectCalendarBtn" type="button">Disconnect my calendar</button>
+              <a class="btn ghost small" href="/admin/settings.html#taskCalendarSettings">Open calendar setup</a>
+            </div>
           </section>
         </div>
       </section>
@@ -673,6 +781,11 @@
                 <label for="commentBody">Add comment</label>
                 <textarea id="commentBody" placeholder="Share an update, blocker, or handover note."></textarea>
               </div>
+              <div class="field">
+                <label for="commentMentions">Tag admin users in this comment</label>
+                <select id="commentMentions" class="multi-select" multiple></select>
+                <p class="field-note">Tagged admins receive a direct HMJ email notification. Hold `Cmd` on Mac or `Ctrl` on Windows for multiple tags.</p>
+              </div>
               <div class="drawer-actions">
                 <div class="drawer-actions__group">
                   <button class="btn primary" id="commentSubmitBtn" type="submit">Post comment</button>
@@ -681,6 +794,25 @@
                 <span class="field-note" id="commentEditMeta"></span>
               </div>
             </form>
+          </div>
+        </section>
+
+        <section class="drawer-card drawer-card--wide">
+          <div class="stack">
+            <div>
+              <p class="eyebrow">Files</p>
+              <h3>Attachments</h3>
+            </div>
+            <div class="upload-row">
+              <input id="attachmentFiles" type="file" multiple accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp,image/avif,image/gif"/>
+              <button class="btn primary" id="uploadAttachmentBtn" type="button">Upload files</button>
+            </div>
+            <p class="field-note">Supported types: PDF, Word documents, and images. Files are stored privately in HMJ’s Supabase storage and stay inside the admin system.</p>
+            <div class="attachment-list" id="attachmentsList"></div>
+            <div class="empty" id="attachmentsEmpty" hidden>
+              <strong>No files yet.</strong>
+              <p class="muted">Upload a PDF, Word document, or image for this task.</p>
+            </div>
           </div>
         </section>
 

@@ -48,6 +48,75 @@ as $$
   );
 $$;
 
+create or replace function public.hmj_candidate_has_auth_user(candidate_identifier text)
+returns boolean
+language sql
+stable
+as $$
+  select exists (
+    select 1
+    from public.candidates c
+    where c.id::text = nullif(trim(candidate_identifier), '')
+      and c.auth_user_id = auth.uid()
+  );
+$$;
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'candidates'
+  ) then
+    execute 'drop policy if exists "candidate self select" on public.candidates';
+    execute 'drop policy if exists "candidate self insert" on public.candidates';
+    execute 'drop policy if exists "candidate self update" on public.candidates';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'candidate_skills'
+  ) then
+    execute 'drop policy if exists "candidate skills self select" on public.candidate_skills';
+    execute 'drop policy if exists "candidate skills self insert" on public.candidate_skills';
+    execute 'drop policy if exists "candidate skills self delete" on public.candidate_skills';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'job_applications'
+  ) then
+    execute 'drop policy if exists "candidate apps self select" on public.job_applications';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'candidate_activity'
+  ) then
+    execute 'drop policy if exists "candidate activity self select" on public.candidate_activity';
+    execute 'drop policy if exists "candidate activity self insert" on public.candidate_activity';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'candidate_documents'
+  ) then
+    execute 'drop policy if exists "candidate docs self select" on public.candidate_documents';
+    execute 'drop policy if exists "candidate docs self insert" on public.candidate_documents';
+    execute 'drop policy if exists "candidate docs self delete" on public.candidate_documents';
+  end if;
+
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'storage' and table_name = 'objects'
+  ) then
+    execute 'drop policy if exists "candidate portal storage select" on storage.objects';
+    execute 'drop policy if exists "candidate portal storage insert" on storage.objects';
+    execute 'drop policy if exists "candidate portal storage update" on storage.objects';
+    execute 'drop policy if exists "candidate portal storage delete" on storage.objects';
+  end if;
+end
+$$;
+
 create table if not exists public.candidate_skills (
   id uuid primary key default gen_random_uuid(),
   candidate_id uuid not null references public.candidates(id) on delete cascade,
@@ -559,6 +628,14 @@ set
   created_at = coalesce(created_at, uploaded_at, now()),
   updated_at = coalesce(updated_at, uploaded_at, created_at, now())
 where true;
+
+update public.candidate_documents d
+set owner_auth_user_id = c.auth_user_id
+from public.candidates c
+where d.candidate_id::text = c.id::text
+  and d.owner_auth_user_id is null
+  and c.auth_user_id is not null
+  and split_part(coalesce(d.storage_path, d.storage_key, ''), '/', 1) = 'portal';
 
 alter table public.candidate_documents
   alter column candidate_id set not null;

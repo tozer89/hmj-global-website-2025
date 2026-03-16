@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 const {
   buildAuthHandoffUrl,
   isAdminPath,
+  isCandidateAuthRoute,
+  isCandidatePath,
   parseAuthState,
 } = require('../js/hmj-auth-flow.js');
 
@@ -65,4 +67,26 @@ test('isAdminPath recognises the HMJ admin route family', () => {
   assert.equal(isAdminPath('/admin/jobs.html'), true);
   assert.equal(isAdminPath('/'), false);
   assert.equal(isAdminPath('/timesheets.html'), false);
+});
+
+test('isCandidatePath recognises the HMJ candidate route family', () => {
+  assert.equal(isCandidatePath('/candidates.html'), true);
+  assert.equal(isCandidatePath('/candidates'), true);
+  assert.equal(isCandidatePath('/'), false);
+  assert.equal(isCandidatePath('/admin/'), false);
+});
+
+test('isCandidateAuthRoute keeps candidate auth callbacks on the candidate page', () => {
+  assert.equal(isCandidateAuthRoute({
+    pathname: '/candidates.html',
+    search: '?candidate_auth=verified',
+  }), true);
+  assert.equal(isCandidateAuthRoute({
+    pathname: '/index.html',
+    search: '?candidate_action=recovery',
+  }), true);
+  assert.equal(isCandidateAuthRoute({
+    pathname: '/admin/',
+    search: '',
+  }), false);
 });

@@ -99,5 +99,6 @@ test('public jobs page renders published Supabase jobs with pay, tags, and locat
   assert.match(cardText, /£65,000 - £80,000 per year/);
   assert.match(cardText, /HV/);
   assert.match(cardText, /P6/);
+  assert.match(document.querySelector('.job-details-link')?.getAttribute('href') || '', /\/jobs\/spec\.html\?id=published-role&slug=senior-planner-frankfurt-germany/);
   assert.match(document.querySelector('#dataSourceIndicator').textContent, /live/i);
 });

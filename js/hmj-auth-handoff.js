@@ -80,6 +80,9 @@
     if (typeof helpers.isAdminPath === 'function' && helpers.isAdminPath(window.location.pathname)) {
       return;
     }
+    if (typeof helpers.isCandidateAuthRoute === 'function' && helpers.isCandidateAuthRoute(window.location)) {
+      return;
+    }
 
     const next = helpers.buildAuthHandoffUrl(destinationForState(state), window.location);
     if (!next || next === currentUrl()) return;

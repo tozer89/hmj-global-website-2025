@@ -8,7 +8,8 @@ netlify/functions/node_modules/
 # Editor cruft
 .DS_Store
 Thumbs.db
-.DS_Store
-.DS_Store
-.DS_Store
-.DS_Store
+
+# Local env / scratch files
+hmj 2.env
+tmp/pdfs/review/
+tmp/supabase-mailer-sample2/

@@ -135,10 +135,31 @@
     return path === '/admin/' || path === '/admin' || path.indexOf('/admin/') === 0;
   }
 
+  function isCandidatePath(pathname) {
+    const path = normalisePathname(pathname).toLowerCase();
+    return path === '/candidates'
+      || path === '/candidates/'
+      || path === '/candidates.html';
+  }
+
+  function isCandidateAuthRoute(input) {
+    const state = input && typeof input === 'object'
+      ? input
+      : { pathname: input };
+
+    const pathname = normalisePathname(state.pathname);
+    if (isCandidatePath(pathname)) return true;
+
+    const searchParams = parseParamString(safeString(state.search), '?');
+    return !!(readParams(searchParams, 'candidate_action') || readParams(searchParams, 'candidate_auth'));
+  }
+
   return {
     AUTH_PARAM_KEYS,
     buildAuthHandoffUrl,
     isAdminPath,
+    isCandidateAuthRoute,
+    isCandidatePath,
     normalisePathname,
     parseAuthState
   };
