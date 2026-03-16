@@ -7,6 +7,7 @@ import {
   getCandidatePortalContext,
   loadCandidateApplications,
   loadCandidateDocuments,
+  loadCandidatePaymentDetails,
   loadCandidateProfile,
   normaliseSkillList,
   onCandidateAuthStateChange,
@@ -19,8 +20,9 @@ import {
   trimText,
   updateCandidateEmail,
   updateCandidatePassword,
+  saveCandidatePaymentDetails,
   uploadCandidateDocument,
-} from '../../js/hmj-candidate-portal.js?v=3';
+} from '../../js/hmj-candidate-portal.js?v=4';
 import {
   classifyCandidateSignupResult,
   validateCandidatePassword,
@@ -163,6 +165,7 @@ import {
   }
 
   const params = readAuthParams();
+  const DASHBOARD_TABS = ['profile', 'applications', 'documents', 'payment', 'settings'];
   const state = {
     hydrating: true,
     authAvailable: true,
@@ -174,12 +177,18 @@ import {
     dashboardBusy: false,
     settingsBusy: false,
     documentsBusy: false,
-    activeTab: 'profile',
+    paymentBusy: false,
+    activeTab: DASHBOARD_TABS.includes(trimText(params.get('candidate_tab'), 40).toLowerCase())
+      ? trimText(params.get('candidate_tab'), 40).toLowerCase()
+      : 'profile',
+    requestedFocus: trimText(params.get('candidate_focus'), 80).toLowerCase(),
+    onboardingPrompt: params.get('candidate_onboarding') === '1',
     user: null,
     session: null,
     candidate: null,
     applications: [],
     documents: [],
+    paymentDetails: null,
     dashboardError: '',
     unsubscribe: null,
     closeConfirm: false,
@@ -321,6 +330,49 @@ import {
       total,
       percent: Math.round((completed / total) * 100),
     };
+  }
+
+  function onboardingSummary() {
+    const documentTypes = new Set((state.documents || []).map((documentRow) => String(documentRow.document_type || '').toLowerCase()));
+    const hasRightToWork = documentTypes.has('right_to_work')
+      || documentTypes.has('passport')
+      || documentTypes.has('visa_permit')
+      || !!trimText(state.candidate?.rtw_url, 2000);
+    const hasPayment = state.paymentDetails?.completion?.complete === true;
+    const missing = [];
+    if (!hasRightToWork) missing.push('right_to_work');
+    if (!hasPayment) missing.push('payment_details');
+    return {
+      hasRightToWork,
+      hasPayment,
+      complete: missing.length === 0,
+      missing,
+    };
+  }
+
+  function updateDashboardLocation(tab, focus = state.requestedFocus) {
+    if (!window.history?.replaceState) return;
+    try {
+      const url = new URL(window.location.href);
+      if (tab) {
+        url.searchParams.set('candidate_tab', tab);
+      } else {
+        url.searchParams.delete('candidate_tab');
+      }
+      if (focus) {
+        url.searchParams.set('candidate_focus', focus);
+      } else {
+        url.searchParams.delete('candidate_focus');
+      }
+      if (state.onboardingPrompt) {
+        url.searchParams.set('candidate_onboarding', '1');
+      } else {
+        url.searchParams.delete('candidate_onboarding');
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch (error) {
+      // Ignore URL sync issues.
+    }
   }
 
   function renderDashboardSkeleton() {
@@ -533,6 +585,26 @@ import {
     const candidate = state.candidate || {};
     const applications = state.applications || [];
     const documents = state.documents || [];
+    const paymentDetails = state.paymentDetails || {
+      accountCurrency: 'GBP',
+      paymentMethod: 'gbp_local',
+      accountHolderName: '',
+      bankName: '',
+      bankLocationOrCountry: '',
+      accountType: '',
+      masked: {
+        sortCode: '',
+        accountNumber: '',
+        iban: '',
+        swiftBic: '',
+      },
+      lastFour: '',
+      updatedAt: null,
+      completion: {
+        complete: false,
+        missing: ['payment_details'],
+      },
+    };
     const fullName = candidateName();
     const userEmail = trimText(state.user?.email, 320) || trimText(candidate.email, 320);
     const authMessage = state.authMessage
@@ -540,8 +612,29 @@ import {
       : '';
     const profileSkills = Array.isArray(candidate.skills) ? candidate.skills.join(', ') : '';
     const verified = state.user?.email_confirmed_at ? 'Verified' : 'Check your inbox to verify';
-    const tabs = ['profile', 'applications', 'documents', 'settings'];
+    const tabs = DASHBOARD_TABS;
     const completion = profileCompletion(candidate);
+    const onboarding = onboardingSummary();
+    const paymentMethod = paymentDetails.paymentMethod || (paymentDetails.accountCurrency === 'GBP' ? 'gbp_local' : 'iban_swift');
+    const showGbpFields = paymentMethod === 'gbp_local';
+    const documentTypeSelection = state.requestedFocus === 'right_to_work' ? 'right_to_work' : 'cv';
+    const onboardingBanner = (!onboarding.complete || state.onboardingPrompt)
+      ? `
+        <div class="candidate-onboarding-banner">
+          <div>
+            <p class="candidate-portal-eyebrow">Onboarding</p>
+            <h3>${onboarding.complete ? 'Your onboarding profile is ready' : 'Complete the final onboarding details'}</h3>
+            <p>${onboarding.complete
+              ? 'HMJ has the key information needed in your portal.'
+              : `${!onboarding.hasRightToWork ? 'Upload passport or right-to-work evidence. ' : ''}${!onboarding.hasPayment ? 'Add your payment details for payroll.' : ''}`}</p>
+          </div>
+          <div class="candidate-onboarding-banner__actions">
+            ${!onboarding.hasRightToWork ? '<button class="candidate-portal-btn candidate-portal-btn--ghost" type="button" data-dashboard-tab="documents" data-dashboard-focus="right_to_work">Upload right-to-work</button>' : ''}
+            ${!onboarding.hasPayment ? '<button class="candidate-portal-btn" type="button" data-dashboard-tab="payment" data-dashboard-focus="">Add payment details</button>' : ''}
+          </div>
+        </div>
+      `
+      : '';
 
     const profilePane = `
       <section class="candidate-dashboard-pane ${state.activeTab === 'profile' ? 'is-active' : ''}" data-dashboard-pane="profile">
@@ -695,16 +788,25 @@ import {
             <h3>Documents</h3>
             <p>Upload your CV, passport, visa, and other supporting documents into your private candidate area.</p>
           </div>
+          ${(!onboarding.hasRightToWork || state.requestedFocus === 'right_to_work')
+            ? `<div class="candidate-inline-panel candidate-inline-panel--priority">
+                <strong>Right-to-work documents needed</strong>
+                <p>Upload your passport, visa, permit, or right-to-work evidence here so HMJ can complete onboarding.</p>
+              </div>`
+            : ''}
           <div class="candidate-inline-panel candidate-inline-panel--subtle">
             <strong>Accepted files</strong>
-            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB. Use Right to work for passports, visas, share codes, or permit evidence.</p>
+            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB. Use Passport, Right to work, or Visa / permit for onboarding evidence.</p>
           </div>
           <form class="candidate-dashboard-form candidate-dashboard-form--documents" data-dashboard-form="documents">
             <label>Document type
               <select name="document_type" required>
-                <option value="cv">CV</option>
-                <option value="certificate">Certificate</option>
-                <option value="right_to_work">Passport / right to work</option>
+                <option value="cv" ${documentTypeSelection === 'cv' ? 'selected' : ''}>CV</option>
+                <option value="passport" ${documentTypeSelection === 'passport' ? 'selected' : ''}>Passport</option>
+                <option value="right_to_work" ${documentTypeSelection === 'right_to_work' ? 'selected' : ''}>Right to work</option>
+                <option value="visa_permit">Visa / permit</option>
+                <option value="qualification_certificate">Qualification / certificate</option>
+                <option value="bank_document">Bank document</option>
                 <option value="other">Other</option>
               </select>
             </label>
@@ -746,6 +848,90 @@ import {
               </div>
             `}
           </div>
+        </div>
+      </section>
+    `;
+
+    const paymentPane = `
+      <section class="candidate-dashboard-pane ${state.activeTab === 'payment' ? 'is-active' : ''}" data-dashboard-pane="payment">
+        <div class="candidate-dashboard-card">
+          <div class="candidate-dashboard-card__head">
+            <h3>Payment details</h3>
+            <p>HMJ uses this secure area to collect payroll-ready bank details during onboarding.</p>
+          </div>
+          <div class="candidate-inline-panel candidate-inline-panel--subtle">
+            <strong>Security note</strong>
+            <p>Bank identifiers are stored for your candidate record and shown back in masked form. If you are only updating bank name or location, leave the masked fields blank.</p>
+          </div>
+          <div class="candidate-payment-summary">
+            <div class="candidate-payment-summary__item">
+              <span>Currency</span>
+              <strong>${escapeHtml(paymentDetails.accountCurrency || 'GBP')}</strong>
+            </div>
+            <div class="candidate-payment-summary__item">
+              <span>Format</span>
+              <strong>${escapeHtml(showGbpFields ? 'Sort code & account number' : 'IBAN & SWIFT/BIC')}</strong>
+            </div>
+            <div class="candidate-payment-summary__item">
+              <span>Stored reference</span>
+              <strong>${escapeHtml(paymentDetails.lastFour ? `••••${paymentDetails.lastFour}` : 'Not saved yet')}</strong>
+            </div>
+            <div class="candidate-payment-summary__item">
+              <span>Updated</span>
+              <strong>${escapeHtml(paymentDetails.updatedAt ? formatDate(paymentDetails.updatedAt) : 'Not yet')}</strong>
+            </div>
+          </div>
+          <form class="candidate-dashboard-form" data-dashboard-form="payment">
+            <label>Account currency
+              <select name="account_currency">
+                <option value="GBP" ${paymentDetails.accountCurrency === 'GBP' ? 'selected' : ''}>GBP</option>
+                <option value="EUR" ${paymentDetails.accountCurrency === 'EUR' ? 'selected' : ''}>EUR</option>
+                <option value="USD" ${paymentDetails.accountCurrency === 'USD' ? 'selected' : ''}>USD</option>
+                ${!['GBP', 'EUR', 'USD'].includes(paymentDetails.accountCurrency || '') && paymentDetails.accountCurrency ? `<option value="${escapeHtml(paymentDetails.accountCurrency)}" selected>${escapeHtml(paymentDetails.accountCurrency)}</option>` : ''}
+              </select>
+            </label>
+            <label>Payment format
+              <select name="payment_method">
+                <option value="gbp_local" ${paymentMethod === 'gbp_local' ? 'selected' : ''}>UK bank account</option>
+                <option value="iban_swift" ${paymentMethod === 'iban_swift' ? 'selected' : ''}>IBAN / SWIFT</option>
+              </select>
+            </label>
+            <label>Account holder name
+              <input type="text" name="account_holder_name" value="${escapeHtml(paymentDetails.accountHolderName || fullName)}" placeholder="Account holder name" required>
+            </label>
+            <label>Bank name
+              <input type="text" name="bank_name" value="${escapeHtml(paymentDetails.bankName || '')}" placeholder="Bank name" required>
+            </label>
+            <label>Bank country / location
+              <input type="text" name="bank_location_or_country" value="${escapeHtml(paymentDetails.bankLocationOrCountry || '')}" placeholder="Bank country or branch location" required>
+            </label>
+            <label>Account type
+              <input type="text" name="account_type" value="${escapeHtml(paymentDetails.accountType || '')}" placeholder="Optional e.g. personal, business">
+            </label>
+            ${showGbpFields ? `
+              <label>Sort code
+                <input type="text" name="sort_code" value="" inputmode="numeric" placeholder="${escapeHtml(paymentDetails.masked?.sortCode || '12-34-56')}">
+                <span class="candidate-field-help">${paymentDetails.masked?.sortCode ? `Stored: ${escapeHtml(paymentDetails.masked.sortCode)}. Re-enter only if it needs to change.` : 'Enter the 6-digit sort code.'}</span>
+              </label>
+              <label>Account number
+                <input type="text" name="account_number" value="" inputmode="numeric" placeholder="${escapeHtml(paymentDetails.masked?.accountNumber || '12345678')}">
+                <span class="candidate-field-help">${paymentDetails.masked?.accountNumber ? `Stored: ${escapeHtml(paymentDetails.masked.accountNumber)}. Re-enter only if it needs to change.` : 'Enter the account number.'}</span>
+              </label>
+            ` : `
+              <label>IBAN
+                <input type="text" name="iban" value="" placeholder="${escapeHtml(paymentDetails.masked?.iban || 'DE89 3704 0044 0532 0130 00')}">
+                <span class="candidate-field-help">${paymentDetails.masked?.iban ? `Stored: ${escapeHtml(paymentDetails.masked.iban)}. Re-enter only if it needs to change.` : 'Enter the IBAN in full.'}</span>
+              </label>
+              <label>SWIFT / BIC
+                <input type="text" name="swift_bic" value="" placeholder="${escapeHtml(paymentDetails.masked?.swiftBic || 'DEUTDEFF')}">
+                <span class="candidate-field-help">${paymentDetails.masked?.swiftBic ? `Stored: ${escapeHtml(paymentDetails.masked.swiftBic)}. Re-enter only if it needs to change.` : 'Enter the SWIFT or BIC code.'}</span>
+              </label>
+            `}
+            <div class="candidate-dashboard-actions candidate-dashboard-form__full">
+              <button class="candidate-portal-btn" type="submit" ${state.paymentBusy ? 'disabled' : ''}>${state.paymentBusy ? 'Saving…' : 'Save payment details'}</button>
+              <span class="candidate-field-help">${paymentDetails.completion?.complete ? 'Payment details are on file.' : 'HMJ uses these details only for onboarding and payroll setup.'}</span>
+            </div>
+          </form>
         </div>
       </section>
     `;
@@ -820,11 +1006,13 @@ import {
           <div class="candidate-dashboard-hero__meta">
             <span class="candidate-dashboard-stat"><strong>${applications.length}</strong><span>Applications</span></span>
             <span class="candidate-dashboard-stat"><strong>${documents.length}</strong><span>Documents</span></span>
+            <span class="candidate-dashboard-stat"><strong>${onboarding.complete ? 'Ready' : 'Action needed'}</strong><span>Onboarding</span></span>
             <a class="candidate-portal-btn candidate-portal-btn--ghost" href="/jobs.html">Browse jobs</a>
             <button class="candidate-portal-btn candidate-portal-btn--subtle" type="button" data-dashboard-action="signout">Sign out</button>
           </div>
         </header>
         ${authMessage}
+        ${onboardingBanner}
         <div class="candidate-dashboard-layout">
           <nav class="candidate-dashboard-nav" aria-label="Candidate dashboard sections">
             ${tabs.map((tab) => `
@@ -835,6 +1023,7 @@ import {
             ${profilePane}
             ${applicationsPane}
             ${documentsPane}
+            ${paymentPane}
             ${settingsPane}
           </div>
         </div>
@@ -865,6 +1054,7 @@ import {
       state.candidate = null;
       state.applications = [];
       state.documents = [];
+      state.paymentDetails = null;
       state.dashboardError = '';
       render();
       return;
@@ -875,17 +1065,24 @@ import {
 
     try {
       const candidate = await loadCandidateProfile();
-      const [applicationsResult, documentsResult] = await Promise.allSettled([
+      const [applicationsResult, documentsResult, paymentResult] = await Promise.allSettled([
         loadCandidateApplications(candidate.id),
         loadCandidateDocuments(candidate.id),
+        loadCandidatePaymentDetails(),
       ]);
       const applications = applicationsResult.status === 'fulfilled' ? applicationsResult.value : [];
       const documents = documentsResult.status === 'fulfilled' ? documentsResult.value : [];
+      const paymentDetails = paymentResult.status === 'fulfilled' ? paymentResult.value : null;
       state.candidate = candidate;
       state.applications = applications;
       state.documents = documents;
+      state.paymentDetails = paymentDetails;
       state.dashboardError = '';
-      if (applicationsResult.status === 'rejected' || documentsResult.status === 'rejected') {
+      if (
+        applicationsResult.status === 'rejected'
+        || documentsResult.status === 'rejected'
+        || paymentResult.status === 'rejected'
+      ) {
         state.authMessage = {
           tone: 'warn',
           text: 'Some candidate dashboard sections are temporarily unavailable, but your profile area is still available.',
@@ -898,6 +1095,7 @@ import {
         text: 'Candidate dashboard tools are unavailable right now. You can still use the application form below.',
       };
       state.candidate = null;
+      state.paymentDetails = null;
     } finally {
       state.dashboardBusy = false;
       render();
@@ -1217,6 +1415,34 @@ import {
         });
         state.authMessage = { tone: 'success', text: 'Document uploaded and linked to your candidate profile.' };
         state.documents = await loadCandidateDocuments(state.candidate?.id);
+        const onboarding = onboardingSummary();
+        if (onboarding.hasPayment && onboarding.hasRightToWork) {
+          state.onboardingPrompt = false;
+        }
+      } else if (formType === 'payment') {
+        state.paymentBusy = true;
+        render();
+        const paymentDetails = await saveCandidatePaymentDetails({
+          account_currency: formData.get('account_currency'),
+          payment_method: formData.get('payment_method'),
+          account_holder_name: formData.get('account_holder_name'),
+          bank_name: formData.get('bank_name'),
+          bank_location_or_country: formData.get('bank_location_or_country'),
+          account_type: formData.get('account_type'),
+          sort_code: formData.get('sort_code'),
+          account_number: formData.get('account_number'),
+          iban: formData.get('iban'),
+          swift_bic: formData.get('swift_bic'),
+        });
+        state.paymentDetails = paymentDetails;
+        state.authMessage = {
+          tone: 'success',
+          text: 'Payment details saved. HMJ can now use them for onboarding and payroll setup.',
+        };
+        if (onboardingSummary().hasRightToWork && paymentDetails?.completion?.complete) {
+          state.onboardingPrompt = false;
+          state.requestedFocus = '';
+        }
       } else if (formType === 'email') {
         state.settingsBusy = true;
         render();
@@ -1240,6 +1466,7 @@ import {
       state.dashboardBusy = false;
       state.settingsBusy = false;
       state.documentsBusy = false;
+      state.paymentBusy = false;
       render();
     }
   }
@@ -1289,7 +1516,17 @@ import {
     }
 
     if (button.hasAttribute('data-dashboard-tab')) {
-      state.activeTab = button.getAttribute('data-dashboard-tab');
+      const nextTab = button.getAttribute('data-dashboard-tab');
+      const focusAttr = button.getAttribute('data-dashboard-focus');
+      state.activeTab = nextTab;
+      state.requestedFocus = typeof focusAttr === 'string' ? trimText(focusAttr, 80).toLowerCase() : state.requestedFocus;
+      if (nextTab !== 'documents' && !focusAttr) {
+        state.requestedFocus = '';
+      }
+      if (nextTab !== 'payment' && state.requestedFocus === 'payment_details') {
+        state.requestedFocus = '';
+      }
+      updateDashboardLocation(state.activeTab, state.requestedFocus);
       render();
       return;
     }
@@ -1332,6 +1569,7 @@ import {
         state.candidate = null;
         state.applications = [];
         state.documents = [];
+        state.paymentDetails = null;
         state.authMode = 'signin';
         state.closeConfirm = false;
         state.authMessage = { tone: 'success', text: 'Signed out.' };
@@ -1361,6 +1599,7 @@ import {
         state.candidate = null;
         state.applications = [];
         state.documents = [];
+        state.paymentDetails = null;
         state.authMode = 'signin';
         state.closeConfirm = false;
         state.authMessage = { tone: 'success', text: 'Candidate portal account closed. You can still use the HMJ application form below.' };
@@ -1371,6 +1610,22 @@ import {
         render();
       }
     }
+  }
+
+  function handleDashboardChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const form = target.closest('[data-dashboard-form="payment"]');
+    if (!form) return;
+
+    const accountCurrency = trimText(form.querySelector('[name="account_currency"]')?.value, 12).toUpperCase() || 'GBP';
+    const paymentMethod = form.querySelector('[name="payment_method"]')?.value || (accountCurrency === 'GBP' ? 'gbp_local' : 'iban_swift');
+    state.paymentDetails = {
+      ...(state.paymentDetails || {}),
+      accountCurrency,
+      paymentMethod,
+    };
+    render();
   }
 
   async function handleCandidateFormSubmit(event) {
@@ -1456,6 +1711,7 @@ import {
 
   authRoot.addEventListener('submit', handleAuthForm);
   dashboardRoot.addEventListener('submit', handleDashboardForm);
+  dashboardRoot.addEventListener('change', handleDashboardChange);
   authRoot.addEventListener('click', handleDashboardAction);
   form.addEventListener('click', handleDashboardAction);
   dashboardRoot.addEventListener('click', handleDashboardAction);
@@ -1483,6 +1739,7 @@ import {
         state.candidate = null;
         state.applications = [];
         state.documents = [];
+        state.paymentDetails = null;
         state.activeTab = 'profile';
         state.closeConfirm = false;
         render();

@@ -175,6 +175,31 @@ create table if not exists public.candidate_documents (
   deleted_at timestamptz
 );
 
+create table if not exists public.candidate_payment_details (
+  id uuid primary key default gen_random_uuid(),
+  candidate_id uuid not null references public.candidates(id) on delete cascade,
+  auth_user_id uuid,
+  account_currency text not null default 'GBP',
+  payment_method text not null default 'gbp_local',
+  account_holder_name text not null,
+  bank_name text not null,
+  bank_location_or_country text not null,
+  account_type text,
+  encrypted_sort_code text,
+  encrypted_account_number text,
+  encrypted_iban text,
+  encrypted_swift_bic text,
+  sort_code_masked text,
+  account_number_masked text,
+  iban_masked text,
+  swift_bic_masked text,
+  last_four text,
+  is_complete boolean not null default true,
+  verified_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 do $$
 begin
   if exists (
@@ -668,20 +693,27 @@ alter table public.candidate_documents
 alter table public.candidate_documents
   alter column updated_at set not null;
 
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_constraint
-    where conrelid = 'public.candidate_documents'::regclass
-      and conname = 'candidate_documents_document_type_check'
-  ) then
-    alter table public.candidate_documents
-      add constraint candidate_documents_document_type_check
-      check (document_type in ('cv', 'cover_letter', 'certificate', 'right_to_work', 'other'));
-  end if;
-end
-$$;
+alter table public.candidate_documents
+  drop constraint if exists candidate_documents_document_type_check;
+alter table public.candidate_documents
+  add constraint candidate_documents_document_type_check
+  check (document_type in (
+    'cv',
+    'cover_letter',
+    'certificate',
+    'qualification_certificate',
+    'passport',
+    'right_to_work',
+    'visa_permit',
+    'bank_document',
+    'other'
+  ));
+
+alter table public.candidate_payment_details
+  drop constraint if exists candidate_payment_details_method_check;
+alter table public.candidate_payment_details
+  add constraint candidate_payment_details_method_check
+  check (payment_method in ('gbp_local', 'iban_swift'));
 
 create or replace function public.merge_candidate_records(keep_id uuid, drop_id uuid)
 returns void
@@ -907,6 +939,12 @@ create index if not exists candidate_documents_uploaded_idx
 create index if not exists candidate_documents_type_idx
   on public.candidate_documents (document_type, uploaded_at desc);
 
+create unique index if not exists candidate_payment_details_candidate_uidx
+  on public.candidate_payment_details (candidate_id);
+
+create index if not exists candidate_payment_details_auth_user_idx
+  on public.candidate_payment_details (auth_user_id);
+
 drop trigger if exists candidates_touch_updated_at on public.candidates;
 create trigger candidates_touch_updated_at
   before update on public.candidates
@@ -922,6 +960,12 @@ create trigger job_applications_touch_updated_at
 drop trigger if exists candidate_documents_touch_updated_at on public.candidate_documents;
 create trigger candidate_documents_touch_updated_at
   before update on public.candidate_documents
+  for each row
+  execute function public.hmj_touch_updated_at();
+
+drop trigger if exists candidate_payment_details_touch_updated_at on public.candidate_payment_details;
+create trigger candidate_payment_details_touch_updated_at
+  before update on public.candidate_payment_details
   for each row
   execute function public.hmj_touch_updated_at();
 
@@ -1055,12 +1099,14 @@ alter table public.candidate_skills enable row level security;
 alter table public.job_applications enable row level security;
 alter table public.candidate_activity enable row level security;
 alter table public.candidate_documents enable row level security;
+alter table public.candidate_payment_details enable row level security;
 
 revoke all on public.candidates from anon;
 revoke all on public.candidate_skills from anon;
 revoke all on public.job_applications from anon;
 revoke all on public.candidate_activity from anon;
 revoke all on public.candidate_documents from anon;
+revoke all on public.candidate_payment_details from anon;
 
 drop policy if exists "candidate self select" on public.candidates;
 create policy "candidate self select"
@@ -1163,6 +1209,40 @@ create policy "candidate docs self delete"
     and owner_auth_user_id = auth.uid()
     and split_part(coalesce(storage_path, storage_key, ''), '/', 1) = 'portal'
     and split_part(coalesce(storage_path, storage_key, ''), '/', 2) = auth.uid()::text
+  );
+
+drop policy if exists "candidate payment self select" on public.candidate_payment_details;
+create policy "candidate payment self select"
+  on public.candidate_payment_details
+  for select
+  to authenticated
+  using (
+    public.hmj_candidate_has_auth_user(candidate_id)
+    and auth_user_id = auth.uid()
+  );
+
+drop policy if exists "candidate payment self insert" on public.candidate_payment_details;
+create policy "candidate payment self insert"
+  on public.candidate_payment_details
+  for insert
+  to authenticated
+  with check (
+    public.hmj_candidate_has_auth_user(candidate_id)
+    and auth_user_id = auth.uid()
+  );
+
+drop policy if exists "candidate payment self update" on public.candidate_payment_details;
+create policy "candidate payment self update"
+  on public.candidate_payment_details
+  for update
+  to authenticated
+  using (
+    public.hmj_candidate_has_auth_user(candidate_id)
+    and auth_user_id = auth.uid()
+  )
+  with check (
+    public.hmj_candidate_has_auth_user(candidate_id)
+    and auth_user_id = auth.uid()
   );
 
 drop policy if exists "candidate portal storage select" on storage.objects;

@@ -494,6 +494,7 @@ async function applyCandidateEmailSettingsToSupabase(event, options = {}) {
 module.exports = {
   SETTINGS_KEY,
   PROVIDER_PRESETS,
+  buildEmailTemplate,
   defaultCandidateEmailSettings,
   deriveEmailRouteSettings,
   normaliseCandidateEmailSettings,

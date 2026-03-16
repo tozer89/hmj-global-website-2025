@@ -7,6 +7,7 @@ const {
   summarisePortalAuthUser,
   syncPortalAuthUserFromCandidate,
 } = require('./_candidate-account-admin.js');
+const { stripSensitiveCandidateFields } = require('./_candidate-onboarding-admin.js');
 
 function splitFullName(value) {
   const text = String(value || '').trim().replace(/\s+/g, ' ');
@@ -261,7 +262,7 @@ const baseHandler = async (event, context) => {
         id: savedCandidate.id,
         ok: true,
         took_ms,
-        candidate: savedCandidate,
+        candidate: stripSensitiveCandidateFields(savedCandidate),
         portal_auth: portalAuth,
         warning: warning || null,
       }),

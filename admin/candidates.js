@@ -4,7 +4,7 @@
 
   const STORAGE_KEY = 'hmj:candidates:filters:v2';
   const SELECTION_KEY = 'hmj:candidates:selection';
-  const ROW_HEIGHT = 64;
+  const ROW_HEIGHT = 112;
   const RENDER_PADDING = 6;
   const MAX_LOGS = 10;
 
@@ -122,6 +122,54 @@
       .split(/[\n,]/)
       .map((part) => part.trim())
       .filter(Boolean);
+  }
+
+  function normalisePaymentSummary(row) {
+    const summary = row?.payment_summary && typeof row.payment_summary === 'object'
+      ? row.payment_summary
+      : null;
+    const lastFour = String(summary?.lastFour || '').trim();
+    const complete = summary?.completion?.complete === true
+      || (!!String(row?.bank_name || '').trim() && !!(String(row?.bank_account || '').trim() || String(row?.bank_iban || '').trim()));
+    return {
+      accountCurrency: String(summary?.accountCurrency || (row?.bank_iban ? 'EUR' : 'GBP') || 'GBP').trim() || 'GBP',
+      bankName: String(summary?.bankName || row?.bank_name || '').trim(),
+      bankLocationOrCountry: String(summary?.bankLocationOrCountry || '').trim(),
+      accountHolderName: String(summary?.accountHolderName || '').trim(),
+      lastFour,
+      updatedAt: summary?.updatedAt || row?.updated_at || row?.created_at || '',
+      completion: {
+        complete,
+        missing: complete ? [] : ['payment_details'],
+      },
+      masked: {
+        sortCode: String(summary?.masked?.sortCode || '').trim(),
+        accountNumber: String(summary?.masked?.accountNumber || '').trim(),
+        iban: String(summary?.masked?.iban || '').trim(),
+        swiftBic: String(summary?.masked?.swiftBic || '').trim(),
+      },
+    };
+  }
+
+  function normaliseOnboarding(row, docs, paymentSummary) {
+    const existing = row?.onboarding && typeof row.onboarding === 'object' ? row.onboarding : null;
+    const docTypes = new Set((Array.isArray(docs) ? docs : []).map((doc) => String(doc?.document_type || doc?.kind || '').toLowerCase()));
+    const hasRightToWork = existing?.hasRightToWork === true
+      || docTypes.has('right_to_work')
+      || docTypes.has('passport')
+      || docTypes.has('visa_permit')
+      || !!String(row?.rtw_url || '').trim();
+    const hasPaymentDetails = existing?.hasPaymentDetails === true || paymentSummary?.completion?.complete === true;
+    const missing = [];
+    if (!hasRightToWork) missing.push('right_to_work');
+    if (!hasPaymentDetails) missing.push('payment_details');
+    return {
+      hasRightToWork,
+      hasPaymentDetails,
+      onboardingComplete: existing?.onboardingComplete === true || missing.length === 0,
+      missing,
+      documentTypes: Array.isArray(existing?.documentTypes) ? existing.documentTypes : Array.from(docTypes),
+    };
   }
 
   function formatDate(value) {
@@ -355,6 +403,8 @@
           updated_at: null,
           full_name: storedFullName || derivedFullName || null,
         };
+    const paymentSummary = normalisePaymentSummary(row);
+    const onboarding = normaliseOnboarding(row, docs, paymentSummary);
     return {
       ...row,
       id: row.id ?? row.ref ?? `tmp-${Math.random().toString(36).slice(2)}`,
@@ -379,6 +429,8 @@
       skills: skillList,
       tags,
       docs,
+      onboarding,
+      payment_summary: paymentSummary,
       notes,
       audit: Array.isArray(row.audit) ? row.audit : [],
       applications: Array.isArray(row.applications) ? row.applications : [],
@@ -564,9 +616,12 @@
   function recomputeMetrics() {
     const total = state.filtered.length;
     const countStatus = (status) => state.filtered.filter((row) => row.status === status).length;
+    const countBy = (predicate) => state.filtered.filter(predicate).length;
     state.metrics = {
       total,
       progress: countStatus('in progress'),
+      ready: countBy((row) => row.onboarding?.onboardingComplete === true),
+      rtwMissing: countBy((row) => row.onboarding?.hasRightToWork === false),
       archived: countStatus('archived'),
       blocked: countStatus('blocked')
     };
@@ -576,6 +631,8 @@
   function updateTotals() {
     if (elements.total) elements.total.textContent = `Total: ${state.metrics.total}`;
     if (elements.progress) elements.progress.textContent = `In progress: ${state.metrics.progress}`;
+    if (elements.ready) elements.ready.textContent = `Ready: ${state.metrics.ready}`;
+    if (elements.rtwMissing) elements.rtwMissing.textContent = `RTW missing: ${state.metrics.rtwMissing}`;
     if (elements.archived) elements.archived.textContent = `Archived: ${state.metrics.archived}`;
     if (elements.blocked) elements.blocked.textContent = `Blocked: ${state.metrics.blocked}`;
   }
@@ -597,7 +654,7 @@
       row.className = 'trow skeleton';
       row.style.position = 'absolute';
       row.style.top = `${i * ROW_HEIGHT}px`;
-      row.innerHTML = '<div class="skeleton-bar"></div>'.repeat(6);
+      row.innerHTML = '<div class="skeleton-bar"></div>'.repeat(7);
       rowsInner.appendChild(row);
     }
   }
@@ -641,6 +698,17 @@
     return String(candidate?.status || '').toLowerCase() === 'blocked';
   }
 
+  function onboardingTone(candidate) {
+    if (candidate?.onboarding?.onboardingComplete) return 'green';
+    if (candidate?.onboarding?.hasRightToWork === false) return 'orange';
+    return 'gray';
+  }
+
+  function paymentReference(candidate) {
+    const lastFour = String(candidate?.payment_summary?.lastFour || '').trim();
+    return lastFour ? `••••${lastFour}` : 'Pending';
+  }
+
   function buildRow(candidate, index) {
     const row = document.createElement('div');
     row.className = 'trow';
@@ -652,21 +720,37 @@
     const archiveRole = isArchived(candidate) ? 'restore' : 'archive';
     const archiveLabel = isArchived(candidate) ? 'Restore' : 'Archive';
     const portalChip = candidate.has_portal_account
-      ? '<span class="chip blue" style="margin-top:4px">Portal linked</span>'
+      ? '<span class="chip blue">Portal linked</span>'
       : candidate.portal_account_state === 'closed'
-      ? '<span class="chip gray" style="margin-top:4px">Portal closed</span>'
+      ? '<span class="chip gray">Portal closed</span>'
       : '';
+    const onboarding = candidate.onboarding || {};
+    const paymentSummary = candidate.payment_summary || {};
     row.innerHTML = `
       <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected}></div>
       <div>${candidate.ref || '—'}</div>
-      <div>
-        <div class="row-name">${candidate.name || '—'}</div>
-        <div class="muted" style="font-size:12px">${candidate.region || ''}</div>
-        ${portalChip}
+      <div class="row-card">
+        <div class="row-title" title="${candidate.name || 'Candidate'}">${candidate.name || '—'}</div>
+        <div class="row-subtle" title="${candidate.role || 'Role pending'}">${candidate.role || 'Role pending'}</div>
+        <div class="row-meta">
+          ${candidate.region ? `<span class="chip gray">${candidate.region}</span>` : ''}
+          ${portalChip}
+        </div>
       </div>
-      <div>${candidate.email || '—'}</div>
+      <div class="row-card">
+        <div class="row-title" title="${candidate.email || 'No email'}">${candidate.email || '—'}</div>
+        <div class="row-subtle">${candidate.phone || 'Phone not added'}</div>
+        <div class="row-subtle">Updated ${formatDate(candidate.updated_at)}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-meta">
+          <span class="chip ${onboarding.hasRightToWork ? 'green' : 'orange'}">${onboarding.hasRightToWork ? 'RTW received' : 'RTW missing'}</span>
+          <span class="chip ${paymentSummary.completion?.complete ? 'green' : 'gray'}">${paymentSummary.completion?.complete ? 'Payment on file' : 'Payment pending'}</span>
+        </div>
+        <div class="row-subtle">Onboarding: <strong class="row-inline-strong ${onboardingTone(candidate)}">${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong></div>
+        <div class="row-subtle">Reference: ${paymentReference(candidate)}</div>
+      </div>
       <div><span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span></div>
-      <div>${candidate.role || '—'}</div>
       <div class="row-actions">
         <button class="btn ghost small" type="button" data-role="open" data-id="${candidate.id}">Open</button>
         <button class="btn ghost small" type="button" data-role="${archiveRole}" data-id="${candidate.id}">${archiveLabel}</button>
@@ -840,6 +924,8 @@
 
   function renderProfile(candidate) {
     const portalAuth = candidate.portal_auth || { exists: false };
+    const onboarding = candidate.onboarding || {};
+    const payment = candidate.payment_summary || {};
     const portalStatus = candidate.has_portal_account
       ? 'Portal linked'
       : candidate.portal_account_state === 'closed'
@@ -849,11 +935,29 @@
       ? (portalAuth.email_confirmed_at ? 'Verified' : 'Verification pending')
       : 'Not created';
     const accountEmail = portalAuth.email || candidate.email || '—';
+    const canSendReminder = !onboarding.hasRightToWork && !!candidate.email && !isArchived(candidate);
     return `
       <div class="drawer-section">
         <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">
           <span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span>
           <span class="muted">Updated ${formatDateTime(candidate.updated_at)}</span>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-tile">
+            <span>Right to work</span>
+            <strong>${onboarding.hasRightToWork ? 'Received' : 'Missing'}</strong>
+            <p>${onboarding.hasRightToWork ? 'Passport or RTW evidence is on file.' : 'Candidate still needs to upload RTW evidence.'}</p>
+          </article>
+          <article class="summary-tile">
+            <span>Payment details</span>
+            <strong>${payment.completion?.complete ? 'On file' : 'Pending'}</strong>
+            <p>${payment.completion?.complete ? `${payment.bankName || 'Bank'} · ${paymentReference(candidate)}` : 'Bank details are still missing.'}</p>
+          </article>
+          <article class="summary-tile">
+            <span>Onboarding</span>
+            <strong>${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong>
+            <p>${onboarding.onboardingComplete ? 'Core onboarding items are complete.' : (onboarding.missing || []).join(', ').replace(/_/g, ' ')}</p>
+          </article>
         </div>
         <div class="profile-grid">
           ${editableField('First name', 'first_name', candidate.first_name)}
@@ -885,6 +989,7 @@
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn ghost" type="button" data-account-action="inspect">Refresh portal status</button>
+          <button class="btn ghost" type="button" data-onboarding-action="send-rtw-reminder" ${canSendReminder ? '' : 'disabled'}>Send RTW reminder</button>
           <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
           <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
           <button class="btn ghost" type="button" data-account-action="send_password_reset" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Email reset link</button>
@@ -1106,6 +1211,21 @@
     });
     const pdfBtn = section.querySelector('[data-action="download-pdf"]');
     if (pdfBtn) pdfBtn.addEventListener('click', () => generatePdf(candidate));
+    section.querySelectorAll('[data-onboarding-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (btn.dataset.onboardingAction === 'send-rtw-reminder') {
+          btn.disabled = true;
+          try {
+            await sendRtwReminders([candidate.id]);
+          } catch (err) {
+            console.error('[candidates] onboarding action failed', err);
+            showToast(err.message || 'Could not send right-to-work reminder.', 'error', 4200);
+          } finally {
+            btn.disabled = false;
+          }
+        }
+      });
+    });
     section.querySelectorAll('[data-account-action]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const action = btn.dataset.accountAction;
@@ -1452,8 +1572,21 @@
     elements.bulkStatus.addEventListener('click', () => bulkStatus());
     elements.bulkBlock.addEventListener('click', () => bulkStatus('blocked'));
     elements.bulkArchive.addEventListener('click', () => bulkStatus('archived'));
+    elements.bulkReminder.addEventListener('click', () => bulkReminder());
     elements.bulkExport.addEventListener('click', () => exportCsv({ mode: 'selected' }));
     elements.bulkClear.addEventListener('click', () => clearSelection());
+  }
+
+  function selectMissingRtw() {
+    const ids = state.filtered
+      .filter((candidate) => candidate.onboarding?.hasRightToWork === false)
+      .map((candidate) => candidate.id);
+    if (!ids.length) {
+      showToast('No visible candidates are missing right-to-work documents.', 'warn');
+      return;
+    }
+    setSelection(ids);
+    showToast(`Selected ${ids.length} candidate${ids.length === 1 ? '' : 's'} missing right-to-work documents.`, 'info', 2600);
   }
 
   function promptStatus(defaultStatus) {
@@ -1499,6 +1632,44 @@
     showToast(`Assigned ${rows.length} candidates to ${recruiter}`, 'info');
     renderDrawer(state.drawerId ? findCandidate(state.drawerId) : null);
     clearSelection();
+  }
+
+  async function sendRtwReminders(candidateIds) {
+    const payloadIds = Array.isArray(candidateIds) && candidateIds.length
+      ? candidateIds.map((id) => String(id))
+      : [];
+    const preview = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
+      action: 'preview',
+      candidateIds: payloadIds,
+    });
+    const eligible = Array.isArray(preview?.candidates) ? preview.candidates : [];
+    if (!eligible.length) {
+      showToast('No selected candidates are currently missing right-to-work documents.', 'warn', 3600);
+      return;
+    }
+    const sampleNames = eligible.slice(0, 3).map((candidate) => candidate.full_name || candidate.email).join(', ');
+    const previewText = eligible.length > 3 ? `${sampleNames}, and ${eligible.length - 3} more` : sampleNames;
+    const confirmed = window.confirm(`Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`);
+    if (!confirmed) return;
+    const response = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
+      action: 'send',
+      candidateIds: payloadIds,
+    });
+    pushLog({ action: 'rtw:reminders', detail: response?.message || `Sent ${response?.sentCount || 0}` });
+    showToast(response?.message || 'Right-to-work reminders sent.', 'info', 4200);
+  }
+
+  async function bulkReminder() {
+    if (!state.selection.size) {
+      showToast('Select candidates first', 'warn');
+      return;
+    }
+    try {
+      await sendRtwReminders(Array.from(state.selection));
+    } catch (err) {
+      console.error('[candidates] reminder send failed', err);
+      showToast(err.message || 'Right-to-work reminder send failed.', 'error', 4200);
+    }
   }
 
   function exportCsv({ mode } = { mode: 'filtered' }) {
@@ -1636,12 +1807,15 @@
     elements.bulkStatus = qs('#bulk-status');
     elements.bulkBlock = qs('#bulk-block');
     elements.bulkArchive = qs('#bulk-archive');
+    elements.bulkReminder = qs('#bulk-rtw-reminder');
     elements.bulkExport = qs('#bulk-export');
     elements.bulkClear = qs('#bulk-clear');
     elements.total = qs('#t-total');
     elements.progress = qs('#t-progress');
     elements.archived = qs('#t-archived');
     elements.blocked = qs('#t-blocked');
+    elements.ready = qs('#t-ready');
+    elements.rtwMissing = qs('#t-rtw-missing');
     elements.drawer = qs('#drawer');
     elements.dwName = qs('#dw-name');
     elements.dwProfile = qs('#dw-profile');
@@ -1665,6 +1839,7 @@
     elements.filterCount = qs('#flt-count');
     elements.applyFilters = qs('#btn-apply');
     elements.clearFilters = qs('#btn-clear');
+    elements.selectMissingRtw = qs('#btn-select-missing-rtw');
   }
 
   function bindEvents() {
@@ -1673,6 +1848,9 @@
     elements.chkAll.addEventListener('change', handleSelectAll);
     elements.search.addEventListener('input', (ev) => updateQuickSearch(ev.target.value));
     elements.refresh.addEventListener('click', () => loadCandidates({ silent: false }));
+    if (elements.selectMissingRtw) {
+      elements.selectMissingRtw.addEventListener('click', () => selectMissingRtw());
+    }
     elements.dwClose.addEventListener('click', () => closeDrawer());
     elements.fab.addEventListener('click', () => createNewCandidate());
     elements.applyFilters.addEventListener('click', () => { captureFilters(); applyFilters(); loadCandidates({ silent: true }); });

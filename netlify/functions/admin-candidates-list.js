@@ -4,6 +4,7 @@
 const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticCandidates, toCandidate } = require('./_candidates-helpers.js');
+const { attachOnboardingSummaries } = require('./_candidate-onboarding-admin.js');
 const { syncPortalAuthUsersToCandidates } = require('./_candidate-account-admin.js');
 
 // Small helper to coalesce falsy/empty strings to null
@@ -264,7 +265,10 @@ const baseHandler = async (event, context) => {
   const filtered = total;         // We requested count against the filtered selection
   const pages = Math.max(1, Math.ceil(filtered / pageSize));
 
-  const normalisedRows = (rows || []).map(toCandidate);
+  const normalisedRows = await attachOnboardingSummaries(
+    supabase,
+    (rows || []).map(toCandidate),
+  );
 
   const response = {
     rows: normalisedRows,

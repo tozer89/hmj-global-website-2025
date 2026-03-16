@@ -75,19 +75,29 @@
 
     .grid{display:grid;gap:18px}
 
-    .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--stroke)}
+    .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--stroke);background:linear-gradient(180deg,#fff,#fbfdff)}
     .search{display:flex;gap:10px;flex:1;align-items:center;min-width:260px}
     .search input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
     .totals{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
     .table{display:flex;flex-direction:column;min-height:520px}
-    .thead,.trow{display:grid;grid-template-columns:32px 110px minmax(180px,1fr) minmax(220px,1fr) 140px 160px 280px;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--stroke)}
-    .thead{position:sticky;top:0;background:#fbfdff;font-size:13px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;z-index:1}
-    .trow{font-size:15px}
-    .trow:hover{background:#f8fafc}
+    .thead,.trow{display:grid;grid-template-columns:40px 84px minmax(250px,1.2fr) minmax(240px,1fr) minmax(230px,1fr) 128px 248px;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--stroke)}
+    .thead{position:sticky;top:0;background:#f8fbff;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;z-index:1}
+    .trow{font-size:15px;min-height:112px;background:#fff}
+    .trow:hover{background:#f8fbff;box-shadow:inset 0 0 0 1px rgba(47,78,162,.08)}
     .vscroll{position:relative;overflow:auto;flex:1;background:#fff}
-    .row-actions{display:flex;gap:8px;justify-content:flex-start;white-space:nowrap}
+    .row-actions{display:flex;gap:8px;justify-content:flex-start;white-space:nowrap;flex-wrap:wrap;align-items:center}
     .row-actions .btn{min-width:0}
+    .row-card{display:grid;gap:6px;min-width:0}
+    .row-title{font-size:1rem;font-weight:800;line-height:1.25;color:var(--ink);word-break:break-word}
+    .row-subtle{font-size:13px;line-height:1.4;color:var(--muted);word-break:break-word}
+    .row-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .row-inline-strong{font-weight:800;color:var(--ink)}
+    .row-inline-strong.green{color:#166534}
+    .row-inline-strong.orange{color:#92400e}
+    .row-inline-strong.gray{color:#475569}
+    .skeleton-bar{height:18px;border-radius:999px;background:linear-gradient(90deg,#eef2ff,#f7f9ff,#eef2ff)}
 
     .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--stroke);background:var(--chip);font-size:12px;font-weight:700;color:var(--blue)}
     .chip.green{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
@@ -98,17 +108,42 @@
 
     .trow.skeleton{opacity:.55;pointer-events:none}
 
-    .bulkbar{position:sticky;bottom:0;background:#f8faff;border-top:1px solid var(--stroke);padding:10px 16px;display:none;gap:12px;align-items:center;justify-content:space-between}
+    .bulkbar{position:sticky;bottom:0;background:linear-gradient(180deg,#f8faff,#f3f7ff);border-top:1px solid var(--stroke);padding:14px 18px;display:none;gap:12px;align-items:center;justify-content:space-between}
     .bulkbar.show{display:flex}
     .bulkbar > div:first-child{font-weight:700}
 
     .fab{position:fixed;right:24px;bottom:24px;background:var(--blue);color:#fff;border:none;border-radius:14px;padding:14px 18px;box-shadow:0 20px 44px rgba(15,23,42,.25);font-weight:800;cursor:pointer}
     .fab:hover{background:var(--blue-2)}
 
-    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,92vw);background:#fff;border-left:1px solid var(--stroke);box-shadow:-24px 0 60px rgba(15,23,42,.18);transform:translateX(100%);transition:transform .24s ease;overflow:auto;z-index:120}
+    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,96vw);background:#fff;border-left:1px solid var(--stroke);box-shadow:-24px 0 60px rgba(15,23,42,.18);transform:translateX(100%);transition:transform .24s ease;overflow:auto;z-index:120}
     .drawer.open{transform:translateX(0)}
-    .drawer .head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--stroke);background:var(--card)}
+    .drawer .head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--stroke);background:rgba(255,255,255,.96);backdrop-filter:blur(10px);z-index:2}
     .drawer .sec{padding:20px;border-bottom:1px solid var(--stroke)}
+    .drawer-toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .drawer-section{display:grid;gap:16px}
+    .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .drawer-field{display:grid;gap:6px;min-width:0}
+    .drawer-field span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .drawer-field strong{color:var(--ink);line-height:1.4;word-break:break-word}
+    .drawer-input{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;color:var(--ink);font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+    .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .summary-tile{display:grid;gap:6px;padding:14px 16px;border:1px solid rgba(15,23,42,.08);border-radius:16px;background:linear-gradient(180deg,#fbfdff,#f5f8ff)}
+    .summary-tile span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .summary-tile strong{font-size:1rem;color:var(--ink)}
+    .summary-tile p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .tag-row{display:flex;gap:8px;flex-wrap:wrap}
+    .doc-list,.notes,.note-list,.audit-list{display:grid;gap:12px}
+    .doc-row,.note,.audit-row{padding:14px 16px;border:1px solid var(--stroke);border-radius:16px;background:#fbfdff}
+    .doc-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .note{display:grid;gap:10px}
+    .note header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .note p{margin:0;color:var(--ink)}
+    .note-form{display:grid;gap:10px}
+    .audit-row{display:grid;gap:4px}
+    .audit-row strong{font-size:13px;color:var(--ink)}
+    .audit-row span{color:var(--muted);line-height:1.45}
+    .empty-state{display:grid;place-items:center;gap:10px;min-height:220px;padding:24px;color:var(--muted);text-align:center}
+    .rows-inner .empty-state{position:absolute;inset:0}
 
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#fff;border:1px solid var(--stroke);padding:12px 16px;border-radius:12px;box-shadow:0 18px 40px rgba(15,23,42,.18);display:none;font-weight:700}
     .toast.show{display:block}
@@ -120,13 +155,20 @@
       .row{flex-wrap:wrap}
       .search{min-width:100%}
       .sidebar{position:static}
+      .thead,.trow{grid-template-columns:40px 84px minmax(220px,1.2fr) minmax(220px,1fr) minmax(200px,1fr) 120px 230px}
+      .summary-grid{grid-template-columns:1fr}
     }
     @media (max-width:720px){
       header.card.intro{padding:18px}
-      .thead,.trow{grid-template-columns:32px 120px 1fr}
-      .thead > :nth-child(n+4),.trow > :nth-child(n+4){display:none}
+      .thead,.trow{grid-template-columns:40px minmax(0,1fr) 120px 152px}
+      .thead > :nth-child(2),.trow > :nth-child(2),
+      .thead > :nth-child(4),.trow > :nth-child(4),
+      .thead > :nth-child(5),.trow > :nth-child(5){display:none}
       .bulkbar{flex-wrap:wrap;gap:10px}
       .bulkbar > div:first-child{width:100%}
+      .profile-grid{grid-template-columns:1fr}
+      .drawer-toolbar{justify-content:flex-start}
+      .doc-row{display:grid}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
@@ -219,9 +261,14 @@
             <input id="search" placeholder="Quick search ( / to focus )" />
             <button class="btn" id="btn-refresh">Refresh</button>
           </div>
+          <div class="toolbar-actions">
+            <button class="btn ghost small" id="btn-select-missing-rtw" type="button">Select missing RTW</button>
+          </div>
           <div class="totals">
             <span class="pill" id="t-total">Total: 0</span>
             <span class="pill" id="t-progress">In progress: 0</span>
+            <span class="pill" id="t-ready">Ready: 0</span>
+            <span class="pill warn" id="t-rtw-missing">RTW missing: 0</span>
             <span class="pill" id="t-archived">Archived: 0</span>
             <span class="pill" id="t-blocked">Blocked: 0</span>
           </div>
@@ -230,7 +277,7 @@
         <div class="table">
           <div class="thead">
             <div><input type="checkbox" id="chk-all"/></div>
-            <div>Ref</div><div>Name</div><div>Email</div><div>Status</div><div>Job Title</div><div>Actions</div>
+            <div>Ref</div><div>Candidate</div><div>Contact</div><div>Onboarding</div><div>Status</div><div>Actions</div>
           </div>
           <div class="vscroll" id="rows" aria-live="polite"></div>
           <div class="bulkbar" id="bulkbar">
@@ -238,6 +285,7 @@
             <div style="display:flex;gap:8px">
               <button class="btn" id="bulk-assign">Assign recruiter</button>
               <button class="btn" id="bulk-status">Update status</button>
+              <button class="btn" id="bulk-rtw-reminder">Send RTW reminder</button>
               <button class="btn red" id="bulk-block">Block</button>
               <button class="btn" id="bulk-archive">Archive</button>
               <button class="btn" id="bulk-export">Export CSV</button>
@@ -253,7 +301,7 @@
   <aside class="drawer" id="drawer">
     <div class="head">
       <strong id="dw-name">Candidate</strong>
-      <div style="display:flex;gap:8px">
+      <div class="drawer-toolbar">
         <button class="btn" id="dw-email">Email</button>
         <button class="btn" id="dw-call">Call</button>
         <button class="btn ghost" id="dw-archive">Archive</button>
@@ -270,6 +318,6 @@
   <button class="fab" id="fab-new">+ New candidate</button>
   <div class="toast" id="toast"></div>
 
-  <script defer src="/admin/candidates.js?v=4"></script>
+  <script defer src="/admin/candidates.js?v=5"></script>
 </body>
 </html>

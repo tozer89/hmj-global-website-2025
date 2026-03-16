@@ -12,7 +12,9 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=4/);
+  assert.match(html, /\/admin\/candidates\.js\?v=5/);
+  assert.match(html, /id="bulk-rtw-reminder"/);
+  assert.match(html, /id="btn-select-missing-rtw"/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
@@ -59,4 +61,11 @@ test('candidate drawer includes admin document upload controls and avoids deleti
   assert.match(source, /admin-candidate-doc-upload/);
   assert.match(source, /admin-candidate-doc-delete/);
   assert.match(source, /const canDelete = !!\(doc\.id && \(doc\.storage_path \|\| doc\.storage_key \|\| doc\.candidate_id \|\| doc\.meta\)\);/);
+});
+
+test('candidate admin UI exposes onboarding reminder controls and uses the reminder endpoint', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /admin-candidate-onboarding-reminders/);
+  assert.match(source, /data-onboarding-action="send-rtw-reminder"/);
+  assert.match(source, /function selectMissingRtw/);
 });
