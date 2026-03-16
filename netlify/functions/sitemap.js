@@ -34,9 +34,9 @@ function resolveSiteUrl(event = {}) {
   if (rawUrl) return rawUrl;
 
   const envCandidates = [
-    process.env.HMJ_CANONICAL_SITE_URL,
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
+    process.env.HMJ_CANONICAL_SITE_URL,
     DEFAULT_SITE_URL,
   ];
 
