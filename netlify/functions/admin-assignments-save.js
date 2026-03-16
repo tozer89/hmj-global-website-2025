@@ -87,8 +87,9 @@ const baseHandler = async (event, context) => {
       payload.active = true;
     }
 
-    if ((!payload.contractor_id && !payload.candidate_id) || !payload.job_title || !payload.start_date) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'candidate_id or contractor_id, job_title, start_date are required' }) };
+    const isExistingAssignment = payload.id != null;
+    if (((!payload.contractor_id && !payload.candidate_id) && !isExistingAssignment) || !payload.job_title || !payload.start_date) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'candidate_id or contractor_id, job_title, start_date are required for new assignments' }) };
     }
     if (payload.rate_std == null) {
       return { statusCode: 400, body: JSON.stringify({ error: 'rate_std is required' }) };

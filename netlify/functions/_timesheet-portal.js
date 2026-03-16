@@ -9,6 +9,23 @@ const DEFAULT_CANDIDATE_PATHS = [
   '/recruitment/contractors',
   '/api/recruitment/contractors',
 ];
+const DEFAULT_ASSIGNMENT_PATHS = [
+  '/jobs',
+  '/placements',
+  '/recruitment/placements',
+  '/assignments',
+  '/recruitment/assignments',
+  '/engagements',
+  '/contracts',
+  '/bookings',
+  '/jobassignments',
+  '/roles',
+  '/api/recruitment/placements',
+  '/api/v1/recruitment/placements',
+  '/api/recruitment/assignments',
+  '/api/v1/assignments',
+  '/api/v1/recruitment/assignments',
+];
 
 let cachedToken = null;
 
@@ -87,6 +104,21 @@ function readTimesheetPortalConfig() {
     trimString(firstEnv(process.env.TIMESHEET_PORTAL_CANDIDATE_PATH, process.env.TSP_CANDIDATE_PATH), 240),
   ].filter(Boolean);
   const candidatePaths = configuredPaths.length ? configuredPaths : DEFAULT_CANDIDATE_PATHS;
+  const configuredAssignmentPaths = [
+    trimString(firstEnv(
+      process.env.TIMESHEET_PORTAL_ASSIGNMENT_PATH_OVERRIDE,
+      process.env.TSP_ASSIGNMENT_PATH_OVERRIDE,
+      process.env.TIMESHEET_PORTAL_PLACEMENT_PATH_OVERRIDE,
+      process.env.TSP_PLACEMENT_PATH_OVERRIDE,
+    ), 240),
+    trimString(firstEnv(
+      process.env.TIMESHEET_PORTAL_ASSIGNMENT_PATH,
+      process.env.TSP_ASSIGNMENT_PATH,
+      process.env.TIMESHEET_PORTAL_PLACEMENT_PATH,
+      process.env.TSP_PLACEMENT_PATH,
+    ), 240),
+  ].filter(Boolean);
+  const assignmentPaths = configuredAssignmentPaths.length ? configuredAssignmentPaths : DEFAULT_ASSIGNMENT_PATHS;
   const enabled = truthyEnv(firstEnv(process.env.TIMESHEET_PORTAL_ENABLED, process.env.TSP_ENABLED)) || !!apiToken || (!!clientId && !!clientSecret);
 
   return {
@@ -100,6 +132,7 @@ function readTimesheetPortalConfig() {
     tokenPath,
     scope,
     candidatePaths,
+    assignmentPaths,
   };
 }
 
@@ -239,6 +272,23 @@ function buildPagedUrl(baseUrl, candidatePath, options = {}) {
   return joinUrl(baseUrl, queryPath);
 }
 
+function buildCollectionUrl(baseUrl, collectionPath, options = {}) {
+  const cleanPath = trimString(collectionPath, 240);
+  if (!cleanPath) return joinUrl(baseUrl, '');
+  const take = Math.max(1, Math.min(1000, Number(options.take) || 250));
+  const page = Math.max(1, Number(options.page) || 1);
+  let queryPath = cleanPath;
+  if (!/\?/.test(queryPath)) {
+    queryPath = `${queryPath}?take=${take}`;
+  } else if (!/[?&](take|top|\$top)=/i.test(queryPath)) {
+    queryPath = `${queryPath}&take=${take}`;
+  }
+  if (page > 1 && !/[?&]page=/i.test(queryPath)) {
+    queryPath = `${queryPath}&page=${page}`;
+  }
+  return joinUrl(baseUrl, queryPath);
+}
+
 async function discoverCandidatePath(config, authCandidates) {
   const attempts = [];
   for (const auth of authCandidates) {
@@ -265,6 +315,165 @@ async function discoverCandidatePath(config, authCandidates) {
   error.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_candidate_path_missing';
   error.attempts = attempts;
   throw error;
+}
+
+async function discoverAssignmentPath(config, authCandidates) {
+  const attempts = [];
+  for (const auth of authCandidates) {
+    for (const path of config.assignmentPaths || []) {
+      const cleanPath = trimString(path, 240);
+      if (!cleanPath) continue;
+      const url = buildCollectionUrl(config.resourceBaseUrl, cleanPath, { take: 5, page: 1 });
+      const result = await fetchJson(url, auth);
+      attempts.push({
+        path: cleanPath,
+        status: result.response.status,
+        authSource: auth.source,
+        authScheme: auth.scheme,
+      });
+      if (result.response.ok) {
+        return { assignmentPath: cleanPath, auth, attempts };
+      }
+    }
+  }
+  const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
+  const error = new Error(sawUnauthorized
+    ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
+    : 'Timesheet Portal assignment endpoint could not be discovered for this account.');
+  error.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_assignment_path_missing';
+  error.attempts = attempts;
+  throw error;
+}
+
+function readStringKeys(record = {}, keys = [], maxLength = 240) {
+  for (const key of keys) {
+    const value = trimString(record?.[key], maxLength);
+    if (value) return value;
+  }
+  return '';
+}
+
+function readNumberKeys(record = {}, keys = []) {
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value === null || value === undefined || value === '') continue;
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return null;
+}
+
+function toDateOnly(value) {
+  const text = trimString(value, 80);
+  if (!text) return '';
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  const parsed = Date.parse(text);
+  if (!Number.isFinite(parsed)) return '';
+  return new Date(parsed).toISOString().slice(0, 10);
+}
+
+function normalizeAssignmentStatus(value, activeFlag) {
+  const raw = trimString(value, 80).toLowerCase();
+  if (raw === 'complete' || raw === 'completed' || raw === 'closed' || raw === 'ended' || raw === 'inactive' || raw === 'finished') {
+    return 'complete';
+  }
+  if (raw === 'pending' || raw === 'future' || raw === 'booked' || raw === 'onboarding') {
+    return 'pending';
+  }
+  if (raw === 'draft' || raw === 'new') {
+    return 'draft';
+  }
+  if (raw === 'live' || raw === 'active' || raw === 'current' || raw === 'open') {
+    return 'live';
+  }
+  if (activeFlag === false) return 'complete';
+  if (activeFlag === true) return 'live';
+  return raw || 'draft';
+}
+
+function normalizeTimesheetPortalAssignment(record = {}) {
+  const firstName = readStringKeys(record, ['firstName', 'firstname', 'candidateFirstName', 'contractorFirstName'], 120);
+  const lastName = readStringKeys(record, ['lastName', 'lastname', 'surname', 'candidateLastName', 'contractorLastName'], 120);
+  const fallbackName = [firstName, lastName].filter(Boolean).join(' ');
+  const candidateName = readStringKeys(
+    record,
+    ['candidateName', 'contractorName', 'workerName', 'employeeName', 'name', 'fullName'],
+    240,
+  ) || fallbackName;
+  const currency = trimString(
+    readStringKeys(record, ['currency', 'payCurrencyCode', 'chargeCurrencyCode'], 12) || 'GBP',
+    12,
+  ).toUpperCase() || 'GBP';
+  const activeFlag = typeof record.active === 'boolean'
+    ? record.active
+    : typeof record.isActive === 'boolean'
+      ? record.isActive
+      : null;
+  const contractorId = readStringKeys(record, ['contractorId', 'candidateId', 'workerId', 'employeeId', 'userId'], 120);
+  const contractorCode = readStringKeys(record, ['contractorCode', 'candidateCode', 'contractorRef', 'workerCode'], 120);
+  const payrollRef = readStringKeys(record, ['payrollReference', 'accountingReference', 'accountingReferenceCode'], 120);
+
+  return {
+    id: readStringKeys(record, ['assignmentId', 'placementId', 'jobId', 'guid', 'id'], 120),
+    reference: readStringKeys(record, ['assignmentCode', 'jobCode', 'reference', 'ref', 'code', 'jobRef'], 120),
+    title: readStringKeys(record, ['jobTitle', 'title', 'description', 'name', 'role'], 240),
+    status: normalizeAssignmentStatus(readStringKeys(record, ['status', 'assignmentStatus', 'state'], 80), activeFlag),
+    candidateName: candidateName || '',
+    candidateEmail: lowerEmail(record.email || record.candidateEmail || record.contractorEmail || record.workerEmail),
+    contractorId,
+    contractorCode,
+    payrollRef,
+    clientCode: readStringKeys(record, ['clientCode', 'customerCode', 'clientRef'], 120),
+    clientName: readStringKeys(record, ['clientName', 'customerName', 'client', 'customer'], 240),
+    clientSite: readStringKeys(record, ['siteAddress', 'siteName', 'site', 'location', 'address'], 240),
+    startDate: toDateOnly(record.startDate || record.assignmentStart || record.start || record.fromDate),
+    endDate: toDateOnly(record.endDate || record.assignmentEnd || record.end || record.toDate),
+    currency,
+    ratePay: readNumberKeys(record, ['ratePay', 'payRate', 'rate_std', 'rateStd', 'pay']),
+    rateStd: readNumberKeys(record, ['rateStd', 'rate_std', 'payRate', 'ratePay', 'standardRate']),
+    rateCharge: readNumberKeys(record, ['rateCharge', 'chargeRate', 'charge_std', 'chargeStd']),
+    chargeStd: readNumberKeys(record, ['chargeStd', 'charge_std', 'chargeRate', 'rateCharge']),
+    chargeOt: readNumberKeys(record, ['chargeOt', 'charge_ot', 'overtimeChargeRate']),
+    consultantName: readStringKeys(record, ['consultantName', 'recruiterName', 'ownerName', 'accountManager'], 240),
+    active: activeFlag === null
+      ? normalizeAssignmentStatus(readStringKeys(record, ['status', 'assignmentStatus', 'state'], 80), null) !== 'complete'
+      : activeFlag,
+    raw: record,
+  };
+}
+
+async function fetchAssignmentsCollection(config, auth, assignmentPath, options = {}) {
+  const seenKeys = new Set();
+  const rows = [];
+  const take = Math.max(1, Math.min(1000, Number(options.take) || 250));
+  const pageLimit = Math.max(1, Math.min(50, Number(options.pageLimit) || 20));
+
+  for (let page = 1; page <= pageLimit; page += 1) {
+    const url = buildCollectionUrl(config.resourceBaseUrl, assignmentPath, { take, page });
+    const result = await fetchJson(url, auth);
+    if (!result.response.ok) {
+      const error = new Error(`Timesheet Portal assignment list failed (${result.response.status})`);
+      error.code = 'timesheet_portal_assignment_list_failed';
+      error.status = result.response.status;
+      throw error;
+    }
+    const pageRows = extractCollection(result.json)
+      .map(normalizeTimesheetPortalAssignment)
+      .filter((row) => row.id || row.reference || row.title || row.clientName);
+    if (!pageRows.length) break;
+    let added = 0;
+    pageRows.forEach((row) => {
+      const key = row.id || row.reference || `${row.title}|${row.clientName}|${row.startDate}`;
+      if (!key || seenKeys.has(key)) return;
+      seenKeys.add(key);
+      rows.push(row);
+      added += 1;
+    });
+    if (!added || pageRows.length < take) break;
+  }
+
+  return rows;
 }
 
 async function fetchUsersCollection(config, auth, candidatePath) {
@@ -331,6 +540,29 @@ async function listTimesheetPortalContractors(config, options = {}) {
   return {
     discovery,
     contractors: extractCollection(result.json).map(normalizeContractor).filter((row) => row.id || row.email || row.reference),
+  };
+}
+
+async function listTimesheetPortalAssignments(config, options = {}) {
+  if (!config.enabled || !config.configured) {
+    const error = new Error('Timesheet Portal is not configured.');
+    error.code = 'timesheet_portal_not_configured';
+    throw error;
+  }
+
+  const { auths, oauthError } = await getAuthCandidates(config);
+  if (!auths.length) {
+    if (oauthError) throw oauthError;
+    const error = new Error('Timesheet Portal credentials are not configured.');
+    error.code = 'timesheet_portal_not_configured';
+    throw error;
+  }
+
+  const discovery = await discoverAssignmentPath(config, auths);
+  const assignments = await fetchAssignmentsCollection(config, discovery.auth, discovery.assignmentPath, options);
+  return {
+    discovery,
+    assignments,
   };
 }
 
@@ -431,6 +663,8 @@ function compareCandidates(websiteCandidates = [], contractors = []) {
 
 module.exports = {
   compareCandidates,
+  listTimesheetPortalAssignments,
   listTimesheetPortalContractors,
+  normalizeTimesheetPortalAssignment,
   readTimesheetPortalConfig,
 };

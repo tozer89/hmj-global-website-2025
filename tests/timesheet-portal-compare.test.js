@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 
 const {
   compareCandidates,
+  listTimesheetPortalAssignments,
   listTimesheetPortalContractors,
+  normalizeTimesheetPortalAssignment,
   readTimesheetPortalConfig,
 } = require('../netlify/functions/_timesheet-portal.js');
 
@@ -120,6 +122,7 @@ test('readTimesheetPortalConfig accepts legacy TSP_* env aliases used in Netlify
 test('readTimesheetPortalConfig includes documented /users endpoint in default candidate discovery paths', () => {
   const config = readTimesheetPortalConfig();
   assert.equal(config.candidatePaths[0], '/users');
+  assert.equal(config.assignmentPaths[0], '/jobs');
 });
 
 test('listTimesheetPortalContractors uses oauth bearer auth and /users discovery when available', async () => {
@@ -232,6 +235,89 @@ test('listTimesheetPortalContractors falls back to raw api token auth when oauth
     assert.equal(result.discovery.candidatePath, '/users');
     assert.equal(result.discovery.auth.scheme, 'token');
     assert.equal(result.contractors[0].email, 'legacy@example.com');
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv('TIMESHEET_PORTAL_API_TOKEN', previous.apiToken);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_ID', previous.clientId);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_SECRET', previous.clientSecret);
+    restoreEnv('TIMESHEET_PORTAL_BASE_URL', previous.baseUrl);
+  }
+});
+
+test('normalizeTimesheetPortalAssignment maps common Brightwater-style fields', () => {
+  const record = normalizeTimesheetPortalAssignment({
+    id: 'job-77',
+    jobCode: 'AS-77',
+    description: 'Electrical Supervisor',
+    status: 'Active',
+    contractorId: '5580',
+    contractorName: 'Joseph Tozer',
+    contractorEmail: 'TOZER89@gmail.com',
+    clientName: 'DataCore Holdings',
+    siteAddress: 'LDN-1 Campus',
+    startDate: '2026-03-01T00:00:00Z',
+    endDate: '2026-06-30T00:00:00Z',
+    payCurrencyCode: 'gbp',
+    payRate: 42,
+    chargeRate: 60,
+  });
+
+  assert.equal(record.id, 'job-77');
+  assert.equal(record.reference, 'AS-77');
+  assert.equal(record.title, 'Electrical Supervisor');
+  assert.equal(record.status, 'live');
+  assert.equal(record.contractorId, '5580');
+  assert.equal(record.candidateName, 'Joseph Tozer');
+  assert.equal(record.candidateEmail, 'tozer89@gmail.com');
+  assert.equal(record.clientName, 'DataCore Holdings');
+  assert.equal(record.clientSite, 'LDN-1 Campus');
+  assert.equal(record.startDate, '2026-03-01');
+  assert.equal(record.endDate, '2026-06-30');
+  assert.equal(record.currency, 'GBP');
+  assert.equal(record.ratePay, 42);
+  assert.equal(record.rateCharge, 60);
+});
+
+test('listTimesheetPortalAssignments discovers /jobs and returns normalized rows', async () => {
+  const previous = {
+    apiToken: process.env.TIMESHEET_PORTAL_API_TOKEN,
+    clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
+    clientSecret: process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
+    baseUrl: process.env.TIMESHEET_PORTAL_BASE_URL,
+  };
+  const originalFetch = global.fetch;
+
+  process.env.TIMESHEET_PORTAL_API_TOKEN = 'raw-token';
+  process.env.TIMESHEET_PORTAL_CLIENT_ID = '';
+  process.env.TIMESHEET_PORTAL_CLIENT_SECRET = '';
+  process.env.TIMESHEET_PORTAL_BASE_URL = 'https://brightwater.api.timesheetportal.test';
+
+  global.fetch = async (url, options = {}) => {
+    if (String(url) === 'https://brightwater.api.timesheetportal.test/jobs?take=5') {
+      assert.equal(options.headers.authorization, 'raw-token');
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ id: 'job-1', jobCode: 'AS-1', description: 'Planner', status: 'Live', contractorName: 'Joe Tozer' }]),
+      };
+    }
+    if (String(url) === 'https://brightwater.api.timesheetportal.test/jobs?take=500') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ id: 'job-1', jobCode: 'AS-1', description: 'Planner', status: 'Live', contractorName: 'Joe Tozer' }]),
+      };
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+
+  try {
+    const result = await listTimesheetPortalAssignments(readTimesheetPortalConfig(), { take: 500, pageLimit: 1 });
+    assert.equal(result.discovery.assignmentPath, '/jobs');
+    assert.equal(result.assignments.length, 1);
+    assert.equal(result.assignments[0].reference, 'AS-1');
+    assert.equal(result.assignments[0].title, 'Planner');
+    assert.equal(result.assignments[0].candidateName, 'Joe Tozer');
   } finally {
     global.fetch = originalFetch;
     restoreEnv('TIMESHEET_PORTAL_API_TOKEN', previous.apiToken);

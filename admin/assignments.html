@@ -150,6 +150,8 @@
         <option>closed</option>
       </select>
       <button class="btn small ghost" id="btnRefresh">⟲ Refresh</button>
+      <button class="btn small" id="btnSyncTsp">Sync from TSP</button>
+      <div id="syncMeta" class="muted" style="font-size:13px;min-height:20px"></div>
 
       <div class="sp"></div>
 
@@ -263,6 +265,9 @@
       let currentTab = 'Basics';
       let dropdowns = { contractors: [], candidates: [], clients: [], projects: [], sites: [] };
       let quickRecord = null;
+      let lastSyncResult = null;
+      let autoSyncAttempted = false;
+      let syncInFlight = false;
 
       const columns = [
         { key:'as_ref',       label:'REF',     show:true,  width:'100px' },
@@ -315,6 +320,21 @@
           <div class="metric">Draft/Pending: ${by('draft') + by('pending')}</div>
           <div class="metric">Complete: ${by('complete')}</div>
         `;
+        const syncMeta = $('#syncMeta');
+        if (syncMeta) {
+          if (!lastSyncResult) {
+            syncMeta.textContent = 'Assignments are mirrored from Timesheet Portal into the website database. Refresh re-syncs from TSP and updates candidate matching.';
+          } else if (lastSyncResult.ok) {
+            const matched = Number(lastSyncResult.matchedCandidates || 0);
+            const unmatched = Number(lastSyncResult.unmatchedCandidates || 0);
+            syncMeta.textContent = `Last TSP sync: ${lastSyncResult.upserted || 0} assignment(s) refreshed from ${lastSyncResult.assignmentPath || 'discovered endpoint'} · matched ${matched} candidate(s) · unmatched ${unmatched}.`;
+          } else {
+            const attempts = Array.isArray(lastSyncResult.attempts) && lastSyncResult.attempts.length
+              ? ` Latest checks: ${lastSyncResult.attempts.slice(0, 4).map((attempt) => `${attempt.path} → ${attempt.status} (${attempt.authSource || attempt.authScheme || 'auth'})`).join(' · ')}`
+              : '';
+            syncMeta.textContent = `${lastSyncResult.message || 'Timesheet Portal sync failed.'}${attempts}`;
+          }
+        }
       }
 
       function render(){
@@ -443,6 +463,11 @@
           total = res?.total ?? rows.length;
           selected.clear(); updateBulkButtons();
           render();
+          if (!rows.length && !activeStatus && !(($('#q')?.value||'').trim()) && !autoSyncAttempted) {
+            autoSyncAttempted = true;
+            await syncFromTsp({ silent: true });
+            return;
+          }
           if (quickRecord?.id) {
             try {
               const refreshed = await api('admin-assignments-get','POST',{ id: quickRecord.id });
@@ -455,6 +480,40 @@
           console.error('[assignments] list error', e);
           toast(e.message || 'Failed to load', 'error', 5000);
           wrap.textContent = 'Failed to load. Check console for details.';
+        }
+      }
+
+      async function syncFromTsp(options = {}){
+        const { silent = false } = options || {};
+        if (syncInFlight) return;
+        syncInFlight = true;
+        const refreshBtn = $('#btnRefresh');
+        const syncBtn = $('#btnSyncTsp');
+        try{
+          lastSyncResult = null;
+          const syncMeta = $('#syncMeta');
+          if (syncMeta) syncMeta.textContent = 'Syncing assignments from Timesheet Portal…';
+          if (refreshBtn) refreshBtn.disabled = true;
+          if (syncBtn) syncBtn.disabled = true;
+          const res = await api('admin-assignments-sync-timesheet-portal','POST',{});
+          lastSyncResult = res || { ok:false, message:'Timesheet Portal sync failed.' };
+          if (res?.ok) {
+            if (!silent) toast(`Synced ${res.upserted || 0} assignment(s) from Timesheet Portal`, 'ok', 2400);
+            page = 1;
+            await refreshDropdowns();
+            await load();
+          } else {
+            computeMetrics();
+            if (!silent) toast(res?.message || 'Timesheet Portal sync failed', 'warn', 5000);
+          }
+        }catch(e){
+          lastSyncResult = { ok:false, message: e.message || String(e), attempts: [] };
+          computeMetrics();
+          if (!silent) toast('Timesheet Portal sync failed: ' + (e.message||e), 'error', 5000);
+        } finally {
+          syncInFlight = false;
+          if (refreshBtn) refreshBtn.disabled = false;
+          if (syncBtn) syncBtn.disabled = false;
         }
       }
 
@@ -1081,7 +1140,8 @@
         }
       }
 
-      $('#btnRefresh').onclick = ()=>{ refreshDropdowns(); load(); };
+      $('#btnRefresh').onclick = ()=>{ page=1; syncFromTsp(); };
+      $('#btnSyncTsp').onclick = ()=>{ syncFromTsp(); };
       $('#btnExportAll').onclick = ()=>exportCsv(false);
       $('#btnExportSel').onclick = ()=>exportCsv(true);
       $('#btnNew').onclick     = ()=>{ resetForm(); openDrawer(); };
