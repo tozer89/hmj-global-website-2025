@@ -1146,17 +1146,11 @@
 
     applyClosedBatchUiDomState();
 
-    const startupFallbackTimer = window.setTimeout(() => {
-      revealStartupFallback('The jobs console did not finish loading. Refresh this page, then sign in again if needed.');
-    }, 4500);
-
     if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
       return setTimeout(startJobs, 40);
     }
 
     window.Admin.bootAdmin(async ({ api, sel, toast, identity }) => {
-      startupSettled = true;
-      window.clearTimeout(startupFallbackTimer);
       const PREFS_KEY = 'hmj.jobs.admin.preferences:v1';
       const DEFAULT_FILTERS = Object.freeze({
         q: '',
@@ -4560,6 +4554,7 @@
       updateStatusPanel();
       applyReadOnly();
       await loadJobs();
+      startupSettled = true;
     }).catch((error) => {
       console.error('[jobs] bootstrap failed', error);
       revealStartupFallback('The jobs console hit a startup error. Refresh this page, then try again.');
