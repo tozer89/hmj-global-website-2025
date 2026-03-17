@@ -420,6 +420,7 @@ import {
     requestedFocus: trimText(params.get('candidate_focus'), 80).toLowerCase(),
     requestedDocuments: parseRequestedDocumentList(params.get('candidate_docs')),
     onboardingPrompt: params.get('candidate_onboarding') === '1',
+    draftOnboardingMode: null,
     user: null,
     session: null,
     candidate: null,
@@ -581,6 +582,9 @@ import {
   }
 
   function candidateOnboardingMode(candidate = state.candidate) {
+    if (typeof state.draftOnboardingMode === 'boolean') {
+      return state.draftOnboardingMode;
+    }
     return storedOnboardingMode(candidate) || state.onboardingPrompt || state.requestedDocuments.length > 0;
   }
 
@@ -1497,6 +1501,7 @@ import {
       state.applications = applications;
       state.documents = documents;
       state.paymentDetails = paymentDetails;
+      state.draftOnboardingMode = null;
       state.requestedDocuments = remainingRequestedDocuments(documents, state.requestedDocuments);
       if (!state.requestedDocuments.length && onboardingSummary().complete) {
         state.onboardingPrompt = false;
@@ -1845,6 +1850,7 @@ import {
           emergency_phone: emergencyPhone,
         });
         state.candidate = saved;
+        state.draftOnboardingMode = null;
         state.authMessage = { tone: 'success', text: 'Profile saved. HMJ will now see the updated version.' };
       } else if (formType === 'documents') {
         state.documentsBusy = true;
@@ -2068,6 +2074,14 @@ import {
 
   function handleDashboardChange(event) {
     const target = event.target;
+    if (target instanceof HTMLInputElement && target.name === 'onboarding_mode') {
+      state.draftOnboardingMode = normaliseBooleanFlag(target.value);
+      if (state.draftOnboardingMode && state.activeTab === 'settings') {
+        state.activeTab = 'profile';
+      }
+      render();
+      return;
+    }
     if (!(target instanceof HTMLSelectElement)) return;
     const form = target.closest('[data-dashboard-form="payment"]');
     if (!form) return;
