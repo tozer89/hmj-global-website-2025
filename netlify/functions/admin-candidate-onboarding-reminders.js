@@ -25,7 +25,7 @@ function buildCandidatesMap(rows = []) {
 async function loadCandidates(supabase, body = {}) {
   let query = supabase
     .from('candidates')
-    .select('id,ref,payroll_ref,full_name,first_name,last_name,email,status,auth_user_id,right_to_work_status,rtw_url,updated_at,created_at')
+    .select('id,ref,payroll_ref,full_name,first_name,last_name,email,status,auth_user_id,right_to_work_status,updated_at,created_at')
     .order('updated_at', { ascending: false })
     .limit(500);
 
