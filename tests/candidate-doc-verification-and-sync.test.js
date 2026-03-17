@@ -12,6 +12,7 @@ const {
 const {
   buildTimesheetPortalContractorLookups,
   buildWebsiteCandidateLookups,
+  emailsConflict,
   matchTimesheetPortalContractorForCandidate,
   matchWebsiteCandidateForTimesheetPortalContractor,
   mergeTimesheetPortalCandidate,
@@ -93,4 +94,39 @@ test('Timesheet Portal candidate sync matches by email and carries TSP reference
   assert.equal(merged.payroll_ref, '5580');
   assert.equal(merged.email, 'tozer89@gmail.com');
   assert.equal(merged.current_job_title, 'Planner');
+});
+
+test('Timesheet Portal candidate sync ignores ref-only matches when the email identity conflicts', () => {
+  const contractor = {
+    id: 'tsp-999',
+    reference: '5580',
+    email: 'george@example.com',
+    firstName: 'George',
+    lastName: 'Chiriac',
+  };
+  const existingCandidate = {
+    id: 'cand-1',
+    ref: '5580',
+    payroll_ref: '5580',
+    email: 'tozer89@gmail.com',
+    first_name: 'Joseph',
+    last_name: 'Tozer',
+    full_name: 'Joseph Tozer',
+  };
+
+  const contractorLookups = buildTimesheetPortalContractorLookups([contractor]);
+  const websiteLookups = buildWebsiteCandidateLookups([existingCandidate]);
+
+  assert.equal(emailsConflict(existingCandidate.email, contractor.email), true);
+  assert.equal(matchTimesheetPortalContractorForCandidate(existingCandidate, contractorLookups).contractor, null);
+  assert.equal(matchWebsiteCandidateForTimesheetPortalContractor(contractor, websiteLookups).candidate, null);
+
+  const inserted = mergeTimesheetPortalCandidate({
+    contractor,
+    existing: null,
+    now: '2026-03-17T12:30:00.000Z',
+  });
+
+  assert.equal(inserted.ref, null);
+  assert.equal(inserted.payroll_ref, '5580');
 });

@@ -22,6 +22,12 @@ function normalizeName(value) {
     .trim();
 }
 
+function emailsConflict(left, right) {
+  const a = lowerEmail(left);
+  const b = lowerEmail(right);
+  return !!(a && b && a !== b);
+}
+
 function candidateDisplayName(candidate = {}) {
   return trimString(
     candidate.full_name
@@ -141,7 +147,9 @@ function matchWebsiteCandidateForTimesheetPortalContractor(contractor = {}, look
     trimString(contractor.id, 120),
   ]) {
     if (ref && lookups.byReference?.has(ref)) {
-      return { candidate: lookups.byReference.get(ref), matchedBy: 'reference' };
+      const candidate = lookups.byReference.get(ref);
+      if (emailsConflict(candidate?.email, contractor.email)) continue;
+      return { candidate, matchedBy: 'reference' };
     }
   }
 
@@ -164,7 +172,9 @@ function matchTimesheetPortalContractorForCandidate(candidate = {}, contractorLo
     trimString(candidate.ref, 120),
   ]) {
     if (ref && contractorLookups.byReference?.has(ref)) {
-      return { contractor: contractorLookups.byReference.get(ref), matchedBy: 'reference' };
+      const contractor = contractorLookups.byReference.get(ref);
+      if (emailsConflict(candidate?.email, contractor?.email)) continue;
+      return { contractor, matchedBy: 'reference' };
     }
   }
 
@@ -178,6 +188,7 @@ function matchTimesheetPortalContractorForCandidate(candidate = {}, contractorLo
 
 function mergeTimesheetPortalCandidate({ contractor = {}, existing = null, now = new Date().toISOString() }) {
   const current = existing && typeof existing === 'object' ? existing : {};
+  const hasExisting = !!current.id;
   const reference = trimString(contractor.reference || contractor.accountingReference, 120) || '';
   const fullName = timesheetPortalContractorName(contractor);
   const split = splitName(fullName);
@@ -185,7 +196,7 @@ function mergeTimesheetPortalCandidate({ contractor = {}, existing = null, now =
 
   const payload = {
     id: current.id || undefined,
-    ref: trimString(current.ref, 120) || reference || null,
+    ref: trimString(current.ref, 120) || (hasExisting ? reference : '') || null,
     payroll_ref: reference || trimString(current.payroll_ref, 120) || null,
     email: lowerEmail(contractor.email) || lowerEmail(current.email) || null,
     first_name: trimString(contractor.firstName, 120) || trimString(current.first_name, 120) || split.first_name || null,
@@ -210,6 +221,7 @@ module.exports = {
   buildTimesheetPortalContractorLookups,
   buildWebsiteCandidateLookups,
   candidateDisplayName,
+  emailsConflict,
   matchTimesheetPortalContractorForCandidate,
   matchWebsiteCandidateForTimesheetPortalContractor,
   mergeTimesheetPortalCandidate,
