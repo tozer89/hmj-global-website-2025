@@ -228,7 +228,14 @@ test('buildSupabaseAuthPatch includes SMTP fields only when custom SMTP is enabl
     });
 
     assert.equal(Object.prototype.hasOwnProperty.call(withoutSmtp, 'smtp_host'), false);
+    assert.equal(withoutSmtp.uri_allow_list, [
+      'https://www.hmj-global.com',
+      'https://www.hmj-global.com/candidates.html?candidate_auth=verified',
+      'https://www.hmj-global.com/candidates.html?candidate_action=recovery',
+      'https://www.hmj-global.com/candidates.html',
+    ].join(','));
     assert.equal(withSmtp.smtp_host, 'smtp.office365.com');
+    assert.equal(withSmtp.smtp_port, '587');
     assert.equal(withSmtp.smtp_pass, 'secret');
   } finally {
     restore();
@@ -297,8 +304,53 @@ test('applyCandidateEmailSettingsToSupabase accepts a one-time management token 
     assert.equal(calls.length, 1);
     assert.match(calls[0].url, /api\.supabase\.com\/v1\/projects\/mftwpbpwisxyaenfoizb\/config\/auth$/);
     assert.equal(calls[0].authorization, 'Bearer override-token');
+    const sentBody = JSON.parse(calls[0].body);
+    assert.equal(typeof sentBody.smtp_port, 'undefined');
+    assert.equal(typeof sentBody.uri_allow_list, 'string');
   } finally {
     global.fetch = originalFetch;
+    restore();
+  }
+});
+
+test('buildSupabaseAuthPatch normalises smtp_port and uri_allow_list to strings for Supabase', () => {
+  const { mod, restore } = loadModule();
+  try {
+    const patch = mod.buildSupabaseAuthPatch({
+      customSmtpEnabled: true,
+      smtpHost: 'smtp.office365.com',
+      smtpPort: 587,
+      smtpUser: 'info@hmj-global.com',
+      smtpPassword: 'secret',
+      senderEmail: 'info@hmj-global.com',
+      senderName: 'HMJ Global',
+      supportEmail: 'info@hmj-global.com',
+      siteUrl: 'https://hmjg.netlify.app',
+      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+      confirmationSubject: 'Confirm your HMJ candidate account',
+      recoverySubject: 'Reset your HMJ candidate password',
+      emailChangeSubject: 'Confirm your new HMJ candidate email address',
+      confirmationHeading: 'Confirm your HMJ candidate account',
+      recoveryHeading: 'Reset your HMJ candidate password',
+      emailChangeHeading: 'Confirm your new HMJ candidate email address',
+      preheader: 'Secure access to your HMJ candidate dashboard.',
+      introCopy: 'Use the secure button below to finish your HMJ candidate account setup.',
+      recoveryCopy: 'Use the secure button below to choose a new password for your HMJ candidate account.',
+      helpCopy: 'If the button does not work, copy the full link into your browser or contact HMJ support.',
+      footerTagline: 'Specialist recruitment for technical projects.',
+    });
+
+    assert.equal(typeof patch.smtp_port, 'string');
+    assert.equal(patch.smtp_port, '587');
+    assert.equal(typeof patch.uri_allow_list, 'string');
+    assert.equal(patch.uri_allow_list, [
+      'https://hmjg.netlify.app',
+      'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
+      'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+      'https://hmjg.netlify.app/candidates.html',
+    ].join(','));
+  } finally {
     restore();
   }
 });

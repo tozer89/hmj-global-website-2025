@@ -64,6 +64,16 @@ function normalisePort(value, fallback = 587) {
   return parsed;
 }
 
+function normaliseCommaSeparatedList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => trimString(entry, 1000))
+      .filter(Boolean)
+      .join(',');
+  }
+  return trimString(value, 4000);
+}
+
 function toBoolean(value, fallback = false) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -327,7 +337,7 @@ function buildSupabaseAuthPatch(settings = {}) {
 
   const patch = {
     site_url: settings.siteUrl,
-    uri_allow_list: redirectUrls,
+    uri_allow_list: normaliseCommaSeparatedList(redirectUrls),
     external_email_enabled: true,
     mailer_autoconfirm: false,
     mailer_secure_email_change_enabled: true,
@@ -341,7 +351,7 @@ function buildSupabaseAuthPatch(settings = {}) {
 
   if (settings.customSmtpEnabled) {
     patch.smtp_host = settings.smtpHost;
-    patch.smtp_port = settings.smtpPort;
+    patch.smtp_port = String(normalisePort(settings.smtpPort, 587));
     patch.smtp_user = settings.smtpUser;
     patch.smtp_pass = settings.smtpPassword;
     patch.smtp_admin_email = settings.senderEmail;
@@ -598,4 +608,5 @@ module.exports = {
   applyCandidateEmailSettingsToSupabase,
   resolveProjectRef,
   resolveManagementToken,
+  normaliseCommaSeparatedList,
 };
