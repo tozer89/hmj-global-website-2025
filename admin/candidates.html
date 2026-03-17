@@ -382,6 +382,10 @@
               Website only
               <span class="source-tab__count" data-source-count="website">0</span>
             </button>
+            <button class="source-tab" type="button" data-source-tab="timesheet-portal-active" aria-selected="false" aria-controls="rows">
+              TSP active assignments
+              <span class="source-tab__count" data-source-count="timesheet-portal-active">0</span>
+            </button>
             <button class="source-tab" type="button" data-source-tab="timesheet-portal" aria-selected="false" aria-controls="rows">
               Timesheet Portal only
               <span class="source-tab__count" data-source-count="timesheet-portal">0</span>
@@ -411,6 +415,7 @@
           <div class="bulkbar" id="bulkbar">
             <div id="bulk-count">0 selected</div>
             <div style="display:flex;gap:8px">
+              <button class="btn" id="bulk-intro-email">Send intro email</button>
               <button class="btn" id="bulk-assign">Assign recruiter</button>
               <button class="btn" id="bulk-status">Update status</button>
               <button class="btn" id="bulk-doc-request">Send document request</button>
@@ -463,6 +468,7 @@
     </form>
   </dialog>
 
-  <script defer src="/admin/candidates.js?v=18"></script>
+  <script defer src="/js/candidate-active-assignments-core.js?v=1"></script>
+  <script defer src="/admin/candidates.js?v=19"></script>
 </body>
 </html>

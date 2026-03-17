@@ -12,7 +12,9 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=18/);
+  assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=1/);
+  assert.match(html, /\/admin\/candidates\.js\?v=19/);
+  assert.match(html, /id="bulk-intro-email"/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
@@ -29,9 +31,11 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /id="dw-assignments"/);
   assert.match(html, /id="candidate-source-tabs"/);
   assert.match(html, /data-source-tab="website"/);
+  assert.match(html, /data-source-tab="timesheet-portal-active"/);
   assert.match(html, /data-source-tab="timesheet-portal"/);
   assert.match(html, /data-source-tab="combined"/);
   assert.match(html, />\s*Website only\s*<span class="source-tab__count" data-source-count="website">/);
+  assert.match(html, />\s*TSP active assignments\s*<span class="source-tab__count" data-source-count="timesheet-portal-active">/);
   assert.match(html, />\s*Timesheet Portal only\s*<span class="source-tab__count" data-source-count="timesheet-portal">/);
   assert.match(html, />\s*Combined \/ all\s*<span class="source-tab__count" data-source-count="combined">/);
 });
@@ -145,14 +149,22 @@ test('candidate admin UI can switch between website, timesheet portal, and combi
   const source = read('admin/candidates.js');
   assert.match(source, /sourceTab:\s*'website'/);
   assert.match(source, /function setSourceTab/);
+  assert.match(source, /function refreshActiveAssignments/);
+  assert.match(source, /function bulkIntroEmail/);
+  assert.match(source, /function ensureWebsiteCandidateForOutreach/);
+  assert.match(source, /function ensureWebsiteCandidatesForOutreach/);
+  assert.match(source, /function currentSelectionOptions/);
   assert.match(source, /function buildSourceDatasets/);
   assert.match(source, /function normalizeTimesheetPortalCandidate/);
   assert.match(source, /function renderSourceTabs/);
   assert.match(source, /elements\.sourceTabs = Array\.from\(document\.querySelectorAll\('\[data-source-tab\]'\)\)/);
   assert.match(source, /website:\s*\{\s*label:\s*'Website only'\s*\}/);
+  assert.match(source, /'timesheet-portal-active':\s*\{\s*label:\s*'TSP active assignments'\s*\}/);
+  assert.match(source, /const activeAssignmentRows = websiteRows/);
   assert.match(source, /const websiteOnlyRows = websiteRows\.filter\(\(candidate\) => !candidate\?\.timesheet_portal_match\);/);
   assert.match(source, /const timesheetPortalOnlyRows = timesheetPortalRows\.filter\(\(candidate\) => !findWebsiteMatch\(candidate, websiteLookups\)\);/);
   assert.match(source, /const combinedRows = websiteRows\.concat\(timesheetPortalOnlyRows\);/);
+  assert.match(source, /Select this row to create an HMJ candidate profile automatically when you send intro, RTW, or document outreach\./);
 });
 
 test('candidate admin normalises and labels recruitment profile versus live onboarding mode', () => {

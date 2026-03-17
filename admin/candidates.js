@@ -7,6 +7,7 @@
   const ROW_HEIGHT = 112;
   const RENDER_PADDING = 6;
   const MAX_LOGS = 10;
+  const assignmentHelpers = window.HMJCandidateActiveAssignments || {};
 
   const STATUS_META = {
     active: { label: 'Active', tone: 'green' },
@@ -29,6 +30,7 @@
   });
   const SOURCE_TABS = Object.freeze({
     website: { label: 'Website only' },
+    'timesheet-portal-active': { label: 'TSP active assignments' },
     'timesheet-portal': { label: 'Timesheet Portal only' },
     combined: { label: 'Combined / all' }
   });
@@ -62,7 +64,10 @@
     tspCompare: null,
     verificationQueue: null,
     pendingDocRequest: null,
-    outreachDiagnostics: null
+    outreachDiagnostics: null,
+    assignmentRows: [],
+    assignmentLookups: null,
+    assignmentLoading: false
   };
 
   const REQUESTABLE_DOC_TYPES = ['passport', 'qualification_certificate', 'reference', 'right_to_work', 'visa_permit', 'bank_document'];
@@ -181,12 +186,61 @@
     return SOURCE_TABS[tab]?.label || SOURCE_TABS.website.label;
   }
 
+  function activeAssignmentHelpersReady() {
+    return typeof assignmentHelpers.buildAssignmentLookups === 'function'
+      && typeof assignmentHelpers.summariseCandidateAssignments === 'function';
+  }
+
   function isRawTimesheetPortalCandidate(candidate) {
     return String(candidate?.source_kind || '').toLowerCase() === 'timesheet-portal';
   }
 
-  function isSelectableCandidate(candidate) {
-    return !!candidate && !isRawTimesheetPortalCandidate(candidate);
+  function isOutreachSelectableRawCandidate(candidate) {
+    return isRawTimesheetPortalCandidate(candidate)
+      && !!String(candidate?.email || '').trim()
+      && Number(candidate?.active_assignment_count || 0) > 0;
+  }
+
+  function isSelectableCandidate(candidate, options = {}) {
+    if (!candidate) return false;
+    if (!isRawTimesheetPortalCandidate(candidate)) return true;
+    return options.allowRaw === true && isOutreachSelectableRawCandidate(candidate);
+  }
+
+  function currentSelectionOptions() {
+    return state.sourceTab === 'timesheet-portal-active'
+      ? { allowRaw: true }
+      : {};
+  }
+
+  function normalizeAssignmentRecord(row) {
+    if (!row) return null;
+    if (typeof assignmentHelpers.normaliseAssignmentRow === 'function') {
+      return assignmentHelpers.normaliseAssignmentRow(row);
+    }
+    return {
+      id: row.id,
+      candidate_id: row.candidate_id || null,
+      reference: row.as_ref || row.reference || null,
+      as_ref: row.as_ref || null,
+      status: String(row.status || 'draft').toLowerCase(),
+      active: row.active !== false,
+      candidate_name: row.candidate_name || null,
+      client_name: row.client_name || null,
+      job_title: row.job_title || null,
+      start_date: row.start_date || null,
+      end_date: row.end_date || null,
+      currency: row.currency || 'GBP',
+      rate_pay: row.rate_pay == null ? null : Number(row.rate_pay),
+      rate_std: row.rate_std == null ? null : Number(row.rate_std),
+    };
+  }
+
+  function summarizeCandidateAssignments(candidate) {
+    if (!activeAssignmentHelpersReady()) {
+      return { assignments: [], count: 0, primary: null };
+    }
+    return assignmentHelpers.summariseCandidateAssignments(candidate, state.assignmentLookups || {});
   }
 
   function buildTimesheetPortalLookups(rows) {
@@ -479,6 +533,19 @@
     return text ? `${text} pay` : 'Rate pending';
   }
 
+  function formatActiveAssignmentMeta(candidate) {
+    const summary = candidate?.active_assignment_summary || null;
+    const count = Number(candidate?.active_assignment_count || 0);
+    if (!summary || count <= 0) return '';
+    const bits = [
+      count === 1 ? '1 active assignment' : `${count} active assignments`,
+      summary.client_name || null,
+      summary.job_title || null,
+      summary.reference || summary.as_ref || null,
+    ].filter(Boolean);
+    return bits.join(' • ');
+  }
+
   function ensureDebugPanel() {
     let panel = qs('#debug-panel');
     if (!panel) {
@@ -731,6 +798,9 @@
       notes,
       audit: Array.isArray(row.audit) ? row.audit : [],
       applications: Array.isArray(row.applications) ? row.applications : [],
+      active_assignments: Array.isArray(row.active_assignments) ? row.active_assignments.slice() : [],
+      active_assignment_count: Number(row.active_assignment_count || 0),
+      active_assignment_summary: row.active_assignment_summary || null,
       availability_on: row.availability_on || row.availability_date || row.availability || row.start_date || '',
       created_at: row.created_at || row.createdAt || '',
       updated_at: row.updated_at || row.updatedAt || row.created_at || '',
@@ -799,6 +869,17 @@
     };
   }
 
+  function decorateCandidateAssignments(candidate) {
+    if (!candidate) return null;
+    const summary = summarizeCandidateAssignments(candidate);
+    return {
+      ...candidate,
+      active_assignments: Array.isArray(summary.assignments) ? summary.assignments.slice() : [],
+      active_assignment_count: Number(summary.count || 0),
+      active_assignment_summary: summary.primary || null,
+    };
+  }
+
   function buildSourceDatasets() {
     const rawTimesheetPortalRows = Array.isArray(state.tspCompare?.timesheetPortalCandidates)
       ? state.tspCompare.timesheetPortalCandidates
@@ -806,16 +887,22 @@
     const timesheetPortalLookups = buildTimesheetPortalLookups(rawTimesheetPortalRows);
     const websiteRows = state.raw
       .map((candidate) => decorateWebsiteCandidate(candidate, findTimesheetPortalMatch(candidate, timesheetPortalLookups)))
+      .map((candidate) => decorateCandidateAssignments(candidate))
       .filter(Boolean);
     const timesheetPortalRows = rawTimesheetPortalRows
       .map((row) => normalizeTimesheetPortalCandidate(row))
+      .map((candidate) => decorateCandidateAssignments(candidate))
       .filter(Boolean);
     const websiteLookups = buildWebsiteLookups(websiteRows);
     const websiteOnlyRows = websiteRows.filter((candidate) => !candidate?.timesheet_portal_match);
     const timesheetPortalOnlyRows = timesheetPortalRows.filter((candidate) => !findWebsiteMatch(candidate, websiteLookups));
+    const activeAssignmentRows = websiteRows
+      .filter((candidate) => Number(candidate?.active_assignment_count || 0) > 0)
+      .concat(timesheetPortalOnlyRows.filter((candidate) => Number(candidate?.active_assignment_count || 0) > 0));
     const combinedRows = websiteRows.concat(timesheetPortalOnlyRows);
     return {
       website: websiteOnlyRows,
+      'timesheet-portal-active': activeAssignmentRows,
       'timesheet-portal': timesheetPortalOnlyRows,
       combined: combinedRows,
     };
@@ -992,6 +1079,7 @@
     const activeSet = Array.isArray(datasets[state.sourceTab]) ? datasets[state.sourceTab] : datasets.website;
     renderSourceTabs({
       website: datasets.website.length,
+      'timesheet-portal-active': datasets['timesheet-portal-active'].length,
       'timesheet-portal': datasets['timesheet-portal'].length,
       combined: datasets.combined.length,
     });
@@ -1068,9 +1156,12 @@
     rowsInner.style.height = `${total * ROW_HEIGHT}px`;
     if (!total) {
       const loadingTsp = state.sourceTab !== 'website' && !state.tspCompare;
+      const loadingAssignments = state.sourceTab === 'timesheet-portal-active' && state.assignmentLoading;
       const configured = state.tspCompare?.configured !== false;
       const message = loadingTsp
         ? 'Loading Timesheet Portal data…'
+        : loadingAssignments
+        ? 'Loading active assignment data…'
         : state.sourceTab === 'timesheet-portal' && !configured
         ? (state.tspCompare?.message || 'Timesheet Portal is not configured for this environment.')
         : `No ${sourceTabLabel().toLowerCase()} rows match the filters.`;
@@ -1155,16 +1246,19 @@
   }
 
   function sourceMetaChips(candidate) {
+    const activeChip = Number(candidate?.active_assignment_count || 0) > 0
+      ? `<span class="chip green">${candidate.active_assignment_count} active</span>`
+      : '';
     if (isRawTimesheetPortalCandidate(candidate)) {
-      return '<span class="chip blue">Timesheet Portal</span>';
+      return `${activeChip}<span class="chip blue">Timesheet Portal</span>`;
     }
     if (candidate?.timesheet_portal_match) {
-      return '<span class="chip blue">TSP matched</span>';
+      return `${activeChip}<span class="chip blue">TSP matched</span>`;
     }
     if (state.sourceTab === 'combined') {
-      return '<span class="chip gray">Website</span>';
+      return `${activeChip}<span class="chip gray">Website</span>`;
     }
-    return '';
+    return activeChip;
   }
 
   function paymentMethodLabel(value) {
@@ -1248,8 +1342,10 @@
     const disabledActions = isBlocked(candidate) || !selectable;
     const sourceChip = sourceMetaChips(candidate);
     if (isRawTimesheetPortalCandidate(candidate)) {
+      const rawSelectable = isSelectableCandidate(candidate, currentSelectionOptions());
+      const assignmentMeta = formatActiveAssignmentMeta(candidate);
       row.innerHTML = `
-        <div><input type="checkbox" data-role="select" data-id="${candidate.id}" disabled></div>
+        <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected} ${!rawSelectable ? 'disabled' : ''}></div>
         <div>${candidateReference(candidate)}</div>
         <div class="row-card">
           <div class="row-title" title="${candidate.name || 'Timesheet Portal candidate'}">${candidate.name || '—'}</div>
@@ -1266,9 +1362,10 @@
         </div>
         <div class="row-card">
           <div class="row-meta">
-            <span class="chip blue">Website onboarding not started</span>
+            <span class="chip blue">${rawSelectable ? 'Ready for website outreach' : candidate.active_assignment_count ? 'Email required for outreach' : 'Website onboarding not started'}</span>
           </div>
-          <div class="row-subtle">This row exists in Timesheet Portal only. Use the sync tools above to mirror it into the website candidate workspace.</div>
+          <div class="row-subtle">${assignmentMeta || 'This row exists in Timesheet Portal only.'}</div>
+          <div class="row-subtle">${rawSelectable ? 'Select this row to create an HMJ candidate profile automatically when you send intro, RTW, or document outreach.' : 'Use the sync tools above to mirror it into the website candidate workspace before onboarding outreach.'}</div>
           <div class="row-subtle">TSP ref: ${candidateReference(candidate)}</div>
         </div>
         <div><span class="chip blue">TSP raw</span></div>
@@ -1289,6 +1386,7 @@
     const onboardingMode = candidateOnboardingMode(candidate);
     const paymentSummary = candidate.payment_summary || {};
     const rtwChip = rightToWorkChip(candidate);
+    const assignmentMeta = formatActiveAssignmentMeta(candidate);
     row.innerHTML = `
       <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected} ${!selectable ? 'disabled' : ''}></div>
       <div>${candidateReference(candidate)}</div>
@@ -1313,9 +1411,12 @@
           <span class="chip ${paymentSummary.completion?.complete ? 'green' : 'gray'}">${paymentSummary.completion?.complete ? 'Payment on file' : (onboardingMode ? 'Payment pending' : 'Payroll not required')}</span>
           ${onboarding.pendingVerificationCount ? `<span class="chip orange">${onboarding.pendingVerificationCount} to verify</span>` : ''}
         </div>
-        <div class="row-subtle">${onboardingMode
+        <div class="row-subtle">${assignmentMeta || (onboardingMode
           ? `Onboarding: <strong class="row-inline-strong ${onboardingTone(candidate)}">${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong>`
-          : 'Portal path: <strong class="row-inline-strong">Recruitment profile only</strong>'}</div>
+          : 'Portal path: <strong class="row-inline-strong">Recruitment profile only</strong>')}</div>
+        ${assignmentMeta ? `<div class="row-subtle">${onboardingMode
+          ? `Onboarding: <strong class="row-inline-strong ${onboardingTone(candidate)}">${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong>`
+          : 'Portal path: <strong class="row-inline-strong">Recruitment profile only</strong>'}</div>` : ''}
         <div class="row-subtle">${onboardingMode ? `Payment ref: ${paymentReference(candidate)}` : 'Payroll onboarding starts only when HMJ marks a live placement.'}</div>
       </div>
       <div><span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span></div>
@@ -1354,7 +1455,7 @@
   function syncHeaderCheckbox() {
     const head = elements.chkAll;
     if (!head) return;
-    const selectableRows = state.filtered.filter((row) => isSelectableCandidate(row));
+    const selectableRows = state.filtered.filter((row) => isSelectableCandidate(row, currentSelectionOptions()));
     if (!selectableRows.length) {
       head.checked = false;
       head.indeterminate = false;
@@ -1371,7 +1472,7 @@
   function updateBulkBar() {
     const bar = elements.bulkbar;
     if (!bar) return;
-    const count = state.filtered.filter((row) => isSelectableCandidate(row) && selectionHas(row.id)).length;
+    const count = state.filtered.filter((row) => isSelectableCandidate(row, currentSelectionOptions()) && selectionHas(row.id)).length;
     bar.classList.toggle('show', count > 0);
     const label = elements.bulkCount;
     if (label) label.textContent = `${count} selected`;
@@ -1493,8 +1594,103 @@
     `;
   }
 
-  function selectedCandidates() {
-    return state.filtered.filter((row) => isSelectableCandidate(row) && selectionHas(row.id));
+  function selectedCandidates(options = {}) {
+    return state.filtered.filter((row) => isSelectableCandidate(row, options) && selectionHas(row.id));
+  }
+
+  function matchedTimesheetPortalProfile(candidate) {
+    if (!candidate) return null;
+    if (candidate.timesheet_portal_match) return candidate.timesheet_portal_match;
+    if (!state.tspCompare?.timesheetPortalProfiles?.length) return null;
+    const email = normalizeReferenceValue(candidate.email);
+    const reference = normalizeReferenceValue(candidate.payroll_ref || candidate.ref);
+    return state.tspCompare.timesheetPortalProfiles.find((profile) => {
+      const profileEmail = normalizeReferenceValue(profile.email);
+      const profileReference = normalizeReferenceValue(profile.reference || profile.accountingReference);
+      return (email && profileEmail === email) || (reference && profileReference === reference);
+    }) || null;
+  }
+
+  function candidateSavePayloadFromRaw(candidate, options = {}) {
+    const [firstName, ...rest] = String(candidate?.name || '').trim().split(/\s+/).filter(Boolean);
+    const contractor = matchedTimesheetPortalProfile(candidate);
+    const summary = candidate?.active_assignment_summary || null;
+    return {
+      first_name: candidate?.first_name || firstName || 'Candidate',
+      last_name: candidate?.last_name || rest.join(' ') || 'Candidate',
+      full_name: candidate?.full_name || candidate?.name || [candidate?.first_name, candidate?.last_name].filter(Boolean).join(' ') || 'Candidate',
+      email: candidate?.email || '',
+      phone: candidate?.phone || '',
+      role: candidate?.role || summary?.job_title || '',
+      headline_role: candidate?.headline_role || candidate?.role || summary?.job_title || '',
+      location: candidate?.location || candidate?.region || '',
+      country: candidate?.country || candidate?.region || 'United Kingdom',
+      payroll_ref: candidate?.payroll_ref || candidate?.ref || contractor?.reference || contractor?.accountingReference || null,
+      ref: candidate?.ref || candidate?.payroll_ref || contractor?.reference || contractor?.accountingReference || null,
+      status: 'active',
+      onboarding_mode: options.onboardingMode === true,
+    };
+  }
+
+  function mergePromotedCandidate(candidate, originalRawCandidate = null) {
+    const contractor = matchedTimesheetPortalProfile(originalRawCandidate || candidate);
+    const normalised = normalizeCandidate(candidate);
+    const decorated = decorateCandidateAssignments(decorateWebsiteCandidate(normalised, contractor));
+    const existingIndex = state.raw.findIndex((row) => String(row.id) === String(decorated.id));
+    if (existingIndex >= 0) state.raw[existingIndex] = decorated;
+    else state.raw.unshift(decorated);
+    return decorated;
+  }
+
+  async function ensureWebsiteCandidateForOutreach(candidate, options = {}) {
+    if (!candidate) return null;
+    if (!isRawTimesheetPortalCandidate(candidate)) return candidate;
+    if (!String(candidate.email || '').trim()) return null;
+
+    const existing = state.raw.find((row) => {
+      if (isRawTimesheetPortalCandidate(row)) return false;
+      const sameEmail = normalizeReferenceValue(row.email) && normalizeReferenceValue(row.email) === normalizeReferenceValue(candidate.email);
+      const rowRef = normalizeReferenceValue(row.payroll_ref || row.ref);
+      const candidateRef = normalizeReferenceValue(candidate.payroll_ref || candidate.ref);
+      return sameEmail || (!!rowRef && rowRef === candidateRef);
+    });
+    if (existing) {
+      state.selection.delete(String(candidate.id));
+      state.selection.add(String(existing.id));
+      return existing;
+    }
+
+    const response = await state.helpers.api('admin-candidates-save', 'POST', candidateSavePayloadFromRaw(candidate, options));
+    const promoted = mergePromotedCandidate(response?.candidate || {}, candidate);
+    state.selection.delete(String(candidate.id));
+    state.selection.add(String(promoted.id));
+    return promoted;
+  }
+
+  async function ensureWebsiteCandidatesForOutreach(rows = [], options = {}) {
+    const out = [];
+    const skipped = [];
+    for (const row of Array.isArray(rows) ? rows : []) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const candidate = await ensureWebsiteCandidateForOutreach(row, options);
+        if (candidate?.id) out.push(candidate);
+        else skipped.push(row);
+      } catch (error) {
+        console.error('[candidates] raw TSP promotion failed', error);
+        skipped.push(row);
+      }
+    }
+    persistSelection();
+    applyFilters();
+    if (skipped.length) {
+      showToast(
+        `Skipped ${skipped.length} selected row${skipped.length === 1 ? '' : 's'} that could not be prepared for outreach.`,
+        'warn',
+        4200,
+      );
+    }
+    return out;
   }
 
   function handleRowClick(event) {
@@ -2929,8 +3125,11 @@
     if (!SOURCE_TABS[nextTab] || state.sourceTab === nextTab) return;
     state.sourceTab = nextTab;
     applyFilters();
-    if ((nextTab === 'timesheet-portal' || nextTab === 'combined') && !state.tspCompare) {
+    if ((nextTab === 'timesheet-portal' || nextTab === 'combined' || nextTab === 'timesheet-portal-active') && !state.tspCompare) {
       refreshTimesheetPortalCompare();
+    }
+    if (nextTab === 'timesheet-portal-active' && !state.assignmentRows.length && !state.assignmentLoading) {
+      refreshActiveAssignments();
     }
   }
 
@@ -2939,11 +3138,14 @@
       clearSelection();
       return;
     }
-    const ids = state.filtered.filter((row) => isSelectableCandidate(row)).map((row) => row.id);
+    const ids = state.filtered
+      .filter((row) => isSelectableCandidate(row, currentSelectionOptions()))
+      .map((row) => row.id);
     setSelection(ids);
   }
 
   function bindBulkActions() {
+    elements.bulkIntroEmail.addEventListener('click', () => bulkIntroEmail());
     elements.bulkAssign.addEventListener('click', () => bulkAssign());
     elements.bulkStatus.addEventListener('click', () => bulkStatus());
     elements.bulkBlock.addEventListener('click', () => bulkStatus('blocked'));
@@ -2956,7 +3158,7 @@
 
   function selectMissingRtw() {
     const ids = state.filtered
-      .filter((candidate) => isSelectableCandidate(candidate))
+      .filter((candidate) => isSelectableCandidate(candidate, currentSelectionOptions()))
       .filter((candidate) => candidate.onboarding?.hasRightToWork !== true && candidate.onboarding?.hasRightToWorkUpload !== true)
       .map((candidate) => candidate.id);
     if (!ids.length) {
@@ -2982,6 +3184,10 @@
     const status = promptStatus(forceStatus);
     if (!status) return;
     const rows = selectedCandidates();
+    if (!rows.length) {
+      showToast('Status updates apply to website candidates only.', 'warn', 3200);
+      return;
+    }
     let savedCount = 0;
     for (const row of rows) {
       // eslint-disable-next-line no-await-in-loop
@@ -3003,6 +3209,10 @@
     const recruiter = window.prompt('Assign to recruiter (email)');
     if (!recruiter) return;
     const rows = selectedCandidates();
+    if (!rows.length) {
+      showToast('Assignment notes apply to website candidates only.', 'warn', 3200);
+      return;
+    }
     rows.forEach((row) => {
       row.audit = row.audit || [];
       row.audit.unshift({ at: new Date().toISOString(), action: `Assigned to ${recruiter}` });
@@ -3123,7 +3333,14 @@
       return;
     }
     try {
-      await sendRtwReminders(Array.from(state.selection));
+      const rows = await ensureWebsiteCandidatesForOutreach(selectedCandidates({ allowRaw: true, includeRaw: true }), {
+        onboardingMode: true,
+      });
+      if (!rows.length) {
+        showToast('Select candidates with a valid email address first.', 'warn', 3200);
+        return;
+      }
+      await sendRtwReminders(rows.map((row) => row.id));
     } catch (err) {
       console.error('[candidates] reminder send failed', err);
       showToast(err.message || 'Right-to-work reminder send failed.', 'error', 4200);
@@ -3131,12 +3348,117 @@
   }
 
   async function bulkDocumentRequest(candidateIds) {
-    const ids = Array.isArray(candidateIds) && candidateIds.length ? candidateIds : Array.from(state.selection);
-    if (!ids.length) {
+    const directIds = Array.isArray(candidateIds) && candidateIds.length ? candidateIds.map(String) : [];
+    const selectedRows = directIds.length
+      ? directIds.map((id) => state.filtered.find((row) => String(row.id) === String(id)) || findCandidate(id)).filter(Boolean)
+      : selectedCandidates({ allowRaw: true, includeRaw: true });
+    if (!selectedRows.length && !directIds.length) {
       showToast('Select candidates first', 'warn');
       return;
     }
+    const rows = directIds.length
+      ? await ensureWebsiteCandidatesForOutreach(selectedRows, { onboardingMode: true })
+      : await ensureWebsiteCandidatesForOutreach(selectedRows, { onboardingMode: true });
+    const ids = rows.map((row) => String(row.id)).filter(Boolean);
+    if (!ids.length) {
+      showToast('Select candidates with a valid email address first.', 'warn', 3200);
+      return;
+    }
     openDocumentRequestDialog(ids);
+  }
+
+  function buildIntroEmailPayload(candidate) {
+    const assignment = candidate?.active_assignment_summary || null;
+    return {
+      first_name: candidate?.first_name || String(candidate?.name || '').split(/\s+/).filter(Boolean)[0] || 'Candidate',
+      last_name: candidate?.last_name || String(candidate?.name || '').split(/\s+/).slice(1).join(' ') || 'Candidate',
+      email: candidate?.email || '',
+      company: assignment?.client_name || 'your HMJ client',
+      phone: candidate?.phone || '',
+      job_title: assignment?.job_title || candidate?.role || '',
+    };
+  }
+
+  async function bulkIntroEmail() {
+    const rows = (await ensureWebsiteCandidatesForOutreach(
+      selectedCandidates({ allowRaw: true, includeRaw: true }).filter((candidate) => !!candidate?.email),
+      { onboardingMode: true },
+    )).filter((candidate) => !!candidate?.email);
+    if (!rows.length) {
+      showToast('Select candidates with email addresses first.', 'warn', 3200);
+      return;
+    }
+    const confirmed = window.confirm(`Send intro emails to ${rows.length} selected candidate${rows.length === 1 ? '' : 's'}?`);
+    if (!confirmed) return;
+    if (elements.bulkIntroEmail) elements.bulkIntroEmail.disabled = true;
+    let sent = 0;
+    const skipped = [];
+    for (const candidate of rows) {
+      try {
+        const payload = buildIntroEmailPayload(candidate);
+        // eslint-disable-next-line no-await-in-loop
+        await state.helpers.api('admin-send-intro-email', 'POST', payload);
+        sent += 1;
+      } catch (err) {
+        skipped.push({
+          candidate,
+          error: err?.message || 'send_failed',
+        });
+      }
+    }
+    if (elements.bulkIntroEmail) elements.bulkIntroEmail.disabled = false;
+    pushLog({
+      action: 'intro:bulk',
+      detail: `${sent} accepted${skipped.length ? `, ${skipped.length} skipped` : ''}`,
+    });
+    showToast(
+      skipped.length
+        ? `Accepted ${sent} intro email${sent === 1 ? '' : 's'} for delivery. ${skipped.length} candidate${skipped.length === 1 ? ' was' : 's were'} skipped.`
+        : `Accepted ${sent} intro email${sent === 1 ? '' : 's'} for delivery.`,
+      skipped.length ? 'warn' : 'info',
+      4600,
+    );
+  }
+
+  async function refreshActiveAssignments() {
+    state.assignmentLoading = true;
+    try {
+      let page = 1;
+      let total = 0;
+      const rows = [];
+      do {
+        // eslint-disable-next-line no-await-in-loop
+        const response = await state.helpers.api('admin-assignments-list', 'POST', {
+          page,
+          pageSize: 200,
+        });
+        const pageRows = Array.isArray(response?.rows) ? response.rows : [];
+        rows.push(...pageRows);
+        total = Number(response?.total || rows.length);
+        page += 1;
+        if (page > 20) break;
+      } while (rows.length < total);
+      state.assignmentRows = rows.map((row) => normalizeAssignmentRecord(row)).filter(Boolean);
+      state.assignmentLookups = activeAssignmentHelpersReady()
+        ? assignmentHelpers.buildAssignmentLookups(state.assignmentRows)
+        : { activeRows: [], byCandidateId: new Map(), byReference: new Map() };
+      pushLog({
+        action: 'assignments:active',
+        detail: `${state.assignmentLookups?.activeRows?.length || 0} active assignments indexed`,
+      });
+      applyFilters();
+    } catch (err) {
+      console.error('[candidates] active assignment load failed', err);
+      pushLog({ action: 'assignments:active:error', detail: err.message || 'error' });
+      state.assignmentRows = [];
+      state.assignmentLookups = activeAssignmentHelpersReady()
+        ? assignmentHelpers.buildAssignmentLookups([])
+        : { activeRows: [], byCandidateId: new Map(), byReference: new Map() };
+      applyFilters();
+    } finally {
+      state.assignmentLoading = false;
+      refreshRows(true);
+    }
   }
 
   async function refreshTimesheetPortalCompare() {
@@ -3375,7 +3697,7 @@
   function exportCsv({ mode } = { mode: 'filtered' }) {
     const rows = mode === 'selected' ? selectedCandidates() : state.filtered;
     if (!rows.length) {
-      showToast('Nothing to export', 'warn');
+      showToast(mode === 'selected' ? 'Selected export only includes website candidates.' : 'Nothing to export', 'warn');
       return;
     }
     const headers = ['id', 'ref', 'name', 'email', 'phone', 'status', 'role', 'region', 'skills'];
@@ -3504,6 +3826,7 @@
     elements.bulkbar = qs('#bulkbar');
     elements.bulkCount = qs('#bulk-count');
     elements.bulkAssign = qs('#bulk-assign');
+    elements.bulkIntroEmail = qs('#bulk-intro-email');
     elements.bulkStatus = qs('#bulk-status');
     elements.bulkBlock = qs('#bulk-block');
     elements.bulkArchive = qs('#bulk-archive');
@@ -3578,6 +3901,7 @@
     elements.search.addEventListener('input', (ev) => updateQuickSearch(ev.target.value));
     elements.refresh.addEventListener('click', async () => {
       await loadCandidates({ silent: false });
+      await refreshActiveAssignments();
       if (state.sourceTab !== 'website' || state.tspCompare) {
         await refreshTimesheetPortalCompare();
       }
@@ -3639,7 +3963,9 @@
     }
     if (elements.visibleDocRequest) {
       elements.visibleDocRequest.addEventListener('click', () => {
-        const visibleIds = state.filtered.filter((candidate) => isSelectableCandidate(candidate)).map((candidate) => candidate.id);
+        const visibleIds = state.filtered
+          .filter((candidate) => isSelectableCandidate(candidate, currentSelectionOptions()))
+          .map((candidate) => candidate.id);
         if (!visibleIds.length) {
           showToast('No visible candidates are available for a document request.', 'warn', 3200);
           return;
@@ -3725,7 +4051,10 @@
     renderVerificationQueue();
     bindEvents();
     bindKeyboardShortcuts();
-    loadCandidates().then(() => refreshVerificationQueue({ silent: true }));
+    loadCandidates().then(async () => {
+      await refreshVerificationQueue({ silent: true });
+      await refreshActiveAssignments();
+    });
     refreshTimesheetPortalCompare();
     refreshOutreachReadiness();
   }
