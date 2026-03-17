@@ -88,6 +88,7 @@ test('classifyCandidateSignupResult avoids false-positive success states for exi
     {
       state: 'existing',
       verificationEmailExpected: false,
+      autoSignedIn: false,
     }
   );
 
@@ -102,6 +103,28 @@ test('classifyCandidateSignupResult avoids false-positive success states for exi
     {
       state: 'created',
       verificationEmailExpected: true,
+      autoSignedIn: false,
+    }
+  );
+});
+
+test('classifyCandidateSignupResult marks live session signups as auto-signed-in', async () => {
+  const { classifyCandidateSignupResult } = await loadAuthUtils();
+
+  assert.deepEqual(
+    classifyCandidateSignupResult({
+      user: {
+        id: 'user-3',
+        identities: [{ identity_id: 'email-2' }],
+      },
+      session: {
+        access_token: 'token',
+      },
+    }),
+    {
+      state: 'created',
+      verificationEmailExpected: false,
+      autoSignedIn: true,
     }
   );
 });

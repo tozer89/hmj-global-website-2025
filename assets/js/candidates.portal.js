@@ -44,6 +44,7 @@ import {
   const confirmPasswordInput = doc.getElementById('candidateConfirmPassword');
   const passwordStatus = doc.getElementById('candidatePasswordStatus');
   const submitButton = doc.getElementById('submitBtn');
+  const submitFeedback = doc.getElementById('candidateSubmitFeedback');
   const paymentGate = doc.getElementById('candidatePaymentGate');
   const paymentToggle = doc.getElementById('candidatePaymentOptIn');
   const paymentPanel = doc.getElementById('candidatePaymentPanel');
@@ -337,6 +338,14 @@ import {
       return null;
     }
 
+    if (params.get('candidate_signed_in') === '1') {
+      return {
+        tone: 'success',
+        text: 'Success. Your profile has been sent to HMJ and you are now signed into your candidate dashboard.',
+        showResend: false,
+      };
+    }
+
     const accountState = trimText(params.get('candidate_account'), 80).toLowerCase();
     if (accountState === 'created') {
       return {
@@ -433,6 +442,7 @@ import {
     formSyncSent: false,
     allowNativeSubmit: false,
     pendingEmail: getPendingCandidateEmail(),
+    formJustSubmitted: params.get('submitted') === '1',
   };
 
   const STATUS_COPY = {
@@ -753,6 +763,7 @@ import {
     if (!state.formMessage) {
       formStatusRoot.hidden = true;
       formStatusRoot.innerHTML = '';
+      syncSubmitFeedback();
       return;
     }
 
@@ -765,6 +776,37 @@ import {
         </div>
       </div>
     `;
+    syncSubmitFeedback();
+  }
+
+  function submitFeedbackText() {
+    if (state.formBusy) {
+      return createAccountRequested()
+        ? 'Submitting your profile and setting up your candidate account now. If sign-in is immediately available, we will open your dashboard automatically.'
+        : 'Submitting your profile to HMJ now. Please keep this page open until the confirmation appears.';
+    }
+    if (state.formMessage && state.formMessage.tone !== 'success') {
+      return state.formMessage.text;
+    }
+    if (state.formJustSubmitted && !state.user) {
+      return 'Success.';
+    }
+    return createAccountRequested()
+      ? 'Create the account and send your profile in one step.'
+      : 'Send your profile without creating a login today.';
+  }
+
+  function submitFeedbackTone() {
+    if (state.formBusy) return 'info';
+    if (state.formMessage && state.formMessage.tone !== 'success') return state.formMessage.tone;
+    if (state.formJustSubmitted) return 'success';
+    return 'muted';
+  }
+
+  function syncSubmitFeedback() {
+    if (!submitFeedback) return;
+    submitFeedback.textContent = submitFeedbackText();
+    submitFeedback.dataset.tone = submitFeedbackTone();
   }
 
   function syncPrimarySubmitLabel() {
@@ -772,9 +814,15 @@ import {
     if (accountRequestedInput) {
       accountRequestedInput.value = creatingAccount ? 'yes' : 'no';
     }
+    if (state.formJustSubmitted && !state.formBusy && !state.user) {
+      submitButton.textContent = 'Success';
+      syncSubmitFeedback();
+      return;
+    }
     submitButton.textContent = state.formBusy
       ? (creatingAccount ? 'Creating account and sending profile…' : 'Sending profile…')
       : (creatingAccount ? 'Create account and send profile' : 'Send profile');
+    syncSubmitFeedback();
   }
 
   function passwordValidationState() {
@@ -1540,6 +1588,14 @@ import {
         render();
         return;
       }
+      if (params.get('submitted') === '1') {
+        state.formMessage = null;
+        state.formJustSubmitted = false;
+        state.authMessage = {
+          tone: 'success',
+          text: 'Success. Your profile has been sent to HMJ and you are now signed into your candidate dashboard.',
+        };
+      }
       await refreshDashboard();
     } catch (error) {
       state.authAvailable = false;
@@ -1669,10 +1725,19 @@ import {
   }
 
   function buildCandidateReturnUrl(accountState) {
+    return buildCandidateReturnUrlWithOptions(accountState, {});
+  }
+
+  function buildCandidateReturnUrlWithOptions(accountState, options = {}) {
     const url = new URL(window.location.href);
     url.hash = '';
     url.searchParams.set('submitted', '1');
     url.searchParams.set('candidate_account', accountState);
+    if (options && options.signedIn) {
+      url.searchParams.set('candidate_signed_in', '1');
+    } else {
+      url.searchParams.delete('candidate_signed_in');
+    }
     url.searchParams.delete('candidate_auth');
     url.searchParams.delete('candidate_action');
     url.searchParams.delete('error');
@@ -1681,7 +1746,7 @@ import {
     return url.toString();
   }
 
-  function requestNativeFormSubmit(accountState) {
+  function requestNativeFormSubmit(accountState, options = {}) {
     const formEmail = trimText(form.querySelector('#email')?.value, 320).toLowerCase();
     if (formEmail && accountState !== 'none') {
       setPendingCandidateEmail(formEmail);
@@ -1692,10 +1757,11 @@ import {
       state.pendingEmail = '';
     }
 
-    form.action = buildCandidateReturnUrl(accountState);
+    form.action = buildCandidateReturnUrlWithOptions(accountState, options);
     accountRequestedInput.value = accountState === 'none' ? 'no' : 'yes';
     state.allowNativeSubmit = true;
     state.formBusy = false;
+    state.formJustSubmitted = true;
     syncAccountControls();
 
     if (isLocalCandidateMockMode()) {
@@ -2110,7 +2176,15 @@ import {
     }
 
     if (!form.checkValidity()) {
+      event.preventDefault();
+      state.formJustSubmitted = false;
+      state.formMessage = {
+        tone: 'warn',
+        text: 'Please complete the required fields highlighted below before sending your profile.',
+      };
+      renderFormStatus();
       syncAccountControls();
+      form.reportValidity?.();
       return;
     }
 
@@ -2136,6 +2210,11 @@ import {
     if (!creatingAccount) {
       event.preventDefault();
       state.formSyncSent = true;
+      state.formMessage = {
+        tone: 'info',
+        text: 'Submitting your profile to HMJ now. Please keep this page open until the confirmation appears.',
+      };
+      renderFormStatus();
       if (requiresSecurePaymentSync) {
         state.formBusy = true;
         syncAccountControls();
@@ -2169,6 +2248,12 @@ import {
     event.preventDefault();
     state.formBusy = true;
     state.formSyncSent = true;
+    state.formJustSubmitted = false;
+    state.formMessage = {
+      tone: 'info',
+      text: 'Submitting your profile and creating your candidate account now. If sign-in is immediately available, we will open your dashboard automatically.',
+    };
+    renderFormStatus();
     syncAccountControls();
 
     const fullName = [formData.get('first_name'), formData.get('surname')]
@@ -2180,6 +2265,7 @@ import {
     state.pendingEmail = email;
 
     let accountState = 'created';
+    let accountSignedIn = false;
     try {
       const signupResult = await signUpCandidate({
         name: fullName,
@@ -2188,6 +2274,7 @@ import {
       });
       const signupClassification = classifyCandidateSignupResult(signupResult);
       accountState = signupClassification.state;
+      accountSignedIn = !!signupClassification.autoSignedIn;
       if (accountState === 'existing') {
         state.authMessage = {
           tone: 'warn',
@@ -2201,6 +2288,7 @@ import {
       } else {
         accountState = 'failed';
       }
+      accountSignedIn = false;
       state.authMessage = {
         tone: accountState === 'existing' ? 'warn' : 'warn',
         text: accountState === 'existing'
@@ -2211,7 +2299,7 @@ import {
       if (requiresSecurePaymentSync) {
         try {
           await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
-          requestNativeFormSubmit(accountState);
+          requestNativeFormSubmit(accountState, { signedIn: accountSignedIn });
         } catch (error) {
           state.formBusy = false;
           state.formMessage = {
@@ -2223,9 +2311,21 @@ import {
         }
       } else {
         void backgroundSyncCandidatePayload(payload);
-        requestNativeFormSubmit(accountState);
+        requestNativeFormSubmit(accountState, { signedIn: accountSignedIn });
       }
     }
+  }
+
+  function clearPostSubmitState() {
+    if (!state.formJustSubmitted && !state.formMessage) return;
+    if (state.formBusy) return;
+    state.formJustSubmitted = false;
+    if (state.formMessage?.tone === 'success' || state.formMessage?.tone === 'warn' || state.formMessage?.tone === 'info') {
+      state.formMessage = null;
+      renderFormStatus();
+      return;
+    }
+    syncAccountControls();
   }
 
   authRoot.addEventListener('submit', handleAuthForm);
@@ -2236,6 +2336,18 @@ import {
   dashboardRoot.addEventListener('click', handleDashboardAction);
   formStatusRoot.addEventListener('click', handleDashboardAction);
   form.addEventListener('submit', handleCandidateFormSubmit);
+  form.addEventListener('invalid', () => {
+    if (state.formBusy) return;
+    state.formJustSubmitted = false;
+    state.formMessage = {
+      tone: 'warn',
+      text: 'Please complete the required fields highlighted below before sending your profile.',
+    };
+    renderFormStatus();
+    syncAccountControls();
+  }, true);
+  form.addEventListener('input', clearPostSubmitState);
+  form.addEventListener('change', clearPostSubmitState);
   accountToggle.addEventListener('change', () => {
     syncAccountControls();
   });

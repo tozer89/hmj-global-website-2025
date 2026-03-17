@@ -611,6 +611,12 @@
   border: 1px solid rgba(180, 35, 24, 0.22);
 }
 
+.candidate-portal-alert--info {
+  background: rgba(57, 86, 153, 0.12);
+  color: var(--brand);
+  border: 1px solid rgba(57, 86, 153, 0.18);
+}
+
 .candidate-dashboard-shell {
   display: grid;
   gap: 18px;
@@ -2107,12 +2113,36 @@
 }
 
 .candidates-page .candidate-form__actions {
-  display: flex;
-  justify-content: flex-start;
+  display: grid;
+  justify-items: flex-start;
+  gap: 10px;
 }
 
 .candidates-page #submitBtn {
   min-width: 182px;
+}
+
+.candidates-page .candidate-submit-feedback {
+  margin: 0;
+  color: var(--muted);
+  max-width: 560px;
+  line-height: 1.5;
+}
+
+.candidates-page .candidate-submit-feedback[data-tone="success"] {
+  color: var(--ok);
+}
+
+.candidates-page .candidate-submit-feedback[data-tone="warn"] {
+  color: var(--warn);
+}
+
+.candidates-page .candidate-submit-feedback[data-tone="error"] {
+  color: var(--bad);
+}
+
+.candidates-page .candidate-submit-feedback[data-tone="info"] {
+  color: var(--brand);
 }
 
 .candidates-page .candidate-form-status {

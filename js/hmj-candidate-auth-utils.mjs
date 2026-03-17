@@ -63,6 +63,7 @@ export function classifyCandidateSignupResult(result = {}) {
     return {
       state: 'existing',
       verificationEmailExpected: false,
+      autoSignedIn: false,
     };
   }
 
@@ -70,11 +71,13 @@ export function classifyCandidateSignupResult(result = {}) {
     return {
       state: 'created',
       verificationEmailExpected: !session,
+      autoSignedIn: !!session,
     };
   }
 
   return {
     state: 'failed',
     verificationEmailExpected: false,
+    autoSignedIn: false,
   };
 }

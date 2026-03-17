@@ -86,7 +86,18 @@
     rtwUpdate: null
   };
 
-  const SKILL_SUGGESTIONS = ['IST', 'SAT', 'BMS', 'EPMS', 'Black Start', 'LV'];
+  const SKILL_SUGGESTIONS = [
+    'Gold Card',
+    'IPAF',
+    '18th Edition',
+    'IST',
+    'SAT',
+    'BMS',
+    'EPMS',
+    'Project Manager',
+    'Project Planner',
+    'Quantity Surveyor'
+  ];
   const ROLE_TIPS = {
     'Commissioning': 'Try titles like “MEP Commissioning Manager”, “Lead IST Engineer”, “BMS Commissioning Engineer”.',
     'Electrical (MEP)': 'Popular: “Electrical Supervisor”, “MEP Package Manager”, “AP/AE Electrical Engineer”.',
