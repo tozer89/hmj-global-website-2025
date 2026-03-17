@@ -10,6 +10,7 @@
   <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js?v=3"></script>
+  <script defer src="/js/job-application-context.js"></script>
   <script defer src="/admin/common.js?v=34"></script>
 
   <style>
@@ -596,7 +597,11 @@
                   <button class="smart-link" type="button" data-smart-clear="locationCode">+ Enter new location code</button>
                 </div>
               </div>
-              <div class="field field--wide"><label for="edApply">Apply URL</label><input id="edApply" placeholder="Defaults to contact form"/></div>
+              <div class="field field--wide">
+                <label for="edApply">Apply URL</label>
+                <input id="edApply" placeholder="Generated automatically from the role and location" readonly spellcheck="false"/>
+                <p class="field-note">Generated automatically from the job title and location. This link is no longer edited manually.</p>
+              </div>
             </div>
           </div>
         </details>
@@ -1895,23 +1900,28 @@
       }
 
       function updateEditorSummaries() {
-        const title = form.title?.value.trim() || '';
+        const draft = readForm();
+        const title = draft.title || '';
         const status = String(form.status?.value || 'live').toLowerCase();
         const statusLabel = getStatusLabel(status);
-        const section = form.section?.value.trim() || '';
-        const location = form.locationText?.value.trim() || '';
-        const customer = form.customer?.value.trim() || '';
-        const clientName = form.clientName?.value.trim() || '';
-        const applyUrl = form.apply?.value.trim() || '';
-        const payText = buildPayText(readForm());
-        const overview = form.overview?.value.trim() || '';
-        const responsibilities = toList(form.responsibilities?.value);
-        const requirements = toList(form.requirements?.value);
+        const section = draft.section || '';
+        const location = draft.locationText || '';
+        const customer = draft.customer || '';
+        const clientName = draft.clientName || '';
+        const applyUrl = draft.applyUrl || '';
+        const payText = draft.payText || '';
+        const overview = draft.overview || '';
+        const responsibilities = Array.isArray(draft.responsibilities) ? draft.responsibilities : [];
+        const requirements = Array.isArray(draft.requirements) ? draft.requirements : [];
         const tagsCount = state.editingTags.length;
         const benefitsCount = state.editingBenefits.length;
-        const publicPageConfig = readPublicPageConfigFromForm();
+        const publicPageConfig = draft.publicPageConfig || readPublicPageConfigFromForm();
         const visibleCount = Object.values(publicPageConfig).filter(Boolean).length;
         const published = !!form.published?.checked;
+
+        if (form.apply) {
+          form.apply.value = applyUrl;
+        }
 
         if (editorSectionSummaries.basics) {
           const statusSummary = published ? statusLabel : `${statusLabel} draft`;
@@ -1926,7 +1936,7 @@
           editorSectionSummaries.placement.textContent = [
             location || 'Location pending',
             customer || clientName || '',
-            applyUrl ? 'Apply link set' : '',
+            applyUrl ? 'Apply link ready' : '',
           ].filter(Boolean).join(' · ');
         }
 
@@ -1984,6 +1994,39 @@
           editorStatusPill.textContent = published ? statusLabel : 'Draft';
           editorStatusPill.dataset.tone = getEditorStatusTone(status, published);
         }
+      }
+
+      function buildGeneratedApplyUrl(job = {}) {
+        const source = 'jobs-admin';
+        const applicationContextApi = window.HMJJobApplicationContext;
+        if (applicationContextApi?.buildApplicationUrl) {
+          return applicationContextApi.buildApplicationUrl({
+            origin: window.location.origin,
+            rawApplyUrl: '',
+            source,
+            forceInternal: true,
+            job: {
+              id: job.id,
+              title: job.title,
+              locationText: job.locationText,
+              type: job.type,
+              payText: job.payText || buildPayText(job),
+            },
+          });
+        }
+
+        const title = String(job.title || '').trim();
+        if (!title) return '';
+
+        const url = new URL('/contact.html', window.location.origin);
+        url.searchParams.set('role', title);
+        url.searchParams.set('job_title', title);
+        if (job.id) url.searchParams.set('job_id', String(job.id).trim());
+        if (job.locationText) url.searchParams.set('job_location', String(job.locationText).trim());
+        if (job.type) url.searchParams.set('job_type', String(job.type).trim());
+        if (job.payText) url.searchParams.set('job_pay', String(job.payText).trim());
+        url.searchParams.set('job_source', source);
+        return `${url.pathname}${url.search}`;
       }
 
       function seoDraftCacheKey(job = null) {
@@ -2458,6 +2501,10 @@
             field.disabled = editorDisabled;
           }
         });
+        if (form.apply) {
+          form.apply.disabled = false;
+          form.apply.readOnly = true;
+        }
         if (batchForm) {
           Array.from(batchForm.querySelectorAll('input, select, textarea')).forEach((field) => {
             field.disabled = state.readOnly || state.loadingJobs || state.batchSaving;
@@ -3733,7 +3780,10 @@
         form.overview.value = job?.overview || '';
         form.responsibilities.value = (job?.responsibilities || []).join('\n');
         form.requirements.value = (job?.requirements || []).join('\n');
-        form.apply.value = job?.applyUrl || '';
+        form.apply.value = buildGeneratedApplyUrl({
+          ...job,
+          payText: job?.payText || buildPayText(job || {}),
+        });
         form.published.checked = !!job?.published;
         form.sortOrder.value = Number.isFinite(job?.sortOrder) ? job.sortOrder : '';
         fillPublicPageConfigForm(job?.publicPageConfig);
@@ -3790,7 +3840,7 @@
       }
 
       function readForm() {
-        return {
+        const draft = {
           id: form.id.value.trim() || undefined,
           title: form.title.value.trim(),
           status: form.status.value,
@@ -3810,15 +3860,17 @@
           locationText: form.locationText.value.trim(),
           locationCode: form.locationCode.value.trim(),
           overview: form.overview.value.trim(),
-          responsibilities: form.responsibilities.value,
-          requirements: form.requirements.value,
-          applyUrl: form.apply.value.trim(),
+          responsibilities: toList(form.responsibilities.value),
+          requirements: toList(form.requirements.value),
           published: form.published.checked,
           sortOrder: form.sortOrder.value ? Number(form.sortOrder.value) : undefined,
           tags: [...state.editingTags],
           benefits: [...state.editingBenefits],
           publicPageConfig: readPublicPageConfigFromForm(),
         };
+        draft.payText = buildPayText(draft);
+        draft.applyUrl = buildGeneratedApplyUrl(draft);
+        return draft;
       }
 
       function getCurrentEditorDraft() {
