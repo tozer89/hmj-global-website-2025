@@ -1081,18 +1081,18 @@ import {
             <div class="candidate-dashboard-form__section-title candidate-dashboard-form__full">Portal path</div>
             <fieldset class="candidate-mode-selector candidate-dashboard-form__full">
               <legend>Are you completing onboarding for a live HMJ placement?</legend>
-              <p class="candidate-field-help">Only select Yes if you have already agreed a live role or have been asked by HMJ to complete onboarding. If you are only registering to apply for jobs, leave this set to No.</p>
+              <p class="candidate-field-help">Only select <strong>Yes</strong> if you have already agreed a live role or have been asked by HMJ to complete <strong>onboarding</strong>. If you are only registering to apply for jobs, leave this set to <strong>No</strong> and stay in <strong>recruitment profile</strong> mode.</p>
               <label class="candidate-mode-option">
                 <input type="radio" name="onboarding_mode" value="false" ${onboardingMode ? '' : 'checked'}>
                 <span>
-                  <strong>No — I’m just creating my recruitment profile</strong>
+                  <strong>No — I’m just creating my <span class="candidate-mode-option__accent">recruitment profile</span></strong>
                   <small>Use your HMJ account for job applications, CV storage, and profile updates.</small>
                 </span>
               </label>
               <label class="candidate-mode-option">
                 <input type="radio" name="onboarding_mode" value="true" ${onboardingMode ? 'checked' : ''}>
                 <span>
-                  <strong>Yes — I’ve agreed a live role and need to complete onboarding</strong>
+                  <strong>Yes — I’ve agreed a live role and need to complete <span class="candidate-mode-option__accent">onboarding</span></strong>
                   <small>HMJ will use this to collect the right-to-work, payroll, address, and emergency contact details needed for mobilisation.</small>
                 </span>
               </label>
