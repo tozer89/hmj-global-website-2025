@@ -69,3 +69,27 @@ test('mergeTimesheetPortalAssignment preserves manual data while applying remote
   assert.equal(payload.auto_ts, true);
   assert.equal(payload.notes, 'Keep this note');
 });
+
+test('mergeTimesheetPortalAssignment tolerates a missing existing row during first sync', () => {
+  const payload = mergeTimesheetPortalAssignment({
+    assignment: {
+      id: 'job-101',
+      reference: 'AS-101',
+      title: 'Package Manager',
+      candidateName: 'Jordan Smith',
+      clientName: 'SA3GRP',
+      contractorId: '8842',
+      active: true,
+    },
+    existing: null,
+    candidate: null,
+    matchedBy: null,
+  });
+
+  assert.equal(payload.id, undefined);
+  assert.equal(payload.as_ref, 'AS-101');
+  assert.equal(payload.contractor_id, 8842);
+  assert.equal(payload.candidate_id, null);
+  assert.equal(payload.client_name, 'SA3GRP');
+  assert.equal(payload.currency, 'GBP');
+});

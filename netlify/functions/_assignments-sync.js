@@ -115,62 +115,63 @@ function normalizeAssignmentStatus(value, activeFlag) {
 }
 
 function mergeTimesheetPortalAssignment({ assignment = {}, existing = {}, candidate = null, matchedBy = null, syncedAt = new Date().toISOString() }) {
+  const persisted = existing && typeof existing === 'object' ? existing : {};
   const status = normalizeAssignmentStatus(assignment.status, assignment.active);
   const active = typeof assignment.active === 'boolean' ? assignment.active : status !== 'complete';
   const contractorId = /^\d+$/.test(trimString(assignment.contractorId, 120))
     ? Number(trimString(assignment.contractorId, 120))
-    : toNumberOrNull(existing.contractor_id);
+    : toNumberOrNull(persisted.contractor_id);
   const candidateId = candidate?.id != null
     ? String(candidate.id)
-    : trimString(existing.candidate_id, 120) || null;
+    : trimString(persisted.candidate_id, 120) || null;
   const candidateName = candidate
     ? candidateDisplayName(candidate)
-    : trimString(assignment.candidateName || existing.candidate_name, 240) || null;
+    : trimString(assignment.candidateName || persisted.candidate_name, 240) || null;
 
   const payload = {
-    id: existing.id != null ? existing.id : undefined,
+    id: persisted.id != null ? persisted.id : undefined,
     candidate_id: candidateId,
     contractor_id: contractorId,
-    project_id: existing.project_id == null ? null : Number(existing.project_id),
-    site_id: existing.site_id == null ? null : Number(existing.site_id),
-    job_title: trimString(assignment.title || existing.job_title, 240) || null,
+    project_id: persisted.project_id == null ? null : Number(persisted.project_id),
+    site_id: persisted.site_id == null ? null : Number(persisted.site_id),
+    job_title: trimString(assignment.title || persisted.job_title, 240) || null,
     status,
     candidate_name: candidateName,
-    client_name: trimString(assignment.clientName || existing.client_name, 240) || null,
-    client_site: trimString(assignment.clientSite || existing.client_site, 240) || null,
-    consultant_name: trimString(assignment.consultantName || existing.consultant_name, 240) || null,
-    po_number: trimString(existing.po_number, 120) || null,
-    po_ref: trimString(existing.po_ref, 120) || null,
-    as_ref: trimString(assignment.reference || assignment.id || existing.as_ref, 120) || null,
-    start_date: trimString(assignment.startDate || existing.start_date, 40) || null,
-    end_date: trimString(assignment.endDate || existing.end_date, 40) || null,
-    days_per_week: toNumberOrNull(existing.days_per_week),
-    hours_per_day: toNumberOrNull(existing.hours_per_day),
-    currency: trimString(assignment.currency || existing.currency || 'GBP', 12).toUpperCase() || 'GBP',
-    rate_std: assignment.rateStd == null ? toNumberOrNull(existing.rate_std) : Number(assignment.rateStd),
-    rate_ot: toNumberOrNull(existing.rate_ot),
-    charge_std: assignment.chargeStd == null ? toNumberOrNull(existing.charge_std) : Number(assignment.chargeStd),
-    charge_ot: assignment.chargeOt == null ? toNumberOrNull(existing.charge_ot) : Number(assignment.chargeOt),
-    rate_pay: assignment.ratePay == null ? toNumberOrNull(existing.rate_pay) : Number(assignment.ratePay),
-    rate_charge: assignment.rateCharge == null ? toNumberOrNull(existing.rate_charge) : Number(assignment.rateCharge),
-    pay_freq: trimString(existing.pay_freq, 80) || null,
-    ts_type: trimString(existing.ts_type, 80) || null,
-    shift_type: trimString(existing.shift_type, 80) || null,
-    auto_ts: existing.auto_ts === true,
-    approver: trimString(existing.approver, 240) || null,
-    notes: trimString(existing.notes, 4000) || null,
-    hs_risk: trimString(existing.hs_risk, 240) || null,
-    rtw_ok: typeof existing.rtw_ok === 'boolean' ? existing.rtw_ok : null,
-    quals: trimString(existing.quals, 4000) || null,
-    special: trimString(existing.special, 4000) || null,
-    duties: trimString(existing.duties, 4000) || null,
-    equipment: trimString(existing.equipment, 4000) || null,
-    terms_sent: typeof existing.terms_sent === 'boolean' ? existing.terms_sent : null,
-    sig_ok: typeof existing.sig_ok === 'boolean' ? existing.sig_ok : null,
-    notice_temp: trimString(existing.notice_temp, 240) || null,
-    notice_client: trimString(existing.notice_client, 240) || null,
-    term_reason: trimString(existing.term_reason, 240) || null,
-    contract_url: trimString(existing.contract_url, 2000) || null,
+    client_name: trimString(assignment.clientName || persisted.client_name, 240) || null,
+    client_site: trimString(assignment.clientSite || persisted.client_site, 240) || null,
+    consultant_name: trimString(assignment.consultantName || persisted.consultant_name, 240) || null,
+    po_number: trimString(persisted.po_number, 120) || null,
+    po_ref: trimString(persisted.po_ref, 120) || null,
+    as_ref: trimString(assignment.reference || assignment.id || persisted.as_ref, 120) || null,
+    start_date: trimString(assignment.startDate || persisted.start_date, 40) || null,
+    end_date: trimString(assignment.endDate || persisted.end_date, 40) || null,
+    days_per_week: toNumberOrNull(persisted.days_per_week),
+    hours_per_day: toNumberOrNull(persisted.hours_per_day),
+    currency: trimString(assignment.currency || persisted.currency || 'GBP', 12).toUpperCase() || 'GBP',
+    rate_std: assignment.rateStd == null ? toNumberOrNull(persisted.rate_std) : Number(assignment.rateStd),
+    rate_ot: toNumberOrNull(persisted.rate_ot),
+    charge_std: assignment.chargeStd == null ? toNumberOrNull(persisted.charge_std) : Number(assignment.chargeStd),
+    charge_ot: assignment.chargeOt == null ? toNumberOrNull(persisted.charge_ot) : Number(assignment.chargeOt),
+    rate_pay: assignment.ratePay == null ? toNumberOrNull(persisted.rate_pay) : Number(assignment.ratePay),
+    rate_charge: assignment.rateCharge == null ? toNumberOrNull(persisted.rate_charge) : Number(assignment.rateCharge),
+    pay_freq: trimString(persisted.pay_freq, 80) || null,
+    ts_type: trimString(persisted.ts_type, 80) || null,
+    shift_type: trimString(persisted.shift_type, 80) || null,
+    auto_ts: persisted.auto_ts === true,
+    approver: trimString(persisted.approver, 240) || null,
+    notes: trimString(persisted.notes, 4000) || null,
+    hs_risk: trimString(persisted.hs_risk, 240) || null,
+    rtw_ok: typeof persisted.rtw_ok === 'boolean' ? persisted.rtw_ok : null,
+    quals: trimString(persisted.quals, 4000) || null,
+    special: trimString(persisted.special, 4000) || null,
+    duties: trimString(persisted.duties, 4000) || null,
+    equipment: trimString(persisted.equipment, 4000) || null,
+    terms_sent: typeof persisted.terms_sent === 'boolean' ? persisted.terms_sent : null,
+    sig_ok: typeof persisted.sig_ok === 'boolean' ? persisted.sig_ok : null,
+    notice_temp: trimString(persisted.notice_temp, 240) || null,
+    notice_client: trimString(persisted.notice_client, 240) || null,
+    term_reason: trimString(persisted.term_reason, 240) || null,
+    contract_url: trimString(persisted.contract_url, 2000) || null,
     active,
   };
 
