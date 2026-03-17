@@ -71,9 +71,11 @@ test('send intro email backend normalises input and builds branded website links
   assert.equal(message.registrationUrl, 'https://hmjg.netlify.app/candidates.html');
   assert.equal(message.timesheetsUrl, 'https://hmjg.netlify.app/timesheets.html');
   assert.match(message.html, /Complete HMJ registration/);
-  assert.match(message.html, /Open timesheets \/ portal access/);
+  assert.match(message.html, /Open HMJ timesheets \/ portal access/);
   assert.match(message.html, /ACME Pharma/);
   assert.match(message.html, /Senior Planner/);
+  assert.match(message.html, /Open HMJ registration/);
+  assert.match(message.html, /background:#173779/);
 });
 
 test('send intro email backend validates required starter details', () => {
@@ -113,5 +115,6 @@ test('send intro email builder can switch to a secure onboarding access link for
   assert.equal(message.accessLinkType, 'invite');
   assert.match(message.html, /Open secure HMJ account and onboarding/);
   assert.match(message.html, /finish opening your candidate account/i);
-  assert.match(message.html, /Secure HMJ access:/);
+  assert.match(message.html, /Use the HMJ buttons below/i);
+  assert.match(message.html, /Open secure HMJ access/);
 });

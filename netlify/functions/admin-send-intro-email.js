@@ -2,7 +2,7 @@
 
 const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
-const { readCandidateEmailSettings } = require('./_candidate-email-settings.js');
+const { buildEmailTemplate, readCandidateEmailSettings } = require('./_candidate-email-settings.js');
 const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-delivery.js');
 const { recordAudit } = require('./_audit.js');
 const { _buildRedirectUrl: buildRedirectUrl } = require('./candidate-auth-config.js');
@@ -71,67 +71,37 @@ function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
       ? 'Use the secure HMJ button below to finish opening your candidate account and go straight into your onboarding area.'
       : 'Use the secure HMJ button below to open your candidate account and go straight into your onboarding area.')
     : 'Please complete your HMJ website registration so we can progress your onboarding, right to work checks, supporting documents, and payment setup where applicable.';
-  const fallbackRegistrationLabel = usesSecureAccess ? 'Secure HMJ access' : 'Registration';
+  const fallbackRegistrationLabel = usesSecureAccess ? 'Open secure HMJ access' : 'Open HMJ registration';
   const subject = jobTitle
     ? 'Welcome to HMJ Global – next steps for your new assignment'
     : 'Welcome to HMJ Global – complete your registration';
-  const roleLine = jobTitle ? ` as ${escapeHtml(jobTitle)}` : '';
 
-  const html = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${escapeHtml(subject)}</title>
-  </head>
-  <body style="margin:0;padding:0;background:#eef2fb;font-family:Arial,sans-serif;color:#14244f;">
-    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Welcome to HMJ Global. Complete your registration and onboarding steps for ${escapeHtml(clientName)}.</div>
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#eef2fb;padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;background:#ffffff;border:1px solid #d7e0f5;border-radius:24px;overflow:hidden;">
-            <tr>
-              <td style="padding:28px 32px;background:linear-gradient(135deg,#274390,#3d66c8);color:#ffffff;">
-                <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;opacity:.88;">HMJ Global</div>
-                <h1 style="margin:14px 0 0;font-size:30px;line-height:1.18;font-weight:800;color:#ffffff;">Welcome to HMJ Global</h1>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:28px 32px 18px;">
-                <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334a7e;">Hi ${escapeHtml(firstName)},</p>
-                <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334a7e;">Congratulations on starting your new role${roleLine} with <strong>${escapeHtml(clientName)}</strong>.</p>
-                <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#42557f;">${escapeHtml(primaryActionIntro)}</p>
-                <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#42557f;">We will also use this information to help get you set up on the Timesheet Portal system. The Timesheet Portal link can also be found in the top menu on the HMJ website.</p>
-                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:18px 0 10px;">
-                  <tr>
-                    <td style="padding:0 0 12px;">
-                      <a href="${escapeHtml(registrationUrl)}" style="display:inline-block;padding:14px 22px;border-radius:14px;background:#3154b3;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">${escapeHtml(primaryActionLabel)}</a>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:0;">
-                      <a href="${escapeHtml(timesheetsUrl)}" style="display:inline-block;padding:14px 22px;border-radius:14px;background:#ffffff;color:#3154b3;font-size:16px;font-weight:700;text-decoration:none;border:1px solid rgba(49,84,179,.22);">Open timesheets / portal access</a>
-                    </td>
-                  </tr>
-                </table>
-                <p style="margin:16px 0 12px;font-size:14px;line-height:1.7;color:#5f74a8;">If the buttons do not work, copy these links into your browser:</p>
-                <p style="margin:0 0 8px;font-size:13px;line-height:1.7;color:#5f74a8;word-break:break-word;">${escapeHtml(fallbackRegistrationLabel)}: ${escapeHtml(registrationUrl)}</p>
-                <p style="margin:0;font-size:13px;line-height:1.7;color:#5f74a8;word-break:break-word;">Timesheets / portal access: ${escapeHtml(timesheetsUrl)}</p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:18px 32px 28px;border-top:1px solid #e6ecfb;background:#f7f9ff;">
-                <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#5f74a8;font-weight:700;">${escapeHtml(senderName)}</p>
-                <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#5f74a8;">${escapeHtml(settings.footerTagline || 'Specialist recruitment for technical projects, commissioning, and delivery teams.')}</p>
-                <p style="margin:0;font-size:13px;line-height:1.6;color:#5f74a8;">Need help? Email <a href="mailto:${escapeHtml(supportEmail)}" style="color:#3154b3;text-decoration:none;">${escapeHtml(supportEmail)}</a>.</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+  const html = buildEmailTemplate({
+    ...settings,
+    senderName,
+    supportEmail,
+  }, {
+    heading: 'Welcome to HMJ Global',
+    intro: `Congratulations on starting your new role${jobTitle ? ` as ${jobTitle}` : ''} with ${clientName}.`,
+    actionLabel: primaryActionLabel,
+    actionUrl: registrationUrl,
+    actions: [
+      { label: primaryActionLabel, url: registrationUrl, tone: 'primary' },
+      { label: 'Open HMJ timesheets / portal access', url: timesheetsUrl, tone: 'secondary' },
+    ],
+    fallbackLinks: [
+      { label: fallbackRegistrationLabel, url: registrationUrl },
+      { label: 'Open HMJ timesheets / portal access', url: timesheetsUrl },
+    ],
+    bodyHtml: `
+      <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">Hi ${escapeHtml(firstName)},</p>
+      <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">${escapeHtml(primaryActionIntro)}</p>
+      <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">HMJ needs your profile, right-to-work, onboarding, and payment details where relevant so we can move your setup forward properly.</p>
+      <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">We will also use this information to help get you set up on the Timesheet Portal system. You can also find Timesheets in the top menu on the HMJ website once your setup is underway.</p>
+      <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">Use the HMJ buttons below rather than saving direct system links. They will take you to the correct HMJ access path.</p>
+    `,
+    preheader: `Welcome to HMJ Global. Complete your registration and onboarding steps for ${clientName}.`,
+  });
 
   return {
     subject,

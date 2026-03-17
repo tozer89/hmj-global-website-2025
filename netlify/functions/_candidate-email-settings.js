@@ -151,7 +151,7 @@ function defaultCandidateEmailSettings(derived = {}) {
     preheader: 'Secure access to your HMJ candidate dashboard.',
     introCopy: 'Use the secure button below to finish your HMJ candidate account setup.',
     recoveryCopy: 'Use the secure button below to choose a new password for your HMJ candidate account.',
-    helpCopy: 'If the button does not work, copy the full link into your browser or contact HMJ support.',
+    helpCopy: 'If the button does not open, use the secure fallback link below or contact HMJ support.',
     footerTagline: 'Specialist recruitment for technical projects, commissioning, and delivery teams.',
     lastAppliedAt: '',
     lastAppliedBy: '',
@@ -249,12 +249,60 @@ function buildEmailTemplate(settings, options = {}) {
   const heading = escapeHtml(options.heading || 'HMJ Global');
   const intro = escapeHtml(options.intro || '');
   const actionLabel = escapeHtml(options.actionLabel || 'Open secure link');
-  const actionUrl = escapeHtml(options.actionUrl || '{{ .ConfirmationURL }}');
+  const actionUrlRaw = trimString(options.actionUrl || '{{ .ConfirmationURL }}', 4000) || '{{ .ConfirmationURL }}';
+  const actionUrl = escapeHtml(actionUrlRaw);
   const helpCopy = escapeHtml(settings.helpCopy || '');
   const senderName = escapeHtml(settings.senderName || 'HMJ Global');
   const supportEmail = escapeHtml(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com');
   const footerTagline = escapeHtml(settings.footerTagline || '');
   const preheader = escapeHtml(settings.preheader || '');
+  const bodyHtml = trimString(options.bodyHtml || '', 4000);
+  const actions = Array.isArray(options.actions) && options.actions.length
+    ? options.actions
+    : [{ label: options.actionLabel || 'Open secure link', url: actionUrlRaw, tone: 'primary' }];
+  const actionRows = actions
+    .map((action = {}) => ({
+      label: escapeHtml(trimString(action.label, 160) || 'Open'),
+      url: escapeHtml(trimString(action.url, 4000)),
+      tone: trimString(action.tone, 40).toLowerCase() === 'secondary' ? 'secondary' : 'primary',
+    }))
+    .filter((action) => action.url);
+  const fallbackLinks = (Array.isArray(options.fallbackLinks) ? options.fallbackLinks : [])
+    .map((link = {}) => ({
+      label: escapeHtml(trimString(link.label, 160) || 'Open secure link'),
+      url: escapeHtml(trimString(link.url, 4000)),
+    }))
+    .filter((link) => link.url);
+  if (!fallbackLinks.length && actionUrlRaw) {
+    fallbackLinks.push({
+      label: 'Open secure fallback link',
+      url: escapeHtml(actionUrlRaw),
+    });
+  }
+  const buttonTable = actionRows.length
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0 12px;margin:0;">
+        ${actionRows.map((action) => {
+          const isPrimary = action.tone === 'primary';
+          const buttonBg = isPrimary ? '#3154b3' : '#ffffff';
+          const buttonColor = isPrimary ? '#ffffff' : '#3154b3';
+          const buttonBorder = isPrimary ? '#3154b3' : '#cfdaf6';
+          return `<tr>
+            <td>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td bgcolor="${buttonBg}" style="border-radius:14px;background:${buttonBg};background-color:${buttonBg};border:1px solid ${buttonBorder};">
+                    <a href="${action.url}" style="display:inline-block;padding:14px 22px;border-radius:14px;background:${buttonBg};background-color:${buttonBg};color:${buttonColor};font-size:16px;font-weight:700;text-decoration:none;border:1px solid ${buttonBorder};">${action.label}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+        }).join('')}
+      </table>`
+    : '';
+  const fallbackHtml = fallbackLinks.length
+    ? `<p style="margin:18px 0 0;font-size:14px;line-height:1.7;color:#5f74a8;">If a button does not open, use these secure links instead: ${fallbackLinks.map((link) => `<a href="${link.url}" style="color:#3154b3;text-decoration:none;font-weight:700;">${link.label}</a>`).join(' &nbsp;|&nbsp; ')}</p>`
+    : '';
 
   return `<!doctype html>
 <html lang="en">
@@ -265,13 +313,13 @@ function buildEmailTemplate(settings, options = {}) {
   </head>
   <body style="margin:0;padding:0;background:#eef2fb;font-family:Arial,sans-serif;color:#14244f;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${preheader}</div>
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#eef2fb;padding:24px 12px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" bgcolor="#eef2fb" style="background:#eef2fb;padding:24px 12px;">
       <tr>
         <td align="center">
           <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px;background:#ffffff;border:1px solid #d7e0f5;border-radius:24px;overflow:hidden;">
             <tr>
-              <td style="padding:28px 32px;background:linear-gradient(135deg,#274390,#3d66c8);color:#ffffff;">
-                <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;opacity:.88;">HMJ Global</div>
+              <td bgcolor="#173779" style="padding:28px 32px;background:#173779;background-color:#173779;color:#ffffff;">
+                <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;font-weight:700;color:#dbe6ff;">HMJ Global</div>
                 <h1 style="margin:14px 0 0;font-size:30px;line-height:1.18;font-weight:800;color:#ffffff;">${heading}</h1>
               </td>
             </tr>
@@ -279,10 +327,10 @@ function buildEmailTemplate(settings, options = {}) {
               <td style="padding:28px 32px 18px;">
                 <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334a7e;">${intro}</p>
                 <p style="margin:0 0 22px;font-size:14px;line-height:1.7;color:#5f74a8;">This link is tied to your HMJ candidate account and should only be used by you.</p>
-                <p style="margin:0 0 26px;">
-                  <a href="${actionUrl}" style="display:inline-block;padding:14px 22px;border-radius:14px;background:#3154b3;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">${actionLabel}</a>
-                </p>
+                ${bodyHtml}
+                ${buttonTable}
                 <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#5f74a8;">${escapeHtml(settings.helpCopy || '')}</p>
+                ${fallbackHtml}
                 <p style="margin:0;font-size:14px;line-height:1.7;color:#5f74a8;">Need help? Email <a href="mailto:${supportEmail}" style="color:#3154b3;text-decoration:none;">${supportEmail}</a>.</p>
               </td>
             </tr>

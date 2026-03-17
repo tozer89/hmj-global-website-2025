@@ -212,7 +212,7 @@ test('buildSupabaseAuthPatch includes SMTP fields only when custom SMTP is enabl
       preheader: 'Secure access to your HMJ candidate dashboard.',
       introCopy: 'Use the secure button below to finish your HMJ candidate account setup.',
       recoveryCopy: 'Use the secure button below to choose a new password for your HMJ candidate account.',
-      helpCopy: 'If the button does not work, copy the full link into your browser or contact HMJ support.',
+      helpCopy: 'If the button does not open, use the secure fallback link below or contact HMJ support.',
       footerTagline: 'Specialist recruitment for technical projects.',
     });
 
@@ -237,6 +237,32 @@ test('buildSupabaseAuthPatch includes SMTP fields only when custom SMTP is enabl
     assert.equal(withSmtp.smtp_host, 'smtp.office365.com');
     assert.equal(withSmtp.smtp_port, '587');
     assert.equal(withSmtp.smtp_pass, 'secret');
+  } finally {
+    restore();
+  }
+});
+
+test('buildEmailTemplate uses a solid brand header and named fallback links', () => {
+  const { mod, restore } = loadModule();
+  try {
+    const html = mod.buildEmailTemplate({
+      senderName: 'HMJ Global',
+      senderEmail: 'info@hmj-global.com',
+      supportEmail: 'info@hmj-global.com',
+      helpCopy: 'If the button does not work, use the secure fallback link below.',
+      footerTagline: 'Specialist recruitment for technical projects.',
+      preheader: 'Secure access to your HMJ candidate dashboard.',
+    }, {
+      heading: 'Confirm your HMJ candidate account',
+      intro: 'Use the secure button below to finish your HMJ candidate account setup.',
+      actionLabel: 'Confirm candidate account',
+      actionUrl: 'https://example.com/secure-token',
+    });
+
+    assert.match(html, /background:#173779/);
+    assert.match(html, /bgcolor="#173779"/);
+    assert.match(html, /Open secure fallback link/);
+    assert.doesNotMatch(html, /linear-gradient/);
   } finally {
     restore();
   }
@@ -295,7 +321,7 @@ test('applyCandidateEmailSettingsToSupabase accepts a one-time management token 
         preheader: 'Secure access to your HMJ candidate dashboard.',
         introCopy: 'Use the secure button below to finish your HMJ candidate account setup.',
         recoveryCopy: 'Use the secure button below to choose a new password for your HMJ candidate account.',
-        helpCopy: 'If the button does not work, copy the full link into your browser or contact HMJ support.',
+        helpCopy: 'If the button does not open, use the secure fallback link below or contact HMJ support.',
         footerTagline: 'Specialist recruitment for technical projects.',
       },
     });
@@ -337,7 +363,7 @@ test('buildSupabaseAuthPatch normalises smtp_port and uri_allow_list to strings 
       preheader: 'Secure access to your HMJ candidate dashboard.',
       introCopy: 'Use the secure button below to finish your HMJ candidate account setup.',
       recoveryCopy: 'Use the secure button below to choose a new password for your HMJ candidate account.',
-      helpCopy: 'If the button does not work, copy the full link into your browser or contact HMJ support.',
+      helpCopy: 'If the button does not open, use the secure fallback link below or contact HMJ support.',
       footerTagline: 'Specialist recruitment for technical projects.',
     });
 

@@ -384,9 +384,7 @@ function buildEmailShell({
     : (actions || []);
   const actionHtml = primaryActions.length
     ? [
-      '<div style="margin:24px 0 0;">',
-      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:10px 10px;margin-left:-10px;">',
-      '<tr>',
+      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0 12px;margin:24px 0 0;">',
       ...primaryActions
         .filter((action) => trimString(action?.url, 2000))
         .map((action) => {
@@ -395,11 +393,9 @@ function buildEmailShell({
           const bg = isPrimary ? HMJ_EMAIL_BRAND.accent : '#ffffff';
           const color = isPrimary ? '#ffffff' : HMJ_EMAIL_BRAND.accent;
           const border = isPrimary ? HMJ_EMAIL_BRAND.accent : HMJ_EMAIL_BRAND.border;
-          return `<td><a href="${escapeHtml(action.url)}" style="display:inline-block;padding:12px 16px;border-radius:14px;background:${bg};color:${color};text-decoration:none;font-weight:800;border:1px solid ${border}">${escapeHtml(action.label || 'Open')}</a></td>`;
+          return `<tr><td><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${bg}" style="border-radius:14px;background:${bg};background-color:${bg};border:1px solid ${border}"><a href="${escapeHtml(action.url)}" style="display:inline-block;padding:12px 16px;border-radius:14px;background:${bg};background-color:${bg};color:${color};text-decoration:none;font-weight:800;border:1px solid ${border}">${escapeHtml(action.label || 'Open')}</a></td></tr></table></td></tr>`;
         }),
-      '</tr>',
       '</table>',
-      '</div>',
     ].join('')
     : '';
   const summaryHtml = summaryRows.length
@@ -415,24 +411,25 @@ function buildEmailShell({
 
   const html = [
     `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(safePreheader || intro)}</div>`,
-    `<div style="font-family:Inter,Segoe UI,Arial,sans-serif;background:${HMJ_EMAIL_BRAND.bg};padding:24px;color:${HMJ_EMAIL_BRAND.accentDeep}">`,
-    `<div style="max-width:640px;margin:0 auto;background:${HMJ_EMAIL_BRAND.panel};border:1px solid ${HMJ_EMAIL_BRAND.border};border-radius:20px;padding:28px;box-shadow:0 18px 38px rgba(15,27,63,.10)">`,
-    `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px">`,
-    `<div>`,
-    `<p style="margin:0 0 12px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:${HMJ_EMAIL_BRAND.accent};font-weight:800">${escapeHtml(eyebrow || HMJ_EMAIL_BRAND.eyebrow)}</p>`,
-    `</div>`,
-    logoUrl
-      ? `<img src="${escapeHtml(logoUrl)}" alt="HMJ Global" style="display:block;height:30px;width:auto;max-width:150px">`
-      : '',
-    `</div>`,
-    `<h1 style="margin:0 0 12px;font-size:28px;line-height:1.1;color:${HMJ_EMAIL_BRAND.accentDeep}">${escapeHtml(heading)}</h1>`,
+    `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" bgcolor="${HMJ_EMAIL_BRAND.bg}" style="background:${HMJ_EMAIL_BRAND.bg};padding:24px 12px;font-family:Arial,sans-serif;color:${HMJ_EMAIL_BRAND.accentDeep};">`,
+    '<tr><td align="center">',
+    `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px;background:${HMJ_EMAIL_BRAND.panel};border:1px solid ${HMJ_EMAIL_BRAND.border};border-radius:20px;overflow:hidden;">`,
+    `<tr><td bgcolor="${HMJ_EMAIL_BRAND.accentDeep}" style="padding:28px 32px;background:${HMJ_EMAIL_BRAND.accentDeep};background-color:${HMJ_EMAIL_BRAND.accentDeep};color:#ffffff;">`,
+    `<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td>`,
+    `<p style="margin:0 0 12px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#dbe6ff;font-weight:800">${escapeHtml(eyebrow || HMJ_EMAIL_BRAND.eyebrow)}</p>`,
+    `<h1 style="margin:0;font-size:28px;line-height:1.1;color:#ffffff">${escapeHtml(heading)}</h1>`,
+    `</td>${logoUrl ? `<td align="right" valign="top"><img src="${escapeHtml(logoUrl)}" alt="HMJ Global" style="display:block;height:30px;width:auto;max-width:150px"></td>` : ''}</tr></table>`,
+    `</td></tr>`,
+    `<tr><td style="padding:28px 32px;">`,
     `<p style="margin:0 0 20px;color:${HMJ_EMAIL_BRAND.muted};line-height:1.6">${escapeHtml(intro)}</p>`,
     summaryHtml,
     bodyHtml,
     actionHtml,
-    `<p style="margin:18px 0 0;color:${HMJ_EMAIL_BRAND.muted};font-size:13px;line-height:1.6">You can open this task securely in HMJ Admin to view comments, files, reminders, and ownership updates.</p>`,
-    '</div>',
-    '</div>',
+    `<p style="margin:18px 0 0;color:${HMJ_EMAIL_BRAND.muted};font-size:13px;line-height:1.6">Use the HMJ buttons above to reopen this task securely in HMJ Admin for comments, files, reminders, and ownership updates.</p>`,
+    `</td></tr>`,
+    '</table>',
+    '</td></tr>',
+    '</table>',
   ].filter(Boolean).join('');
 
   const text = [

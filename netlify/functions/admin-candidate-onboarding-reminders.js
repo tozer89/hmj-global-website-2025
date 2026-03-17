@@ -109,6 +109,18 @@ function documentListText(documentTypes = []) {
 
 function buildReminderContent(settings, candidateName, actionUrl, documentTypes = ['right_to_work'], options = {}) {
   const labelsText = documentListText(documentTypes);
+  const safeCandidateName = candidateName
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+  const safeLabelsText = labelsText
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
   const isRightToWorkOnly = documentTypes.length === 1 && documentTypes[0] === 'right_to_work';
   const heading = isRightToWorkOnly ? 'Complete your right-to-work documents' : 'Complete your HMJ onboarding documents';
   const secureAccessCopy = options.linkType === 'invite'
@@ -122,22 +134,18 @@ function buildReminderContent(settings, candidateName, actionUrl, documentTypes 
     intro,
     actionLabel: isRightToWorkOnly ? 'Open secure right-to-work upload' : 'Open secure HMJ uploads',
     actionUrl,
-  }).replace(
-    '</table>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>',
-    `<tr><td style="padding:0 32px 28px;color:#42557f;font-size:15px;line-height:1.6">
-      <p style="margin:0 0 12px">Hi ${candidateName},</p>
-      <p style="margin:0 0 12px">HMJ uses this area for onboarding documents such as passports, certificates, references, visas, and share-code evidence.</p>
-      <p style="margin:0 0 12px">If you have not completed your online setup yet, the secure link above will guide you through access first and then open the correct HMJ upload area for this request.</p>
-      ${isRightToWorkOnly ? '' : `<p style="margin:0 0 12px">Requested documents: <strong>${labelsText}</strong>.</p>`}
-      <p style="margin:0">If you have already uploaded the right file, you can ignore this reminder.</p>
-    </td></tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`,
-  );
+    bodyHtml: `
+      <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Hi ${safeCandidateName},</p>
+      <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">HMJ uses this area for onboarding documents such as passports, certificates, references, visas, and share-code evidence.</p>
+      <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">If you have not completed your online setup yet, the secure link above will guide you through access first and then open the correct HMJ upload area for this request.</p>
+      ${isRightToWorkOnly ? '' : `<p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Requested documents: <strong>${safeLabelsText}</strong>.</p>`}
+      <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Once you are inside your candidate account, upload the requested documents and HMJ will route them into the correct verification section automatically.</p>
+      <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">If you have already uploaded the right file, you can ignore this reminder.</p>
+    `,
+    fallbackLinks: [
+      { label: isRightToWorkOnly ? 'Open secure right-to-work upload' : 'Open secure HMJ uploads', url: actionUrl },
+    ],
+  });
   return {
     subject: isRightToWorkOnly
       ? 'Action required: upload your HMJ right-to-work documents'

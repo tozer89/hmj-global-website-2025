@@ -159,6 +159,8 @@ test('buildAssignmentEmail includes branded CTA buttons and assignment context',
   assert.match(message.html, /Open task/);
   assert.match(message.html, /Open board/);
   assert.match(message.html, /Open workspace/);
+  assert.match(message.html, /background:#0f1b3f/);
+  assert.match(message.html, /bgcolor="#0f1b3f"/);
   assert.match(message.text, /Joe Tozer-O'Sullivan assigned you a task/);
 });
 
