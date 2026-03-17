@@ -12,6 +12,7 @@ const {
   requestedDocumentLabel,
   summariseCandidatesOnboardingMap,
 } = require('./_candidate-onboarding.js');
+const { generateCandidateAccessLink } = require('./_candidate-account-admin.js');
 const { isMissingRelationError } = require('./_candidate-portal.js');
 const { paymentDetailsSummary } = require('./_candidate-payment-details.js');
 const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-delivery.js');
@@ -106,23 +107,27 @@ function documentListText(documentTypes = []) {
   return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
 }
 
-function buildReminderContent(settings, candidateName, actionUrl, documentTypes = ['right_to_work']) {
+function buildReminderContent(settings, candidateName, actionUrl, documentTypes = ['right_to_work'], options = {}) {
   const labelsText = documentListText(documentTypes);
   const isRightToWorkOnly = documentTypes.length === 1 && documentTypes[0] === 'right_to_work';
   const heading = isRightToWorkOnly ? 'Complete your right-to-work documents' : 'Complete your HMJ onboarding documents';
+  const secureAccessCopy = options.linkType === 'invite'
+    ? 'Use the secure HMJ access button below to finish opening your candidate account and go straight to the correct upload area.'
+    : 'Use the secure HMJ access button below to go straight to the correct upload area in your candidate account.';
   const intro = isRightToWorkOnly
-    ? 'HMJ Global needs your passport or right-to-work evidence to keep your onboarding moving. Use the secure HMJ link below to open your candidate account and upload the required file.'
-    : `HMJ Global needs your ${labelsText.toLowerCase()} to complete onboarding. Use the secure HMJ link below to open your candidate account and upload the requested documents.`;
+    ? `HMJ Global needs your passport or right-to-work evidence to keep your onboarding moving. ${secureAccessCopy}`
+    : `HMJ Global needs your ${labelsText.toLowerCase()} to complete onboarding. ${secureAccessCopy}`;
   const html = buildEmailTemplate(settings, {
     heading,
     intro,
-    actionLabel: isRightToWorkOnly ? 'Upload right-to-work documents' : 'Open onboarding uploads',
+    actionLabel: isRightToWorkOnly ? 'Open secure right-to-work upload' : 'Open secure HMJ uploads',
     actionUrl,
   }).replace(
     '</table>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>',
     `<tr><td style="padding:0 32px 28px;color:#42557f;font-size:15px;line-height:1.6">
       <p style="margin:0 0 12px">Hi ${candidateName},</p>
       <p style="margin:0 0 12px">HMJ uses this area for onboarding documents such as passports, certificates, references, visas, and share-code evidence.</p>
+      <p style="margin:0 0 12px">If you have not completed your online setup yet, the secure link above will guide you through access first and then open the correct HMJ upload area for this request.</p>
       ${isRightToWorkOnly ? '' : `<p style="margin:0 0 12px">Requested documents: <strong>${labelsText}</strong>.</p>`}
       <p style="margin:0">If you have already uploaded the right file, you can ignore this reminder.</p>
     </td></tr>
@@ -254,7 +259,7 @@ const baseHandler = async (event, context) => {
   const skipped = [];
   const actionDocuments = requestType === 'rtw' ? ['right_to_work'] : requestedDocuments;
   const activityType = requestType === 'rtw' ? 'rtw_reminder_sent' : 'candidate_document_request_sent';
-  const actionUrl = buildCandidatePortalDeepLink(event, {
+  const redirectUrl = buildCandidatePortalDeepLink(event, {
     tab: 'documents',
     focus: requestType === 'rtw' ? 'right_to_work' : 'documents',
     onboarding: true,
@@ -273,7 +278,13 @@ const baseHandler = async (event, context) => {
       continue;
     }
 
-    const content = buildReminderContent(settings, displayCandidateName(candidate), actionUrl, actionDocuments);
+    const accessLink = await generateCandidateAccessLink(supabase, candidate, redirectUrl, {
+      email: candidate.email,
+    });
+    const actionUrl = accessLink?.action_link || redirectUrl;
+    const content = buildReminderContent(settings, displayCandidateName(candidate), actionUrl, actionDocuments, {
+      linkType: accessLink?.link_type || null,
+    });
 
     try {
       await sendTransactionalEmail({
@@ -296,16 +307,20 @@ const baseHandler = async (event, context) => {
           requestType,
           documentTypes: actionDocuments,
           actionUrl,
+          redirectUrl,
           totalEligible: eligible.length,
         }),
       };
     }
     await recordReminderActivity(supabase, candidate.id, user?.email || null, activityType, {
       document_types: actionDocuments,
+      link_type: accessLink?.link_type || null,
+      created_account: !!accessLink?.created_account,
     });
     sent.push({
       id: candidate.id,
       email: lowerEmail(candidate.email),
+      link_type: accessLink?.link_type || null,
     });
   }
 
@@ -319,11 +334,11 @@ const baseHandler = async (event, context) => {
       skipped,
       requestType,
       documentTypes: actionDocuments,
-      actionUrl,
+      actionUrl: redirectUrl,
       message: sent.length
         ? (requestType === 'rtw'
-          ? `Sent ${sent.length} right-to-work reminder email${sent.length === 1 ? '' : 's'}.`
-          : `Sent ${sent.length} onboarding document request email${sent.length === 1 ? '' : 's'}.`)
+          ? `Accepted ${sent.length} right-to-work reminder email${sent.length === 1 ? '' : 's'} for delivery.`
+          : `Accepted ${sent.length} onboarding document request email${sent.length === 1 ? '' : 's'} for delivery.`)
         : skipped.length
           ? `No ${requestType === 'rtw' ? 'right-to-work reminders' : 'document requests'} were sent. ${skipped.length} candidate${skipped.length === 1 ? ' was' : 's were'} skipped${skipped.some((entry) => entry?.reason === 'recently_sent') ? ' because HMJ already emailed them in the last 24 hours' : ''}.`
         : (requestType === 'rtw'
@@ -333,4 +348,5 @@ const baseHandler = async (event, context) => {
   };
 };
 
+exports.buildReminderContent = buildReminderContent;
 exports.handler = withAdminCors(baseHandler, { requireToken: false });

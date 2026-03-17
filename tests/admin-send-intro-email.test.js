@@ -26,7 +26,7 @@ test('send intro email page uses the shared admin bootstrap and expected operati
   assert.match(html, /id="introPhone"/);
   assert.match(html, /id="introJobTitle"/);
   assert.match(html, /id="sendIntroStatus"/);
-  assert.match(html, /send-intro-email\.js\?v=1/);
+  assert.match(html, /send-intro-email\.js\?v=2/);
 });
 
 test('send intro email page reuses candidate email diagnostics and the dedicated send endpoint', () => {
@@ -85,4 +85,33 @@ test('send intro email backend validates required starter details', () => {
     email: 'ava@example.com',
     company: '',
   }), /Company \/ client is required/);
+});
+
+test('send intro email builder can switch to a secure onboarding access link for existing candidates', () => {
+  const mod = require('../netlify/functions/admin-send-intro-email.js');
+
+  const payload = mod.normaliseIntroEmailRequest({
+    first_name: 'Joseph',
+    last_name: 'Tozer',
+    email: 'tozer89@gmail.com',
+    company: 'SA3',
+    job_title: 'Electrician',
+  });
+
+  const message = mod.buildIntroEmailMessage({
+    siteUrl: 'https://hmjg.netlify.app/',
+    senderName: 'HMJ Global',
+    senderEmail: 'info@hmj-global.com',
+    supportEmail: 'info@hmj-global.com',
+  }, payload, {
+    registrationUrl: 'https://mftwpbpwisxyaenfoizb.supabase.co/auth/v1/verify?token=abc',
+    accessLinkType: 'invite',
+    secureAccess: true,
+  });
+
+  assert.equal(message.registrationUrl, 'https://mftwpbpwisxyaenfoizb.supabase.co/auth/v1/verify?token=abc');
+  assert.equal(message.accessLinkType, 'invite');
+  assert.match(message.html, /Open secure HMJ account and onboarding/);
+  assert.match(message.html, /finish opening your candidate account/i);
+  assert.match(message.html, /Secure HMJ access:/);
 });

@@ -5,6 +5,7 @@ const { getContext, coded } = require('./_auth.js');
 const {
   buildCandidateRedirects,
   ensureCandidateFromAuthUser,
+  generateCandidateAccessLink,
   generateCandidatePasswordResetLink,
   loadCandidateRecord,
   resendCandidateVerificationEmail,
@@ -122,6 +123,37 @@ exports.handler = withAdminCors(async (event, context) => {
       };
     }
 
+    if (action === 'copy_access_link') {
+      const targetEmail = authUser?.email || candidate?.email || email;
+      if (!targetEmail) throw coded(404, 'No candidate email is available for a secure access link.');
+      const link = await generateCandidateAccessLink(supabase, candidate || { email: targetEmail }, redirects.emailRedirectUrl, {
+        email: targetEmail,
+      });
+      await writeAdminAuditLog(supabase, {
+        actor_email: user.email,
+        actor_id: user.id || user.sub || null,
+        action: 'candidate.portal_access_link.generate',
+        target_id: candidate?.id ? String(candidate.id) : null,
+        meta: {
+          candidate_email: targetEmail,
+          redirect_to: redirects.emailRedirectUrl,
+          link_type: link.link_type,
+          created_account: !!link.created_account,
+        },
+      });
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          ok: true,
+          candidate,
+          auth: summarisePortalAuthUser(authUser),
+          access_link: link.action_link,
+          access_link_meta: link,
+          message: 'Secure candidate access link generated.',
+        }),
+      };
+    }
+
     if (action === 'resend_verification') {
       const targetEmail = authUser?.email || candidate?.email || email;
       if (!targetEmail) throw coded(404, 'No candidate email is available for verification.');
@@ -161,6 +193,7 @@ exports.handler = withAdminCors(async (event, context) => {
         : 'Candidate profile checked.',
       set_temporary_password: 'Temporary password saved for the portal account.',
       send_password_reset: 'Password reset email sent to the candidate inbox.',
+      copy_access_link: 'Secure candidate access link generated.',
       resend_verification: 'Verification email sent to the candidate inbox.',
     };
 

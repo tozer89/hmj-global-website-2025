@@ -6,6 +6,8 @@ const { readCandidateEmailSettings } = require('./_candidate-email-settings.js')
 const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-delivery.js');
 const { recordAudit } = require('./_audit.js');
 const { _buildRedirectUrl: buildRedirectUrl } = require('./candidate-auth-config.js');
+const { buildCandidatePortalDeepLink } = require('./_candidate-onboarding.js');
+const { loadCandidateRecord, generateCandidateAccessLink } = require('./_candidate-account-admin.js');
 
 function parseBody(event) {
   try {
@@ -50,15 +52,26 @@ function validateIntroEmailRequest(input = {}) {
   if (!trimString(input.company, 180)) throw coded(400, 'Company / client is required.');
 }
 
-function buildIntroEmailMessage(settings = {}, request = {}) {
+function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
   const siteUrl = trimString(settings.siteUrl, 1000) || 'https://hmjg.netlify.app/';
-  const registrationUrl = buildRedirectUrl(siteUrl, '/candidates.html');
+  const registrationUrl = trimString(links.registrationUrl, 4000) || buildRedirectUrl(siteUrl, '/candidates.html');
   const timesheetsUrl = buildRedirectUrl(siteUrl, '/timesheets.html');
   const supportEmail = trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com';
   const senderName = trimString(settings.senderName, 160) || 'HMJ Global';
   const firstName = trimString(request.firstName, 120) || 'there';
   const clientName = trimString(request.company, 180) || 'your new client';
   const jobTitle = trimString(request.jobTitle, 180);
+  const accessLinkType = trimString(links?.accessLinkType, 40).toLowerCase();
+  const usesSecureAccess = !!accessLinkType || links?.secureAccess === true;
+  const primaryActionLabel = usesSecureAccess
+    ? (accessLinkType === 'invite' ? 'Open secure HMJ account and onboarding' : 'Open secure HMJ onboarding')
+    : 'Complete HMJ registration';
+  const primaryActionIntro = usesSecureAccess
+    ? (accessLinkType === 'invite'
+      ? 'Use the secure HMJ button below to finish opening your candidate account and go straight into your onboarding area.'
+      : 'Use the secure HMJ button below to open your candidate account and go straight into your onboarding area.')
+    : 'Please complete your HMJ website registration so we can progress your onboarding, right to work checks, supporting documents, and payment setup where applicable.';
+  const fallbackRegistrationLabel = usesSecureAccess ? 'Secure HMJ access' : 'Registration';
   const subject = jobTitle
     ? 'Welcome to HMJ Global – next steps for your new assignment'
     : 'Welcome to HMJ Global – complete your registration';
@@ -87,12 +100,12 @@ function buildIntroEmailMessage(settings = {}, request = {}) {
               <td style="padding:28px 32px 18px;">
                 <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334a7e;">Hi ${escapeHtml(firstName)},</p>
                 <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334a7e;">Congratulations on starting your new role${roleLine} with <strong>${escapeHtml(clientName)}</strong>.</p>
-                <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#42557f;">Please complete your HMJ website registration so we can progress your onboarding, right to work checks, supporting documents, and payment setup where applicable.</p>
+                <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#42557f;">${escapeHtml(primaryActionIntro)}</p>
                 <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:#42557f;">We will also use this information to help get you set up on the Timesheet Portal system. The Timesheet Portal link can also be found in the top menu on the HMJ website.</p>
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:18px 0 10px;">
                   <tr>
                     <td style="padding:0 0 12px;">
-                      <a href="${escapeHtml(registrationUrl)}" style="display:inline-block;padding:14px 22px;border-radius:14px;background:#3154b3;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">Complete HMJ registration</a>
+                      <a href="${escapeHtml(registrationUrl)}" style="display:inline-block;padding:14px 22px;border-radius:14px;background:#3154b3;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;">${escapeHtml(primaryActionLabel)}</a>
                     </td>
                   </tr>
                   <tr>
@@ -102,7 +115,7 @@ function buildIntroEmailMessage(settings = {}, request = {}) {
                   </tr>
                 </table>
                 <p style="margin:16px 0 12px;font-size:14px;line-height:1.7;color:#5f74a8;">If the buttons do not work, copy these links into your browser:</p>
-                <p style="margin:0 0 8px;font-size:13px;line-height:1.7;color:#5f74a8;word-break:break-word;">Registration: ${escapeHtml(registrationUrl)}</p>
+                <p style="margin:0 0 8px;font-size:13px;line-height:1.7;color:#5f74a8;word-break:break-word;">${escapeHtml(fallbackRegistrationLabel)}: ${escapeHtml(registrationUrl)}</p>
                 <p style="margin:0;font-size:13px;line-height:1.7;color:#5f74a8;word-break:break-word;">Timesheets / portal access: ${escapeHtml(timesheetsUrl)}</p>
               </td>
             </tr>
@@ -125,6 +138,38 @@ function buildIntroEmailMessage(settings = {}, request = {}) {
     html,
     registrationUrl,
     timesheetsUrl,
+    accessLinkType: accessLinkType || null,
+  };
+}
+
+async function resolveIntroEmailLinks(event, supabase, request = {}) {
+  const candidate = await loadCandidateRecord(supabase, null, request.email);
+  const onboardingUrl = buildCandidatePortalDeepLink(event, {
+    tab: 'documents',
+    focus: 'right_to_work',
+    onboarding: true,
+    documents: ['right_to_work', 'passport', 'qualification_certificate', 'reference', 'bank_document'],
+  });
+
+  if (!candidate?.id) {
+    return {
+      candidate: null,
+      registrationUrl: null,
+      accessLinkType: null,
+      secureAccess: false,
+      onboardingUrl,
+    };
+  }
+
+  const accessLink = await generateCandidateAccessLink(supabase, candidate, onboardingUrl, {
+    email: request.email,
+  });
+  return {
+    candidate,
+    registrationUrl: trimString(accessLink?.action_link, 4000) || onboardingUrl,
+    accessLinkType: trimString(accessLink?.link_type, 40).toLowerCase() || null,
+    secureAccess: true,
+    onboardingUrl,
   };
 }
 
@@ -133,7 +178,7 @@ const baseHandler = async (event, context) => {
     throw coded(405, 'Method Not Allowed');
   }
 
-  const { user } = await getContext(event, context, { requireAdmin: true });
+  const { supabase, user } = await getContext(event, context, { requireAdmin: true });
   const body = parseBody(event);
   const request = normaliseIntroEmailRequest(body);
   validateIntroEmailRequest(request);
@@ -152,7 +197,8 @@ const baseHandler = async (event, context) => {
     throw error;
   }
 
-  const message = buildIntroEmailMessage(settings, request);
+  const links = await resolveIntroEmailLinks(event, supabase, request);
+  const message = buildIntroEmailMessage(settings, request, links);
   const delivery = await sendTransactionalEmail({
     toEmail: request.email,
     fromEmail: settings.senderEmail || settings.supportEmail || 'info@hmj-global.com',
@@ -175,6 +221,8 @@ const baseHandler = async (event, context) => {
       job_title: request.jobTitle || null,
       phone: request.phone || null,
       delivery_provider: delivery?.provider || null,
+      candidate_id: links?.candidate?.id ? String(links.candidate.id) : null,
+      access_link_type: message.accessLinkType || null,
     },
   });
 
@@ -184,14 +232,16 @@ const baseHandler = async (event, context) => {
     subject: message.subject,
     registrationUrl: message.registrationUrl,
     timesheetsUrl: message.timesheetsUrl,
+    accessLinkType: message.accessLinkType,
     delivery,
-    message: 'Intro email sent.',
+    message: 'Intro email accepted for delivery.',
   });
 };
 
 module.exports = {
   buildIntroEmailMessage,
   normaliseIntroEmailRequest,
+  resolveIntroEmailLinks,
   validateIntroEmailRequest,
   handler: withAdminCors(baseHandler, { requireToken: false }),
 };

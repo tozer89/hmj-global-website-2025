@@ -33,7 +33,7 @@ test('sendTransactionalEmail falls back to SMTP when Resend is configured but re
     json: async () => ({ message: 'API key is invalid' }),
   });
   nodemailer.createTransport = () => ({
-    sendMail: async () => ({ messageId: 'smtp-message-id' }),
+    sendMail: async () => ({ messageId: 'smtp-message-id', accepted: ['candidate@example.com'], rejected: [], pending: [] }),
   });
 
   const { mod, restore } = loadModule({
@@ -59,6 +59,8 @@ test('sendTransactionalEmail falls back to SMTP when Resend is configured but re
 
     assert.equal(result.provider, 'smtp');
     assert.equal(result.id, 'smtp-message-id');
+    assert.deepEqual(result.accepted, ['candidate@example.com']);
+    assert.deepEqual(result.rejected, []);
   } finally {
     global.fetch = originalFetch;
     nodemailer.createTransport = originalCreateTransport;

@@ -161,9 +161,9 @@
         const response = await api('admin-send-intro-email', 'POST', formPayload());
         setStatus(
           'success',
-          `Intro email sent to <strong>${escapeHtml(response?.recipient || formPayload().email)}</strong> via ${escapeHtml(response?.delivery?.provider || 'configured provider')}.`
+          `Intro email was accepted for delivery to <strong>${escapeHtml(response?.recipient || formPayload().email)}</strong> via ${escapeHtml(response?.delivery?.provider || 'configured provider')}.`
         );
-        toast('Intro email sent.', 'ok', 3200);
+        toast('Intro email accepted for delivery.', 'ok', 3200);
       } catch (error) {
         const detailsMessage = trimString(error?.details?.error || error?.details?.message || '');
         setStatus(

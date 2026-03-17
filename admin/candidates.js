@@ -1732,6 +1732,7 @@
           <button class="btn ghost" type="button" data-onboarding-action="copy-upload-link">Copy upload link</button>
           <button class="btn ghost" type="button" data-tsp-action="sync-candidate" ${(!candidate.email && !String(candidate?.ref || candidate?.payroll_ref || '').trim()) || isArchived(candidate) ? 'disabled' : ''}>Sync from TSP</button>
           <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
+          <button class="btn ghost" type="button" data-account-action="copy_access_link" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Copy secure access link</button>
           <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
           <button class="btn ghost" type="button" data-account-action="send_password_reset" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Email reset link</button>
           <button class="btn ghost" type="button" data-account-action="copy_password_reset_link" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Copy secure reset link</button>
@@ -2633,6 +2634,9 @@
       });
       if (response?.reset_link) {
         await copyText(response.reset_link);
+      }
+      if (response?.access_link) {
+        await copyText(response.access_link);
       }
       if (response?.candidate) {
         const record = normalizeCandidate(response.candidate);

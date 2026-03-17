@@ -337,6 +337,65 @@ async function generateCandidatePasswordResetLink(supabase, email, redirectTo) {
   };
 }
 
+async function generateCandidateAccessLink(supabase, candidate = {}, redirectTo, options = {}) {
+  const targetEmail = lowerEmail(options.email || candidate?.email);
+  if (!targetEmail) {
+    const error = new Error('candidate_email_required');
+    error.code = 'candidate_email_required';
+    throw error;
+  }
+
+  let authUser = await resolvePortalAuthUser(supabase, candidate, targetEmail);
+  const metadata = {
+    full_name: trimString(candidate?.full_name, 240) || [candidate?.first_name, candidate?.last_name].filter(Boolean).join(' ') || null,
+    first_name: trimString(candidate?.first_name, 120) || null,
+    last_name: trimString(candidate?.last_name, 120) || null,
+  };
+
+  let linkType = 'magiclink';
+  let createdAccount = false;
+  let response;
+
+  if (authUser?.id) {
+    response = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: targetEmail,
+      options: {
+        redirectTo,
+        data: metadata,
+      },
+    });
+    if (response?.error) throw response.error;
+  } else {
+    linkType = 'invite';
+    createdAccount = true;
+    response = await supabase.auth.admin.generateLink({
+      type: 'invite',
+      email: targetEmail,
+      options: {
+        redirectTo,
+        data: metadata,
+      },
+    });
+    if (response?.error) throw response.error;
+    authUser = response?.data?.user || await resolvePortalAuthUser(supabase, candidate, targetEmail);
+    if (authUser?.id) {
+      await ensureCandidateFromAuthUser(supabase, authUser, candidate).catch(() => null);
+    }
+  }
+
+  const actionLink = rewriteAuthActionLink(response?.data?.properties?.action_link, redirectTo);
+  return {
+    action_link: actionLink,
+    redirect_to: redirectTo,
+    link_type: linkType,
+    created_account: createdAccount,
+    user_id: trimString(authUser?.id || response?.data?.user?.id, 120) || null,
+    email_otp: response?.data?.properties?.email_otp || null,
+    hashed_token: response?.data?.properties?.hashed_token || null,
+  };
+}
+
 async function writeAdminAuditLog(supabase, payload = {}) {
   try {
     const { error } = await supabase.from('admin_audit_logs').insert({
@@ -389,6 +448,7 @@ module.exports = {
   buildPortalAuthUserUpdate,
   ensureCandidateFromAuthUser,
   findAuthUserByEmail,
+  generateCandidateAccessLink,
   generateCandidatePasswordResetLink,
   loadCandidateRecord,
   lowerEmail,

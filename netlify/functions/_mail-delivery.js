@@ -231,6 +231,9 @@ async function sendViaSmtp(message) {
   return {
     provider: 'smtp',
     id: info?.messageId || null,
+    accepted: Array.isArray(info?.accepted) ? info.accepted : [],
+    rejected: Array.isArray(info?.rejected) ? info.rejected : [],
+    pending: Array.isArray(info?.pending) ? info.pending : [],
   };
 }
 
