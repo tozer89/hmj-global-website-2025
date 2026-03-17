@@ -12,7 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=15/);
+  assert.match(html, /\/admin\/candidates\.js\?v=16/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
@@ -31,6 +31,9 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /data-source-tab="website"/);
   assert.match(html, /data-source-tab="timesheet-portal"/);
   assert.match(html, /data-source-tab="combined"/);
+  assert.match(html, />\s*Website only\s*<span class="source-tab__count" data-source-count="website">/);
+  assert.match(html, />\s*Timesheet Portal only\s*<span class="source-tab__count" data-source-count="timesheet-portal">/);
+  assert.match(html, />\s*Combined \/ all\s*<span class="source-tab__count" data-source-count="combined">/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
@@ -140,6 +143,10 @@ test('candidate admin UI can switch between website, timesheet portal, and combi
   assert.match(source, /function normalizeTimesheetPortalCandidate/);
   assert.match(source, /function renderSourceTabs/);
   assert.match(source, /elements\.sourceTabs = Array\.from\(document\.querySelectorAll\('\[data-source-tab\]'\)\)/);
+  assert.match(source, /website:\s*\{\s*label:\s*'Website only'\s*\}/);
+  assert.match(source, /const websiteOnlyRows = websiteRows\.filter\(\(candidate\) => !candidate\?\.timesheet_portal_match\);/);
+  assert.match(source, /const timesheetPortalOnlyRows = timesheetPortalRows\.filter\(\(candidate\) => !findWebsiteMatch\(candidate, websiteLookups\)\);/);
+  assert.match(source, /const combinedRows = websiteRows\.concat\(timesheetPortalOnlyRows\);/);
 });
 
 test('candidate admin UI exposes the document verification queue and review actions', () => {

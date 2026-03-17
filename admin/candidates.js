@@ -28,7 +28,7 @@
     createdTo: ''
   });
   const SOURCE_TABS = Object.freeze({
-    website: { label: 'Website online' },
+    website: { label: 'Website only' },
     'timesheet-portal': { label: 'Timesheet Portal only' },
     combined: { label: 'Combined / all' }
   });
@@ -786,7 +786,7 @@
     return {
       ...candidate,
       source_kind: contractor ? 'combined' : 'website',
-      source_label: contractor ? 'Website + TSP' : 'Website online',
+      source_label: contractor ? 'Website + TSP' : 'Website only',
       source_badges: contractor ? ['Website', 'Timesheet Portal'] : ['Website'],
       timesheet_portal_match: contractor || null,
       timesheet_portal_reference: contractor?.reference || contractor?.accountingReference || '',
@@ -805,13 +805,12 @@
       .map((row) => normalizeTimesheetPortalCandidate(row))
       .filter(Boolean);
     const websiteLookups = buildWebsiteLookups(websiteRows);
-    const combinedRows = websiteRows.slice();
-    timesheetPortalRows.forEach((candidate) => {
-      if (!findWebsiteMatch(candidate, websiteLookups)) combinedRows.push(candidate);
-    });
+    const websiteOnlyRows = websiteRows.filter((candidate) => !candidate?.timesheet_portal_match);
+    const timesheetPortalOnlyRows = timesheetPortalRows.filter((candidate) => !findWebsiteMatch(candidate, websiteLookups));
+    const combinedRows = websiteRows.concat(timesheetPortalOnlyRows);
     return {
-      website: websiteRows,
-      'timesheet-portal': timesheetPortalRows,
+      website: websiteOnlyRows,
+      'timesheet-portal': timesheetPortalOnlyRows,
       combined: combinedRows,
     };
   }
