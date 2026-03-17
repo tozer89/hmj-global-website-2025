@@ -2076,7 +2076,12 @@ import {
     const target = event.target;
     if (target instanceof HTMLInputElement && target.name === 'onboarding_mode') {
       state.draftOnboardingMode = normaliseBooleanFlag(target.value);
+      state.authMessage = null;
+      state.requestedFocus = '';
       if (state.draftOnboardingMode && state.activeTab === 'settings') {
+        state.activeTab = 'profile';
+      }
+      if (!state.draftOnboardingMode && state.activeTab === 'payment') {
         state.activeTab = 'profile';
       }
       render();

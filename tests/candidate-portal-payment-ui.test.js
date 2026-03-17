@@ -28,4 +28,7 @@ test('candidate portal switches between recruitment profile and live onboarding 
   assert.match(source, /requestedDocumentListText/);
   assert.match(source, /value: 'cover_letter', label: 'Cover letter'/);
   assert.match(source, /value: 'bank_document', label: 'Bank document'/);
+  assert.match(source, /if \(target instanceof HTMLInputElement && target\.name === 'onboarding_mode'\)/);
+  assert.match(source, /state\.authMessage = null;/);
+  assert.match(source, /if \(!state\.draftOnboardingMode && state\.activeTab === 'payment'\)/);
 });
