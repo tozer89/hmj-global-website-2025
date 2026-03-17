@@ -7,9 +7,9 @@ function read(relPath) {
   return fs.readFileSync(path.join(__dirname, '..', relPath), 'utf8');
 }
 
-test('team tasks admin page exposes assignment email controls and delivery notes', () => {
+test('team tasks admin page exposes assignment email controls, planner upgrades, and quick-add aids', () => {
   const html = read('admin/team-tasks.html');
-  assert.match(html, /team-tasks\.js\?v=3/);
+  assert.match(html, /team-tasks\.js\?v=4/);
   assert.match(html, /settingAssignmentEmails/);
   assert.match(html, /emailStatusDetail/);
   assert.match(html, /sendAssignmentEmailBtn/);
@@ -17,9 +17,19 @@ test('team tasks admin page exposes assignment email controls and delivery notes
   assert.match(html, /detailReminderSummary/);
   assert.match(html, /detailEmailRecipients/);
   assert.match(html, /detailEmailHistory/);
+  assert.match(html, /quickTemplateButtons/);
+  assert.match(html, /quickDueShortcutButtons/);
+  assert.match(html, /quickFeedback/);
+  assert.match(html, /plannerComfortableBtn/);
+  assert.match(html, /plannerCompactBtn/);
+  assert.match(html, /plannerExpandAllBtn/);
+  assert.match(html, /plannerCollapseAllBtn/);
+  assert.match(html, /opsFocusList/);
+  assert.match(html, /opsReminderList/);
+  assert.match(html, /opsWaitingList/);
 });
 
-test('team tasks client wires assignment emails, manual sends, and query-aware tabs', () => {
+test('team tasks client wires assignment emails, planner interactions, and guided quick add', () => {
   const source = read('admin/team-tasks.js');
   assert.match(source, /const SEND_EMAIL_ENDPOINT = '\/admin-team-tasks-send-email';/);
   assert.match(source, /assignmentEmailNotifications/);
@@ -28,6 +38,13 @@ test('team tasks client wires assignment emails, manual sends, and query-aware t
   assert.match(source, /sendDrawerEmail\('reminder'\)/);
   assert.match(source, /readQueryTab/);
   assert.match(source, /updateQueryState/);
+  assert.match(source, /QUICK_TASK_TEMPLATES/);
+  assert.match(source, /applyQuickTemplate/);
+  assert.match(source, /applyDueShortcut/);
+  assert.match(source, /setQuickFeedback/);
+  assert.match(source, /setPlannerDensity/);
+  assert.match(source, /setPlannerExpansionForVisibleDays/);
+  assert.match(source, /renderOperationsPanels/);
 });
 
 test('team tasks backend uses shared email config and new send endpoint', () => {

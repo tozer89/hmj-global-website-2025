@@ -70,6 +70,54 @@
   const PRIORITY_ORDER = ['urgent', 'high', 'medium', 'low'];
   const BOARD_STATUSES = ['open', 'in_progress', 'waiting', 'done'];
   const REMINDER_MODES = ['none', 'due_date_9am', '1_day_before', '2_days_before', 'custom'];
+  const DEFAULT_PLANNER_CARD_LIMIT = 2;
+  const QUICK_TASK_TEMPLATES = [
+    {
+      key: 'follow_up',
+      label: 'Follow-up',
+      title: 'Candidate follow-up',
+      description: 'Check progress, confirm blockers, and update the next agreed action.',
+      linkedModule: 'Candidates',
+      tags: ['follow-up', 'candidate'],
+      priority: 'medium',
+    },
+    {
+      key: 'payroll',
+      label: 'Payroll',
+      title: 'Complete payroll review',
+      description: 'Review timesheets, confirm exceptions, and finalise payroll checks before release.',
+      linkedModule: 'Payroll',
+      tags: ['payroll', 'finance'],
+      priority: 'high',
+    },
+    {
+      key: 'client',
+      label: 'Client update',
+      title: 'Send client project update',
+      description: 'Prepare the client update, confirm decisions, and log the agreed next steps.',
+      linkedModule: 'Clients',
+      tags: ['client', 'update'],
+      priority: 'medium',
+    },
+    {
+      key: 'mobilisation',
+      label: 'Mobilisation',
+      title: 'Complete starter mobilisation check',
+      description: 'Confirm onboarding, documentation, and first-day readiness for the live assignment.',
+      linkedModule: 'Candidates',
+      tags: ['onboarding', 'mobilisation'],
+      priority: 'high',
+    },
+    {
+      key: 'finance',
+      label: 'Finance chase',
+      title: 'Chase finance item',
+      description: 'Follow up on the outstanding finance item and record the response in the task trail.',
+      linkedModule: 'Finance',
+      tags: ['finance', 'chase'],
+      priority: 'high',
+    },
+  ];
 
   const state = {
     helpers: null,
@@ -119,6 +167,8 @@
     commentEditId: '',
     attachmentUploadBusy: false,
     countdownTimer: 0,
+    plannerDensity: 'comfortable',
+    plannerExpandedDays: {},
     filters: {
       query: '',
       scope: 'all',
@@ -155,6 +205,9 @@
       'quickAssignedTo',
       'quickPriority',
       'quickAddBtn',
+      'quickTemplateButtons',
+      'quickDueShortcutButtons',
+      'quickFeedback',
       'quickAdvanced',
       'quickDescription',
       'quickReminderMode',
@@ -182,12 +235,29 @@
       'plannerNextWeekBtn',
       'plannerSetupLink',
       'plannerConnectBtn',
+      'plannerComfortableBtn',
+      'plannerCompactBtn',
+      'plannerExpandAllBtn',
+      'plannerCollapseAllBtn',
       'plannerWeekLabel',
       'plannerConnectionBadge',
+      'plannerTaskCountBadge',
+      'plannerReminderBadge',
       'plannerStatusNote',
       'plannerLegend',
       'plannerGrid',
       'plannerUnscheduledList',
+      'opsFocusMetric',
+      'opsFocusList',
+      'opsReminderMetric',
+      'opsReminderList',
+      'opsWaitingMetric',
+      'opsWaitingList',
+      'opsActionState',
+      'opsOverdueBtn',
+      'opsMineBtn',
+      'opsBoardBtn',
+      'opsSettingsBtn',
       'tasksList',
       'tasksEmpty',
       'boardColumns',
@@ -1028,6 +1098,12 @@
     }
   }
 
+  function setQuickFeedback(message, tone) {
+    if (!els.quickFeedback) return;
+    els.quickFeedback.innerHTML = message || 'Choose a template, set a due shortcut, or add the task directly.';
+    setStatusNoteTone(els.quickFeedback, tone || '');
+  }
+
   function setQuickFormDefaults() {
     if (els.quickPriority) {
       els.quickPriority.value = state.settings.defaultPriority;
@@ -1041,6 +1117,118 @@
     if (els.quickReminderCustomAt) {
       els.quickReminderCustomAt.value = '';
     }
+    setQuickFeedback('Choose a template, set a due shortcut, or add the task directly. Assignment emails will follow your saved Team Tasks settings.');
+  }
+
+  function dateAtLocal(baseDate, hour, minute) {
+    const value = new Date(baseDate);
+    value.setHours(hour, minute, 0, 0);
+    return value;
+  }
+
+  function upcomingWeekdayDate(targetWeekday, hour, minute) {
+    const now = new Date();
+    const value = new Date(now);
+    const currentWeekday = value.getDay();
+    let delta = (targetWeekday - currentWeekday + 7) % 7;
+    value.setDate(value.getDate() + delta);
+    value.setHours(hour, minute, 0, 0);
+    if (delta === 0 && value <= now) {
+      value.setDate(value.getDate() + 7);
+    }
+    return value;
+  }
+
+  function dueShortcutOptions() {
+    return [
+      {
+        key: 'today_1700',
+        label: 'Today 17:00',
+        build() {
+          const now = new Date();
+          const value = dateAtLocal(now, 17, 0);
+          if (value <= now) {
+            value.setDate(value.getDate() + 1);
+          }
+          return value;
+        },
+      },
+      {
+        key: 'tomorrow_0900',
+        label: 'Tomorrow 09:00',
+        build() {
+          const value = dateAtLocal(new Date(), 9, 0);
+          value.setDate(value.getDate() + 1);
+          return value;
+        },
+      },
+      {
+        key: 'friday_1500',
+        label: 'Fri 15:00',
+        build() {
+          return upcomingWeekdayDate(5, 15, 0);
+        },
+      },
+      {
+        key: 'monday_0900',
+        label: 'Mon 09:00',
+        build() {
+          return upcomingWeekdayDate(1, 9, 0);
+        },
+      },
+      {
+        key: 'clear',
+        label: 'Clear due date',
+        build() {
+          return null;
+        },
+      },
+    ];
+  }
+
+  function renderQuickAddAids() {
+    if (els.quickTemplateButtons) {
+      els.quickTemplateButtons.innerHTML = QUICK_TASK_TEMPLATES.map((template) => `
+        <button class="quick-preset-btn" type="button" data-quick-template="${escapeHtml(template.key)}">${escapeHtml(template.label)}</button>
+      `).join('');
+    }
+    if (els.quickDueShortcutButtons) {
+      els.quickDueShortcutButtons.innerHTML = dueShortcutOptions().map((shortcut) => `
+        <button class="quick-preset-btn" type="button" data-due-shortcut="${escapeHtml(shortcut.key)}">${escapeHtml(shortcut.label)}</button>
+      `).join('');
+    }
+  }
+
+  function applyQuickTemplate(key) {
+    const template = QUICK_TASK_TEMPLATES.find((item) => item.key === key);
+    if (!template) return;
+    if (els.quickTitle) {
+      els.quickTitle.value = template.title;
+    }
+    if (els.quickDescription) {
+      els.quickDescription.value = template.description;
+    }
+    if (els.quickLinkedModule) {
+      els.quickLinkedModule.value = template.linkedModule;
+    }
+    if (els.quickTags) {
+      els.quickTags.value = template.tags.join(', ');
+    }
+    if (els.quickPriority) {
+      els.quickPriority.value = template.priority;
+    }
+    setAdvancedVisibility(true);
+    setQuickFeedback(`<strong>${escapeHtml(template.label)}</strong> template applied. Adjust the assignee, due date, or watcher list before saving.`, 'ok');
+  }
+
+  function applyDueShortcut(key) {
+    const shortcut = dueShortcutOptions().find((item) => item.key === key);
+    if (!shortcut || !els.quickDueAt) return;
+    const value = shortcut.build();
+    els.quickDueAt.value = value ? toLocalInputValue(value.toISOString()) : '';
+    setQuickFeedback(value
+      ? `<strong>${escapeHtml(shortcut.label)}</strong> applied to the due date.`
+      : 'Due date cleared. This task will stay unscheduled until you set a new deadline.', value ? 'ok' : 'warn');
   }
 
   function populateSelect(select, options, placeholder) {
@@ -1137,6 +1325,44 @@
     return `${pluralize(count, 'calendar')} connected`;
   }
 
+  function plannerDayKey(date) {
+    const value = date instanceof Date ? new Date(date) : new Date(date || '');
+    if (Number.isNaN(value.getTime())) return '';
+    const yyyy = String(value.getFullYear());
+    const mm = String(value.getMonth() + 1).padStart(2, '0');
+    const dd = String(value.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function plannerDayExpanded(dayKey, itemCount, date) {
+    if (!dayKey) return true;
+    if (Object.prototype.hasOwnProperty.call(state.plannerExpandedDays, dayKey)) {
+      return state.plannerExpandedDays[dayKey] !== false;
+    }
+    return isSameDay(date, new Date()) || itemCount <= DEFAULT_PLANNER_CARD_LIMIT;
+  }
+
+  function setPlannerDayExpanded(dayKey, expanded) {
+    if (!dayKey) return;
+    state.plannerExpandedDays[dayKey] = !!expanded;
+    renderWeeklyPlanner();
+  }
+
+  function setPlannerExpansionForVisibleDays(expanded) {
+    plannerDayEntries().forEach((day) => {
+      const dayKey = plannerDayKey(day.date);
+      if (dayKey) {
+        state.plannerExpandedDays[dayKey] = !!expanded;
+      }
+    });
+    renderWeeklyPlanner();
+  }
+
+  function setPlannerDensity(nextDensity) {
+    state.plannerDensity = nextDensity === 'compact' ? 'compact' : 'comfortable';
+    renderWeeklyPlanner();
+  }
+
   function plannerOwners() {
     const owners = [];
     const seen = new Set();
@@ -1220,10 +1446,34 @@
     });
     const unscheduled = filteredTasks().filter((task) => !trimText(task?.due_at, 120) && task.status !== 'archived').slice(0, 9);
     const externalEvents = Array.isArray(state.calendar.events) ? state.calendar.events : [];
+    const visibleReminderCount = state.reminders.filter((item) => {
+      if (!item || !item.task_id) return false;
+      const task = findTask(item.task_id);
+      return !!task && filteredTasks().some((candidate) => candidate.id === task.id) && item.status !== 'sent' && item.status !== 'cancelled';
+    }).length;
 
     els.plannerWeekLabel.textContent = formatWeekLabel(startAt);
     if (els.plannerConnectionBadge) {
       els.plannerConnectionBadge.textContent = connectedCalendarLabel();
+    }
+    if (els.plannerTaskCountBadge) {
+      els.plannerTaskCountBadge.textContent = `${pluralize(items.length, 'scheduled task')} · ${pluralize(externalEvents.length, 'diary event')}`;
+    }
+    if (els.plannerReminderBadge) {
+      els.plannerReminderBadge.textContent = `${pluralize(visibleReminderCount, 'pending reminder')} · ${pluralize(unscheduled.length, 'unscheduled task')}`;
+    }
+    if (els.plannerGrid) {
+      els.plannerGrid.dataset.density = state.plannerDensity;
+    }
+    if (els.plannerComfortableBtn) {
+      const active = state.plannerDensity !== 'compact';
+      els.plannerComfortableBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      els.plannerComfortableBtn.className = `btn ${active ? 'secondary' : 'soft'} small`;
+    }
+    if (els.plannerCompactBtn) {
+      const active = state.plannerDensity === 'compact';
+      els.plannerCompactBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      els.plannerCompactBtn.className = `btn ${active ? 'secondary' : 'soft'} small`;
     }
 
     const diagnostics = state.calendar.diagnostics || {};
@@ -1263,15 +1513,23 @@
         ...dayTasks.map((task) => taskPlannerCard(task)),
         ...dayEvents.map((eventItem) => externalPlannerCard(eventItem)),
       ];
+      const dayKey = plannerDayKey(day.date);
+      const expanded = plannerDayExpanded(dayKey, cards.length, day.date);
+      const visibleCards = expanded ? cards : cards.slice(0, DEFAULT_PLANNER_CARD_LIMIT);
+      const hiddenCount = Math.max(0, cards.length - visibleCards.length);
 
       return `
-        <section class="planner-day${isSameDay(day.date, new Date()) ? ' is-today' : ''}">
-          <div class="planner-day__head">
+        <section class="planner-day${isSameDay(day.date, new Date()) ? ' is-today' : ''}${expanded ? '' : ' is-collapsed'}">
+          <button class="planner-day__head planner-day__toggle" type="button" data-planner-day="${escapeHtml(dayKey)}" aria-expanded="${expanded ? 'true' : 'false'}">
             <div class="planner-day__eyebrow">${escapeHtml(new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(day.date))}</div>
-            <div class="planner-day__date">${escapeHtml(new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(day.date))}</div>
-          </div>
+            <div class="planner-day__summary">
+              <div class="planner-day__date">${escapeHtml(new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(day.date))}</div>
+              <span class="planner-day__count">${escapeHtml(pluralize(cards.length, 'item'))} <span class="planner-day__chevron">${expanded ? 'Hide' : 'Expand'}</span></span>
+            </div>
+          </button>
           <div class="planner-day__items">
-            ${cards.length ? cards.join('') : '<div class="planner-empty">No due tasks or diary events for this day.</div>'}
+            ${visibleCards.length ? visibleCards.join('') : '<div class="planner-empty">No due tasks or diary events for this day.</div>'}
+            ${hiddenCount ? `<button class="planner-day__more" type="button" data-planner-day="${escapeHtml(dayKey)}">Show ${escapeHtml(pluralize(hiddenCount, 'more item'))}</button>` : ''}
           </div>
         </section>
       `;
@@ -1291,6 +1549,71 @@
     }
     if (els.disconnectCalendarBtn) {
       els.disconnectCalendarBtn.disabled = !currentConnection;
+    }
+  }
+
+  function renderOpsCardItem(task, meta) {
+    if (!task) {
+      return '<div class="ops-card__item"><strong>Nothing to show</strong><span>The current filters do not surface any tasks here.</span></div>';
+    }
+    return `
+      <article class="ops-card__item">
+        <strong>${escapeHtml(task.title)}</strong>
+        <span>${escapeHtml(meta)}</span>
+        <button class="btn secondary small" type="button" data-action="open" data-id="${escapeHtml(task.id)}">Open task</button>
+      </article>
+    `;
+  }
+
+  function renderOperationsPanels() {
+    const items = filteredTasks().filter((task) => task.status !== 'archived');
+    const focusItems = items
+      .filter((task) => ['overdue', 'today', 'soon'].includes(taskUrgency(task)))
+      .sort((left, right) => {
+        const urgencyDelta = ['overdue', 'today', 'soon', 'later', 'none'].indexOf(taskUrgency(left))
+          - ['overdue', 'today', 'soon', 'later', 'none'].indexOf(taskUrgency(right));
+        if (urgencyDelta !== 0) return urgencyDelta;
+        return new Date(left.due_at || 0).getTime() - new Date(right.due_at || 0).getTime();
+      })
+      .slice(0, 3);
+    const reminderEntries = items
+      .map((task) => ({ task, reminders: pendingTaskReminders(task.id) }))
+      .filter((entry) => entry.reminders.length);
+    const reminderItems = reminderEntries
+      .sort((left, right) => new Date(left.reminders[0].send_at || 0).getTime() - new Date(right.reminders[0].send_at || 0).getTime())
+      .slice(0, 3);
+    const waitingItems = items
+      .filter((task) => task.status === 'waiting')
+      .sort((left, right) => new Date(left.updated_at || left.created_at || 0).getTime() - new Date(right.updated_at || right.created_at || 0).getTime())
+      .slice(0, 3);
+
+    if (els.opsFocusMetric) {
+      els.opsFocusMetric.innerHTML = `${focusItems.length}<small>${pluralize(items.filter((task) => taskUrgency(task) === 'overdue').length, 'overdue item')} and ${pluralize(items.filter((task) => taskUrgency(task) === 'today').length, 'due today')} visible.</small>`;
+    }
+    if (els.opsReminderMetric) {
+      const pendingReminders = reminderEntries.reduce((total, entry) => total + entry.reminders.length, 0);
+      els.opsReminderMetric.innerHTML = `${pendingReminders}<small>Next sends are surfaced here so manual nudges are easy to spot.</small>`;
+    }
+    if (els.opsWaitingMetric) {
+      els.opsWaitingMetric.innerHTML = `${waitingItems.length}<small>${pluralize(items.filter((task) => !trimText(task.assigned_to, 120) && !lowerEmail(task.assigned_to_email)).length, 'unassigned task')} still need ownership.</small>`;
+    }
+    if (els.opsFocusList) {
+      els.opsFocusList.innerHTML = (focusItems.length ? focusItems : [null]).map((task) => (
+        renderOpsCardItem(task, task ? `${STATUS_LABELS[task.status] || 'Open'} · ${task.due_at ? formatDateTime(task.due_at) : 'No due date'}` : '')
+      )).join('');
+    }
+    if (els.opsReminderList) {
+      els.opsReminderList.innerHTML = reminderItems.length
+        ? reminderItems.map((entry) => renderOpsCardItem(entry.task, `${pluralize(entry.reminders.length, 'reminder')} queued · next send ${formatDateTime(entry.reminders[0].send_at)}`)).join('')
+        : renderOpsCardItem(null, '');
+    }
+    if (els.opsWaitingList) {
+      els.opsWaitingList.innerHTML = (waitingItems.length ? waitingItems : [null]).map((task) => (
+        renderOpsCardItem(task, task ? `${pluralize(taskComments(task.id).length, 'comment')} · updated ${formatDateTime(task.updated_at || task.created_at)}` : '')
+      )).join('');
+    }
+    if (els.opsActionState) {
+      els.opsActionState.textContent = `${pluralize(items.length, 'task')} visible in the current scope. Use the shortcuts below to flip between the task board, overdue queue, and workspace settings.`;
     }
   }
 
@@ -1889,6 +2212,7 @@
     renderHeroSummary();
     renderBanner();
     renderMetrics();
+    renderQuickAddAids();
     renderToolbar();
     renderTasksTab();
     renderBoardTab();
@@ -1896,6 +2220,7 @@
     renderMineTab();
     renderSettingsTab();
     renderWeeklyPlanner();
+    renderOperationsPanels();
     renderTabs();
     if (state.selectedTaskId) {
       renderDrawer();
@@ -2462,16 +2787,20 @@
     }
     const payload = quickTaskPayload();
     if (!payload.title) {
+      setQuickFeedback('Add a task title before saving this item.', 'warn');
       state.helpers.toast.err('Add a task title first.', 3400);
       els.quickTitle.focus();
       return;
     }
     if (payload.reminder_mode !== 'none' && payload.reminder_mode !== 'custom' && !payload.due_at) {
+      setQuickFeedback('Preset reminders need a due date. Apply a shortcut or choose a date and time first.', 'warn');
       state.helpers.toast.err('Due date is required for preset reminders.', 4200);
       return;
     }
 
     els.quickAddBtn.disabled = true;
+    els.quickAddBtn.textContent = 'Adding task…';
+    setQuickFeedback('Creating the task, syncing watchers/reminders, and triggering any assignment email rules now.', 'ok');
     try {
       const client = await ensureClient();
       const { data, error } = await client
@@ -2506,12 +2835,15 @@
       els.quickAddForm.reset();
       setAdvancedVisibility(false);
       setQuickFormDefaults();
+      setQuickFeedback(`Task created successfully.${assignmentMessage}`.trim(), 'ok');
       await loadAllData({ silent: true });
       openDrawer(data.id);
     } catch (error) {
+      setQuickFeedback(error?.message || 'Unable to add the task. Check the required fields and try again.', 'warn');
       state.helpers.toast.err(error?.message || 'Unable to add task.', 5400);
     } finally {
       els.quickAddBtn.disabled = false;
+      els.quickAddBtn.textContent = 'Add Task';
     }
   }
 
@@ -2797,6 +3129,16 @@
     });
     els.quickAddForm.addEventListener('submit', handleQuickAddSubmit);
     els.quickResetBtn.addEventListener('click', resetQuickForm);
+    els.quickTemplateButtons?.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-quick-template]');
+      if (!button) return;
+      applyQuickTemplate(button.getAttribute('data-quick-template'));
+    });
+    els.quickDueShortcutButtons?.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-due-shortcut]');
+      if (!button) return;
+      applyDueShortcut(button.getAttribute('data-due-shortcut'));
+    });
     els.refreshBtn.addEventListener('click', async () => {
       await loadAllData({ silent: false });
       await loadCalendarStatus({ silent: true });
@@ -2814,6 +3156,10 @@
       loadCalendarStatus({ silent: false });
     });
     els.plannerConnectBtn?.addEventListener('click', startCalendarConnectFlow);
+    els.plannerComfortableBtn?.addEventListener('click', () => setPlannerDensity('comfortable'));
+    els.plannerCompactBtn?.addEventListener('click', () => setPlannerDensity('compact'));
+    els.plannerExpandAllBtn?.addEventListener('click', () => setPlannerExpansionForVisibleDays(true));
+    els.plannerCollapseAllBtn?.addEventListener('click', () => setPlannerExpansionForVisibleDays(false));
     els.connectCalendarBtn?.addEventListener('click', startCalendarConnectFlow);
     els.disconnectCalendarBtn?.addEventListener('click', disconnectCalendarConnection);
     els.toggleDoneBtn.addEventListener('click', () => {
@@ -2859,6 +3205,36 @@
     bindListOpeners(els.mineCreatedList);
     bindListOpeners(els.mineWatchingList);
     bindListOpeners(els.drawerAuditList);
+    els.plannerGrid?.addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-planner-day]');
+      if (!toggle) return;
+      const dayKey = trimText(toggle.getAttribute('data-planner-day'), 40);
+      if (!dayKey) return;
+      const currentExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      setPlannerDayExpanded(dayKey, !currentExpanded);
+    });
+    els.opsOverdueBtn?.addEventListener('click', () => {
+      state.filters.scope = 'overdue';
+      state.activeTab = 'tasks';
+      updateQueryState({ tab: 'tasks' });
+      renderAll();
+    });
+    els.opsMineBtn?.addEventListener('click', () => {
+      state.filters.scope = 'my_tasks';
+      state.activeTab = 'tasks';
+      updateQueryState({ tab: 'tasks' });
+      renderAll();
+    });
+    els.opsBoardBtn?.addEventListener('click', () => {
+      state.activeTab = 'board';
+      updateQueryState({ tab: 'board' });
+      renderTabs();
+    });
+    els.opsSettingsBtn?.addEventListener('click', () => {
+      state.activeTab = 'settings';
+      updateQueryState({ tab: 'settings' });
+      renderTabs();
+    });
 
     els.closeDrawerBtn.addEventListener('click', closeDrawer);
     els.drawerBackdrop.addEventListener('click', closeDrawer);
