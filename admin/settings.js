@@ -266,9 +266,17 @@
     }
     state.activity.forEach((item) => {
       const li = createEl('li');
-      li.appendChild(createEl('div', { text: item.label }));
-      if (item.detail) li.appendChild(createEl('div', { className: 'muted', text: item.detail }));
-      li.appendChild(createEl('time', { text: formatRelative(item.ts), attrs: { datetime: new Date(item.ts).toISOString() } }));
+      const entry = createEl('div', { className: 'activity-entry' });
+      entry.appendChild(createEl('div', { className: 'activity-entry__label', text: item.label }));
+      if (item.detail) {
+        entry.appendChild(createEl('div', { className: 'activity-entry__detail', text: item.detail }));
+      }
+      entry.appendChild(createEl('time', {
+        className: 'activity-entry__time',
+        text: formatRelative(item.ts),
+        attrs: { datetime: new Date(item.ts).toISOString(), title: formatTime(item.ts) }
+      }));
+      li.appendChild(entry);
       list.appendChild(li);
     });
   }
