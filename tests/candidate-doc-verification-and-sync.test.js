@@ -13,6 +13,7 @@ const {
   buildTimesheetPortalContractorLookups,
   buildWebsiteCandidateLookups,
   emailsConflict,
+  isPortalLinkedCandidate,
   matchTimesheetPortalContractorForCandidate,
   matchWebsiteCandidateForTimesheetPortalContractor,
   mergeTimesheetPortalCandidate,
@@ -129,4 +130,63 @@ test('Timesheet Portal candidate sync ignores ref-only matches when the email id
 
   assert.equal(inserted.ref, null);
   assert.equal(inserted.payroll_ref, '5580');
+});
+
+test('Timesheet Portal candidate sync can still match a duplicate ref bucket when a later candidate has the compatible email', () => {
+  const contractor = {
+    id: 'tsp-1000',
+    reference: '5580',
+    email: '',
+    firstName: 'George',
+    lastName: 'Chiriac',
+  };
+  const staleCandidate = {
+    id: 'cand-legacy',
+    ref: '5580',
+    payroll_ref: '5580',
+    email: 'tozer89@gmail.com',
+    first_name: 'Joseph',
+    last_name: 'Tozer',
+    full_name: 'Joseph Tozer',
+  };
+  const correctCandidate = {
+    id: 'cand-george',
+    ref: null,
+    payroll_ref: '5580',
+    email: '',
+    first_name: 'George',
+    last_name: 'Chiriac',
+    full_name: 'George Chiriac',
+  };
+
+  const websiteLookups = buildWebsiteCandidateLookups([staleCandidate, correctCandidate]);
+  const result = matchWebsiteCandidateForTimesheetPortalContractor(contractor, websiteLookups);
+
+  assert.equal(result.matchedBy, 'reference');
+  assert.equal(result.candidate?.id, 'cand-george');
+});
+
+test('portal-linked website candidates are not name-matched to TSP contractors without an explicit identity match', () => {
+  const contractor = {
+    id: 'tsp-joseph',
+    reference: 'TESTCODE',
+    email: '',
+    firstName: 'Joseph',
+    lastName: 'Tozer',
+  };
+  const websiteCandidate = {
+    id: 'cand-portal',
+    auth_user_id: 'auth-123',
+    email: 'tozer89@gmail.com',
+    first_name: 'Joseph',
+    last_name: 'Tozer',
+    full_name: 'Joseph Tozer',
+  };
+
+  const contractorLookups = buildTimesheetPortalContractorLookups([contractor]);
+  const websiteLookups = buildWebsiteCandidateLookups([websiteCandidate]);
+
+  assert.equal(isPortalLinkedCandidate(websiteCandidate), true);
+  assert.equal(matchTimesheetPortalContractorForCandidate(websiteCandidate, contractorLookups).contractor, null);
+  assert.equal(matchWebsiteCandidateForTimesheetPortalContractor(contractor, websiteLookups).candidate, null);
 });

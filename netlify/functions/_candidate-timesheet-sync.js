@@ -28,6 +28,11 @@ function emailsConflict(left, right) {
   return !!(a && b && a !== b);
 }
 
+function isPortalLinkedCandidate(candidate = {}) {
+  return !!trimString(candidate.auth_user_id || candidate.authUserId, 120)
+    || candidate.has_portal_account === true;
+}
+
 function candidateDisplayName(candidate = {}) {
   return trimString(
     candidate.full_name
@@ -81,7 +86,10 @@ function buildWebsiteCandidateLookups(candidates = []) {
 
     if (email && !byEmail.has(email)) byEmail.set(email, candidate);
     refs.forEach((ref) => {
-      if (ref && !byReference.has(ref)) byReference.set(ref, candidate);
+      if (!ref) return;
+      const bucket = byReference.get(ref) || [];
+      bucket.push(candidate);
+      byReference.set(ref, bucket);
     });
     if (nameKey) {
       const bucket = nameBuckets.get(nameKey) || [];
@@ -114,7 +122,10 @@ function buildTimesheetPortalContractorLookups(contractors = []) {
 
     if (email && !byEmail.has(email)) byEmail.set(email, contractor);
     refs.forEach((ref) => {
-      if (ref && !byReference.has(ref)) byReference.set(ref, contractor);
+      if (!ref) return;
+      const bucket = byReference.get(ref) || [];
+      bucket.push(contractor);
+      byReference.set(ref, bucket);
     });
     if (nameKey) {
       const bucket = nameBuckets.get(nameKey) || [];
@@ -147,15 +158,24 @@ function matchWebsiteCandidateForTimesheetPortalContractor(contractor = {}, look
     trimString(contractor.id, 120),
   ]) {
     if (ref && lookups.byReference?.has(ref)) {
-      const candidate = lookups.byReference.get(ref);
-      if (emailsConflict(candidate?.email, contractor.email)) continue;
+      const candidates = Array.isArray(lookups.byReference.get(ref))
+        ? lookups.byReference.get(ref)
+        : [lookups.byReference.get(ref)];
+      const compatible = candidates.filter((entry) => !emailsConflict(entry?.email, contractor.email));
+      const contractorNameKey = normalizeName(timesheetPortalContractorName(contractor));
+      const candidate = compatible.find((entry) => normalizeName(candidateDisplayName(entry)) === contractorNameKey)
+        || compatible[0];
+      if (!candidate) continue;
       return { candidate, matchedBy: 'reference' };
     }
   }
 
   const nameKey = normalizeName(timesheetPortalContractorName(contractor));
   if (nameKey && lookups.byName?.has(nameKey)) {
-    return { candidate: lookups.byName.get(nameKey), matchedBy: 'name' };
+    const candidate = lookups.byName.get(nameKey);
+    if (!isPortalLinkedCandidate(candidate)) {
+      return { candidate, matchedBy: 'name' };
+    }
   }
 
   return { candidate: null, matchedBy: null };
@@ -172,15 +192,23 @@ function matchTimesheetPortalContractorForCandidate(candidate = {}, contractorLo
     trimString(candidate.ref, 120),
   ]) {
     if (ref && contractorLookups.byReference?.has(ref)) {
-      const contractor = contractorLookups.byReference.get(ref);
-      if (emailsConflict(candidate?.email, contractor?.email)) continue;
+      const contractors = Array.isArray(contractorLookups.byReference.get(ref))
+        ? contractorLookups.byReference.get(ref)
+        : [contractorLookups.byReference.get(ref)];
+      const compatible = contractors.filter((entry) => !emailsConflict(candidate?.email, entry?.email));
+      const candidateNameKey = normalizeName(candidateDisplayName(candidate));
+      const contractor = compatible.find((entry) => normalizeName(timesheetPortalContractorName(entry)) === candidateNameKey)
+        || compatible[0];
+      if (!contractor) continue;
       return { contractor, matchedBy: 'reference' };
     }
   }
 
   const nameKey = normalizeName(candidateDisplayName(candidate));
   if (nameKey && contractorLookups.byName?.has(nameKey)) {
-    return { contractor: contractorLookups.byName.get(nameKey), matchedBy: 'name' };
+    if (!isPortalLinkedCandidate(candidate)) {
+      return { contractor: contractorLookups.byName.get(nameKey), matchedBy: 'name' };
+    }
   }
 
   return { contractor: null, matchedBy: null };
@@ -222,6 +250,7 @@ module.exports = {
   buildWebsiteCandidateLookups,
   candidateDisplayName,
   emailsConflict,
+  isPortalLinkedCandidate,
   matchTimesheetPortalContractorForCandidate,
   matchWebsiteCandidateForTimesheetPortalContractor,
   mergeTimesheetPortalCandidate,

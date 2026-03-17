@@ -237,6 +237,12 @@ const baseHandler = async (event, context) => {
   const skipped = [];
   const actionDocuments = requestType === 'rtw' ? ['right_to_work'] : requestedDocuments;
   const activityType = requestType === 'rtw' ? 'rtw_reminder_sent' : 'candidate_document_request_sent';
+  const actionUrl = buildCandidatePortalDeepLink(event, {
+    tab: 'documents',
+    focus: requestType === 'rtw' ? 'right_to_work' : 'documents',
+    onboarding: true,
+    documents: actionDocuments,
+  });
 
   for (const entry of eligible) {
     const candidate = entry.candidate;
@@ -250,23 +256,37 @@ const baseHandler = async (event, context) => {
       continue;
     }
 
-    const actionUrl = buildCandidatePortalDeepLink(event, {
-      tab: 'documents',
-      focus: requestType === 'rtw' ? 'right_to_work' : 'documents',
-      onboarding: true,
-      documents: actionDocuments,
-    });
     const content = buildReminderContent(settings, displayCandidateName(candidate), actionUrl, actionDocuments);
 
-    await sendTransactionalEmail({
-      toEmail: lowerEmail(candidate.email),
-      fromEmail: settings.senderEmail || settings.supportEmail || 'info@hmj-global.com',
-      fromName: settings.senderName || 'HMJ Global',
-      replyTo: settings.supportEmail || settings.senderEmail || '',
-      subject: content.subject,
-      html: content.html,
-      smtpSettings: settings,
-    });
+    try {
+      await sendTransactionalEmail({
+        toEmail: lowerEmail(candidate.email),
+        fromEmail: settings.senderEmail || settings.supportEmail || 'info@hmj-global.com',
+        fromName: settings.senderName || 'HMJ Global',
+        replyTo: settings.supportEmail || settings.senderEmail || '',
+        subject: content.subject,
+        html: content.html,
+        smtpSettings: settings,
+      });
+    } catch (error) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          ok: false,
+          code: error?.code || 'candidate_onboarding_email_failed',
+          message: error?.code === 'resend_email_failed'
+            ? 'Candidate emails could not be sent because the RESEND_API_KEY configured in Netlify was rejected. Fix the key or save working SMTP details in Admin Settings.'
+            : error?.code === 'email_provider_not_configured'
+              ? 'Candidate emails are not configured. Add a working RESEND_API_KEY or save SMTP details in Admin Settings before sending reminders.'
+              : error?.message || 'Candidate onboarding email delivery failed.',
+          details: error?.details || null,
+          requestType,
+          documentTypes: actionDocuments,
+          actionUrl,
+          totalEligible: eligible.length,
+        }),
+      };
+    }
     await recordReminderActivity(supabase, candidate.id, user?.email || null, activityType, {
       document_types: actionDocuments,
     });
@@ -286,6 +306,7 @@ const baseHandler = async (event, context) => {
       skipped,
       requestType,
       documentTypes: actionDocuments,
+      actionUrl,
       message: sent.length
         ? (requestType === 'rtw'
           ? `Sent ${sent.length} right-to-work reminder email${sent.length === 1 ? '' : 's'}.`

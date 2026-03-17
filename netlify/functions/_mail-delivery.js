@@ -3,6 +3,8 @@
 const nodemailer = require('nodemailer');
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
+const RESEND_DOMAINS_URL = 'https://api.resend.com/domains';
+let resendProbeCache = null;
 
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
@@ -65,6 +67,68 @@ async function sendViaResend(message) {
   };
 }
 
+async function probeResendProvider() {
+  const apiKey = trimString(process.env.RESEND_API_KEY, 4000);
+  if (!apiKey) {
+    return {
+      provider: 'resend',
+      configured: false,
+      ready: false,
+      status: 'missing',
+      message: 'RESEND_API_KEY is not configured.',
+    };
+  }
+  const cacheKey = `${apiKey.slice(0, 16)}:${apiKey.length}`;
+  if (resendProbeCache && resendProbeCache.key === cacheKey && resendProbeCache.expiresAt > Date.now()) {
+    return resendProbeCache.value;
+  }
+
+  let value;
+  try {
+    const response = await fetch(RESEND_DOMAINS_URL, {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        accept: 'application/json',
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      value = {
+        provider: 'resend',
+        configured: true,
+        ready: false,
+        status: 'invalid',
+        httpStatus: response.status,
+        message: data?.message || data?.error || `RESEND_API_KEY was rejected by Resend (${response.status}).`,
+      };
+    } else {
+      value = {
+        provider: 'resend',
+        configured: true,
+        ready: true,
+        status: 'ready',
+        message: 'Resend is configured and accepted the API key.',
+      };
+    }
+  } catch (error) {
+    value = {
+      provider: 'resend',
+      configured: true,
+      ready: false,
+      status: 'error',
+      message: error?.message || 'Could not verify RESEND_API_KEY against Resend.',
+    };
+  }
+
+  resendProbeCache = {
+    key: cacheKey,
+    value,
+    expiresAt: Date.now() + 60_000,
+  };
+  return value;
+}
+
 function smtpConfig(settings = {}) {
   const host = trimString(settings.smtpHost, 320);
   const user = trimString(settings.smtpUser, 320);
@@ -108,13 +172,36 @@ async function sendTransactionalEmail(message = {}) {
     throw error;
   }
 
-  const resendResult = await sendViaResend({ ...message, toEmail, fromEmail, subject });
-  if (resendResult) return resendResult;
+  let resendError = null;
+  let smtpError = null;
 
-  const smtpResult = await sendViaSmtp({ ...message, toEmail, fromEmail, subject });
-  if (smtpResult) return smtpResult;
+  try {
+    const resendResult = await sendViaResend({ ...message, toEmail, fromEmail, subject });
+    if (resendResult) return resendResult;
+  } catch (error) {
+    resendError = error;
+  }
 
-  const error = new Error('No email provider is configured. Add RESEND_API_KEY or save SMTP settings in Admin Settings.');
+  try {
+    const smtpResult = await sendViaSmtp({ ...message, toEmail, fromEmail, subject });
+    if (smtpResult) return smtpResult;
+  } catch (error) {
+    smtpError = error;
+  }
+
+  if (resendError && smtpError) {
+    const error = new Error(`Email delivery failed via Resend and SMTP. Resend: ${resendError.message}. SMTP: ${smtpError.message}.`);
+    error.code = 'email_delivery_failed';
+    error.details = {
+      resend: { code: resendError.code || '', status: resendError.status || null, message: resendError.message || '' },
+      smtp: { code: smtpError.code || '', status: smtpError.status || null, message: smtpError.message || '' },
+    };
+    throw error;
+  }
+  if (smtpError) throw smtpError;
+  if (resendError) throw resendError;
+
+  const error = new Error('No email provider is configured. Add a working RESEND_API_KEY or save SMTP settings in Admin Settings.');
   error.code = 'email_provider_not_configured';
   throw error;
 }
@@ -122,6 +209,7 @@ async function sendTransactionalEmail(message = {}) {
 module.exports = {
   lowerEmail,
   plainTextFromHtml,
+  probeResendProvider,
   sendTransactionalEmail,
   trimString,
 };

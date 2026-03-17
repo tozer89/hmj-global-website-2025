@@ -14,6 +14,7 @@ function loadModule(env = {}) {
     SUPABASE_PERSONAL_ACCESS_TOKEN: '',
     SUPABASE_ACCESS_TOKEN: '',
     SUPABASE_PROJECT_REF: '',
+    RESEND_API_KEY: '',
   };
   const mergedEnv = { ...baseline, ...env };
   const original = {};
@@ -111,6 +112,39 @@ test('candidateEmailDiagnostics flags incomplete SMTP as not ready for public de
     assert.equal(diagnostics.publicDeliveryReady, false);
     assert.equal(diagnostics.managementTokenAvailable, false);
     assert.ok(diagnostics.warnings.some((item) => /custom smtp/i.test(item)));
+  } finally {
+    restore();
+  }
+});
+
+test('candidateEmailDiagnostics treats a validated Resend provider as ready for public delivery', () => {
+  const { mod, restore } = loadModule({
+    SUPABASE_URL: 'https://mftwpbpwisxyaenfoizb.supabase.co',
+    RESEND_API_KEY: 're_live_placeholder',
+  });
+  try {
+    const diagnostics = mod.candidateEmailDiagnostics({
+      customSmtpEnabled: false,
+      senderEmail: 'info@hmj-global.com',
+      senderName: 'HMJ Global',
+      siteUrl: 'https://hmjg.netlify.app',
+      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+      confirmationSubject: 'Confirm your HMJ candidate account',
+      recoverySubject: 'Reset your HMJ candidate password',
+    }, {
+      deliveryProbe: {
+        configured: true,
+        ready: true,
+        status: 'ready',
+        message: 'Resend is configured and accepted the API key.',
+      },
+    });
+
+    assert.equal(diagnostics.publicDeliveryReady, true);
+    assert.equal(diagnostics.deliverySource, 'resend');
+    assert.equal(diagnostics.resendConfigured, true);
+    assert.equal(diagnostics.resendReady, true);
   } finally {
     restore();
   }

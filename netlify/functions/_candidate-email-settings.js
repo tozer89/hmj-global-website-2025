@@ -1,6 +1,7 @@
 'use strict';
 
 const { fetchSettings, saveSettings } = require('./_settings-helpers.js');
+const { probeResendProvider } = require('./_mail-delivery.js');
 const {
   _resolveCandidatePortalBaseUrl: resolveCandidatePortalBaseUrl,
   _buildRedirectUrl: buildRedirectUrl,
@@ -353,9 +354,10 @@ function redactSupabaseAuthPatch(patch = {}) {
   };
 }
 
-function candidateEmailDiagnostics(settings = {}) {
+function candidateEmailDiagnostics(settings = {}, options = {}) {
   const management = resolveManagementToken();
   const projectRef = resolveProjectRef();
+  const resendConfigured = !!trimString(process.env.RESEND_API_KEY, 4000);
   const smtpConfigured = !!(
     settings.customSmtpEnabled
     && trimString(settings.smtpHost, 320)
@@ -376,7 +378,7 @@ function candidateEmailDiagnostics(settings = {}) {
   );
 
   const warnings = [];
-  if (!smtpConfigured) {
+  if (!smtpConfigured && !(options.deliveryProbe && options.deliveryProbe.ready === true)) {
     warnings.push('Custom SMTP is not complete. Supabase default email is only suitable for testing and is rate-limited.');
   }
   if (!redirectsReady) {
@@ -386,17 +388,58 @@ function candidateEmailDiagnostics(settings = {}) {
     warnings.push('Automatic apply to Supabase is not available until SUPABASE_MANAGEMENT_ACCESS_TOKEN is added to Netlify.');
   }
 
+  const deliveryProbe = options.deliveryProbe && typeof options.deliveryProbe === 'object'
+    ? options.deliveryProbe
+    : null;
+  if (deliveryProbe?.configured && deliveryProbe?.ready === false) {
+    warnings.push(deliveryProbe.message || 'The configured Resend key could not be validated.');
+  }
+  if (!deliveryProbe?.configured && !smtpConfigured) {
+    warnings.push('No outbound candidate email provider is configured. Reminder emails will not send until Resend or SMTP is working.');
+  }
+
+  const publicDeliveryReady = deliveryProbe?.ready === true || smtpConfigured;
+  const deliverySource = deliveryProbe?.ready === true
+    ? 'resend'
+    : smtpConfigured
+      ? 'smtp'
+      : resendConfigured
+        ? 'resend_invalid'
+        : 'none';
+
   return {
     projectRef,
     managementTokenAvailable: !!management.token,
     managementTokenSource: management.source,
+    resendConfigured,
+    resendReady: deliveryProbe?.ready === true,
+    resendStatus: deliveryProbe?.status || (resendConfigured ? 'unknown' : 'missing'),
+    resendMessage: deliveryProbe?.message || '',
     customSmtpReady: smtpConfigured,
+    smtpReady: smtpConfigured,
     redirectsReady,
     subjectsReady,
-    publicDeliveryReady: smtpConfigured,
+    deliverySource,
+    publicDeliveryReady,
     warnings,
-    status: smtpConfigured && redirectsReady && subjectsReady ? 'ready' : 'needs_attention',
+    status: publicDeliveryReady && redirectsReady && subjectsReady ? 'ready' : 'needs_attention',
   };
+}
+
+async function buildCandidateEmailDiagnostics(settings = {}) {
+  let deliveryProbe = null;
+  try {
+    deliveryProbe = await probeResendProvider();
+  } catch (error) {
+    deliveryProbe = {
+      provider: 'resend',
+      configured: !!trimString(process.env.RESEND_API_KEY, 4000),
+      ready: false,
+      status: 'error',
+      message: error?.message || 'Could not verify Resend delivery.',
+    };
+  }
+  return candidateEmailDiagnostics(settings, { deliveryProbe });
 }
 
 async function readCandidateEmailSettings(event) {
@@ -406,13 +449,14 @@ async function readCandidateEmailSettings(event) {
     ? result.settings[SETTINGS_KEY]
     : {};
   const settings = normaliseCandidateEmailSettings(stored, { existing: stored, derived });
+  const diagnostics = await buildCandidateEmailDiagnostics(settings);
   return {
     settings,
     redacted: redactCandidateEmailSettings(settings),
     previews: buildCandidateEmailTemplates(settings),
     patch: buildSupabaseAuthPatch(settings),
     patchPreview: redactSupabaseAuthPatch(buildSupabaseAuthPatch(settings)),
-    diagnostics: candidateEmailDiagnostics(settings),
+    diagnostics,
     source: result?.source || 'fallback',
   };
 }
@@ -438,7 +482,7 @@ async function applyCandidateEmailSettingsToSupabase(event, options = {}) {
   const current = options.settings
     ? {
         settings: options.settings,
-        diagnostics: candidateEmailDiagnostics(options.settings),
+        diagnostics: await buildCandidateEmailDiagnostics(options.settings),
         patch: buildSupabaseAuthPatch(options.settings),
       }
     : await readCandidateEmailSettings(event);
@@ -503,6 +547,7 @@ module.exports = {
   buildSupabaseAuthPatch,
   redactSupabaseAuthPatch,
   candidateEmailDiagnostics,
+  buildCandidateEmailDiagnostics,
   readCandidateEmailSettings,
   persistCandidateEmailSettings,
   applyCandidateEmailSettingsToSupabase,

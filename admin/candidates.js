@@ -54,7 +54,8 @@
     importPreview: null,
     tspCompare: null,
     verificationQueue: null,
-    pendingDocRequest: null
+    pendingDocRequest: null,
+    outreachDiagnostics: null
   };
 
   const REQUESTABLE_DOC_TYPES = ['passport', 'qualification_certificate', 'reference', 'right_to_work', 'visa_permit', 'bank_document'];
@@ -206,6 +207,18 @@
     if (labels.length === 1) return labels[0];
     if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
     return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
+  }
+
+  function buildCandidateUploadLink({ requestType = 'documents', documentTypes = [] } = {}) {
+    const url = new URL('/candidates.html', window.location.origin);
+    url.searchParams.set('candidate_tab', 'documents');
+    url.searchParams.set('candidate_focus', requestType === 'rtw' ? 'right_to_work' : 'documents');
+    url.searchParams.set('candidate_onboarding', '1');
+    const requested = (Array.isArray(documentTypes) ? documentTypes : [])
+      .map((value) => normalizeDocumentRequestType(value))
+      .filter((value, index, list) => value && list.indexOf(value) === index);
+    if (requested.length) url.searchParams.set('candidate_docs', requested.join(','));
+    return url.toString();
   }
 
   function renderDocumentRequestDialogOptions(selected = []) {
@@ -1415,6 +1428,7 @@
           <button class="btn ghost" type="button" data-account-action="inspect">Refresh portal status</button>
           <button class="btn ghost" type="button" data-onboarding-action="send-doc-request" ${!candidate.email || isArchived(candidate) ? 'disabled' : ''}>Request documents</button>
           <button class="btn ghost" type="button" data-onboarding-action="send-rtw-reminder" ${canSendReminder ? '' : 'disabled'}>Send RTW reminder</button>
+          <button class="btn ghost" type="button" data-onboarding-action="copy-upload-link">Copy upload link</button>
           <button class="btn ghost" type="button" data-tsp-action="sync-candidate" ${(!candidate.email && !String(candidate?.ref || candidate?.payroll_ref || '').trim()) || isArchived(candidate) ? 'disabled' : ''}>Sync from TSP</button>
           <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
           <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
@@ -2183,6 +2197,13 @@
         }
         if (btn.dataset.onboardingAction === 'send-doc-request') {
           openDocumentRequestDialog([candidate.id]);
+          return;
+        }
+        if (btn.dataset.onboardingAction === 'copy-upload-link') {
+          await copyCandidateUploadLink({
+            requestType: 'documents',
+            documentTypes: ['passport', 'qualification_certificate', 'reference'],
+          });
         }
       });
     });
@@ -2225,6 +2246,32 @@
     }
     window.prompt('Copy this link', value);
     return true;
+  }
+
+  async function copyCandidateUploadLink({ requestType = 'documents', documentTypes = [] } = {}) {
+    const copied = await copyText(buildCandidateUploadLink({ requestType, documentTypes }));
+    if (copied) showToast('Secure candidate upload link copied.', 'info', 3600);
+    return copied;
+  }
+
+  function renderOutreachStatus() {
+    if (!elements.outreachStatus) return;
+    const diagnostics = state.outreachDiagnostics;
+    if (!diagnostics) {
+      elements.outreachStatus.textContent = 'Checking candidate outreach delivery…';
+      return;
+    }
+    if (diagnostics.publicDeliveryReady) {
+      const sourceLabel = diagnostics.deliverySource === 'smtp' ? 'SMTP' : 'Resend';
+      elements.outreachStatus.textContent = `Candidate reminder delivery is ready via ${sourceLabel}.`;
+      return;
+    }
+    if (diagnostics.resendConfigured && diagnostics.resendReady === false) {
+      elements.outreachStatus.textContent = diagnostics.resendMessage
+        || 'Candidate reminder delivery is blocked because the configured RESEND_API_KEY was rejected. Fix the key or save SMTP settings in Admin Settings.';
+      return;
+    }
+    elements.outreachStatus.textContent = 'Candidate reminder delivery is not configured. Save SMTP settings in Admin Settings or add a working RESEND_API_KEY.';
   }
 
   async function runPortalAccountAction(candidate, action, button) {
@@ -2617,6 +2664,17 @@
   }
 
   async function sendOnboardingRequest({ candidateIds, requestType = 'rtw', documentTypes = [], skipConfirm = true, force = false }) {
+    if (state.outreachDiagnostics && state.outreachDiagnostics.publicDeliveryReady !== true) {
+      await copyCandidateUploadLink({ requestType, documentTypes });
+      showToast(
+        state.outreachDiagnostics.resendConfigured && state.outreachDiagnostics.resendReady === false
+          ? 'Email delivery is blocked by an invalid RESEND_API_KEY. The secure upload link was copied instead.'
+          : 'Email delivery is not configured. The secure upload link was copied instead.',
+        'warn',
+        5200,
+      );
+      return;
+    }
     const payloadIds = Array.isArray(candidateIds) && candidateIds.length
       ? candidateIds.map((id) => String(id))
       : [];
@@ -2654,6 +2712,10 @@
       documentTypes,
       force,
     });
+    if (response?.ok === false) {
+      if (response?.actionUrl) await copyText(response.actionUrl);
+      throw new Error(response?.message || 'Candidate onboarding email delivery failed.');
+    }
     const recentSkips = Array.isArray(response?.skipped)
       ? response.skipped.filter((entry) => entry?.reason === 'recently_sent').length
       : 0;
@@ -2669,6 +2731,10 @@
           documentTypes,
           force: true,
         });
+        if (response?.ok === false) {
+          if (response?.actionUrl) await copyText(response.actionUrl);
+          throw new Error(response?.message || 'Candidate onboarding email delivery failed.');
+        }
       }
     }
     pushLog({
@@ -2728,6 +2794,28 @@
       };
       renderTspSummary();
     }
+  }
+
+  async function refreshOutreachReadiness() {
+    if (elements.outreachStatus) {
+      elements.outreachStatus.textContent = 'Checking candidate outreach delivery…';
+    }
+    try {
+      const response = await state.helpers.api('admin-candidate-email-settings', 'POST', {
+        action: 'get',
+      });
+      state.outreachDiagnostics = response?.diagnostics || null;
+    } catch (err) {
+      console.error('[candidates] candidate email diagnostics failed', err);
+      state.outreachDiagnostics = {
+        publicDeliveryReady: false,
+        resendConfigured: false,
+        resendReady: false,
+        resendMessage: err.message || 'Could not verify candidate email delivery.',
+        deliverySource: 'none',
+      };
+    }
+    renderOutreachStatus();
   }
 
   async function runTimesheetPortalCandidateSync({ candidateIds = [], provisionPortalAccounts = false } = {}) {
@@ -3107,6 +3195,7 @@
     elements.visibleDocRequest = qs('#btn-visible-doc-request');
     elements.tspStatus = qs('#tsp-status');
     elements.tspSyncStatus = qs('#tsp-sync-status');
+    elements.outreachStatus = qs('#outreach-status');
     elements.tspSummary = qs('#tsp-summary');
     elements.refreshVerify = qs('#btn-refresh-verify');
     elements.selectToVerify = qs('#btn-select-to-verify');
@@ -3115,6 +3204,7 @@
     elements.docRequestDialog = qs('#doc-request-dialog');
     elements.docRequestOptions = qs('#doc-request-options');
     elements.docRequestCancel = qs('#doc-request-cancel');
+    elements.docRequestCopyLink = qs('#doc-request-copy-link');
     elements.docRequestSend = qs('#doc-request-send');
   }
 
@@ -3192,6 +3282,15 @@
     if (elements.docRequestCancel) {
       elements.docRequestCancel.addEventListener('click', () => closeDocumentRequestDialog());
     }
+    if (elements.docRequestCopyLink) {
+      elements.docRequestCopyLink.addEventListener('click', async () => {
+        const requested = selectedDocumentRequestTypes();
+        await copyCandidateUploadLink({
+          requestType: requested.includes('right_to_work') && requested.length === 1 ? 'rtw' : 'documents',
+          documentTypes: requested,
+        });
+      });
+    }
     if (elements.docRequestDialog) {
       elements.docRequestDialog.addEventListener('cancel', (event) => {
         event.preventDefault();
@@ -3248,11 +3347,13 @@
     applyFilterInputs();
     renderImportState();
     renderTspSummary();
+    renderOutreachStatus();
     renderVerificationQueue();
     bindEvents();
     bindKeyboardShortcuts();
     loadCandidates().then(() => refreshVerificationQueue({ silent: true }));
     refreshTimesheetPortalCompare();
+    refreshOutreachReadiness();
   }
 
   function ready() {
