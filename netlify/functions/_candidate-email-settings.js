@@ -96,7 +96,11 @@ function resolveProjectRef() {
   }
 }
 
-function resolveManagementToken() {
+function resolveManagementToken(options = {}) {
+  const override = trimString(options.tokenOverride, 4000);
+  if (override) {
+    return { token: override, source: 'request_override' };
+  }
   for (const key of MANAGEMENT_TOKEN_KEYS) {
     const value = trimString(process.env[key], 4000);
     if (value) return { token: value, source: key };
@@ -355,7 +359,7 @@ function redactSupabaseAuthPatch(patch = {}) {
 }
 
 function candidateEmailDiagnostics(settings = {}, options = {}) {
-  const management = resolveManagementToken();
+  const management = resolveManagementToken({ tokenOverride: options.managementToken });
   const projectRef = resolveProjectRef();
   const resendConfigured = !!trimString(process.env.RESEND_API_KEY, 4000);
   const smtpConfigured = !!(
@@ -426,7 +430,7 @@ function candidateEmailDiagnostics(settings = {}, options = {}) {
   };
 }
 
-async function buildCandidateEmailDiagnostics(settings = {}) {
+async function buildCandidateEmailDiagnostics(settings = {}, options = {}) {
   let deliveryProbe = null;
   try {
     deliveryProbe = await probeResendProvider();
@@ -439,7 +443,10 @@ async function buildCandidateEmailDiagnostics(settings = {}) {
       message: error?.message || 'Could not verify Resend delivery.',
     };
   }
-  return candidateEmailDiagnostics(settings, { deliveryProbe });
+  return candidateEmailDiagnostics(settings, {
+    deliveryProbe,
+    managementToken: options.managementToken,
+  });
 }
 
 async function readCandidateEmailSettings(event) {
@@ -482,14 +489,16 @@ async function applyCandidateEmailSettingsToSupabase(event, options = {}) {
   const current = options.settings
     ? {
         settings: options.settings,
-        diagnostics: await buildCandidateEmailDiagnostics(options.settings),
+        diagnostics: await buildCandidateEmailDiagnostics(options.settings, {
+          managementToken: options.managementToken,
+        }),
         patch: buildSupabaseAuthPatch(options.settings),
       }
     : await readCandidateEmailSettings(event);
 
-  const management = resolveManagementToken();
+  const management = resolveManagementToken({ tokenOverride: options.managementToken });
   if (!management.token) {
-    const error = new Error('Add SUPABASE_MANAGEMENT_ACCESS_TOKEN to Netlify before applying these settings directly from admin.');
+    const error = new Error('Add SUPABASE_MANAGEMENT_ACCESS_TOKEN to Netlify or paste a one-time Supabase personal access token before applying these settings.');
     error.code = 'management_token_missing';
     error.details = {
       diagnostics: current.diagnostics,

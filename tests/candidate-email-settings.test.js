@@ -189,3 +189,71 @@ test('buildSupabaseAuthPatch includes SMTP fields only when custom SMTP is enabl
     restore();
   }
 });
+
+test('resolveManagementToken prefers a one-time request override when provided', () => {
+  const { mod, restore } = loadModule({
+    SUPABASE_MANAGEMENT_ACCESS_TOKEN: '',
+  });
+  try {
+    const token = mod.resolveManagementToken({ tokenOverride: 'override-token' });
+    assert.deepEqual(token, {
+      token: 'override-token',
+      source: 'request_override',
+    });
+  } finally {
+    restore();
+  }
+});
+
+test('applyCandidateEmailSettingsToSupabase accepts a one-time management token override', async () => {
+  const { mod, restore } = loadModule({
+    SUPABASE_URL: 'https://mftwpbpwisxyaenfoizb.supabase.co',
+  });
+  const originalFetch = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    calls.push({
+      url: String(url),
+      authorization: options?.headers?.authorization || '',
+      body: options?.body || '',
+    });
+    return {
+      ok: true,
+      json: async () => ({ ok: true }),
+    };
+  };
+
+  try {
+    const result = await mod.applyCandidateEmailSettingsToSupabase({}, {
+      managementToken: 'override-token',
+      settings: {
+        customSmtpEnabled: false,
+        senderEmail: 'info@hmj-global.com',
+        senderName: 'HMJ Global',
+        supportEmail: 'info@hmj-global.com',
+        siteUrl: 'https://hmjg.netlify.app',
+        verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
+        recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+        confirmationSubject: 'Confirm your HMJ candidate account',
+        recoverySubject: 'Reset your HMJ candidate password',
+        emailChangeSubject: 'Confirm your new HMJ candidate email address',
+        confirmationHeading: 'Confirm your HMJ candidate account',
+        recoveryHeading: 'Reset your HMJ candidate password',
+        emailChangeHeading: 'Confirm your new HMJ candidate email address',
+        preheader: 'Secure access to your HMJ candidate dashboard.',
+        introCopy: 'Use the secure button below to finish your HMJ candidate account setup.',
+        recoveryCopy: 'Use the secure button below to choose a new password for your HMJ candidate account.',
+        helpCopy: 'If the button does not work, copy the full link into your browser or contact HMJ support.',
+        footerTagline: 'Specialist recruitment for technical projects.',
+      },
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /api\.supabase\.com\/v1\/projects\/mftwpbpwisxyaenfoizb\/config\/auth$/);
+    assert.equal(calls[0].authorization, 'Bearer override-token');
+  } finally {
+    global.fetch = originalFetch;
+    restore();
+  }
+});

@@ -383,6 +383,11 @@
                 <label for="candidateFooterTagline">Footer tagline</label>
                 <input id="candidateFooterTagline" name="footerTagline" type="text" maxlength="220">
               </div>
+              <div class="settings-field settings-field--full">
+                <label for="candidateSupabaseManagementToken">Supabase management access token</label>
+                <input id="candidateSupabaseManagementToken" type="password" maxlength="4000" autocomplete="off" placeholder="Optional one-time token for Apply to Supabase Auth">
+                <small>Optional. If the token is not stored in Netlify, paste a Supabase personal access token here for this apply action only. It is not saved to HMJ settings.</small>
+              </div>
             </div>
             <div class="settings-actions">
               <button class="btn primary" id="btnSaveCandidateEmailSettings" type="submit">Save candidate email settings</button>

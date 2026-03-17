@@ -65,6 +65,7 @@ exports.handler = withAdminCors(async (event, context) => {
       const saved = await persistCandidateEmailSettings(event, body.settings || body, {});
       const applied = await applyCandidateEmailSettingsToSupabase(event, {
         settings: saved.settings,
+        managementToken: body.managementToken,
       });
       const refreshed = await persistCandidateEmailSettings(event, {}, {
         appliedAt: new Date().toISOString(),

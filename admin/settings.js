@@ -73,6 +73,7 @@
       'candidateRecoveryCopy',
       'candidateHelpCopy',
       'candidateFooterTagline',
+      'candidateSupabaseManagementToken',
       'candidateEmailStatusSummary',
       'candidateEmailStatusList',
       'candidateEmailPatchPreview',
@@ -477,10 +478,10 @@
         },
         {
           tone: diagnostics.managementTokenAvailable ? 'ok' : 'warn',
-          title: diagnostics.managementTokenAvailable ? 'Direct Supabase apply available' : 'Direct Supabase apply not available',
+          title: diagnostics.managementTokenAvailable ? 'Direct Supabase apply available' : 'Direct Supabase apply needs a management token',
           body: diagnostics.managementTokenAvailable
             ? 'The Netlify environment includes a Supabase management token, so this page can push auth email settings directly.'
-            : 'Add SUPABASE_MANAGEMENT_ACCESS_TOKEN to Netlify if you want the Apply button to update Supabase directly.',
+            : 'Add SUPABASE_MANAGEMENT_ACCESS_TOKEN to Netlify or paste a one-time Supabase personal access token into the field above before clicking Apply.',
         },
         {
           tone: settings.lastAppliedAt ? 'ok' : 'warn',
@@ -816,11 +817,16 @@
 
   async function handleCandidateEmailApply() {
     try {
+      const managementToken = trimText(els.candidateSupabaseManagementToken?.value, 4000);
       const payload = await state.helpers.api('admin-candidate-email-settings', 'POST', {
         action: 'apply',
         settings: readCandidateEmailForm(),
+        managementToken,
       });
       applyCandidateEmailResponse(payload, payload?.message || 'Candidate email settings were applied to Supabase Auth.', 'success');
+      if (els.candidateSupabaseManagementToken) {
+        els.candidateSupabaseManagementToken.value = '';
+      }
       toast('Candidate email settings applied to Supabase', 'info', 2600);
       logActivity({
         label: 'Applied candidate email settings to Supabase',
@@ -837,7 +843,7 @@
       updateCandidateEmailNotice(
         error?.message || 'Unable to apply candidate email settings.',
         'danger',
-        details?.response?.message || 'Check the warnings on this page. If SMTP credentials are still missing, save the settings here first and add the Supabase management token in Netlify before trying again.'
+        details?.response?.message || 'Check the warnings on this page. If Netlify does not have a Supabase management token yet, paste a one-time Supabase personal access token into the field above before trying again.'
       );
     }
   }
