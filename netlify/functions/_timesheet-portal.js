@@ -565,6 +565,19 @@ function normalizeTimesheetPortalPayrollStatus(record = {}) {
   return 'pending';
 }
 
+function normalizeTimesheetPortalTimesheetStatus(record = {}) {
+  const raw = readStringKeys(
+    record,
+    ['TimesheetStatus', 'timesheetStatus', 'ApprovalStatus', 'approvalStatus', 'Status', 'status', 'state'],
+    80,
+  ).toLowerCase();
+  if (raw.includes('approved') || raw.includes('authorised') || raw.includes('authorized') || raw.includes('processed')) return 'approved';
+  if (raw.includes('reject') || raw.includes('declin') || raw.includes('returned')) return 'rejected';
+  if (raw.includes('submit') || raw.includes('await') || raw.includes('pending')) return 'submitted';
+  if (raw.includes('draft') || raw.includes('open') || raw.includes('new')) return 'draft';
+  return raw || 'submitted';
+}
+
 function normalizeTimesheetPortalPayrollRecord(record = {}) {
   const timesheetId = readStringKeys(record, ['TimesheetId', 'timesheetId', 'id'], 120);
   const invoiceNumber = readStringKeys(record, ['SelfBillingInvoiceNumber', 'selfBillingInvoiceNumber', 'InvoiceNumberText', 'invoiceNumberText'], 120);
@@ -616,6 +629,89 @@ function normalizeTimesheetPortalPayrollRecord(record = {}) {
     invoicePaidDate: toDateOnly(record.InvoicePaidDate || record.invoicePaidDate),
     invoiceSelfBilling: normalizeBoolean(record.InvoiceSelfBilling ?? record.invoiceSelfBilling),
     payrollStatus: normalizeTimesheetPortalPayrollStatus(record),
+    raw: record,
+  };
+}
+
+function normalizeTimesheetPortalTimesheetRecord(record = {}) {
+  const timesheetId = readStringKeys(record, ['TimesheetId', 'timesheetId', 'guid', 'id'], 120);
+  const assignmentRef = readStringKeys(
+    record,
+    ['ChargeCode', 'chargeCode', 'JobCode', 'jobCode', 'assignmentCode', 'reference', 'ref'],
+    120,
+  );
+  const candidateName = readStringKeys(
+    record,
+    ['EmployeeName', 'employeeName', 'candidateName', 'contractorName', 'workerName', 'name', 'fullName'],
+    240,
+  );
+  const weekEnding = toDateOnly(
+    record.TimesheetWeekEnd
+    || record.timesheetWeekEnd
+    || record.WeekEnding
+    || record.weekEnding
+    || record.weekEndDate
+  );
+  const weekStart = toDateOnly(
+    record.TimesheetWeekStart
+    || record.timesheetWeekStart
+    || record.WeekStart
+    || record.weekStart
+    || record.weekStartDate
+  );
+  const standardHours = readNumberKeys(
+    record,
+    ['StandardHours', 'standardHours', 'StdHours', 'stdHours', 'HoursStd', 'hoursStd', 'RegularHours', 'regularHours'],
+  );
+  const overtimeHours = readNumberKeys(
+    record,
+    ['OvertimeHours', 'overtimeHours', 'OtHours', 'otHours', 'HoursOt', 'hoursOt', 'ExtraHours', 'extraHours'],
+  );
+  const totalHours = readNumberKeys(record, ['EntryQuantity', 'entryQuantity', 'TotalHours', 'totalHours', 'hours']);
+  const currency = trimString(
+    readStringKeys(record, ['CurrencyCode', 'currencyCode', 'PayCurrencyIsoSymbol', 'currency'], 12) || 'GBP',
+    12,
+  ).toUpperCase() || 'GBP';
+  const computedStd = standardHours === null ? 0 : standardHours;
+  const computedOt = overtimeHours === null ? 0 : overtimeHours;
+  const computedTotal = totalHours === null ? computedStd + computedOt : totalHours;
+
+  return {
+    id: timesheetId || [assignmentRef, candidateName, weekEnding].filter(Boolean).join('|'),
+    timesheetId,
+    weekEnding,
+    weekStart,
+    candidateName,
+    candidateEmail: lowerEmail(
+      record.EmployeeEmail
+      || record.employeeEmail
+      || record.candidateEmail
+      || record.contractorEmail
+      || record.email,
+    ),
+    payrollRef: readStringKeys(
+      record,
+      ['EmployeeAccountingReference', 'employeeAccountingReference', 'EmployeeReference', 'employeeReference', 'payrollReference'],
+      120,
+    ),
+    employeeReference: readStringKeys(record, ['EmployeeReference', 'employeeReference', 'contractorCode', 'candidateCode'], 120),
+    assignmentRef,
+    jobTitle: readStringKeys(record, ['ChargeCodeDesc', 'chargeCodeDesc', 'jobTitle', 'title', 'description'], 240),
+    clientName: readStringKeys(record, ['CompanyName', 'companyName', 'clientName', 'customerName'], 240),
+    approverName: readStringKeys(record, ['ApproverName', 'approverName', 'approvedBy', 'authoriserName', 'authorizerName'], 240),
+    submittedAt: toDateOnly(record.SubmittedDate || record.submittedDate || record.submittedAt),
+    approvedAt: toDateOnly(record.ApprovedDate || record.approvedDate || record.approvedAt || record.authorisedDate || record.authorizedDate),
+    status: normalizeTimesheetPortalTimesheetStatus(record),
+    totals: {
+      hours: computedTotal,
+      standardHours: computedStd,
+      overtimeHours: computedOt,
+      pay: readNumberKeys(record, ['TotalPay', 'totalPay', 'payAmount']) || 0,
+      charge: readNumberKeys(record, ['TotalCharge', 'totalCharge', 'chargeAmount']) || 0,
+    },
+    currency,
+    notes: readStringKeys(record, ['Notes', 'notes', 'Comment', 'comment', 'Comments', 'comments'], 2000),
+    attachmentCount: readNumberKeys(record, ['AttachmentCount', 'attachmentCount']) || 0,
     raw: record,
   };
 }
@@ -693,6 +789,39 @@ async function fetchTimesheetPortalTimesheets(config, auth, listPath, options = 
   return extractCollection(result.json)
     .map(normalizeTimesheetPortalPayrollRecord)
     .filter((row) => row.id || row.candidateName || row.invoiceNumberText);
+}
+
+async function fetchTimesheetPortalManagementTimesheets(config, auth, listPath, options = {}) {
+  const seenKeys = new Set();
+  const rows = [];
+  const take = Math.max(1, Math.min(1000, Number(options.take) || 250));
+  const pageLimit = Math.max(1, Math.min(50, Number(options.pageLimit) || 20));
+
+  for (let page = 1; page <= pageLimit; page += 1) {
+    const url = buildCollectionUrl(config.resourceBaseUrl, listPath, { take, page });
+    const result = await fetchJson(url, auth);
+    if (!result.response.ok) {
+      const error = new Error(`Timesheet Portal timesheet list failed (${result.response.status})`);
+      error.code = 'timesheet_portal_timesheet_list_failed';
+      error.status = result.response.status;
+      throw error;
+    }
+    const pageRows = extractCollection(result.json)
+      .map(normalizeTimesheetPortalTimesheetRecord)
+      .filter((row) => row.id || row.candidateName || row.assignmentRef || row.weekEnding);
+    if (!pageRows.length) break;
+    let added = 0;
+    pageRows.forEach((row) => {
+      const key = row.id || `${row.assignmentRef}|${row.candidateName}|${row.weekEnding}`;
+      if (!key || seenKeys.has(key)) return;
+      seenKeys.add(key);
+      rows.push(row);
+      added += 1;
+    });
+    if (!added || pageRows.length < take) break;
+  }
+
+  return rows;
 }
 
 async function fetchUsersCollection(config, auth, candidatePath) {
@@ -906,6 +1035,82 @@ async function listTimesheetPortalPayroll(config, options = {}) {
   throw error;
 }
 
+async function listTimesheetPortalTimesheets(config, options = {}) {
+  if (!config.enabled || !config.configured) {
+    const error = new Error('Timesheet Portal is not configured.');
+    error.code = 'timesheet_portal_not_configured';
+    throw error;
+  }
+
+  const { auths, oauthError } = await getAuthCandidates(config);
+  if (!auths.length) {
+    if (oauthError) throw oauthError;
+    const error = new Error('Timesheet Portal credentials are not configured.');
+    error.code = 'timesheet_portal_not_configured';
+    throw error;
+  }
+
+  const attempts = [];
+  let emptySuccess = null;
+
+  for (const auth of auths) {
+    for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
+      try {
+        const rows = await fetchTimesheetPortalManagementTimesheets(config, auth, path, options);
+        attempts.push({
+          path,
+          mode: 'timesheets',
+          status: 200,
+          authSource: auth.source,
+          authScheme: auth.scheme,
+          count: rows.length,
+        });
+        if (rows.length) {
+          return {
+            discovery: {
+              timesheetPath: path,
+              mode: 'timesheets',
+              auth,
+              attempts,
+            },
+            rows,
+          };
+        }
+        if (!emptySuccess) {
+          emptySuccess = {
+            discovery: {
+              timesheetPath: path,
+              mode: 'timesheets',
+              auth,
+              attempts,
+            },
+            rows: [],
+          };
+        }
+      } catch (error) {
+        const status = Number(error?.status) || 500;
+        attempts.push({
+          path,
+          mode: 'timesheets',
+          status,
+          authSource: auth.source,
+          authScheme: auth.scheme,
+        });
+      }
+    }
+  }
+
+  if (emptySuccess) return emptySuccess;
+
+  const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
+  const error = new Error(sawUnauthorized
+    ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
+    : 'Timesheet Portal timesheet-management endpoint could not be discovered for this account.');
+  error.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_timesheet_path_missing';
+  error.attempts = attempts;
+  throw error;
+}
+
 function candidateName(candidate = {}) {
   return trimString(
     candidate.full_name
@@ -1006,7 +1211,9 @@ module.exports = {
   listTimesheetPortalAssignments,
   listTimesheetPortalContractors,
   listTimesheetPortalPayroll,
+  listTimesheetPortalTimesheets,
   normalizeTimesheetPortalPayrollRecord,
+  normalizeTimesheetPortalTimesheetRecord,
   normalizeTimesheetPortalAssignment,
   readTimesheetPortalConfig,
 };

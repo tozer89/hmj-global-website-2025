@@ -1,282 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Timesheets — Admin | HMJ-Global</title>
-  <link rel="stylesheet" href="/css/style.css" />
-  <link rel="stylesheet" href="/css/admin.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Timesheets — Admin | HMJ Global</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/admin/common.js?v=22"></script>
+
   <style>
-    body{background:#f6f8fb;color:#0b1a3a;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;min-height:100vh;display:flex;flex-direction:column}
-    header{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid rgba(10,31,68,.1);box-shadow:0 1px 0 rgba(15,35,75,.05)}
-    header .bar{display:flex;align-items:center;gap:12px;max-width:1400px;margin:0 auto;padding:14px 20px}
-    header .brand{font-weight:700;font-size:18px;color:#162550}
-    header .sp{flex:1}
-    header .pill{border-radius:999px;padding:6px 10px;background:#eef2ff;color:#3a4b93;font-weight:600;font-size:13px}
-
-    main{flex:1;max-width:1400px;width:100%;margin:0 auto;padding:20px;display:grid;gap:20px;grid-template-columns:minmax(0,1fr) 340px}
-    @media (max-width:1100px){ main{grid-template-columns:1fr} }
-
-    .panel{background:#fff;border-radius:16px;border:1px solid rgba(12,32,64,.08);box-shadow:0 14px 42px rgba(15,35,75,.08);padding:18px;display:flex;flex-direction:column;gap:16px}
-    .panel h2{margin:0;font-size:18px}
-    .panel h3{margin:0;font-size:16px}
-    .panel .muted{color:#4f5d7a;font-size:13px}
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .toolbar button,.toolbar .btn{border-radius:12px;border:1px solid rgba(28,56,118,.18);background:#f4f6ff;color:#193078;font-weight:600;padding:8px 12px;font-size:13px;cursor:pointer}
-    .toolbar .btn-primary{background:#193078;color:#fff;border:none}
-    .toolbar .btn-secondary{background:#fff}
-    .toolbar .counter{display:flex;align-items:center;gap:6px;background:#fff;padding:8px 12px;border-radius:12px;border:1px solid rgba(28,56,118,.16);font-weight:600;color:#193078}
-
-    .filter-panel{display:grid;gap:12px;border-radius:14px;background:#f8f9fe;padding:14px;border:1px solid rgba(28,56,118,.08)}
-    .filter-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-    label.filter{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#324164}
-    .filter input,.filter select{border-radius:10px;border:1px solid rgba(31,55,110,.15);padding:8px 10px;font-size:14px}
-    .filter input:focus,.filter select:focus{outline:none;box-shadow:0 0 0 3px rgba(25,48,120,.2)}
-
-    .chipbar{display:flex;flex-wrap:wrap;gap:6px}
-    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#e6ebff;border:1px solid rgba(23,50,118,.18);font-size:12px;color:#152b6f}
-    .chip .remove{cursor:pointer;background:none;border:none;color:inherit;font-weight:700}
-    .chip.badge{background:#13245d;color:#fff;border-color:transparent}
-
-    .table-shell{position:relative;border-radius:14px;border:1px solid rgba(12,32,64,.08);overflow:hidden;background:#fff;display:flex;flex-direction:column}
-    .table-header{display:grid;grid-template-columns:40px minmax(200px,1.2fr) repeat(6,minmax(100px,1fr));gap:0;background:#eef1fb;color:#162550;font-weight:600;font-size:13px;padding:12px 16px;position:sticky;top:0;z-index:5;border-bottom:1px solid rgba(12,32,64,.08)}
-    .table-row{display:grid;grid-template-columns:40px minmax(200px,1.2fr) repeat(6,minmax(100px,1fr));gap:0;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(12,32,64,.06);font-size:13px;color:#0b1a3a}
-    .table-row[aria-selected="true"]{background:#f0f4ff}
-    .table-row.invalid{background:#fff3f3}
-    .table-row .row-actions{opacity:0;display:flex;gap:8px;justify-content:flex-end}
-    .table-row:hover .row-actions{opacity:1}
-    .status-pill{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-weight:600;font-size:11px}
-    .status-draft{background:#dbe1f1;color:#1b2d5a}
-    .status-submitted{background:#e2d8ff;color:#3f1c8d}
-    .status-approved{background:#daf1de;color:#185226}
-    .status-rejected{background:#ffd7d7;color:#821b1b}
-    .table-viewport{max-height:520px;overflow:auto}
-    .table-placeholder{padding:24px;text-align:center;color:#4f5d7a;font-size:14px}
-    .totals-bar{display:flex;gap:16px;justify-content:flex-end;padding:12px 16px;background:#f6f9ff;border-top:1px solid rgba(12,32,64,.08);font-weight:600;font-size:13px}
-
-    .hours-input{width:70px;border-radius:8px;border:1px solid rgba(31,55,110,.18);padding:6px 8px;font-size:13px}
-    .hours-input:disabled{background:#f1f4fb;color:#6b7898}
-
-    .bulk-bar{position:sticky;bottom:0;margin-top:auto;display:none;background:#13245d;color:#fff;padding:14px;border-radius:12px;align-items:center;gap:12px;flex-wrap:wrap}
-    .bulk-bar button{background:#fff;color:#13245d;border:none;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer}
-
-    aside.panel{position:relative}
-    .aside-section{display:flex;flex-direction:column;gap:10px}
-    .aside-section hr{border:none;border-top:1px solid rgba(15,35,80,.08);margin:6px 0}
-    .audit-list{max-height:220px;overflow:auto;border-radius:12px;border:1px solid rgba(18,40,90,.08);padding:10px;background:#f9fbff;font-size:12px;color:#2f3d60}
-
-    dialog{border:none;border-radius:16px;padding:0;max-width:900px;width:min(96vw,900px);box-shadow:0 28px 60px rgba(15,35,80,.28)}
-    dialog::backdrop{background:rgba(10,16,30,.55)}
-    dialog .modal-shell{padding:20px;display:flex;flex-direction:column;gap:16px}
-    dialog h2{margin:0;font-size:18px}
-    dialog canvas{background:#fff;border-radius:12px;border:1px solid rgba(12,32,64,.08)}
-
-    .toast-zone{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:10px;z-index:90}
-    .toast{background:#13245d;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 14px 40px rgba(15,35,80,.25);font-size:13px;min-width:220px}
-
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    :root {
+      --bg:#f5f7fb; --panel:#fff; --border:#d8e0f4; --ink:#0f1b3f; --muted:#5d6f9e;
+      --accent:#3052a3; --accent-soft:rgba(48,82,163,.12); --good:#138754; --warn:#b7791f; --bad:#b42318;
+    }
+    * { box-sizing:border-box; }
+    html,body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    a { color:inherit; text-decoration:none; }
+    .top { position:sticky; top:0; z-index:100; background:linear-gradient(180deg,var(--accent),#274188); color:#fff; border-bottom:1px solid rgba(255,255,255,.18); box-shadow:0 14px 32px rgba(15,27,63,.18); }
+    .row { max-width:1480px; margin:0 auto; padding:14px 22px; display:flex; align-items:center; gap:12px; }
+    .brand { font-weight:800; letter-spacing:.02em; font-size:16px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.32); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+    .sp { flex:1; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn { background:linear-gradient(180deg,rgba(48,82,163,.12),rgba(48,82,163,.05)); color:var(--ink); border:1px solid rgba(48,82,163,.25); padding:9px 14px; border-radius:12px; font-weight:700; cursor:pointer; transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease,background .2s ease; }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 12px 26px rgba(15,27,63,.18); border-color:rgba(48,82,163,.45); }
+    .btn.ghost { background:#fff; border-color:rgba(48,82,163,.18); color:var(--accent); }
+    .btn.primary { background:linear-gradient(180deg,rgba(48,82,163,.22),rgba(48,82,163,.1)); border-color:rgba(48,82,163,.55); color:#fff; box-shadow:0 16px 32px rgba(48,82,163,.22); }
+    .btn.small { padding:7px 11px; font-size:13px; border-radius:10px; }
+    .wrap { max-width:1480px; margin:24px auto; padding:0 22px; display:grid; gap:18px; }
+    .panel { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px; box-shadow:0 20px 44px rgba(15,27,63,.12); }
+    .muted { color:var(--muted); }
+    .lead { margin:0 0 4px; font-size:28px; line-height:1.15; }
+    .summary-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+    .summary-card { border:1px solid rgba(48,82,163,.18); border-radius:16px; padding:14px 16px; background:var(--accent-soft); }
+    .summary-card strong { display:block; font-size:24px; margin-top:6px; color:var(--accent); }
+    .summary-card small { display:block; color:var(--muted); margin-top:4px; }
+    .alert { border-radius:14px; padding:14px 16px; border:1px solid rgba(48,82,163,.16); background:#f8faff; }
+    .alert.warn { background:rgba(245,158,11,.08); border-color:rgba(180,83,9,.22); }
+    .alert.bad { background:rgba(180,35,24,.08); border-color:rgba(180,35,24,.24); }
+    .filters { display:grid; gap:14px; }
+    .filter-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
+    .field { display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:var(--muted); }
+    .field input, .field select { padding:11px 12px; border-radius:12px; border:1px solid rgba(48,82,163,.22); background:#fff; color:var(--ink); font-weight:600; }
+    .field input:focus, .field select:focus { outline:none; border-color:rgba(48,82,163,.5); box-shadow:0 0 0 3px rgba(48,82,163,.18); }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .table-wrap { min-height:220px; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:#fff; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { background:#eef1ff; color:var(--muted); text-align:left; font-size:13px; font-weight:800; padding:12px; border-bottom:1px solid var(--border); }
+    tbody td { padding:12px; border-top:1px solid var(--border); vertical-align:top; }
+    tbody tr { transition:background .18s ease; cursor:pointer; }
+    tbody tr:hover { background:#f6f8ff; }
+    tbody tr.active { background:#edf2ff; }
+    .status-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-weight:700; font-size:12px; text-transform:capitalize; }
+    .status-draft { background:rgba(148,163,184,.18); color:#334155; }
+    .status-submitted { background:rgba(59,130,246,.14); color:#1d4ed8; }
+    .status-approved { background:rgba(19,135,84,.14); color:#166534; }
+    .status-rejected { background:rgba(180,35,24,.12); color:#991b1b; }
+    .status-other { background:rgba(48,82,163,.12); color:var(--accent); }
+    .match-chip { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; background:#eef2ff; color:#1d4ed8; }
+    .match-chip.missing { background:rgba(180,35,24,.1); color:#991b1b; }
+    .empty { padding:36px; text-align:center; color:var(--muted); }
+    .drawer { position:fixed; inset:0; pointer-events:none; display:flex; justify-content:flex-end; z-index:200; }
+    .drawer.active { pointer-events:auto; }
+    .drawer .overlay { flex:1; background:rgba(15,27,63,.28); opacity:0; transition:opacity .24s ease; }
+    .drawer.active .overlay { opacity:1; }
+    .drawer .panel { width:460px; max-width:calc(100vw - 60px); height:100%; border-radius:0; border-left:1px solid rgba(48,82,163,.24); transform:translateX(100%); transition:transform .28s ease; display:flex; flex-direction:column; padding:22px; background:#fff; overflow:auto; }
+    .drawer.active .panel { transform:translateX(0); }
+    .drawer header { display:flex; align-items:flex-start; gap:10px; margin-bottom:18px; }
+    .drawer header h2 { margin:0; font-size:20px; }
+    .drawer section { margin-bottom:18px; }
+    .drawer section h3 { margin:0 0 8px; font-size:14px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+    .kv { display:grid; grid-template-columns:140px 1fr; gap:6px; font-size:13px; }
+    .code-block { margin:0; white-space:pre-wrap; word-break:break-word; font-size:12px; background:#f8faff; border:1px solid rgba(48,82,163,.16); border-radius:12px; padding:12px; color:#23345f; }
+    @media (max-width: 980px) {
+      .drawer .panel { width:100%; max-width:100%; }
+    }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
 </head>
 <body>
-  <header>
-    <div class="bar">
-      <div class="brand">Timesheets Console</div>
-      <div class="pill" id="debugIdentity" aria-live="polite">offline</div>
-      <div class="sp"></div>
-      <button type="button" class="btn" id="btnSignOut">Sign out</button>
+  <div class="top"><div class="row">
+    <div class="brand">Timesheets Console</div>
+    <span class="pill">Admin</span>
+    <div class="sp"></div>
+    <div id="diagChips" class="chips"></div>
+    <a class="btn ghost" href="/">Website</a>
+    <a class="btn ghost" href="/admin/">⟵ Return to Admin Dash</a>
+    <button class="btn" type="button" data-admin-logout>Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn" type="button" data-admin-login>Log in</button>
     </div>
-  </header>
-  <main id="timesheets-app" aria-live="polite">
-    <section class="panel" id="mainPanel">
-      <div class="toolbar" id="weekToolbar" role="toolbar" aria-label="Week navigation">
-        <button type="button" class="btn" id="weekPrev" aria-label="Previous week">« Prev week</button>
-        <button type="button" class="btn" id="weekNext" aria-label="Next week">Next week »</button>
-        <button type="button" class="btn-primary" id="weekCurrent">This week</button>
-        <div class="counter" id="weekLabel">Week ending –</div>
-        <div class="counter" id="summaryTotal">Total: 0</div>
-        <div class="counter" id="summaryFiltered">Filtered: 0</div>
-        <div class="counter" id="summarySelected">Selected: 0</div>
-        <button type="button" class="btn-secondary" id="refreshButton" title="Reload (R)">Refresh</button>
-        <button type="button" class="btn-secondary" id="toggleFilters">Filters</button>
-        <button type="button" class="btn-secondary" id="calendarButton">Calendar</button>
-        <button type="button" class="btn-secondary" id="chartsButton">Charts</button>
-        <button type="button" class="btn-secondary" id="debugButton">Debug</button>
-      </div>
+  </div>
 
-      <div class="filter-panel" id="filters" aria-expanded="true">
-        <div class="toolbar" style="justify-content:space-between">
-          <label class="filter" style="flex:1">
-            <span>Quick search</span>
-            <input id="filterSearch" type="search" placeholder="Search contractor, client, site" aria-label="Quick search" />
-          </label>
-          <button type="button" class="btn-secondary" id="clearFilters">Clear all</button>
-        </div>
-        <div class="filter-grid">
-          <label class="filter">Status
-            <select id="filterStatus">
-              <option value="">Any</option>
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </label>
-          <label class="filter">Contractor
-            <select id="filterContractor"></select>
-          </label>
-          <label class="filter">Client
-            <select id="filterClient"></select>
-          </label>
-          <label class="filter">Project / Site
-            <select id="filterSite"></select>
-          </label>
-          <label class="filter">Role
-            <select id="filterRole"></select>
-          </label>
-          <label class="filter">Approver
-            <select id="filterApprover"></select>
-          </label>
-          <label class="filter">Week ending from
-            <input id="filterWeekFrom" type="date" />
-          </label>
-          <label class="filter">Week ending to
-            <input id="filterWeekTo" type="date" />
-          </label>
-          <label class="filter">Week number
-            <input id="filterWeekNumber" type="number" min="1" />
-          </label>
-          <label class="filter">Missing entries
-            <select id="filterMissing">
-              <option value="">Any</option>
-              <option value="missing">Missing hours</option>
-            </select>
-          </label>
-        </div>
-        <div class="chipbar" id="filterChips" aria-live="polite"></div>
-        <div class="chip badge" id="filteredBadge" aria-live="polite">Filtered: 0</div>
-      </div>
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel">
+      <p class="muted" style="margin:0 0 8px; text-transform:uppercase; letter-spacing:.08em; font-weight:800;">Timesheet management</p>
+      <h1 class="lead">Timesheet Portal mirror</h1>
+      <p class="muted" style="margin:0">Review live timesheet-management data from Timesheet Portal, see which rows match website candidates and assignments, and refresh on demand. Mirrored Timesheet Portal timesheets are read-only here.</p>
+      <div class="summary-grid" id="summaryBar" style="margin-top:18px"></div>
+    </section>
 
-      <div class="table-shell" aria-label="Timesheets table">
-        <div class="table-header" role="row">
-          <div><input type="checkbox" id="selectAll" aria-label="Select all" /></div>
-          <div>Assignment</div>
-          <div>Status</div>
-          <div>Contractor</div>
-          <div>Client</div>
-          <div>Std (h)</div>
-          <div>OT (h)</div>
-          <div>Gross (£)</div>
-          <div>Week ending</div>
-        </div>
-        <div class="table-viewport" id="tableViewport">
-          <div class="table-placeholder" id="tablePlaceholder">Loading…</div>
-          <div id="tableInner" role="rowgroup"></div>
-        </div>
-        <div class="totals-bar" id="totalsBar">
-          <div>Std: <span id="totalsStd">0</span></div>
-          <div>OT: <span id="totalsOt">0</span></div>
-          <div>Gross: <span id="totalsGross">£0.00</span></div>
-        </div>
-      </div>
-
-      <div class="bulk-bar" id="bulkBar" role="region" aria-live="polite">
-        <div id="bulkCount">0 selected</div>
-        <button type="button" id="bulkApprove">Approve</button>
-        <button type="button" id="bulkReject">Reject</button>
-        <button type="button" id="bulkExportCsv">Export CSV</button>
-        <button type="button" id="bulkExportXlsx">Export XLSX</button>
-        <button type="button" id="bulkRemind">Email reminders</button>
-        <button type="button" id="bulkDelete">Delete drafts</button>
+    <section class="panel">
+      <div id="syncNotice" class="alert">Loading live timesheet data…</div>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn ghost small" id="btnRefresh">Refresh from TSP</button>
+        <button class="btn ghost small" id="btnClear">Clear filters</button>
+        <button class="btn ghost small" id="btnExportCsv">Export CSV</button>
+        <span class="muted" id="resultMeta">0 timesheets</span>
       </div>
     </section>
 
-    <aside class="panel" id="sidePanel">
-      <div class="aside-section" aria-labelledby="createHeading">
-        <h2 id="createHeading">Create draft</h2>
-        <label class="filter">Assignment ID
-          <input id="createAssignment" type="text" inputmode="numeric" />
+    <section class="panel filters">
+      <div class="filter-grid">
+        <label class="field" for="filterSearch">Global search
+          <input id="filterSearch" type="search" placeholder="Search worker, client, assignment, payroll ref"/>
         </label>
-        <label class="filter">Week ending
-          <input id="createWeek" type="date" />
+        <label class="field" for="filterStatus">Status
+          <select id="filterStatus">
+            <option value="">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="submitted">Submitted</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
         </label>
-        <button type="button" class="btn-primary" id="createButton">Create draft</button>
-        <div class="muted" id="createHint">Creates a draft with 7 entries.</div>
+        <label class="field" for="filterCandidate">Candidate
+          <input id="filterCandidate" type="text" placeholder="Candidate or worker name"/>
+        </label>
+        <label class="field" for="filterClient">Client
+          <input id="filterClient" type="text" placeholder="Client name"/>
+        </label>
+        <label class="field" for="filterAssignment">Assignment
+          <input id="filterAssignment" type="text" placeholder="Assignment ref or job title"/>
+        </label>
+        <label class="field" for="filterWeekFrom">Week ending from
+          <input id="filterWeekFrom" type="date"/>
+        </label>
+        <label class="field" for="filterWeekTo">Week ending to
+          <input id="filterWeekTo" type="date"/>
+        </label>
       </div>
-      <hr />
-      <div class="aside-section" aria-labelledby="csvHeading">
-        <h2 id="csvHeading">CSV import</h2>
-        <input id="csvInput" type="file" accept=".csv" />
-        <div class="muted">Columns: assignment_id, week_ending, h_mon…h_sun, ot_hours, notes</div>
-        <div class="chipbar" id="csvActions">
-          <button type="button" class="btn-secondary" id="csvDryRun">Dry-run</button>
-          <button type="button" class="btn-secondary" id="csvImport">Import</button>
+    </section>
+
+    <section class="panel">
+      <div class="table-wrap" id="tableWrap">Loading…</div>
+    </section>
+  </div>
+
+  <div class="drawer" id="detailDrawer" aria-hidden="true">
+    <div class="overlay" id="drawerOverlay"></div>
+    <aside class="panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+      <header>
+        <div style="flex:1">
+          <h2 id="drawerTitle">Timesheet detail</h2>
+          <div class="muted" id="drawerMeta">Select a row to inspect details.</div>
         </div>
-        <div class="muted" id="csvPreview" aria-live="polite"></div>
-      </div>
-      <hr />
-      <div class="aside-section" aria-labelledby="reminderHeading">
-        <h2 id="reminderHeading">Reminders</h2>
-        <button type="button" class="btn-secondary" id="reminderButton">Send reminder for last week</button>
-        <div class="muted" id="reminderPreview" aria-live="polite"></div>
-      </div>
-      <hr />
-      <div class="aside-section" aria-labelledby="auditHeading">
-        <h2 id="auditHeading">Audit</h2>
-        <div class="audit-list" id="auditList" role="log"></div>
-      </div>
-      <hr />
-      <div class="aside-section" aria-labelledby="debugHeading">
-        <h2 id="debugHeading">Debug</h2>
-        <div class="muted">Identity: <span id="debugIdentityDetail">offline</span></div>
-        <div class="muted">Trace: <span id="debugTrace">–</span></div>
-        <div class="muted">Status: <span id="debugStatus">offline</span></div>
-        <button type="button" class="btn-secondary" id="debugExport">Export logs</button>
-      </div>
+        <button class="btn ghost small" id="drawerClose" type="button">Close</button>
+      </header>
+      <section>
+        <h3>Overview</h3>
+        <div class="kv" id="drawerFacts"></div>
+      </section>
+      <section>
+        <h3>Website matching</h3>
+        <div class="kv" id="drawerMatches"></div>
+      </section>
+      <section>
+        <h3>Notes</h3>
+        <div class="muted" id="drawerNotes"></div>
+      </section>
+      <section>
+        <h3>Raw source snapshot</h3>
+        <pre class="code-block" id="drawerRaw">No row selected.</pre>
+      </section>
     </aside>
-  </main>
+  </div>
 
-  <dialog id="calendarModal" aria-labelledby="calendarHeading">
-    <div class="modal-shell">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2 id="calendarHeading">Calendar view</h2>
-        <button type="button" class="btn-secondary" data-close="calendarModal">Close</button>
-      </div>
-      <div id="calendarGrid" role="grid"></div>
-    </div>
-  </dialog>
-
-  <dialog id="chartsModal" aria-labelledby="chartsHeading">
-    <div class="modal-shell">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2 id="chartsHeading">Charts</h2>
-        <button type="button" class="btn-secondary" data-close="chartsModal">Close</button>
-      </div>
-      <canvas id="chartClient" width="760" height="280" role="img" aria-label="Hours per client"></canvas>
-      <canvas id="chartTrend" width="760" height="280" role="img" aria-label="Submitted vs approved"></canvas>
-      <canvas id="chartStatus" width="760" height="280" role="img" aria-label="Status distribution"></canvas>
-    </div>
-
-window.__timesheetsController = null;
-
-async function main({ api, sel, toast, setTrace, getTrace, identity, isMobile }) {
-  const DEFAULTS = {
-    week1Ending: '2025-11-02',
-    deadlineNote: 'Submit approved timesheets by Monday 10:00 (UK time)',
-    deadlineTimezone: 'Europe/London',
-  };
-  </dialog>
-
-  <div class="toast-zone" id="toastZone" aria-live="assertive"></div>
-
-  <script src="/admin/timesheets.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.createTimesheetsApp) {
-        window.__timesheetsApp = window.createTimesheetsApp(document);
-      }
-    });
-  </script>
+  <script src="/admin/timesheets.js?v=2"></script>
 </body>
 </html>
