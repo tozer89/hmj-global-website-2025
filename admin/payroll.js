@@ -70,6 +70,7 @@
       config: {},
       loading: false,
       error: null,
+      emptyMessage: '',
       drawerRow: null,
       auditCache: new Map(),
     };
@@ -208,6 +209,7 @@
       if (count === 0) {
         elements.bulkBar.classList.remove('active');
         if (elements.bulkValue) elements.bulkValue.textContent = '';
+        syncActionAvailability();
         return;
       }
       const selectedRows = state.filtered.filter((row) => state.selected.has(String(row.id)));
@@ -223,6 +225,42 @@
         elements.bulkValue.textContent = `Pay ${formatNumber(totals.pay)} • Charge ${formatNumber(totals.charge)}`;
       }
       elements.bulkBar.classList.add('active');
+      syncActionAvailability();
+    }
+
+    function isReadOnlyRow(row) {
+      return !!row?.readOnly || String(row?.source || '').toLowerCase() === 'timesheet_portal';
+    }
+
+    function selectedRows() {
+      return state.rows.filter((row) => state.selected.has(String(row.id)));
+    }
+
+    function syncActionAvailability() {
+      const picked = selectedRows();
+      const hasSelection = picked.length > 0;
+      const selectionEditable = hasSelection && picked.every((row) => !isReadOnlyRow(row));
+
+      [elements.bulkReady, elements.bulkProcessing, elements.bulkPaid, elements.bulkHold].forEach((btn) => {
+        if (btn) btn.disabled = !selectionEditable;
+      });
+      if (elements.bulkCsv) elements.bulkCsv.disabled = !hasSelection;
+
+      const drawerReadOnly = isReadOnlyRow(state.drawerRow);
+      const noteSubmit = elements.drawerNoteForm ? elements.drawerNoteForm.querySelector('button[type="submit"]') : null;
+      if (elements.statusButtons) {
+        elements.statusButtons.forEach((btn) => {
+          btn.disabled = drawerReadOnly || !state.drawerRow;
+          btn.title = drawerReadOnly ? 'Mirrored Timesheet Portal rows are read-only in this workspace.' : '';
+        });
+      }
+      if (elements.drawerNoteInput) {
+        elements.drawerNoteInput.disabled = drawerReadOnly;
+        elements.drawerNoteInput.placeholder = drawerReadOnly
+          ? 'Timesheet Portal payroll rows are read-only here.'
+          : 'Add note for payroll trail';
+      }
+      if (noteSubmit) noteSubmit.disabled = drawerReadOnly;
     }
 
     function statusChip(status) {
@@ -323,15 +361,21 @@
       if (!elements.tableWrap) return;
       if (state.loading) {
         elements.tableWrap.textContent = 'Loading…';
+        syncActionAvailability();
         return;
       }
       if (state.error) {
         elements.tableWrap.innerHTML = `<div class="empty">${state.error}</div>`;
+        syncActionAvailability();
         return;
       }
       if (!state.filtered.length) {
-        elements.tableWrap.innerHTML = '<div class="empty">No payroll items match your filters.</div>';
+        const emptyCopy = !state.rows.length && state.emptyMessage
+          ? state.emptyMessage
+          : 'No payroll items match your filters.';
+        elements.tableWrap.innerHTML = `<div class="empty">${emptyCopy}</div>`;
         if (elements.pager) elements.pager.style.display = 'none';
+        syncActionAvailability();
         return;
       }
 
@@ -354,7 +398,12 @@
             <td><div>${formatNumber(row.totals?.hours || 0)} hrs</div><div class="muted" style="font-size:12px">OT ${formatNumber(row.totals?.ot || 0)}</div></td>
             <td><div>${formatNumber(row.totals?.pay || 0)} ${row.currency || ''}</div><div class="muted" style="font-size:12px">Charge ${formatNumber(row.totals?.charge || 0)}</div></td>
             <td>${statusChip(row.payrollStatus)}</td>
-            <td>${notes ? `<div class="muted" style="font-size:12px">Note added</div>` : ''}${buildIssueBadge(id)}</td>
+            <td>
+              ${row.invoiceRef ? `<div class="muted" style="font-size:12px">Invoice ${row.invoiceRef}</div>` : ''}
+              ${isReadOnlyRow(row) ? `<div class="muted" style="font-size:12px">TSP mirror</div>` : ''}
+              ${notes ? `<div class="muted" style="font-size:12px">Note added</div>` : ''}
+              ${buildIssueBadge(id)}
+            </td>
           </tr>`;
         })
         .join('');
@@ -403,6 +452,7 @@
           if (box.checked) state.selected.add(id);
           else state.selected.delete(id);
           updateBulkBar();
+          syncActionAvailability();
         };
       });
 
@@ -414,6 +464,8 @@
           if (row) renderDrawer(row);
         };
       });
+
+      syncActionAvailability();
     }
 
     function closeDrawer() {
@@ -421,6 +473,7 @@
       if (!elements.drawer) return;
       elements.drawer.classList.remove('active');
       elements.drawer.setAttribute('aria-hidden', 'true');
+      syncActionAvailability();
     }
 
     function formatDateTime(value) {
@@ -507,6 +560,7 @@
           `Pay ${formatNumber(row.totals?.pay || 0)}`,
           `Charge ${formatNumber(row.totals?.charge || 0)}`,
         ];
+        if (isReadOnlyRow(row)) bits.push('Source TSP');
         elements.drawerMeta.textContent = bits.join(' • ');
       }
       if (elements.drawerAssignment) {
@@ -548,7 +602,7 @@
                   )}</div>${item.summary ? `<div>${item.summary}</div>` : ''}</div>`
               )
               .join('')
-          : '<div class="muted">No audit history yet.</div>';
+          : `<div class="muted">${isReadOnlyRow(row) ? 'Mirrored from Timesheet Portal self-billing data.' : 'No audit history yet.'}</div>`;
       }
 
       if (elements.drawerNotes) {
@@ -563,8 +617,10 @@
                   }</div></div>`
               )
               .join('')
-          : '<div class="muted">No notes captured yet.</div>';
+          : `<div class="muted">${isReadOnlyRow(row) ? 'No local notes. This row is mirrored from Timesheet Portal.' : 'No notes captured yet.'}</div>`;
       }
+
+      syncActionAvailability();
     }
 
     function updateQuickFilter(val) {
@@ -575,9 +631,20 @@
     }
 
     async function changeStatus(ids, status, note) {
+      const picked = state.rows.filter((row) => ids.map(String).includes(String(row.id)));
+      const editable = picked.filter((row) => !isReadOnlyRow(row));
+      const skipped = picked.length - editable.length;
+      if (!editable.length) {
+        toast('Selected payroll rows are mirrored from Timesheet Portal and are read-only here.', 'warn', 3600);
+        return;
+      }
+      if (skipped > 0) {
+        toast(`Skipped ${skipped} read-only Timesheet Portal row${skipped === 1 ? '' : 's'}.`, 'warn', 3200);
+      }
       const payload = prepareAuditPayload(status, note);
       const cleanStatus = payload.status;
-      const validIds = ids
+      const validIds = editable
+        .map((row) => row.id)
         .map((id) => (Number.isFinite(Number(id)) ? Number(id) : id))
         .filter((id) => id !== null && id !== undefined && id !== '');
       if (!validIds.length) return;
@@ -790,8 +857,15 @@
         });
         state.rows = Array.isArray(res?.rows) ? res.rows : [];
         state.config = res?.config || {};
+        state.emptyMessage = res?.message || '';
         if (res?.config?.week1Ending && elements.weekBaseMeta) {
-          elements.weekBaseMeta.textContent = `Week 1 ends ${res.config.week1Ending}`;
+          const bits = [`Week 1 ends ${res.config.week1Ending}`];
+          if (res?.source === 'timesheet_portal') bits.push('Source: Timesheet Portal payroll');
+          elements.weekBaseMeta.textContent = bits.join(' • ');
+        } else if (elements.weekBaseMeta) {
+          elements.weekBaseMeta.textContent = res?.source === 'timesheet_portal'
+            ? 'Source: Timesheet Portal payroll'
+            : 'Week 1 ends —';
         }
         state.selected.clear();
         state.auditCache.clear();
@@ -800,6 +874,7 @@
       } catch (err) {
         state.loading = false;
         state.rows = [];
+        state.emptyMessage = '';
         const message = friendlyErrorMessage(err);
         state.error = message;
         if (elements.btnRetry) elements.btnRetry.style.display = '';

@@ -5,6 +5,8 @@ const { supabaseStatus } = require('./_supabase.js');
 const { loadStaticTimesheets } = require('./_timesheets-helpers.js');
 const { loadStaticAssignments } = require('./_assignments-helpers.js');
 const { fetchSettings, DEFAULT_SETTINGS, fiscalWeekNumber } = require('./_settings-helpers.js');
+const { isMissingColumnError, isMissingRelationError } = require('./_candidate-portal.js');
+const { listTimesheetPortalPayroll, readTimesheetPortalConfig } = require('./_timesheet-portal.js');
 
 function toNumber(value) {
   const num = Number(value);
@@ -49,6 +51,268 @@ function normalisePerson(row = {}) {
     taxId: row.tax_id || row.taxId || null,
     bank: normaliseBank(row),
     raw: row,
+  };
+}
+
+function normaliseNameKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildPersonLookups(rows = []) {
+  const byPayroll = new Map();
+  const nameBuckets = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const person = normalisePerson(row);
+    const payrollRef = String(person.payrollRef || '').trim();
+    const nameKey = normaliseNameKey(person.name);
+    if (payrollRef && !byPayroll.has(payrollRef)) byPayroll.set(payrollRef, person);
+    if (nameKey) {
+      const bucket = nameBuckets.get(nameKey) || [];
+      bucket.push(person);
+      nameBuckets.set(nameKey, bucket);
+    }
+  });
+  const byName = new Map();
+  nameBuckets.forEach((bucket, key) => {
+    if (bucket.length === 1) byName.set(key, bucket[0]);
+  });
+  return { byPayroll, byName };
+}
+
+function matchPayrollPerson(payrollRow = {}, lookups = {}) {
+  const candidates = [
+    String(payrollRow.payrollRef || '').trim(),
+    String(payrollRow.employeeReference || '').trim(),
+  ].filter(Boolean);
+  for (const value of candidates) {
+    if (lookups.byPayroll?.has(value)) return lookups.byPayroll.get(value);
+  }
+  const nameKey = normaliseNameKey(payrollRow.candidateName);
+  if (nameKey && lookups.byName?.has(nameKey)) return lookups.byName.get(nameKey);
+  return null;
+}
+
+function buildAssignmentLookups(rows = []) {
+  const byRef = new Map();
+  const byTitleClient = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const ref = String(row.as_ref || row.ref || '').trim();
+    const titleClientKey = normaliseNameKey(`${row.job_title || ''} ${row.client_name || ''}`);
+    if (ref && !byRef.has(ref)) byRef.set(ref, row);
+    if (titleClientKey && !byTitleClient.has(titleClientKey)) byTitleClient.set(titleClientKey, row);
+  });
+  return { byRef, byTitleClient };
+}
+
+function matchPayrollAssignment(payrollRow = {}, lookups = {}) {
+  const ref = String(payrollRow.assignmentRef || '').trim();
+  if (ref && lookups.byRef?.has(ref)) return lookups.byRef.get(ref);
+  const titleClientKey = normaliseNameKey(`${payrollRow.jobTitle || ''} ${payrollRow.clientName || ''}`);
+  if (titleClientKey && lookups.byTitleClient?.has(titleClientKey)) return lookups.byTitleClient.get(titleClientKey);
+  return null;
+}
+
+async function safeSelect(supabase, table, columns, options = {}) {
+  let query = supabase.from(table).select(columns);
+  if (typeof options.orderBy === 'string') {
+    query = query.order(options.orderBy, {
+      ascending: options.ascending !== false,
+      nullsFirst: !!options.nullsFirst,
+    });
+  }
+  if (Number.isFinite(options.limit)) {
+    query = query.limit(Number(options.limit));
+  }
+  if (Array.isArray(options.inValues) && options.inValues.length && options.inColumn) {
+    query = query.in(options.inColumn, options.inValues);
+  }
+  const { data, error } = await query;
+  if (error) {
+    if (options.allowMissing && (isMissingRelationError(error) || isMissingColumnError(error))) {
+      return [];
+    }
+    throw error;
+  }
+  return Array.isArray(data) ? data : [];
+}
+
+async function loadTimesheetPortalPayrollPayload({ supabase, status, searchNeedle, weekFrom, weekTo, ids, limit, baseWeekEnding, settingsSource }) {
+  const config = readTimesheetPortalConfig();
+  if (!config.enabled || !config.configured) return null;
+
+  const tspResult = await listTimesheetPortalPayroll(config, {
+    fromDate: weekFrom || null,
+    toDate: weekTo || null,
+    take: Math.min(Math.max(Number(limit) || 250, 50), 500),
+  });
+
+  const candidateRows = await safeSelect(
+    supabase,
+    'candidates',
+    'id,full_name,first_name,last_name,email,phone,payroll_ref,pay_type',
+    { orderBy: 'updated_at', ascending: false, limit: 5000 }
+  );
+  const contractorRows = await safeSelect(
+    supabase,
+    'contractors',
+    'id,name,email,phone,payroll_ref,pay_type',
+    { orderBy: 'id', ascending: false, limit: 5000, allowMissing: true }
+  );
+  const assignmentRows = await safeSelect(
+    supabase,
+    'assignments',
+    'id,job_title,client_name,client_site,po_number,pay_freq,currency,rate_pay,rate_charge,charge_std,as_ref',
+    { orderBy: 'id', ascending: false, limit: 5000, allowMissing: true }
+  );
+
+  const peopleLookups = buildPersonLookups(candidateRows.concat(contractorRows));
+  const assignmentLookups = buildAssignmentLookups(assignmentRows);
+
+  const selectedIds = Array.isArray(ids) && ids.length
+    ? new Set(ids.map((value) => String(value)))
+    : null;
+
+  const filteredRows = (Array.isArray(tspResult.rows) ? tspResult.rows : [])
+    .map((row, index) => {
+      const candidate = matchPayrollPerson(row, peopleLookups);
+      const assignment = matchPayrollAssignment(row, assignmentLookups);
+      const hours = toNumber(row.totals?.hours);
+      const pay = toNumber(row.totals?.pay);
+      const charge = toNumber(row.totals?.charge);
+      const effectiveCurrency = row.currency || assignment?.currency || 'GBP';
+      const ratePay = hours > 0 ? pay / hours : toNumber(assignment?.rate_pay);
+      const rateCharge = hours > 0 ? charge / hours : toNumber(assignment?.rate_charge || assignment?.charge_std);
+      const invoiceRef = row.selfBillingInvoiceNumber || row.invoiceNumberText || null;
+      const id = String(row.id || row.timesheetId || invoiceRef || `tsp-${index + 1}`);
+      return {
+        id: `tsp:${id}`,
+        externalId: id,
+        source: 'timesheet_portal',
+        readOnly: true,
+        readOnlyReason: 'Mirrored from Timesheet Portal self-billing data. Local payroll status actions are disabled for this row.',
+        weekEnding: row.weekEnding || null,
+        weekStart: null,
+        status: row.invoiceStatus || null,
+        payrollStatus: row.payrollStatus || 'pending',
+        weekNo: row.weekEnding ? fiscalWeekNumber(row.weekEnding, baseWeekEnding) : null,
+        candidateId: candidate?.id || null,
+        candidateName: row.candidateName || candidate?.name || null,
+        candidate: candidate
+          ? {
+              id: candidate.id,
+              name: candidate.name,
+              payrollRef: candidate.payrollRef || row.payrollRef || row.employeeReference || null,
+              payType: candidate.payType || null,
+              email: candidate.email || null,
+              phone: candidate.phone || null,
+              bank: candidate.bank || {},
+            }
+          : {
+              name: row.candidateName || null,
+              payrollRef: row.payrollRef || row.employeeReference || null,
+              payType: null,
+              email: null,
+              phone: null,
+              bank: {},
+            },
+        assignmentId: assignment?.id || null,
+        assignment: {
+          id: assignment?.id || null,
+          jobTitle: assignment?.job_title || row.jobTitle || null,
+          clientName: assignment?.client_name || row.clientName || null,
+          clientSite: assignment?.client_site || null,
+          ref: assignment?.as_ref || row.assignmentRef || null,
+          payFreq: assignment?.pay_freq || null,
+          currency: assignment?.currency || effectiveCurrency,
+          poNumber: assignment?.po_number || row.poNumber || null,
+        },
+        projectName: null,
+        siteName: assignment?.client_site || null,
+        totals: {
+          hours,
+          ot: 0,
+          pay,
+          charge,
+        },
+        rate: {
+          pay: ratePay,
+          charge: rateCharge,
+        },
+        currency: effectiveCurrency,
+        approvedAt: row.invoiceDate || row.selfBillingInvoiceDate || null,
+        submittedAt: row.invoiceDate || row.selfBillingInvoiceDate || null,
+        updatedAt: row.invoicePaidDate || row.invoiceDate || row.selfBillingInvoiceDate || row.weekEnding || null,
+        invoiceRef,
+        costCentre: row.costCentre || null,
+        poNumber: row.poNumber || assignment?.po_number || null,
+        breakdown: null,
+        attachments: [],
+        statusHistory: [],
+        audit: null,
+        notes: row.invoiceSelfBilling === true
+          ? 'Self-billing invoice linked from Timesheet Portal.'
+          : 'Payroll data pulled from Timesheet Portal.',
+        timesheetPortal: {
+          invoiceDate: row.invoiceDate || row.selfBillingInvoiceDate || null,
+          invoicePaidDate: row.invoicePaidDate || null,
+          invoiceStatus: row.invoiceStatus || null,
+          invoiceSelfBilling: row.invoiceSelfBilling === true,
+        },
+      };
+    })
+    .filter((row) => {
+      if (selectedIds && !selectedIds.has(String(row.id))) return false;
+      if (status && status !== 'all') {
+        const wanted = new Set(String(status).split(',').map((value) => value.trim().toLowerCase()).filter(Boolean));
+        if (wanted.size && !wanted.has(String(row.payrollStatus || '').toLowerCase())) {
+          return false;
+        }
+      }
+      if (searchNeedle) {
+        const haystack = [
+          row.id,
+          row.externalId,
+          row.candidateName,
+          row.candidate?.payrollRef,
+          row.assignment?.jobTitle,
+          row.assignment?.clientName,
+          row.assignment?.ref,
+          row.invoiceRef,
+          row.costCentre,
+          row.poNumber,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(searchNeedle)) return false;
+      }
+      return true;
+    });
+
+  return {
+    rows: filteredRows,
+    stats: summarise(filteredRows),
+    readOnly: true,
+    source: 'timesheet_portal',
+    supabase: supabaseStatus(),
+    message: filteredRows.length
+      ? 'Payroll data refreshed from Timesheet Portal self-billing records.'
+      : 'Timesheet Portal returned no payroll/self-billing rows for the current filters.',
+    tsp: {
+      payrollPath: tspResult.discovery?.payrollPath || null,
+      mode: tspResult.discovery?.mode || null,
+      attempts: Array.isArray(tspResult.discovery?.attempts) ? tspResult.discovery.attempts : [],
+    },
+    config: {
+      week1Ending: baseWeekEnding,
+      source: settingsSource,
+      payrollSource: 'timesheet_portal',
+    },
   };
 }
 
@@ -178,6 +442,41 @@ const baseHandler = async (event, context) => {
     const baseWeekEnding = settingsResult.settings?.fiscal_week1_ending || DEFAULT_SETTINGS.fiscal_week1_ending;
     const wantsCsv = String(format || '').toLowerCase() === 'csv';
     const searchNeedle = String(q || '').trim().toLowerCase();
+
+    if (supabase && typeof supabase.from === 'function') {
+      try {
+        const tspPayload = await loadTimesheetPortalPayrollPayload({
+          supabase,
+          status,
+          searchNeedle,
+          weekFrom,
+          weekTo,
+          ids,
+          limit,
+          baseWeekEnding,
+          settingsSource: settingsResult.source,
+        });
+        if (tspPayload) {
+          if (wantsCsv) {
+            return {
+              statusCode: 200,
+              headers: {
+                'Content-Type': 'text/csv; charset=utf-8',
+                'Content-Disposition': 'attachment; filename="payroll.csv"',
+              },
+              body: toCsv(tspPayload.rows),
+            };
+          }
+          return { statusCode: 200, body: JSON.stringify(tspPayload) };
+        }
+      } catch (error) {
+        if (String(error?.code || '') === 'timesheet_portal_not_configured') {
+          // Fall back to the existing local payroll dataset when TSP is not configured.
+        } else {
+          throw error;
+        }
+      }
+    }
 
     if (!supabase || typeof supabase.from !== 'function') {
       const staticTimesheets = loadStaticTimesheets(baseWeekEnding);

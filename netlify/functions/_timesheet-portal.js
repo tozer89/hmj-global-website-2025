@@ -26,6 +26,39 @@ const DEFAULT_ASSIGNMENT_PATHS = [
   '/api/v1/assignments',
   '/api/v1/recruitment/assignments',
 ];
+const DEFAULT_PAYROLL_REPORT_PATHS = [
+  '/reports/timesheets',
+  '/timesheets',
+];
+const DEFAULT_TIMESHEET_LIST_PATHS = [
+  '/v2/rec/timesheets',
+];
+const DEFAULT_PAYROLL_REPORT_FIELDS = [
+  'TimesheetId',
+  'TimesheetWeekEnd',
+  'EmployeeName',
+  'EmployeeReference',
+  'EmployeeAccountingReference',
+  'CompanyName',
+  'ChargeCode',
+  'ChargeCodeDesc',
+  'PurchaseOrder',
+  'CostCentreCode',
+  'EntryQuantity',
+  'TotalPay',
+  'TotalCharge',
+  'PayCurrencyIsoSymbol',
+  'ChargeCurrencyIsoSymbol',
+  'SelfBillingInvoiceNumber',
+  'SelfBillingInvoiceDate',
+  'SelfBillingInvoiceTotalNet',
+  'SelfBillingInvoiceTotalTax',
+  'InvoiceNumberText',
+  'InvoiceDate',
+  'InvoiceStatus',
+  'InvoicePaidDate',
+  'InvoiceSelfBilling',
+];
 
 let cachedToken = null;
 
@@ -233,6 +266,25 @@ async function fetchJson(url, auth) {
   return { response, text, json };
 }
 
+async function postJson(url, auth, payload) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...authHeaders(auth),
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload || {}),
+  });
+  const text = await response.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  return { response, text, json };
+}
+
 function extractCollection(payload) {
   if (Array.isArray(payload)) return payload;
   if (!payload || typeof payload !== 'object') return [];
@@ -241,6 +293,49 @@ function extractCollection(payload) {
     if (Array.isArray(payload[key])) return payload[key];
   }
   return [];
+}
+
+function extractTabularRows(payload) {
+  if (Array.isArray(payload) && payload.every((row) => Array.isArray(row))) {
+    return payload;
+  }
+  if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.rows) && payload.rows.every((row) => Array.isArray(row))) {
+      return payload.rows;
+    }
+    if (Array.isArray(payload.data) && payload.data.every((row) => Array.isArray(row))) {
+      return payload.data;
+    }
+  }
+  return [];
+}
+
+function tableRowsToRecords(rows = []) {
+  if (!Array.isArray(rows) || !rows.length) return [];
+  const header = Array.isArray(rows[0]) ? rows[0] : [];
+  const normalizedHeader = header.map((cell, index) => trimString(cell, 120) || `column_${index + 1}`);
+  if (!normalizedHeader.length) return [];
+  const looksLikeHeader = normalizedHeader.some((cell) => /[a-z]/i.test(cell));
+  if (!looksLikeHeader) return [];
+  return rows
+    .slice(1)
+    .filter((row) => Array.isArray(row) && row.some((cell) => trimString(cell, 40)))
+    .map((row) => {
+      const record = {};
+      normalizedHeader.forEach((key, index) => {
+        record[key] = row[index] ?? null;
+      });
+      return record;
+    });
+}
+
+function normalizeBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  const raw = trimString(value, 32).toLowerCase();
+  if (!raw) return null;
+  if (['true', '1', 'yes', 'y'].includes(raw)) return true;
+  if (['false', '0', 'no', 'n'].includes(raw)) return false;
+  return null;
 }
 
 function splitName(value) {
@@ -455,6 +550,76 @@ function normalizeTimesheetPortalAssignment(record = {}) {
   };
 }
 
+function normalizeTimesheetPortalPayrollStatus(record = {}) {
+  const invoicePaidDate = toDateOnly(record.InvoicePaidDate || record.invoicePaidDate || record.selfBillingInvoicePaidDate);
+  if (invoicePaidDate) return 'paid';
+  const raw = readStringKeys(record, ['InvoiceStatus', 'invoiceStatus', 'status'], 80).toLowerCase();
+  if (raw.includes('paid')) return 'paid';
+  if (raw.includes('hold')) return 'hold';
+  if (raw.includes('process')) return 'processing';
+  if (raw.includes('pending') || raw.includes('draft')) return 'pending';
+  const invoiceNumber = readStringKeys(record, ['SelfBillingInvoiceNumber', 'InvoiceNumberText', 'selfBillingInvoiceNumber', 'invoiceNumberText'], 120);
+  if (invoiceNumber) return 'processing';
+  const totalPay = readNumberKeys(record, ['TotalPay', 'totalPay', 'payAmount', 'total']);
+  if (totalPay !== null && totalPay > 0) return 'ready';
+  return 'pending';
+}
+
+function normalizeTimesheetPortalPayrollRecord(record = {}) {
+  const timesheetId = readStringKeys(record, ['TimesheetId', 'timesheetId', 'id'], 120);
+  const invoiceNumber = readStringKeys(record, ['SelfBillingInvoiceNumber', 'selfBillingInvoiceNumber', 'InvoiceNumberText', 'invoiceNumberText'], 120);
+  const fallbackId = invoiceNumber || readStringKeys(record, ['InvoiceNumber', 'invoiceNumber'], 120);
+  const weekEnding = toDateOnly(record.TimesheetWeekEnd || record.timesheetWeekEnd || record.weekEnding || record.weekEndDate);
+  const hours = readNumberKeys(record, ['EntryQuantity', 'entryQuantity', 'TotalHours', 'totalHours', 'hours']);
+  const pay = readNumberKeys(record, ['TotalPay', 'totalPay', 'payAmount']);
+  const charge = readNumberKeys(record, ['TotalCharge', 'totalCharge', 'chargeAmount']);
+  const currency = trimString(
+    readStringKeys(record, ['PayCurrencyIsoSymbol', 'ChargeCurrencyIsoSymbol', 'currency'], 12) || 'GBP',
+    12,
+  ).toUpperCase() || 'GBP';
+  const candidateName = readStringKeys(
+    record,
+    ['EmployeeName', 'employeeName', 'candidateName', 'contractorName', 'workerName', 'name'],
+    240,
+  );
+  const payrollRef = readStringKeys(
+    record,
+    ['EmployeeAccountingReference', 'employeeAccountingReference', 'EmployeeReference', 'employeeReference', 'payrollReference'],
+    120,
+  );
+
+  return {
+    id: timesheetId || fallbackId,
+    timesheetId,
+    weekEnding,
+    candidateName,
+    payrollRef,
+    employeeReference: readStringKeys(record, ['EmployeeReference', 'employeeReference'], 120),
+    clientName: readStringKeys(record, ['CompanyName', 'companyName', 'clientName', 'customerName'], 240),
+    assignmentRef: readStringKeys(record, ['ChargeCode', 'chargeCode', 'jobCode', 'assignmentCode', 'reference'], 120),
+    jobTitle: readStringKeys(record, ['ChargeCodeDesc', 'chargeCodeDesc', 'jobTitle', 'title', 'description'], 240),
+    poNumber: readStringKeys(record, ['PurchaseOrder', 'purchaseOrder', 'poNumber'], 120),
+    costCentre: readStringKeys(record, ['CostCentreCode', 'costCentreCode', 'costCentre'], 120),
+    totals: {
+      hours: hours === null ? 0 : hours,
+      pay: pay === null ? 0 : pay,
+      charge: charge === null ? 0 : charge,
+    },
+    currency,
+    selfBillingInvoiceNumber: readStringKeys(record, ['SelfBillingInvoiceNumber', 'selfBillingInvoiceNumber'], 120),
+    selfBillingInvoiceDate: toDateOnly(record.SelfBillingInvoiceDate || record.selfBillingInvoiceDate),
+    selfBillingInvoiceTotalNet: readNumberKeys(record, ['SelfBillingInvoiceTotalNet', 'selfBillingInvoiceTotalNet']),
+    selfBillingInvoiceTotalTax: readNumberKeys(record, ['SelfBillingInvoiceTotalTax', 'selfBillingInvoiceTotalTax']),
+    invoiceNumberText: readStringKeys(record, ['InvoiceNumberText', 'invoiceNumberText', 'InvoiceNumber', 'invoiceNumber'], 120),
+    invoiceDate: toDateOnly(record.InvoiceDate || record.invoiceDate),
+    invoiceStatus: readStringKeys(record, ['InvoiceStatus', 'invoiceStatus', 'status'], 80),
+    invoicePaidDate: toDateOnly(record.InvoicePaidDate || record.invoicePaidDate),
+    invoiceSelfBilling: normalizeBoolean(record.InvoiceSelfBilling ?? record.invoiceSelfBilling),
+    payrollStatus: normalizeTimesheetPortalPayrollStatus(record),
+    raw: record,
+  };
+}
+
 async function fetchAssignmentsCollection(config, auth, assignmentPath, options = {}) {
   const seenKeys = new Set();
   const rows = [];
@@ -486,6 +651,48 @@ async function fetchAssignmentsCollection(config, auth, assignmentPath, options 
   }
 
   return rows;
+}
+
+function buildPayrollReportPayload(options = {}) {
+  const payload = {
+    reportTimeGrouping: 'Timesheet',
+    fields: DEFAULT_PAYROLL_REPORT_FIELDS.slice(),
+  };
+  const fromDate = toDateOnly(options.fromDate);
+  const toDate = toDateOnly(options.toDate);
+  if (fromDate) payload.fromDate = fromDate;
+  if (toDate) payload.toDate = toDate;
+  return payload;
+}
+
+async function fetchTimesheetPortalPayrollReport(config, auth, reportPath, options = {}) {
+  const payload = buildPayrollReportPayload(options);
+  const result = await postJson(joinUrl(config.resourceBaseUrl, reportPath), auth, payload);
+  if (!result.response.ok) {
+    const error = new Error(`Timesheet Portal payroll report failed (${result.response.status})`);
+    error.code = 'timesheet_portal_payroll_report_failed';
+    error.status = result.response.status;
+    throw error;
+  }
+
+  const tabularRows = extractTabularRows(result.json);
+  const records = tableRowsToRecords(tabularRows);
+  return records.map(normalizeTimesheetPortalPayrollRecord).filter((row) => row.id || row.candidateName || row.invoiceNumberText);
+}
+
+async function fetchTimesheetPortalTimesheets(config, auth, listPath, options = {}) {
+  const take = Math.max(1, Math.min(1000, Number(options.take) || 500));
+  const url = buildCollectionUrl(config.resourceBaseUrl, listPath, { take, page: 1 });
+  const result = await fetchJson(url, auth);
+  if (!result.response.ok) {
+    const error = new Error(`Timesheet Portal timesheet list failed (${result.response.status})`);
+    error.code = 'timesheet_portal_timesheet_list_failed';
+    error.status = result.response.status;
+    throw error;
+  }
+  return extractCollection(result.json)
+    .map(normalizeTimesheetPortalPayrollRecord)
+    .filter((row) => row.id || row.candidateName || row.invoiceNumberText);
 }
 
 async function fetchUsersCollection(config, auth, candidatePath) {
@@ -576,6 +783,127 @@ async function listTimesheetPortalAssignments(config, options = {}) {
     discovery,
     assignments,
   };
+}
+
+async function listTimesheetPortalPayroll(config, options = {}) {
+  if (!config.enabled || !config.configured) {
+    const error = new Error('Timesheet Portal is not configured.');
+    error.code = 'timesheet_portal_not_configured';
+    throw error;
+  }
+
+  const { auths, oauthError } = await getAuthCandidates(config);
+  if (!auths.length) {
+    if (oauthError) throw oauthError;
+    const error = new Error('Timesheet Portal credentials are not configured.');
+    error.code = 'timesheet_portal_not_configured';
+    throw error;
+  }
+
+  const attempts = [];
+  let emptySuccess = null;
+
+  for (const auth of auths) {
+    for (const path of DEFAULT_PAYROLL_REPORT_PATHS) {
+      try {
+        const rows = await fetchTimesheetPortalPayrollReport(config, auth, path, options);
+        attempts.push({
+          path,
+          mode: 'report',
+          status: 200,
+          authSource: auth.source,
+          authScheme: auth.scheme,
+          count: rows.length,
+        });
+        if (rows.length) {
+          return {
+            discovery: {
+              payrollPath: path,
+              mode: 'report',
+              auth,
+              attempts,
+            },
+            rows,
+          };
+        }
+        if (!emptySuccess) {
+          emptySuccess = {
+            discovery: {
+              payrollPath: path,
+              mode: 'report',
+              auth,
+              attempts,
+            },
+            rows: [],
+          };
+        }
+      } catch (error) {
+        const status = Number(error?.status) || 500;
+        attempts.push({
+          path,
+          mode: 'report',
+          status,
+          authSource: auth.source,
+          authScheme: auth.scheme,
+        });
+      }
+    }
+
+    for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
+      try {
+        const rows = await fetchTimesheetPortalTimesheets(config, auth, path, options);
+        attempts.push({
+          path,
+          mode: 'timesheets',
+          status: 200,
+          authSource: auth.source,
+          authScheme: auth.scheme,
+          count: rows.length,
+        });
+        if (rows.length) {
+          return {
+            discovery: {
+              payrollPath: path,
+              mode: 'timesheets',
+              auth,
+              attempts,
+            },
+            rows,
+          };
+        }
+        if (!emptySuccess) {
+          emptySuccess = {
+            discovery: {
+              payrollPath: path,
+              mode: 'timesheets',
+              auth,
+              attempts,
+            },
+            rows: [],
+          };
+        }
+      } catch (error) {
+        const status = Number(error?.status) || 500;
+        attempts.push({
+          path,
+          mode: 'timesheets',
+          status,
+          authSource: auth.source,
+          authScheme: auth.scheme,
+        });
+      }
+    }
+  }
+
+  if (emptySuccess) return emptySuccess;
+
+  const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
+  const error = new Error(sawUnauthorized
+    ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
+    : 'Timesheet Portal payroll endpoint could not be discovered for this account.');
+  error.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_payroll_path_missing';
+  error.attempts = attempts;
+  throw error;
 }
 
 function candidateName(candidate = {}) {
@@ -677,6 +1005,8 @@ module.exports = {
   compareCandidates,
   listTimesheetPortalAssignments,
   listTimesheetPortalContractors,
+  listTimesheetPortalPayroll,
+  normalizeTimesheetPortalPayrollRecord,
   normalizeTimesheetPortalAssignment,
   readTimesheetPortalConfig,
 };
