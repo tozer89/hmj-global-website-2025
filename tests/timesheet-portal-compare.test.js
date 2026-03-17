@@ -61,6 +61,8 @@ test('compareCandidates reports matched, mismatched, website-only, and tsp-only 
   assert.equal(result.summary.websiteOnly, 1);
   assert.equal(result.summary.timesheetPortalOnly, 1);
   assert.equal(result.summary.mismatched, 1);
+  assert.equal(result.timesheetPortalCandidates.length, 2);
+  assert.equal(result.timesheetPortalCandidates[1].email, 'tsp-only@example.com');
   assert.equal(result.mismatches[0].email, 'matched@example.com');
   assert.deepEqual(result.mismatches[0].differences, ['phone']);
 });

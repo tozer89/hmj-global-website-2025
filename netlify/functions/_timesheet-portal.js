@@ -1148,6 +1148,16 @@ function compareCandidates(websiteCandidates = [], contractors = []) {
   const websiteRows = (Array.isArray(websiteCandidates) ? websiteCandidates : [])
     .filter((candidate) => String(candidate.status || '').toLowerCase() !== 'archived');
   const contractorRows = Array.isArray(contractors) ? contractors : [];
+  const timesheetPortalCandidates = contractorRows.map((row) => ({
+    id: row.id || '',
+    reference: row.reference || '',
+    accountingReference: row.accountingReference || '',
+    firstName: row.firstName || '',
+    lastName: row.lastName || '',
+    name: trimString([row.firstName, row.lastName].filter(Boolean).join(' '), 240) || 'Contractor',
+    email: row.email || '',
+    mobile: row.mobile || '',
+  }));
 
   const websiteByEmail = new Map();
   websiteRows.forEach((candidate) => {
@@ -1225,6 +1235,7 @@ function compareCandidates(websiteCandidates = [], contractors = []) {
       timesheetPortalOnly: timesheetPortalOnly.length,
       mismatched: mismatches.length,
     },
+    timesheetPortalCandidates,
     websiteOnly: websiteOnly.slice(0, 25),
     timesheetPortalOnly: timesheetPortalOnly.slice(0, 25),
     mismatches: mismatches.slice(0, 25),

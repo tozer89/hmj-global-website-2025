@@ -12,7 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=14/);
+  assert.match(html, /\/admin\/candidates\.js\?v=15/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
@@ -27,6 +27,10 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /id="doc-request-copy-link"/);
   assert.match(html, /id="dw-payment"/);
   assert.match(html, /id="dw-assignments"/);
+  assert.match(html, /id="candidate-source-tabs"/);
+  assert.match(html, /data-source-tab="website"/);
+  assert.match(html, /data-source-tab="timesheet-portal"/);
+  assert.match(html, /data-source-tab="combined"/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
@@ -126,6 +130,16 @@ test('candidate admin UI exposes import and timesheet portal comparison controls
   assert.match(source, /function previewCandidateImport/);
   assert.match(source, /function confirmCandidateImport/);
   assert.match(source, /function refreshTimesheetPortalCompare/);
+});
+
+test('candidate admin UI can switch between website, timesheet portal, and combined data tabs', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /sourceTab:\s*'website'/);
+  assert.match(source, /function setSourceTab/);
+  assert.match(source, /function buildSourceDatasets/);
+  assert.match(source, /function normalizeTimesheetPortalCandidate/);
+  assert.match(source, /function renderSourceTabs/);
+  assert.match(source, /elements\.sourceTabs = Array\.from\(document\.querySelectorAll\('\[data-source-tab\]'\)\)/);
 });
 
 test('candidate admin UI exposes the document verification queue and review actions', () => {

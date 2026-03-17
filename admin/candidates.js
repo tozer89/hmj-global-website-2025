@@ -13,7 +13,8 @@
     'in progress': { label: 'In progress', tone: 'blue' },
     complete: { label: 'Complete', tone: 'green' },
     archived: { label: 'Archived', tone: 'gray' },
-    blocked: { label: 'Blocked', tone: 'red' }
+    blocked: { label: 'Blocked', tone: 'red' },
+    'timesheet portal': { label: 'TSP raw', tone: 'blue' }
   };
 
   const DEFAULT_FILTERS = Object.freeze({
@@ -25,6 +26,11 @@
     availability: '',
     createdFrom: '',
     createdTo: ''
+  });
+  const SOURCE_TABS = Object.freeze({
+    website: { label: 'Website online' },
+    'timesheet-portal': { label: 'Timesheet Portal only' },
+    combined: { label: 'Combined / all' }
   });
 
   const elements = {};
@@ -40,6 +46,7 @@
     filtered: [],
     selection: new Set(),
     filters: loadFilters(),
+    sourceTab: 'website',
     quickSearch: '',
     sort: { key: 'updated_at', dir: 'desc' },
     drawerId: null,
@@ -159,6 +166,69 @@
       .split(/[\n,]/)
       .map((part) => part.trim())
       .filter(Boolean);
+  }
+
+  function lowerEmail(value) {
+    const email = String(value || '').trim().toLowerCase();
+    return email || '';
+  }
+
+  function normalizeReferenceValue(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function sourceTabLabel(tab = state.sourceTab) {
+    return SOURCE_TABS[tab]?.label || SOURCE_TABS.website.label;
+  }
+
+  function isRawTimesheetPortalCandidate(candidate) {
+    return String(candidate?.source_kind || '').toLowerCase() === 'timesheet-portal';
+  }
+
+  function isSelectableCandidate(candidate) {
+    return !!candidate && !isRawTimesheetPortalCandidate(candidate);
+  }
+
+  function buildTimesheetPortalLookups(rows) {
+    const byEmail = new Map();
+    const byReference = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const email = lowerEmail(row?.email);
+      const reference = normalizeReferenceValue(row?.reference || row?.accountingReference);
+      if (email && !byEmail.has(email)) byEmail.set(email, row);
+      if (reference && !byReference.has(reference)) byReference.set(reference, row);
+    });
+    return { byEmail, byReference };
+  }
+
+  function buildWebsiteLookups(rows) {
+    const byEmail = new Map();
+    const byReference = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const email = lowerEmail(row?.email);
+      const reference = normalizeReferenceValue(row?.ref || row?.payroll_ref);
+      if (email && !byEmail.has(email)) byEmail.set(email, row);
+      if (reference && !byReference.has(reference)) byReference.set(reference, row);
+    });
+    return { byEmail, byReference };
+  }
+
+  function findTimesheetPortalMatch(candidate, lookups) {
+    if (!candidate || !lookups) return null;
+    const email = lowerEmail(candidate.email);
+    if (email && lookups.byEmail?.has(email)) return lookups.byEmail.get(email);
+    const reference = normalizeReferenceValue(candidate.ref || candidate.payroll_ref);
+    if (reference && lookups.byReference?.has(reference)) return lookups.byReference.get(reference);
+    return null;
+  }
+
+  function findWebsiteMatch(candidate, lookups) {
+    if (!candidate || !lookups) return null;
+    const email = lowerEmail(candidate.email);
+    if (email && lookups.byEmail?.has(email)) return lookups.byEmail.get(email);
+    const reference = normalizeReferenceValue(candidate.ref || candidate.payroll_ref);
+    if (reference && lookups.byReference?.has(reference)) return lookups.byReference.get(reference);
+    return null;
   }
 
   function normalizeDocumentRequestType(value) {
@@ -662,6 +732,90 @@
     };
   }
 
+  function normalizeTimesheetPortalCandidate(row) {
+    if (!row) return null;
+    const firstName = row.firstName || row.first_name || '';
+    const lastName = row.lastName || row.last_name || '';
+    const name = row.name || `${firstName} ${lastName}`.trim() || row.email || 'Timesheet Portal candidate';
+    const reference = row.reference || row.accountingReference || '';
+    const seed = row.id || row.email || reference || name;
+    return normalizeCandidate({
+      id: `tsp:${seed}`,
+      ref: reference || null,
+      payroll_ref: reference || null,
+      first_name: firstName,
+      last_name: lastName,
+      full_name: name,
+      email: row.email || '',
+      phone: row.mobile || '',
+      role: row.role || row.jobTitle || '',
+      region: row.region || row.location || row.country || '',
+      location: row.location || row.region || row.country || '',
+      status: 'timesheet portal',
+      source: 'timesheet_portal',
+      source_kind: 'timesheet-portal',
+      source_label: 'Timesheet Portal',
+      source_badges: ['Timesheet Portal'],
+      source_record_id: row.id || null,
+      updated_at: row.updated_at || row.updatedAt || state.tspCompare?.comparedAt || '',
+      onboarding: {
+        hasRightToWork: false,
+        hasRightToWorkUpload: false,
+        hasRightToWorkPendingVerification: false,
+        hasPaymentDetails: false,
+        onboardingComplete: false,
+        missing: [],
+        documentTypes: [],
+        pendingVerificationCount: 0,
+      },
+      payment_summary: {
+        completion: { complete: false },
+      },
+      docs: [],
+      notes: [],
+      assignments: [],
+      assignment_options: [],
+      applications: [],
+      audit: [],
+      assignment_linking_available: false,
+    });
+  }
+
+  function decorateWebsiteCandidate(candidate, contractor) {
+    if (!candidate) return null;
+    return {
+      ...candidate,
+      source_kind: contractor ? 'combined' : 'website',
+      source_label: contractor ? 'Website + TSP' : 'Website online',
+      source_badges: contractor ? ['Website', 'Timesheet Portal'] : ['Website'],
+      timesheet_portal_match: contractor || null,
+      timesheet_portal_reference: contractor?.reference || contractor?.accountingReference || '',
+    };
+  }
+
+  function buildSourceDatasets() {
+    const rawTimesheetPortalRows = Array.isArray(state.tspCompare?.timesheetPortalCandidates)
+      ? state.tspCompare.timesheetPortalCandidates
+      : [];
+    const timesheetPortalLookups = buildTimesheetPortalLookups(rawTimesheetPortalRows);
+    const websiteRows = state.raw
+      .map((candidate) => decorateWebsiteCandidate(candidate, findTimesheetPortalMatch(candidate, timesheetPortalLookups)))
+      .filter(Boolean);
+    const timesheetPortalRows = rawTimesheetPortalRows
+      .map((row) => normalizeTimesheetPortalCandidate(row))
+      .filter(Boolean);
+    const websiteLookups = buildWebsiteLookups(websiteRows);
+    const combinedRows = websiteRows.slice();
+    timesheetPortalRows.forEach((candidate) => {
+      if (!findWebsiteMatch(candidate, websiteLookups)) combinedRows.push(candidate);
+    });
+    return {
+      website: websiteRows,
+      'timesheet-portal': timesheetPortalRows,
+      combined: combinedRows,
+    };
+  }
+
   function updateSupabaseBadge() {
     const pill = qs('#dbg-sb');
     if (!pill) return;
@@ -776,7 +930,7 @@
     if (!label) return;
     const count = state.filtered.length;
     const active = countActiveFilters();
-    label.textContent = `${count} results${active ? ` — ${active} filter${active === 1 ? '' : 's'}` : ''}`;
+    label.textContent = `${count} results — ${sourceTabLabel()}${active ? ` — ${active} filter${active === 1 ? '' : 's'}` : ''}`;
   }
 
   function matchesFilters(candidate) {
@@ -816,8 +970,27 @@
     return true;
   }
 
+  function renderSourceTabs(counts = {}) {
+    const tabs = Array.isArray(elements.sourceTabs) ? elements.sourceTabs : [];
+    tabs.forEach((button) => {
+      const key = button.dataset.sourceTab;
+      const active = key === state.sourceTab;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+      const countHost = qs(`[data-source-count="${key}"]`, button);
+      if (countHost) countHost.textContent = String(counts[key] || 0);
+    });
+  }
+
   function applyFilters() {
-    state.filtered = state.raw.filter((candidate) => matchesFilters(candidate));
+    const datasets = buildSourceDatasets();
+    const activeSet = Array.isArray(datasets[state.sourceTab]) ? datasets[state.sourceTab] : datasets.website;
+    renderSourceTabs({
+      website: datasets.website.length,
+      'timesheet-portal': datasets['timesheet-portal'].length,
+      combined: datasets.combined.length,
+    });
+    state.filtered = activeSet.filter((candidate) => matchesFilters(candidate));
     state.filtered.sort((a, b) => {
       const dir = state.sort.dir === 'asc' ? 1 : -1;
       if (state.sort.key === 'name') {
@@ -836,8 +1009,9 @@
 
   function recomputeMetrics() {
     const total = state.filtered.length;
-    const countStatus = (status) => state.filtered.filter((row) => row.status === status).length;
-    const countBy = (predicate) => state.filtered.filter(predicate).length;
+    const websiteBackedRows = state.filtered.filter((row) => !isRawTimesheetPortalCandidate(row));
+    const countStatus = (status) => websiteBackedRows.filter((row) => row.status === status).length;
+    const countBy = (predicate) => websiteBackedRows.filter(predicate).length;
     state.metrics = {
       total,
       progress: countStatus('in progress'),
@@ -852,12 +1026,13 @@
 
   function updateTotals() {
     if (elements.total) elements.total.textContent = `Total: ${state.metrics.total}`;
-    if (elements.progress) elements.progress.textContent = `In progress: ${state.metrics.progress}`;
-    if (elements.ready) elements.ready.textContent = `Ready: ${state.metrics.ready}`;
-    if (elements.rtwMissing) elements.rtwMissing.textContent = `RTW missing: ${state.metrics.rtwMissing}`;
-    if (elements.toVerify) elements.toVerify.textContent = `To verify: ${state.metrics.toVerify}`;
-    if (elements.archived) elements.archived.textContent = `Archived: ${state.metrics.archived}`;
-    if (elements.blocked) elements.blocked.textContent = `Blocked: ${state.metrics.blocked}`;
+    const showWorkflowCounts = state.sourceTab !== 'timesheet-portal';
+    if (elements.progress) elements.progress.textContent = `In progress: ${showWorkflowCounts ? state.metrics.progress : '—'}`;
+    if (elements.ready) elements.ready.textContent = `Ready: ${showWorkflowCounts ? state.metrics.ready : '—'}`;
+    if (elements.rtwMissing) elements.rtwMissing.textContent = `RTW missing: ${showWorkflowCounts ? state.metrics.rtwMissing : '—'}`;
+    if (elements.toVerify) elements.toVerify.textContent = `To verify: ${showWorkflowCounts ? state.metrics.toVerify : '—'}`;
+    if (elements.archived) elements.archived.textContent = `Archived: ${showWorkflowCounts ? state.metrics.archived : '—'}`;
+    if (elements.blocked) elements.blocked.textContent = `Blocked: ${showWorkflowCounts ? state.metrics.blocked : '—'}`;
   }
 
   function ensureRowsContainer() {
@@ -887,7 +1062,14 @@
     const total = state.filtered.length;
     rowsInner.style.height = `${total * ROW_HEIGHT}px`;
     if (!total) {
-      rowsInner.innerHTML = '<div class="empty-state">No candidates match the filters.</div>';
+      const loadingTsp = state.sourceTab !== 'website' && !state.tspCompare;
+      const configured = state.tspCompare?.configured !== false;
+      const message = loadingTsp
+        ? 'Loading Timesheet Portal data…'
+        : state.sourceTab === 'timesheet-portal' && !configured
+        ? (state.tspCompare?.message || 'Timesheet Portal is not configured for this environment.')
+        : `No ${sourceTabLabel().toLowerCase()} rows match the filters.`;
+      rowsInner.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
       return;
     }
     if (force) rowsInner.innerHTML = '';
@@ -944,6 +1126,19 @@
 
   function candidateReference(candidate) {
     return String(candidate?.ref || candidate?.payroll_ref || '').trim() || '—';
+  }
+
+  function sourceMetaChips(candidate) {
+    if (isRawTimesheetPortalCandidate(candidate)) {
+      return '<span class="chip blue">Timesheet Portal</span>';
+    }
+    if (candidate?.timesheet_portal_match) {
+      return '<span class="chip blue">TSP matched</span>';
+    }
+    if (state.sourceTab === 'combined') {
+      return '<span class="chip gray">Website</span>';
+    }
+    return '';
   }
 
   function paymentMethodLabel(value) {
@@ -1023,7 +1218,40 @@
     row.style.position = 'absolute';
     row.style.top = `${index * ROW_HEIGHT}px`;
     const selected = selectionHas(candidate.id) ? 'checked' : '';
-    const disabledActions = isBlocked(candidate);
+    const selectable = isSelectableCandidate(candidate);
+    const disabledActions = isBlocked(candidate) || !selectable;
+    const sourceChip = sourceMetaChips(candidate);
+    if (isRawTimesheetPortalCandidate(candidate)) {
+      row.innerHTML = `
+        <div><input type="checkbox" data-role="select" data-id="${candidate.id}" disabled></div>
+        <div>${candidateReference(candidate)}</div>
+        <div class="row-card">
+          <div class="row-title" title="${candidate.name || 'Timesheet Portal candidate'}">${candidate.name || '—'}</div>
+          <div class="row-subtle" title="${candidate.role || 'Timesheet Portal record'}">${candidate.role || 'Timesheet Portal record'}</div>
+          <div class="row-meta">
+            ${candidate.region ? `<span class="chip gray">${candidate.region}</span>` : ''}
+            ${sourceChip}
+          </div>
+        </div>
+        <div class="row-card">
+          <div class="row-title" title="${candidate.email || 'No email'}">${candidate.email || '—'}</div>
+          <div class="row-subtle">${candidate.phone || 'Phone not available'}</div>
+          <div class="row-subtle">${candidate.updated_at ? `Fetched ${formatDate(candidate.updated_at)}` : 'Raw Timesheet Portal record'}</div>
+        </div>
+        <div class="row-card">
+          <div class="row-meta">
+            <span class="chip blue">Website onboarding not started</span>
+          </div>
+          <div class="row-subtle">This row exists in Timesheet Portal only. Use the sync tools above to mirror it into the website candidate workspace.</div>
+          <div class="row-subtle">TSP ref: ${candidateReference(candidate)}</div>
+        </div>
+        <div><span class="chip blue">TSP raw</span></div>
+        <div class="row-actions">
+          <button class="btn ghost small" type="button" data-role="copy-email" data-id="${candidate.id}" ${!candidate.email ? 'disabled' : ''}>Copy email</button>
+          <button class="btn ghost small" type="button" data-role="copy-ref" data-id="${candidate.id}" ${candidateReference(candidate) === '—' ? 'disabled' : ''}>Copy ref</button>
+        </div>`;
+      return row;
+    }
     const archiveRole = isArchived(candidate) ? 'restore' : 'archive';
     const archiveLabel = isArchived(candidate) ? 'Restore' : 'Archive';
     const portalChip = candidate.has_portal_account
@@ -1035,7 +1263,7 @@
     const paymentSummary = candidate.payment_summary || {};
     const rtwChip = rightToWorkChip(candidate);
     row.innerHTML = `
-      <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected}></div>
+      <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected} ${!selectable ? 'disabled' : ''}></div>
       <div>${candidateReference(candidate)}</div>
       <div class="row-card">
         <div class="row-title" title="${candidate.name || 'Candidate'}">${candidate.name || '—'}</div>
@@ -1043,6 +1271,7 @@
         <div class="row-meta">
           ${candidate.region ? `<span class="chip gray">${candidate.region}</span>` : ''}
           ${portalChip}
+          ${sourceChip}
         </div>
       </div>
       <div class="row-card">
@@ -1095,13 +1324,16 @@
   function syncHeaderCheckbox() {
     const head = elements.chkAll;
     if (!head) return;
-    if (!state.filtered.length) {
+    const selectableRows = state.filtered.filter((row) => isSelectableCandidate(row));
+    if (!selectableRows.length) {
       head.checked = false;
       head.indeterminate = false;
+      head.disabled = true;
       return;
     }
-    const total = state.filtered.length;
-    const selected = state.filtered.filter((row) => selectionHas(row.id)).length;
+    head.disabled = false;
+    const total = selectableRows.length;
+    const selected = selectableRows.filter((row) => selectionHas(row.id)).length;
     head.checked = selected && selected === total;
     head.indeterminate = selected > 0 && selected < total;
   }
@@ -1109,7 +1341,7 @@
   function updateBulkBar() {
     const bar = elements.bulkbar;
     if (!bar) return;
-    const count = state.selection.size;
+    const count = state.filtered.filter((row) => isSelectableCandidate(row) && selectionHas(row.id)).length;
     bar.classList.toggle('show', count > 0);
     const label = elements.bulkCount;
     if (label) label.textContent = `${count} selected`;
@@ -1232,7 +1464,7 @@
   }
 
   function selectedCandidates() {
-    return state.filtered.filter((row) => selectionHas(row.id));
+    return state.filtered.filter((row) => isSelectableCandidate(row) && selectionHas(row.id));
   }
 
   function handleRowClick(event) {
@@ -1248,7 +1480,8 @@
     const role = action?.dataset.role || '';
     const id = action?.dataset.id || row?.dataset.id;
     if (!role) {
-      if (id) openDrawer(id);
+      const candidate = id ? state.filtered.find((row) => String(row.id) === String(id)) : null;
+      if (candidate && !isRawTimesheetPortalCandidate(candidate)) openDrawer(id);
       return;
     }
     if (!id) return;
@@ -1268,6 +1501,20 @@
     if (role === 'pdf') {
       const candidate = findCandidate(id);
       if (candidate) generatePdf(candidate);
+      return;
+    }
+    if (role === 'copy-email') {
+      const candidate = state.filtered.find((row) => String(row.id) === String(id));
+      copyText(candidate?.email || '').then((copied) => {
+        if (copied) showToast('Email copied.', 'info', 2400);
+      });
+      return;
+    }
+    if (role === 'copy-ref') {
+      const candidate = state.filtered.find((row) => String(row.id) === String(id));
+      copyText(candidateReference(candidate)).then((copied) => {
+        if (copied) showToast('Reference copied.', 'info', 2400);
+      });
     }
   }
 
@@ -2605,12 +2852,21 @@
     window.requestAnimationFrame(updateVisibleRows);
   }
 
+  function setSourceTab(nextTab) {
+    if (!SOURCE_TABS[nextTab] || state.sourceTab === nextTab) return;
+    state.sourceTab = nextTab;
+    applyFilters();
+    if ((nextTab === 'timesheet-portal' || nextTab === 'combined') && !state.tspCompare) {
+      refreshTimesheetPortalCompare();
+    }
+  }
+
   function handleSelectAll(event) {
     if (!event.target.checked) {
       clearSelection();
       return;
     }
-    const ids = state.filtered.map((row) => row.id);
+    const ids = state.filtered.filter((row) => isSelectableCandidate(row)).map((row) => row.id);
     setSelection(ids);
   }
 
@@ -2627,6 +2883,7 @@
 
   function selectMissingRtw() {
     const ids = state.filtered
+      .filter((candidate) => isSelectableCandidate(candidate))
       .filter((candidate) => candidate.onboarding?.hasRightToWork !== true && candidate.onboarding?.hasRightToWorkUpload !== true)
       .map((candidate) => candidate.id);
     if (!ids.length) {
@@ -2816,6 +3073,7 @@
       const response = await state.helpers.api('admin-candidates-timesheet-compare', 'POST', {});
       state.tspCompare = response;
       renderTspSummary();
+      applyFilters();
     } catch (err) {
       console.error('[candidates] TSP comparison failed', err);
       state.tspCompare = {
@@ -2823,6 +3081,7 @@
         message: err.message || 'Timesheet Portal comparison failed.',
       };
       renderTspSummary();
+      applyFilters();
     }
   }
 
@@ -3212,6 +3471,7 @@
     elements.applyFilters = qs('#btn-apply');
     elements.clearFilters = qs('#btn-clear');
     elements.selectMissingRtw = qs('#btn-select-missing-rtw');
+    elements.sourceTabs = Array.from(document.querySelectorAll('[data-source-tab]'));
     elements.importFile = qs('#candidate-import-file');
     elements.importFileButton = qs('#btn-import-file');
     elements.importPreview = qs('#btn-import-preview');
@@ -3243,7 +3503,17 @@
     elements.rows.addEventListener('click', handleRowClick);
     elements.chkAll.addEventListener('change', handleSelectAll);
     elements.search.addEventListener('input', (ev) => updateQuickSearch(ev.target.value));
-    elements.refresh.addEventListener('click', () => loadCandidates({ silent: false }));
+    elements.refresh.addEventListener('click', async () => {
+      await loadCandidates({ silent: false });
+      if (state.sourceTab !== 'website' || state.tspCompare) {
+        await refreshTimesheetPortalCompare();
+      }
+    });
+    if (Array.isArray(elements.sourceTabs)) {
+      elements.sourceTabs.forEach((button) => {
+        button.addEventListener('click', () => setSourceTab(button.dataset.sourceTab));
+      });
+    }
     if (elements.selectMissingRtw) {
       elements.selectMissingRtw.addEventListener('click', () => selectMissingRtw());
     }
@@ -3296,11 +3566,12 @@
     }
     if (elements.visibleDocRequest) {
       elements.visibleDocRequest.addEventListener('click', () => {
-        if (!state.filtered.length) {
+        const visibleIds = state.filtered.filter((candidate) => isSelectableCandidate(candidate)).map((candidate) => candidate.id);
+        if (!visibleIds.length) {
           showToast('No visible candidates are available for a document request.', 'warn', 3200);
           return;
         }
-        openDocumentRequestDialog(state.filtered.map((candidate) => candidate.id));
+        openDocumentRequestDialog(visibleIds);
       });
     }
     if (elements.refreshVerify) {
