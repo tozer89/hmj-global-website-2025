@@ -319,7 +319,7 @@ async function loadTspRows(baseWeekEnding, filters) {
   );
   const assignmentRows = await safeSelect(
     'assignments',
-    'id,job_title,client_name,client_site,as_ref,ref,currency',
+    'id,job_title,client_name,client_site,as_ref,currency',
     { allowMissing: true, orderBy: 'id', ascending: false, limit: 5000 }
   );
 

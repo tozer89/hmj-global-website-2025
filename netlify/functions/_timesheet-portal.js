@@ -96,6 +96,18 @@ function truthyEnv(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 }
 
+function uniquePaths(...groups) {
+  const seen = new Set();
+  const out = [];
+  groups.flat().forEach((value) => {
+    const path = trimString(value, 240);
+    if (!path || seen.has(path)) return;
+    seen.add(path);
+    out.push(path);
+  });
+  return out;
+}
+
 function firstEnv(...values) {
   for (const value of values) {
     const text = normalizeCredential(value).slice(0, 4000);
@@ -148,7 +160,9 @@ function readTimesheetPortalConfig() {
     trimString(firstEnv(process.env.TIMESHEET_PORTAL_CANDIDATE_PATH_OVERRIDE, process.env.TSP_CANDIDATE_PATH_OVERRIDE), 240),
     trimString(firstEnv(process.env.TIMESHEET_PORTAL_CANDIDATE_PATH, process.env.TSP_CANDIDATE_PATH), 240),
   ].filter(Boolean);
-  const candidatePaths = configuredPaths.length ? configuredPaths : DEFAULT_CANDIDATE_PATHS;
+  const candidatePaths = configuredPaths.length
+    ? uniquePaths(configuredPaths, DEFAULT_CANDIDATE_PATHS)
+    : DEFAULT_CANDIDATE_PATHS;
   const configuredAssignmentPaths = [
     trimString(firstEnv(
       process.env.TIMESHEET_PORTAL_ASSIGNMENT_PATH_OVERRIDE,
@@ -163,7 +177,9 @@ function readTimesheetPortalConfig() {
       process.env.TSP_PLACEMENT_PATH,
     ), 240),
   ].filter(Boolean);
-  const assignmentPaths = configuredAssignmentPaths.length ? configuredAssignmentPaths : DEFAULT_ASSIGNMENT_PATHS;
+  const assignmentPaths = configuredAssignmentPaths.length
+    ? uniquePaths(configuredAssignmentPaths, DEFAULT_ASSIGNMENT_PATHS)
+    : DEFAULT_ASSIGNMENT_PATHS;
   const enabled = truthyEnv(firstEnv(process.env.TIMESHEET_PORTAL_ENABLED, process.env.TSP_ENABLED)) || !!apiToken || (!!clientId && !!clientSecret);
 
   return {
@@ -933,9 +949,11 @@ async function listTimesheetPortalPayroll(config, options = {}) {
   let emptySuccess = null;
 
   for (const auth of auths) {
+    let authHadSuccess = false;
     for (const path of DEFAULT_PAYROLL_REPORT_PATHS) {
       try {
         const rows = await fetchTimesheetPortalPayrollReport(config, auth, path, options);
+        authHadSuccess = true;
         attempts.push({
           path,
           mode: 'report',
@@ -981,6 +999,7 @@ async function listTimesheetPortalPayroll(config, options = {}) {
     for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
       try {
         const rows = await fetchTimesheetPortalTimesheets(config, auth, path, options);
+        authHadSuccess = true;
         attempts.push({
           path,
           mode: 'timesheets',
@@ -1022,6 +1041,8 @@ async function listTimesheetPortalPayroll(config, options = {}) {
         });
       }
     }
+
+    if (authHadSuccess && emptySuccess) return emptySuccess;
   }
 
   if (emptySuccess) return emptySuccess;
@@ -1054,9 +1075,11 @@ async function listTimesheetPortalTimesheets(config, options = {}) {
   let emptySuccess = null;
 
   for (const auth of auths) {
+    let authHadSuccess = false;
     for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
       try {
         const rows = await fetchTimesheetPortalManagementTimesheets(config, auth, path, options);
+        authHadSuccess = true;
         attempts.push({
           path,
           mode: 'timesheets',
@@ -1098,6 +1121,8 @@ async function listTimesheetPortalTimesheets(config, options = {}) {
         });
       }
     }
+
+    if (authHadSuccess && emptySuccess) return emptySuccess;
   }
 
   if (emptySuccess) return emptySuccess;

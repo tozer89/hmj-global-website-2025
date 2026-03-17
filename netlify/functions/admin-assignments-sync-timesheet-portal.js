@@ -109,11 +109,9 @@ const baseHandler = async (event, context) => {
   }
 
   try {
-    const [tspData, websiteCandidates, existingRows] = await Promise.all([
-      listTimesheetPortalAssignments(config, { take: 500, pageLimit: 20 }),
-      loadWebsiteCandidates(supabase),
-      loadExistingAssignments(supabase),
-    ]);
+    const tspData = await listTimesheetPortalAssignments(config, { take: 500, pageLimit: 20 });
+    const websiteCandidates = await loadWebsiteCandidates(supabase);
+    const existingRows = await loadExistingAssignments(supabase);
 
     const lookups = buildCandidateLookups(websiteCandidates);
     const byRef = new Map();

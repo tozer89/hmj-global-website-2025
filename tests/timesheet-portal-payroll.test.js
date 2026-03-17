@@ -146,3 +146,69 @@ test('listTimesheetPortalPayroll parses matrix report payloads from /reports/tim
     restoreEnv('TIMESHEET_PORTAL_BASE_URL', previous.baseUrl);
   }
 });
+
+test('listTimesheetPortalPayroll stops after a successful oauth empty result instead of retrying stale api tokens', async () => {
+  const previous = {
+    enabled: process.env.TIMESHEET_PORTAL_ENABLED,
+    apiToken: process.env.TIMESHEET_PORTAL_API_TOKEN,
+    clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
+    clientSecret: process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
+    baseUrl: process.env.TIMESHEET_PORTAL_BASE_URL,
+  };
+  const originalFetch = global.fetch;
+  const calls = [];
+
+  process.env.TIMESHEET_PORTAL_ENABLED = 'true';
+  process.env.TIMESHEET_PORTAL_API_TOKEN = 'stale-token';
+  process.env.TIMESHEET_PORTAL_CLIENT_ID = 'payroll-client';
+  process.env.TIMESHEET_PORTAL_CLIENT_SECRET = 'payroll-secret';
+  process.env.TIMESHEET_PORTAL_BASE_URL = 'https://gb3.api.timesheetportal.test';
+
+  global.fetch = async (url, options = {}) => {
+    const value = String(url);
+    calls.push(value);
+    if (value === 'https://gb3.api.timesheetportal.test/oauth/token') {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'oauth-access', expires_in: 3600 }),
+      };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/reports/timesheets') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([['TimesheetId'],]),
+      };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/timesheets') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([]),
+      };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/v2/rec/timesheets?take=500') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([]),
+      };
+    }
+    throw new Error(`Unexpected fetch ${url} ${options.method || 'GET'}`);
+  };
+
+  try {
+    const result = await listTimesheetPortalPayroll(readTimesheetPortalConfig(), {});
+    assert.equal(result.rows.length, 0);
+    assert.equal(calls.filter((value) => value.includes('/reports/timesheets')).length, 1);
+    assert.equal(calls.filter((value) => value.includes('/v2/rec/timesheets')).length, 1);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv('TIMESHEET_PORTAL_ENABLED', previous.enabled);
+    restoreEnv('TIMESHEET_PORTAL_API_TOKEN', previous.apiToken);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_ID', previous.clientId);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_SECRET', previous.clientSecret);
+    restoreEnv('TIMESHEET_PORTAL_BASE_URL', previous.baseUrl);
+  }
+});

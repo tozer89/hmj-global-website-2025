@@ -461,15 +461,18 @@ function isMissingRelationError(error) {
 function isMissingColumnError(error) {
   const message = String(error?.message || '');
   return (
-    /column "?[a-zA-Z0-9_]+"? does not exist/i.test(message)
+    /column "?[a-zA-Z0-9_.]+"? does not exist/i.test(message)
     || /Could not find the '[a-zA-Z0-9_]+' column of '[^']+' in the schema cache/i.test(message)
   );
 }
 
 function extractMissingColumnName(error) {
   const message = String(error?.message || '');
-  const postgresMatch = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(message);
-  if (postgresMatch) return postgresMatch[1];
+  const postgresMatch = /column "?([a-zA-Z0-9_.]+)"? does not exist/i.exec(message);
+  if (postgresMatch) {
+    const parts = String(postgresMatch[1] || '').split('.').filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : null;
+  }
   const schemaCacheMatch = /Could not find the '([a-zA-Z0-9_]+)' column of '[^']+' in the schema cache/i.exec(message);
   return schemaCacheMatch ? schemaCacheMatch[1] : null;
 }

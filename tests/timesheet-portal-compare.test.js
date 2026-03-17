@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   compareCandidates,
@@ -12,6 +14,10 @@ const {
 function restoreEnv(key, value) {
   if (value === undefined) delete process.env[key];
   else process.env[key] = value;
+}
+
+function read(filePath) {
+  return fs.readFileSync(path.join(process.cwd(), filePath), 'utf8');
 }
 
 test('compareCandidates reports matched, mismatched, website-only, and tsp-only rows by email', () => {
@@ -78,7 +84,8 @@ test('readTimesheetPortalConfig prefers explicit overrides and enablement env va
     assert.equal(config.enabled, true);
     assert.equal(config.configured, true);
     assert.equal(config.baseUrl, 'https://example.timesheetportal.test');
-    assert.deepEqual(config.candidatePaths, ['/custom/candidates']);
+    assert.equal(config.candidatePaths[0], '/custom/candidates');
+    assert.ok(config.candidatePaths.includes('/users'));
     assert.equal(config.apiToken, 'test-token');
   } finally {
     restoreEnv('TIMESHEET_PORTAL_ENABLED', previous.enabled);
@@ -144,8 +151,15 @@ test('readTimesheetPortalConfig normalises legacy token paths and trims copied O
 
 test('readTimesheetPortalConfig includes documented /users endpoint in default candidate discovery paths', () => {
   const config = readTimesheetPortalConfig();
-  assert.equal(config.candidatePaths[0], '/users');
-  assert.equal(config.assignmentPaths[0], '/jobs');
+  assert.ok(config.candidatePaths.includes('/users'));
+  assert.ok(config.assignmentPaths.includes('/jobs'));
+});
+
+test('candidate compare endpoint resolves TSP before loading website rows', () => {
+  const source = read('netlify/functions/admin-candidates-timesheet-compare.js');
+  assert.doesNotMatch(source, /Promise\.all\(/);
+  assert.match(source, /const tspData = await listTimesheetPortalContractors/);
+  assert.match(source, /const websiteCandidates = await loadWebsiteCandidates/);
 });
 
 test('listTimesheetPortalContractors uses oauth bearer auth and /users discovery when available', async () => {

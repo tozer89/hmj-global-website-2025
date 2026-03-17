@@ -47,6 +47,7 @@ test('assignment sync endpoint and schema scripts include TSP source tracking', 
   const helperSource = read('netlify/functions/_assignments-sync.js');
 
   assert.match(syncSource, /listTimesheetPortalAssignments/);
+  assert.doesNotMatch(syncSource, /Promise\.all\(/);
   assert.match(syncSource, /const reference = String\(assignment\.reference \|\| assignment\.id \|\| ''\)\.trim\(\)/);
   assert.match(helperSource, /matchCandidateForTimesheetPortalAssignment/);
   assert.match(syncSource, /\.upsert\(payloads\)/);

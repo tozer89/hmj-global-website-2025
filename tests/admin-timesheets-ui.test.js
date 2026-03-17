@@ -25,4 +25,6 @@ test('timesheets admin page is a live TSP mirror, not the old local editor shell
   assert.match(listFn, /source: 'timesheet_portal'/);
   assert.match(listFn, /Edit approvals and entries in TSP/);
   assert.match(listFn, /Timesheet Portal returned no timesheet rows for this account or date range/);
+  assert.doesNotMatch(listFn, /client_site,as_ref,ref,currency/);
+  assert.match(listFn, /client_site,as_ref,currency/);
 });

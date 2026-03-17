@@ -134,3 +134,61 @@ test('listTimesheetPortalTimesheets pages through /v2/rec/timesheets and normali
     restoreEnv('TIMESHEET_PORTAL_TOKEN_PATH', previous.tokenPath);
   }
 });
+
+test('listTimesheetPortalTimesheets stops after a successful oauth empty result instead of retrying stale api tokens', async () => {
+  const previous = {
+    enabled: process.env.TIMESHEET_PORTAL_ENABLED,
+    clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
+    clientSecret: process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
+    apiToken: process.env.TIMESHEET_PORTAL_API_TOKEN,
+    baseUrl: process.env.TIMESHEET_PORTAL_BASE_URL,
+    tokenPath: process.env.TIMESHEET_PORTAL_TOKEN_PATH,
+  };
+  const originalFetch = global.fetch;
+  const calls = [];
+
+  process.env.TIMESHEET_PORTAL_ENABLED = 'true';
+  process.env.TIMESHEET_PORTAL_CLIENT_ID = 'timesheet-client';
+  process.env.TIMESHEET_PORTAL_CLIENT_SECRET = 'timesheet-secret';
+  process.env.TIMESHEET_PORTAL_API_TOKEN = 'stale-token';
+  process.env.TIMESHEET_PORTAL_BASE_URL = 'https://gb3.api.timesheetportal.test';
+  process.env.TIMESHEET_PORTAL_TOKEN_PATH = '/oauth/token';
+
+  global.fetch = async (url) => {
+    const value = String(url);
+    calls.push(value);
+    if (value === 'https://gb3.api.timesheetportal.test/oauth/token') {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'oauth-access', expires_in: 3600 }),
+      };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/v2/rec/timesheets?take=2') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([]),
+      };
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+
+  try {
+    const result = await listTimesheetPortalTimesheets(readTimesheetPortalConfig(), {
+      take: 2,
+      pageLimit: 1,
+    });
+
+    assert.equal(result.rows.length, 0);
+    assert.equal(calls.filter((value) => value.includes('/v2/rec/timesheets')).length, 1);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv('TIMESHEET_PORTAL_ENABLED', previous.enabled);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_ID', previous.clientId);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_SECRET', previous.clientSecret);
+    restoreEnv('TIMESHEET_PORTAL_API_TOKEN', previous.apiToken);
+    restoreEnv('TIMESHEET_PORTAL_BASE_URL', previous.baseUrl);
+    restoreEnv('TIMESHEET_PORTAL_TOKEN_PATH', previous.tokenPath);
+  }
+});

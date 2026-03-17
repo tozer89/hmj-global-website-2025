@@ -194,6 +194,11 @@ test('extractMissingColumnName supports Postgres and Supabase schema cache error
   );
 
   assert.equal(
+    extractMissingColumnName({ message: 'column candidates.pay_type does not exist' }),
+    'pay_type'
+  );
+
+  assert.equal(
     extractMissingColumnName({ message: "Could not find the 'last_portal_login_at' column of 'candidates' in the schema cache" }),
     'last_portal_login_at'
   );

@@ -113,6 +113,7 @@ const baseHandler = async (event, context) => {
         ok: true,
         configured: true,
         tableAvailable,
+        source: 'timesheet_portal_jobs',
         syncedAt: new Date().toISOString(),
         assignmentPath: tspData.discovery.assignmentPath,
         attempts: tspData.discovery.attempts,

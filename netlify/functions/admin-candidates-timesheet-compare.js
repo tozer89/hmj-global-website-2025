@@ -85,10 +85,8 @@ const baseHandler = async (event, context) => {
   }
 
   try {
-    const [websiteCandidates, tspData] = await Promise.all([
-      loadWebsiteCandidates(supabase),
-      listTimesheetPortalContractors(config, { take: 1000 }),
-    ]);
+    const tspData = await listTimesheetPortalContractors(config, { take: 1000 });
+    const websiteCandidates = await loadWebsiteCandidates(supabase);
     const comparison = compareCandidates(websiteCandidates, tspData.contractors);
 
     return {

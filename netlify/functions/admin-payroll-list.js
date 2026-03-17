@@ -141,6 +141,32 @@ async function safeSelect(supabase, table, columns, options = {}) {
   return Array.isArray(data) ? data : [];
 }
 
+async function safeSelectWithOptionalColumns(supabase, table, requiredColumns = [], optionalColumns = [], options = {}) {
+  const stableColumns = Array.isArray(requiredColumns) ? requiredColumns.filter(Boolean) : [];
+  const startingOptional = Array.isArray(optionalColumns) ? optionalColumns.filter(Boolean) : [];
+  let remainingOptional = [...startingOptional];
+
+  while (true) {
+    const columns = stableColumns.concat(remainingOptional).join(',');
+    try {
+      const rows = await safeSelect(supabase, table, columns, options);
+      if (remainingOptional.length === startingOptional.length) return rows;
+      const missingOptional = startingOptional.filter((column) => !remainingOptional.includes(column));
+      return rows.map((row) => {
+        const next = { ...(row || {}) };
+        missingOptional.forEach((column) => {
+          if (!(column in next)) next[column] = null;
+        });
+        return next;
+      });
+    } catch (error) {
+      const missingColumn = remainingOptional.find((column) => isMissingColumnError(error, column));
+      if (!missingColumn) throw error;
+      remainingOptional = remainingOptional.filter((column) => column !== missingColumn);
+    }
+  }
+}
+
 async function loadTimesheetPortalPayrollPayload({ supabase, status, searchNeedle, weekFrom, weekTo, ids, limit, baseWeekEnding, settingsSource }) {
   const config = readTimesheetPortalConfig();
   if (!config.enabled || !config.configured) return null;
@@ -151,16 +177,18 @@ async function loadTimesheetPortalPayrollPayload({ supabase, status, searchNeedl
     take: Math.min(Math.max(Number(limit) || 250, 50), 500),
   });
 
-  const candidateRows = await safeSelect(
+  const candidateRows = await safeSelectWithOptionalColumns(
     supabase,
     'candidates',
-    'id,full_name,first_name,last_name,email,phone,payroll_ref,pay_type',
+    ['id', 'full_name', 'first_name', 'last_name', 'email', 'phone', 'payroll_ref'],
+    ['pay_type'],
     { orderBy: 'updated_at', ascending: false, limit: 5000 }
   );
-  const contractorRows = await safeSelect(
+  const contractorRows = await safeSelectWithOptionalColumns(
     supabase,
     'contractors',
-    'id,name,email,phone,payroll_ref,pay_type',
+    ['id', 'name', 'email', 'phone', 'payroll_ref'],
+    ['pay_type'],
     { orderBy: 'id', ascending: false, limit: 5000, allowMissing: true }
   );
   const assignmentRows = await safeSelect(
@@ -442,6 +470,7 @@ const baseHandler = async (event, context) => {
     const baseWeekEnding = settingsResult.settings?.fiscal_week1_ending || DEFAULT_SETTINGS.fiscal_week1_ending;
     const wantsCsv = String(format || '').toLowerCase() === 'csv';
     const searchNeedle = String(q || '').trim().toLowerCase();
+    let tspSyncError = null;
 
     if (supabase && typeof supabase.from === 'function') {
       try {
@@ -457,6 +486,7 @@ const baseHandler = async (event, context) => {
           settingsSource: settingsResult.source,
         });
         if (tspPayload) {
+          tspPayload.syncError = null;
           if (wantsCsv) {
             return {
               statusCode: 200,
@@ -473,7 +503,11 @@ const baseHandler = async (event, context) => {
         if (String(error?.code || '') === 'timesheet_portal_not_configured') {
           // Fall back to the existing local payroll dataset when TSP is not configured.
         } else {
-          throw error;
+          tspSyncError = {
+            code: String(error?.code || 'timesheet_portal_payroll_failed'),
+            message: String(error?.message || 'Timesheet Portal payroll sync failed.'),
+            attempts: Array.isArray(error?.attempts) ? error.attempts : [],
+          };
         }
       }
     }
@@ -585,6 +619,7 @@ const baseHandler = async (event, context) => {
         stats,
         readOnly: true,
         source: 'static',
+        syncError: tspSyncError,
         supabase: supabaseStatus(),
         config: { week1Ending: baseWeekEnding, source: settingsResult.source },
       };
@@ -627,7 +662,7 @@ const baseHandler = async (event, context) => {
 
     const timesheets = Array.isArray(timesheetRows) ? timesheetRows : [];
     if (!timesheets.length) {
-      const payload = { rows: [], stats: summarise([]) };
+      const payload = { rows: [], stats: summarise([]), syncError: tspSyncError };
       if (wantsCsv) {
         return {
           statusCode: 200,
@@ -674,24 +709,24 @@ const baseHandler = async (event, context) => {
 
     let candidates = [];
     if (candidateIds.length) {
-      const { data, error } = await supabase
-        .from('candidates')
-        .select(
-          'id,first_name,last_name,email,phone,payroll_ref,pay_type,bank_sort_code,bank_sort,bank_account,bank_name,bank_iban,bank_swift,tax_id'
-        )
-        .in('id', candidateIds);
-      if (error) throw error;
-      candidates = Array.isArray(data) ? data : [];
+      candidates = await safeSelectWithOptionalColumns(
+        supabase,
+        'candidates',
+        ['id', 'first_name', 'last_name', 'email', 'phone', 'payroll_ref'],
+        ['pay_type', 'bank_sort_code', 'bank_sort', 'bank_account', 'bank_name', 'bank_iban', 'bank_swift', 'tax_id'],
+        { inValues: candidateIds, inColumn: 'id' }
+      );
     }
 
     let contractors = [];
     if (candidateIds.length) {
-      const { data, error } = await supabase
-        .from('contractors')
-        .select('id,name,email,phone,payroll_ref,pay_type,bank,address_json,emergency_contact')
-        .in('id', candidateIds);
-      if (error) throw error;
-      contractors = Array.isArray(data) ? data : [];
+      contractors = await safeSelectWithOptionalColumns(
+        supabase,
+        'contractors',
+        ['id', 'name', 'email', 'phone', 'payroll_ref'],
+        ['pay_type', 'bank', 'address_json', 'emergency_contact'],
+        { inValues: candidateIds, inColumn: 'id', allowMissing: true }
+      );
     }
 
     let auditLogs = [];
@@ -830,8 +865,13 @@ const baseHandler = async (event, context) => {
         return true;
       });
 
-    const stats = summarise(filteredRows);
-    const payload = { rows: filteredRows, stats, config: { week1Ending: baseWeekEnding, source: settingsResult.source } };
+      const stats = summarise(filteredRows);
+      const payload = {
+        rows: filteredRows,
+        stats,
+        syncError: tspSyncError,
+        config: { week1Ending: baseWeekEnding, source: settingsResult.source },
+      };
 
     if (wantsCsv) {
       return {
