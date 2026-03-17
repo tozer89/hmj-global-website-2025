@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=31"></script>
-  <script defer src="/admin/settings.js?v=4"></script>
+  <script defer src="/admin/settings.js?v=5"></script>
 
   <style>
     :root{
@@ -52,7 +52,7 @@
     .muted{color:var(--muted)}
     .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
 
-    .hero{display:grid;gap:18px;grid-template-columns:minmax(0,1.4fr) minmax(320px,.9fr);align-items:start}
+    .hero{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));align-items:start}
     .hero h1{margin:4px 0 0;font-size:32px;line-height:1.08}
     .hero p{margin:0}
     .hero-card{padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(47,78,162,.08),rgba(255,255,255,.92));border:1px solid rgba(47,78,162,.12);display:grid;gap:14px}
@@ -63,11 +63,11 @@
     .chip[data-tone="danger"]{background:rgba(180,35,24,.1);border-color:rgba(180,35,24,.16);color:var(--danger)}
 
     .content-grid,.links-grid{display:grid;gap:18px}
-    .content-grid{grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr)}
-    .links-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .content-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));align-items:start}
+    .links-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
     .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}
     .section-head h2{margin:4px 0 0;font-size:22px;line-height:1.15}
-    .section-head p:last-child{margin:0;max-width:60ch}
+    .section-head p:last-child{margin:0;max-width:min(100%,60ch);flex:1 0 min(100%,320px);min-width:min(100%,320px)}
     .section-note{margin:0 0 14px}
 
     pre{margin:14px 0 0;padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(245,248,255,.96);font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;color:var(--muted);white-space:pre-wrap}
@@ -96,8 +96,8 @@
     .settings-card{padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.12);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,249,255,.98));display:grid;gap:16px;min-width:0}
     .settings-card h3{margin:0;font-size:20px;line-height:1.2}
     .settings-card p{margin:0}
-    .settings-grid{display:grid;gap:14px 16px;grid-template-columns:repeat(2,minmax(0,1fr))}
-    .settings-field{display:grid;gap:6px}
+    .settings-grid{display:grid;gap:14px 16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+    .settings-field{display:grid;gap:6px;min-width:0}
     .settings-field--full{grid-column:1/-1}
     .settings-field label{font-weight:800;color:var(--ink)}
     .settings-field input,
@@ -105,7 +105,7 @@
     .settings-field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:#fff;color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
     .settings-field textarea{min-height:110px;resize:vertical}
     .settings-field small{color:var(--muted);font-size:13px;line-height:1.55}
-    .settings-toggle{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;border:1px solid rgba(47,78,162,.12);background:rgba(63,102,199,.06)}
+    .settings-toggle{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;border:1px solid rgba(47,78,162,.12);background:rgba(63,102,199,.06);min-width:0}
     .settings-toggle input{margin-top:3px}
     .settings-toggle strong{display:block;font-size:15px}
     .settings-toggle span{display:block;color:var(--muted);font-size:13px;line-height:1.55}
@@ -129,22 +129,35 @@
     .preview-meta strong{font-size:14px}
     .preview-meta span{font-size:13px;color:var(--muted)}
     .preview-pane{padding:14px;background:#eef2fb}
-    .preview-pane iframe{width:100%;min-height:520px;border:0;background:#fff;border-radius:14px}
-    .settings-code{margin:0;padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(245,248,255,.96);font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;color:var(--muted);white-space:pre-wrap;overflow:auto;max-height:360px}
+    .preview-pane iframe{width:100%;min-height:460px;max-height:72vh;border:0;background:#fff;border-radius:14px}
+    .settings-code{margin:0;padding:14px;border-radius:16px;border:1px solid rgba(47,78,162,.14);background:rgba(245,248,255,.96);font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;color:var(--muted);white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;overflow:auto;max-height:320px}
+
+    .panel,
+    .settings-card,
+    .preview-frame,
+    .status-list,
+    .settings-stack{
+      min-width:0;
+    }
+
+    .section-head > * ,
+    .settings-field > *,
+    .settings-toggle > *{
+      min-width:0;
+    }
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.22);box-shadow:0 18px 32px rgba(15,27,63,.2);font-weight:800}
 
-    @media (max-width:1320px){
+    @media (max-width:1480px){
       .content-grid{grid-template-columns:1fr}
     }
 
-    @media (max-width:1160px){
-      .hero,.links-grid{grid-template-columns:1fr}
+    @media (max-width:1180px){
       .preview-pane iframe{min-height:460px}
     }
 
-    @media (max-width:820px){
+    @media (max-width:900px){
       .wrap{padding:0 14px}
       .row{padding:12px 14px}
       .link-grid{grid-template-columns:1fr}
@@ -160,8 +173,22 @@
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
+  <style>
+    body.settings-page :is(
+      h1,h2,h3,h4,h5,h6,p,small,label,legend,strong,span,button,a,.muted,.pill,.chip,.status-item,.status-item p,.settings-alert,.settings-alert p,.settings-toggle span
+    ){
+      overflow-wrap:normal !important;
+      word-break:normal !important;
+      hyphens:none !important;
+    }
+
+    body.settings-page :is(.settings-code,.activity-entry__detail,.preview-meta span,.activity-empty){
+      overflow-wrap:anywhere !important;
+      word-break:break-word !important;
+    }
+  </style>
 </head>
-<body>
+<body class="settings-page">
   <div class="top"><div class="row">
     <div class="brand">HMJ Global Admin</div>
     <span class="pill">Settings</span>
