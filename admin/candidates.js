@@ -48,11 +48,13 @@
     lastQueryMs: 0,
     logs: [],
     debugOpen: false,
-    metrics: { total: 0, progress: 0, archived: 0, blocked: 0 },
+    metrics: { total: 0, progress: 0, ready: 0, rtwMissing: 0, toVerify: 0, archived: 0, blocked: 0 },
     importFile: null,
     importFileData: '',
     importPreview: null,
-    tspCompare: null
+    tspCompare: null,
+    verificationQueue: null,
+    pendingDocRequest: null
   };
 
   const REQUESTABLE_DOC_TYPES = ['passport', 'qualification_certificate', 'reference', 'right_to_work', 'visa_permit', 'bank_document'];
@@ -190,12 +192,91 @@
     return documentRequestLabel(normalized);
   }
 
+  function documentVerificationMeta(doc) {
+    const status = String(doc?.verification_status || '').trim().toLowerCase();
+    if (status === 'verified') return { label: 'Verified', tone: 'green' };
+    if (status === 'rejected') return { label: 'Needs re-upload', tone: 'red' };
+    if (doc?.verification_required) return { label: 'To verify', tone: 'orange' };
+    return { label: 'Stored', tone: 'gray' };
+  }
+
   function formatDocumentRequestList(list) {
     const labels = (Array.isArray(list) ? list : []).map((item) => documentRequestLabel(item));
     if (!labels.length) return 'documents';
     if (labels.length === 1) return labels[0];
     if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
     return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
+  }
+
+  function renderDocumentRequestDialogOptions(selected = []) {
+    if (!elements.docRequestOptions) return;
+    const chosen = new Set(
+      (Array.isArray(selected) ? selected : [])
+        .map((value) => normalizeDocumentRequestType(value))
+        .filter(Boolean)
+    );
+    elements.docRequestOptions.innerHTML = REQUESTABLE_DOC_TYPES
+      .map((type) => `
+        <label class="drawer-field" style="display:flex;align-items:flex-start;gap:10px">
+          <input type="checkbox" data-doc-request-type="${type}" ${chosen.has(type) ? 'checked' : ''} />
+          <span>
+            <strong>${escapeHtml(documentRequestLabel(type))}</strong>
+            <span class="muted" style="display:block;font-size:12px">${type === 'right_to_work'
+              ? 'Passport, share code, visa, or formal RTW evidence.'
+              : type === 'qualification_certificate'
+              ? 'Cards, tickets, qualifications, or certification proof.'
+              : type === 'reference'
+              ? 'Reference letters or referee support documents.'
+              : type === 'bank_document'
+              ? 'Void cheque or payroll support document.'
+              : type === 'passport'
+              ? 'Passport ID pages.'
+              : 'Visa or permit evidence.'}</span>
+          </span>
+        </label>
+      `)
+      .join('');
+  }
+
+  function closeDocumentRequestDialog() {
+    state.pendingDocRequest = null;
+    const dialog = elements.docRequestDialog;
+    if (!dialog) return;
+    if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+    else dialog.removeAttribute('open');
+  }
+
+  function selectedDocumentRequestTypes() {
+    if (!elements.docRequestOptions) return [];
+    return Array.from(elements.docRequestOptions.querySelectorAll('[data-doc-request-type]:checked'))
+      .map((input) => normalizeDocumentRequestType(input.dataset.docRequestType || input.value))
+      .filter((value, index, list) => value && list.indexOf(value) === index);
+  }
+
+  function openDocumentRequestDialog(candidateIds, defaultTypes = []) {
+    const ids = (Array.isArray(candidateIds) ? candidateIds : [])
+      .map((value) => String(value))
+      .filter(Boolean);
+    if (!ids.length) {
+      showToast('Select candidates first.', 'warn', 2800);
+      return;
+    }
+    const requested = Array.isArray(defaultTypes) && defaultTypes.length
+      ? defaultTypes
+      : ['passport', 'qualification_certificate', 'reference'];
+    state.pendingDocRequest = {
+      candidateIds: ids,
+      defaultTypes: requested,
+    };
+    renderDocumentRequestDialogOptions(requested);
+    if (elements.docRequestSend) {
+      elements.docRequestSend.textContent = `Send request${ids.length === 1 ? '' : ` to ${ids.length} candidates`}`;
+      elements.docRequestSend.disabled = false;
+    }
+    if (elements.docRequestDialog) {
+      if (typeof elements.docRequestDialog.showModal === 'function') elements.docRequestDialog.showModal();
+      else elements.docRequestDialog.setAttribute('open', 'open');
+    }
   }
 
   function parseDocumentRequestList(value) {
@@ -240,22 +321,33 @@
 
   function normaliseOnboarding(row, docs, paymentSummary) {
     const existing = row?.onboarding && typeof row.onboarding === 'object' ? row.onboarding : null;
-    const docTypes = new Set((Array.isArray(docs) ? docs : []).map((doc) => String(doc?.document_type || doc?.kind || '').toLowerCase()));
-    const hasRightToWork = existing?.hasRightToWork === true
-      || docTypes.has('right_to_work')
-      || docTypes.has('passport')
-      || docTypes.has('visa_permit')
+    const docRows = Array.isArray(docs) ? docs : [];
+    const docTypes = new Set(docRows.map((doc) => String(doc?.document_type || doc?.kind || '').toLowerCase()));
+    const rightToWorkDocs = docRows.filter((doc) => ['right_to_work', 'passport', 'visa_permit'].includes(String(doc?.document_type || doc?.kind || '').toLowerCase()));
+    const hasRightToWorkUpload = existing?.hasRightToWorkUpload === true
+      || rightToWorkDocs.length > 0
       || !!String(row?.rtw_url || '').trim();
+    const hasRightToWork = existing?.hasRightToWork === true
+      || rightToWorkDocs.some((doc) => String(doc?.verification_status || '').toLowerCase() === 'verified')
+      || !!String(row?.rtw_url || '').trim();
+    const hasRightToWorkPendingVerification = existing?.hasRightToWorkPendingVerification === true
+      || (!hasRightToWork && hasRightToWorkUpload);
     const hasPaymentDetails = existing?.hasPaymentDetails === true || paymentSummary?.completion?.complete === true;
+    const pendingVerificationCount = typeof existing?.pendingVerificationCount === 'number'
+      ? existing.pendingVerificationCount
+      : docRows.filter((doc) => doc?.verification_required && String(doc?.verification_status || '').toLowerCase() !== 'verified').length;
     const missing = [];
     if (!hasRightToWork) missing.push('right_to_work');
     if (!hasPaymentDetails) missing.push('payment_details');
     return {
       hasRightToWork,
+      hasRightToWorkUpload,
+      hasRightToWorkPendingVerification,
       hasPaymentDetails,
       onboardingComplete: existing?.onboardingComplete === true || missing.length === 0,
       missing,
       documentTypes: Array.isArray(existing?.documentTypes) ? existing.documentTypes : Array.from(docTypes),
+      pendingVerificationCount,
     };
   }
 
@@ -518,7 +610,7 @@
     return {
       ...row,
       id: row.id ?? row.ref ?? `tmp-${Math.random().toString(36).slice(2)}`,
-      ref: row.ref || null,
+      ref: row.ref || row.payroll_ref || null,
       auth_user_id: row.auth_user_id || portalAuth.user_id || null,
       has_portal_account: !!(row.has_portal_account || row.auth_user_id || portalAuth.exists),
       portal_account_state: row.portal_account_state || (row.auth_user_id ? 'linked' : 'none'),
@@ -737,7 +829,8 @@
       total,
       progress: countStatus('in progress'),
       ready: countBy((row) => row.onboarding?.onboardingComplete === true),
-      rtwMissing: countBy((row) => row.onboarding?.hasRightToWork === false),
+      rtwMissing: countBy((row) => row.onboarding?.hasRightToWork !== true && row.onboarding?.hasRightToWorkUpload !== true),
+      toVerify: countBy((row) => (row.onboarding?.pendingVerificationCount || 0) > 0),
       archived: countStatus('archived'),
       blocked: countStatus('blocked')
     };
@@ -749,6 +842,7 @@
     if (elements.progress) elements.progress.textContent = `In progress: ${state.metrics.progress}`;
     if (elements.ready) elements.ready.textContent = `Ready: ${state.metrics.ready}`;
     if (elements.rtwMissing) elements.rtwMissing.textContent = `RTW missing: ${state.metrics.rtwMissing}`;
+    if (elements.toVerify) elements.toVerify.textContent = `To verify: ${state.metrics.toVerify}`;
     if (elements.archived) elements.archived.textContent = `Archived: ${state.metrics.archived}`;
     if (elements.blocked) elements.blocked.textContent = `Blocked: ${state.metrics.blocked}`;
   }
@@ -820,9 +914,23 @@
     return 'gray';
   }
 
+  function rightToWorkChip(candidate) {
+    const onboarding = candidate?.onboarding || {};
+    if (onboarding.hasRightToWork === true) return { label: 'RTW verified', tone: 'green' };
+    if (onboarding.hasRightToWorkPendingVerification === true || onboarding.pendingVerificationCount > 0) {
+      return { label: 'RTW to verify', tone: 'orange' };
+    }
+    if (onboarding.hasRightToWorkUpload === true) return { label: 'RTW uploaded', tone: 'orange' };
+    return { label: 'RTW missing', tone: 'orange' };
+  }
+
   function paymentReference(candidate) {
     const lastFour = String(candidate?.payment_summary?.lastFour || '').trim();
     return lastFour ? `••••${lastFour}` : 'Pending';
+  }
+
+  function candidateReference(candidate) {
+    return String(candidate?.ref || candidate?.payroll_ref || '').trim() || '—';
   }
 
   function paymentMethodLabel(value) {
@@ -912,9 +1020,10 @@
       : '';
     const onboarding = candidate.onboarding || {};
     const paymentSummary = candidate.payment_summary || {};
+    const rtwChip = rightToWorkChip(candidate);
     row.innerHTML = `
       <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected}></div>
-      <div>${candidate.ref || '—'}</div>
+      <div>${candidateReference(candidate)}</div>
       <div class="row-card">
         <div class="row-title" title="${candidate.name || 'Candidate'}">${candidate.name || '—'}</div>
         <div class="row-subtle" title="${candidate.role || 'Role pending'}">${candidate.role || 'Role pending'}</div>
@@ -930,11 +1039,12 @@
       </div>
       <div class="row-card">
         <div class="row-meta">
-          <span class="chip ${onboarding.hasRightToWork ? 'green' : 'orange'}">${onboarding.hasRightToWork ? 'RTW received' : 'RTW missing'}</span>
+          <span class="chip ${rtwChip.tone}">${rtwChip.label}</span>
           <span class="chip ${paymentSummary.completion?.complete ? 'green' : 'gray'}">${paymentSummary.completion?.complete ? 'Payment on file' : 'Payment pending'}</span>
+          ${onboarding.pendingVerificationCount ? `<span class="chip orange">${onboarding.pendingVerificationCount} to verify</span>` : ''}
         </div>
         <div class="row-subtle">Onboarding: <strong class="row-inline-strong ${onboardingTone(candidate)}">${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong></div>
-        <div class="row-subtle">Reference: ${paymentReference(candidate)}</div>
+        <div class="row-subtle">Payment ref: ${paymentReference(candidate)}</div>
       </div>
       <div><span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span></div>
       <div class="row-actions">
@@ -1236,6 +1346,16 @@
       : 'Not created';
     const accountEmail = portalAuth.email || candidate.email || '—';
     const canSendReminder = !onboarding.hasRightToWork && !!candidate.email && !isArchived(candidate);
+    const rtwTitle = onboarding.hasRightToWork
+      ? 'Verified'
+      : onboarding.hasRightToWorkPendingVerification
+      ? 'To verify'
+      : 'Missing';
+    const rtwCopy = onboarding.hasRightToWork
+      ? 'HMJ has a verified RTW or passport record on file.'
+      : onboarding.hasRightToWorkPendingVerification
+      ? 'Candidate has uploaded RTW evidence, but HMJ still needs to verify it.'
+      : 'Candidate still needs to upload RTW evidence.';
     return `
       <div class="drawer-section">
         <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">
@@ -1245,8 +1365,8 @@
         <div class="summary-grid">
           <article class="summary-tile">
             <span>Right to work</span>
-            <strong>${onboarding.hasRightToWork ? 'Received' : 'Missing'}</strong>
-            <p>${onboarding.hasRightToWork ? 'Passport or RTW evidence is on file.' : 'Candidate still needs to upload RTW evidence.'}</p>
+            <strong>${rtwTitle}</strong>
+            <p>${rtwCopy}</p>
           </article>
           <article class="summary-tile">
             <span>Payment details</span>
@@ -1268,7 +1388,7 @@
           ${editableField('Region', 'region', candidate.region)}
           ${editableField('Availability', 'availability_on', candidate.availability_on, 'date')}
           ${editableSelect('Status', 'status', candidate.status, Object.keys(STATUS_META))}
-          ${editableField('Reference', 'ref', candidate.ref)}
+          ${editableField('Reference', 'ref', candidateReference(candidate))}
         </div>
         <div class="profile-grid" style="margin-top:12px">
           <div class="drawer-field"><span>Portal account</span><strong>${portalStatus}</strong></div>
@@ -1295,6 +1415,7 @@
           <button class="btn ghost" type="button" data-account-action="inspect">Refresh portal status</button>
           <button class="btn ghost" type="button" data-onboarding-action="send-doc-request" ${!candidate.email || isArchived(candidate) ? 'disabled' : ''}>Request documents</button>
           <button class="btn ghost" type="button" data-onboarding-action="send-rtw-reminder" ${canSendReminder ? '' : 'disabled'}>Send RTW reminder</button>
+          <button class="btn ghost" type="button" data-tsp-action="sync-candidate" ${(!candidate.email && !String(candidate?.ref || candidate?.payroll_ref || '').trim()) || isArchived(candidate) ? 'disabled' : ''}>Sync from TSP</button>
           <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
           <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
           <button class="btn ghost" type="button" data-account-action="send_password_reset" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Email reset link</button>
@@ -1437,6 +1558,7 @@
             const label = doc.label || doc.kind || doc.original_filename || doc.filename || doc.name || documentTypeLabel(doc.document_type);
             const uploaded = formatDateTime(doc.uploaded_at || doc.created_at);
             const typeLabel = documentTypeLabel(doc.document_type || doc.kind);
+            const verification = documentVerificationMeta(doc);
             const action = href
               ? `<a href="${href}" target="_blank" rel="noopener">Open</a>`
               : '<span class="muted">Unavailable</span>';
@@ -1444,12 +1566,21 @@
             const remove = canDelete
               ? `<button class="btn ghost small" type="button" data-doc-delete="${doc.id}">Delete</button>`
               : '';
+            const verifyControls = doc.verification_required
+              ? `
+                <span class="chip ${verification.tone}">${verification.label}</span>
+                ${doc.verification_status !== 'verified' ? `<button class="btn ghost small" type="button" data-doc-verify="${doc.id}">Verify</button>` : ''}
+                ${doc.verification_status !== 'rejected' ? `<button class="btn ghost small" type="button" data-doc-reject="${doc.id}">Reject</button>` : ''}
+                ${doc.verification_status === 'rejected' ? `<button class="btn ghost small" type="button" data-doc-reset="${doc.id}">Reset</button>` : ''}
+              `
+              : '';
             return `<div class="doc-row">
               <div style="min-width:0">
                 <div style="font-weight:700;word-break:break-word">${escapeHtml(label)}</div>
-                <div class="muted" style="font-size:12px">${escapeHtml(typeLabel)}${uploaded ? ` · ${escapeHtml(uploaded)}` : ''}</div>
+                <div class="muted" style="font-size:12px">${escapeHtml(typeLabel)}${uploaded ? ` · ${escapeHtml(uploaded)}` : ''}${doc.verified_at ? ` · Verified ${escapeHtml(formatDateTime(doc.verified_at))}` : ''}</div>
+                ${doc.verification_notes ? `<div class="muted" style="font-size:12px;margin-top:4px">Review note: ${escapeHtml(doc.verification_notes)}</div>` : ''}
               </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${action}${remove}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${verifyControls}${action}${remove}</div>
             </div>`;
           }).join('')
         : '<div class="muted">Nothing uploaded in this section yet.</div>';
@@ -1637,6 +1768,7 @@
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
     refreshDrawerProfile(candidate, { preserveDirty: true });
+    await refreshVerificationQueue({ silent: true });
   }
 
   async function uploadCandidateDocument(candidate, file, label, documentType) {
@@ -1659,6 +1791,7 @@
       elements.dwDocs.innerHTML = renderDocs(candidate);
       bindDocumentActions(candidate);
       refreshDrawerProfile(candidate, { preserveDirty: true });
+      await refreshVerificationQueue({ silent: true });
     } else {
       await refreshCandidateDocuments(candidate);
     }
@@ -1675,6 +1808,33 @@
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
     refreshDrawerProfile(candidate, { preserveDirty: true });
+    await refreshVerificationQueue({ silent: true });
+  }
+
+  async function reviewCandidateDocument(candidate, documentId, action, notes = '') {
+    if (!documentId) return;
+    const response = await state.helpers.api('admin-candidate-doc-verify', 'POST', {
+      id: documentId,
+      action,
+      notes,
+    });
+    const document = response?.document || null;
+    if (document) {
+      candidate.docs = (candidate.docs || []).map((entry) => (
+        String(entry.id) === String(documentId) ? { ...entry, ...document } : entry
+      ));
+    } else {
+      await refreshCandidateDocuments(candidate);
+    }
+    candidate.onboarding = normaliseOnboarding(candidate, candidate.docs, candidate.payment_summary);
+    const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
+    if (index >= 0) state.raw[index] = { ...candidate };
+    applyFilters();
+    elements.dwDocs.innerHTML = renderDocs(candidate);
+    bindDocumentActions(candidate);
+    refreshDrawerProfile(candidate, { preserveDirty: true });
+    await refreshVerificationQueue({ silent: true });
+    showToast(response?.message || 'Document review updated.', 'info', 2600);
   }
 
   function bindDocumentActions(candidate) {
@@ -1718,6 +1878,28 @@
         } catch (err) {
           console.error('[candidates] document delete failed', err);
           showToast(err.message || 'Document delete failed', 'error', 4200);
+          button.disabled = false;
+        }
+      });
+    });
+    host.querySelectorAll('[data-doc-verify],[data-doc-reject],[data-doc-reset]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const documentId = button.dataset.docVerify || button.dataset.docReject || button.dataset.docReset;
+        if (!documentId) return;
+        const action = button.dataset.docVerify
+          ? 'verify'
+          : button.dataset.docReject
+          ? 'reject'
+          : 'reset';
+        const notes = action === 'reject'
+          ? window.prompt('Add a short note for the candidate or HMJ review team (optional).', '') || ''
+          : '';
+        button.disabled = true;
+        try {
+          await reviewCandidateDocument(candidate, documentId, action, notes);
+        } catch (err) {
+          console.error('[candidates] document review failed', err);
+          showToast(err.message || 'Document review failed.', 'error', 4200);
           button.disabled = false;
         }
       });
@@ -2000,15 +2182,23 @@
           return;
         }
         if (btn.dataset.onboardingAction === 'send-doc-request') {
-          btn.disabled = true;
-          try {
-            await sendDocumentRequests([candidate.id]);
-          } catch (err) {
-            console.error('[candidates] document request failed', err);
-            showToast(err.message || 'Could not send the document request.', 'error', 4200);
-          } finally {
-            btn.disabled = false;
-          }
+          openDocumentRequestDialog([candidate.id]);
+        }
+      });
+    });
+    section.querySelectorAll('[data-tsp-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (btn.dataset.tspAction !== 'sync-candidate') return;
+        btn.disabled = true;
+        try {
+          await runTimesheetPortalCandidateSync({ candidateIds: [candidate.id] });
+          const refreshed = await fetchCandidate(candidate.id).catch(() => null);
+          if (refreshed) renderDrawer(refreshed);
+        } catch (err) {
+          console.error('[candidates] single candidate TSP sync failed', err);
+          showToast(err.message || 'Could not sync this candidate from Timesheet Portal.', 'error', 4200);
+        } finally {
+          btn.disabled = false;
         }
       });
     });
@@ -2371,7 +2561,7 @@
 
   function selectMissingRtw() {
     const ids = state.filtered
-      .filter((candidate) => candidate.onboarding?.hasRightToWork === false)
+      .filter((candidate) => candidate.onboarding?.hasRightToWork !== true && candidate.onboarding?.hasRightToWorkUpload !== true)
       .map((candidate) => candidate.id);
     if (!ids.length) {
       showToast('No visible candidates are missing right-to-work documents.', 'warn');
@@ -2426,24 +2616,7 @@
     clearSelection();
   }
 
-  function promptDocumentRequestTypes(defaultTypes) {
-    const fallback = Array.isArray(defaultTypes) && defaultTypes.length
-      ? defaultTypes
-      : ['passport', 'qualification_certificate', 'reference'];
-    const answer = window.prompt(
-      'Document types to request (comma separated: passport, qualification_certificate, reference, right_to_work, visa_permit, bank_document)',
-      fallback.join(', '),
-    );
-    if (answer == null) return null;
-    const requested = parseDocumentRequestList(answer);
-    if (!requested.length) {
-      showToast('Enter at least one supported document type.', 'warn', 3200);
-      return null;
-    }
-    return requested;
-  }
-
-  async function sendOnboardingRequest({ candidateIds, requestType = 'rtw', documentTypes = [] }) {
+  async function sendOnboardingRequest({ candidateIds, requestType = 'rtw', documentTypes = [], skipConfirm = true, force = false }) {
     const payloadIds = Array.isArray(candidateIds) && candidateIds.length
       ? candidateIds.map((id) => String(id))
       : [];
@@ -2464,20 +2637,40 @@
       );
       return;
     }
-    const sampleNames = eligible.slice(0, 3).map((candidate) => candidate.full_name || candidate.email).join(', ');
-    const previewText = eligible.length > 3 ? `${sampleNames}, and ${eligible.length - 3} more` : sampleNames;
-    const confirmed = window.confirm(
-      requestType === 'rtw'
-        ? `Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`
-        : `Send secure ${formatDocumentRequestList(documentTypes).toLowerCase()} requests to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`,
-    );
-    if (!confirmed) return;
-    const response = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
+    if (!skipConfirm) {
+      const sampleNames = eligible.slice(0, 3).map((candidate) => candidate.full_name || candidate.email).join(', ');
+      const previewText = eligible.length > 3 ? `${sampleNames}, and ${eligible.length - 3} more` : sampleNames;
+      const confirmed = window.confirm(
+        requestType === 'rtw'
+          ? `Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`
+          : `Send secure ${formatDocumentRequestList(documentTypes).toLowerCase()} requests to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`,
+      );
+      if (!confirmed) return;
+    }
+    let response = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
       action: 'send',
       candidateIds: payloadIds,
       requestType,
       documentTypes,
+      force,
     });
+    const recentSkips = Array.isArray(response?.skipped)
+      ? response.skipped.filter((entry) => entry?.reason === 'recently_sent').length
+      : 0;
+    if (!force && Number(response?.sentCount || 0) === 0 && recentSkips > 0) {
+      const resend = window.confirm(
+        `HMJ already sent ${recentSkips} reminder${recentSkips === 1 ? '' : 's'} in the last 24 hours. Send a fresh reminder anyway?`
+      );
+      if (resend) {
+        response = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
+          action: 'send',
+          candidateIds: payloadIds,
+          requestType,
+          documentTypes,
+          force: true,
+        });
+      }
+    }
     pushLog({
       action: requestType === 'rtw' ? 'rtw:reminders' : 'docs:request',
       detail: response?.message || `Sent ${response?.sentCount || 0}`,
@@ -2494,16 +2687,7 @@
       candidateIds,
       requestType: 'rtw',
       documentTypes: ['right_to_work'],
-    });
-  }
-
-  async function sendDocumentRequests(candidateIds, defaultTypes) {
-    const requested = promptDocumentRequestTypes(defaultTypes);
-    if (!requested) return;
-    await sendOnboardingRequest({
-      candidateIds,
-      requestType: 'documents',
-      documentTypes: requested,
+      skipConfirm: true,
     });
   }
 
@@ -2526,12 +2710,7 @@
       showToast('Select candidates first', 'warn');
       return;
     }
-    try {
-      await sendDocumentRequests(ids);
-    } catch (err) {
-      console.error('[candidates] document request send failed', err);
-      showToast(err.message || 'Document request send failed.', 'error', 4200);
-    }
+    openDocumentRequestDialog(ids);
   }
 
   async function refreshTimesheetPortalCompare() {
@@ -2549,6 +2728,133 @@
       };
       renderTspSummary();
     }
+  }
+
+  async function runTimesheetPortalCandidateSync({ candidateIds = [], provisionPortalAccounts = false } = {}) {
+    if (elements.tspSyncStatus) {
+      elements.tspSyncStatus.textContent = provisionPortalAccounts
+        ? 'Syncing Timesheet Portal candidates and inviting portal accounts…'
+        : 'Syncing Timesheet Portal candidates into Supabase…';
+    }
+    const response = await state.helpers.api('admin-candidates-sync-timesheet-portal', 'POST', {
+      candidateIds,
+      provisionPortalAccounts,
+    });
+    if (response?.configured === false) {
+      if (elements.tspSyncStatus) elements.tspSyncStatus.textContent = response.message || 'Timesheet Portal is not configured for this environment.';
+      showToast(response.message || 'Timesheet Portal is not configured for this environment.', 'warn', 4200);
+      return response;
+    }
+    if (!response?.ok) {
+      const attempts = Array.isArray(response?.attempts) ? response.attempts : [];
+      const attemptText = attempts.length
+        ? ` Latest checks: ${attempts.slice(0, 4).map((attempt) => `${attempt.path} → ${attempt.status}${attempt.authScheme ? ` (${attempt.authScheme})` : ''}`).join(' · ')}`
+        : '';
+      throw new Error((response?.message || 'Timesheet Portal candidate sync failed.') + attemptText);
+    }
+    if (elements.tspSyncStatus) {
+      elements.tspSyncStatus.textContent = response.message
+        || `Synced ${response.upserted || 0} candidate record${Number(response.upserted || 0) === 1 ? '' : 's'} from Timesheet Portal.`;
+    }
+    pushLog({
+      action: provisionPortalAccounts ? 'tsp:candidates:sync+invite' : 'tsp:candidates:sync',
+      detail: `${response.upserted || 0} upserted`,
+    });
+    await loadCandidates({ silent: true });
+    await refreshTimesheetPortalCompare();
+    await refreshVerificationQueue({ silent: true });
+    if (state.drawerId) {
+      const refreshed = await fetchCandidate(state.drawerId).catch(() => null);
+      if (refreshed) renderDrawer(refreshed);
+    }
+    showToast(response.message || 'Timesheet Portal candidate sync complete.', 'info', 4200);
+    return response;
+  }
+
+  function renderVerificationQueue() {
+    const statusHost = elements.verifyStatus;
+    const summaryHost = elements.verifySummary;
+    if (!statusHost || !summaryHost) return;
+    const queue = state.verificationQueue;
+    if (!queue) {
+      statusHost.textContent = 'Loading candidate document verification queue…';
+      summaryHost.innerHTML = '';
+      return;
+    }
+    if (queue.ok === false) {
+      statusHost.textContent = queue.message || 'Could not load the verification queue.';
+      summaryHost.innerHTML = '';
+      return;
+    }
+    const candidates = Array.isArray(queue.candidates) ? queue.candidates : [];
+    statusHost.textContent = candidates.length
+      ? `${candidates.length} candidate${candidates.length === 1 ? '' : 's'} currently have documents waiting for HMJ verification.`
+      : 'No uploaded candidate documents currently need HMJ verification.';
+    summaryHost.innerHTML = candidates.length
+      ? candidates.slice(0, 12).map((entry) => `
+          <div class="mapping-item">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <strong>${escapeHtml(entry.name || entry.email || 'Candidate')}</strong>
+                <p>${escapeHtml([
+                  entry.ref || entry.payroll_ref || null,
+                  entry.email || null,
+                  `${entry.count || (entry.documents || []).length} document${Number(entry.count || (entry.documents || []).length) === 1 ? '' : 's'} to verify`,
+                ].filter(Boolean).join(' · '))}</p>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn ghost small" type="button" data-open-candidate="${escapeHtml(entry.candidate_id)}">Open</button>
+                <button class="btn ghost small" type="button" data-select-candidate="${escapeHtml(entry.candidate_id)}">Select</button>
+              </div>
+            </div>
+            <div class="tag-row">${(entry.documents || []).slice(0, 6).map((doc) => `<span class="chip orange">${escapeHtml(documentTypeLabel(doc.document_type || doc.label || 'document'))}</span>`).join(' ')}</div>
+          </div>
+        `).join('')
+      : '';
+    summaryHost.querySelectorAll('[data-open-candidate]').forEach((button) => {
+      button.addEventListener('click', () => openDrawer(button.dataset.openCandidate));
+    });
+    summaryHost.querySelectorAll('[data-select-candidate]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.selectCandidate;
+        if (!id) return;
+        state.selection.add(String(id));
+        persistSelection();
+        updateBulkBar();
+        syncHeaderCheckbox();
+        refreshRows(true);
+        showToast('Candidate added to the current selection.', 'info', 2200);
+      });
+    });
+  }
+
+  async function refreshVerificationQueue({ silent = false } = {}) {
+    if (!silent && elements.verifyStatus) {
+      elements.verifyStatus.textContent = 'Loading candidate document verification queue…';
+    }
+    try {
+      const response = await state.helpers.api('admin-candidate-doc-verification-queue', 'POST', {});
+      state.verificationQueue = response || { ok: true, count: 0, candidates: [] };
+      renderVerificationQueue();
+    } catch (err) {
+      console.error('[candidates] verification queue failed', err);
+      state.verificationQueue = {
+        ok: false,
+        message: err.message || 'Could not load the verification queue.',
+      };
+      renderVerificationQueue();
+      if (!silent) showToast(err.message || 'Could not load the verification queue.', 'error', 4200);
+    }
+  }
+
+  function selectPendingVerificationCandidates() {
+    const ids = (state.verificationQueue?.candidates || []).map((entry) => String(entry.candidate_id || '')).filter(Boolean);
+    if (!ids.length) {
+      showToast('No candidates are currently waiting for document verification.', 'warn', 3200);
+      return;
+    }
+    setSelection(ids);
+    showToast(`Selected ${ids.length} candidate${ids.length === 1 ? '' : 's'} waiting for document verification.`, 'info', 2800);
   }
 
   async function previewCandidateImport() {
@@ -2761,6 +3067,7 @@
     elements.blocked = qs('#t-blocked');
     elements.ready = qs('#t-ready');
     elements.rtwMissing = qs('#t-rtw-missing');
+    elements.toVerify = qs('#t-to-verify');
     elements.drawer = qs('#drawer');
     elements.dwName = qs('#dw-name');
     elements.dwProfile = qs('#dw-profile');
@@ -2795,9 +3102,20 @@
     elements.importSummary = qs('#import-summary');
     elements.importMapping = qs('#import-mapping');
     elements.refreshTsp = qs('#btn-refresh-tsp');
+    elements.syncTsp = qs('#btn-sync-tsp');
+    elements.syncTspPortal = qs('#btn-sync-tsp-portal');
     elements.visibleDocRequest = qs('#btn-visible-doc-request');
     elements.tspStatus = qs('#tsp-status');
+    elements.tspSyncStatus = qs('#tsp-sync-status');
     elements.tspSummary = qs('#tsp-summary');
+    elements.refreshVerify = qs('#btn-refresh-verify');
+    elements.selectToVerify = qs('#btn-select-to-verify');
+    elements.verifyStatus = qs('#verify-status');
+    elements.verifySummary = qs('#verify-summary');
+    elements.docRequestDialog = qs('#doc-request-dialog');
+    elements.docRequestOptions = qs('#doc-request-options');
+    elements.docRequestCancel = qs('#doc-request-cancel');
+    elements.docRequestSend = qs('#doc-request-send');
   }
 
   function bindEvents() {
@@ -2828,17 +3146,90 @@
     if (elements.refreshTsp) {
       elements.refreshTsp.addEventListener('click', () => refreshTimesheetPortalCompare());
     }
+    if (elements.syncTsp) {
+      elements.syncTsp.addEventListener('click', async () => {
+        elements.syncTsp.disabled = true;
+        try {
+          await runTimesheetPortalCandidateSync();
+        } catch (err) {
+          console.error('[candidates] TSP candidate sync failed', err);
+          if (elements.tspSyncStatus) elements.tspSyncStatus.textContent = err.message || 'Timesheet Portal candidate sync failed.';
+          showToast(err.message || 'Timesheet Portal candidate sync failed.', 'error', 4200);
+        } finally {
+          elements.syncTsp.disabled = false;
+        }
+      });
+    }
+    if (elements.syncTspPortal) {
+      elements.syncTspPortal.addEventListener('click', async () => {
+        elements.syncTspPortal.disabled = true;
+        try {
+          await runTimesheetPortalCandidateSync({ provisionPortalAccounts: true });
+        } catch (err) {
+          console.error('[candidates] TSP candidate sync+invite failed', err);
+          if (elements.tspSyncStatus) elements.tspSyncStatus.textContent = err.message || 'Timesheet Portal sync + invite failed.';
+          showToast(err.message || 'Timesheet Portal sync + invite failed.', 'error', 4200);
+        } finally {
+          elements.syncTspPortal.disabled = false;
+        }
+      });
+    }
     if (elements.visibleDocRequest) {
-      elements.visibleDocRequest.addEventListener('click', async () => {
+      elements.visibleDocRequest.addEventListener('click', () => {
         if (!state.filtered.length) {
           showToast('No visible candidates are available for a document request.', 'warn', 3200);
           return;
         }
+        openDocumentRequestDialog(state.filtered.map((candidate) => candidate.id));
+      });
+    }
+    if (elements.refreshVerify) {
+      elements.refreshVerify.addEventListener('click', () => refreshVerificationQueue());
+    }
+    if (elements.selectToVerify) {
+      elements.selectToVerify.addEventListener('click', () => selectPendingVerificationCandidates());
+    }
+    if (elements.docRequestCancel) {
+      elements.docRequestCancel.addEventListener('click', () => closeDocumentRequestDialog());
+    }
+    if (elements.docRequestDialog) {
+      elements.docRequestDialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeDocumentRequestDialog();
+      });
+      elements.docRequestDialog.addEventListener('close', () => {
+        if (!elements.docRequestDialog.open) state.pendingDocRequest = null;
+      });
+    }
+    if (elements.docRequestSend) {
+      elements.docRequestSend.addEventListener('click', async () => {
+        const pending = state.pendingDocRequest;
+        if (!pending?.candidateIds?.length) {
+          closeDocumentRequestDialog();
+          return;
+        }
+        const requested = selectedDocumentRequestTypes();
+        if (!requested.length) {
+          showToast('Select at least one requested document type.', 'warn', 3200);
+          return;
+        }
+        elements.docRequestSend.disabled = true;
         try {
-          await sendDocumentRequests(state.filtered.map((candidate) => candidate.id));
+          await sendOnboardingRequest({
+            candidateIds: pending.candidateIds,
+            requestType: 'documents',
+            documentTypes: requested,
+            skipConfirm: true,
+          });
+          closeDocumentRequestDialog();
         } catch (err) {
-          console.error('[candidates] visible document request failed', err);
+          console.error('[candidates] document request send failed', err);
           showToast(err.message || 'Document request send failed.', 'error', 4200);
+          elements.docRequestSend.disabled = false;
+        } finally {
+          if (elements.docRequestSend && !elements.docRequestDialog?.open) {
+            elements.docRequestSend.disabled = false;
+          }
         }
       });
     }
@@ -2857,9 +3248,10 @@
     applyFilterInputs();
     renderImportState();
     renderTspSummary();
+    renderVerificationQueue();
     bindEvents();
     bindKeyboardShortcuts();
-    loadCandidates();
+    loadCandidates().then(() => refreshVerificationQueue({ silent: true }));
     refreshTimesheetPortalCompare();
   }
 

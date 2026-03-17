@@ -25,7 +25,7 @@ function buildCandidatesMap(rows = []) {
 async function loadCandidates(supabase, body = {}) {
   let query = supabase
     .from('candidates')
-    .select('id,full_name,first_name,last_name,email,status,auth_user_id,right_to_work,right_to_work_status,rtw_url,bank_name,bank_account,bank_iban,updated_at,created_at')
+    .select('id,ref,payroll_ref,full_name,first_name,last_name,email,status,auth_user_id,right_to_work_status,rtw_url,updated_at,created_at')
     .order('updated_at', { ascending: false })
     .limit(500);
 
@@ -195,7 +195,7 @@ const baseHandler = async (event, context) => {
       if (!candidate?.id || !lowerEmail(candidate.email)) return false;
       if (String(candidate.status || '').toLowerCase() === 'archived') return false;
       if (!onboarding) return false;
-      if (requestType === 'rtw') return onboarding.hasRightToWork === false;
+      if (requestType === 'rtw') return missingDocuments.includes('right_to_work');
       return missingDocuments.length > 0;
     });
 
@@ -290,6 +290,8 @@ const baseHandler = async (event, context) => {
         ? (requestType === 'rtw'
           ? `Sent ${sent.length} right-to-work reminder email${sent.length === 1 ? '' : 's'}.`
           : `Sent ${sent.length} onboarding document request email${sent.length === 1 ? '' : 's'}.`)
+        : skipped.length
+          ? `No ${requestType === 'rtw' ? 'right-to-work reminders' : 'document requests'} were sent. ${skipped.length} candidate${skipped.length === 1 ? ' was' : 's were'} skipped${skipped.some((entry) => entry?.reason === 'recently_sent') ? ' because HMJ already emailed them in the last 24 hours' : ''}.`
         : (requestType === 'rtw'
           ? 'No right-to-work reminders were sent.'
           : 'No onboarding document requests were sent.'),

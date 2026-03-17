@@ -1,5 +1,6 @@
 'use strict';
 
+const { normaliseCandidateDocument } = require('./_candidate-docs.js');
 const {
   _resolveCandidatePortalBaseUrl: resolveCandidatePortalBaseUrl,
   _buildRedirectUrl: buildRedirectUrl,
@@ -66,20 +67,23 @@ function normaliseDocumentType(value, fallbackLabel = '') {
 }
 
 function normaliseDocumentRow(row = {}) {
+  const normalized = normaliseCandidateDocument(row);
   const label = trimString(
-    row.label
+    normalized.label
     || row.kind
-    || row.original_filename
-    || row.filename
+    || normalized.original_filename
+    || normalized.filename
     || row.name,
     240,
   );
   return {
-    id: trimString(row.id, 120) || null,
-    candidate_id: trimString(row.candidate_id, 120) || null,
-    document_type: normaliseDocumentType(row.document_type, label),
+    id: normalized.id,
+    candidate_id: normalized.candidate_id,
+    document_type: normalized.document_type || normaliseDocumentType(row.document_type, label),
     label,
-    uploaded_at: row.uploaded_at || row.created_at || null,
+    uploaded_at: normalized.uploaded_at || row.created_at || null,
+    verification_required: normalized.verification_required === true,
+    verification_status: normalized.verification_status || null,
   };
 }
 
@@ -89,16 +93,38 @@ function listDocumentTypes(rows = []) {
     .filter(Boolean);
 }
 
-function hasRightToWorkEvidence(candidate = {}, documents = []) {
-  const types = new Set(listDocumentTypes(documents));
-  if ([...types].some((type) => RTW_DOCUMENT_TYPES.has(type))) return true;
-  if (trimString(candidate.rtw_url, 2000)) return true;
-  if (candidate.right_to_work === true) return true;
+function rightToWorkEvidenceState(candidate = {}, documents = []) {
+  const docRows = (Array.isArray(documents) ? documents : []).map((row) => normaliseDocumentRow(row));
+  const rightToWorkDocs = docRows.filter((row) => RTW_DOCUMENT_TYPES.has(row.document_type));
+  const hasUploaded = rightToWorkDocs.length > 0;
+  const hasVerifiedDocument = rightToWorkDocs.some((row) => row.verification_status === 'verified');
+  const hasPendingVerification = rightToWorkDocs.some((row) => row.verification_status !== 'verified');
+
+  if (trimString(candidate.rtw_url, 2000) || candidate.right_to_work === true) {
+    return {
+      hasUploaded: true,
+      hasVerified: true,
+      pendingVerification: false,
+    };
+  }
   const status = lowerText(candidate.right_to_work_status, 240);
   if (status && /full right to work|right to work in place|share code provided|passport provided/.test(status)) {
-    return true;
+    return {
+      hasUploaded: true,
+      hasVerified: true,
+      pendingVerification: false,
+    };
   }
-  return false;
+  return {
+    hasUploaded,
+    hasVerified: hasVerifiedDocument,
+    pendingVerification: hasPendingVerification && !hasVerifiedDocument,
+  };
+}
+
+function hasRightToWorkEvidence(candidate = {}, documents = []) {
+  const state = rightToWorkEvidenceState(candidate, documents);
+  return !!state?.hasVerified;
 }
 
 function hasPaymentDetails(paymentDetails = null, candidate = {}) {
@@ -117,19 +143,25 @@ function hasPaymentDetails(paymentDetails = null, candidate = {}) {
 
 function summariseOnboarding({ candidate = {}, documents = [], paymentDetails = null } = {}) {
   const documentRows = Array.isArray(documents) ? documents : [];
-  const hasRightToWork = hasRightToWorkEvidence(candidate, documentRows);
+  const rightToWorkState = rightToWorkEvidenceState(candidate, documentRows);
+  const hasRightToWork = !!rightToWorkState?.hasVerified;
   const hasPayment = hasPaymentDetails(paymentDetails, candidate);
-  const documentTypes = Array.from(new Set(listDocumentTypes(documentRows)));
+  const normalizedDocs = documentRows.map((row) => normaliseDocumentRow(row));
+  const documentTypes = Array.from(new Set(normalizedDocs.map((row) => row.document_type).filter(Boolean)));
+  const pendingVerificationCount = normalizedDocs.filter((row) => row.verification_required && row.verification_status !== 'verified').length;
   const missing = [];
   if (!hasRightToWork) missing.push('right_to_work');
   if (!hasPayment) missing.push('payment_details');
 
   return {
     hasRightToWork: hasRightToWork,
+    hasRightToWorkUpload: !!rightToWorkState?.hasUploaded,
+    hasRightToWorkPendingVerification: !!rightToWorkState?.pendingVerification,
     hasPaymentDetails: hasPayment,
     onboardingComplete: missing.length === 0,
     missing,
     documentTypes,
+    pendingVerificationCount,
     hasPassportLikeDocument: documentTypes.includes('passport'),
     hasVisaPermitDocument: documentTypes.includes('visa_permit'),
     hasCertificateDocument: documentTypes.includes('certificate') || documentTypes.includes('qualification_certificate'),
@@ -194,7 +226,7 @@ function missingRequestedDocuments(candidate = {}, documents = [], requested = [
   const onboarding = summariseOnboarding({ candidate, documents, paymentDetails });
 
   return requestedTypes.filter((type) => {
-    if (type === 'right_to_work') return onboarding.hasRightToWork === false;
+    if (type === 'right_to_work') return onboarding.hasRightToWork !== true && onboarding.hasRightToWorkUpload !== true;
     if (type === 'passport') return !docTypes.has('passport');
     if (type === 'qualification_certificate') return !docTypes.has('qualification_certificate') && !docTypes.has('certificate');
     if (type === 'reference') return !docTypes.has('reference');
@@ -223,6 +255,7 @@ module.exports = {
   buildCandidatePortalDeepLink,
   hasPaymentDetails,
   hasRightToWorkEvidence,
+  rightToWorkEvidenceState,
   missingRequestedDocuments,
   normaliseCandidatePortalTarget,
   normaliseDocumentRow,

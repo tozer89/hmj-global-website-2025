@@ -21,6 +21,7 @@ const {
   isPortalStoragePathOwnedByUser,
   presentCandidateDocument,
   presentCandidateDocuments,
+  withDocumentVerificationMeta,
 } = require('./_candidate-docs.js');
 
 function header(event, name) {
@@ -292,10 +293,11 @@ async function createFinalizeUploadResponse(ctx, body) {
   }
 
   const uploadedAt = new Date().toISOString();
+  const documentType = normaliseDocumentType(body.document_type);
   const payload = {
     candidate_id: String(ctx.candidate.id),
     owner_auth_user_id: ctx.authUser.id,
-    document_type: normaliseDocumentType(body.document_type),
+    document_type: documentType,
     label: trimString(body.label, 240) || trimString(validated.fileName, 240) || 'Document',
     original_filename: validated.fileName,
     filename: validated.fileName,
@@ -307,11 +309,11 @@ async function createFinalizeUploadResponse(ctx, body) {
     storage_key: storagePath,
     uploaded_at: uploadedAt,
     updated_at: uploadedAt,
-    meta: {
+    meta: withDocumentVerificationMeta(documentType, {
       uploaded_via: 'candidate_portal',
       owner_user_id: ctx.authUser.id,
       source: 'candidate_documents_function',
-    },
+    }),
   };
 
   const insert = await insertDocumentRecord(ctx.supabase, payload);

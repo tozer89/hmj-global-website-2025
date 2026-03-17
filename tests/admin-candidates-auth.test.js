@@ -12,12 +12,17 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=9/);
+  assert.match(html, /\/admin\/candidates\.js\?v=11/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
   assert.match(html, /id="candidate-template-xlsx"/);
   assert.match(html, /id="btn-refresh-tsp"/);
+  assert.match(html, /id="btn-sync-tsp"/);
+  assert.match(html, /id="btn-sync-tsp-portal"/);
+  assert.match(html, /id="btn-refresh-verify"/);
+  assert.match(html, /id="btn-select-to-verify"/);
+  assert.match(html, /id="doc-request-dialog"/);
   assert.match(html, /id="dw-payment"/);
   assert.match(html, /id="dw-assignments"/);
 });
@@ -93,7 +98,9 @@ test('candidate admin UI exposes onboarding reminder controls and uses the remin
   assert.match(source, /data-onboarding-action="send-rtw-reminder"/);
   assert.match(source, /data-onboarding-action="send-doc-request"/);
   assert.match(source, /function selectMissingRtw/);
-  assert.match(source, /function sendDocumentRequests/);
+  assert.match(source, /function openDocumentRequestDialog/);
+  assert.match(source, /function sendOnboardingRequest/);
+  assert.match(source, /recently_sent/);
 });
 
 test('candidate admin UI renders and binds assignment pairing controls in the drawer', () => {
@@ -108,9 +115,22 @@ test('candidate admin UI exposes import and timesheet portal comparison controls
   const source = read('admin/candidates.js');
   assert.match(source, /admin-candidates-import/);
   assert.match(source, /admin-candidates-timesheet-compare/);
+  assert.match(source, /admin-candidates-sync-timesheet-portal/);
+  assert.match(source, /function runTimesheetPortalCandidateSync/);
   assert.match(source, /function previewCandidateImport/);
   assert.match(source, /function confirmCandidateImport/);
   assert.match(source, /function refreshTimesheetPortalCompare/);
+});
+
+test('candidate admin UI exposes the document verification queue and review actions', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /admin-candidate-doc-verification-queue/);
+  assert.match(source, /admin-candidate-doc-verify/);
+  assert.match(source, /function refreshVerificationQueue/);
+  assert.match(source, /function renderVerificationQueue/);
+  assert.match(source, /data-doc-verify/);
+  assert.match(source, /data-doc-reject/);
+  assert.match(source, /data-doc-reset/);
 });
 
 test('candidate drawer exposes an explicit save path instead of relying on blur only', () => {

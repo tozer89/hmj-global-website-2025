@@ -26,9 +26,20 @@ test('summariseOnboarding flags missing RTW and payment details cleanly', () => 
   assert.equal(missing.hasPaymentDetails, false);
   assert.deepEqual(missing.missing, ['right_to_work', 'payment_details']);
 
-  const complete = summariseOnboarding({
+  const pendingVerification = summariseOnboarding({
     candidate: {},
     documents: [{ document_type: 'passport' }],
+    paymentDetails: { completion: { complete: true } },
+  });
+
+  assert.equal(pendingVerification.hasRightToWork, false);
+  assert.equal(pendingVerification.hasRightToWorkUpload, true);
+  assert.equal(pendingVerification.hasRightToWorkPendingVerification, true);
+  assert.equal(pendingVerification.hasPaymentDetails, true);
+
+  const complete = summariseOnboarding({
+    candidate: {},
+    documents: [{ document_type: 'passport', meta: { verification_status: 'verified' } }],
     paymentDetails: { completion: { complete: true } },
   });
 

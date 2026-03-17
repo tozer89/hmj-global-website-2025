@@ -3,7 +3,11 @@ const { withAdminCors } = require('./_http.js');
 const { randomUUID } = require('node:crypto');
 const { getContext } = require('./_auth.js');
 const { slugify } = require('./_jobs-helpers.js');
-const { CANDIDATE_DOCS_BUCKET, presentCandidateDocument } = require('./_candidate-docs.js');
+const {
+  CANDIDATE_DOCS_BUCKET,
+  presentCandidateDocument,
+  withDocumentVerificationMeta,
+} = require('./_candidate-docs.js');
 
 function ensureBuffer(base64) {
   try {
@@ -104,13 +108,13 @@ const baseHandler = async (event, context) => {
       uploaded_at: uploadedAt,
       updated_at: uploadedAt,
       url: null,
-      meta: {
+      meta: withDocumentVerificationMeta(documentType, {
         access_mode: 'signed_url',
         content_type: contentType || 'application/octet-stream',
         size_bytes: buffer.length,
         uploaded_by_email: user?.email || null,
         uploaded_by_id: user?.id || user?.sub || null,
-      },
+      }),
     });
 
     if (error) throw error;

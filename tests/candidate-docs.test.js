@@ -47,6 +47,13 @@ test('normaliseCandidateDocument trims fields and preserves safe metadata', () =
     updated_at: null,
     is_primary: false,
     meta: { uploaded_by_email: 'ops@hmj-global.com' },
+    verification_required: true,
+    verification_status: 'pending',
+    verified_at: null,
+    verified_by: null,
+    verification_notes: null,
+    reviewed_at: null,
+    reviewed_by: null,
   });
 });
 
