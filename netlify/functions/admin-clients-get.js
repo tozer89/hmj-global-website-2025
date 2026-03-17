@@ -4,6 +4,12 @@ const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticClients } = require('./_clients-helpers.js');
 
+function isMissingClientsSchemaError(error) {
+  const message = String(error?.message || error || '');
+  return /Could not find the table 'public\.clients' in the schema cache/i.test(message)
+    || /relation "?clients"? does not exist/i.test(message);
+}
+
 const baseHandler = async (event, context) => {
   try {
     await getContext(event, context, { requireAdmin: true });
@@ -28,8 +34,21 @@ const baseHandler = async (event, context) => {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
-    return { statusCode: 200, body: JSON.stringify(data) };
+    if (error) {
+      if (isMissingClientsSchemaError(error)) {
+        const rows = loadStaticClients();
+        const match = rows.find((row) => String(row.id) === String(id));
+        if (!match) {
+          return {
+            statusCode: 404,
+            body: JSON.stringify({ error: 'Client not found in fallback dataset', readOnly: true, source: 'static', supabase: supabaseStatus() }),
+          };
+        }
+        return { statusCode: 200, body: JSON.stringify({ ...match, terms_text: match.notes || null, readOnly: true, source: 'static' }) };
+      }
+      throw error;
+    }
+    return { statusCode: 200, body: JSON.stringify({ ...data, terms_text: data?.billing?.notes || null, source: 'supabase', readOnly: false }) };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };

@@ -4,6 +4,12 @@ const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { recordAudit } = require('./_audit.js');
 
+function isMissingClientsSchemaError(error) {
+  const message = String(error?.message || error || '');
+  return /Could not find the table 'public\.clients' in the schema cache/i.test(message)
+    || /relation "?clients"? does not exist/i.test(message);
+}
+
 const baseHandler = async (event, context) => {
   try {
     const { user } = await getContext(event, context, { requireAdmin: true });
@@ -30,7 +36,15 @@ const baseHandler = async (event, context) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingClientsSchemaError(error)) {
+        return {
+          statusCode: 409,
+          body: JSON.stringify({ error: 'Client storage is not available on this environment yet. Use Timesheet Portal refresh or apply the clients schema patch first.' }),
+        };
+      }
+      throw error;
+    }
 
     await recordAudit({
       actor: user,

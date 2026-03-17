@@ -9,8 +9,8 @@
   <script src="/admin/__env.js"></script>
   <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="../js/identity-loader.js"></script>
-  <script defer src="/admin/common.js?v=31"></script>
+  <script defer src="../js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
 
   <style>
     :root{
@@ -40,6 +40,7 @@
 
     .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
     .toolbar input{padding:11px 12px;border-radius:12px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--ink);font-weight:600;min-width:240px}
+    .toolbar-meta{flex:1 1 100%;font-size:13px;color:var(--muted);min-height:18px}
 
     .layout{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:18px;align-items:start}
     @media(max-width:980px){ .layout{grid-template-columns:1fr} }
@@ -92,9 +93,10 @@
     <section class="panel toolbar">
       <input id="search" type="search" placeholder="Search client name or email…" autocomplete="off"/>
       <button class="btn small" id="btnSearch">Search</button>
-      <button class="btn ghost small" id="btnRefresh">Refresh</button>
+      <button class="btn ghost small" id="btnRefresh">Refresh from TSP</button>
       <div class="sp"></div>
       <button class="btn primary small" id="btnNew">＋ New client</button>
+      <div class="toolbar-meta" id="syncMeta">Clients load from the website database when available, otherwise they can be derived from Timesheet Portal jobs.</div>
     </section>
 
     <div class="layout">
@@ -161,6 +163,10 @@
       const metaEl = sel('#clientMeta');
       const assignmentsHost = sel('#assignmentsWrap');
       const searchInput = sel('#search');
+      const syncMeta = sel('#syncMeta');
+      const btnNew = sel('#btnNew');
+      const btnSave = sel('#btnSave');
+      const btnDelete = sel('#btnDelete');
       const tabs = Array.from(document.querySelectorAll('.tab'));
       const panes = Array.from(document.querySelectorAll('.tabpane'));
 
@@ -178,7 +184,29 @@
         terms_text: sel('#f_terms_text'),
       };
 
-      const state = { rows: [], current: null };
+      const state = {
+        rows: [],
+        current: null,
+        source: 'unknown',
+        tableAvailable: false,
+        readOnly: true,
+        autoSyncAttempted: false,
+        syncInFlight: false,
+      };
+
+      function setEditingState(client){
+        const readOnly = !!client?.readOnly || !state.tableAvailable;
+        Object.values(form).forEach((field) => {
+          if (field && typeof field.disabled === 'boolean') field.disabled = readOnly;
+        });
+        if (btnSave) btnSave.disabled = readOnly;
+        if (btnDelete) btnDelete.disabled = readOnly || !client?.id || String(client?.id).startsWith('tsp:');
+        if (btnNew) btnNew.disabled = !state.tableAvailable;
+      }
+
+      function updateSyncMeta(text){
+        if (syncMeta) syncMeta.textContent = text || '';
+      }
 
       function switchTab(key){
         tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === key));
@@ -188,7 +216,7 @@
 
       function renderList(){
         if (!state.rows.length) {
-          listHost.innerHTML = '<p class="muted">No clients found. Try refreshing.</p>';
+          listHost.innerHTML = '<p class="muted">No clients found. Try refreshing from Timesheet Portal.</p>';
           return;
         }
         const rows = state.rows.map((row) => `
@@ -196,11 +224,13 @@
             <td>${row.name || '—'}</td>
             <td>${row.billing_email || '—'}</td>
             <td>${row.phone || '—'}</td>
+            <td>${row.client_code || (row.source === 'timesheet_portal' ? 'TSP derived' : '—')}</td>
             <td><button class="btn ghost small" data-open="${row.id}">Open</button></td>
           </tr>`).join('');
-        listHost.innerHTML = `<table><thead><tr><th>Name</th><th>Billing email</th><th>Phone</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+        listHost.innerHTML = `<table><thead><tr><th>Name</th><th>Billing email</th><th>Phone</th><th>Source</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
         listHost.querySelectorAll('[data-open]').forEach((btn) => {
-          btn.addEventListener('click', () => openClient(Number(btn.dataset.open)));
+          const row = state.rows.find((item) => String(item.id) === String(btn.dataset.open));
+          btn.addEventListener('click', () => openClient(row || Number(btn.dataset.open)));
         });
       }
 
@@ -241,43 +271,65 @@
         form.terms_text.value = termsText;
       }
 
-      async function loadAssignments(clientId){
+      async function loadAssignments(client){
         assignmentsHost.textContent = 'Loading assignments…';
         try {
-          const rows = await api('/admin-assignments-list', 'POST', { client_id: clientId });
+          const response = await api('/admin-assignments-list', 'POST', {
+            client_name: client?.name || null,
+            page: 1,
+            pageSize: 50,
+          });
+          const rows = Array.isArray(response) ? response : (response?.rows || []);
           if (!rows || !rows.length) {
             assignmentsHost.innerHTML = '<p class="muted">No assignments linked to this client.</p>';
             return;
           }
           const items = rows.map((row) => `
-            <li><strong>#${row.id}</strong> — ${row.contractor_email || 'Contractor'} · ${row.project_name || 'Project'} (${row.active ? 'active' : 'closed'})</li>`).join('');
+            <li><strong>${row.as_ref || ('#' + row.id)}</strong> — ${row.candidate_name || 'Candidate'} · ${row.job_title || 'Assignment'} (${row.status || (row.active ? 'live' : 'closed')})</li>`).join('');
           assignmentsHost.innerHTML = `<ul>${items}</ul>`;
         } catch (e) {
           assignmentsHost.innerHTML = `<p class="muted">Unable to load assignments: ${e.message || e}</p>`;
         }
       }
 
-      async function openClient(id){
+      function applyClient(client){
+        state.current = client;
+        profile.style.display = '';
+        nameEl.textContent = client.name || 'Client';
+        const metaBits = [];
+        if (client.billing_email) metaBits.push(client.billing_email);
+        metaBits.push(client.status || 'active');
+        if (client.readOnly) metaBits.push(client.source === 'timesheet_portal' ? 'Timesheet Portal derived (read-only)' : 'Read-only');
+        metaEl.textContent = metaBits.join(' · ');
+        fillForm(client);
+        setEditingState(client);
+        switchTab('details');
+        loadAssignments(client);
+      }
+
+      async function openClient(target){
         try {
-          const client = await api('/admin-clients-get', 'POST', { id });
-          state.current = client;
-          profile.style.display = '';
-          nameEl.textContent = client.name || 'Client';
-          metaEl.textContent = client.billing_email ? `${client.billing_email} · ${client.status || 'active'}` : (client.status || 'active');
-          fillForm(client);
-          switchTab('details');
-          loadAssignments(client.id);
+          const isLocalRow = target && typeof target === 'object' && (target.readOnly || target.source !== 'supabase');
+          const client = isLocalRow
+            ? target
+            : await api('/admin-clients-get', 'POST', { id: target?.id || target });
+          applyClient(client);
         } catch (e) {
           toast('Failed to load client: ' + (e.message || e), 'error', 3800);
         }
       }
 
       function newClient(){
+        if (!state.tableAvailable) {
+          toast('Client storage is not available on this environment yet. Use Timesheet Portal refresh for read-only clients.', 'warn', 3600);
+          return;
+        }
         state.current = null;
         profile.style.display = '';
         nameEl.textContent = 'New client';
         metaEl.textContent = 'Draft not yet saved';
         fillForm(null);
+        setEditingState({ readOnly: false, id: null });
         assignmentsHost.innerHTML = '<p class="muted">Save the client to view assignments.</p>';
         switchTab('details');
       }
@@ -285,12 +337,55 @@
       async function loadList(){
         listHost.textContent = 'Loading…';
         try {
-          const rows = await api('/admin-clients-list', 'POST', { q: searchInput.value.trim() || null });
-          state.rows = Array.isArray(rows) ? rows : [];
+          const response = await api('/admin-clients-list', 'POST', { q: searchInput.value.trim() || null });
+          state.rows = Array.isArray(response) ? response : (response?.rows || []);
+          state.source = response?.source || (Array.isArray(response) ? 'legacy' : 'unknown');
+          state.tableAvailable = response?.tableAvailable !== false;
+          state.readOnly = response?.readOnly !== false;
+          if (response?.message) updateSyncMeta(response.message);
           renderList();
+          setEditingState(state.current || { readOnly: !state.tableAvailable });
+          if (!searchInput.value.trim() && !state.autoSyncAttempted && (!state.rows.length || state.source !== 'supabase')) {
+            state.autoSyncAttempted = true;
+            await syncFromTsp({ silent: true });
+          }
         } catch (e) {
           console.error('[clients] list error', e);
           listHost.innerHTML = `<p class="muted">Failed to load clients: ${e.message || e}</p>`;
+        }
+      }
+
+      async function syncFromTsp(options = {}){
+        const { silent = false } = options || {};
+        if (state.syncInFlight) return;
+        state.syncInFlight = true;
+        const refreshBtn = sel('#btnRefresh');
+        try {
+          if (refreshBtn) refreshBtn.disabled = true;
+          updateSyncMeta('Syncing clients from Timesheet Portal…');
+          const response = await api('/admin-clients-sync-timesheet-portal', 'POST', {});
+          if (!response?.ok) {
+            const attempts = Array.isArray(response?.attempts) && response.attempts.length
+              ? ` Latest checks: ${response.attempts.slice(0, 4).map((attempt) => `${attempt.path} → ${attempt.status} (${attempt.authSource || attempt.authScheme || 'auth'})`).join(' · ')}`
+              : '';
+            updateSyncMeta(`${response?.message || 'Timesheet Portal client sync failed.'}${attempts}`);
+            if (!silent) toast(response?.message || 'Timesheet Portal client sync failed.', 'warn', 5000);
+            return;
+          }
+          state.rows = Array.isArray(response.rows) ? response.rows : [];
+          state.tableAvailable = response.tableAvailable !== false;
+          state.readOnly = !state.tableAvailable;
+          state.source = response.tableAvailable ? 'supabase' : 'timesheet_portal';
+          updateSyncMeta(response.message || 'Clients refreshed from Timesheet Portal.');
+          renderList();
+          setEditingState(state.current || { readOnly: !state.tableAvailable });
+          if (!silent) toast(response.message || 'Clients refreshed from Timesheet Portal.', 'ok', 2200);
+        } catch (e) {
+          updateSyncMeta(`Timesheet Portal client sync failed: ${e.message || e}`);
+          if (!silent) toast('Timesheet Portal client sync failed: ' + (e.message || e), 'error', 4200);
+        } finally {
+          state.syncInFlight = false;
+          if (refreshBtn) refreshBtn.disabled = false;
         }
       }
 
@@ -328,10 +423,10 @@
 
       // wires
       sel('#btnSearch').onclick = () => loadList();
-      sel('#btnRefresh').onclick = () => { searchInput.value = ''; loadList(); };
-      sel('#btnNew').onclick = newClient;
-      sel('#btnSave').onclick = saveClient;
-      sel('#btnDelete').onclick = deleteClient;
+      sel('#btnRefresh').onclick = () => { searchInput.value = ''; syncFromTsp(); };
+      btnNew.onclick = newClient;
+      btnSave.onclick = saveClient;
+      btnDelete.onclick = deleteClient;
       searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadList(); } });
 
       document.addEventListener('keydown', (e) => {
@@ -339,6 +434,7 @@
         if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); searchInput.focus(); }
       });
 
+      setEditingState({ readOnly: true });
       await loadList();
     });
   })();

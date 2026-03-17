@@ -47,6 +47,7 @@ const baseHandler = async (event, context) => {
     const body = JSON.parse(event.body || '{}');
     const search = normaliseLike(body.q || '');
     const status = String(body.status || '').trim();
+    const clientName = String(body.client_name || '').trim();
     const ids = Array.isArray(body.ids) ? body.ids.filter((v) => v !== null && v !== undefined && v !== '') : [];
     const wantsCsv = String(body.format || '').toLowerCase() === 'csv';
     const page = Math.max(toNumber(body.page, 1), 1);
@@ -60,6 +61,9 @@ const baseHandler = async (event, context) => {
       }
       if (status) {
         q = q.ilike('status', status);
+      }
+      if (clientName) {
+        q = q.ilike('client_name', clientName.includes('%') ? clientName : `%${clientName}%`);
       }
       if (search) {
         const like = `%${search}%`;
@@ -83,6 +87,7 @@ const baseHandler = async (event, context) => {
       const filtered = fallback.filter((row) => {
         if (ids.length && !idSet.has(String(row.id))) return false;
         if (status && String(row.status || '').toLowerCase() !== status.toLowerCase()) return false;
+        if (clientName && String(row.client_name || '').toLowerCase().includes(clientName.toLowerCase()) === false) return false;
         if (searchLower) {
           const haystack = [
             row.job_title,

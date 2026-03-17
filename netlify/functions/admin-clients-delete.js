@@ -4,6 +4,12 @@ const { supabase } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { recordAudit } = require('./_audit.js');
 
+function isMissingClientsSchemaError(error) {
+  const message = String(error?.message || error || '');
+  return /Could not find the table 'public\.clients' in the schema cache/i.test(message)
+    || /relation "?clients"? does not exist/i.test(message);
+}
+
 const baseHandler = async (event, context) => {
   try {
     const { user } = await getContext(event, context, { requireAdmin: true });
@@ -11,7 +17,15 @@ const baseHandler = async (event, context) => {
     if (!id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing id' }) };
 
     const { error } = await supabase.from('clients').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      if (isMissingClientsSchemaError(error)) {
+        return {
+          statusCode: 409,
+          body: JSON.stringify({ error: 'Client storage is not available on this environment yet. Apply the clients schema patch before deleting records.' }),
+        };
+      }
+      throw error;
+    }
 
     await recordAudit({
       actor: user,

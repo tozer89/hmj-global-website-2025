@@ -37,6 +37,7 @@ test('assignment save, list and publish flows preserve candidate_id', () => {
   assert.match(saveSource, /currency: assignment\.currency \|\| 'GBP'/);
   assert.match(saveSource, /candidate_id or contractor_id, job_title, start_date are required for new assignments/);
   assert.match(listSource, /'candidate_id',/);
+  assert.match(listSource, /const clientName = String\(body\.client_name \|\| ''\)\.trim\(\)/);
   assert.match(publishSource, /if \(!assignment\.candidate_id && !assignment\.contractor_id\)/);
   assert.match(publishSource, /\.eq\('id', assignment\.candidate_id\)/);
 });
