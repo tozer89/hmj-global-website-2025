@@ -223,6 +223,135 @@
       font-weight:600;
       line-height:1.5;
     }
+    .candidate-quick-apply{
+      border:1px solid rgba(58,102,179,.18);
+      background:
+        radial-gradient(520px 180px at 0% 0%, rgba(58,102,179,.16), transparent 65%),
+        linear-gradient(180deg, rgba(255,255,255,.99), rgba(245,248,255,.96));
+    }
+    .candidate-quick-apply__header{
+      display:flex;
+      gap:16px;
+      justify-content:space-between;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-bottom:16px;
+    }
+    .candidate-quick-apply__eyebrow{
+      margin:0 0 8px;
+      font-size:.72rem;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      font-weight:800;
+      color:#5266a8;
+    }
+    .candidate-quick-apply__header h2{
+      margin:0 0 8px;
+      font-size:1.45rem;
+    }
+    .candidate-quick-apply__header p{
+      margin:0;
+      color:#475569;
+      font-weight:600;
+      line-height:1.55;
+      max-width:720px;
+    }
+    .candidate-quick-apply__pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(58,102,179,.18);
+      background:#fff;
+      color:#36579c;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .candidate-quick-apply__grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+    }
+    .candidate-quick-apply__stat{
+      padding:14px;
+      border-radius:14px;
+      background:#fff;
+      border:1px solid rgba(58,102,179,.14);
+    }
+    .candidate-quick-apply__label{
+      display:block;
+      margin-bottom:6px;
+      font-size:.76rem;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      font-weight:800;
+      color:#526684;
+    }
+    .candidate-quick-apply__value{
+      display:block;
+      color:var(--ink);
+      font-weight:800;
+      line-height:1.45;
+    }
+    .candidate-quick-apply__value small{
+      display:block;
+      margin-top:4px;
+      color:#5f74a8;
+      font-weight:600;
+      line-height:1.45;
+    }
+    .candidate-quick-apply__status{
+      margin-top:14px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:#eff5ff;
+      border:1px solid rgba(58,102,179,.14);
+      color:#31456f;
+      font-weight:700;
+      line-height:1.5;
+    }
+    .candidate-quick-apply__status[data-tone="warn"]{
+      background:#fff8e8;
+      border-color:rgba(191, 135, 10, .18);
+      color:#7a5410;
+    }
+    .candidate-quick-apply__status[data-tone="danger"]{
+      background:#fff1f1;
+      border-color:rgba(178, 54, 54, .18);
+      color:#8e2b2b;
+    }
+    .candidate-quick-apply__actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:16px;
+    }
+    .btn-secondary,
+    .btn-ghost{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:12px 18px;
+      border-radius:12px;
+      border:1px solid rgba(58,102,179,.18);
+      background:#fff;
+      color:#36579c;
+      font-weight:800;
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .btn-secondary:hover,
+    .btn-ghost:hover{
+      background:#edf3ff;
+    }
+    .candidate-quick-apply__help{
+      margin:10px 0 0;
+      color:#5f74a8;
+      font-size:.93rem;
+      line-height:1.55;
+    }
 
     /* Consent + helper layout */
     .consent{display:flex;gap:10px;align-items:flex-start}
@@ -231,6 +360,11 @@
 
     /* Footer (match site) */
     footer{ text-align:center; padding:28px 16px; background:#0f1322; color:#cfd7ff; border-top:1px solid rgba(255,255,255,.06) }
+    @media (max-width:820px){
+      .candidate-quick-apply__grid{grid-template-columns:1fr}
+      .candidate-quick-apply__pill{white-space:normal}
+      .candidate-quick-apply__actions > *{width:100%}
+    }
   </style>
   <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
   <link rel="stylesheet" href="/assets/css/public.harmony.css?v=2" />
@@ -367,8 +501,27 @@
           </div>
         </div>
         <div id="candidateApplyNotice" class="apply-card candidate-apply-note" hidden></div>
+        <div id="candidateQuickApplyCard" class="apply-card candidate-quick-apply" hidden>
+          <div class="candidate-quick-apply__header">
+            <div>
+              <p class="candidate-quick-apply__eyebrow">Candidate quick apply</p>
+              <h2>Apply using your saved HMJ candidate profile</h2>
+              <p>We can submit this role using the profile, contact details, and stored documents already linked to your HMJ candidate account. Expand the full form only if you want to override that saved information for this role.</p>
+            </div>
+            <div id="candidateQuickApplyPill" class="candidate-quick-apply__pill">Signed-in candidate account</div>
+          </div>
+          <div id="candidateQuickApplyGrid" class="candidate-quick-apply__grid"></div>
+          <div id="candidateQuickApplyStatus" class="candidate-quick-apply__status" aria-live="polite"></div>
+          <div class="candidate-quick-apply__actions">
+            <button id="candidateQuickApplyButton" type="button" class="btn-primary" data-analytics-event="job_apply_clicked" data-analytics-label="Quick apply with saved profile">Quick apply now</button>
+            <a href="/candidates.html?candidate_tab=profile" class="btn-secondary">Review saved profile</a>
+            <a href="/candidates.html?candidate_tab=documents" class="btn-secondary">Review documents</a>
+            <button id="candidateQuickApplyToggleForm" type="button" class="btn-ghost">Use full application form instead</button>
+          </div>
+          <p class="candidate-quick-apply__help">Quick apply keeps your existing HMJ account details as the source of truth and logs the role to your candidate application history at the same time.</p>
+        </div>
         <!-- application form card -->
-        <div class="apply-card">
+        <div id="fullApplicationCard" class="apply-card">
           <h2>Application form</h2>
           <p id="applyingFor" class="helper" style="margin-top:-4px;"></p>
 
@@ -519,6 +672,7 @@
 
   <!-- ===== Scripts ===== -->
   <script src="js/job-application-context.js"></script>
+  <script src="js/contact-quick-apply-core.js?v=1"></script>
   <script>
     /* ---------- Floating labels / filled state ---------- */
     const fields = document.querySelectorAll('.field input, .field textarea, .field select');
@@ -690,7 +844,7 @@
     /* ---------- Make select labels appear raised on load (mobile fix) ---------- */
     document.querySelectorAll('.field.select').forEach(w => w.classList.add('filled'));
   </script>
-  <script type="module" src="assets/js/contact.portal.js?v=2"></script>
+  <script type="module" src="assets/js/contact.portal.js?v=3"></script>
 
   <!-- OPTIONAL toast for jobs.html?submitted=1 is the same as before -->
 </body>
