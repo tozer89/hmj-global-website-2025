@@ -142,6 +142,20 @@
       } catch {}
     }
 
+    function applyUrlFilters() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const search = trimString(params.get('search'));
+        const assignment = trimString(params.get('assignment'));
+        const candidate = trimString(params.get('candidate'));
+        const client = trimString(params.get('client'));
+        if (search) state.filters.search = search;
+        if (assignment) state.filters.assignment = assignment;
+        if (candidate) state.filters.candidate = candidate;
+        if (client) state.filters.client = client;
+      } catch {}
+    }
+
     function persistFilters() {
       try {
         localStorage.setItem(storageKey, JSON.stringify(state.filters));
@@ -497,6 +511,7 @@
     }
 
     loadStoredFilters();
+    applyUrlFilters();
     syncFiltersToInputs();
     bindInputs();
     loadRows();

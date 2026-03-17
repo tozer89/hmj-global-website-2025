@@ -100,3 +100,28 @@ test('inactive or ended assignments are excluded from the active-assignment tab 
   assert.equal(summary.count, 1);
   assert.equal(summary.primary.reference, 'LIVE-5588');
 });
+
+test('assignment normalizer preserves the extra TSP assignment fields used in admin tables', () => {
+  const row = helpers.normaliseAssignmentRow({
+    id: 9,
+    as_ref: 'ARAFRANK-5448',
+    client_name: 'ARA Industrial Engineering Ltd',
+    assignment_description: 'ARA industrial engineering Ltd - Other',
+    branch_name: 'ARA Industrial Engineering Ltd',
+    cost_centre: 'ARA Industrial Engineering - MISC',
+    ir35_status: 'N/A',
+    assigned_approvers: 'Luke Mooney',
+    assigned_contractors: 'Bogdan-Adrian Zamfir',
+    assignment_category: 'Contractor',
+    last_modified: '2026-03-17T10:00:00Z',
+  });
+
+  assert.equal(row.assignment_description, 'ARA industrial engineering Ltd - Other');
+  assert.equal(row.branch_name, 'ARA Industrial Engineering Ltd');
+  assert.equal(row.cost_centre, 'ARA Industrial Engineering - MISC');
+  assert.equal(row.ir35_status, 'N/A');
+  assert.equal(row.assigned_approvers, 'Luke Mooney');
+  assert.equal(row.assigned_contractors, 'Bogdan-Adrian Zamfir');
+  assert.equal(row.assignment_category, 'Contractor');
+  assert.equal(row.last_modified, '2026-03-17T10:00:00Z');
+});

@@ -12,8 +12,8 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=1/);
-  assert.match(html, /\/admin\/candidates\.js\?v=20/);
+  assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=2/);
+  assert.match(html, /\/admin\/candidates\.js\?v=21/);
   assert.match(html, /id="bulk-intro-email"/);
   assert.match(html, /id="bulk-copy-emails"/);
   assert.match(html, /id="bulk-rtw-reminder"/);
@@ -33,6 +33,8 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /id="dw-payment"/);
   assert.match(html, /id="dw-assignments"/);
   assert.match(html, /id="candidate-source-tabs"/);
+  assert.match(html, /id="candidate-table"/);
+  assert.match(html, /id="candidate-thead"/);
   assert.match(html, /data-source-tab="website"/);
   assert.match(html, /data-source-tab="timesheet-portal-active"/);
   assert.match(html, /data-source-tab="timesheet-portal"/);
@@ -156,11 +158,19 @@ test('candidate admin UI can switch between website, timesheet portal, and combi
   assert.match(source, /function renderActiveFilterChips/);
   assert.match(source, /function selectVisibleCandidates/);
   assert.match(source, /function bulkCopyEmails/);
+  assert.match(source, /function renderTableHeader/);
+  assert.match(source, /function buildActiveAssignmentRow/);
+  assert.match(source, /data-role="open-assignment"/);
+  assert.match(source, /data-role="open-timesheets"/);
+  assert.match(source, /data-role="copy-assignment-code"/);
+  assert.match(source, /function assignmentSearchUrl/);
+  assert.match(source, /function timesheetsSearchUrl/);
   assert.match(source, /function refreshActiveAssignments/);
   assert.match(source, /function bulkIntroEmail/);
   assert.match(source, /function ensureWebsiteCandidateForOutreach/);
   assert.match(source, /function ensureWebsiteCandidatesForOutreach/);
   assert.match(source, /function currentSelectionOptions/);
+  assert.match(source, /function primaryActiveAssignment/);
   assert.match(source, /function buildSourceDatasets/);
   assert.match(source, /function normalizeTimesheetPortalCandidate/);
   assert.match(source, /function renderSourceTabs/);

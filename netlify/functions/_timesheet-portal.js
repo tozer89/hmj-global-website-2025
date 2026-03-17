@@ -476,6 +476,49 @@ function readStringKeys(record = {}, keys = [], maxLength = 240) {
   return '';
 }
 
+function normalizeStringList(value, maxLength = 240) {
+  const source = Array.isArray(value)
+    ? value
+    : value === null || value === undefined || value === ''
+      ? []
+      : [value];
+  const out = [];
+  source.forEach((entry) => {
+    if (entry === null || entry === undefined || entry === '') return;
+    if (Array.isArray(entry)) {
+      normalizeStringList(entry, maxLength).forEach((item) => {
+        if (item && !out.includes(item)) out.push(item);
+      });
+      return;
+    }
+    if (typeof entry === 'object') {
+      const label = trimString(
+        entry.name
+        || entry.fullName
+        || entry.displayName
+        || entry.label
+        || entry.code
+        || entry.userCode
+        || entry.id,
+        maxLength,
+      );
+      if (label && !out.includes(label)) out.push(label);
+      return;
+    }
+    const label = trimString(entry, maxLength);
+    if (label && !out.includes(label)) out.push(label);
+  });
+  return out;
+}
+
+function readArrayKeys(record = {}, keys = [], maxLength = 240) {
+  for (const key of keys) {
+    const list = normalizeStringList(record?.[key], maxLength);
+    if (list.length) return list;
+  }
+  return [];
+}
+
 function readNumberKeys(record = {}, keys = []) {
   for (const key of keys) {
     const value = record?.[key];
@@ -515,6 +558,15 @@ function normalizeAssignmentStatus(value, activeFlag) {
   return raw || 'draft';
 }
 
+function normalizeTimesheetPortalIr35Status(value) {
+  const raw = trimString(value, 80).toLowerCase();
+  if (!raw) return '';
+  if (raw === '0' || raw === 'out' || raw === 'outside' || raw === 'outside ir35') return 'Out';
+  if (raw === '1' || raw === 'in' || raw === 'inside' || raw === 'inside ir35') return 'In';
+  if (raw === '2' || raw === 'n/a' || raw === 'na' || raw === 'not applicable' || raw === 'not_applicable') return 'N/A';
+  return trimString(value, 80);
+}
+
 function normalizeTimesheetPortalAssignment(record = {}) {
   const firstName = readStringKeys(record, ['firstName', 'firstname', 'candidateFirstName', 'contractorFirstName'], 120);
   const lastName = readStringKeys(record, ['lastName', 'lastname', 'surname', 'candidateLastName', 'contractorLastName'], 120);
@@ -536,6 +588,22 @@ function normalizeTimesheetPortalAssignment(record = {}) {
   const contractorId = readStringKeys(record, ['contractorId', 'candidateId', 'workerId', 'employeeId', 'userId'], 120);
   const contractorCode = readStringKeys(record, ['contractorCode', 'candidateCode', 'contractorRef', 'workerCode'], 120);
   const payrollRef = readStringKeys(record, ['payrollReference', 'accountingReference', 'accountingReferenceCode'], 120);
+  const clientCode = readStringKeys(record, ['clientCode', 'customerCode', 'clientRef'], 120);
+  const clientName = readStringKeys(record, ['clientName', 'customerName', 'client', 'customer'], 240);
+  const clientSite = readStringKeys(record, ['siteAddress', 'siteName', 'site', 'location', 'address'], 240);
+  const assignmentDescription = readStringKeys(record, ['description', 'jobDescription', 'jobTitle', 'title', 'name', 'role'], 240);
+  const assignmentCategory = readStringKeys(record, ['assignmentCategory', 'assignmentType', 'categoryName', 'category'], 160);
+  const branchName = readStringKeys(
+    record,
+    ['branchName', 'branch', 'divisionName', 'officeName', 'companyName', 'chargeCodeGroupName', 'chargeCodeGroupCode'],
+    240,
+  ) || clientSite || clientCode;
+  const costCentre = readStringKeys(record, ['costCentreCode', 'costCentre'], 120);
+  const assignedApproverCodes = readArrayKeys(record, ['assignedApproverCodes', 'approverCodes'], 120);
+  const assignedContractorCodes = readArrayKeys(record, ['assignedContractorCodes', 'contractorCodes'], 120);
+  const assignedApprovers = readArrayKeys(record, ['assignedApproverNames', 'approverNames', 'assignedApprovers'], 240);
+  const assignedContractors = readArrayKeys(record, ['assignedContractorNames', 'contractorNames', 'assignedContractors'], 240);
+  const ir35Status = normalizeTimesheetPortalIr35Status(record.iR35Status ?? record.ir35Status ?? record.iR35);
 
   return {
     id: readStringKeys(record, ['assignmentId', 'placementId', 'jobId', 'guid', 'id'], 120),
@@ -547,9 +615,21 @@ function normalizeTimesheetPortalAssignment(record = {}) {
     contractorId,
     contractorCode,
     payrollRef,
-    clientCode: readStringKeys(record, ['clientCode', 'customerCode', 'clientRef'], 120),
-    clientName: readStringKeys(record, ['clientName', 'customerName', 'client', 'customer'], 240),
-    clientSite: readStringKeys(record, ['siteAddress', 'siteName', 'site', 'location', 'address'], 240),
+    clientCode,
+    clientName,
+    clientDisplayName: clientName || clientCode,
+    clientSite,
+    assignmentDescription,
+    assignmentCategory,
+    branchName,
+    costCentre,
+    ir35Status,
+    ir35StatusCode: record.iR35Status ?? record.ir35Status ?? record.iR35 ?? null,
+    assignedApproverCodes,
+    assignedApprovers,
+    assignedContractorCodes,
+    assignedContractors,
+    lastModified: trimString(record.lastModified || record.updatedAt || record.modifiedAt, 80),
     startDate: toDateOnly(record.startDate || record.assignmentStart || record.start || record.fromDate),
     endDate: toDateOnly(record.endDate || record.assignmentEnd || record.end || record.toDate),
     currency,
@@ -1251,5 +1331,6 @@ module.exports = {
   normalizeTimesheetPortalPayrollRecord,
   normalizeTimesheetPortalTimesheetRecord,
   normalizeTimesheetPortalAssignment,
+  normalizeTimesheetPortalIr35Status,
   readTimesheetPortalConfig,
 };

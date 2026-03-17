@@ -226,8 +226,17 @@
       status: String(row.status || 'draft').toLowerCase(),
       active: row.active !== false,
       candidate_name: row.candidate_name || null,
+      client_code: row.client_code || null,
       client_name: row.client_name || null,
       job_title: row.job_title || null,
+      assignment_description: row.assignment_description || row.job_title || null,
+      branch_name: row.branch_name || row.client_site || null,
+      cost_centre: row.cost_centre || null,
+      ir35_status: row.ir35_status || null,
+      assigned_approvers: row.assigned_approvers || null,
+      assigned_contractors: row.assigned_contractors || row.candidate_name || null,
+      assignment_category: row.assignment_category || null,
+      last_modified: row.last_modified || null,
       start_date: row.start_date || null,
       end_date: row.end_date || null,
       currency: row.currency || 'GBP',
@@ -531,6 +540,36 @@
     const pay = row?.rate_pay ?? row?.rate_std;
     const text = formatMoneyAmount(pay, row?.currency || 'GBP');
     return text ? `${text} pay` : 'Rate pending';
+  }
+
+  function primaryActiveAssignment(candidate) {
+    const summary = candidate?.active_assignment_summary;
+    if (summary && typeof summary === 'object') return summary;
+    const first = Array.isArray(candidate?.active_assignments) ? candidate.active_assignments[0] : null;
+    return first && typeof first === 'object' ? first : null;
+  }
+
+  function formatAssignmentDateCell(value, fallback = '—') {
+    return value ? formatDate(value) : fallback;
+  }
+
+  function assignmentSearchUrl(assignment) {
+    const ref = String(assignment?.as_ref || assignment?.reference || '').trim();
+    const url = new URL('/admin/assignments.html', window.location.origin);
+    if (ref) {
+      url.searchParams.set('q', ref);
+      url.searchParams.set('assignment', ref);
+    }
+    return url.toString();
+  }
+
+  function timesheetsSearchUrl(assignment, candidate) {
+    const ref = String(assignment?.as_ref || assignment?.reference || '').trim();
+    const candidateName = String(candidate?.name || candidate?.email || '').trim();
+    const url = new URL('/admin/timesheets.html', window.location.origin);
+    if (ref) url.searchParams.set('assignment', ref);
+    if (candidateName) url.searchParams.set('candidate', candidateName);
+    return url.toString();
   }
 
   function formatActiveAssignmentMeta(candidate) {
@@ -1163,6 +1202,7 @@
     });
     updateFilterCount();
     recomputeMetrics();
+    renderTableHeader();
     refreshRows(true);
     syncHeaderCheckbox();
   }
@@ -1200,6 +1240,44 @@
       elements.rows.innerHTML = '';
       elements.rows.appendChild(rowsInner);
     }
+  }
+
+  function tableMode() {
+    return state.sourceTab === 'timesheet-portal-active' ? 'assignments' : 'candidates';
+  }
+
+  function renderTableHeader() {
+    if (!elements.table || !elements.thead) return;
+    const assignmentsView = tableMode() === 'assignments';
+    elements.table.classList.toggle('assignments-view', assignmentsView);
+    elements.thead.innerHTML = assignmentsView
+      ? `
+        <div><input type="checkbox" id="chk-all"/></div>
+        <div>Ref</div>
+        <div>Assignment code</div>
+        <div>Candidate</div>
+        <div>Client</div>
+        <div>Description</div>
+        <div>Branch</div>
+        <div>Start date</div>
+        <div>End date</div>
+        <div>Cost centre</div>
+        <div>IR35</div>
+        <div>Assigned approvers</div>
+        <div>Assigned contractors</div>
+        <div>Actions</div>
+      `
+      : `
+        <div><input type="checkbox" id="chk-all"/></div>
+        <div>Ref</div>
+        <div>Candidate</div>
+        <div>Contact</div>
+        <div>Onboarding</div>
+        <div>Status</div>
+        <div>Actions</div>
+      `;
+    elements.chkAll = qs('#chk-all', elements.thead);
+    syncHeaderCheckbox();
   }
 
   function renderSkeleton() {
@@ -1425,6 +1503,95 @@
   }
 
   function buildRow(candidate, index) {
+    if (state.sourceTab === 'timesheet-portal-active') {
+      const assignment = primaryActiveAssignment(candidate);
+      if (assignment) return buildActiveAssignmentRow(candidate, assignment, index);
+    }
+    return buildCandidateRow(candidate, index);
+  }
+
+  function buildActiveAssignmentRow(candidate, assignment, index) {
+    const row = document.createElement('div');
+    row.className = 'trow';
+    row.dataset.id = candidate.id;
+    row.style.position = 'absolute';
+    row.style.top = `${index * ROW_HEIGHT}px`;
+    const selected = selectionHas(candidate.id) ? 'checked' : '';
+    const selectable = isSelectableCandidate(candidate, currentSelectionOptions());
+    const sourceChip = sourceMetaChips(candidate);
+    const rawCandidate = isRawTimesheetPortalCandidate(candidate);
+    const assignmentRef = String(assignment?.as_ref || assignment?.reference || '—').trim() || '—';
+    const clientName = assignment?.client_name || assignment?.client_code || '—';
+    const branchName = assignment?.branch_name || assignment?.client_site || '—';
+    const description = assignment?.assignment_description || assignment?.job_title || candidate?.role || '—';
+    const approvers = assignment?.assigned_approvers || candidate?.consultant_name || '—';
+    const contractors = assignment?.assigned_contractors || candidate?.name || '—';
+    const assignmentStatus = statusLabel(assignment?.status || 'live');
+    const candidateActionRole = rawCandidate ? 'promote' : 'open';
+    const candidateActionLabel = rawCandidate ? 'Prepare' : 'Candidate';
+    row.innerHTML = `
+      <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected} ${!selectable ? 'disabled' : ''}></div>
+      <div>${renderReferenceCell(candidate)}</div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(assignmentRef)}">${escapeHtml(assignmentRef)}</div>
+        <div class="row-subtle">${escapeHtml(assignment?.assignment_category || assignment?.job_title || 'Live assignment')}</div>
+        <div class="row-meta">
+          ${sourceChip}
+          <span class="chip ${statusTone(assignment?.status || 'live')}">${escapeHtml(assignmentStatus)}</span>
+        </div>
+      </div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(candidate.name || 'Candidate')}">${escapeHtml(candidate.name || '—')}</div>
+        <div class="row-subtle">${escapeHtml(candidate.role || 'Role pending')}</div>
+        <div class="row-subtle">${escapeHtml(candidate.email || 'No email')}${candidate.phone ? ` · ${escapeHtml(candidate.phone)}` : ''}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(clientName)}">${escapeHtml(clientName)}</div>
+        <div class="row-subtle">${escapeHtml(candidateModeLabel(candidate))}</div>
+        <div class="row-subtle">${candidate.active_assignment_count > 1 ? `${candidate.active_assignment_count} active assignments` : 'Single active assignment'}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(description)}">${escapeHtml(description)}</div>
+        <div class="row-subtle">${assignment?.last_modified ? `Updated ${escapeHtml(formatDate(assignment.last_modified))}` : 'Assignment summary'}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title">${escapeHtml(branchName)}</div>
+        <div class="row-subtle">${escapeHtml(assignment?.assignment_category || 'Branch / business unit')}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title">${escapeHtml(formatAssignmentDateCell(assignment?.start_date))}</div>
+        <div class="row-subtle">${escapeHtml(formatAssignmentPay(assignment))}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title">${escapeHtml(formatAssignmentDateCell(assignment?.end_date, 'Open'))}</div>
+        <div class="row-subtle">${rawCandidate ? 'TSP mirrored worker' : 'Website candidate linked'}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title">${escapeHtml(assignment?.cost_centre || '—')}</div>
+        <div class="row-subtle">${escapeHtml(assignment?.client_code || 'Cost centre')}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title">${escapeHtml(assignment?.ir35_status || '—')}</div>
+        <div class="row-subtle">IR35</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(approvers)}">${escapeHtml(approvers)}</div>
+        <div class="row-subtle">Assigned approvers</div>
+      </div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(contractors)}">${escapeHtml(contractors)}</div>
+        <div class="row-subtle">Assigned contractors</div>
+      </div>
+      <div class="row-actions">
+        <button class="btn ghost small" type="button" data-role="${candidateActionRole}" data-id="${candidate.id}">${candidateActionLabel}</button>
+        <button class="btn ghost small" type="button" data-role="open-assignment" data-id="${candidate.id}" ${assignmentRef === '—' ? 'disabled' : ''}>Assignment</button>
+        <button class="btn ghost small" type="button" data-role="open-timesheets" data-id="${candidate.id}" ${assignmentRef === '—' ? 'disabled' : ''}>Timesheets</button>
+        <button class="btn ghost small" type="button" data-role="copy-assignment-code" data-id="${candidate.id}" ${assignmentRef === '—' ? 'disabled' : ''}>Copy code</button>
+      </div>`;
+    return row;
+  }
+
+  function buildCandidateRow(candidate, index) {
     const row = document.createElement('div');
     row.className = 'trow';
     row.dataset.id = candidate.id;
@@ -1828,6 +1995,42 @@
     }
     if (role === 'open') {
       openDrawer(id);
+      return;
+    }
+    if (role === 'promote') {
+      const candidate = state.filtered.find((entry) => String(entry.id) === String(id));
+      if (!candidate) return;
+      void ensureWebsiteCandidateForOutreach(candidate, { onboardingMode: true })
+        .then((promoted) => {
+          if (promoted?.id) {
+            showToast('Website candidate created for this live worker.', 'info', 3200);
+            openDrawer(promoted.id);
+          }
+        })
+        .catch((err) => {
+          console.error('[candidates] candidate promotion failed', err);
+          showToast(err.message || 'Could not prepare this candidate for website onboarding.', 'error', 4200);
+        });
+      return;
+    }
+    if (role === 'open-assignment') {
+      const candidate = state.filtered.find((entry) => String(entry.id) === String(id));
+      const assignment = primaryActiveAssignment(candidate);
+      if (assignment) window.open(assignmentSearchUrl(assignment), '_blank', 'noopener');
+      return;
+    }
+    if (role === 'open-timesheets') {
+      const candidate = state.filtered.find((entry) => String(entry.id) === String(id));
+      const assignment = primaryActiveAssignment(candidate);
+      if (assignment) window.open(timesheetsSearchUrl(assignment, candidate), '_blank', 'noopener');
+      return;
+    }
+    if (role === 'copy-assignment-code') {
+      const candidate = state.filtered.find((entry) => String(entry.id) === String(id));
+      const assignment = primaryActiveAssignment(candidate);
+      copyText(String(assignment?.as_ref || assignment?.reference || '').trim()).then((copied) => {
+        if (copied) showToast('Assignment code copied.', 'info', 2400);
+      });
       return;
     }
     if (role === 'archive' || role === 'restore') {
@@ -3568,6 +3771,7 @@
         const response = await state.helpers.api('admin-assignments-list', 'POST', {
           page,
           pageSize: 200,
+          include_tsp_meta: true,
         });
         const pageRows = Array.isArray(response?.rows) ? response.rows : [];
         rows.push(...pageRows);
@@ -3957,7 +4161,9 @@
 
   function initElements() {
     elements.rows = qs('#rows');
-    elements.chkAll = qs('#chk-all');
+    elements.table = qs('#candidate-table');
+    elements.thead = qs('#candidate-thead');
+    elements.chkAll = qs('#chk-all', elements.thead || document);
     elements.search = qs('#search');
     elements.refresh = qs('#btn-refresh');
     elements.selectVisible = qs('#btn-select-visible');
@@ -4037,7 +4243,11 @@
   function bindEvents() {
     elements.rows.addEventListener('scroll', handleScroll);
     elements.rows.addEventListener('click', handleRowClick);
-    elements.chkAll.addEventListener('change', handleSelectAll);
+    if (elements.thead) {
+      elements.thead.addEventListener('change', (event) => {
+        if (event.target && event.target.id === 'chk-all') handleSelectAll(event);
+      });
+    }
     elements.search.addEventListener('input', (ev) => updateQuickSearch(ev.target.value));
     elements.refresh.addEventListener('click', async () => {
       await loadCandidates({ silent: false });

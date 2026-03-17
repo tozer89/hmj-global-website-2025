@@ -3,6 +3,11 @@ const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { loadStaticAssignments } = require('./_assignments-helpers.js');
+const {
+  buildClientCodeMap,
+  decorateAssignmentRowWithTimesheetPortal,
+  loadTimesheetPortalAssignmentMirror,
+} = require('./_timesheet-portal-assignment-meta.js');
 
 function shouldFallback(error) {
   if (!error) return false;
@@ -51,7 +56,28 @@ const baseHandler = async (event, context) => {
       throw error;
     }
 
-    return { statusCode: 200, body: JSON.stringify(data) };
+    let row = data;
+    try {
+      const [mirror, clientCodeRows] = await Promise.all([
+        loadTimesheetPortalAssignmentMirror(),
+        supabase
+          .from('clients')
+          .select('client_code,name')
+          .not('client_code', 'is', null)
+          .limit(2000),
+      ]);
+      const clientCodeMap = buildClientCodeMap(clientCodeRows?.data || []);
+      row = decorateAssignmentRowWithTimesheetPortal(data, mirror.lookup, clientCodeMap);
+    } catch {
+      row = {
+        ...data,
+        assignment_description: data.assignment_description || data.job_title || null,
+        branch_name: data.branch_name || data.client_site || null,
+        assigned_contractors: data.assigned_contractors || data.candidate_name || null,
+      };
+    }
+
+    return { statusCode: 200, body: JSON.stringify(row) };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;
     return { statusCode: status, body: JSON.stringify({ error: e.message }) };

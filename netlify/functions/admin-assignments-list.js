@@ -3,6 +3,11 @@ const { withAdminCors } = require('./_http.js');
 const { supabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { getContext } = require('./_auth.js');
 const { loadStaticAssignments } = require('./_assignments-helpers.js');
+const {
+  buildClientCodeMap,
+  decorateAssignmentRowWithTimesheetPortal,
+  loadTimesheetPortalAssignmentMirror,
+} = require('./_timesheet-portal-assignment-meta.js');
 
 function normaliseLike(value = '') {
   return String(value)
@@ -15,15 +20,36 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+async function loadClientCodeRows() {
+  if (!hasSupabase()) return [];
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('client_code,name')
+      .not('client_code', 'is', null)
+      .limit(2000);
+    if (error) return [];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
 function toCsv(rows = []) {
-  if (!rows.length) return 'id,reference,status,client,candidate,start_date,end_date,pay_rate,currency\n';
-  const header = ['ID', 'Reference', 'Status', 'Client', 'Candidate', 'Job title', 'Start date', 'End date', 'Pay rate', 'Charge rate', 'Currency'];
+  if (!rows.length) return 'id,reference,status,client,description,branch,cost_centre,ir35_status,assigned_approvers,assigned_contractors,candidate,start_date,end_date,pay_rate,currency\n';
+  const header = ['ID', 'Reference', 'Status', 'Client', 'Description', 'Branch', 'Cost centre', 'IR35 status', 'Assigned approvers', 'Assigned contractors', 'Candidate', 'Job title', 'Start date', 'End date', 'Pay rate', 'Charge rate', 'Currency'];
   const lines = rows.map((row) => {
     const cells = [
       row.id,
       row.as_ref || row.po_number || '',
       row.status || '',
       row.client_name || '',
+      row.assignment_description || '',
+      row.branch_name || '',
+      row.cost_centre || '',
+      row.ir35_status || '',
+      row.assigned_approvers || '',
+      row.assigned_contractors || '',
       row.candidate_name || '',
       row.job_title || '',
       row.start_date || '',
@@ -50,6 +76,7 @@ const baseHandler = async (event, context) => {
     const clientName = String(body.client_name || '').trim();
     const ids = Array.isArray(body.ids) ? body.ids.filter((v) => v !== null && v !== undefined && v !== '') : [];
     const wantsCsv = String(body.format || '').toLowerCase() === 'csv';
+    const includeTspMeta = body.include_tsp_meta !== false;
     const page = Math.max(toNumber(body.page, 1), 1);
     const pageSize = Math.min(Math.max(toNumber(body.pageSize, 20), 10), 200);
     const offset = (page - 1) * pageSize;
@@ -109,6 +136,12 @@ const baseHandler = async (event, context) => {
           : filtered.slice(offset, offset + pageSize).map((row) => ({
               ...row,
               client_site: row.client_site || null,
+              assignment_description: row.assignment_description || row.job_title || null,
+              branch_name: row.branch_name || row.client_site || null,
+              cost_centre: row.cost_centre || null,
+              ir35_status: row.ir35_status || null,
+              assigned_approvers: row.assigned_approvers || null,
+              assigned_contractors: row.assigned_contractors || row.candidate_name || null,
             }));
 
       console.warn('[assignments] using static fallback dataset (%d rows)', filtered.length);
@@ -179,6 +212,13 @@ const baseHandler = async (event, context) => {
             'as_ref',
             'po_number',
             'po_ref',
+            'assignment_description',
+            'branch_name',
+            'cost_centre',
+            'ir35_status',
+            'assigned_approvers',
+            'assigned_contractors',
+            'assignment_category',
             'rate_std',
             'rate_pay',
             'charge_std',
@@ -207,6 +247,29 @@ const baseHandler = async (event, context) => {
       throw error;
     }
 
+    let rows = Array.isArray(data) ? data : [];
+    let tspMeta = null;
+    if (includeTspMeta) {
+      try {
+        const [mirror, clientCodeRows] = await Promise.all([
+          loadTimesheetPortalAssignmentMirror(),
+          loadClientCodeRows(),
+        ]);
+        const clientCodeMap = buildClientCodeMap(clientCodeRows);
+        rows = rows.map((row) => decorateAssignmentRowWithTimesheetPortal(row, mirror.lookup, clientCodeMap));
+        tspMeta = {
+          configured: mirror.configured,
+          assignmentPath: mirror.discovery?.assignmentPath || null,
+          activeCount: Array.isArray(mirror.rows) ? mirror.rows.length : 0,
+        };
+      } catch (tspError) {
+        tspMeta = {
+          configured: true,
+          error: tspError.message || 'Timesheet Portal metadata unavailable.',
+        };
+      }
+    }
+
     if (wantsCsv) {
       return {
         statusCode: 200,
@@ -214,18 +277,20 @@ const baseHandler = async (event, context) => {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': 'attachment; filename="assignments.csv"',
         },
-        body: toCsv(data || []),
+        body: toCsv(rows || []),
       };
     }
 
-    const rows = (data || []).map((row) => ({
-      ...row,
-      client_site: row.client_site || null,
-    }));
-
     return {
       statusCode: 200,
-      body: JSON.stringify({ rows, total: count ?? rows.length }),
+      body: JSON.stringify({
+        rows: rows.map((row) => ({
+          ...row,
+          client_site: row.client_site || null,
+        })),
+        total: count ?? rows.length,
+        tspMeta,
+      }),
     };
   } catch (e) {
     const status = e.code === 401 ? 401 : e.code === 403 ? 403 : 500;

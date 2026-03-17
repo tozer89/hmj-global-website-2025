@@ -18,6 +18,16 @@ test('assignments admin editor supports website candidate pairing alongside cont
   assert.match(source, /admin-assignments-sync-timesheet-portal/);
   assert.match(source, /btnRefresh'\)\.onclick = \(\)=>\{ page=1; syncFromTsp\(\); \}/);
   assert.match(source, /autoSyncAttempted = true/);
+  assert.match(source, /label:'Assignment code'/);
+  assert.match(source, /label:'Description'/);
+  assert.match(source, /label:'Assigned approvers'/);
+  assert.match(source, /label:'Assigned contractors'/);
+  assert.match(source, /data-timesheets/);
+  assert.match(source, /data-copy-code/);
+  assert.match(source, /qvOpenAssignment/);
+  assert.match(source, /qvTimesheets/);
+  assert.match(source, /qvCopyCode/);
+  assert.match(source, /function applyUrlFilters/);
 });
 
 test('assignment dropdown endpoint exposes website candidates for pairing', () => {
@@ -37,6 +47,13 @@ test('assignment save, list and publish flows preserve candidate_id', () => {
   assert.match(saveSource, /currency: assignment\.currency \|\| 'GBP'/);
   assert.match(saveSource, /candidate_id or contractor_id, job_title, start_date are required for new assignments/);
   assert.match(listSource, /'candidate_id',/);
+  assert.match(listSource, /'assignment_description',/);
+  assert.match(listSource, /'branch_name',/);
+  assert.match(listSource, /'cost_centre',/);
+  assert.match(listSource, /'ir35_status',/);
+  assert.match(listSource, /'assigned_approvers',/);
+  assert.match(listSource, /'assigned_contractors',/);
+  assert.match(listSource, /decorateAssignmentRowWithTimesheetPortal/);
   assert.match(listSource, /const clientName = String\(body\.client_name \|\| ''\)\.trim\(\)/);
   assert.match(publishSource, /if \(!assignment\.candidate_id && !assignment\.contractor_id\)/);
   assert.match(publishSource, /\.eq\('id', assignment\.candidate_id\)/);
@@ -51,4 +68,13 @@ test('assignment sync endpoint and schema scripts include TSP source tracking', 
   assert.match(syncSource, /const reference = String\(assignment\.reference \|\| assignment\.id \|\| ''\)\.trim\(\)/);
   assert.match(helperSource, /matchCandidateForTimesheetPortalAssignment/);
   assert.match(syncSource, /\.upsert\(payloads\)/);
+});
+
+test('timesheets admin accepts assignment and candidate filters from URL params', () => {
+  const source = read('admin/timesheets.js');
+
+  assert.match(source, /function applyUrlFilters/);
+  assert.match(source, /params\.get\('assignment'\)/);
+  assert.match(source, /params\.get\('candidate'\)/);
+  assert.match(source, /params\.get\('client'\)/);
 });

@@ -288,12 +288,20 @@ test('normalizeTimesheetPortalAssignment maps common Brightwater-style fields', 
     id: 'job-77',
     jobCode: 'AS-77',
     description: 'Electrical Supervisor',
+    category: 'Contractor',
     status: 'Active',
     contractorId: '5580',
     contractorName: 'Joseph Tozer',
     contractorEmail: 'TOZER89@gmail.com',
+    clientCode: 'DATA-1',
     clientName: 'DataCore Holdings',
+    branchName: 'London',
     siteAddress: 'LDN-1 Campus',
+    costCentreCode: 'DC-LDN-1',
+    iR35Status: 2,
+    assignedApproverCodes: ['APR-1', 'APR-2'],
+    assignedContractorCodes: ['CTR-1'],
+    lastModified: '2026-03-17T10:00:00Z',
     startDate: '2026-03-01T00:00:00Z',
     endDate: '2026-06-30T00:00:00Z',
     payCurrencyCode: 'gbp',
@@ -308,8 +316,16 @@ test('normalizeTimesheetPortalAssignment maps common Brightwater-style fields', 
   assert.equal(record.contractorId, '5580');
   assert.equal(record.candidateName, 'Joseph Tozer');
   assert.equal(record.candidateEmail, 'tozer89@gmail.com');
+  assert.equal(record.clientCode, 'DATA-1');
   assert.equal(record.clientName, 'DataCore Holdings');
+  assert.equal(record.assignmentCategory, 'Contractor');
+  assert.equal(record.branchName, 'London');
   assert.equal(record.clientSite, 'LDN-1 Campus');
+  assert.equal(record.costCentre, 'DC-LDN-1');
+  assert.equal(record.ir35Status, 'N/A');
+  assert.deepEqual(record.assignedApproverCodes, ['APR-1', 'APR-2']);
+  assert.deepEqual(record.assignedContractorCodes, ['CTR-1']);
+  assert.equal(record.lastModified, '2026-03-17T10:00:00Z');
   assert.equal(record.startDate, '2026-03-01');
   assert.equal(record.endDate, '2026-06-30');
   assert.equal(record.currency, 'GBP');

@@ -195,6 +195,9 @@
         <div class="hr"></div>
         <div class="right">
           <a id="qvOpenCandidate" class="btn light small" href="#" style="display:none">Open candidate</a>
+          <a id="qvOpenAssignment" class="btn light small" href="#" style="display:none">Open assignment</a>
+          <a id="qvTimesheets" class="btn light small" href="#" style="display:none">Timesheets</a>
+          <button id="qvCopyCode" class="btn light small" style="display:none">Copy code</button>
           <button id="qvLive" class="btn light small" style="display:none">Make live</button>
           <button id="qvEdit" class="btn light small" style="display:none">Edit</button>
           <button id="qvClose" class="btn light small" style="display:none">Close</button>
@@ -270,12 +273,17 @@
       let syncInFlight = false;
 
       const columns = [
-        { key:'as_ref',       label:'REF',     show:true,  width:'100px' },
-        { key:'job_title',    label:'TITLE',   show:true },
-        { key:'client_name',  label:'CLIENT',  show:true },
-        { key:'candidate_name',label:'CANDIDATE',show:true },
-        { key:'dates',        label:'DATES',   show:true, width:'220px' },
-        { key:'status',       label:'STATUS',  show:true, width:'120px' },
+        { key:'as_ref',                label:'Assignment code',     show:true, width:'180px' },
+        { key:'client_name',           label:'Client',              show:true, width:'220px' },
+        { key:'assignment_description',label:'Description',         show:true, width:'240px' },
+        { key:'branch_name',           label:'Branch',              show:true, width:'210px' },
+        { key:'start_date',            label:'Start date',          show:true, width:'120px' },
+        { key:'end_date',              label:'End date',            show:true, width:'120px' },
+        { key:'cost_centre',           label:'Cost centre',         show:true, width:'210px' },
+        { key:'ir35_status',           label:'IR35',                show:true, width:'120px' },
+        { key:'assigned_approvers',    label:'Assigned approvers',  show:true, width:'220px' },
+        { key:'assigned_contractors',  label:'Assigned contractors',show:true, width:'220px' },
+        { key:'status',                label:'Status',              show:true, width:'120px' },
       ];
 
       function pillStatus(s){
@@ -284,6 +292,41 @@
         return `<span class="pill ${tone}">${s||'—'}</span>`;
       }
       function fmtDate(d){ try{ return new Date(d).toISOString().slice(0,10); }catch{ return d||'—'; } }
+      function safeText(value, fallback='—'){ const text = String(value ?? '').trim(); return text || fallback; }
+      function esc(value){ return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+      function assignmentSearchHref(r){
+        const ref = safeText(r?.as_ref || r?.timesheet_portal_reference, '');
+        const url = new URL('/admin/assignments.html', window.location.origin);
+        if (ref) {
+          url.searchParams.set('q', ref);
+          url.searchParams.set('assignment', ref);
+        }
+        return url.toString();
+      }
+      function timesheetHref(r){
+        const ref = safeText(r?.as_ref || r?.timesheet_portal_reference, '');
+        const candidate = safeText(r?.assigned_contractors || r?.candidate_name, '');
+        const url = new URL('/admin/timesheets.html', window.location.origin);
+        if (ref) url.searchParams.set('assignment', ref);
+        if (candidate) url.searchParams.set('candidate', candidate);
+        return url.toString();
+      }
+      function applyUrlFilters(){
+        try{
+          const params = new URLSearchParams(window.location.search);
+          const search = params.get('q') || params.get('assignment') || '';
+          const candidate = params.get('candidate') || '';
+          const client = params.get('client') || '';
+          const status = params.get('status') || '';
+          if (search && $('#q')) $('#q').value = search;
+          if (status && $('#statusSel')) {
+            $('#statusSel').value = status;
+            activeStatus = status;
+          }
+          if (candidate && !search && $('#q')) $('#q').value = candidate;
+          if (client && !search && $('#q')) $('#q').value = client;
+        } catch {}
+      }
 
       function buildColMenu(){
         const host = $('#colSheet'); host.innerHTML='';
@@ -307,7 +350,7 @@
           const arrow = sort.key===c.key ? (sort.dir==='asc'?'▲':'▼') : '';
           h.push(`<th style="${c.width?`width:${c.width}`:''};cursor:pointer" data-sort="${c.key}">${c.label} ${arrow}</th>`);
         });
-        h.push(`<th style="width:140px"></th>`);
+        h.push(`<th style="width:260px"></th>`);
         return `<thead><tr>${h.join('')}</tr></thead>`;
       }
 
@@ -358,11 +401,6 @@
           const cells=[];
           const id = r.id;
 
-          const dates = (r.start_date?fmtDate(r.start_date):'—') + ' — ' + (r.end_date?fmtDate(r.end_date):'open');
-          const clientLink = r.client_name
-            ? `<span>${r.client_name}</span>`
-            : '—';
-
           let candCell = r.candidate_name || '—';
           if (r.candidate_id || r.contractor_id) {
             const candidateLabel = r.candidate_name || (r.candidate_id ? `Candidate ${r.candidate_id}` : null) || r.contractor_name || `Candidate #${r.contractor_id}`;
@@ -377,23 +415,30 @@
           columns.forEach(c=>{
             if(!c.show) return;
             let v='—';
-            if (c.key==='as_ref') v=r.as_ref||r.po_ref||('AS-'+id);
-            else if (c.key==='job_title') v=r.job_title||'—';
-            else if (c.key==='client_name') v=clientLink;
-            else if (c.key==='candidate_name') v=candCell;
-            else if (c.key==='dates') v=dates;
+            if (c.key==='as_ref') v=`<strong>${esc(r.as_ref||r.timesheet_portal_reference||r.po_ref||('AS-'+id))}</strong>`;
+            else if (c.key==='client_name') v=`<span>${esc(safeText(r.client_name || r.client_code))}</span>`;
+            else if (c.key==='assignment_description') v=`<span>${esc(safeText(r.assignment_description || r.job_title))}</span>`;
+            else if (c.key==='branch_name') v=`<span>${esc(safeText(r.branch_name || r.client_site))}</span>`;
+            else if (c.key==='start_date') v=esc(fmtDate(r.start_date));
+            else if (c.key==='end_date') v=esc(r.end_date ? fmtDate(r.end_date) : 'open');
+            else if (c.key==='cost_centre') v=esc(safeText(r.cost_centre));
+            else if (c.key==='ir35_status') v=esc(safeText(r.ir35_status));
+            else if (c.key==='assigned_approvers') v=esc(safeText(r.assigned_approvers || r.approver || r.consultant_name));
+            else if (c.key==='assigned_contractors') v=candCell !== '—' ? candCell : esc(safeText(r.assigned_contractors));
             else if (c.key==='status') v=pillStatus(r.status||'');
             else v=r[c.key] ?? '—';
             cells.push(`<td>${v}</td>`);
           });
           cells.push(`<td>
             <button class="btn light small" data-open="${id}">Open</button>
-            <button class="btn light small" data-quick="${id}">Quick view</button>
+            <button class="btn light small" data-candidate="${id}" ${!(r.candidate_id || r.contractor_id || r.candidate_name) ? 'disabled' : ''}>Candidate</button>
+            <button class="btn light small" data-timesheets="${id}" ${!(r.as_ref || r.timesheet_portal_reference) ? 'disabled' : ''}>Timesheets</button>
+            <button class="btn light small" data-copy-code="${id}" ${!(r.as_ref || r.timesheet_portal_reference) ? 'disabled' : ''}>Copy code</button>
           </td>`);
           return `<tr data-row="${id}">${cells.join('')}</tr>`;
         }).join('');
 
-        wrap.innerHTML = `<table>${headerHtml()}<tbody>${body}</tbody></table>`;
+        wrap.innerHTML = `<div style="overflow:auto"><table style="min-width:1900px">${headerHtml()}<tbody>${body}</tbody></table></div>`;
 
         wrap.querySelectorAll('th[data-sort]').forEach(th=>{
           th.onclick = ()=>{
@@ -419,8 +464,35 @@
         wrap.querySelectorAll('[data-open]').forEach(b=>{
           b.onclick=()=>openOne(Number(b.getAttribute('data-open')));
         });
-        wrap.querySelectorAll('[data-quick]').forEach(b=>{
-          b.onclick=(e)=>{ e.stopPropagation(); quick(Number(b.getAttribute('data-quick'))); };
+        wrap.querySelectorAll('[data-candidate]').forEach(b=>{
+          b.onclick=(e)=>{
+            e.stopPropagation();
+            const record = rows.find((item) => String(item.id) === String(b.getAttribute('data-candidate')));
+            const candidateQuery = encodeURIComponent(record?.candidate_name || record?.assigned_contractors || record?.candidate_id || record?.contractor_id || '');
+            if (candidateQuery) window.open(`/admin/candidates.html?q=${candidateQuery}`, '_blank', 'noopener');
+          };
+        });
+        wrap.querySelectorAll('[data-timesheets]').forEach(b=>{
+          b.onclick=(e)=>{
+            e.stopPropagation();
+            const record = rows.find((item) => String(item.id) === String(b.getAttribute('data-timesheets')));
+            window.open(timesheetHref(record), '_blank', 'noopener');
+          };
+        });
+        wrap.querySelectorAll('[data-copy-code]').forEach(b=>{
+          b.onclick=async (e)=>{
+            e.stopPropagation();
+            const record = rows.find((item) => String(item.id) === String(b.getAttribute('data-copy-code')));
+            const code = safeText(record?.as_ref || record?.timesheet_portal_reference, '');
+            if (!code) return;
+            try {
+              if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
+              else window.prompt('Copy assignment code', code);
+              toast('Assignment code copied', 'ok', 1800);
+            } catch {
+              window.prompt('Copy assignment code', code);
+            }
+          };
         });
         wrap.querySelectorAll('tr[data-row]').forEach(tr=>{
           tr.addEventListener('click',(e)=>{
@@ -590,6 +662,9 @@
       function renderQuick(r){
         const host = $('#qvRows');
         const openBtn = $('#qvOpenCandidate');
+        const assignmentBtn = $('#qvOpenAssignment');
+        const timesheetBtn = $('#qvTimesheets');
+        const copyCodeBtn = $('#qvCopyCode');
         const editBtn = $('#qvEdit');
         const closeBtn = $('#qvClose');
         const liveBtn = $('#qvLive');
@@ -598,6 +673,9 @@
           quickRecord = null;
           if (host) host.innerHTML = `<div class="empty">Select an assignment to preview details here.</div>`;
           if (openBtn) openBtn.style.display = 'none';
+          if (assignmentBtn) assignmentBtn.style.display = 'none';
+          if (timesheetBtn) timesheetBtn.style.display = 'none';
+          if (copyCodeBtn) copyCodeBtn.style.display = 'none';
           if (editBtn) editBtn.style.display = 'none';
           if (closeBtn) closeBtn.style.display = 'none';
           if (liveBtn) liveBtn.style.display = 'none';
@@ -609,14 +687,20 @@
         if (host) {
           host.innerHTML = `
             <div class="kv"><b>Reference</b><div>${r.as_ref || '—'}</div></div>
-            <div class="kv"><b>Title</b><div>${r.job_title||'—'}</div></div>
+            <div class="kv"><b>Description</b><div>${r.assignment_description || r.job_title || '—'}</div></div>
             <div class="kv"><b>Status</b><div>${pillStatus(r.status||'')}</div></div>
-            <div class="kv"><b>Client</b><div>${r.client_name||'—'} ${r.client_site?('· '+r.client_site):''}</div></div>
-            <div class="kv"><b>Candidate</b><div>${r.candidate_name||'—'}</div></div>
-            <div class="kv"><b>Dates</b><div>${dates}</div></div>
+            <div class="kv"><b>Client</b><div>${r.client_name||r.client_code||'—'}</div></div>
+            <div class="kv"><b>Branch</b><div>${r.branch_name || r.client_site || '—'}</div></div>
+            <div class="kv"><b>Start date</b><div>${r.start_date ? fmtDate(r.start_date) : '—'}</div></div>
+            <div class="kv"><b>End date</b><div>${r.end_date ? fmtDate(r.end_date) : 'open'}</div></div>
+            <div class="kv"><b>Cost centre</b><div>${r.cost_centre || '—'}</div></div>
+            <div class="kv"><b>IR35</b><div>${r.ir35_status || '—'}</div></div>
+            <div class="kv"><b>Assigned approvers</b><div>${r.assigned_approvers || r.approver || r.consultant_name || '—'}</div></div>
+            <div class="kv"><b>Assigned contractors</b><div>${r.assigned_contractors || r.candidate_name || '—'}</div></div>
             <div class="kv"><b>Pay</b><div>${r.currency||'GBP'} ${r.rate_pay||r.rate_std||'—'}</div></div>
             <div class="kv"><b>PO</b><div>${r.po_number||r.po_ref||'—'}</div></div>
             <div class="kv"><b>Consultant</b><div>${r.consultant_name||'—'}</div></div>
+            <div class="kv"><b>Dates</b><div>${dates}</div></div>
           `;
         }
 
@@ -633,6 +717,31 @@
           } else {
             openBtn.style.display = 'none';
           }
+        }
+
+        if (assignmentBtn) {
+          assignmentBtn.href = assignmentSearchHref(r);
+          assignmentBtn.style.display = r.as_ref || r.timesheet_portal_reference ? '' : 'none';
+        }
+
+        if (timesheetBtn) {
+          timesheetBtn.href = timesheetHref(r);
+          timesheetBtn.style.display = r.as_ref || r.timesheet_portal_reference ? '' : 'none';
+        }
+
+        if (copyCodeBtn) {
+          copyCodeBtn.style.display = r.as_ref || r.timesheet_portal_reference ? '' : 'none';
+          copyCodeBtn.onclick = async () => {
+            const code = safeText(r.as_ref || r.timesheet_portal_reference, '');
+            if (!code) return;
+            try {
+              if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
+              else window.prompt('Copy assignment code', code);
+              toast('Assignment code copied', 'ok', 1800);
+            } catch {
+              window.prompt('Copy assignment code', code);
+            }
+          };
         }
 
         if (editBtn) {
@@ -1164,6 +1273,7 @@
       });
 
       buildColMenu();
+      applyUrlFilters();
       await refreshDropdowns();
       await load();
       updateBulkButtons();
