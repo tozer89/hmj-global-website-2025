@@ -6,8 +6,7 @@ const {
   trimString,
   lowerEmail,
 } = require('./_team-tasks-helpers.js');
-
-const RESEND_API_URL = 'https://api.resend.com/emails';
+const { resolveTeamTaskEmailConfig, sendTeamTaskEmail } = require('./_team-task-email.js');
 
 function header(event, name) {
   const headers = event?.headers || {};
@@ -127,17 +126,7 @@ async function markReminderFailed(supabase, reminderId, reason) {
   if (error) throw error;
 }
 
-async function sendWithResend({ reminder, siteUrl }) {
-  const apiKey = trimString(process.env.RESEND_API_KEY, 320);
-  const fromEmail = trimString(process.env.TASK_REMINDER_FROM_EMAIL, 320);
-  const replyTo = trimString(process.env.TASK_REMINDER_REPLY_TO, 320);
-
-  if (!apiKey || !fromEmail) {
-    const error = new Error('Reminder email provider is not configured.');
-    error.code = 'reminder_email_not_configured';
-    throw error;
-  }
-
+async function sendTaskReminderEmail({ event, emailConfig, reminder }) {
   const task = reminder?.task_items || {};
   const recipientEmail = lowerEmail(reminder?.recipient_email);
   if (!recipientEmail) {
@@ -155,33 +144,39 @@ async function sendWithResend({ reminder, siteUrl }) {
       email: recipientEmail,
       displayName: recipientEmail,
     },
-    siteUrl,
+    siteUrl: emailConfig.siteUrl,
   });
-
-  const response = await fetch(RESEND_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: [recipientEmail],
-      reply_to: replyTo || undefined,
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
-    }),
+  const sent = await sendTeamTaskEmail({
+    event,
+    emailConfig,
+    toEmail: recipientEmail,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
   });
+  return {
+    recipientEmail,
+    delivery: sent.delivery,
+  };
+}
 
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload?.message || payload?.error || `Resend error (${response.status})`);
-    error.code = 'resend_request_failed';
-    throw error;
+async function recordReminderAudit(supabase, reminder, metadata = {}) {
+  try {
+    await supabase.from('task_audit_log').insert({
+      task_id: trimString(reminder?.task_id, 120) || null,
+      action_type: 'reminder_email_sent',
+      actor_user_id: 'system',
+      actor_email: 'system@hmj-global.com',
+      entity_type: 'reminder',
+      entity_id: trimString(reminder?.id, 120) || null,
+      source_action: 'admin-team-tasks-reminders-run',
+      old_data: {},
+      new_data: {},
+      metadata,
+    });
+  } catch (error) {
+    console.warn('[team-task-reminders] audit log write failed (%s)', error?.message || error);
   }
-
-  return payload;
 }
 
 exports.handler = async (event = {}) => {
@@ -210,10 +205,7 @@ exports.handler = async (event = {}) => {
 
   try {
     const supabase = getSupabase(event);
-    const siteUrl = trimString(
-      process.env.URL || process.env.DEPLOY_PRIME_URL || process.env.SITE_URL || '',
-      500
-    ).replace(/\/$/, '');
+    const emailConfig = await resolveTeamTaskEmailConfig(event);
 
     const reminders = await loadDueReminders(supabase, limit);
     if (dryRun) {
@@ -245,8 +237,13 @@ exports.handler = async (event = {}) => {
       summary.reminderIds.push(reminder.id);
 
       try {
-        await sendWithResend({ reminder, siteUrl });
+        const result = await sendTaskReminderEmail({ event, emailConfig, reminder });
         await markReminderSent(supabase, reminder.id);
+        await recordReminderAudit(supabase, reminder, {
+          recipient_email: result.recipientEmail,
+          provider: result.delivery?.provider || emailConfig.preferredProvider,
+          delivery_id: result.delivery?.id || null,
+        });
         summary.sent += 1;
       } catch (error) {
         await markReminderFailed(supabase, reminder.id, error?.message || 'Reminder send failed');

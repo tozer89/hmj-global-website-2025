@@ -9,6 +9,7 @@ const {
   buildTaskRecipients,
   describeTaskDueCountdown,
   formatFileSize,
+  buildAssignmentEmail,
   buildReminderEmail,
   buildTaskActivityEmail,
 } = require('../netlify/functions/_team-tasks-helpers.js');
@@ -27,6 +28,7 @@ test('normalizeTaskSettings falls back cleanly and preserves valid values', () =
     {
       dueSoonDays: 5,
       collapseDoneByDefault: false,
+      assignmentEmailNotifications: true,
       reminderRecipientMode: 'assignee_only',
       activityRecipientMode: 'watchers_only',
       activityEmailNotifications: false,
@@ -45,6 +47,7 @@ test('normalizeTaskSettings falls back cleanly and preserves valid values', () =
     {
       dueSoonDays: 3,
       collapseDoneByDefault: true,
+      assignmentEmailNotifications: true,
       reminderRecipientMode: 'assignee_creator_watchers',
       activityRecipientMode: 'assignee_creator_watchers',
       activityEmailNotifications: true,
@@ -124,7 +127,39 @@ test('buildReminderEmail includes admin deep link and task context', () => {
   assert.match(message.subject, /\[HMJ Team Tasks\]/);
   assert.match(message.text, /Chase updated payroll sign-off/);
   assert.match(message.text, /https:\/\/hmj-global\.com\/admin\/team-tasks\.html\?task=task-1/);
-  assert.match(message.html, /Open task in HMJ Admin/);
+  assert.match(message.html, /Open task/);
+  assert.match(message.html, /Open board/);
+  assert.match(message.html, /Weekly planner/);
+});
+
+test('buildAssignmentEmail includes branded CTA buttons and assignment context', () => {
+  const message = buildAssignmentEmail({
+    task: {
+      id: 'task-2',
+      title: 'Review payroll exceptions',
+      description: 'Check the remaining payroll exceptions before payroll close.',
+      status: 'open',
+      priority: 'urgent',
+      due_at: '2026-03-22T15:30:00.000Z',
+      assigned_to_email: 'nick@hmj-global.com',
+      linked_module: 'Payroll',
+    },
+    recipient: {
+      email: 'nick@hmj-global.com',
+      displayName: 'Nick Chamberlain',
+    },
+    actor: {
+      email: 'joe@hmj-global.com',
+      displayName: "Joe Tozer-O'Sullivan",
+    },
+    siteUrl: 'https://hmj-global.com',
+  });
+
+  assert.match(message.subject, /New task assigned/);
+  assert.match(message.html, /Open task/);
+  assert.match(message.html, /Open board/);
+  assert.match(message.html, /Open workspace/);
+  assert.match(message.text, /Joe Tozer-O'Sullivan assigned you a task/);
 });
 
 test('buildTaskRecipients respects mode and dedupes watchers', () => {

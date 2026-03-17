@@ -15,8 +15,7 @@ const {
   trimString,
   lowerEmail,
 } = require('./_team-tasks-helpers.js');
-
-const RESEND_API_URL = 'https://api.resend.com/emails';
+const { resolveTeamTaskEmailConfig, sendTeamTaskEmail } = require('./_team-task-email.js');
 
 function json(statusCode, body) {
   return {
@@ -27,16 +26,6 @@ function json(statusCode, body) {
     },
     body: JSON.stringify(body),
   };
-}
-
-function currentSiteUrl() {
-  return trimString(
-    process.env.URL
-      || process.env.DEPLOY_PRIME_URL
-      || process.env.SITE_URL
-      || '',
-    500
-  ).replace(/\/$/, '');
 }
 
 function sameRecipient(left = {}, right = {}) {
@@ -52,43 +41,20 @@ function nonActorRecipients(recipients, actor) {
   return dedupeReminderRecipients(recipients).filter((recipient) => !sameRecipient(recipient, actor));
 }
 
-async function sendWithResend({ recipient, message }) {
-  const apiKey = trimString(process.env.RESEND_API_KEY, 320);
-  const fromEmail = trimString(process.env.TASK_REMINDER_FROM_EMAIL, 320);
-  const replyTo = trimString(process.env.TASK_REMINDER_REPLY_TO, 320);
-
-  if (!apiKey || !fromEmail) {
-    return { skipped: true, reason: 'email_provider_not_configured' };
-  }
-
+async function sendTaskActivityEmail({ event, emailConfig, recipient, message }) {
   const email = lowerEmail(recipient?.email);
   if (!email) {
     return { skipped: true, reason: 'recipient_email_missing' };
   }
-
-  const response = await fetch(RESEND_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: [email],
-      reply_to: replyTo || undefined,
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
-    }),
+  const result = await sendTeamTaskEmail({
+    event,
+    emailConfig,
+    toEmail: email,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
   });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload?.message || payload?.error || `Resend error (${response.status})`);
-    error.code = 'resend_request_failed';
-    throw error;
-  }
-  return { skipped: false, payload };
+  return { skipped: false, payload: result.delivery };
 }
 
 async function loadTaskBundle(supabase, { taskId, commentId, attachmentId }) {
@@ -202,7 +168,8 @@ exports.handler = withAdminCors(async (event, context) => {
       email: lowerEmail(user?.email),
       displayName: memberDisplayName(user?.user_metadata || { email: user?.email, userId: user?.id || user?.sub }),
     };
-    const siteUrl = currentSiteUrl();
+    const emailConfig = await resolveTeamTaskEmailConfig(event);
+    const siteUrl = emailConfig.siteUrl;
 
     const mentionRecipients = settings.mentionEmailNotifications
       ? nonActorRecipients(
@@ -249,7 +216,7 @@ exports.handler = withAdminCors(async (event, context) => {
           attachment: bundle.attachment,
           siteUrl,
         });
-        const delivery = await sendWithResend({ recipient, message });
+        const delivery = await sendTaskActivityEmail({ event, emailConfig, recipient, message });
         if (delivery.skipped) {
           summary.skipped += 1;
           summary.errors.push({
@@ -298,7 +265,7 @@ exports.handler = withAdminCors(async (event, context) => {
           attachment: bundle.attachment,
           siteUrl,
         });
-        const delivery = await sendWithResend({ recipient, message });
+        const delivery = await sendTaskActivityEmail({ event, emailConfig, recipient, message });
         if (delivery.skipped) {
           summary.skipped += 1;
           summary.errors.push({

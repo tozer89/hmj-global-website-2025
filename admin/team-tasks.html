@@ -11,7 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js?v=3"></script>
   <script defer src="/admin/common.js?v=34"></script>
-  <script defer src="/admin/team-tasks.js?v=2"></script>
+  <script defer src="/admin/team-tasks.js?v=3"></script>
 
   <style>
     :root{
@@ -270,6 +270,13 @@
     .stack{display:grid;gap:12px}
     .stack--tight{gap:10px}
     .status-note{padding:12px 14px;border-radius:15px;background:#fff;border:1px solid rgba(36,72,158,.10);color:var(--muted)}
+    .status-note strong{color:var(--ink)}
+    .status-note--ok{background:var(--ok-soft);border-color:rgba(19,130,84,.18);color:var(--ok)}
+    .status-note--warn{background:var(--warn-soft);border-color:rgba(155,106,0,.18);color:var(--warn)}
+    .status-note--danger{background:var(--danger-soft);border-color:rgba(179,50,40,.18);color:var(--danger)}
+    .status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .status-grid .status-note{height:100%}
+    .email-action-row{display:flex;gap:10px;flex-wrap:wrap}
     .footnote{font-size:12px;color:var(--muted)}
 
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
@@ -278,7 +285,11 @@
     @media (max-width:1240px){
       .hero{grid-template-columns:1fr}
       .hero-card{position:relative;top:auto}
-      .metrics,.board,.mine-grid,.settings-grid,.planner-unscheduled__list{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .metrics,.board,.mine-grid,.settings-grid,.planner-unscheduled__list,.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+
+    @media (max-width:1080px){
+      .drawer-grid,.form-grid,.status-grid{grid-template-columns:1fr}
     }
 
     @media (max-width:960px){
@@ -611,6 +622,12 @@
                 </label>
               </div>
               <div class="field field--wide">
+                <label class="checkline" for="settingAssignmentEmails">
+                  <input id="settingAssignmentEmails" type="checkbox"/>
+                  Send branded emails when tasks are assigned or reassigned
+                </label>
+              </div>
+              <div class="field field--wide">
                 <label class="checkline" for="settingActivityEmails">
                   <input id="settingActivityEmails" type="checkbox"/>
                   Send email notifications when comments or files are added
@@ -635,10 +652,11 @@
             </div>
             <div class="stack--tight stack">
               <div class="status-note" id="emailStatusNote">Checking reminder email configuration…</div>
-              <div class="status-note">The scheduled reminder runner sends due reminders hourly, and the Team Tasks activity notifier sends branded emails for comments, file uploads, and @mentions through the secure server-side path.</div>
+              <div class="status-note" id="emailStatusDetail">Loading sender details…</div>
+              <div class="status-note">Assignment emails, due reminders, comments, files, and @mentions now all use the same HMJ-branded server-side delivery path.</div>
               <div class="status-note" id="schemaStatusNote">Checking schema status…</div>
             </div>
-            <p class="footnote">Environment variables still needed for live reminder delivery: `SUPABASE_JWT_SECRET`, `RESEND_API_KEY`, `TASK_REMINDER_FROM_EMAIL`, and optionally `TASK_REMINDER_REPLY_TO` plus `TASK_REMINDER_CRON_SECRET` for protected manual runs.</p>
+            <p class="footnote">Team Tasks now follows the live HMJ sender configuration from Candidate Email settings. `TASK_REMINDER_CRON_SECRET` is still recommended if you want protected manual runs for the scheduled reminder runner.</p>
           </section>
 
           <section class="settings-card">
@@ -752,6 +770,22 @@
             <div class="field">
               <label for="detailTags">Tags</label>
               <input id="detailTags" maxlength="240" placeholder="ops, internal, finance"/>
+            </div>
+            <div class="field">
+              <label>Reminder status</label>
+              <div class="status-note" id="detailReminderSummary">Loading reminder status…</div>
+            </div>
+            <div class="field">
+              <label>Email recipients</label>
+              <div class="status-note" id="detailEmailRecipients">Loading recipients…</div>
+            </div>
+            <div class="field">
+              <label>Delivery history</label>
+              <div class="status-note" id="detailEmailHistory">Loading delivery history…</div>
+            </div>
+            <div class="email-action-row">
+              <button class="btn secondary small" id="sendAssignmentEmailBtn" type="button">Send assignment email</button>
+              <button class="btn soft small" id="sendReminderNowBtn" type="button">Send reminder now</button>
             </div>
           </section>
 

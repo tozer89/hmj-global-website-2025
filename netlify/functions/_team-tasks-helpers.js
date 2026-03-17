@@ -16,6 +16,7 @@ const HMJ_EMAIL_BRAND = {
 const DEFAULT_TEAM_TASK_SETTINGS = {
   dueSoonDays: 3,
   collapseDoneByDefault: true,
+  assignmentEmailNotifications: true,
   reminderRecipientMode: 'assignee_creator_watchers',
   activityRecipientMode: 'assignee_creator_watchers',
   activityEmailNotifications: true,
@@ -77,6 +78,10 @@ function normalizeTaskSettings(value) {
     collapseDoneByDefault: coerceBoolean(
       settings.collapseDoneByDefault,
       DEFAULT_TEAM_TASK_SETTINGS.collapseDoneByDefault
+    ),
+    assignmentEmailNotifications: coerceBoolean(
+      settings.assignmentEmailNotifications,
+      DEFAULT_TEAM_TASK_SETTINGS.assignmentEmailNotifications
     ),
     reminderRecipientMode: normaliseEnum(
       settings.reminderRecipientMode,
@@ -334,16 +339,69 @@ function buildTaskUrl(task = {}, siteUrl = '') {
   return `${safeSiteUrl}/admin/team-tasks.html?task=${encodeURIComponent(taskId)}`;
 }
 
+function buildTaskUrls(task = {}, siteUrl = '') {
+  const taskId = trimString(task.id, 120);
+  const safeSiteUrl = trimString(siteUrl, 500).replace(/\/$/, '');
+  const base = safeSiteUrl ? `${safeSiteUrl}/admin/team-tasks.html` : '';
+  if (!base) {
+    return {
+      taskUrl: '',
+      boardUrl: '',
+      plannerUrl: '',
+      workspaceUrl: '',
+    };
+  }
+  const taskUrl = taskId
+    ? `${base}?task=${encodeURIComponent(taskId)}&tab=tasks`
+    : base;
+  return {
+    taskUrl,
+    boardUrl: taskId
+      ? `${base}?task=${encodeURIComponent(taskId)}&tab=board`
+      : `${base}?tab=board`,
+    plannerUrl: taskId
+      ? `${base}?task=${encodeURIComponent(taskId)}&tab=tasks#weeklyPlannerHeading`
+      : `${base}#weeklyPlannerHeading`,
+    workspaceUrl: `${base}?tab=tasks`,
+  };
+}
+
 function buildEmailShell({
   eyebrow,
   heading,
+  preheader = '',
   intro,
   summaryRows = [],
   bodyHtml = '',
   bodyText = '',
   ctaLabel = 'Open task in HMJ Admin',
   ctaUrl = '',
+  actions = [],
 }) {
+  const safePreheader = trimString(preheader, 220);
+  const primaryActions = ctaUrl
+    ? [{ label: ctaLabel, url: ctaUrl, tone: 'primary' }].concat(actions || [])
+    : (actions || []);
+  const actionHtml = primaryActions.length
+    ? [
+      '<div style="margin:24px 0 0;">',
+      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:10px 10px;margin-left:-10px;">',
+      '<tr>',
+      ...primaryActions
+        .filter((action) => trimString(action?.url, 2000))
+        .map((action) => {
+          const tone = trimString(action.tone, 32) || 'secondary';
+          const isPrimary = tone === 'primary';
+          const bg = isPrimary ? HMJ_EMAIL_BRAND.accent : '#ffffff';
+          const color = isPrimary ? '#ffffff' : HMJ_EMAIL_BRAND.accent;
+          const border = isPrimary ? HMJ_EMAIL_BRAND.accent : HMJ_EMAIL_BRAND.border;
+          return `<td><a href="${escapeHtml(action.url)}" style="display:inline-block;padding:12px 16px;border-radius:14px;background:${bg};color:${color};text-decoration:none;font-weight:800;border:1px solid ${border}">${escapeHtml(action.label || 'Open')}</a></td>`;
+        }),
+      '</tr>',
+      '</table>',
+      '</div>',
+    ].join('')
+    : '';
   const summaryHtml = summaryRows.length
     ? [
       '<div style="display:grid;gap:10px;margin:0 0 20px;padding:18px;border-radius:18px;background:#f7f9ff;border:1px solid #d9e1f4">',
@@ -351,18 +409,28 @@ function buildEmailShell({
       '</div>',
     ].join('')
     : '';
+  const logoUrl = trimString(ctaUrl, 2000)
+    ? `${trimString(ctaUrl, 2000).split('/admin/team-tasks.html')[0] || ''}/images/uploads/logo-plain.png`
+    : '';
 
   const html = [
+    `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(safePreheader || intro)}</div>`,
     `<div style="font-family:Inter,Segoe UI,Arial,sans-serif;background:${HMJ_EMAIL_BRAND.bg};padding:24px;color:${HMJ_EMAIL_BRAND.accentDeep}">`,
     `<div style="max-width:640px;margin:0 auto;background:${HMJ_EMAIL_BRAND.panel};border:1px solid ${HMJ_EMAIL_BRAND.border};border-radius:20px;padding:28px;box-shadow:0 18px 38px rgba(15,27,63,.10)">`,
+    `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px">`,
+    `<div>`,
     `<p style="margin:0 0 12px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:${HMJ_EMAIL_BRAND.accent};font-weight:800">${escapeHtml(eyebrow || HMJ_EMAIL_BRAND.eyebrow)}</p>`,
+    `</div>`,
+    logoUrl
+      ? `<img src="${escapeHtml(logoUrl)}" alt="HMJ Global" style="display:block;height:30px;width:auto;max-width:150px">`
+      : '',
+    `</div>`,
     `<h1 style="margin:0 0 12px;font-size:28px;line-height:1.1;color:${HMJ_EMAIL_BRAND.accentDeep}">${escapeHtml(heading)}</h1>`,
     `<p style="margin:0 0 20px;color:${HMJ_EMAIL_BRAND.muted};line-height:1.6">${escapeHtml(intro)}</p>`,
     summaryHtml,
     bodyHtml,
-    ctaUrl
-      ? `<p style="margin:22px 0 0"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:12px 16px;border-radius:12px;background:${HMJ_EMAIL_BRAND.accent};color:#ffffff;text-decoration:none;font-weight:700">${escapeHtml(ctaLabel)}</a></p>`
-      : '',
+    actionHtml,
+    `<p style="margin:18px 0 0;color:${HMJ_EMAIL_BRAND.muted};font-size:13px;line-height:1.6">You can open this task securely in HMJ Admin to view comments, files, reminders, and ownership updates.</p>`,
     '</div>',
     '</div>',
   ].filter(Boolean).join('');
@@ -377,7 +445,9 @@ function buildEmailShell({
     summaryRows.length ? '' : null,
     bodyText,
     '',
-    ctaUrl ? `${ctaLabel}: ${ctaUrl}` : '',
+    ...primaryActions
+      .filter((action) => trimString(action?.url, 2000))
+      .map((action) => `${trimString(action.label, 120) || 'Open'}: ${trimString(action.url, 2000)}`),
   ].filter((value) => value != null && value !== '').join('\n');
 
   return { html, text };
@@ -401,16 +471,64 @@ function buildReminderEmail({ task = {}, recipient = {}, siteUrl = '' } = {}) {
     || 'Open HMJ Admin to review the latest notes, comments, and owner updates.';
   const greeting = trimString(recipient.displayName || recipient.email, 160) || 'HMJ team';
   const subject = `[HMJ Team Tasks] Reminder: ${taskTitle}`;
-  const taskUrl = buildTaskUrl(task, siteUrl);
+  const urls = buildTaskUrls(task, siteUrl);
   const shell = buildEmailShell({
     eyebrow: HMJ_EMAIL_BRAND.eyebrow,
     heading: taskTitle,
+    preheader: `Reminder: ${taskTitle}`,
     intro: `Hello ${greeting}, this is a reminder for one of your HMJ team tasks.`,
     summaryRows: taskSummaryRows(task),
     bodyHtml: `<p style="margin:0;color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6">${escapeHtml(preview)}</p>`,
     bodyText: preview,
-    ctaLabel: 'Open task in HMJ Admin',
-    ctaUrl: taskUrl,
+    ctaLabel: 'Open task',
+    ctaUrl: urls.taskUrl,
+    actions: [
+      { label: 'Open board', url: urls.boardUrl, tone: 'secondary' },
+      { label: 'Weekly planner', url: urls.plannerUrl, tone: 'secondary' },
+    ],
+  });
+
+  return {
+    subject,
+    text: shell.text,
+    html: shell.html,
+  };
+}
+
+function buildAssignmentEmail({
+  task = {},
+  recipient = {},
+  actor = {},
+  siteUrl = '',
+} = {}) {
+  const taskTitle = trimString(task.title, 180) || 'HMJ task';
+  const greeting = trimString(recipient.displayName || recipient.email, 160) || 'HMJ team';
+  const actorName = trimString(actor.displayName || actor.email, 160) || 'An HMJ admin';
+  const preview = trimString(task.description, 500)
+    || 'Open HMJ Admin to review the brief, links, files, and due date.';
+  const urls = buildTaskUrls(task, siteUrl);
+  const subject = `[HMJ Team Tasks] New task assigned: ${taskTitle}`;
+  const shell = buildEmailShell({
+    eyebrow: HMJ_EMAIL_BRAND.eyebrow,
+    heading: taskTitle,
+    preheader: `New HMJ task assigned: ${taskTitle}`,
+    intro: `Hello ${greeting}, ${actorName} assigned you a task in HMJ Team Tasks.`,
+    summaryRows: taskSummaryRows(task).concat(
+      trimString(task.linked_module, 80)
+        ? [{ label: 'Linked module', value: trimString(task.linked_module, 80) }]
+        : []
+    ),
+    bodyHtml: [
+      `<p style="margin:0 0 14px;color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6">${escapeHtml(preview)}</p>`,
+      `<div style="padding:16px 18px;border-radius:18px;background:${HMJ_EMAIL_BRAND.badgeBg};border:1px solid ${HMJ_EMAIL_BRAND.badgeBorder};color:${HMJ_EMAIL_BRAND.accentDeep};line-height:1.6">Use the buttons below to open the task directly, jump to the board view, or review this week’s planner alongside diary commitments.</div>`,
+    ].join(''),
+    bodyText: preview,
+    ctaLabel: 'Open task',
+    ctaUrl: urls.taskUrl,
+    actions: [
+      { label: 'Open board', url: urls.boardUrl, tone: 'secondary' },
+      { label: 'Open workspace', url: urls.workspaceUrl, tone: 'secondary' },
+    ],
   });
 
   return {
@@ -433,7 +551,7 @@ function buildTaskActivityEmail({
   const taskTitle = trimString(task.title, 180) || 'HMJ task';
   const actorName = trimString(actor.displayName || actor.email, 160) || 'An HMJ admin';
   const greeting = trimString(recipient.displayName || recipient.email, 160) || 'HMJ team';
-  const taskUrl = buildTaskUrl(task, siteUrl);
+  const urls = buildTaskUrls(task, siteUrl);
   const commentPreview = trimString(comment.comment_body || comment.commentBody, 600)
     || 'Open HMJ Admin to read the latest comment.';
   const attachmentName = trimString(attachment.file_name || attachment.original_filename || attachment.name, 220) || 'Task file';
@@ -469,12 +587,16 @@ function buildTaskActivityEmail({
   const shell = buildEmailShell({
     eyebrow: HMJ_EMAIL_BRAND.eyebrow,
     heading: taskTitle,
+    preheader: subject,
     intro,
     summaryRows: taskSummaryRows(task),
     bodyHtml,
     bodyText,
     ctaLabel,
-    ctaUrl: taskUrl,
+    ctaUrl: urls.taskUrl,
+    actions: [
+      { label: 'Open board', url: urls.boardUrl, tone: 'secondary' },
+    ],
   });
 
   return {
@@ -499,9 +621,11 @@ module.exports = {
   buildTaskRecipients,
   describeTaskDueCountdown,
   formatFileSize,
+  buildAssignmentEmail,
   buildReminderEmail,
   buildTaskActivityEmail,
   trimString,
   lowerEmail,
   toIsoTimestamp,
+  buildTaskUrls,
 };

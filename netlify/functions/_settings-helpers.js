@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   team_tasks_settings: {
     dueSoonDays: 3,
     collapseDoneByDefault: true,
+    assignmentEmailNotifications: true,
     reminderRecipientMode: 'assignee_creator_watchers',
     activityRecipientMode: 'assignee_creator_watchers',
     activityEmailNotifications: true,

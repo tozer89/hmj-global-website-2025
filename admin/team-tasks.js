@@ -10,6 +10,7 @@
   const CONFIG_ENDPOINT = '/admin-team-tasks-config';
   const SETTINGS_SAVE_ENDPOINT = '/admin-settings-save';
   const NOTIFY_ENDPOINT = '/admin-team-tasks-notify-activity';
+  const SEND_EMAIL_ENDPOINT = '/admin-team-tasks-send-email';
   const ATTACHMENT_DELETE_ENDPOINT = '/admin-team-task-attachment-delete';
   const ATTACHMENT_URL_ENDPOINT = '/admin-team-task-attachment-url';
   const CALENDAR_STATUS_ENDPOINT = '/admin-team-tasks-calendar-status';
@@ -42,6 +43,7 @@
   const DEFAULT_SETTINGS = {
     dueSoonDays: 3,
     collapseDoneByDefault: true,
+    assignmentEmailNotifications: true,
     reminderRecipientMode: 'assignee_creator_watchers',
     activityRecipientMode: 'assignee_creator_watchers',
     activityEmailNotifications: true,
@@ -87,6 +89,16 @@
     schemaReady: false,
     schemaMessage: '',
     emailConfigured: false,
+    emailDelivery: {
+      ready: false,
+      senderEmail: '',
+      senderName: '',
+      supportEmail: '',
+      preferredProvider: 'none',
+      message: '',
+      resend: null,
+      smtp: null,
+    },
     siteUrl: '',
     settings: { ...DEFAULT_SETTINGS },
     currentUser: {
@@ -189,10 +201,12 @@
       'settingDefaultPriority',
       'settingReminderRecipients',
       'settingActivityRecipients',
+      'settingAssignmentEmails',
       'settingCollapseDone',
       'settingActivityEmails',
       'settingMentionEmails',
       'emailStatusNote',
+      'emailStatusDetail',
       'schemaStatusNote',
       'calendarRuntimeNote',
       'calendarConnectionSummary',
@@ -214,6 +228,11 @@
       'detailReminderEnabled',
       'detailReminderMode',
       'detailReminderCustomAt',
+      'detailReminderSummary',
+      'detailEmailRecipients',
+      'detailEmailHistory',
+      'sendAssignmentEmailBtn',
+      'sendReminderNowBtn',
       'detailLinkedModule',
       'detailLinkedUrl',
       'detailTags',
@@ -416,6 +435,9 @@
     return {
       dueSoonDays,
       collapseDoneByDefault,
+      assignmentEmailNotifications: input.assignmentEmailNotifications === false
+        ? false
+        : DEFAULT_SETTINGS.assignmentEmailNotifications,
       defaultPriority,
       reminderRecipientMode,
       activityRecipientMode,
@@ -962,11 +984,16 @@
     return findTask(state.selectedTaskId);
   }
 
-  function updateQueryTaskParam(taskId) {
+  function updateQueryState({ taskId = state.selectedTaskId, tab = state.activeTab } = {}) {
     try {
       const url = new URL(window.location.href);
       if (taskId) url.searchParams.set('task', taskId);
       else url.searchParams.delete('task');
+      if (tab && ['tasks', 'board', 'audit', 'mine', 'settings'].includes(tab)) {
+        url.searchParams.set('tab', tab);
+      } else {
+        url.searchParams.delete('tab');
+      }
       window.history.replaceState({}, '', url.toString());
     } catch {}
   }
@@ -975,6 +1002,16 @@
     try {
       const url = new URL(window.location.href);
       return trimText(url.searchParams.get('task'), 120);
+    } catch {
+      return '';
+    }
+  }
+
+  function readQueryTab() {
+    try {
+      const url = new URL(window.location.href);
+      const tab = trimText(url.searchParams.get('tab'), 40).toLowerCase();
+      return ['tasks', 'board', 'audit', 'mine', 'settings'].includes(tab) ? tab : '';
     } catch {
       return '';
     }
@@ -1263,12 +1300,125 @@
       .filter(Boolean);
   }
 
+  function setStatusNoteTone(element, tone) {
+    if (!element) return;
+    element.classList.remove('status-note--ok', 'status-note--warn', 'status-note--danger');
+    if (tone === 'ok') element.classList.add('status-note--ok');
+    if (tone === 'warn') element.classList.add('status-note--warn');
+    if (tone === 'danger') element.classList.add('status-note--danger');
+  }
+
+  function pendingTaskReminders(taskId) {
+    return taskReminders(taskId)
+      .filter((item) => item.status !== 'sent' && item.status !== 'cancelled')
+      .sort((left, right) => new Date(left.send_at || 0).getTime() - new Date(right.send_at || 0).getTime());
+  }
+
+  function assignmentEmailRecipient(task) {
+    const email = lowerEmail(task?.assigned_to_email);
+    if (!email) return null;
+    return {
+      userId: trimText(task.assigned_to, 120),
+      email,
+      displayName: memberDisplayName(task.assigned_to, task.assigned_to_email),
+    };
+  }
+
+  function taskReminderRecipients(task) {
+    const recipients = [];
+    const mode = trimText(state.settings.reminderRecipientMode, 64) || DEFAULT_SETTINGS.reminderRecipientMode;
+    const includeAssignee = mode === 'assignee_creator_watchers' || mode === 'assignee_only';
+    const includeCreator = mode === 'assignee_creator_watchers' || mode === 'creator_only';
+    const includeWatchers = mode === 'assignee_creator_watchers' || mode === 'watchers_only';
+    if (includeAssignee && assignmentEmailRecipient(task)) {
+      recipients.push(assignmentEmailRecipient(task));
+    }
+    if (includeCreator && (trimText(task.created_by, 120) || lowerEmail(task.created_by_email))) {
+      recipients.push({
+        userId: trimText(task.created_by, 120),
+        email: lowerEmail(task.created_by_email),
+        displayName: memberDisplayName(task.created_by, task.created_by_email),
+      });
+    }
+    if (includeWatchers) {
+      taskWatchers(task.id).forEach((watcher) => {
+        recipients.push({
+          userId: trimText(watcher.user_id, 120),
+          email: lowerEmail(watcher.user_email),
+          displayName: memberDisplayName(watcher.user_id, watcher.user_email),
+        });
+      });
+    }
+    const seen = new Set();
+    return recipients.filter((recipient) => {
+      const key = recipient.email || recipient.userId;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function taskEmailAuditEntry(taskId, actionType) {
+    return taskAuditEntries(taskId).find((entry) => trimText(entry.action_type, 80) === actionType) || null;
+  }
+
+  function formatRecipients(recipients = []) {
+    if (!recipients.length) return 'No recipient available yet.';
+    return recipients.map((recipient) => recipient.displayName || recipient.email || recipient.userId).join(', ');
+  }
+
+  function buildReminderStatusCopy(task) {
+    const pending = pendingTaskReminders(task.id);
+    if (!pending.length && !task.reminder_enabled) {
+      return {
+        text: 'No reminder is scheduled for this task yet.',
+        tone: 'warn',
+      };
+    }
+    const nextReminder = pending[0] || null;
+    if (!nextReminder) {
+      return {
+        text: 'Reminder is enabled, but there is no pending send time. Save the task again after setting the due date or custom reminder.',
+        tone: 'warn',
+      };
+    }
+    return {
+      text: `${pluralize(pending.length, 'reminder')} queued. Next send: ${formatDateTime(nextReminder.send_at)} (${reminderModeLabel(nextReminder.reminder_mode || task.reminder_mode)}).`,
+      tone: 'ok',
+    };
+  }
+
+  function buildEmailHistoryCopy(task) {
+    const assignmentSent = taskEmailAuditEntry(task.id, 'assignment_email_sent');
+    const reminderSent = taskEmailAuditEntry(task.id, 'reminder_email_sent');
+    if (!assignmentSent && !reminderSent) {
+      return {
+        text: 'No assignment or reminder email has been logged for this task yet.',
+        tone: 'warn',
+      };
+    }
+    const parts = [];
+    if (assignmentSent) {
+      const recipient = trimText(assignmentSent.metadata?.recipient_email, 160) || 'assignee';
+      parts.push(`Assignment email: ${formatDateTime(assignmentSent.created_at)} to ${recipient}.`);
+    }
+    if (reminderSent) {
+      const recipient = trimText(reminderSent.metadata?.recipient_email, 160) || 'recipient';
+      parts.push(`Reminder email: ${formatDateTime(reminderSent.created_at)} to ${recipient}.`);
+    }
+    return {
+      text: parts.join(' '),
+      tone: 'ok',
+    };
+  }
+
   function reminderIndicator(task) {
-    const pending = taskReminders(task.id).filter((item) => item.status !== 'sent' && item.status !== 'cancelled');
+    const pending = pendingTaskReminders(task.id);
     if (!pending.length && !task.reminder_enabled) {
       return '<span class="badge">No reminder</span>';
     }
-    return `<span class="badge">${pluralize(pending.length || 1, 'reminder')}</span>`;
+    const nextReminder = pending[0];
+    return `<span class="badge">${pluralize(pending.length || 1, 'reminder')}${nextReminder?.send_at ? ` · ${escapeHtml(formatDateTime(nextReminder.send_at))}` : ''}</span>`;
   }
 
   function renderHeroSummary() {
@@ -1335,6 +1485,7 @@
       : 'Unassigned';
     const dueText = task.due_at ? formatDateTime(task.due_at) : 'No due date';
     const countdown = taskCountdown(task);
+    const reminderStatus = buildReminderStatusCopy(task);
     const statusOptions = STATUS_ORDER.map((status) => (
       `<option value="${status}"${task.status === status ? ' selected' : ''}>${STATUS_LABELS[status]}</option>`
     )).join('');
@@ -1367,6 +1518,7 @@
             <span>Creator: <strong>${escapeHtml(creatorName)}</strong></span>
             <span>Assigned: <strong>${escapeHtml(assigneeName)}</strong></span>
             <span>Due: <strong>${escapeHtml(dueText)}</strong>${countdown ? ` · ${escapeHtml(countdown.label)}` : ''}</span>
+            <span>Reminder: <strong>${escapeHtml(reminderStatus.text)}</strong></span>
             <span>${pluralize(commentsCount, 'comment')}</span>
             <span>${pluralize(watchersCount, 'watcher')}</span>
             <span>${pluralize(attachmentsCount, 'file')}</span>
@@ -1498,16 +1650,28 @@
     els.settingDefaultPriority.value = state.settings.defaultPriority;
     els.settingReminderRecipients.value = state.settings.reminderRecipientMode;
     els.settingActivityRecipients.value = state.settings.activityRecipientMode || state.settings.reminderRecipientMode;
+    els.settingAssignmentEmails.checked = state.settings.assignmentEmailNotifications !== false;
     els.settingCollapseDone.checked = state.settings.collapseDoneByDefault;
     els.settingActivityEmails.checked = state.settings.activityEmailNotifications !== false;
     els.settingMentionEmails.checked = state.settings.mentionEmailNotifications !== false;
-    els.emailStatusNote.textContent = state.emailConfigured
-      ? 'Team Tasks reminder and activity email variables are present.'
-      : 'Team Tasks email delivery is not fully configured yet.';
-    els.emailStatusNote.style.color = state.emailConfigured ? 'var(--ok)' : 'var(--warn)';
+    const delivery = state.emailDelivery || {};
+    els.emailStatusNote.textContent = delivery.ready
+      ? `Team Tasks emails are live via ${String(delivery.preferredProvider || '').toUpperCase()}.`
+      : 'Team Tasks email delivery still needs attention.';
+    setStatusNoteTone(els.emailStatusNote, delivery.ready ? 'ok' : 'warn');
+    if (els.emailStatusDetail) {
+      const senderLabel = trimText(delivery.senderEmail, 160) || 'No sender saved';
+      const smtpLine = delivery.smtp?.message || 'SMTP status unavailable.';
+      const resendLine = delivery.resend?.message || 'Resend status unavailable.';
+      els.emailStatusDetail.innerHTML = delivery.ready
+        ? `<strong>Sender:</strong> ${escapeHtml(senderLabel)}<br><strong>SMTP:</strong> ${escapeHtml(smtpLine)}<br><strong>Resend:</strong> ${escapeHtml(resendLine)}`
+        : `<strong>Delivery check:</strong> ${escapeHtml(trimText(delivery.message, 240) || 'Email delivery is not configured.')}`;
+      setStatusNoteTone(els.emailStatusDetail, delivery.ready ? 'ok' : 'warn');
+    }
     els.schemaStatusNote.textContent = state.schemaReady
       ? 'Supabase schema checks passed for Team Tasks.'
       : (state.schemaMessage || 'Team Tasks schema is still missing required tables or columns.');
+    setStatusNoteTone(els.schemaStatusNote, state.schemaReady ? 'ok' : 'warn');
     const diagnostics = state.calendar.diagnostics || {};
     const connections = Array.isArray(state.calendar.connections) ? state.calendar.connections : [];
     const currentConnection = connections.find((connection) => connection.isCurrentUser && connection.connected) || null;
@@ -1653,6 +1817,10 @@
     const watcherValues = taskWatchers(task.id)
       .map((watcher) => resolveMemberOptionValue(watcher.user_id, watcher.user_email))
       .filter(Boolean);
+    const assignmentRecipient = assignmentEmailRecipient(task);
+    const reminderRecipients = taskReminderRecipients(task);
+    const reminderStatus = buildReminderStatusCopy(task);
+    const emailHistory = buildEmailHistoryCopy(task);
     const metaBits = [
       `<span class="badge">${escapeHtml(creatorName)}</span>`,
       `<span class="badge">Created ${escapeHtml(formatDateTime(task.created_at))}</span>`,
@@ -1677,6 +1845,27 @@
     els.detailTags.value = (task.tags || []).join(', ');
     setMultiSelectValues(els.detailWatchers, watcherValues);
     els.uploadAttachmentBtn.disabled = state.attachmentUploadBusy;
+    if (els.detailReminderSummary) {
+      els.detailReminderSummary.textContent = reminderStatus.text;
+      setStatusNoteTone(els.detailReminderSummary, reminderStatus.tone);
+    }
+    if (els.detailEmailRecipients) {
+      els.detailEmailRecipients.innerHTML = [
+        `<strong>Assignment:</strong> ${escapeHtml(assignmentRecipient ? (assignmentRecipient.displayName || assignmentRecipient.email) : 'No assignee email yet.')}`,
+        `<br><strong>Reminders:</strong> ${escapeHtml(formatRecipients(reminderRecipients))}`,
+      ].join('');
+      setStatusNoteTone(els.detailEmailRecipients, reminderRecipients.length || assignmentRecipient ? 'ok' : 'warn');
+    }
+    if (els.detailEmailHistory) {
+      els.detailEmailHistory.textContent = emailHistory.text;
+      setStatusNoteTone(els.detailEmailHistory, emailHistory.tone);
+    }
+    if (els.sendAssignmentEmailBtn) {
+      els.sendAssignmentEmailBtn.disabled = !state.emailConfigured || !assignmentRecipient;
+    }
+    if (els.sendReminderNowBtn) {
+      els.sendReminderNowBtn.disabled = !state.emailConfigured || !reminderRecipients.length;
+    }
 
     ['detailTitle', 'detailDescription', 'detailLinkedModule', 'detailLinkedUrl', 'detailTags'].forEach((id) => {
       if (els[id]) {
@@ -1693,7 +1882,7 @@
 
     els.detailDrawerShell.classList.add('is-open');
     els.detailDrawerShell.setAttribute('aria-hidden', 'false');
-    updateQueryTaskParam(task.id);
+    updateQueryState({ taskId: task.id });
   }
 
   function renderAll() {
@@ -1727,6 +1916,9 @@
     state.schemaReady = payload.schemaReady !== false;
     state.schemaMessage = trimText(payload.schemaMessage, 600);
     state.emailConfigured = payload.emailConfigured === true;
+    state.emailDelivery = payload.emailDelivery && typeof payload.emailDelivery === 'object'
+      ? payload.emailDelivery
+      : state.emailDelivery;
     state.siteUrl = trimText(payload.siteUrl, 500).replace(/\/$/, '');
     state.settings = normaliseSettings(payload.settings);
     state.members = normaliseMembers(payload.members || []);
@@ -2099,6 +2291,55 @@
     }
   }
 
+  async function sendTaskEmail(action, taskId, options = {}) {
+    const payload = {
+      action,
+      taskId,
+      force: options.force === true,
+    };
+    return state.helpers.api(SEND_EMAIL_ENDPOINT, 'POST', payload);
+  }
+
+  function assignmentChanged(previousTask, nextTask) {
+    const previousKey = [
+      trimText(previousTask?.assigned_to, 120),
+      lowerEmail(previousTask?.assigned_to_email),
+    ].join('|');
+    const nextKey = [
+      trimText(nextTask?.assigned_to, 120),
+      lowerEmail(nextTask?.assigned_to_email),
+    ].join('|');
+    return !!lowerEmail(nextTask?.assigned_to_email) && nextKey !== previousKey;
+  }
+
+  async function maybeSendAssignmentEmail(previousTask, nextTask) {
+    if (state.settings.assignmentEmailNotifications === false) {
+      return { skipped: true, reason: 'assignment_emails_disabled' };
+    }
+    if (!assignmentChanged(previousTask, nextTask)) {
+      return { skipped: true, reason: 'assignee_unchanged' };
+    }
+    return sendTaskEmail('assignment', nextTask.id);
+  }
+
+  async function sendDrawerEmail(action) {
+    const task = currentTask();
+    if (!task) return;
+    const button = action === 'assignment' ? els.sendAssignmentEmailBtn : els.sendReminderNowBtn;
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const result = await sendTaskEmail(action, task.id, { force: true });
+      state.helpers.toast.ok(result?.message || 'Email accepted for delivery.', 3600);
+      await loadAllData({ silent: true });
+      openDrawer(task.id);
+    } catch (error) {
+      state.helpers.toast.err(error?.message || 'Unable to send the task email.', 5200);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function attachmentStorageKey(taskId, fileName) {
     const now = new Date();
     const year = String(now.getUTCFullYear());
@@ -2250,7 +2491,18 @@
         els.quickReminderCustomAt.value
       );
 
-      state.helpers.toast.ok('Task added.', 2800);
+      let assignmentMessage = '';
+      try {
+        const assignmentResult = await maybeSendAssignmentEmail(null, data);
+        if (assignmentResult?.message) {
+          assignmentMessage = ` ${assignmentResult.message}`;
+        }
+      } catch (assignmentError) {
+        assignmentMessage = '';
+        state.helpers.toast.err(assignmentError?.message || 'Task added, but the assignment email could not be sent.', 5200);
+      }
+
+      state.helpers.toast.ok(`Task added.${assignmentMessage}`.trim(), 3200);
       els.quickAddForm.reset();
       setAdvancedVisibility(false);
       setQuickFormDefaults();
@@ -2310,6 +2562,7 @@
     els.saveTaskBtn.disabled = true;
     try {
       const client = await ensureClient();
+      const previousTask = { ...task };
       const { data, error } = await client
         .from('task_items')
         .update(payload)
@@ -2328,7 +2581,18 @@
         els.detailReminderCustomAt.value
       );
 
-      state.helpers.toast.ok('Task saved.', 2800);
+      let assignmentMessage = '';
+      try {
+        const assignmentResult = await maybeSendAssignmentEmail(previousTask, data);
+        if (assignmentResult?.message) {
+          assignmentMessage = ` ${assignmentResult.message}`;
+        }
+      } catch (assignmentError) {
+        assignmentMessage = '';
+        state.helpers.toast.err(assignmentError?.message || 'Task saved, but the assignment email could not be sent.', 5200);
+      }
+
+      state.helpers.toast.ok(`Task saved.${assignmentMessage}`.trim(), 3200);
       await loadAllData({ silent: true });
       openDrawer(task.id);
     } catch (error) {
@@ -2460,6 +2724,7 @@
     const nextSettings = {
       dueSoonDays: Math.min(14, Math.max(1, Number.parseInt(els.settingDueSoonDays.value, 10) || DEFAULT_SETTINGS.dueSoonDays)),
       defaultPriority: PRIORITY_LABELS[els.settingDefaultPriority.value] ? els.settingDefaultPriority.value : DEFAULT_SETTINGS.defaultPriority,
+      assignmentEmailNotifications: els.settingAssignmentEmails.checked,
       reminderRecipientMode: trimText(els.settingReminderRecipients.value, 64) || DEFAULT_SETTINGS.reminderRecipientMode,
       activityRecipientMode: trimText(els.settingActivityRecipients.value, 64) || DEFAULT_SETTINGS.activityRecipientMode,
       activityEmailNotifications: els.settingActivityEmails.checked,
@@ -2499,7 +2764,7 @@
       els.detailDrawerShell.classList.remove('is-open');
       els.detailDrawerShell.setAttribute('aria-hidden', 'true');
     }
-    updateQueryTaskParam('');
+    updateQueryState({ taskId: '' });
   }
 
   function bindListOpeners(root) {
@@ -2580,6 +2845,7 @@
       if (!button) return;
       button.addEventListener('click', () => {
         state.activeTab = key;
+        updateQueryState({ tab: key });
         renderTabs();
       });
     });
@@ -2603,6 +2869,8 @@
     });
 
     els.saveTaskBtn.addEventListener('click', handleTaskSave);
+    els.sendAssignmentEmailBtn?.addEventListener('click', () => sendDrawerEmail('assignment'));
+    els.sendReminderNowBtn?.addEventListener('click', () => sendDrawerEmail('reminder'));
     els.markDoneBtn.addEventListener('click', () => {
       const task = currentTask();
       if (task) quickUpdateTask(task.id, { status: 'done' });
@@ -2628,6 +2896,7 @@
   async function initPage(helpers) {
     state.helpers = helpers;
     state.who = await helpers.identity('admin');
+    state.activeTab = readQueryTab() || state.activeTab;
     els.welcomeMeta.textContent = `Signed in as ${state.who?.email || state.currentUser.email || 'admin user'}`;
     plannerNoticeFromQuery();
 

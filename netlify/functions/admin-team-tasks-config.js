@@ -17,6 +17,7 @@ const {
   trimString,
   lowerEmail,
 } = require('./_team-tasks-helpers.js');
+const { resolveTeamTaskEmailConfig } = require('./_team-task-email.js');
 
 const TOKEN_TTL_SECONDS = 60 * 20;
 const JWT_SECRET_KEYS = [
@@ -59,16 +60,6 @@ function normaliseRoles(roles = []) {
   return Array.isArray(roles)
     ? roles.map((role) => trimString(role, 64).toLowerCase()).filter(Boolean)
     : [];
-}
-
-function currentSiteUrl() {
-  return trimString(
-    process.env.URL
-      || process.env.DEPLOY_PRIME_URL
-      || process.env.SITE_URL
-      || '',
-    500
-  ).replace(/\/$/, '');
 }
 
 function displayNameFromMeta(meta, email, userId) {
@@ -233,10 +224,11 @@ const baseHandler = async (event, context) => {
       };
     }
 
-    const [memberRows, settingsResult, schemaStatus] = await Promise.all([
+    const [memberRows, settingsResult, schemaStatus, emailDelivery] = await Promise.all([
       readAdminMembers(supabase, user, context),
       fetchSettings(event, [TEAM_TASKS_SETTINGS_KEY]),
       readSchemaStatus(supabase),
+      resolveTeamTaskEmailConfig(event),
     ]);
 
     const access = buildAccessToken({
@@ -259,9 +251,28 @@ const baseHandler = async (event, context) => {
         schemaMessage: schemaStatus.message || '',
         members: memberRows,
         settings: normalizeTaskSettings(settingsResult?.settings?.[TEAM_TASKS_SETTINGS_KEY]),
-        emailConfigured: !!trimString(process.env.RESEND_API_KEY, 320)
-          && !!trimString(process.env.TASK_REMINDER_FROM_EMAIL, 320),
-        siteUrl: currentSiteUrl(),
+        emailConfigured: emailDelivery.ready === true,
+        emailDelivery: {
+          ready: emailDelivery.ready === true,
+          senderEmail: emailDelivery.senderEmail,
+          senderName: emailDelivery.senderName,
+          supportEmail: emailDelivery.supportEmail,
+          preferredProvider: emailDelivery.preferredProvider,
+          message: emailDelivery.message,
+          resend: {
+            configured: emailDelivery.resend?.configured === true,
+            ready: emailDelivery.resend?.ready === true,
+            status: emailDelivery.resend?.status || '',
+            message: emailDelivery.resend?.message || '',
+          },
+          smtp: {
+            configured: emailDelivery.smtp?.configured === true,
+            ready: emailDelivery.smtp?.ready === true,
+            status: emailDelivery.smtp?.status || '',
+            message: emailDelivery.smtp?.message || '',
+          },
+        },
+        siteUrl: emailDelivery.siteUrl,
         currentUser: {
           userId: trimString(user?.id || user?.sub, 120) || lowerEmail(user?.email),
           email: lowerEmail(user?.email),
