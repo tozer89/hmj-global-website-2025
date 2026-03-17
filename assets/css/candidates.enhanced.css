@@ -2076,6 +2076,130 @@
   line-height: 1.65;
 }
 
+.candidates-page .candidate-payment-gate {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(57, 86, 153, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.candidates-page .candidate-payment-gate__toggle {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.candidates-page .candidate-payment-gate__toggle input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+}
+
+.candidates-page .candidate-payment-gate__toggle strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.candidates-page .candidate-payment-gate__copy,
+.candidates-page .candidate-payment-gate__summary {
+  margin: 0;
+  color: #516382;
+  line-height: 1.65;
+}
+
+.candidates-page .candidate-payment-gate__summary {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(57, 86, 153, 0.1);
+  background: linear-gradient(180deg, rgba(245, 248, 255, 0.96), rgba(255, 255, 255, 0.98));
+  font-weight: 700;
+}
+
+.candidates-page .candidate-payment-panel {
+  display: grid;
+  gap: 16px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    max-height 0.32s ease,
+    opacity 0.24s ease,
+    transform 0.24s ease,
+    margin 0.24s ease;
+}
+
+.candidates-page .candidate-payment-panel[data-open="true"] {
+  max-height: 1400px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.candidates-page .candidate-payment-panel__head {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(57, 86, 153, 0.12);
+  background: linear-gradient(180deg, rgba(245, 248, 255, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.candidates-page .candidate-payment-panel__eyebrow {
+  margin: 0;
+  color: var(--accent-deep);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.candidates-page .candidate-payment-group[data-payment-group="iban_swift"] {
+  display: none;
+}
+
+.candidates-page .candidate-payment-panel[data-method="iban_swift"] .candidate-payment-group[data-payment-group="gbp_local"] {
+  display: none;
+}
+
+.candidates-page .candidate-payment-panel[data-method="iban_swift"] .candidate-payment-group[data-payment-group="iban_swift"] {
+  display: grid;
+}
+
+.candidates-page .candidate-payment-panel[data-method="gbp_local"] .candidate-payment-group[data-payment-group="gbp_local"] {
+  display: grid;
+}
+
+.candidates-page .candidate-payment-status {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(57, 86, 153, 0.12);
+  background: rgba(245, 248, 255, 0.86);
+}
+
+.candidates-page .candidate-payment-status[data-tone="warn"] {
+  border-color: rgba(183, 129, 3, 0.22);
+  background: rgba(183, 129, 3, 0.08);
+  color: var(--warn);
+}
+
+.candidates-page .candidate-payment-status[data-tone="error"] {
+  border-color: rgba(180, 35, 24, 0.2);
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--bad);
+}
+
+.candidates-page .candidate-payment-status[data-tone="success"] {
+  border-color: rgba(19, 135, 84, 0.2);
+  background: rgba(19, 135, 84, 0.08);
+  color: var(--ok);
+}
+
 .candidates-page .candidate-password-panel {
   display: grid;
   gap: 14px;
@@ -2468,6 +2592,11 @@
 
   .candidates-page .candidate-password-input {
     grid-template-columns: 1fr;
+  }
+
+  .candidates-page .candidate-payment-gate,
+  .candidates-page .candidate-payment-panel__head {
+    padding: 16px;
   }
 
   .candidates-page .candidate-form__actions,

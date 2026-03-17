@@ -514,6 +514,76 @@
               </fieldset>
 
               <fieldset class="candidate-form__section">
+                <legend>Secure payment details</legend>
+                <div class="candidate-payment-gate" id="candidatePaymentGate" data-open="false">
+                  <label class="candidate-payment-gate__toggle" for="candidatePaymentOptIn">
+                    <input id="candidatePaymentOptIn" type="checkbox" aria-controls="candidatePaymentPanel" aria-expanded="false">
+                    <span>
+                      <strong>Already have a new assignment?</strong>
+                      Populate your bank payment details below on this secure form.
+                    </span>
+                  </label>
+                  <p class="small candidate-payment-gate__copy">Only complete this secure section if HMJ has already confirmed a start and needs your payroll setup for onboarding. Portal-only registrations can leave it closed and continue as normal.</p>
+                  <div class="candidate-payment-gate__summary" id="candidatePaymentGateSummary">Optional secure payroll setup for workers who are already starting an assignment.</div>
+                  <div class="candidate-payment-panel" id="candidatePaymentPanel" data-open="false" aria-hidden="true">
+                    <div class="candidate-payment-panel__head">
+                      <p class="candidate-payment-panel__eyebrow">Secure payroll setup</p>
+                      <p class="small">These details are stored separately from the main profile and are mainly used for onboarding and payroll once an assignment is confirmed.</p>
+                    </div>
+                    <div class="candidate-form__grid candidate-form__grid--two">
+                      <div class="candidate-field">
+                        <label for="candidatePaymentCurrency">Account currency</label>
+                        <select id="candidatePaymentCurrency" data-payment-input autocomplete="off">
+                          <option value="GBP" selected>GBP</option>
+                          <option value="EUR">EUR</option>
+                        </select>
+                      </div>
+                      <div class="candidate-field">
+                        <label for="candidatePaymentMethod">Payment method</label>
+                        <select id="candidatePaymentMethod" data-payment-input autocomplete="off">
+                          <option value="gbp_local" selected>Sort code / account number</option>
+                          <option value="iban_swift">IBAN / SWIFT</option>
+                        </select>
+                      </div>
+                      <div class="candidate-field">
+                        <label for="candidatePaymentAccountHolder">Account holder name</label>
+                        <input id="candidatePaymentAccountHolder" data-payment-input type="text" autocomplete="name" placeholder="Name on the bank account">
+                      </div>
+                      <div class="candidate-field">
+                        <label for="candidatePaymentBankName">Bank name</label>
+                        <input id="candidatePaymentBankName" data-payment-input type="text" autocomplete="organization" placeholder="e.g. Barclays">
+                      </div>
+                      <div class="candidate-field">
+                        <label for="candidatePaymentBankLocation">Bank location / country</label>
+                        <input id="candidatePaymentBankLocation" data-payment-input type="text" autocomplete="country-name" placeholder="e.g. United Kingdom">
+                      </div>
+                      <div class="candidate-field">
+                        <label for="candidatePaymentAccountType">Account type</label>
+                        <input id="candidatePaymentAccountType" data-payment-input type="text" autocomplete="off" placeholder="Optional">
+                      </div>
+                      <div class="candidate-field candidate-payment-group" data-payment-group="gbp_local">
+                        <label for="candidatePaymentSortCode">Sort code</label>
+                        <input id="candidatePaymentSortCode" data-payment-input data-payment-sensitive type="text" inputmode="numeric" autocomplete="off" placeholder="12-34-56">
+                      </div>
+                      <div class="candidate-field candidate-payment-group" data-payment-group="gbp_local">
+                        <label for="candidatePaymentAccountNumber">Account number</label>
+                        <input id="candidatePaymentAccountNumber" data-payment-input data-payment-sensitive type="text" inputmode="numeric" autocomplete="off" placeholder="12345678">
+                      </div>
+                      <div class="candidate-field candidate-payment-group" data-payment-group="iban_swift">
+                        <label for="candidatePaymentIban">IBAN</label>
+                        <input id="candidatePaymentIban" data-payment-input data-payment-sensitive type="text" autocomplete="off" placeholder="GB00AAAA12345678901234">
+                      </div>
+                      <div class="candidate-field candidate-payment-group" data-payment-group="iban_swift">
+                        <label for="candidatePaymentSwift">SWIFT / BIC</label>
+                        <input id="candidatePaymentSwift" data-payment-input data-payment-sensitive type="text" autocomplete="off" placeholder="BARCGB22">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="candidate-payment-status small" id="candidatePaymentStatus" aria-live="polite"></div>
+                </div>
+              </fieldset>
+
+              <fieldset class="candidate-form__section">
                 <legend>Mobility, skills &amp; supporting details</legend>
                 <div class="candidate-form__grid candidate-form__grid--two">
                   <div class="candidate-field candidate-field--full">
@@ -677,8 +747,8 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=10">
+  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=11">
   <script defer src="assets/js/candidates.enhanced.js?v=3"></script>
-  <script type="module" src="assets/js/candidates.portal.js?v=8"></script>
+  <script type="module" src="assets/js/candidates.portal.js?v=9"></script>
 </body>
 </html>

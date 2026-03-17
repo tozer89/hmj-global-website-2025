@@ -44,6 +44,24 @@ import {
   const confirmPasswordInput = doc.getElementById('candidateConfirmPassword');
   const passwordStatus = doc.getElementById('candidatePasswordStatus');
   const submitButton = doc.getElementById('submitBtn');
+  const paymentGate = doc.getElementById('candidatePaymentGate');
+  const paymentToggle = doc.getElementById('candidatePaymentOptIn');
+  const paymentPanel = doc.getElementById('candidatePaymentPanel');
+  const paymentSummary = doc.getElementById('candidatePaymentGateSummary');
+  const paymentStatus = doc.getElementById('candidatePaymentStatus');
+  const paymentFields = {
+    currency: doc.getElementById('candidatePaymentCurrency'),
+    method: doc.getElementById('candidatePaymentMethod'),
+    accountHolderName: doc.getElementById('candidatePaymentAccountHolder'),
+    bankName: doc.getElementById('candidatePaymentBankName'),
+    bankLocationOrCountry: doc.getElementById('candidatePaymentBankLocation'),
+    accountType: doc.getElementById('candidatePaymentAccountType'),
+    sortCode: doc.getElementById('candidatePaymentSortCode'),
+    accountNumber: doc.getElementById('candidatePaymentAccountNumber'),
+    iban: doc.getElementById('candidatePaymentIban'),
+    swiftBic: doc.getElementById('candidatePaymentSwift'),
+  };
+  const paymentInputs = Array.from(form.querySelectorAll('[data-payment-input]'));
 
   if (!authRoot || !applicationView || !dashboardRoot || !form || !formStatusRoot || !accountToggle || !accountRequestedInput || !passwordFields || !passwordInput || !confirmPasswordInput || !passwordStatus || !submitButton) return;
 
@@ -128,6 +146,145 @@ import {
       maximumFractionDigits: maxFractionDigits,
     }).format(numeric);
     return `${formatted} ${salaryExpectationSuffix(normalisedUnit)}`;
+  }
+
+  function digitsOnly(value, maxLength = 32) {
+    return trimText(value, maxLength).replace(/\D+/g, '');
+  }
+
+  function normaliseRegistrationPaymentMethod(currency, method) {
+    const raw = trimText(method, 40).toLowerCase();
+    if (raw === 'gbp_local' || raw === 'iban_swift') return raw;
+    return trimText(currency, 12).toUpperCase() === 'GBP' ? 'gbp_local' : 'iban_swift';
+  }
+
+  function registrationPaymentEnabled() {
+    return !!(paymentToggle && paymentToggle.checked);
+  }
+
+  function paymentStatusMessage(tone, text) {
+    if (!paymentStatus) return;
+    paymentStatus.dataset.tone = tone;
+    paymentStatus.textContent = text;
+  }
+
+  function paymentValidationState() {
+    if (!paymentToggle || !paymentPanel) {
+      return { active: false, valid: true, tone: 'info', text: '' };
+    }
+
+    if (!registrationPaymentEnabled()) {
+      return {
+        active: false,
+        valid: true,
+        tone: 'info',
+        text: 'Optional secure payroll setup. Open this only if HMJ has already confirmed a new assignment and needs your bank details for onboarding.',
+      };
+    }
+
+    const accountCurrency = trimText(paymentFields.currency?.value, 12).toUpperCase() || 'GBP';
+    const paymentMethod = normaliseRegistrationPaymentMethod(accountCurrency, paymentFields.method?.value);
+    const errors = [];
+    const firstMissingField = (field) => field instanceof HTMLElement ? field : null;
+    let focusField = null;
+
+    function flag(field, test, message) {
+      if (test) return;
+      errors.push(message);
+      if (!focusField) focusField = firstMissingField(field);
+    }
+
+    flag(paymentFields.accountHolderName, trimText(paymentFields.accountHolderName?.value, 160), 'Enter the account holder name before you submit.');
+    flag(paymentFields.bankName, trimText(paymentFields.bankName?.value, 160), 'Enter the bank name before you submit.');
+    flag(paymentFields.bankLocationOrCountry, trimText(paymentFields.bankLocationOrCountry?.value, 160), 'Enter the bank location or country before you submit.');
+
+    if (paymentMethod === 'gbp_local') {
+      flag(paymentFields.sortCode, digitsOnly(paymentFields.sortCode?.value, 16).length === 6, 'Enter a valid 6-digit sort code.');
+      const accountNumberDigits = digitsOnly(paymentFields.accountNumber?.value, 16);
+      flag(paymentFields.accountNumber, accountNumberDigits.length >= 6 && accountNumberDigits.length <= 10, 'Enter a valid account number.');
+    } else {
+      const iban = trimText(paymentFields.iban?.value, 64).toUpperCase().replace(/\s+/g, '');
+      const swiftBic = trimText(paymentFields.swiftBic?.value, 32).toUpperCase().replace(/\s+/g, '');
+      flag(paymentFields.iban, /^[A-Z]{2}[A-Z0-9]{13,32}$/.test(iban), 'Enter a valid IBAN.');
+      flag(paymentFields.swiftBic, /^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(swiftBic), 'Enter a valid SWIFT / BIC code.');
+    }
+
+    if (errors.length) {
+      return {
+        active: true,
+        valid: false,
+        tone: 'error',
+        text: errors[0],
+        focusField,
+      };
+    }
+
+    return {
+      active: true,
+      valid: true,
+      tone: 'success',
+      text: 'Secure payment details will be sent separately for onboarding and payroll setup.',
+      focusField: null,
+    };
+  }
+
+  function buildRegistrationPaymentDetails() {
+    if (!registrationPaymentEnabled()) return null;
+    const accountCurrency = trimText(paymentFields.currency?.value, 12).toUpperCase() || 'GBP';
+    const paymentMethod = normaliseRegistrationPaymentMethod(accountCurrency, paymentFields.method?.value);
+    return {
+      account_currency: accountCurrency,
+      payment_method: paymentMethod,
+      account_holder_name: trimText(paymentFields.accountHolderName?.value, 160),
+      bank_name: trimText(paymentFields.bankName?.value, 160),
+      bank_location_or_country: trimText(paymentFields.bankLocationOrCountry?.value, 160),
+      account_type: trimText(paymentFields.accountType?.value, 80),
+      sort_code: trimText(paymentFields.sortCode?.value, 32),
+      account_number: trimText(paymentFields.accountNumber?.value, 32),
+      iban: trimText(paymentFields.iban?.value, 64).toUpperCase(),
+      swift_bic: trimText(paymentFields.swiftBic?.value, 32).toUpperCase(),
+    };
+  }
+
+  function syncPaymentGateControls() {
+    if (!paymentToggle || !paymentPanel || !paymentGate) return;
+
+    const enabled = registrationPaymentEnabled();
+    const accountCurrency = trimText(paymentFields.currency?.value, 12).toUpperCase() || 'GBP';
+    const paymentMethod = normaliseRegistrationPaymentMethod(accountCurrency, paymentFields.method?.value);
+
+    if (paymentFields.currency && paymentFields.currency.value !== accountCurrency) {
+      paymentFields.currency.value = accountCurrency;
+    }
+    if (paymentFields.method && paymentFields.method.value !== paymentMethod) {
+      paymentFields.method.value = paymentMethod;
+    }
+
+    paymentGate.dataset.open = enabled ? 'true' : 'false';
+    paymentPanel.dataset.open = enabled ? 'true' : 'false';
+    paymentPanel.dataset.method = paymentMethod;
+    paymentPanel.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+    paymentToggle.setAttribute('aria-expanded', enabled ? 'true' : 'false');
+
+    paymentInputs.forEach((input) => {
+      input.disabled = !enabled;
+    });
+
+    if (paymentSummary) {
+      paymentSummary.textContent = enabled
+        ? (paymentMethod === 'gbp_local'
+          ? 'Secure GBP bank details are open. HMJ will store them separately from your profile.'
+          : 'Secure international bank details are open. HMJ will store them separately from your profile.')
+        : 'Optional secure payroll setup for workers who are already starting an assignment.';
+    }
+
+    const validation = paymentValidationState();
+    if (validation.text) {
+      paymentStatusMessage(validation.tone, validation.text);
+    } else if (paymentStatus) {
+      paymentStatus.dataset.tone = 'info';
+      paymentStatus.textContent = '';
+    }
   }
 
   function remainingRequestedDocuments(documents, requestedDocuments) {
@@ -555,11 +712,13 @@ import {
     confirmPasswordInput.disabled = !accountEnabled;
 
     const validation = passwordValidationState();
+    syncPaymentGateControls();
+    const paymentValidation = paymentValidationState();
     passwordStatus.textContent = validation.text;
     passwordStatus.dataset.tone = validation.tone;
     passwordStatus.className = `candidate-password-status is-${validation.tone}`;
 
-    const shouldDisable = state.formBusy || (validation.active && !validation.valid);
+    const shouldDisable = state.formBusy || (validation.active && !validation.valid) || (paymentValidation.active && !paymentValidation.valid);
     submitButton.disabled = shouldDisable;
     syncPrimarySubmitLabel();
   }
@@ -1290,7 +1449,7 @@ import {
     return !!(accountToggle.checked && state.authAvailable);
   }
 
-  function buildCandidateSyncPayload(formData, submissionId) {
+  function buildCandidateSyncPayload(formData, submissionId, paymentDetails = null) {
     const rightToWorkRegions = normaliseSkillList(formData.get('right_to_work'));
     const salaryExpectationUnit = normaliseSalaryExpectationUnit(formData.get('salary_expectation_unit'));
     const candidate = {
@@ -1331,6 +1490,7 @@ import {
       source: createAccountRequested() ? 'candidate_registration_form' : 'candidate_profile_form',
       submission_id: submissionId,
       candidate,
+      payment_details: paymentDetails && typeof paymentDetails === 'object' ? paymentDetails : undefined,
     };
   }
 
@@ -1752,12 +1912,43 @@ import {
     const formData = new FormData(form);
     const creatingAccount = createAccountRequested();
     const submissionId = window.crypto?.randomUUID?.() || `candidate-${Date.now()}`;
-    const payload = buildCandidateSyncPayload(formData, submissionId);
+    const paymentValidation = paymentValidationState();
+    if (paymentValidation.active && !paymentValidation.valid) {
+      event.preventDefault();
+      state.formMessage = {
+        tone: 'error',
+        text: paymentValidation.text,
+      };
+      renderFormStatus();
+      paymentValidation.focusField?.focus();
+      syncAccountControls();
+      return;
+    }
+    const paymentDetails = buildRegistrationPaymentDetails();
+    const requiresSecurePaymentSync = !!paymentDetails;
+    const payload = buildCandidateSyncPayload(formData, submissionId, paymentDetails);
 
     if (!creatingAccount) {
       event.preventDefault();
       state.formSyncSent = true;
-      void backgroundSyncCandidatePayload(payload);
+      if (requiresSecurePaymentSync) {
+        state.formBusy = true;
+        syncAccountControls();
+        try {
+          await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
+        } catch (error) {
+          state.formBusy = false;
+          state.formMessage = {
+            tone: 'error',
+            text: error?.message || 'Secure payment details could not be saved. Please try again or leave the payment section closed if you only need portal access today.',
+          };
+          renderFormStatus();
+          syncAccountControls();
+          return;
+        }
+      } else {
+        void backgroundSyncCandidatePayload(payload);
+      }
       requestNativeFormSubmit('none');
       return;
     }
@@ -1812,8 +2003,23 @@ import {
           : `${message} Your profile will still be sent to HMJ without blocking the live application workflow.`,
       };
     } finally {
-      void backgroundSyncCandidatePayload(payload);
-      requestNativeFormSubmit(accountState);
+      if (requiresSecurePaymentSync) {
+        try {
+          await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
+          requestNativeFormSubmit(accountState);
+        } catch (error) {
+          state.formBusy = false;
+          state.formMessage = {
+            tone: 'error',
+            text: error?.message || 'Secure payment details could not be saved. Please try again or untick the payment section if you only need a portal account today.',
+          };
+          renderFormStatus();
+          syncAccountControls();
+        }
+      } else {
+        void backgroundSyncCandidatePayload(payload);
+        requestNativeFormSubmit(accountState);
+      }
     }
   }
 
@@ -1827,6 +2033,27 @@ import {
   form.addEventListener('submit', handleCandidateFormSubmit);
   accountToggle.addEventListener('change', () => {
     syncAccountControls();
+  });
+  paymentToggle?.addEventListener('change', () => {
+    state.formMessage = null;
+    renderFormStatus();
+    syncAccountControls();
+  });
+  paymentFields.currency?.addEventListener('change', () => {
+    if (paymentFields.method) {
+      paymentFields.method.value = trimText(paymentFields.currency?.value, 12).toUpperCase() === 'GBP' ? 'gbp_local' : 'iban_swift';
+    }
+    syncAccountControls();
+  });
+  paymentFields.method?.addEventListener('change', () => {
+    syncAccountControls();
+  });
+  paymentInputs.forEach((input) => {
+    input.addEventListener('input', () => {
+      if (registrationPaymentEnabled()) {
+        syncAccountControls();
+      }
+    });
   });
   [passwordInput, confirmPasswordInput].forEach((input) => {
     input.addEventListener('input', () => {

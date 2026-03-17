@@ -1501,7 +1501,7 @@ export async function buildBackgroundSyncPayload(basePayload = {}) {
   return payload;
 }
 
-export async function backgroundSyncCandidatePayload(basePayload = {}) {
+export async function backgroundSyncCandidatePayload(basePayload = {}, options = {}) {
   if (isLocalCandidateMockMode()) {
     const store = getMockStore();
     const payload = await buildBackgroundSyncPayload(basePayload);
@@ -1522,23 +1522,38 @@ export async function backgroundSyncCandidatePayload(basePayload = {}) {
 
   const payload = await buildBackgroundSyncPayload(basePayload);
   const body = JSON.stringify(payload);
+  const awaitResponse = options && options.awaitResponse === true;
 
-  if (navigator.sendBeacon) {
+  if (!awaitResponse && navigator.sendBeacon) {
     const blob = new Blob([body], { type: 'application/json' });
     const accepted = navigator.sendBeacon(SYNC_ENDPOINT, blob);
     if (accepted) return true;
   }
 
   try {
-    await fetch(SYNC_ENDPOINT, {
+    const response = await fetch(SYNC_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body,
       keepalive: true,
       credentials: 'same-origin',
     });
-    return true;
+    if (!awaitResponse) {
+      return response.ok;
+    }
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.ok === false) {
+      const error = new Error(data?.message || data?.error || 'Candidate profile sync failed.');
+      error.status = response.status;
+      error.details = data;
+      throw error;
+    }
+    return data;
   } catch (error) {
+    if (awaitResponse) {
+      throw error;
+    }
     return false;
   }
 }

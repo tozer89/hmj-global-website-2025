@@ -4,6 +4,7 @@ const { buildCors } = require('./_http.js');
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const {
   buildJobApplicationPayload,
+  isMissingRelationError,
   recordCandidateActivity,
   resolveSupabaseAuthUser,
   syncCandidateSkills,
@@ -11,6 +12,7 @@ const {
   upsertCandidateProfile,
   insertJobApplication,
 } = require('./_candidate-portal.js');
+const { buildPaymentWritePayload } = require('./_candidate-payment-details.js');
 
 function header(event, name) {
   if (!event?.headers) return '';
@@ -39,6 +41,47 @@ function parseBody(event) {
   } catch (error) {
     return {};
   }
+}
+
+async function syncCandidatePaymentDetails(supabase, candidate, authUser, paymentInput) {
+  if (!candidate?.id || !paymentInput || typeof paymentInput !== 'object') {
+    return { saved: false, skipped: true };
+  }
+
+  const candidateId = String(candidate.id);
+  const { data: existingRows, error: existingError } = await supabase
+    .from('candidate_payment_details')
+    .select('*')
+    .eq('candidate_id', candidateId)
+    .limit(1);
+
+  if (existingError) {
+    if (isMissingRelationError(existingError)) {
+      return { saved: false, skipped: true };
+    }
+    throw existingError;
+  }
+
+  const existing = Array.isArray(existingRows) && existingRows.length ? existingRows[0] : {};
+  const payload = buildPaymentWritePayload(
+    candidateId,
+    authUser?.id || candidate.auth_user_id || null,
+    paymentInput,
+    existing,
+  );
+
+  const { error: upsertError } = await supabase
+    .from('candidate_payment_details')
+    .upsert(payload, { onConflict: 'candidate_id' });
+
+  if (upsertError) {
+    if (isMissingRelationError(upsertError)) {
+      return { saved: false, skipped: true };
+    }
+    throw upsertError;
+  }
+
+  return { saved: true, skipped: false };
 }
 
 exports.handler = async (event = {}) => {
@@ -71,6 +114,7 @@ exports.handler = async (event = {}) => {
     const now = new Date().toISOString();
     const profileInput = body.candidate && typeof body.candidate === 'object' ? body.candidate : body;
     const applicationInput = body.application && typeof body.application === 'object' ? body.application : body;
+    const paymentInput = body.payment_details && typeof body.payment_details === 'object' ? body.payment_details : null;
 
     const candidateResult = await upsertCandidateProfile(supabase, profileInput, {
       authUser,
@@ -95,6 +139,10 @@ exports.handler = async (event = {}) => {
         profileInput.skills ?? profileInput.skill_tags ?? profileInput.tags
       );
     }
+
+    const paymentResult = paymentInput
+      ? await syncCandidatePaymentDetails(supabase, candidate, authUser, paymentInput)
+      : { saved: false, skipped: true };
 
     const applicationPayload = buildJobApplicationPayload(applicationInput, candidateId, { now });
     const applicationResult = applicationPayload
@@ -151,6 +199,7 @@ exports.handler = async (event = {}) => {
       candidateCreated,
       applicationCreated,
       authenticated: !!authUser,
+      paymentSaved: paymentResult.saved === true,
     });
   } catch (error) {
     console.warn('[candidate-portal-sync] failed', error?.message || error);
