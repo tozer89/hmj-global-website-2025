@@ -45,6 +45,26 @@ test('reference token matching can resolve assignment refs embedded in TSP assig
   assert.equal(second.primary.job_title, 'Supervisor');
 });
 
+test('candidate reference digits are enough to match an assignment code token', () => {
+  const lookups = helpers.buildAssignmentLookups([
+    {
+      id: 88,
+      as_ref: 'PLC-SA3GRP-FRA87-5449',
+      status: 'live',
+      active: true,
+      start_date: '2026-03-01',
+      end_date: '2026-12-31',
+    },
+  ], new Date('2026-03-17T12:00:00Z'));
+
+  const summary = helpers.summariseCandidateAssignments({
+    ref: '5449',
+  }, lookups);
+
+  assert.equal(summary.count, 1);
+  assert.equal(summary.primary.reference, 'PLC-SA3GRP-FRA87-5449');
+});
+
 test('inactive or ended assignments are excluded from the active-assignment tab set', () => {
   const lookups = helpers.buildAssignmentLookups([
     {

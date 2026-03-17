@@ -13,11 +13,14 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
   assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=1/);
-  assert.match(html, /\/admin\/candidates\.js\?v=19/);
+  assert.match(html, /\/admin\/candidates\.js\?v=20/);
   assert.match(html, /id="bulk-intro-email"/);
+  assert.match(html, /id="bulk-copy-emails"/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
+  assert.match(html, /id="btn-select-visible"/);
   assert.match(html, /id="bulk-doc-request"/);
+  assert.match(html, /id="active-filter-chips"/);
   assert.match(html, /id="candidate-template-xlsx"/);
   assert.match(html, /id="btn-refresh-tsp"/);
   assert.match(html, /id="btn-sync-tsp"/);
@@ -149,6 +152,10 @@ test('candidate admin UI can switch between website, timesheet portal, and combi
   const source = read('admin/candidates.js');
   assert.match(source, /sourceTab:\s*'website'/);
   assert.match(source, /function setSourceTab/);
+  assert.match(source, /function renderReferenceCell/);
+  assert.match(source, /function renderActiveFilterChips/);
+  assert.match(source, /function selectVisibleCandidates/);
+  assert.match(source, /function bulkCopyEmails/);
   assert.match(source, /function refreshActiveAssignments/);
   assert.match(source, /function bulkIntroEmail/);
   assert.match(source, /function ensureWebsiteCandidateForOutreach/);

@@ -1023,6 +1023,73 @@
     const count = state.filtered.length;
     const active = countActiveFilters();
     label.textContent = `${count} results — ${sourceTabLabel()}${active ? ` — ${active} filter${active === 1 ? '' : 's'}` : ''}`;
+    renderActiveFilterChips();
+  }
+
+  function activeFilterChipItems() {
+    const chips = [{
+      key: 'source',
+      label: `View: ${sourceTabLabel()}`,
+      static: true,
+    }];
+    if (state.filters.query) chips.push({ key: 'query', label: `Search: ${state.filters.query}` });
+    if (state.filters.status.length) chips.push({ key: 'status', label: `Status: ${state.filters.status.join(', ')}` });
+    if (state.filters.role) chips.push({ key: 'role', label: `Role: ${state.filters.role}` });
+    if (state.filters.region) chips.push({ key: 'region', label: `Region: ${state.filters.region}` });
+    if (state.filters.skills.length) chips.push({ key: 'skills', label: `Skills: ${state.filters.skills.join(', ')}` });
+    if (state.filters.availability) chips.push({ key: 'availability', label: `Availability: ${state.filters.availability}` });
+    if (state.filters.createdFrom || state.filters.createdTo) {
+      chips.push({
+        key: 'dates',
+        label: `Dates: ${state.filters.createdFrom || '…'} to ${state.filters.createdTo || '…'}`,
+      });
+    }
+    return chips;
+  }
+
+  function clearFilterChip(key) {
+    switch (String(key || '')) {
+      case 'query':
+        state.filters.query = '';
+        break;
+      case 'status':
+        state.filters.status = [];
+        break;
+      case 'role':
+        state.filters.role = '';
+        break;
+      case 'region':
+        state.filters.region = '';
+        break;
+      case 'skills':
+        state.filters.skills = [];
+        break;
+      case 'availability':
+        state.filters.availability = '';
+        break;
+      case 'dates':
+        state.filters.createdFrom = '';
+        state.filters.createdTo = '';
+        break;
+      default:
+        return;
+    }
+    saveFilters(state.filters);
+    applyFilterInputs();
+    applyFilters();
+  }
+
+  function renderActiveFilterChips() {
+    const host = elements.activeFilterChips;
+    if (!host) return;
+    const chips = activeFilterChipItems();
+    host.innerHTML = chips.map((chip) => chip.static
+      ? `<span class="filter-chip static">${escapeHtml(chip.label)}</span>`
+      : `<span class="filter-chip">${escapeHtml(chip.label)}<button type="button" data-filter-clear="${escapeHtml(chip.key)}" aria-label="Clear ${escapeHtml(chip.label)}">×</button></span>`
+    ).join('');
+    host.querySelectorAll('[data-filter-clear]').forEach((button) => {
+      button.addEventListener('click', () => clearFilterChip(button.dataset.filterClear));
+    });
   }
 
   function matchesFilters(candidate) {
@@ -1242,7 +1309,33 @@
   }
 
   function candidateReference(candidate) {
-    return String(candidate?.ref || candidate?.payroll_ref || '').trim() || '—';
+    return String(candidate?.ref || candidate?.payroll_ref || candidate?.internal_ref || '').trim() || '—';
+  }
+
+  function displayCandidateReference(candidate) {
+    return String(
+      candidate?.ref
+      || candidate?.payroll_ref
+      || candidate?.internal_ref
+      || candidate?.timesheet_portal_reference
+      || candidate?.timesheet_portal_match?.reference
+      || candidate?.timesheet_portal_match?.accountingReference
+      || candidate?.active_assignment_summary?.reference
+      || ''
+    ).trim() || '—';
+  }
+
+  function referenceChip(candidate) {
+    const reference = displayCandidateReference(candidate);
+    if (!reference || reference === '—') return '';
+    return `<span class="chip gray">Ref ${escapeHtml(reference)}</span>`;
+  }
+
+  function renderReferenceCell(candidate) {
+    const reference = displayCandidateReference(candidate);
+    return reference === '—'
+      ? '<span class="row-subtle">—</span>'
+      : `<span class="row-ref">${escapeHtml(reference)}</span>`;
   }
 
   function sourceMetaChips(candidate) {
@@ -1346,12 +1439,13 @@
       const assignmentMeta = formatActiveAssignmentMeta(candidate);
       row.innerHTML = `
         <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected} ${!rawSelectable ? 'disabled' : ''}></div>
-        <div>${candidateReference(candidate)}</div>
+        <div>${renderReferenceCell(candidate)}</div>
         <div class="row-card">
           <div class="row-title" title="${candidate.name || 'Timesheet Portal candidate'}">${candidate.name || '—'}</div>
           <div class="row-subtle" title="${candidate.role || 'Timesheet Portal record'}">${candidate.role || 'Timesheet Portal record'}</div>
           <div class="row-meta">
             ${candidate.region ? `<span class="chip gray">${candidate.region}</span>` : ''}
+            ${referenceChip(candidate)}
             ${sourceChip}
           </div>
         </div>
@@ -1389,12 +1483,13 @@
     const assignmentMeta = formatActiveAssignmentMeta(candidate);
     row.innerHTML = `
       <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected} ${!selectable ? 'disabled' : ''}></div>
-      <div>${candidateReference(candidate)}</div>
+      <div>${renderReferenceCell(candidate)}</div>
       <div class="row-card">
         <div class="row-title" title="${candidate.name || 'Candidate'}">${candidate.name || '—'}</div>
         <div class="row-subtle" title="${candidate.role || 'Role pending'}">${candidate.role || 'Role pending'}</div>
         <div class="row-meta">
           ${candidate.region ? `<span class="chip gray">${candidate.region}</span>` : ''}
+          ${referenceChip(candidate)}
           ${portalChip}
           ${sourceChip}
         </div>
@@ -1472,10 +1567,26 @@
   function updateBulkBar() {
     const bar = elements.bulkbar;
     if (!bar) return;
-    const count = state.filtered.filter((row) => isSelectableCandidate(row, currentSelectionOptions()) && selectionHas(row.id)).length;
+    const selectedRows = state.filtered.filter((row) => isSelectableCandidate(row, currentSelectionOptions()) && selectionHas(row.id));
+    const count = selectedRows.length;
+    const websiteCount = selectedRows.filter((row) => !isRawTimesheetPortalCandidate(row)).length;
+    const outreachCount = selectedRows.filter((row) => !!String(row?.email || '').trim()).length;
     bar.classList.toggle('show', count > 0);
     const label = elements.bulkCount;
-    if (label) label.textContent = `${count} selected`;
+    if (label) {
+      label.textContent = websiteCount === count
+        ? `${count} selected`
+        : `${count} selected · ${websiteCount} website-ready`;
+    }
+    if (elements.bulkAssign) elements.bulkAssign.disabled = websiteCount === 0;
+    if (elements.bulkStatus) elements.bulkStatus.disabled = websiteCount === 0;
+    if (elements.bulkBlock) elements.bulkBlock.disabled = websiteCount === 0;
+    if (elements.bulkArchive) elements.bulkArchive.disabled = websiteCount === 0;
+    if (elements.bulkExport) elements.bulkExport.disabled = websiteCount === 0;
+    if (elements.bulkCopyEmails) elements.bulkCopyEmails.disabled = outreachCount === 0;
+    if (elements.bulkIntroEmail) elements.bulkIntroEmail.disabled = outreachCount === 0;
+    if (elements.bulkDocRequest) elements.bulkDocRequest.disabled = outreachCount === 0;
+    if (elements.bulkReminder) elements.bulkReminder.disabled = outreachCount === 0;
   }
 
   function showToast(message, tone = 'info', ms = 3600) {
@@ -1754,6 +1865,7 @@
     if (!drawer) return;
     state.drawerId = id;
     drawer.classList.add('open');
+    document.body.classList.add('drawer-open');
     const cached = findCandidate(id);
     if (cached) renderDrawer(cached);
     else renderDrawerSkeleton();
@@ -1773,6 +1885,7 @@
     }
     state.drawerId = null;
     if (elements.drawer) elements.drawer.classList.remove('open');
+    document.body.classList.remove('drawer-open');
   }
 
   function renderDrawerSkeleton() {
@@ -3144,7 +3257,31 @@
     setSelection(ids);
   }
 
+  function selectVisibleCandidates() {
+    const ids = state.filtered
+      .filter((row) => isSelectableCandidate(row, currentSelectionOptions()))
+      .map((row) => row.id);
+    if (!ids.length) {
+      showToast('No visible candidates can be selected in this view.', 'warn', 3200);
+      return;
+    }
+    setSelection(ids);
+    showToast(`Selected ${ids.length} visible candidate${ids.length === 1 ? '' : 's'}.`, 'info', 2600);
+  }
+
+  async function bulkCopyEmails() {
+    const rows = selectedCandidates({ allowRaw: true }).filter((candidate) => !!String(candidate?.email || '').trim());
+    const emails = Array.from(new Set(rows.map((candidate) => String(candidate.email || '').trim().toLowerCase()).filter(Boolean)));
+    if (!emails.length) {
+      showToast('No selected email addresses were available to copy.', 'warn', 3200);
+      return;
+    }
+    const copied = await copyText(emails.join(', '));
+    if (copied) showToast(`Copied ${emails.length} email address${emails.length === 1 ? '' : 'es'}.`, 'info', 3200);
+  }
+
   function bindBulkActions() {
+    elements.bulkCopyEmails.addEventListener('click', () => bulkCopyEmails());
     elements.bulkIntroEmail.addEventListener('click', () => bulkIntroEmail());
     elements.bulkAssign.addEventListener('click', () => bulkAssign());
     elements.bulkStatus.addEventListener('click', () => bulkStatus());
@@ -3823,8 +3960,10 @@
     elements.chkAll = qs('#chk-all');
     elements.search = qs('#search');
     elements.refresh = qs('#btn-refresh');
+    elements.selectVisible = qs('#btn-select-visible');
     elements.bulkbar = qs('#bulkbar');
     elements.bulkCount = qs('#bulk-count');
+    elements.bulkCopyEmails = qs('#bulk-copy-emails');
     elements.bulkAssign = qs('#bulk-assign');
     elements.bulkIntroEmail = qs('#bulk-intro-email');
     elements.bulkStatus = qs('#bulk-status');
@@ -3867,6 +4006,7 @@
     elements.applyFilters = qs('#btn-apply');
     elements.clearFilters = qs('#btn-clear');
     elements.selectMissingRtw = qs('#btn-select-missing-rtw');
+    elements.activeFilterChips = qs('#active-filter-chips');
     elements.sourceTabs = Array.from(document.querySelectorAll('[data-source-tab]'));
     elements.importFile = qs('#candidate-import-file');
     elements.importFileButton = qs('#btn-import-file');
@@ -3973,6 +4113,9 @@
         openDocumentRequestDialog(visibleIds);
       });
     }
+    if (elements.selectVisible) {
+      elements.selectVisible.addEventListener('click', () => selectVisibleCandidates());
+    }
     if (elements.refreshVerify) {
       elements.refreshVerify.addEventListener('click', () => refreshVerificationQueue());
     }
@@ -4045,6 +4188,7 @@
     ensureDebugPanel();
     detectVersion();
     applyFilterInputs();
+    renderActiveFilterChips();
     renderImportState();
     renderTspSummary();
     renderOutreachStatus();

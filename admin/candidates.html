@@ -75,17 +75,24 @@
 
     .grid{display:grid;gap:18px}
 
-    .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--stroke);background:linear-gradient(180deg,#fff,#fbfdff)}
-    .search{display:flex;gap:10px;flex:1;align-items:center;min-width:260px}
+    .toolbar{display:grid;gap:14px;padding:18px 20px;border-bottom:1px solid var(--stroke);background:linear-gradient(180deg,#fff,#fbfdff)}
+    .toolbar-main{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+    .toolbar-meta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+    .search{display:flex;gap:10px;flex:1;align-items:center;min-width:min(520px,100%)}
     .search input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
-    .totals{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .source-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .source-tab{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.22);background:#fff;color:var(--blue);font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:background .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease}
+    .search .btn,.toolbar-actions .btn,.drawer-toolbar .btn,.bulkbar-actions .btn{white-space:nowrap;flex:0 0 auto}
+    .totals{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .source-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0}
+    .source-tab{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.22);background:#fff;color:var(--blue);font:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:background .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease}
     .source-tab:hover{background:#f8fbff;border-color:rgba(47,78,162,.36)}
     .source-tab.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 14px 28px rgba(47,78,162,.2)}
     .source-tab__count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 7px;border-radius:999px;background:rgba(47,78,162,.1);font-size:11px;letter-spacing:.04em}
     .source-tab.active .source-tab__count{background:rgba(255,255,255,.16);color:#fff}
+    .filter-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:0}
+    .filter-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#f8fbff;color:var(--blue);font-size:12px;font-weight:700;line-height:1}
+    .filter-chip button{border:0;background:none;color:inherit;font:inherit;font-weight:900;cursor:pointer;padding:0;line-height:1}
+    .filter-chip.static{background:#eef2ff;border-color:#c7d2fe}
     .ops-card{padding:18px 20px}
     .ops-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px}
     .ops-panel{display:grid;gap:14px;padding:18px;border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fbff)}
@@ -113,6 +120,7 @@
     .vscroll{position:relative;overflow:auto;flex:1;background:#fff}
     .row-actions{display:flex;gap:8px;justify-content:flex-start;white-space:nowrap;flex-wrap:wrap;align-items:center}
     .row-actions .btn{min-width:0}
+    .row-ref{font-weight:800;color:var(--blue-2);font-variant-numeric:tabular-nums;letter-spacing:.02em}
     .row-card{display:grid;gap:6px;min-width:0}
     .row-title{font-size:1rem;font-weight:800;line-height:1.25;color:var(--ink);word-break:break-word}
     .row-subtle{font-size:13px;line-height:1.4;color:var(--muted);word-break:break-word}
@@ -132,14 +140,16 @@
 
     .trow.skeleton{opacity:.55;pointer-events:none}
 
-    .bulkbar{position:sticky;bottom:0;background:linear-gradient(180deg,#f8faff,#f3f7ff);border-top:1px solid var(--stroke);padding:14px 18px;display:none;gap:12px;align-items:center;justify-content:space-between}
+    .bulkbar{background:linear-gradient(180deg,#f8faff,#f3f7ff);border-bottom:1px solid var(--stroke);padding:14px 20px;display:none;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
     .bulkbar.show{display:flex}
     .bulkbar > div:first-child{font-weight:700}
+    .bulkbar-help{margin-top:4px;font-size:13px;line-height:1.45;color:var(--muted);font-weight:600}
+    .bulkbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
     .fab{position:fixed;right:24px;bottom:24px;background:var(--blue);color:#fff;border:none;border-radius:14px;padding:14px 18px;box-shadow:0 20px 44px rgba(15,23,42,.25);font-weight:800;cursor:pointer}
     .fab:hover{background:var(--blue-2)}
 
-    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,96vw);background:#fff;border-left:1px solid var(--stroke);box-shadow:-24px 0 60px rgba(15,23,42,.18);transform:translateX(100%);transition:transform .24s ease;overflow:auto;z-index:120}
+    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(580px,94vw);background:#fff;border-left:1px solid var(--stroke);box-shadow:-24px 0 60px rgba(15,23,42,.18);transform:translateX(100%);transition:transform .24s ease;overflow:auto;z-index:120}
     .drawer.open{transform:translateX(0)}
     .drawer .head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--stroke);background:rgba(255,255,255,.96);backdrop-filter:blur(10px);z-index:2}
     .drawer .sec{padding:20px;border-bottom:1px solid var(--stroke)}
@@ -202,6 +212,8 @@
       .summary-grid{grid-template-columns:1fr}
       .payment-summary{grid-template-columns:1fr}
       .payment-sensitive-fields,.doc-upload-controls{grid-template-columns:1fr}
+      .toolbar-main,.toolbar-meta{align-items:flex-start}
+      .totals{justify-content:flex-start}
     }
     @media (max-width:720px){
       header.card.intro{padding:18px}
@@ -212,13 +224,17 @@
       .thead > :nth-child(2),.trow > :nth-child(2),
       .thead > :nth-child(4),.trow > :nth-child(4),
       .thead > :nth-child(5),.trow > :nth-child(5){display:none}
-      .bulkbar{flex-wrap:wrap;gap:10px}
-      .bulkbar > div:first-child{width:100%}
+      .bulkbar{gap:10px}
+      .bulkbar > div:first-child,.bulkbar-actions{width:100%}
+      .bulkbar-actions .btn{flex:1 1 160px}
       .profile-grid{grid-template-columns:1fr}
       .drawer-toolbar{justify-content:flex-start}
       .doc-row{display:grid}
       .payment-sensitive-fields{grid-template-columns:1fr}
       .dialog-grid{grid-template-columns:1fr}
+    }
+    @media (min-width:1560px){
+      body.drawer-open .wrap.layout{padding-right:calc(16px + min(360px,22vw))}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
@@ -370,39 +386,63 @@
 
       <section class="card table-card">
         <div class="toolbar">
-          <div class="search">
-            <input id="search" placeholder="Quick search ( / to focus )" />
-            <button class="btn" id="btn-refresh">Refresh</button>
+          <div class="toolbar-main">
+            <div class="search">
+              <input id="search" placeholder="Quick search ( / to focus )" />
+              <button class="btn" id="btn-refresh">Refresh</button>
+            </div>
+            <div class="toolbar-actions">
+              <button class="btn ghost small" id="btn-select-visible" type="button">Select visible</button>
+              <button class="btn ghost small" id="btn-select-missing-rtw" type="button">Select missing RTW</button>
+            </div>
           </div>
-          <div class="toolbar-actions">
-            <button class="btn ghost small" id="btn-select-missing-rtw" type="button">Select missing RTW</button>
+          <div class="toolbar-meta">
+            <div class="source-tabs" id="candidate-source-tabs" role="tablist" aria-label="Candidate source views">
+              <button class="source-tab active" type="button" data-source-tab="website" aria-selected="true" aria-controls="rows">
+                Website only
+                <span class="source-tab__count" data-source-count="website">0</span>
+              </button>
+              <button class="source-tab" type="button" data-source-tab="timesheet-portal-active" aria-selected="false" aria-controls="rows">
+                TSP active assignments
+                <span class="source-tab__count" data-source-count="timesheet-portal-active">0</span>
+              </button>
+              <button class="source-tab" type="button" data-source-tab="timesheet-portal" aria-selected="false" aria-controls="rows">
+                Timesheet Portal only
+                <span class="source-tab__count" data-source-count="timesheet-portal">0</span>
+              </button>
+              <button class="source-tab" type="button" data-source-tab="combined" aria-selected="false" aria-controls="rows">
+                Combined / all
+                <span class="source-tab__count" data-source-count="combined">0</span>
+              </button>
+            </div>
+            <div class="totals">
+              <span class="pill" id="t-total">Total: 0</span>
+              <span class="pill" id="t-progress">In progress: 0</span>
+              <span class="pill" id="t-ready">Ready: 0</span>
+              <span class="pill warn" id="t-rtw-missing">RTW missing: 0</span>
+              <span class="pill warn" id="t-to-verify">To verify: 0</span>
+              <span class="pill" id="t-archived">Archived: 0</span>
+              <span class="pill" id="t-blocked">Blocked: 0</span>
+            </div>
           </div>
-          <div class="source-tabs" id="candidate-source-tabs" role="tablist" aria-label="Candidate source views">
-            <button class="source-tab active" type="button" data-source-tab="website" aria-selected="true" aria-controls="rows">
-              Website only
-              <span class="source-tab__count" data-source-count="website">0</span>
-            </button>
-            <button class="source-tab" type="button" data-source-tab="timesheet-portal-active" aria-selected="false" aria-controls="rows">
-              TSP active assignments
-              <span class="source-tab__count" data-source-count="timesheet-portal-active">0</span>
-            </button>
-            <button class="source-tab" type="button" data-source-tab="timesheet-portal" aria-selected="false" aria-controls="rows">
-              Timesheet Portal only
-              <span class="source-tab__count" data-source-count="timesheet-portal">0</span>
-            </button>
-            <button class="source-tab" type="button" data-source-tab="combined" aria-selected="false" aria-controls="rows">
-              Combined / all
-              <span class="source-tab__count" data-source-count="combined">0</span>
-            </button>
+          <div class="filter-chips" id="active-filter-chips" aria-live="polite"></div>
+        </div>
+        <div class="bulkbar" id="bulkbar">
+          <div>
+            <div id="bulk-count">0 selected</div>
+            <div class="bulkbar-help">Bulk actions apply to the current selection in this view.</div>
           </div>
-          <div class="totals">
-            <span class="pill" id="t-total">Total: 0</span>
-            <span class="pill" id="t-progress">In progress: 0</span>
-            <span class="pill" id="t-ready">Ready: 0</span>
-            <span class="pill warn" id="t-rtw-missing">RTW missing: 0</span>
-            <span class="pill warn" id="t-to-verify">To verify: 0</span>
-            <span class="pill" id="t-archived">Archived: 0</span>
-            <span class="pill" id="t-blocked">Blocked: 0</span>
+          <div class="bulkbar-actions">
+            <button class="btn ghost" id="bulk-copy-emails">Copy emails</button>
+            <button class="btn" id="bulk-intro-email">Send intro email</button>
+            <button class="btn" id="bulk-assign">Assign recruiter</button>
+            <button class="btn" id="bulk-status">Update status</button>
+            <button class="btn" id="bulk-doc-request">Send document request</button>
+            <button class="btn" id="bulk-rtw-reminder">Send RTW reminder</button>
+            <button class="btn red" id="bulk-block">Block</button>
+            <button class="btn" id="bulk-archive">Archive</button>
+            <button class="btn" id="bulk-export">Export CSV</button>
+            <button class="btn ghost" id="bulk-clear">Clear</button>
           </div>
         </div>
 
@@ -412,20 +452,6 @@
             <div>Ref</div><div>Candidate</div><div>Contact</div><div>Onboarding</div><div>Status</div><div>Actions</div>
           </div>
           <div class="vscroll" id="rows" aria-live="polite"></div>
-          <div class="bulkbar" id="bulkbar">
-            <div id="bulk-count">0 selected</div>
-            <div style="display:flex;gap:8px">
-              <button class="btn" id="bulk-intro-email">Send intro email</button>
-              <button class="btn" id="bulk-assign">Assign recruiter</button>
-              <button class="btn" id="bulk-status">Update status</button>
-              <button class="btn" id="bulk-doc-request">Send document request</button>
-              <button class="btn" id="bulk-rtw-reminder">Send RTW reminder</button>
-              <button class="btn red" id="bulk-block">Block</button>
-              <button class="btn" id="bulk-archive">Archive</button>
-              <button class="btn" id="bulk-export">Export CSV</button>
-              <button class="btn ghost" id="bulk-clear">Clear</button>
-            </div>
-          </div>
         </div>
       </section>
     </main>
@@ -469,6 +495,6 @@
   </dialog>
 
   <script defer src="/js/candidate-active-assignments-core.js?v=1"></script>
-  <script defer src="/admin/candidates.js?v=19"></script>
+  <script defer src="/admin/candidates.js?v=20"></script>
 </body>
 </html>
