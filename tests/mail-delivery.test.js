@@ -65,3 +65,35 @@ test('sendTransactionalEmail falls back to SMTP when Resend is configured but re
     restore();
   }
 });
+
+test('probeSmtpProvider reports invalid SMTP credentials clearly', async () => {
+  const originalCreateTransport = nodemailer.createTransport;
+  nodemailer.createTransport = () => ({
+    verify: async () => {
+      const error = new Error('Invalid login');
+      error.code = 'EAUTH';
+      error.responseCode = 535;
+      throw error;
+    },
+  });
+
+  const { mod, restore } = loadModule({});
+
+  try {
+    const result = await mod.probeSmtpProvider({
+      smtpHost: 'smtp.office365.com',
+      smtpPort: 587,
+      smtpEncryption: 'starttls',
+      smtpUser: 'info@hmj-global.com',
+      smtpPassword: 'bad-secret',
+    });
+
+    assert.equal(result.provider, 'smtp');
+    assert.equal(result.ready, false);
+    assert.equal(result.status, 'invalid_credentials');
+    assert.match(result.message, /rejected by Microsoft 365/i);
+  } finally {
+    nodemailer.createTransport = originalCreateTransport;
+    restore();
+  }
+});

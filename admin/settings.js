@@ -453,16 +453,40 @@
     const summary = els.candidateEmailStatusSummary;
     const list = els.candidateEmailStatusList;
     const patchPreview = els.candidateEmailPatchPreview;
+    const smtpStatusTitle = diagnostics.smtpStatus === 'ready'
+      ? (diagnostics.customSmtpEnabled ? 'Custom SMTP verified' : 'SMTP verified but not enabled for auth')
+      : diagnostics.smtpStatus === 'invalid_credentials'
+        ? 'SMTP login rejected'
+        : diagnostics.smtpCredentialsSaved
+          ? 'SMTP needs attention'
+          : 'No SMTP credentials saved';
+    const smtpStatusTone = diagnostics.smtpStatus === 'ready'
+      ? (diagnostics.customSmtpEnabled ? 'ok' : 'warn')
+      : diagnostics.smtpStatus === 'invalid_credentials'
+        ? 'danger'
+        : diagnostics.smtpCredentialsSaved
+          ? 'warn'
+          : 'warn';
+    const smtpStatusBody = diagnostics.smtpStatus === 'ready'
+      ? (diagnostics.customSmtpEnabled
+        ? `SMTP login for ${settings.senderEmail || 'the HMJ sender account'} was accepted by the mail server.`
+        : 'The saved SMTP login works, but "Use custom SMTP" is still off. Reminder emails can send, but Supabase auth emails will keep using the default provider until you enable SMTP and apply settings.')
+      : diagnostics.smtpMessage
+        || (diagnostics.smtpCredentialsSaved
+          ? 'Saved SMTP credentials could not be verified.'
+          : 'Add the real HMJ mailbox credentials to switch Supabase away from the default test mailer.');
 
     if (summary) {
-      const tone = diagnostics.publicDeliveryReady ? 'success' : 'warn';
+      const tone = diagnostics.customSmtpReady && diagnostics.redirectsReady ? 'success' : diagnostics.publicDeliveryReady ? 'warn' : 'warn';
       summary.dataset.tone = tone;
       summary.innerHTML = `
-        <strong>${diagnostics.publicDeliveryReady ? 'Candidate email delivery is close to production-ready.' : 'Candidate email delivery still needs attention.'}</strong>
+        <strong>${diagnostics.customSmtpReady && diagnostics.redirectsReady ? 'Candidate email delivery is ready to apply.' : diagnostics.publicDeliveryReady ? 'Reminder delivery works, but auth email setup still needs attention.' : 'Candidate email delivery still needs attention.'}</strong>
         <p>${escapeHtml(
-          diagnostics.publicDeliveryReady
+          diagnostics.customSmtpReady && diagnostics.redirectsReady
             ? 'Custom SMTP, redirects, and branding are in place. Apply the settings to Supabase Auth after every material change.'
-            : 'Without custom SMTP, public candidate verification and password reset emails are not dependable for real candidates.'
+            : diagnostics.publicDeliveryReady
+              ? 'A working outbound provider exists for reminder emails, but Supabase auth email still needs valid SMTP enabled and applied from this page.'
+              : 'Without a working outbound provider, reminder emails and candidate auth email cannot be relied on in production.'
         )}</p>
       `;
     }
@@ -471,11 +495,16 @@
       list.innerHTML = '';
       const items = [
         {
-          tone: diagnostics.publicDeliveryReady ? 'ok' : 'warn',
-          title: diagnostics.publicDeliveryReady ? 'Custom SMTP ready' : 'Custom SMTP incomplete',
-          body: diagnostics.publicDeliveryReady
-            ? `SMTP is configured for ${settings.senderEmail || 'the HMJ sender address'}.`
-            : 'Add the real HMJ mailbox credentials to switch Supabase away from the default test mailer.',
+          tone: smtpStatusTone,
+          title: smtpStatusTitle,
+          body: smtpStatusBody,
+        },
+        {
+          tone: diagnostics.resendReady ? 'ok' : diagnostics.resendConfigured ? 'warn' : 'warn',
+          title: diagnostics.resendReady ? 'Resend verified' : diagnostics.resendConfigured ? 'Resend key rejected' : 'Resend not configured',
+          body: diagnostics.resendReady
+            ? 'The configured RESEND_API_KEY was accepted by Resend.'
+            : diagnostics.resendMessage || 'Resend is not available for candidate emails in this environment.',
         },
         {
           tone: diagnostics.redirectsReady ? 'ok' : 'danger',

@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const RESEND_DOMAINS_URL = 'https://api.resend.com/domains';
 let resendProbeCache = null;
+let smtpProbeCache = null;
 
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
@@ -144,6 +145,77 @@ function smtpConfig(settings = {}) {
   };
 }
 
+function smtpCacheKey(settings = {}) {
+  const config = smtpConfig(settings);
+  if (!config) return '';
+  return JSON.stringify([
+    config.host,
+    config.port,
+    config.secure,
+    config.requireTLS,
+    config.auth?.user || '',
+    config.auth?.pass || '',
+  ]);
+}
+
+function smtpProviderLabel(settings = {}) {
+  const host = trimString(settings.smtpHost, 320).toLowerCase();
+  if (host.includes('office365') || host.includes('outlook')) return 'Microsoft 365';
+  return 'the mail server';
+}
+
+async function probeSmtpProvider(settings = {}) {
+  const config = smtpConfig(settings);
+  if (!config) {
+    return {
+      provider: 'smtp',
+      configured: false,
+      ready: false,
+      status: 'missing',
+      message: 'SMTP host, username, or password is missing.',
+    };
+  }
+
+  const cacheKey = smtpCacheKey(settings);
+  if (smtpProbeCache && smtpProbeCache.key === cacheKey && smtpProbeCache.expiresAt > Date.now()) {
+    return smtpProbeCache.value;
+  }
+
+  let value;
+  try {
+    const transporter = nodemailer.createTransport(config);
+    await transporter.verify();
+    value = {
+      provider: 'smtp',
+      configured: true,
+      ready: true,
+      status: 'ready',
+      message: `Saved SMTP credentials were accepted by ${smtpProviderLabel(settings)}.`,
+    };
+  } catch (error) {
+    const responseCode = Number(error?.responseCode) || null;
+    const invalidCredentials = error?.code === 'EAUTH' || responseCode === 535;
+    value = {
+      provider: 'smtp',
+      configured: true,
+      ready: false,
+      status: invalidCredentials ? 'invalid_credentials' : 'error',
+      message: invalidCredentials
+        ? `The saved SMTP login for ${trimString(settings.smtpUser, 320) || 'the HMJ sender account'} was rejected by ${smtpProviderLabel(settings)}. Update the mailbox password or app password in Admin Settings.`
+        : error?.message || 'Could not verify the saved SMTP settings.',
+      code: error?.code || '',
+      responseCode,
+    };
+  }
+
+  smtpProbeCache = {
+    key: cacheKey,
+    value,
+    expiresAt: Date.now() + 60_000,
+  };
+  return value;
+}
+
 async function sendViaSmtp(message) {
   const transportConfig = smtpConfig(message.smtpSettings);
   if (!transportConfig) return null;
@@ -210,6 +282,7 @@ module.exports = {
   lowerEmail,
   plainTextFromHtml,
   probeResendProvider,
+  probeSmtpProvider,
   sendTransactionalEmail,
   trimString,
 };

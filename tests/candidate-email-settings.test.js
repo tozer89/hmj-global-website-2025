@@ -150,6 +150,51 @@ test('candidateEmailDiagnostics treats a validated Resend provider as ready for 
   }
 });
 
+test('candidateEmailDiagnostics surfaces invalid SMTP credentials explicitly', () => {
+  const { mod, restore } = loadModule({
+    SUPABASE_URL: 'https://mftwpbpwisxyaenfoizb.supabase.co',
+  });
+  try {
+    const diagnostics = mod.candidateEmailDiagnostics({
+      customSmtpEnabled: false,
+      smtpHost: 'smtp.office365.com',
+      smtpPort: 587,
+      smtpEncryption: 'starttls',
+      smtpUser: 'info@hmj-global.com',
+      smtpPassword: 'bad-secret',
+      senderEmail: 'info@hmj-global.com',
+      senderName: 'HMJ Global',
+      siteUrl: 'https://hmjg.netlify.app',
+      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+      confirmationSubject: 'Confirm your HMJ candidate account',
+      recoverySubject: 'Reset your HMJ candidate password',
+    }, {
+      smtpProbe: {
+        provider: 'smtp',
+        configured: true,
+        ready: false,
+        status: 'invalid_credentials',
+        message: 'The saved SMTP login for info@hmj-global.com was rejected by Microsoft 365.',
+      },
+      deliveryProbe: {
+        provider: 'resend',
+        configured: false,
+        ready: false,
+        status: 'missing',
+        message: 'RESEND_API_KEY is not configured.',
+      },
+    });
+
+    assert.equal(diagnostics.publicDeliveryReady, false);
+    assert.equal(diagnostics.smtpStatus, 'invalid_credentials');
+    assert.equal(diagnostics.deliverySource, 'smtp_invalid');
+    assert.match(diagnostics.warnings.join(' '), /Microsoft 365/i);
+  } finally {
+    restore();
+  }
+});
+
 test('buildSupabaseAuthPatch includes SMTP fields only when custom SMTP is enabled', () => {
   const { mod, restore } = loadModule();
   try {

@@ -141,6 +141,23 @@ function buildReminderContent(settings, candidateName, actionUrl, documentTypes 
   };
 }
 
+function reminderDeliveryMessage(error) {
+  const smtpCode = error?.details?.smtp?.code || error?.code || '';
+  const smtpMessage = String(error?.details?.smtp?.message || error?.message || '');
+  const resendCode = error?.details?.resend?.code || '';
+
+  if (smtpCode === 'EAUTH' || /Authentication unsuccessful|Invalid login/i.test(smtpMessage)) {
+    return 'Candidate emails could not be sent because the saved SMTP login was rejected by Microsoft 365. Update the mailbox password or app password in Admin Settings.';
+  }
+  if (error?.code === 'resend_email_failed' || resendCode === 'resend_email_failed') {
+    return 'Candidate emails could not be sent because the RESEND_API_KEY configured in Netlify was rejected. Fix the key or save working SMTP details in Admin Settings.';
+  }
+  if (error?.code === 'email_provider_not_configured') {
+    return 'Candidate emails are not configured. Add a working RESEND_API_KEY or save SMTP details in Admin Settings before sending reminders.';
+  }
+  return error?.message || 'Candidate onboarding email delivery failed.';
+}
+
 async function recordReminderActivity(supabase, candidateId, actorEmail, activityType, meta) {
   await supabase.from('candidate_activity').insert({
     candidate_id: String(candidateId),
@@ -274,11 +291,7 @@ const baseHandler = async (event, context) => {
         body: JSON.stringify({
           ok: false,
           code: error?.code || 'candidate_onboarding_email_failed',
-          message: error?.code === 'resend_email_failed'
-            ? 'Candidate emails could not be sent because the RESEND_API_KEY configured in Netlify was rejected. Fix the key or save working SMTP details in Admin Settings.'
-            : error?.code === 'email_provider_not_configured'
-              ? 'Candidate emails are not configured. Add a working RESEND_API_KEY or save SMTP details in Admin Settings before sending reminders.'
-              : error?.message || 'Candidate onboarding email delivery failed.',
+          message: reminderDeliveryMessage(error),
           details: error?.details || null,
           requestType,
           documentTypes: actionDocuments,

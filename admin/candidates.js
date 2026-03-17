@@ -2271,6 +2271,15 @@
         || 'Candidate reminder delivery is blocked because the configured RESEND_API_KEY was rejected. Fix the key or save SMTP settings in Admin Settings.';
       return;
     }
+    if (diagnostics.smtpStatus === 'invalid_credentials') {
+      elements.outreachStatus.textContent = diagnostics.smtpMessage
+        || 'Candidate reminder delivery is blocked because the saved SMTP login was rejected by the mail server.';
+      return;
+    }
+    if (diagnostics.smtpCredentialsSaved && diagnostics.smtpMessage) {
+      elements.outreachStatus.textContent = diagnostics.smtpMessage;
+      return;
+    }
     elements.outreachStatus.textContent = 'Candidate reminder delivery is not configured. Save SMTP settings in Admin Settings or add a working RESEND_API_KEY.';
   }
 
@@ -2677,8 +2686,12 @@
     if (state.outreachDiagnostics && state.outreachDiagnostics.publicDeliveryReady !== true) {
       await copyCandidateUploadLink({ requestType, documentTypes });
       showOutreachConfigurationError(
-        state.outreachDiagnostics.resendConfigured && state.outreachDiagnostics.resendReady === false
+        state.outreachDiagnostics.smtpStatus === 'invalid_credentials'
+          ? (state.outreachDiagnostics.smtpMessage || 'Candidate emails are currently blocked because the saved SMTP login was rejected by the mail server.')
+          : state.outreachDiagnostics.resendConfigured && state.outreachDiagnostics.resendReady === false
           ? 'Candidate emails are currently blocked because the configured RESEND_API_KEY is invalid.'
+          : state.outreachDiagnostics.smtpCredentialsSaved
+            ? (state.outreachDiagnostics.smtpMessage || 'Candidate emails are currently blocked because the saved SMTP configuration could not be verified.')
           : 'Candidate emails are not configured on this website yet.',
         { copiedLink: true }
       );

@@ -1,7 +1,7 @@
 'use strict';
 
 const { fetchSettings, saveSettings } = require('./_settings-helpers.js');
-const { probeResendProvider } = require('./_mail-delivery.js');
+const { probeResendProvider, probeSmtpProvider } = require('./_mail-delivery.js');
 const {
   _resolveCandidatePortalBaseUrl: resolveCandidatePortalBaseUrl,
   _buildRedirectUrl: buildRedirectUrl,
@@ -362,15 +362,19 @@ function candidateEmailDiagnostics(settings = {}, options = {}) {
   const management = resolveManagementToken({ tokenOverride: options.managementToken });
   const projectRef = resolveProjectRef();
   const resendConfigured = !!trimString(process.env.RESEND_API_KEY, 4000);
-  const smtpConfigured = !!(
-    settings.customSmtpEnabled
-    && trimString(settings.smtpHost, 320)
+  const smtpCredentialsSaved = !!(
+    trimString(settings.smtpHost, 320)
     && normalisePort(settings.smtpPort, 0)
     && trimString(settings.smtpUser, 320)
     && trimString(settings.smtpPassword, 4000)
     && lowerEmail(settings.senderEmail)
     && trimString(settings.senderName, 160)
   );
+  const smtpProbe = options.smtpProbe && typeof options.smtpProbe === 'object'
+    ? options.smtpProbe
+    : null;
+  const smtpReady = smtpProbe?.ready === true;
+  const smtpConfigured = settings.customSmtpEnabled === true && smtpReady;
   const redirectsReady = !!(
     normaliseUrl(settings.siteUrl)
     && normaliseUrl(settings.verificationRedirectUrl)
@@ -382,8 +386,16 @@ function candidateEmailDiagnostics(settings = {}, options = {}) {
   );
 
   const warnings = [];
-  if (!smtpConfigured && !(options.deliveryProbe && options.deliveryProbe.ready === true)) {
-    warnings.push('Custom SMTP is not complete. Supabase default email is only suitable for testing and is rate-limited.');
+  if (!smtpConfigured) {
+    if (smtpProbe?.status === 'invalid_credentials') {
+      warnings.push(smtpProbe.message || 'The saved SMTP login was rejected by the mail server.');
+    } else if (smtpProbe?.configured && smtpProbe?.ready === false) {
+      warnings.push(smtpProbe.message || 'Saved SMTP credentials could not be verified.');
+    } else if (smtpCredentialsSaved && settings.customSmtpEnabled !== true && smtpReady) {
+      warnings.push('SMTP credentials are saved and working, but "Use custom SMTP" is still off. Reminder emails can send, but Supabase auth emails will not use SMTP until you enable it and apply the settings.');
+    } else {
+      warnings.push('Custom SMTP is not complete. Supabase default email is only suitable for testing and is rate-limited.');
+    }
   }
   if (!redirectsReady) {
     warnings.push('Candidate auth redirects are incomplete. Verification and recovery emails can fail if these are wrong.');
@@ -398,15 +410,17 @@ function candidateEmailDiagnostics(settings = {}, options = {}) {
   if (deliveryProbe?.configured && deliveryProbe?.ready === false) {
     warnings.push(deliveryProbe.message || 'The configured Resend key could not be validated.');
   }
-  if (!deliveryProbe?.configured && !smtpConfigured) {
+  if (!deliveryProbe?.configured && !smtpCredentialsSaved) {
     warnings.push('No outbound candidate email provider is configured. Reminder emails will not send until Resend or SMTP is working.');
   }
 
-  const publicDeliveryReady = deliveryProbe?.ready === true || smtpConfigured;
+  const publicDeliveryReady = deliveryProbe?.ready === true || smtpReady;
   const deliverySource = deliveryProbe?.ready === true
     ? 'resend'
-    : smtpConfigured
+    : smtpReady
       ? 'smtp'
+      : smtpProbe?.status === 'invalid_credentials'
+        ? 'smtp_invalid'
       : resendConfigured
         ? 'resend_invalid'
         : 'none';
@@ -419,8 +433,12 @@ function candidateEmailDiagnostics(settings = {}, options = {}) {
     resendReady: deliveryProbe?.ready === true,
     resendStatus: deliveryProbe?.status || (resendConfigured ? 'unknown' : 'missing'),
     resendMessage: deliveryProbe?.message || '',
+    customSmtpEnabled: settings.customSmtpEnabled === true,
+    smtpCredentialsSaved,
     customSmtpReady: smtpConfigured,
-    smtpReady: smtpConfigured,
+    smtpReady,
+    smtpStatus: smtpProbe?.status || (smtpCredentialsSaved ? 'unknown' : 'missing'),
+    smtpMessage: smtpProbe?.message || '',
     redirectsReady,
     subjectsReady,
     deliverySource,
@@ -431,20 +449,38 @@ function candidateEmailDiagnostics(settings = {}, options = {}) {
 }
 
 async function buildCandidateEmailDiagnostics(settings = {}, options = {}) {
-  let deliveryProbe = null;
-  try {
-    deliveryProbe = await probeResendProvider();
-  } catch (error) {
-    deliveryProbe = {
-      provider: 'resend',
-      configured: !!trimString(process.env.RESEND_API_KEY, 4000),
-      ready: false,
-      status: 'error',
-      message: error?.message || 'Could not verify Resend delivery.',
-    };
-  }
+  const [deliveryProbe, smtpProbe] = await Promise.all([
+    (async () => {
+      try {
+        return await probeResendProvider();
+      } catch (error) {
+        return {
+          provider: 'resend',
+          configured: !!trimString(process.env.RESEND_API_KEY, 4000),
+          ready: false,
+          status: 'error',
+          message: error?.message || 'Could not verify Resend delivery.',
+        };
+      }
+    })(),
+    (async () => {
+      try {
+        return await probeSmtpProvider(settings);
+      } catch (error) {
+        return {
+          provider: 'smtp',
+          configured: !!trimString(settings.smtpHost, 320),
+          ready: false,
+          status: 'error',
+          message: error?.message || 'Could not verify SMTP delivery.',
+        };
+      }
+    })(),
+  ]);
+
   return candidateEmailDiagnostics(settings, {
     deliveryProbe,
+    smtpProbe,
     managementToken: options.managementToken,
   });
 }
