@@ -2274,6 +2274,16 @@
     elements.outreachStatus.textContent = 'Candidate reminder delivery is not configured. Save SMTP settings in Admin Settings or add a working RESEND_API_KEY.';
   }
 
+  function showOutreachConfigurationError(message, { copiedLink = false } = {}) {
+    const suffix = copiedLink
+      ? '\n\nA secure upload link has been copied so you can still send it manually.'
+      : '';
+    const guidance = '\n\nFix this in Admin Settings -> Candidate email settings by saving working SMTP details, or replace the invalid RESEND_API_KEY in Netlify.';
+    const text = `${message}${guidance}${suffix}`;
+    window.alert(text);
+    showToast(message, 'error', 5200);
+  }
+
   async function runPortalAccountAction(candidate, action, button) {
     const label = button?.textContent || 'Action';
     let password = null;
@@ -2666,12 +2676,11 @@
   async function sendOnboardingRequest({ candidateIds, requestType = 'rtw', documentTypes = [], skipConfirm = true, force = false }) {
     if (state.outreachDiagnostics && state.outreachDiagnostics.publicDeliveryReady !== true) {
       await copyCandidateUploadLink({ requestType, documentTypes });
-      showToast(
+      showOutreachConfigurationError(
         state.outreachDiagnostics.resendConfigured && state.outreachDiagnostics.resendReady === false
-          ? 'Email delivery is blocked by an invalid RESEND_API_KEY. The secure upload link was copied instead.'
-          : 'Email delivery is not configured. The secure upload link was copied instead.',
-        'warn',
-        5200,
+          ? 'Candidate emails are currently blocked because the configured RESEND_API_KEY is invalid.'
+          : 'Candidate emails are not configured on this website yet.',
+        { copiedLink: true }
       );
       return;
     }
@@ -2714,7 +2723,11 @@
     });
     if (response?.ok === false) {
       if (response?.actionUrl) await copyText(response.actionUrl);
-      throw new Error(response?.message || 'Candidate onboarding email delivery failed.');
+      showOutreachConfigurationError(
+        response?.message || 'Candidate onboarding email delivery failed.',
+        { copiedLink: !!response?.actionUrl }
+      );
+      return;
     }
     const recentSkips = Array.isArray(response?.skipped)
       ? response.skipped.filter((entry) => entry?.reason === 'recently_sent').length
@@ -2733,7 +2746,11 @@
         });
         if (response?.ok === false) {
           if (response?.actionUrl) await copyText(response.actionUrl);
-          throw new Error(response?.message || 'Candidate onboarding email delivery failed.');
+          showOutreachConfigurationError(
+            response?.message || 'Candidate onboarding email delivery failed.',
+            { copiedLink: !!response?.actionUrl }
+          );
+          return;
         }
       }
     }

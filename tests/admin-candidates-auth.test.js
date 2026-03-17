@@ -12,7 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=12/);
+  assert.match(html, /\/admin\/candidates\.js\?v=13/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
@@ -104,6 +104,7 @@ test('candidate admin UI exposes onboarding reminder controls and uses the remin
   assert.match(source, /function sendOnboardingRequest/);
   assert.match(source, /function refreshOutreachReadiness/);
   assert.match(source, /function copyCandidateUploadLink/);
+  assert.match(source, /function showOutreachConfigurationError/);
   assert.match(source, /data-onboarding-action="copy-upload-link"/);
   assert.match(source, /recently_sent/);
 });
