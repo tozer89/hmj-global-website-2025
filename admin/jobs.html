@@ -2906,6 +2906,7 @@
         if (!normalized.id) {
           normalized.id = `job-${Math.random().toString(36).slice(2, 10)}`;
         }
+        normalized.applyUrl = buildGeneratedApplyUrl(normalized);
         return normalized;
       }
 

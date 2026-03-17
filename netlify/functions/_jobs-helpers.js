@@ -324,6 +324,39 @@ function normaliseInternalApplyUrl(value, siteUrl = DEFAULT_PUBLIC_SITE_URL) {
   }
 }
 
+function buildGeneratedApplyUrl(job = {}, siteUrl = DEFAULT_PUBLIC_SITE_URL, options = {}) {
+  const base = normalisePublicUrl(siteUrl) || DEFAULT_PUBLIC_SITE_URL;
+  const url = new URL('/contact.html', base);
+  const title = asString(job.title || job.jobTitle || job.role || job.name);
+  const jobId = asString(job.id || job.jobId || job.job_id);
+  const locationText = asString(job.locationText || job.location_text || job.location || job.jobLocation);
+  const employmentType = asString(job.type || job.jobType || job.employmentType || job.employment_type);
+  const payText = asString(job.payText || job.pay_text || job.pay || buildPayText(job));
+  const source = asString(options.source || job.jobSource || job.job_source || 'jobs-admin');
+
+  if (title) {
+    url.searchParams.set('role', title);
+    url.searchParams.set('job_title', title);
+  }
+  if (jobId) {
+    url.searchParams.set('job_id', jobId);
+  }
+  if (locationText) {
+    url.searchParams.set('job_location', locationText);
+  }
+  if (employmentType) {
+    url.searchParams.set('job_type', employmentType);
+  }
+  if (payText) {
+    url.searchParams.set('job_pay', payText);
+  }
+  if (source) {
+    url.searchParams.set('job_source', source);
+  }
+
+  return url.toString();
+}
+
 function asNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
@@ -621,7 +654,7 @@ function toDbPayload(job = {}) {
     hourly_min: null,
     hourly_max: null,
     currency: (payType === 'day_rate' || /_range$/.test(payType)) ? (currency || null) : null,
-    apply_url: asString(j.applyUrl),
+    apply_url: '',
     published: !!job.published,
     sort_order: Number.isFinite(job.sortOrder)
       ? Number(job.sortOrder)
@@ -642,6 +675,23 @@ function toDbPayload(job = {}) {
     payload.hourly_min = asNumber(job.hourlyMin ?? job.hourly_min ?? j.hourlyMin);
     payload.hourly_max = asNumber(job.hourlyMax ?? job.hourly_max ?? j.hourlyMax);
   }
+
+  payload.apply_url = buildGeneratedApplyUrl({
+    id: payload.id,
+    title: payload.title,
+    type: payload.type,
+    locationText: payload.location_text,
+    payText: buildPayText({
+      payType,
+      dayRateMin: payload.day_rate_min,
+      dayRateMax: payload.day_rate_max,
+      salaryMin: payload.salary_min,
+      salaryMax: payload.salary_max,
+      hourlyMin: payload.hourly_min,
+      hourlyMax: payload.hourly_max,
+      currency: payload.currency,
+    }),
+  }, DEFAULT_PUBLIC_SITE_URL, { source: 'jobs-admin' });
 
   return payload;
 }
@@ -698,4 +748,5 @@ module.exports = {
   buildPublicJobDetailPath,
   resolvePublicSiteUrl,
   normaliseInternalApplyUrl,
+  buildGeneratedApplyUrl,
 };

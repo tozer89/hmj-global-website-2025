@@ -189,6 +189,13 @@ test('jobs editor surfaces live suggestions and saves new custom values cleanly'
   benefitInput.value = 'Housing support';
   benefitInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
+  const applyField = document.querySelector('#edApply');
+  assert.equal(applyField.readOnly, true);
+  assert.match(applyField.value, /^\/contact\.html\?/);
+  const generatedBeforeSave = new URL(applyField.value, 'https://example.com');
+  assert.equal(generatedBeforeSave.searchParams.get('role'), 'Commissioning Lead');
+  assert.equal(generatedBeforeSave.searchParams.get('job_location'), 'Amsterdam, Netherlands');
+
   document.querySelector('#btnSave').click();
   await settle(dom.window, 10);
 
@@ -199,6 +206,13 @@ test('jobs editor surfaces live suggestions and saves new custom values cleanly'
   assert.deepEqual(Array.from(saveCalls[0].benefits || []), ['Housing support']);
   assert.equal(saveCalls[0].section, 'Commercial');
   assert.equal(saveCalls[0].discipline, 'Commissioning');
+  assert.match(saveCalls[0].applyUrl, /^\/contact\.html\?/);
+  const savedApplyUrl = new URL(saveCalls[0].applyUrl, 'https://example.com');
+  assert.equal(savedApplyUrl.searchParams.get('role'), 'Commissioning Lead');
+  assert.equal(savedApplyUrl.searchParams.get('job_title'), 'Commissioning Lead');
+  assert.equal(savedApplyUrl.searchParams.get('job_location'), 'Amsterdam, Netherlands');
+  assert.equal(savedApplyUrl.searchParams.get('job_type'), 'freelance');
+  assert.equal(savedApplyUrl.searchParams.get('job_source'), 'jobs-admin');
 });
 
 test('jobs editor hydrates custom employment types without breaking standard mode', async () => {

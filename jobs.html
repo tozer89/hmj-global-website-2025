@@ -30,6 +30,7 @@
   <script defer src="js/hmj-nav.js?v=2"></script>
   <script defer src="js/hmj-analytics.js"></script>
   <script defer src="js/hmj-identity-redirect.js" data-hmj-login-redirect="/timesheets.html" data-hmj-logout-redirect="/"></script>
+  <script defer src="js/job-application-context.js"></script>
   <link rel="preload" href="images/hero.jpg" as="image" fetchpriority="high">
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="assets/css/public.facelift.css" />
@@ -1788,31 +1789,35 @@
     }
 
     function resolveApplyUrl(job = {}) {
-      const fallbackRole = encodeURIComponent(job.title || 'HMJ Application');
-      const fallback = `contact.html?role=${fallbackRole}`;
       const raw = (job.applyUrl || '').trim();
-      if (!raw) return fallback;
+      const applicationContextApi = window.HMJJobApplicationContext;
 
-      try {
-        const url = new URL(raw, window.location.origin);
-        const sameOrigin = url.origin === window.location.origin;
-        const hmjDomain = /(?:^|\.)hmj-global\.com$/i.test(url.hostname);
-        const path = url.pathname.replace(/^\/+/, '');
-
-        if ((sameOrigin || hmjDomain) && path === 'contact.html') {
-          if (job.title && !url.searchParams.has('role')) {
-            url.searchParams.set('role', job.title);
-          }
-          const search = url.searchParams.toString();
-          const hash = url.hash || '';
-          return `${path}${search ? `?${search}` : ''}${hash}`;
-        }
-
-        return url.href;
-      } catch (err) {
-        console.warn('Invalid apply URL, falling back', err);
-        return fallback;
+      if (applicationContextApi?.buildApplicationUrl) {
+        return applicationContextApi.buildApplicationUrl({
+          origin: window.location.origin,
+          rawApplyUrl: raw,
+          source: 'jobs-board',
+          forceInternal: true,
+          job: {
+            id: job.id,
+            title: job.title,
+            locationText: job.locationText,
+            type: job.type,
+            payText: job.payText || buildPayText(job),
+          },
+        });
       }
+
+      const title = String(job.title || 'HMJ Application').trim();
+      const url = new URL('/contact.html', window.location.origin);
+      url.searchParams.set('role', title);
+      url.searchParams.set('job_title', title);
+      if (job.id) url.searchParams.set('job_id', String(job.id).trim());
+      if (job.locationText) url.searchParams.set('job_location', String(job.locationText).trim());
+      if (job.type) url.searchParams.set('job_type', String(job.type).trim());
+      if (job.payText) url.searchParams.set('job_pay', String(job.payText).trim());
+      url.searchParams.set('job_source', 'jobs-board');
+      return `${url.pathname}${url.search}`;
     }
 
     async function loadJobsFromApi(){

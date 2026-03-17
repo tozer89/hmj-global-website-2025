@@ -65,7 +65,7 @@ test('public jobs page renders published Supabase jobs with pay, tags, and locat
                   salary_min: 65000,
                   salary_max: 80000,
                   currency: 'GBP',
-                  apply_url: 'contact.html?role=Senior%20Planner',
+                  apply_url: 'contact.html?role=Outdated%20Role&job_location=Old%20Location',
                 },
                 {
                   id: 'draft-role',
@@ -100,5 +100,13 @@ test('public jobs page renders published Supabase jobs with pay, tags, and locat
   assert.match(cardText, /HV/);
   assert.match(cardText, /P6/);
   assert.match(document.querySelector('.job-details-link')?.getAttribute('href') || '', /\/jobs\/spec\.html\?id=published-role&slug=senior-planner-frankfurt-germany/);
+  const applyHref = document.querySelector('.job .btn.btn-primary')?.getAttribute('href') || '';
+  const applyUrl = new URL(applyHref, 'https://example.com');
+  assert.equal(applyUrl.pathname, '/contact.html');
+  assert.equal(applyUrl.searchParams.get('role'), 'Senior Planner');
+  assert.equal(applyUrl.searchParams.get('job_title'), 'Senior Planner');
+  assert.equal(applyUrl.searchParams.get('job_location'), 'Frankfurt, Germany');
+  assert.equal(applyUrl.searchParams.get('job_type'), 'permanent');
+  assert.equal(applyUrl.searchParams.get('job_source'), 'jobs-board');
   assert.match(document.querySelector('#dataSourceIndicator').textContent, /live/i);
 });

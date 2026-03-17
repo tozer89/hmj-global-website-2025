@@ -20,6 +20,7 @@ const {
   PUBLIC_PAGE_DEFAULTS,
   normalisePublicPageConfig,
   normaliseInternalApplyUrl,
+  buildGeneratedApplyUrl,
 } = require('../netlify/functions/_jobs-helpers.js');
 
 test('toJob normalises database row fields and derives tags/section meta', () => {
@@ -115,10 +116,12 @@ test('toDbPayload trims values, converts arrays, and flattens tags to keywords s
     salaryMin: '65000',
     salaryMax: 80000,
     currency: 'GBP',
-    applyUrl: 'https://apply',
     published: false,
     sortOrder: 5,
   });
+
+  const applyUrl = payload.apply_url;
+  delete payload.apply_url;
 
   assert.deepEqual(payload, {
     id: 'role-2',
@@ -150,10 +153,20 @@ test('toDbPayload trims values, converts arrays, and flattens tags to keywords s
     hourly_min: null,
     hourly_max: null,
     currency: 'GBP',
-    apply_url: 'https://apply',
     published: false,
     sort_order: 5,
   });
+
+  const parsed = new URL(applyUrl);
+  assert.equal(parsed.origin, 'https://hmjg.netlify.app');
+  assert.equal(parsed.pathname, '/contact.html');
+  assert.equal(parsed.searchParams.get('role'), 'Project Manager');
+  assert.equal(parsed.searchParams.get('job_title'), 'Project Manager');
+  assert.equal(parsed.searchParams.get('job_id'), 'role-2');
+  assert.equal(parsed.searchParams.get('job_location'), 'Dublin');
+  assert.equal(parsed.searchParams.get('job_type'), 'contract');
+  assert.equal(parsed.searchParams.get('job_pay'), '£65,000 - £80,000 per year');
+  assert.equal(parsed.searchParams.get('job_source'), 'jobs-admin');
 });
 
 test('toPublicJob strips internal-only fields while preserving public pay and customer data', () => {
@@ -212,6 +225,27 @@ test('toPublicJob rewrites legacy internal contact URLs to the active site host'
     normaliseInternalApplyUrl('https://www.hmj-global.com/contact.html?role=Planner', 'https://hmjg.netlify.app'),
     'https://hmjg.netlify.app/contact.html?role=Planner'
   );
+});
+
+test('buildGeneratedApplyUrl derives an internal contact link from job title and location', () => {
+  const applyUrl = buildGeneratedApplyUrl({
+    id: 'planner-macc',
+    title: 'Senior Planner',
+    locationText: 'Macclesfield, UK',
+    type: 'permanent',
+    payText: '£80,000 - £105,000 per year',
+  }, 'https://hmjg.netlify.app', { source: 'jobs-board' });
+
+  const parsed = new URL(applyUrl);
+  assert.equal(parsed.origin, 'https://hmjg.netlify.app');
+  assert.equal(parsed.pathname, '/contact.html');
+  assert.equal(parsed.searchParams.get('role'), 'Senior Planner');
+  assert.equal(parsed.searchParams.get('job_title'), 'Senior Planner');
+  assert.equal(parsed.searchParams.get('job_id'), 'planner-macc');
+  assert.equal(parsed.searchParams.get('job_location'), 'Macclesfield, UK');
+  assert.equal(parsed.searchParams.get('job_type'), 'permanent');
+  assert.equal(parsed.searchParams.get('job_pay'), '£80,000 - £105,000 per year');
+  assert.equal(parsed.searchParams.get('job_source'), 'jobs-board');
 });
 
 test('normalisePublicPageConfig applies defaults and understands string booleans', () => {
