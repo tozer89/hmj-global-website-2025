@@ -87,6 +87,17 @@ function normaliseDocumentRow(row = {}) {
   };
 }
 
+function normaliseBooleanFlag(value) {
+  if (typeof value === 'boolean') return value;
+  if (value === null || value === undefined || value === '') return false;
+  const text = String(value).trim().toLowerCase();
+  return text === 'true' || text === '1' || text === 'yes' || text === 'on';
+}
+
+function candidateRequiresOnboarding(candidate = {}) {
+  return normaliseBooleanFlag(candidate?.onboarding_mode ?? candidate?.onboardingMode);
+}
+
 function listDocumentTypes(rows = []) {
   return (Array.isArray(rows) ? rows : [])
     .map((row) => normaliseDocumentRow(row).document_type)
@@ -143,6 +154,7 @@ function hasPaymentDetails(paymentDetails = null, candidate = {}) {
 
 function summariseOnboarding({ candidate = {}, documents = [], paymentDetails = null } = {}) {
   const documentRows = Array.isArray(documents) ? documents : [];
+  const onboardingRequired = candidateRequiresOnboarding(candidate);
   const rightToWorkState = rightToWorkEvidenceState(candidate, documentRows);
   const hasRightToWork = !!rightToWorkState?.hasVerified;
   const hasPayment = hasPaymentDetails(paymentDetails, candidate);
@@ -150,15 +162,17 @@ function summariseOnboarding({ candidate = {}, documents = [], paymentDetails = 
   const documentTypes = Array.from(new Set(normalizedDocs.map((row) => row.document_type).filter(Boolean)));
   const pendingVerificationCount = normalizedDocs.filter((row) => row.verification_required && row.verification_status !== 'verified').length;
   const missing = [];
-  if (!hasRightToWork) missing.push('right_to_work');
-  if (!hasPayment) missing.push('payment_details');
+  if (onboardingRequired && !hasRightToWork) missing.push('right_to_work');
+  if (onboardingRequired && !hasPayment) missing.push('payment_details');
 
   return {
+    onboardingMode: onboardingRequired,
+    onboardingRequired,
     hasRightToWork: hasRightToWork,
     hasRightToWorkUpload: !!rightToWorkState?.hasUploaded,
     hasRightToWorkPendingVerification: !!rightToWorkState?.pendingVerification,
     hasPaymentDetails: hasPayment,
-    onboardingComplete: missing.length === 0,
+    onboardingComplete: onboardingRequired ? missing.length === 0 : false,
     missing,
     documentTypes,
     pendingVerificationCount,
@@ -253,6 +267,7 @@ module.exports = {
   REQUESTABLE_DOCUMENT_TYPES,
   RTW_DOCUMENT_TYPES,
   buildCandidatePortalDeepLink,
+  candidateRequiresOnboarding,
   hasPaymentDetails,
   hasRightToWorkEvidence,
   rightToWorkEvidenceState,

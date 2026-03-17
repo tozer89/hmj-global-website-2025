@@ -111,6 +111,7 @@ const baseHandler = async (event, context) => {
     assignTrim('bank_swift');
     assignTrim('emergency_name');
     assignTrim('emergency_phone');
+    if (hasOwn(body, 'onboarding_mode')) rec.onboarding_mode = toBool(body.onboarding_mode);
     assignTrim('rtw_url');
     assignTrim('contract_url');
     if (hasOwn(body, 'terms_ok')) rec.terms_ok = !!body.terms_ok;

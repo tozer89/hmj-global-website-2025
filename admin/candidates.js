@@ -404,6 +404,7 @@
 
   function normaliseOnboarding(row, docs, paymentSummary) {
     const existing = row?.onboarding && typeof row.onboarding === 'object' ? row.onboarding : null;
+    const onboardingMode = candidateOnboardingMode(row) || existing?.onboardingMode === true || existing?.onboardingRequired === true;
     const docRows = Array.isArray(docs) ? docs : [];
     const docTypes = new Set(docRows.map((doc) => String(doc?.document_type || doc?.kind || '').toLowerCase()));
     const rightToWorkDocs = docRows.filter((doc) => ['right_to_work', 'passport', 'visa_permit'].includes(String(doc?.document_type || doc?.kind || '').toLowerCase()));
@@ -420,14 +421,16 @@
       ? existing.pendingVerificationCount
       : docRows.filter((doc) => doc?.verification_required && String(doc?.verification_status || '').toLowerCase() !== 'verified').length;
     const missing = [];
-    if (!hasRightToWork) missing.push('right_to_work');
-    if (!hasPaymentDetails) missing.push('payment_details');
+    if (onboardingMode && !hasRightToWork) missing.push('right_to_work');
+    if (onboardingMode && !hasPaymentDetails) missing.push('payment_details');
     return {
+      onboardingMode,
+      onboardingRequired: onboardingMode,
       hasRightToWork,
       hasRightToWorkUpload,
       hasRightToWorkPendingVerification,
       hasPaymentDetails,
-      onboardingComplete: existing?.onboardingComplete === true || missing.length === 0,
+      onboardingComplete: onboardingMode ? (existing?.onboardingComplete === true || missing.length === 0) : false,
       missing,
       documentTypes: Array.isArray(existing?.documentTypes) ? existing.documentTypes : Array.from(docTypes),
       pendingVerificationCount,
@@ -705,6 +708,9 @@
       name: displayName,
       email: row.email || '',
       phone: row.phone || '',
+      onboarding_mode: candidateOnboardingMode(row),
+      emergency_name: row.emergency_name || '',
+      emergency_phone: row.emergency_phone || '',
       status,
       role: row.role || row.job_title || row.headline_role || '',
       region: row.region || row.location || row.county || row.country || '',
@@ -1123,6 +1129,27 @@
     return lastFour ? `••••${lastFour}` : 'Pending';
   }
 
+  function normaliseBooleanFlag(value) {
+    if (typeof value === 'boolean') return value;
+    if (value === null || value === undefined || value === '') return false;
+    const text = String(value).trim().toLowerCase();
+    return text === 'true' || text === '1' || text === 'yes' || text === 'on';
+  }
+
+  function candidateOnboardingMode(candidate) {
+    return normaliseBooleanFlag(candidate?.onboarding_mode ?? candidate?.onboardingMode);
+  }
+
+  function candidateModeLabel(candidate) {
+    return candidateOnboardingMode(candidate) ? 'Live onboarding' : 'Recruitment profile';
+  }
+
+  function candidateModeDescription(candidate) {
+    return candidateOnboardingMode(candidate)
+      ? 'HMJ is collecting onboarding, right-to-work, payroll, and mobilisation details for a live placement.'
+      : 'Candidate is registered on the website for recruitment, applications, CV storage, and profile updates only.';
+  }
+
   function candidateReference(candidate) {
     return String(candidate?.ref || candidate?.payroll_ref || '').trim() || '—';
   }
@@ -1259,6 +1286,7 @@
       ? '<span class="chip gray">Portal closed</span>'
       : '';
     const onboarding = candidate.onboarding || {};
+    const onboardingMode = candidateOnboardingMode(candidate);
     const paymentSummary = candidate.payment_summary || {};
     const rtwChip = rightToWorkChip(candidate);
     row.innerHTML = `
@@ -1280,12 +1308,15 @@
       </div>
       <div class="row-card">
         <div class="row-meta">
-          <span class="chip ${rtwChip.tone}">${rtwChip.label}</span>
-          <span class="chip ${paymentSummary.completion?.complete ? 'green' : 'gray'}">${paymentSummary.completion?.complete ? 'Payment on file' : 'Payment pending'}</span>
+          <span class="chip ${onboardingMode ? 'orange' : 'gray'}">${candidateModeLabel(candidate)}</span>
+          <span class="chip ${rtwChip.tone}">${onboardingMode ? rtwChip.label : (onboarding.hasRightToWork ? 'RTW on file' : 'RTW not required yet')}</span>
+          <span class="chip ${paymentSummary.completion?.complete ? 'green' : 'gray'}">${paymentSummary.completion?.complete ? 'Payment on file' : (onboardingMode ? 'Payment pending' : 'Payroll not required')}</span>
           ${onboarding.pendingVerificationCount ? `<span class="chip orange">${onboarding.pendingVerificationCount} to verify</span>` : ''}
         </div>
-        <div class="row-subtle">Onboarding: <strong class="row-inline-strong ${onboardingTone(candidate)}">${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong></div>
-        <div class="row-subtle">Payment ref: ${paymentReference(candidate)}</div>
+        <div class="row-subtle">${onboardingMode
+          ? `Onboarding: <strong class="row-inline-strong ${onboardingTone(candidate)}">${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong>`
+          : 'Portal path: <strong class="row-inline-strong">Recruitment profile only</strong>'}</div>
+        <div class="row-subtle">${onboardingMode ? `Payment ref: ${paymentReference(candidate)}` : 'Payroll onboarding starts only when HMJ marks a live placement.'}</div>
       </div>
       <div><span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span></div>
       <div class="row-actions">
@@ -1594,6 +1625,7 @@
   function renderProfile(candidate) {
     const portalAuth = candidate.portal_auth || { exists: false };
     const onboarding = candidate.onboarding || {};
+    const onboardingMode = candidateOnboardingMode(candidate);
     const payment = candidate.payment_summary || {};
     const portalStatus = candidate.has_portal_account
       ? 'Portal linked'
@@ -1604,13 +1636,15 @@
       ? (portalAuth.email_confirmed_at ? 'Verified' : 'Verification pending')
       : 'Not created';
     const accountEmail = portalAuth.email || candidate.email || '—';
-    const canSendReminder = !onboarding.hasRightToWork && !!candidate.email && !isArchived(candidate);
+    const canSendReminder = onboardingMode && !onboarding.hasRightToWork && !!candidate.email && !isArchived(candidate);
     const rtwTitle = onboarding.hasRightToWork
       ? 'Verified'
       : onboarding.hasRightToWorkPendingVerification
       ? 'To verify'
       : 'Missing';
-    const rtwCopy = onboarding.hasRightToWork
+    const rtwCopy = !onboardingMode
+      ? 'HMJ only requests right-to-work evidence once a live placement is underway.'
+      : onboarding.hasRightToWork
       ? 'HMJ has a verified RTW or passport record on file.'
       : onboarding.hasRightToWorkPendingVerification
       ? 'Candidate has uploaded RTW evidence, but HMJ still needs to verify it.'
@@ -1623,22 +1657,36 @@
         </div>
         <div class="summary-grid">
           <article class="summary-tile">
+            <span>Candidate mode</span>
+            <strong>${candidateModeLabel(candidate)}</strong>
+            <p>${candidateModeDescription(candidate)}</p>
+          </article>
+          <article class="summary-tile">
             <span>Right to work</span>
-            <strong>${rtwTitle}</strong>
+            <strong>${onboardingMode ? rtwTitle : 'Not required yet'}</strong>
             <p>${rtwCopy}</p>
           </article>
           <article class="summary-tile">
-            <span>Payment details</span>
-            <strong>${payment.completion?.complete ? 'On file' : 'Pending'}</strong>
-            <p>${payment.completion?.complete ? `${payment.bankName || 'Bank'} · ${paymentReference(candidate)}` : 'Bank details are still missing.'}</p>
+            <span>Onboarding</span>
+            <strong>${onboardingMode ? (onboarding.onboardingComplete ? 'Ready' : 'Action needed') : 'Recruitment profile'}</strong>
+            <p>${onboardingMode
+              ? (onboarding.onboardingComplete ? 'Core onboarding items are complete.' : (onboarding.missing || []).join(', ').replace(/_/g, ' '))
+              : 'Candidate can register, upload CVs, and apply for jobs without payroll onboarding.'}</p>
           </article>
           <article class="summary-tile">
-            <span>Onboarding</span>
-            <strong>${onboarding.onboardingComplete ? 'Ready' : 'Action needed'}</strong>
-            <p>${onboarding.onboardingComplete ? 'Core onboarding items are complete.' : (onboarding.missing || []).join(', ').replace(/_/g, ' ')}</p>
+            <span>Payroll details</span>
+            <strong>${payment.completion?.complete ? 'On file' : (onboardingMode ? 'Pending' : 'Not required yet')}</strong>
+            <p>${payment.completion?.complete ? `${payment.bankName || 'Bank'} · ${paymentReference(candidate)}` : (onboardingMode ? 'Bank details are still missing.' : 'Bank details are only collected for live assignment onboarding.')}</p>
           </article>
         </div>
         <div class="profile-grid">
+          <label class="drawer-field">
+            <span>Candidate path</span>
+            <select class="drawer-input" data-field="onboarding_mode">
+              <option value="false" ${onboardingMode ? '' : 'selected'}>Recruitment profile only</option>
+              <option value="true" ${onboardingMode ? 'selected' : ''}>Live assignment onboarding</option>
+            </select>
+          </label>
           ${editableField('First name', 'first_name', candidate.first_name)}
           ${editableField('Last name', 'last_name', candidate.last_name)}
           ${editableField('Email', 'email', candidate.email)}
@@ -1658,6 +1706,13 @@
           <div class="drawer-field"><span>Location</span><strong>${candidate.location || '—'}</strong></div>
           <div class="drawer-field"><span>Sector focus</span><strong>${candidate.sector_focus || '—'}</strong></div>
         </div>
+        ${(onboardingMode || candidate.emergency_name || candidate.emergency_phone) ? `
+          <div class="profile-grid" style="margin-top:12px">
+            ${editableField('Next of kin full name', 'emergency_name', candidate.emergency_name)}
+            ${editableField('Next of kin telephone number', 'emergency_phone', candidate.emergency_phone)}
+          </div>
+          <div class="muted" style="margin-top:6px;font-size:12px">Emergency contact details are only required for live assignment onboarding.</div>
+        ` : ''}
         <div style="margin-top:12px">
           <label class="muted" style="display:block;margin-bottom:4px">Skills / tags</label>
           <textarea data-field="skills" rows="2" class="drawer-input">${candidate.skills.join(', ')}</textarea>
@@ -1687,6 +1742,21 @@
   }
 
   function renderPayment(candidate) {
+    if (!candidateOnboardingMode(candidate)) {
+      return `
+        <div class="drawer-section">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0 0 4px">Payroll details</h3>
+              <div class="muted" style="font-size:13px">This section is only used when a candidate is completing live assignment onboarding.</div>
+            </div>
+            <span class="chip gray">Not required yet</span>
+          </div>
+          <div class="muted" style="margin-top:12px">
+            Recruitment-profile candidates can still register, upload CVs, and apply for jobs without payroll data. Switch the candidate path to live assignment onboarding when HMJ needs bank details for mobilisation.
+          </div>
+        </div>`;
+    }
     const payment = ensurePaymentDraft(candidate);
     const isIban = payment.paymentMethod === 'iban_swift';
     const helperMessage = payment.loadedSensitive
@@ -1701,7 +1771,7 @@
       <div class="drawer-section">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
           <div>
-            <h3 style="margin:0 0 4px">Bank / payment details</h3>
+            <h3 style="margin:0 0 4px">Payroll details</h3>
             <div class="muted" style="font-size:13px">${helperMessage}</div>
           </div>
           <div class="tag-row">

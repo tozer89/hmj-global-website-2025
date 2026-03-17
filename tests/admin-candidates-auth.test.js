@@ -12,7 +12,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
-  assert.match(html, /\/admin\/candidates\.js\?v=16/);
+  assert.match(html, /\/admin\/candidates\.js\?v=17/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
   assert.match(html, /id="bulk-doc-request"/);
@@ -76,6 +76,11 @@ test('candidate normalizer keeps synthetic display names out of persisted full_n
 test('candidate drawer includes admin payment editing plus typed document upload controls', () => {
   const source = read('admin/candidates.js');
   assert.match(source, /function renderPayment/);
+  assert.match(source, /Candidate path/);
+  assert.match(source, /Live onboarding/);
+  assert.match(source, /Recruitment profile/);
+  assert.match(source, /Next of kin full name/);
+  assert.match(source, /Next of kin telephone number/);
   assert.match(source, /admin-candidate-payment-details/);
   assert.match(source, /data-action="save-payment-details"/);
   assert.match(source, /data-action="load-payment-details"/);
@@ -147,6 +152,14 @@ test('candidate admin UI can switch between website, timesheet portal, and combi
   assert.match(source, /const websiteOnlyRows = websiteRows\.filter\(\(candidate\) => !candidate\?\.timesheet_portal_match\);/);
   assert.match(source, /const timesheetPortalOnlyRows = timesheetPortalRows\.filter\(\(candidate\) => !findWebsiteMatch\(candidate, websiteLookups\)\);/);
   assert.match(source, /const combinedRows = websiteRows\.concat\(timesheetPortalOnlyRows\);/);
+});
+
+test('candidate admin normalises and labels recruitment profile versus live onboarding mode', () => {
+  const source = read('admin/candidates.js');
+  assert.match(source, /function candidateOnboardingMode/);
+  assert.match(source, /onboarding_mode: candidateOnboardingMode\(row\)/);
+  assert.match(source, /Payroll onboarding starts only when HMJ marks a live placement/);
+  assert.match(source, /This section is only used when a candidate is completing live assignment onboarding/);
 });
 
 test('candidate admin UI exposes the document verification queue and review actions', () => {

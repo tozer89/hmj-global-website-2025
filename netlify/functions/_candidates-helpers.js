@@ -88,6 +88,7 @@ function toCandidate(row = {}) {
     country: row.country || 'United Kingdom',
     location: row.location || null,
     nationality: row.nationality || null,
+    onboarding_mode: normaliseBoolean(row.onboarding_mode ?? row.onboardingMode),
     right_to_work_status: row.right_to_work_status || null,
     right_to_work_regions: normaliseArray(row.right_to_work_regions || row.right_to_work_regions_csv || row.work_regions),
     primary_specialism: row.primary_specialism || null,

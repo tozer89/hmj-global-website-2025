@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   buildCandidatePortalDeepLink,
+  candidateRequiresOnboarding,
   normaliseDocumentType,
   summariseOnboarding,
 } = require('../netlify/functions/_candidate-onboarding.js');
@@ -15,19 +16,36 @@ test('normaliseDocumentType recognises onboarding document categories', () => {
   assert.equal(normaliseDocumentType('Reference'), 'reference');
 });
 
-test('summariseOnboarding flags missing RTW and payment details cleanly', () => {
-  const missing = summariseOnboarding({
+test('candidateRequiresOnboarding defaults to recruitment profile mode until explicitly enabled', () => {
+  assert.equal(candidateRequiresOnboarding({}), false);
+  assert.equal(candidateRequiresOnboarding({ onboarding_mode: true }), true);
+  assert.equal(candidateRequiresOnboarding({ onboarding_mode: 'true' }), true);
+});
+
+test('summariseOnboarding does not flag payroll blockers for recruitment-profile candidates', () => {
+  const profileOnly = summariseOnboarding({
     candidate: {},
     documents: [],
     paymentDetails: { completion: { complete: false } },
   });
 
-  assert.equal(missing.hasRightToWork, false);
-  assert.equal(missing.hasPaymentDetails, false);
+  assert.equal(profileOnly.onboardingMode, false);
+  assert.equal(profileOnly.hasRightToWork, false);
+  assert.equal(profileOnly.hasPaymentDetails, false);
+  assert.deepEqual(profileOnly.missing, []);
+  assert.equal(profileOnly.onboardingComplete, false);
+
+  const missing = summariseOnboarding({
+    candidate: { onboarding_mode: true },
+    documents: [],
+    paymentDetails: { completion: { complete: false } },
+  });
+
+  assert.equal(missing.onboardingMode, true);
   assert.deepEqual(missing.missing, ['right_to_work', 'payment_details']);
 
   const pendingVerification = summariseOnboarding({
-    candidate: {},
+    candidate: { onboarding_mode: true },
     documents: [{ document_type: 'passport' }],
     paymentDetails: { completion: { complete: true } },
   });
@@ -38,7 +56,7 @@ test('summariseOnboarding flags missing RTW and payment details cleanly', () => 
   assert.equal(pendingVerification.hasPaymentDetails, true);
 
   const complete = summariseOnboarding({
-    candidate: {},
+    candidate: { onboarding_mode: true },
     documents: [{ document_type: 'passport', meta: { verification_status: 'verified' } }],
     paymentDetails: { completion: { complete: true } },
   });

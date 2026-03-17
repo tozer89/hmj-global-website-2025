@@ -115,6 +115,14 @@ exports.handler = async (event = {}) => {
     const profileInput = body.candidate && typeof body.candidate === 'object' ? body.candidate : body;
     const applicationInput = body.application && typeof body.application === 'object' ? body.application : body;
     const paymentInput = body.payment_details && typeof body.payment_details === 'object' ? body.payment_details : null;
+    if (
+      profileInput
+      && typeof profileInput === 'object'
+      && profileInput.onboarding_mode === undefined
+      && profileInput.onboardingMode === undefined
+    ) {
+      profileInput.onboarding_mode = !!paymentInput;
+    }
 
     const candidateResult = await upsertCandidateProfile(supabase, profileInput, {
       authUser,

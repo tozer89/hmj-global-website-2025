@@ -401,6 +401,7 @@ import {
 
   const params = readAuthParams();
   const DASHBOARD_TABS = ['profile', 'applications', 'documents', 'payment', 'settings'];
+  const RECRUITMENT_PROFILE_TABS = DASHBOARD_TABS.filter((tab) => tab !== 'payment');
   const state = {
     hydrating: true,
     authAvailable: true,
@@ -568,7 +569,91 @@ import {
     };
   }
 
+  function normaliseBooleanFlag(value) {
+    if (typeof value === 'boolean') return value;
+    if (value === null || value === undefined || value === '') return false;
+    const text = trimText(value, 16).toLowerCase();
+    return text === 'true' || text === '1' || text === 'yes' || text === 'on';
+  }
+
+  function storedOnboardingMode(candidate = state.candidate) {
+    return normaliseBooleanFlag(candidate?.onboarding_mode ?? candidate?.onboardingMode);
+  }
+
+  function candidateOnboardingMode(candidate = state.candidate) {
+    return storedOnboardingMode(candidate) || state.onboardingPrompt || state.requestedDocuments.length > 0;
+  }
+
+  function dashboardTabsForCandidate(candidate = state.candidate) {
+    return candidateOnboardingMode(candidate) ? DASHBOARD_TABS : RECRUITMENT_PROFILE_TABS;
+  }
+
+  function resolveDashboardTab(candidate = state.candidate, requested = state.activeTab) {
+    const tabs = dashboardTabsForCandidate(candidate);
+    return tabs.includes(requested) ? requested : 'profile';
+  }
+
+  function dashboardTabLabel(tab) {
+    if (tab === 'payment') return 'Payroll details';
+    return tab.charAt(0).toUpperCase() + tab.slice(1);
+  }
+
+  function candidateModeLabel(candidate = state.candidate) {
+    return candidateOnboardingMode(candidate) ? 'Live assignment onboarding' : 'Recruitment profile';
+  }
+
+  function candidateModeDescription(candidate = state.candidate) {
+    return candidateOnboardingMode(candidate)
+      ? 'You are completing onboarding for a live HMJ placement. Provide your right-to-work, address, payroll, and emergency contact details so HMJ can prepare mobilisation and timesheet/payroll setup.'
+      : 'You can use your HMJ profile to apply for jobs and keep your CV and preferences up to date. Bank details and onboarding documents are only needed if you move forward with a live assignment.';
+  }
+
+  function emergencyContactComplete(candidate = state.candidate) {
+    return !!trimText(candidate?.emergency_name, 240) && !!trimText(candidate?.emergency_phone, 80);
+  }
+
+  function onboardingAddressComplete(candidate = state.candidate) {
+    return !!trimText(candidate?.address1, 240)
+      && !!trimText(candidate?.town, 160)
+      && !!trimText(candidate?.postcode, 32)
+      && !!trimText(candidate?.country, 120);
+  }
+
+  function onboardingChecklist(onboarding = onboardingSummary(), candidate = state.candidate) {
+    return [
+      {
+        label: 'Profile details completed',
+        complete: onboardingAddressComplete(candidate),
+      },
+      {
+        label: 'CV uploaded',
+        complete: (state.documents || []).some((documentRow) => String(documentRow?.document_type || '').toLowerCase() === 'cv'),
+      },
+      {
+        label: 'Right to work uploaded',
+        complete: onboarding.hasRightToWork || onboarding.hasRightToWorkUpload,
+      },
+      {
+        label: 'Address completed',
+        complete: onboardingAddressComplete(candidate),
+      },
+      {
+        label: 'Payroll details completed',
+        complete: onboarding.hasPayment,
+      },
+      {
+        label: 'Emergency contact added',
+        complete: emergencyContactComplete(candidate),
+      },
+      {
+        label: 'Ready for Timesheet Portal',
+        complete: onboarding.complete && emergencyContactComplete(candidate) && onboardingAddressComplete(candidate),
+      },
+    ];
+  }
+
   function onboardingSummary() {
+    const onboardingRequired = candidateOnboardingMode();
     const documentTypes = new Set((state.documents || []).map((documentRow) => String(documentRow.document_type || '').toLowerCase()));
     const hasRightToWork = documentTypes.has('right_to_work')
       || documentTypes.has('passport')
@@ -576,12 +661,14 @@ import {
       || !!trimText(state.candidate?.rtw_url, 2000);
     const hasPayment = state.paymentDetails?.completion?.complete === true;
     const missing = [];
-    if (!hasRightToWork) missing.push('right_to_work');
-    if (!hasPayment) missing.push('payment_details');
+    if (onboardingRequired && !hasRightToWork) missing.push('right_to_work');
+    if (onboardingRequired && !hasPayment) missing.push('payment_details');
     return {
+      onboardingRequired,
+      onboardingMode: onboardingRequired,
       hasRightToWork,
       hasPayment,
-      complete: missing.length === 0,
+      complete: onboardingRequired ? missing.length === 0 : false,
       missing,
     };
   }
@@ -855,15 +942,20 @@ import {
       : '';
     const profileSkills = Array.isArray(candidate.skills) ? candidate.skills.join(', ') : '';
     const verified = state.user?.email_confirmed_at ? 'Verified' : 'Check your inbox to verify';
-    const tabs = DASHBOARD_TABS;
     const completion = profileCompletion(candidate);
     const onboarding = onboardingSummary();
+    const onboardingMode = candidateOnboardingMode(candidate);
+    const activeTab = resolveDashboardTab(candidate, state.activeTab);
+    if (state.activeTab !== activeTab) {
+      state.activeTab = activeTab;
+    }
+    const tabs = dashboardTabsForCandidate(candidate);
     const paymentMethod = paymentDetails.paymentMethod || (paymentDetails.accountCurrency === 'GBP' ? 'gbp_local' : 'iban_swift');
     const showGbpFields = paymentMethod === 'gbp_local';
     const requestedDocFocus = state.requestedDocuments[0] || (state.requestedFocus === 'right_to_work' ? 'right_to_work' : '');
     const documentTypeSelection = requestedDocFocus || 'cv';
     const requestedDocsText = requestedDocumentListText(state.requestedDocuments);
-    const onboardingBanner = (!onboarding.complete || state.onboardingPrompt)
+    const onboardingBanner = onboardingMode && (!onboarding.complete || state.onboardingPrompt)
       ? `
         <div class="candidate-onboarding-banner">
           <div>
@@ -880,20 +972,79 @@ import {
         </div>
       `
       : '';
+    const dashboardStatusPanel = onboardingMode
+      ? `
+        <div class="candidate-inline-panel candidate-inline-panel--priority">
+          <strong>Live assignment onboarding</strong>
+          <p>${escapeHtml(candidateModeDescription(candidate))}</p>
+          <ul class="candidate-checklist">
+            ${onboardingChecklist(onboarding, candidate).map((item) => `
+              <li class="${item.complete ? 'is-complete' : 'is-pending'}">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${item.complete ? 'Done' : 'Needed'}</strong>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `
+      : `
+        <div class="candidate-inline-panel candidate-inline-panel--subtle">
+          <strong>Recruitment profile active</strong>
+          <p>${escapeHtml(candidateModeDescription(candidate))}</p>
+        </div>
+      `;
+    const recruitmentDocumentOptions = [
+      { value: 'cv', label: 'CV' },
+      { value: 'cover_letter', label: 'Cover letter' },
+      { value: 'qualification_certificate', label: 'Qualification / certificate' },
+      { value: 'reference', label: 'Reference' },
+      { value: 'other', label: 'Other' },
+    ];
+    const onboardingDocumentOptions = [
+      { value: 'passport', label: 'Passport' },
+      { value: 'right_to_work', label: 'Right to work' },
+      { value: 'visa_permit', label: 'Visa / permit' },
+      { value: 'bank_document', label: 'Bank document' },
+    ];
+    const documentOptions = onboardingMode
+      ? recruitmentDocumentOptions.concat(onboardingDocumentOptions)
+      : recruitmentDocumentOptions;
 
     const profilePane = `
-      <section class="candidate-dashboard-pane ${state.activeTab === 'profile' ? 'is-active' : ''}" data-dashboard-pane="profile">
+      <section class="candidate-dashboard-pane ${activeTab === 'profile' ? 'is-active' : ''}" data-dashboard-pane="profile">
         <div class="candidate-dashboard-card">
           <div class="candidate-dashboard-card__head">
             <h3>Profile</h3>
-            <p>Keep the details HMJ uses to represent you up to date, from address and mobility through to sector fit and availability.</p>
+            <p>${onboardingMode
+              ? 'Keep your core profile, onboarding, and mobilisation details current in one place.'
+              : 'Keep the details HMJ uses to represent you up to date, from your CV and role focus through to location and availability.'}</p>
           </div>
+          ${dashboardStatusPanel}
           <div class="candidate-inline-panel">
             <strong>Profile completion</strong>
             <p>${completion.completed} of ${completion.total} profile areas completed. Adding the missing detail helps recruiters assess fit faster.</p>
             <div class="candidate-meter" aria-hidden="true"><span style="width:${completion.percent}%"></span></div>
           </div>
           <form class="candidate-dashboard-form" data-dashboard-form="profile">
+            <div class="candidate-dashboard-form__section-title candidate-dashboard-form__full">Portal path</div>
+            <fieldset class="candidate-mode-selector candidate-dashboard-form__full">
+              <legend>Are you completing onboarding for a live HMJ placement?</legend>
+              <p class="candidate-field-help">Only select Yes if you have already agreed a live role or have been asked by HMJ to complete onboarding. If you are only registering to apply for jobs, leave this set to No.</p>
+              <label class="candidate-mode-option">
+                <input type="radio" name="onboarding_mode" value="false" ${onboardingMode ? '' : 'checked'}>
+                <span>
+                  <strong>No — I’m just creating my recruitment profile</strong>
+                  <small>Use your HMJ account for job applications, CV storage, and profile updates.</small>
+                </span>
+              </label>
+              <label class="candidate-mode-option">
+                <input type="radio" name="onboarding_mode" value="true" ${onboardingMode ? 'checked' : ''}>
+                <span>
+                  <strong>Yes — I’ve agreed a live role and need to complete onboarding</strong>
+                  <small>HMJ will use this to collect the right-to-work, payroll, address, and emergency contact details needed for mobilisation.</small>
+                </span>
+              </label>
+            </fieldset>
             <div class="candidate-dashboard-form__section-title candidate-dashboard-form__full">Core contact details</div>
             <label>Full name
               <input type="text" name="name" value="${escapeHtml(fullName)}" required>
@@ -928,13 +1079,6 @@ import {
             </label>
             <label>Nationality
               <input type="text" name="nationality" value="${escapeHtml(candidate.nationality || '')}" placeholder="Nationality">
-            </label>
-            <label>Right to work status
-              <input type="text" name="right_to_work_status" value="${escapeHtml(candidate.right_to_work_status || '')}" placeholder="Full right to work already in place">
-            </label>
-            <label class="candidate-dashboard-form__full">Right to work regions
-              <input type="text" name="right_to_work_regions" value="${escapeHtml(Array.isArray(candidate.right_to_work_regions) ? candidate.right_to_work_regions.join(', ') : '')}" placeholder="United Kingdom, European Union / EEA">
-              <span class="candidate-field-help">Separate regions with commas.</span>
             </label>
             <div class="candidate-dashboard-form__section-title candidate-dashboard-form__full">Recruitment profile</div>
             <label>Primary specialism
@@ -976,8 +1120,28 @@ import {
             <label class="candidate-dashboard-form__full">Summary
               <textarea name="summary" rows="6" placeholder="Tell HMJ about your current focus, preferred rotations and the sites that fit best.">${escapeHtml(candidate.summary || '')}</textarea>
             </label>
+            ${onboardingMode ? `
+              <div class="candidate-dashboard-form__section-title candidate-dashboard-form__full">Live assignment onboarding</div>
+              <label>Right to work status
+                <input type="text" name="right_to_work_status" value="${escapeHtml(candidate.right_to_work_status || '')}" placeholder="Full right to work already in place">
+              </label>
+              <label class="candidate-dashboard-form__full">Right to work regions
+                <input type="text" name="right_to_work_regions" value="${escapeHtml(Array.isArray(candidate.right_to_work_regions) ? candidate.right_to_work_regions.join(', ') : '')}" placeholder="United Kingdom, European Union / EEA">
+                <span class="candidate-field-help">Separate regions with commas.</span>
+              </label>
+              <div class="candidate-inline-panel candidate-inline-panel--subtle candidate-dashboard-form__full">
+                <strong>Emergency contact (next of kin)</strong>
+                <p>Provide a contact HMJ can reach in case of emergency while you are on assignment.</p>
+              </div>
+              <label>Next of kin full name
+                <input type="text" name="emergency_name" value="${escapeHtml(candidate.emergency_name || '')}" placeholder="Emergency contact full name">
+              </label>
+              <label>Next of kin telephone number
+                <input type="tel" name="emergency_phone" value="${escapeHtml(candidate.emergency_phone || '')}" placeholder="+44 7…">
+              </label>
+            ` : ''}
             <div class="candidate-dashboard-actions candidate-dashboard-form__full">
-              <button class="candidate-portal-btn" type="submit" ${state.dashboardBusy ? 'disabled' : ''}>${state.dashboardBusy && state.activeTab === 'profile' ? 'Saving…' : 'Save profile'}</button>
+              <button class="candidate-portal-btn" type="submit" ${state.dashboardBusy ? 'disabled' : ''}>${state.dashboardBusy && activeTab === 'profile' ? 'Saving…' : 'Save profile'}</button>
               <span class="candidate-field-help">We only update your candidate record after you press save.</span>
             </div>
           </form>
@@ -986,7 +1150,7 @@ import {
     `;
 
     const applicationsPane = `
-      <section class="candidate-dashboard-pane ${state.activeTab === 'applications' ? 'is-active' : ''}" data-dashboard-pane="applications">
+      <section class="candidate-dashboard-pane ${activeTab === 'applications' ? 'is-active' : ''}" data-dashboard-pane="applications">
         <div class="candidate-dashboard-card">
           <div class="candidate-dashboard-card__head">
             <h3>Applications</h3>
@@ -1027,13 +1191,15 @@ import {
     `;
 
     const documentsPane = `
-      <section class="candidate-dashboard-pane ${state.activeTab === 'documents' ? 'is-active' : ''}" data-dashboard-pane="documents">
+      <section class="candidate-dashboard-pane ${activeTab === 'documents' ? 'is-active' : ''}" data-dashboard-pane="documents">
         <div class="candidate-dashboard-card">
           <div class="candidate-dashboard-card__head">
             <h3>Documents</h3>
-            <p>Upload your CV, passport, visa, and other supporting documents into your private candidate area.</p>
+            <p>${onboardingMode
+              ? 'Upload recruitment documents and the onboarding evidence HMJ has requested for your live placement.'
+              : 'Upload your CV, cover letter, qualifications, and other recruitment profile documents into your private candidate area.'}</p>
           </div>
-          ${(!onboarding.hasRightToWork || state.requestedFocus === 'right_to_work')
+          ${onboardingMode && (!onboarding.hasRightToWork || state.requestedFocus === 'right_to_work')
             ? `<div class="candidate-inline-panel candidate-inline-panel--priority">
                 <strong>Right-to-work documents needed</strong>
                 <p>Upload your passport, visa, permit, or right-to-work evidence here so HMJ can complete onboarding.</p>
@@ -1046,20 +1212,21 @@ import {
               </div>`
             : ''}
           <div class="candidate-inline-panel candidate-inline-panel--subtle">
+            <strong>${onboardingMode ? 'Recruitment and onboarding documents' : 'Recruitment profile documents'}</strong>
+            <p>${onboardingMode
+              ? 'Use CV, cover letter, qualification, and reference types for your recruitment profile. Use Passport, Right to work, Visa / permit, and Bank document only when HMJ has asked you to complete onboarding.'
+              : 'Use this area for your CV, cover letter, qualifications, and supporting documents. Right-to-work and payroll documents are only needed if HMJ asks you to complete live onboarding.'}</p>
+          </div>
+          <div class="candidate-inline-panel candidate-inline-panel--subtle">
             <strong>Accepted files</strong>
-            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB. Use Passport, Right to work, or Visa / permit for onboarding evidence.</p>
+            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB.</p>
           </div>
           <form class="candidate-dashboard-form candidate-dashboard-form--documents" data-dashboard-form="documents">
             <label>Document type
               <select name="document_type" required>
-                <option value="cv" ${documentTypeSelection === 'cv' ? 'selected' : ''}>CV</option>
-                <option value="passport" ${documentTypeSelection === 'passport' ? 'selected' : ''}>Passport</option>
-                <option value="right_to_work" ${documentTypeSelection === 'right_to_work' ? 'selected' : ''}>Right to work</option>
-                <option value="visa_permit" ${documentTypeSelection === 'visa_permit' ? 'selected' : ''}>Visa / permit</option>
-                <option value="qualification_certificate" ${documentTypeSelection === 'qualification_certificate' ? 'selected' : ''}>Qualification / certificate</option>
-                <option value="reference" ${documentTypeSelection === 'reference' ? 'selected' : ''}>Reference</option>
-                <option value="bank_document" ${documentTypeSelection === 'bank_document' ? 'selected' : ''}>Bank document</option>
-                <option value="other">Other</option>
+                ${documentOptions.map((option) => `
+                  <option value="${option.value}" ${documentTypeSelection === option.value ? 'selected' : ''}>${option.label}</option>
+                `).join('')}
               </select>
             </label>
             <label>Label
@@ -1104,11 +1271,11 @@ import {
       </section>
     `;
 
-    const paymentPane = `
-      <section class="candidate-dashboard-pane ${state.activeTab === 'payment' ? 'is-active' : ''}" data-dashboard-pane="payment">
+    const paymentPane = onboardingMode ? `
+      <section class="candidate-dashboard-pane ${activeTab === 'payment' ? 'is-active' : ''}" data-dashboard-pane="payment">
         <div class="candidate-dashboard-card">
           <div class="candidate-dashboard-card__head">
-            <h3>Payment details</h3>
+            <h3>Payroll details</h3>
             <p>HMJ uses this secure area to collect payroll-ready bank details during onboarding.</p>
           </div>
           <div class="candidate-inline-panel candidate-inline-panel--subtle">
@@ -1186,10 +1353,10 @@ import {
           </form>
         </div>
       </section>
-    `;
+    ` : '';
 
     const settingsPane = `
-      <section class="candidate-dashboard-pane ${state.activeTab === 'settings' ? 'is-active' : ''}" data-dashboard-pane="settings">
+      <section class="candidate-dashboard-pane ${activeTab === 'settings' ? 'is-active' : ''}" data-dashboard-pane="settings">
         <div class="candidate-dashboard-grid candidate-dashboard-grid--settings">
           <article class="candidate-dashboard-card">
             <div class="candidate-dashboard-card__head">
@@ -1253,12 +1420,13 @@ import {
             <div class="candidate-dashboard-hero__status">
               <span class="candidate-hero-chip">${escapeHtml(verified)}</span>
               <span class="candidate-hero-chip">Profile ${completion.percent}% complete</span>
+              <span class="candidate-hero-chip">${escapeHtml(candidateModeLabel(candidate))}</span>
             </div>
           </div>
           <div class="candidate-dashboard-hero__meta">
             <span class="candidate-dashboard-stat"><strong>${applications.length}</strong><span>Applications</span></span>
             <span class="candidate-dashboard-stat"><strong>${documents.length}</strong><span>Documents</span></span>
-            <span class="candidate-dashboard-stat"><strong>${onboarding.complete ? 'Ready' : 'Action needed'}</strong><span>Onboarding</span></span>
+            <span class="candidate-dashboard-stat"><strong>${onboardingMode ? (onboarding.complete ? 'Ready' : 'Action needed') : 'Active'}</strong><span>${onboardingMode ? 'Onboarding' : 'Recruitment profile'}</span></span>
             <a class="candidate-portal-btn candidate-portal-btn--ghost" href="/jobs.html">Browse jobs</a>
             <button class="candidate-portal-btn candidate-portal-btn--subtle" type="button" data-dashboard-action="signout">Sign out</button>
           </div>
@@ -1268,7 +1436,7 @@ import {
         <div class="candidate-dashboard-layout">
           <nav class="candidate-dashboard-nav" aria-label="Candidate dashboard sections">
             ${tabs.map((tab) => `
-              <button type="button" class="candidate-dashboard-nav__item ${state.activeTab === tab ? 'is-active' : ''}" data-dashboard-tab="${tab}">${escapeHtml(tab.charAt(0).toUpperCase() + tab.slice(1))}</button>
+              <button type="button" class="candidate-dashboard-nav__item ${activeTab === tab ? 'is-active' : ''}" data-dashboard-tab="${tab}">${escapeHtml(dashboardTabLabel(tab))}</button>
             `).join('')}
           </nav>
           <div class="candidate-dashboard-content">
@@ -1484,6 +1652,7 @@ import {
       message: formData.get('message'),
       skills: normaliseSkillList(formData.get('skills')),
       source_submission_id: submissionId,
+      onboarding_mode: !!paymentDetails,
     };
 
     return {
@@ -1625,11 +1794,25 @@ import {
         render();
         const name = trimText(formData.get('name'), 240);
         const linkedinUrl = trimText(formData.get('linkedin_url'), 500);
+        const onboardingMode = normaliseBooleanFlag(formData.get('onboarding_mode'));
+        const emergencyName = trimText(formData.get('emergency_name'), 240);
+        const emergencyPhone = trimText(formData.get('emergency_phone'), 80);
         if (!name) {
           throw new Error('Please enter your name before saving.');
         }
         if (linkedinUrl && !/^https?:\/\//i.test(linkedinUrl)) {
           throw new Error('Please enter your LinkedIn URL in full, for example https://linkedin.com/in/your-name.');
+        }
+        if (onboardingMode) {
+          if (!trimText(formData.get('address1'), 240) || !trimText(formData.get('town'), 160) || !trimText(formData.get('postcode'), 32) || !trimText(formData.get('country'), 120)) {
+            throw new Error('Add your address details before saving live assignment onboarding.');
+          }
+          if (!emergencyName || !emergencyPhone) {
+            throw new Error('Add your emergency contact name and phone number before saving live assignment onboarding.');
+          }
+          if (emergencyPhone.replace(/\D/g, '').length < 7) {
+            throw new Error('Enter a valid emergency contact telephone number.');
+          }
         }
         const saved = await saveCandidateProfile({
           name,
@@ -1657,6 +1840,9 @@ import {
           salary_expectation: formData.get('salary_expectation'),
           linkedin_url: linkedinUrl,
           summary: formData.get('summary'),
+          onboarding_mode: onboardingMode,
+          emergency_name: emergencyName,
+          emergency_phone: emergencyPhone,
         });
         state.candidate = saved;
         state.authMessage = { tone: 'success', text: 'Profile saved. HMJ will now see the updated version.' };

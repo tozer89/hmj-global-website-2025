@@ -235,6 +235,16 @@ function normaliseSalaryExpectationUnit(value) {
   return ['annual', 'daily', 'hourly'].includes(raw) ? raw : '';
 }
 
+function normaliseBooleanFlag(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'boolean') return value;
+  const text = trimText(value, 16).toLowerCase();
+  if (!text) return null;
+  if (['1', 'true', 'yes', 'on'].includes(text)) return true;
+  if (['0', 'false', 'no', 'off'].includes(text)) return false;
+  return null;
+}
+
 function salaryExpectationSuffix(unit) {
   if (unit === 'hourly') return 'per hour';
   if (unit === 'daily') return 'per day';
@@ -601,6 +611,16 @@ function buildCandidateProfilePayload(input = {}, options = {}) {
     ) || null,
     updated_at: new Date().toISOString(),
   };
+
+  if (Object.prototype.hasOwnProperty.call(input, 'onboarding_mode') || Object.prototype.hasOwnProperty.call(input, 'onboardingMode')) {
+    payload.onboarding_mode = normaliseBooleanFlag(input.onboarding_mode ?? input.onboardingMode);
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'emergency_name') || Object.prototype.hasOwnProperty.call(input, 'next_of_kin_name')) {
+    payload.emergency_name = trimText(input.emergency_name || input.next_of_kin_name, 240) || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'emergency_phone') || Object.prototype.hasOwnProperty.call(input, 'next_of_kin_phone')) {
+    payload.emergency_phone = trimText(input.emergency_phone || input.next_of_kin_phone, 80) || null;
+  }
 
   if (options.includeCreatedAt) {
     payload.created_at = new Date().toISOString();

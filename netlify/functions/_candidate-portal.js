@@ -139,6 +139,16 @@ function normaliseSalaryExpectationUnit(value) {
   return ['annual', 'daily', 'hourly'].includes(raw) ? raw : null;
 }
 
+function normaliseBooleanFlag(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'boolean') return value;
+  const text = String(value).trim().toLowerCase();
+  if (!text) return null;
+  if (['1', 'true', 'yes', 'on'].includes(text)) return true;
+  if (['0', 'false', 'no', 'off'].includes(text)) return false;
+  return null;
+}
+
 function salaryExpectationSuffix(unit) {
   if (unit === 'hourly') return 'per hour';
   if (unit === 'daily') return 'per day';
@@ -265,6 +275,11 @@ function buildCandidateWritePayload(input = {}, options = {}) {
     trimString(pickFirst(input.right_to_work_status, input.work_authorisation_status), 240),
     { hasValue: hasOwn(input, 'right_to_work_status') || hasOwn(input, 'work_authorisation_status') }
   );
+  assign(
+    'onboarding_mode',
+    normaliseBooleanFlag(pickFirst(input.onboarding_mode, input.onboardingMode)),
+    { hasValue: hasOwn(input, 'onboarding_mode') || hasOwn(input, 'onboardingMode') }
+  );
   const rightToWorkRegions = normaliseTextList(
     pickFirst(input.right_to_work_regions, input.right_to_work),
     120
@@ -361,6 +376,16 @@ function buildCandidateWritePayload(input = {}, options = {}) {
     'linkedin_url',
     trimString(pickFirst(input.linkedin_url, input.linkedin), 500),
     { hasValue: hasOwn(input, 'linkedin_url') || hasOwn(input, 'linkedin') }
+  );
+  assign(
+    'emergency_name',
+    trimString(pickFirst(input.emergency_name, input.next_of_kin_name), 240),
+    { hasValue: hasOwn(input, 'emergency_name') || hasOwn(input, 'next_of_kin_name') }
+  );
+  assign(
+    'emergency_phone',
+    trimString(pickFirst(input.emergency_phone, input.next_of_kin_phone), 80),
+    { hasValue: hasOwn(input, 'emergency_phone') || hasOwn(input, 'next_of_kin_phone') }
   );
   assign(
     'summary',
