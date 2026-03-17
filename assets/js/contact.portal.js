@@ -18,11 +18,15 @@ import {
   const quickApplyToggleForm = document.getElementById('candidateQuickApplyToggleForm');
   const fullApplicationCard = document.getElementById('fullApplicationCard');
   const quickApplyCore = window.HMJContactQuickApply;
+  const applicationDocumentsEndpoint = '/.netlify/functions/contact-application-documents';
+  const submitButton = form?.querySelector('button[type="submit"]');
+  const defaultSubmitButtonLabel = trimText(submitButton?.textContent, 120) || 'Submit Application';
 
   if (!form) return;
 
   const state = {
     backgroundSyncSent: false,
+    formSubmitBusy: false,
     quickApplyBusy: false,
     quickApplyReady: false,
     snapshot: null,
@@ -56,6 +60,18 @@ import {
     return trimText(form.elements?.[name]?.value, 500);
   }
 
+  function ensureHiddenField(name, value) {
+    if (!name) return;
+    let input = form.querySelector(`input[type="hidden"][name="${name.replace(/"/g, '\\"')}"]`);
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      form.appendChild(input);
+    }
+    input.value = value == null ? '' : String(value);
+  }
+
   function getJobContextFromForm() {
     return {
       title: getFieldValue('job_title') || getFieldValue('role'),
@@ -69,6 +85,214 @@ import {
       source: getFieldValue('job_source'),
       specUrl: getFieldValue('job_spec_url'),
     };
+  }
+
+  function setSubmitBusy(busy) {
+    if (!submitButton) return;
+    submitButton.disabled = !!busy;
+    submitButton.textContent = busy ? 'Submitting…' : defaultSubmitButtonLabel;
+  }
+
+  function inferApplicationDocumentType(fieldName, fileName = '') {
+    const raw = `${trimText(fieldName, 120) || ''} ${trimText(fileName, 280) || ''}`.toLowerCase();
+    if (!raw) return 'cv';
+    if (/\b(cv|resume)\b/.test(raw)) return 'cv';
+    if (/cover[\s_-]?letter/.test(raw)) return 'cover_letter';
+    if (/\bpassport\b/.test(raw)) return 'passport';
+    if (/right[\s_-]?to[\s_-]?work|share[\s_-]?code/.test(raw)) return 'right_to_work';
+    if (/\b(reference|references|referee)\b/.test(raw)) return 'reference';
+    if (/\b(visa|permit|brp|residence)\b/.test(raw)) return 'visa_permit';
+    if (/\b(cert|certificate|certification|qualification|ticket|card)\b/.test(raw)) return 'qualification_certificate';
+    if (/\b(bank|void cheque|void check)\b/.test(raw)) return 'bank_document';
+    return 'other';
+  }
+
+  function inferApplicationDocumentLabel(fieldName, fileName = '') {
+    const type = inferApplicationDocumentType(fieldName, fileName);
+    if (type === 'cv') return 'CV';
+    if (type === 'cover_letter') return 'Cover letter';
+    return trimText(fileName, 240) || 'Supporting document';
+  }
+
+  function listApplicationDocumentsFromForm() {
+    const fileInputs = Array.from(form.querySelectorAll('input[type="file"][name]'));
+    const documents = [];
+    fileInputs.forEach((input) => {
+      const fieldName = trimText(input.name, 120);
+      const files = Array.from(input.files || []);
+      files.forEach((file) => {
+        if (!(file instanceof File) || !file.name || !file.size) return;
+        documents.push({
+          fieldName,
+          file,
+          documentType: inferApplicationDocumentType(fieldName, file.name),
+          label: inferApplicationDocumentLabel(fieldName, file.name),
+        });
+      });
+    });
+    return documents;
+  }
+
+  async function applicationDocumentsRequest(payload) {
+    const response = await fetch(applicationDocumentsEndpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+      credentials: 'same-origin',
+      keepalive: true,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.ok === false) {
+      const error = new Error(data?.message || data?.error || 'Application document sync failed.');
+      error.status = response.status;
+      error.details = data;
+      throw error;
+    }
+    return data;
+  }
+
+  async function reportPublicApplicationDocumentFailure(context, documentRow, error) {
+    if (!context?.candidateId || !context?.submissionId || !documentRow?.file) return;
+    try {
+      await applicationDocumentsRequest({
+        action: 'report_failure',
+        candidate_id: context.candidateId,
+        application_id: context.applicationId || null,
+        submission_id: context.submissionId,
+        file_name: trimText(documentRow.file.name, 280) || 'Document',
+        mime_type: trimText(documentRow.file.type, 120) || null,
+        size_bytes: Number(documentRow.file.size || 0) || 0,
+        field_name: documentRow.fieldName,
+        document_type: documentRow.documentType,
+        label: documentRow.label,
+        error_message: trimText(error?.message, 500) || 'Public application document ingestion failed.',
+      });
+    } catch (reportError) {
+      console.warn('[contact.portal] application document failure reporting failed', reportError?.message || reportError);
+    }
+  }
+
+  async function persistPublicApplicationDocuments(context, documents) {
+    if (!context?.candidateId || !context?.submissionId || !Array.isArray(documents) || !documents.length) {
+      return [];
+    }
+
+    let client = null;
+    try {
+      ({ client } = await getCandidatePortalContext());
+    } catch (error) {
+      for (const documentRow of documents) {
+        await reportPublicApplicationDocumentFailure(context, documentRow, error);
+      }
+      throw error;
+    }
+
+    if (!client?.storage?.from) {
+      const error = new Error('The candidate document client is unavailable.');
+      for (const documentRow of documents) {
+        await reportPublicApplicationDocumentFailure(context, documentRow, error);
+      }
+      throw error;
+    }
+
+    const uploaded = [];
+    for (const documentRow of documents) {
+      try {
+        const prepared = await applicationDocumentsRequest({
+          action: 'prepare_upload',
+          candidate_id: context.candidateId,
+          application_id: context.applicationId || null,
+          submission_id: context.submissionId,
+          file_name: trimText(documentRow.file?.name, 280) || 'document',
+          mime_type: trimText(documentRow.file?.type, 120) || null,
+          size_bytes: Number(documentRow.file?.size || 0) || 0,
+          field_name: documentRow.fieldName,
+          document_type: documentRow.documentType,
+          label: documentRow.label,
+        });
+
+        const uploadTarget = prepared?.upload || {};
+        const uploadBucket = trimText(uploadTarget.bucket, 120) || 'candidate-docs';
+        const uploadPath = trimText(uploadTarget.path, 500) || '';
+        const uploadToken = trimText(uploadTarget.token, 2000) || '';
+        if (!uploadPath || !uploadToken) {
+          throw new Error('A secure upload path could not be prepared for this document.');
+        }
+
+        const upload = await client
+          .storage
+          .from(uploadBucket)
+          .uploadToSignedUrl(uploadPath, uploadToken, documentRow.file, {
+            cacheControl: '3600',
+            contentType: trimText(documentRow.file?.type, 120) || undefined,
+          });
+
+        if (upload.error) {
+          throw upload.error;
+        }
+
+        const finalized = await applicationDocumentsRequest({
+          action: 'finalize_upload',
+          candidate_id: context.candidateId,
+          application_id: context.applicationId || null,
+          submission_id: context.submissionId,
+          storage_path: uploadPath,
+          file_name: trimText(documentRow.file?.name, 280) || 'document',
+          mime_type: trimText(documentRow.file?.type, 120) || null,
+          size_bytes: Number(documentRow.file?.size || 0) || 0,
+          field_name: documentRow.fieldName,
+          document_type: documentRow.documentType,
+          label: documentRow.label,
+        });
+
+        uploaded.push(finalized?.document || null);
+      } catch (error) {
+        console.warn('[contact.portal] public application document persistence failed', error?.message || error);
+        await reportPublicApplicationDocumentFailure(context, documentRow, error);
+      }
+    }
+
+    return uploaded.filter(Boolean);
+  }
+
+  async function syncFullApplicationSubmission() {
+    const payload = serialiseForm();
+    const documents = listApplicationDocumentsFromForm();
+    const submissionId = quickApplySubmissionId();
+    payload.submission_id = submissionId;
+    if (payload.candidate) {
+      payload.candidate.source_submission_id = submissionId;
+    }
+    if (payload.application) {
+      payload.application.source_submission_id = submissionId;
+    }
+
+    let syncResult = null;
+    try {
+      syncResult = await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
+    } catch (error) {
+      console.warn('[contact.portal] background application sync failed', error?.message || error);
+      return { submissionId, syncResult: null };
+    }
+
+    if (syncResult?.candidateId) {
+      ensureHiddenField('candidate_id', syncResult.candidateId);
+    }
+    if (syncResult?.applicationId) {
+      ensureHiddenField('application_id', syncResult.applicationId);
+    }
+    ensureHiddenField('source_submission_id', submissionId);
+    ensureHiddenField('candidate_apply_mode', 'full_form');
+
+    if (documents.length && syncResult?.candidateId) {
+      await persistPublicApplicationDocuments({
+        candidateId: syncResult.candidateId,
+        applicationId: syncResult.applicationId || null,
+        submissionId,
+      }, documents);
+    }
+
+    return { submissionId, syncResult };
   }
 
   function setQuickApplyStatus(message, tone = '') {
@@ -403,22 +627,19 @@ import {
     }
   }
 
-  form.addEventListener('submit', () => {
-    if (!form.checkValidity() || state.backgroundSyncSent) return;
+  form.addEventListener('submit', async (event) => {
+    if (!form.checkValidity() || state.backgroundSyncSent || state.formSubmitBusy) return;
+    event.preventDefault();
+    state.backgroundSyncSent = true;
+    state.formSubmitBusy = true;
+    setSubmitBusy(true);
+
     try {
-      state.backgroundSyncSent = true;
-      const payload = serialiseForm();
-      const submissionId = quickApplySubmissionId();
-      payload.submission_id = submissionId;
-      if (payload.candidate) {
-        payload.candidate.source_submission_id = submissionId;
-      }
-      if (payload.application) {
-        payload.application.source_submission_id = submissionId;
-      }
-      void backgroundSyncCandidatePayload(payload);
+      await syncFullApplicationSubmission();
     } catch (error) {
-      // Never allow background portal sync errors to interrupt the Netlify form submit.
+      console.warn('[contact.portal] full application submission sync failed', error?.message || error);
+    } finally {
+      HTMLFormElement.prototype.submit.call(form);
     }
   });
 
