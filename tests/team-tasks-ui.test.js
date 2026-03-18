@@ -9,7 +9,7 @@ function read(relPath) {
 
 test('team tasks admin page exposes assignment email controls, planner upgrades, and quick-add aids', () => {
   const html = read('admin/team-tasks.html');
-  assert.match(html, /team-tasks\.js\?v=4/);
+  assert.match(html, /team-tasks\.js\?v=5/);
   assert.match(html, /settingAssignmentEmails/);
   assert.match(html, /emailStatusDetail/);
   assert.match(html, /sendAssignmentEmailBtn/);
@@ -45,6 +45,8 @@ test('team tasks client wires assignment emails, planner interactions, and guide
   assert.match(source, /setPlannerDensity/);
   assert.match(source, /setPlannerExpansionForVisibleDays/);
   assert.match(source, /renderOperationsPanels/);
+  assert.doesNotMatch(source, /description:\s*trimText\(els\.quickDescription\.value,\s*5000\)/);
+  assert.doesNotMatch(source, /payload\.description\s*=\s*trimText\(els\.detailDescription\.value,\s*5000\)/);
 });
 
 test('team tasks backend uses shared email config and new send endpoint', () => {

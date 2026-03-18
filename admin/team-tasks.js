@@ -2764,7 +2764,7 @@
     const assignedMember = findMemberByKey(assignedKey);
     return {
       title: trimText(els.quickTitle.value, 180),
-      description: trimText(els.quickDescription.value, 5000),
+      description: trimText(els.quickDescription.value),
       priority: PRIORITY_LABELS[els.quickPriority.value] ? els.quickPriority.value : state.settings.defaultPriority,
       assigned_to: assignedKey || null,
       assigned_to_email: lowerEmail(assignedMember?.email) || null,
@@ -2870,7 +2870,7 @@
     };
     if (canEditSource) {
       payload.title = trimText(els.detailTitle.value, 180);
-      payload.description = trimText(els.detailDescription.value, 5000);
+      payload.description = trimText(els.detailDescription.value);
       payload.linked_module = trimText(els.detailLinkedModule.value, 120) || null;
       payload.linked_url = trimText(els.detailLinkedUrl.value, 500) || null;
       payload.tags = parseTags(els.detailTags.value);
