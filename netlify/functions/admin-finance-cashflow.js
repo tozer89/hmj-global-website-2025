@@ -26,7 +26,7 @@ function json(statusCode, payload) {
   };
 }
 
-async function buildPayload(event, scenarioKey = 'base') {
+async function buildPayload(event, scenarioKey = 'base', scenarioPreset = 'base') {
   const schema = await getFinanceSchemaStatus(event);
   const connection = schema.ready ? await readFinanceConnection(event).catch(() => null) : null;
   const qbo = buildQboDiagnostics(event, connection, schema.ready);
@@ -41,7 +41,10 @@ async function buildPayload(event, scenarioKey = 'base') {
   }
 
   const state = await readCashflowState(event, scenarioKey);
-  const forecast = buildCashflowForecast(state);
+  const forecast = buildCashflowForecast({
+    ...state,
+    scenarioPreset,
+  });
   return {
     ok: true,
     schema,
@@ -58,7 +61,8 @@ module.exports.handler = withAdminCors(async (event, context) => {
 
   if (method === 'GET') {
     const scenarioKey = (event.queryStringParameters && event.queryStringParameters.scenario) || 'base';
-    return json(200, await buildPayload(event, scenarioKey));
+    const scenarioPreset = (event.queryStringParameters && event.queryStringParameters.preset) || 'base';
+    return json(200, await buildPayload(event, scenarioKey, scenarioPreset));
   }
 
   const schema = await getFinanceSchemaStatus(event);
@@ -98,5 +102,6 @@ module.exports.handler = withAdminCors(async (event, context) => {
   }
 
   const scenarioKey = input.scenario_key || input.scenarioKey || payload.scenario || 'base';
-  return json(200, await buildPayload(event, scenarioKey));
+  const scenarioPreset = payload.preset || 'base';
+  return json(200, await buildPayload(event, scenarioKey, scenarioPreset));
 });

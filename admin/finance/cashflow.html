@@ -84,6 +84,67 @@
     </section>
 
     <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Scenario lens</p>
+            <h2>Commercial stress testing</h2>
+          </div>
+          <p class="finance-muted" id="cashflowScenarioMeta">Use preset lenses to pressure-test delays, payroll drag, and funding terms without overwriting the base working forecast.</p>
+        </div>
+        <div class="finance-preset-strip" id="cashflowPresetStrip" aria-label="Cashflow scenario presets"></div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Visuals</p>
+            <h2>Cash curve and weekly movement</h2>
+          </div>
+          <p class="finance-muted">The line graph tracks weekly closing cash. The bar view shows inflows versus outflows so payroll strain, late receipts, and funding releases stand out.</p>
+        </div>
+        <div class="finance-chart-grid">
+          <section class="finance-data-block">
+            <p class="finance-eyebrow">Closing cash</p>
+            <h3>13-week cash curve</h3>
+            <div id="cashBalanceChart" class="finance-chart-shell" aria-label="Closing cash line chart"></div>
+          </section>
+          <section class="finance-data-block">
+            <p class="finance-eyebrow">Movement</p>
+            <h3>Inflows and outflows by week</h3>
+            <div id="cashFlowBars" class="finance-chart-shell" aria-label="Weekly inflow and outflow bars"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Commercial insights</p>
+            <h2>Warnings and commentary</h2>
+          </div>
+          <p class="finance-muted">Built for HMJ-style weekly decision making: payroll cover, debtor concentration, overdue receipts, retention locked, and likely pressure points.</p>
+        </div>
+        <div class="finance-insight-grid">
+          <section class="finance-data-block">
+            <p class="finance-eyebrow">Commentary</p>
+            <h3>Forecast narrative</h3>
+            <div class="finance-list" id="cashflowCommentary"></div>
+          </section>
+          <section class="finance-data-block">
+            <p class="finance-eyebrow">Customer exposure</p>
+            <h3>Receipt concentration</h3>
+            <div class="finance-list" id="cashflowExposure"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
       <div class="finance-panel__inner finance-split">
         <div>
           <div class="finance-section-head">
@@ -158,6 +219,26 @@
                 <label class="finance-field">
                   <span>EUR to GBP rate</span>
                   <input name="eur_to_gbp_rate" type="number" step="0.0001"/>
+                </label>
+                <label class="finance-field">
+                  <span>Minimum cash buffer</span>
+                  <input name="minimum_cash_buffer" type="number" step="0.01"/>
+                </label>
+                <label class="finance-field">
+                  <span>Payroll cover warning (weeks)</span>
+                  <input name="payroll_cover_warning_weeks" type="number" step="0.1"/>
+                </label>
+                <label class="finance-field">
+                  <span>Customer concentration warning %</span>
+                  <input name="concentration_warning_percent" type="number" step="0.1"/>
+                </label>
+                <label class="finance-field">
+                  <span>Receipt delay cushion (days)</span>
+                  <input name="receipt_delay_days" type="number" step="1"/>
+                </label>
+                <label class="finance-field">
+                  <span>QBO sync stale warning (days)</span>
+                  <input name="qbo_sync_warning_days" type="number" step="1"/>
                 </label>
                 <label class="finance-field">
                   <span>Include QBO open invoices</span>

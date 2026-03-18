@@ -24,6 +24,10 @@ test('cashflow page includes assumptions forms and table placeholders', () => {
   assert.match(html, /id="overheadForm"/);
   assert.match(html, /id="cashflowTable"/);
   assert.match(html, /id="weekDetailList"/);
+  assert.match(html, /id="cashflowPresetStrip"/);
+  assert.match(html, /id="cashBalanceChart"/);
+  assert.match(html, /id="cashflowCommentary"/);
+  assert.match(html, /id="cashflowExposure"/);
 });
 
 test('quickbooks page includes connect, sync, and disconnect controls', () => {

@@ -4,11 +4,19 @@
   const state = {
     payload: null,
     selectedWeekKey: '',
+    selectedPreset: 'base',
     helpers: null,
   };
 
   const forms = {};
   const els = {};
+  const PRESETS = [
+    { key: 'base', label: 'Base', detail: 'Working HMJ forecast with no extra stress.' },
+    { key: 'late_receipts', label: 'Receipts slip', detail: 'Push expected receipts back by one week.' },
+    { key: 'funding_squeeze', label: 'Funding squeeze', detail: 'Lower advance rates and add fee drag.' },
+    { key: 'payroll_pressure', label: 'Payroll pressure', detail: 'Lift payroll-style outflows by 6%.' },
+    { key: 'tight_cash', label: 'Tight cash', detail: 'Combine slower receipts, softer funding, and payroll pressure.' },
+  ];
 
   function $(id) {
     return document.getElementById(id);
@@ -23,7 +31,13 @@
       'metricLowCash',
       'metricLowCashMeta',
       'cashflowAlerts',
+      'cashflowScenarioMeta',
+      'cashflowPresetStrip',
       'cashflowMetricGrid',
+      'cashBalanceChart',
+      'cashFlowBars',
+      'cashflowCommentary',
+      'cashflowExposure',
       'weekCardGrid',
       'cashflowTable',
       'weekDetailHeading',
@@ -122,6 +136,23 @@
     return Object.fromEntries(fd.entries());
   }
 
+  function readSelectedPreset() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('preset') || 'base';
+  }
+
+  function writeSelectedPreset(value) {
+    const params = new URLSearchParams(window.location.search);
+    if (!value || value === 'base') params.delete('preset');
+    else params.set('preset', value);
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash || ''}`;
+    window.history.replaceState({}, '', next);
+  }
+
+  function presetMeta(value) {
+    return PRESETS.find((preset) => preset.key === value) || PRESETS[0];
+  }
+
   function resetForm(form) {
     form.reset();
     const hiddenId = form.querySelector('input[name="id"]');
@@ -144,10 +175,13 @@
 
   function renderStatus(payload) {
     const summary = payload.forecast?.summary || {};
+    const assumptions = payload.state?.assumptions || {};
+    const insights = payload.forecast?.insights || {};
     clearNode(els.cashflowStatusChips);
     els.cashflowStatusChips.appendChild(statusChip(payload.schema?.ready ? 'Finance schema ready' : 'Finance schema pending', payload.schema?.ready ? 'ok' : 'warn'));
     els.cashflowStatusChips.appendChild(statusChip(payload.connection ? 'QuickBooks connected' : 'QuickBooks optional', payload.connection ? 'ok' : 'warn'));
     els.cashflowStatusChips.appendChild(statusChip(`Reporting ${summary.reportingCurrency || 'GBP'}`, 'ok'));
+    els.cashflowStatusChips.appendChild(statusChip(`${summary.scenarioLabel || 'Base'} lens`, summary.scenarioPreset === 'base' ? 'ok' : 'warn'));
 
     els.metricCurrentCash.textContent = money(summary.currentCash || 0, summary.reportingCurrency);
     els.metricCurrentCashMeta.textContent = summary.rangeStart ? `${summary.rangeStart} to ${summary.rangeEnd}` : 'Waiting for finance data';
@@ -166,6 +200,19 @@
     if (!payload.connection) {
       alerts.push({ tone: 'warn', text: 'QuickBooks is not connected. Cashflow still works with manual assumptions, but historic actuals and open-item imports will stay limited until QBO is connected.' });
     }
+    if (payload.connection?.lastSyncAt) {
+      const ageDays = Math.floor((Date.now() - new Date(payload.connection.lastSyncAt).getTime()) / (1000 * 60 * 60 * 24));
+      const staleDays = Number(assumptions.qbo_sync_warning_days || 3);
+      if (Number.isFinite(ageDays) && ageDays >= staleDays) {
+        alerts.push({ tone: ageDays >= staleDays * 2 ? 'danger' : 'warn', text: `QuickBooks sync is ${ageDays} day${ageDays === 1 ? '' : 's'} old. Refresh before relying on the cash position.` });
+      }
+    }
+    (insights.warnings || []).forEach((warning) => {
+      alerts.push({
+        tone: warning.tone || 'warn',
+        text: `${warning.title}: ${warning.text}${warning.action ? ` ${warning.action}` : ''}`,
+      });
+    });
     showAlerts(alerts);
   }
 
@@ -178,6 +225,9 @@
       ['Total outflows', summary.totalOutflows, 'Expenses, AP, overheads, funding fees, and manual outflows.'],
       ['Retention locked', summary.retentionLocked, 'Retention still held until settlement clears.'],
       ['Funding fees', summary.fundingFeesForecast, 'Forecast settlement fees and finance deductions.'],
+      ['Overdue receipts', summary.overdueReceivables || 0, 'Open receivables already past due in QuickBooks.'],
+      ['Payroll cover', summary.payrollCoverWeeks || 0, 'Approximate weeks of payroll cover from current cash.'],
+      ['Largest customer share', summary.largestCustomerShare || 0, 'Share of receivable exposure held by the largest customer in view.'],
       ['Weeks in view', summary.weekCount, 'Active 13-week horizon, ready to roll forward weekly.'],
     ];
     cards.forEach(([title, value, detail]) => {
@@ -185,11 +235,177 @@
       card.className = 'finance-stat';
       card.innerHTML = `
         <span class="finance-kicker">${title}</span>
-        <strong>${typeof value === 'number' && title !== 'Weeks in view' ? money(value, currency) : value}</strong>
+        <strong>${typeof value === 'number' && !['Weeks in view', 'Payroll cover', 'Largest customer share'].includes(title)
+          ? money(value, currency)
+          : title === 'Payroll cover'
+            ? `${Number(value || 0).toFixed(1)}w`
+            : title === 'Largest customer share'
+              ? `${Number(value || 0).toFixed(1)}%`
+              : value}</strong>
         <span>${detail}</span>
       `;
       els.cashflowMetricGrid.appendChild(card);
     });
+  }
+
+  function renderPresetStrip(summary = {}) {
+    clearNode(els.cashflowPresetStrip);
+    const selected = state.selectedPreset || summary.scenarioPreset || 'base';
+    PRESETS.forEach((preset) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'finance-preset';
+      if (preset.key === selected) button.dataset.selected = 'true';
+      button.innerHTML = `
+        <strong>${preset.label}</strong>
+        <span>${preset.detail}</span>
+      `;
+      button.addEventListener('click', () => {
+        if (state.selectedPreset === preset.key) return;
+        state.selectedPreset = preset.key;
+        writeSelectedPreset(preset.key);
+        load()
+          .then(() => state.helpers.toast(`Scenario set to ${preset.label}.`, 'ok', 2200))
+          .catch((error) => state.helpers.toast(error.message, 'warn', 3200));
+      });
+      els.cashflowPresetStrip.appendChild(button);
+    });
+    const current = presetMeta(selected);
+    els.cashflowScenarioMeta.textContent = `${current.label}: ${current.detail}`;
+  }
+
+  function buildLineChartSvg(weeks, summary, assumptions) {
+    if (!weeks.length) return '<div class="finance-empty">No weekly cash data is available yet.</div>';
+    const width = 720;
+    const height = 280;
+    const paddingX = 42;
+    const paddingTop = 22;
+    const paddingBottom = 34;
+    const values = weeks.map((week) => Number(week.closingBalance || 0));
+    const buffer = Number(assumptions.minimum_cash_buffer || 0);
+    const min = Math.min(...values, 0, buffer);
+    const max = Math.max(...values, buffer, 1);
+    const span = Math.max(max - min, 1);
+    const stepX = weeks.length > 1 ? (width - (paddingX * 2)) / (weeks.length - 1) : 0;
+    const yFor = (value) => paddingTop + ((max - value) / span) * (height - paddingTop - paddingBottom);
+    const xFor = (index) => paddingX + (stepX * index);
+    const points = weeks.map((week, index) => `${xFor(index)},${yFor(Number(week.closingBalance || 0))}`).join(' ');
+    const zeroY = yFor(0);
+    const bufferY = yFor(buffer);
+
+    return `
+      <svg viewBox="0 0 ${width} ${height}" class="finance-chart-svg" role="img" aria-label="Closing cash line chart">
+        <rect x="0" y="0" width="${width}" height="${height}" rx="20" fill="#ffffff"></rect>
+        <line x1="${paddingX}" y1="${zeroY}" x2="${width - paddingX}" y2="${zeroY}" class="finance-chart-line finance-chart-line--zero"></line>
+        <line x1="${paddingX}" y1="${bufferY}" x2="${width - paddingX}" y2="${bufferY}" class="finance-chart-line finance-chart-line--buffer"></line>
+        <polyline points="${points}" class="finance-chart-path"></polyline>
+        ${weeks.map((week, index) => `
+          <circle cx="${xFor(index)}" cy="${yFor(Number(week.closingBalance || 0))}" r="4.5" class="finance-chart-point ${Number(week.closingBalance || 0) < 0 ? 'finance-chart-point--danger' : ''}"></circle>
+          <text x="${xFor(index)}" y="${height - 10}" text-anchor="middle" class="finance-chart-label">${dateLabel(week.weekStart)}</text>
+        `).join('')}
+      </svg>
+      <div class="finance-chart-legend">
+        <span><i class="finance-chart-swatch finance-chart-swatch--cash"></i>Closing cash</span>
+        <span><i class="finance-chart-swatch finance-chart-swatch--buffer"></i>Cash buffer</span>
+        <span><i class="finance-chart-swatch finance-chart-swatch--zero"></i>Zero line</span>
+      </div>
+    `;
+  }
+
+  function renderFlowBars(weeks, currency) {
+    if (!weeks.length) {
+      els.cashFlowBars.innerHTML = '<div class="finance-empty">No weekly movement is available yet.</div>';
+      return;
+    }
+    const peak = Math.max(1, ...weeks.map((week) => Math.max(Number(week.inflows || 0), Number(week.outflows || 0))));
+    els.cashFlowBars.innerHTML = `
+      <div class="finance-bars">
+        ${weeks.map((week) => {
+          const inflowHeight = Math.max(10, (Number(week.inflows || 0) / peak) * 132);
+          const outflowHeight = Math.max(10, (Number(week.outflows || 0) / peak) * 132);
+          return `
+            <div class="finance-bar-card">
+              <div class="finance-bars__visual">
+                <div class="finance-bars__stack">
+                  <div class="finance-bar finance-bar--inflow" style="height:${inflowHeight}px" title="Inflows ${money(week.inflows || 0, currency)}"></div>
+                  <div class="finance-bar finance-bar--outflow" style="height:${outflowHeight}px" title="Outflows ${money(week.outflows || 0, currency)}"></div>
+                </div>
+              </div>
+              <strong>${dateLabel(week.weekStart)}</strong>
+              <span>Net ${money(week.netMovement || 0, currency)}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="finance-chart-legend">
+        <span><i class="finance-chart-swatch finance-chart-swatch--inflow"></i>Inflows</span>
+        <span><i class="finance-chart-swatch finance-chart-swatch--outflow"></i>Outflows</span>
+      </div>
+    `;
+  }
+
+  function renderCommentary(insights = {}) {
+    clearNode(els.cashflowCommentary);
+    const items = Array.isArray(insights.commentary) ? insights.commentary : [];
+    if (!items.length) {
+      els.cashflowCommentary.innerHTML = '<div class="finance-empty">Commentary will appear once enough finance data exists to analyse.</div>';
+      return;
+    }
+    items.forEach((item) => {
+      const node = document.createElement('div');
+      node.className = 'finance-list-item';
+      node.dataset.tone = item.tone || 'ok';
+      node.innerHTML = `
+        <strong>${item.title}</strong>
+        <small>${item.text}</small>
+      `;
+      if (item.weekStart) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'finance-btn finance-btn--soft';
+        button.textContent = 'Open week';
+        button.addEventListener('click', () => selectWeek(item.weekStart));
+        node.appendChild(button);
+      }
+      els.cashflowCommentary.appendChild(node);
+    });
+  }
+
+  function renderExposure(insights = {}, summary = {}) {
+    clearNode(els.cashflowExposure);
+    const rows = Array.isArray(insights.exposureEntries) ? insights.exposureEntries.slice(0, 8) : [];
+    const currency = summary.reportingCurrency || 'GBP';
+    if (!rows.length) {
+      els.cashflowExposure.innerHTML = '<div class="finance-empty">Customer exposure appears once QBO invoices or HMJ invoice plans are available.</div>';
+      return;
+    }
+    rows.forEach((row) => {
+      const node = document.createElement('div');
+      node.className = 'finance-exposure';
+      node.innerHTML = `
+        <div class="finance-exposure__top">
+          <strong>${row.customerName}</strong>
+          <span>${money(row.totalExposure || 0, currency)} · ${Number(row.shareOfExposure || 0).toFixed(1)}%</span>
+        </div>
+        <div class="finance-exposure__bar"><span style="width:${Math.min(100, Number(row.shareOfExposure || 0))}%"></span></div>
+        <div class="finance-exposure__meta">
+          <span>${row.invoiceCount} item${row.invoiceCount === 1 ? '' : 's'}</span>
+          <span>Overdue ${money(row.overdueExposure || 0, currency)}</span>
+          <span>${row.fundedExposure > 0 ? `Funded ${money(row.fundedExposure || 0, currency)}` : 'Normal receipts'}</span>
+        </div>
+      `;
+      els.cashflowExposure.appendChild(node);
+    });
+  }
+
+  function renderVisuals(payload) {
+    const weeks = payload.forecast?.weeks || [];
+    const summary = payload.forecast?.summary || {};
+    const assumptions = payload.state?.assumptions || {};
+    els.cashBalanceChart.innerHTML = buildLineChartSvg(weeks, summary, assumptions);
+    renderFlowBars(weeks, summary.reportingCurrency || 'GBP');
+    renderCommentary(payload.forecast?.insights || {});
+    renderExposure(payload.forecast?.insights || {}, summary);
   }
 
   function selectWeek(weekKey) {
@@ -309,12 +525,15 @@
 
   function renderDataTables() {
     const currentState = state.payload?.state || {};
+    const exposureMap = new Map((state.payload?.forecast?.insights?.exposureEntries || []).map((row) => [String(row.customerName || '').toLowerCase(), row]));
     renderTable(els.customerTable, [
       { label: 'Customer', key: 'customer_name' },
       { label: 'Currency', key: 'default_currency' },
       { label: 'VAT', render: (row) => `${row.vat_treatment || 'uk_standard'} · ${row.vat_rate || 0}%` },
       { label: 'Pay days', key: 'expected_payment_days' },
       { label: 'Funding', render: (row) => row.funding_enabled ? 'Enabled' : 'No' },
+      { label: 'Exposure', render: (row) => money(exposureMap.get(String(row.customer_name || '').toLowerCase())?.totalExposure || 0, row.default_currency || currency) },
+      { label: 'Overdue', render: (row) => money(exposureMap.get(String(row.customer_name || '').toLowerCase())?.overdueExposure || 0, row.default_currency || currency) },
     ], currentState.customers || [], {
       onEdit: (row) => fillForm(forms.customer, row),
       onDelete: (row) => deleteRecord('finance_customers', row.id),
@@ -392,7 +611,7 @@
   async function saveAction(action, payload, successMessage) {
     const next = await fetchJson('/.netlify/functions/admin-finance-cashflow', {
       method: 'POST',
-      body: JSON.stringify({ action, payload }),
+      body: JSON.stringify({ action, payload, preset: state.selectedPreset || 'base' }),
     });
     state.payload = next;
     state.selectedWeekKey = next.forecast?.weeks?.[0]?.weekStart || '';
@@ -470,9 +689,11 @@
     const payload = state.payload || {};
     renderStatus(payload);
     renderMetricGrid(payload.forecast?.summary || {});
+    renderPresetStrip(payload.forecast?.summary || {});
     renderAssumptionsForm();
     renderCustomerOptions();
     state.selectedWeekKey = state.selectedWeekKey || payload.forecast?.weeks?.[0]?.weekStart || '';
+    renderVisuals(payload);
     renderWeekCards(payload.forecast?.weeks || []);
     renderCashflowTable(payload.forecast?.weeks || []);
     renderWeekDetail();
@@ -480,7 +701,8 @@
   }
 
   async function load() {
-    const payload = await fetchJson('/.netlify/functions/admin-finance-cashflow');
+    const preset = encodeURIComponent(state.selectedPreset || 'base');
+    const payload = await fetchJson(`/.netlify/functions/admin-finance-cashflow?preset=${preset}`);
     state.payload = payload;
     renderAll();
   }
@@ -500,6 +722,7 @@
       window.setTimeout(boot, 40);
       return;
     }
+    state.selectedPreset = readSelectedPreset();
     setup();
     attachFormHandlers();
     window.Admin.bootAdmin(async (helpers) => {

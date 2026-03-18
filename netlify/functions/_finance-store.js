@@ -89,6 +89,29 @@ async function listRows(event, table, queryBuilder) {
   return Array.isArray(data) ? data : [];
 }
 
+async function readModuleSettings(event, moduleKey) {
+  const rows = await listRows(event, 'finance_module_settings', (query) => query
+    .eq('module_key', trimString(moduleKey, 240))
+    .limit(1));
+  return rows[0] || null;
+}
+
+async function saveModuleSettings(event, moduleKey, settings = {}, updatedBy = '') {
+  const supabase = getSupabase(event);
+  const row = {
+    module_key: trimString(moduleKey, 240),
+    settings: asJson(settings, {}),
+    updated_by: trimString(updatedBy, 240),
+  };
+  const { data, error } = await supabase
+    .from('finance_module_settings')
+    .upsert(row, { onConflict: 'module_key' })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 async function readFinanceConnection(event) {
   const rows = await listRows(event, 'finance_qbo_connections', (query) => query
     .eq('provider', 'quickbooks')
@@ -212,6 +235,7 @@ async function readCashflowState(event, scenarioKey = 'base') {
   const scenario = trimString(scenarioKey, 80) || 'base';
   const [
     assumptionsRows,
+    settingsRows,
     customers,
     fundingRules,
     invoicePlans,
@@ -225,6 +249,7 @@ async function readCashflowState(event, scenarioKey = 'base') {
     qboPurchases,
   ] = await Promise.all([
     listRows(event, 'finance_cashflow_assumptions', (query) => query.eq('scenario_key', scenario).limit(1)),
+    listRows(event, 'finance_module_settings', (query) => query.eq('module_key', `cashflow_preferences:${scenario}`).limit(1)),
     listRows(event, 'finance_customers', (query) => query.eq('scenario_key', scenario).eq('is_active', true).order('customer_name', { ascending: true })),
     listRows(event, 'finance_funding_rules', (query) => query.eq('scenario_key', scenario).eq('is_active', true).order('customer_name', { ascending: true })),
     listRows(event, 'finance_cashflow_invoice_plans', (query) => query.eq('scenario_key', scenario).order('invoice_date', { ascending: true })),
@@ -238,8 +263,11 @@ async function readCashflowState(event, scenarioKey = 'base') {
     listRows(event, 'finance_qbo_purchases_cache', (query) => query.order('txn_date', { ascending: false }).limit(1000)),
   ]);
 
+  const preferenceSettings = asJson(settingsRows[0]?.settings, {});
+
   return {
-    assumptions: assumptionsRows[0] || {
+    assumptions: {
+      ...(assumptionsRows[0] || {
       scenario_key: scenario,
       opening_balance: 0,
       reporting_currency: 'GBP',
@@ -248,6 +276,13 @@ async function readCashflowState(event, scenarioKey = 'base') {
       include_qbo_open_invoices: true,
       include_qbo_open_bills: true,
       include_qbo_purchases_actuals: true,
+      minimum_cash_buffer: 0,
+      payroll_cover_warning_weeks: 1,
+      concentration_warning_percent: 40,
+      receipt_delay_days: 0,
+      qbo_sync_warning_days: 3,
+      }),
+      ...preferenceSettings,
     },
     customers,
     fundingRules,
@@ -279,6 +314,16 @@ function normalizeAssumptionInput(input = {}, savedBy = '') {
   };
 }
 
+function normalizeAssumptionPreferences(input = {}) {
+  return {
+    minimum_cash_buffer: toNumber(input.minimum_cash_buffer ?? input.minimumCashBuffer, 0),
+    payroll_cover_warning_weeks: toNumber(input.payroll_cover_warning_weeks ?? input.payrollCoverWarningWeeks, 1),
+    concentration_warning_percent: toNumber(input.concentration_warning_percent ?? input.concentrationWarningPercent, 40),
+    receipt_delay_days: Math.max(0, Math.round(toNumber(input.receipt_delay_days ?? input.receiptDelayDays, 0))),
+    qbo_sync_warning_days: Math.max(1, Math.round(toNumber(input.qbo_sync_warning_days ?? input.qboSyncWarningDays, 3))),
+  };
+}
+
 async function upsertAssumptions(event, input = {}, savedBy = '') {
   const supabase = getSupabase(event);
   const row = normalizeAssumptionInput(input, savedBy);
@@ -288,6 +333,12 @@ async function upsertAssumptions(event, input = {}, savedBy = '') {
     .select('*')
     .single();
   if (error) throw error;
+  await saveModuleSettings(
+    event,
+    `cashflow_preferences:${row.scenario_key}`,
+    normalizeAssumptionPreferences(input),
+    savedBy
+  );
   return data;
 }
 
@@ -497,6 +548,8 @@ module.exports = {
   lowerText,
   toBoolean,
   getFinanceSchemaStatus,
+  readModuleSettings,
+  saveModuleSettings,
   readFinanceConnection,
   saveFinanceConnection,
   disconnectFinanceConnection,

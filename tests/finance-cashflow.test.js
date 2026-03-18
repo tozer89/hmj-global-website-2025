@@ -98,3 +98,55 @@ test('cashflow forecast brings open QBO invoices and bills into forecast weeks',
   assert.equal(result.summary.totalInflows, 5000);
   assert.equal(result.summary.totalOutflows, 1200);
 });
+
+test('cashflow scenario presets can delay receipts and surface commercial warnings', () => {
+  const result = buildCashflowForecast({
+    scenarioPreset: 'tight_cash',
+    assumptions: {
+      anchor_week_start: '2026-03-16',
+      opening_balance: 2000,
+      minimum_cash_buffer: 5000,
+      payroll_cover_warning_weeks: 1.5,
+      concentration_warning_percent: 35,
+      reporting_currency: 'GBP',
+    },
+    customers: [
+      { customer_name: 'Major Client', expected_payment_days: 14, funding_enabled: false, is_active: true },
+    ],
+    invoicePlans: [
+      {
+        customer_name: 'Major Client',
+        invoice_date: '2026-03-17',
+        expected_payment_date: '2026-03-19',
+        gross_amount: 15000,
+        currency: 'GBP',
+      },
+    ],
+    overheads: [
+      {
+        label: 'Weekly payroll',
+        category: 'payroll',
+        amount: 3500,
+        currency: 'GBP',
+        first_due_date: '2026-03-18',
+        frequency: 'weekly',
+        is_active: true,
+      },
+    ],
+    qboInvoices: [
+      {
+        customer_name: 'Major Client',
+        due_date: '2026-03-10',
+        balance_amount: 4000,
+        currency: 'GBP',
+      },
+    ],
+  });
+
+  assert.equal(result.summary.scenarioPreset, 'tight_cash');
+  assert.ok(result.insights.warnings.some((warning) => /cash|receivables|payroll|concentrated/i.test(`${warning.title} ${warning.text}`)));
+  assert.ok(result.insights.exposureEntries[0].shareOfExposure >= 35);
+  const plannedReceiptWeek = result.weeks.find((week) => week.lines.some((line) => line.source === 'forecast_invoice'));
+  assert.ok(plannedReceiptWeek);
+  assert.equal(plannedReceiptWeek.weekStart, '2026-03-23');
+});
