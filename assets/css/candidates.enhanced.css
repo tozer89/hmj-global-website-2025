@@ -576,6 +576,24 @@
   color: var(--bad);
 }
 
+.candidate-portal-btn--verified {
+  background: rgba(19, 135, 84, 0.12);
+  border-color: rgba(19, 135, 84, 0.24);
+  color: var(--ok);
+}
+
+.candidate-portal-btn--pending {
+  background: rgba(183, 129, 3, 0.12);
+  border-color: rgba(183, 129, 3, 0.24);
+  color: var(--warn);
+}
+
+.candidate-portal-btn--required {
+  background: rgba(180, 35, 24, 0.08);
+  border-color: rgba(180, 35, 24, 0.2);
+  color: var(--bad);
+}
+
 .candidate-portal-note {
   font-size: 0.92rem;
   color: var(--muted);
@@ -806,6 +824,11 @@
   background: linear-gradient(135deg, rgba(47, 92, 197, 0.12), rgba(248, 250, 255, 0.96));
 }
 
+.candidate-inline-panel--compact {
+  margin-bottom: 0;
+  padding: 12px 14px;
+}
+
 .candidate-inline-panel strong {
   color: var(--ink);
 }
@@ -837,12 +860,31 @@
   font-size: 0.88rem;
 }
 
-.candidate-checklist li.is-complete strong {
+.candidate-checklist li.is-verified {
+  border-color: rgba(19, 135, 84, 0.22);
+  background: rgba(19, 135, 84, 0.08);
+}
+
+.candidate-checklist li.is-verified strong {
   color: #198754;
+}
+
+.candidate-checklist li.is-pending {
+  border-color: rgba(183, 129, 3, 0.24);
+  background: rgba(183, 129, 3, 0.08);
 }
 
 .candidate-checklist li.is-pending strong {
   color: #b05a00;
+}
+
+.candidate-checklist li.is-required {
+  border-color: rgba(180, 35, 24, 0.2);
+  background: rgba(180, 35, 24, 0.06);
+}
+
+.candidate-checklist li.is-required strong {
+  color: var(--bad);
 }
 
 .candidate-onboarding-banner {
@@ -855,6 +897,21 @@
   border-radius: 20px;
   border: 1px solid rgba(47, 92, 197, 0.14);
   background: linear-gradient(135deg, rgba(47, 92, 197, 0.1), rgba(255, 255, 255, 0.98));
+}
+
+.candidate-onboarding-banner--verified {
+  border-color: rgba(19, 135, 84, 0.22);
+  background: linear-gradient(135deg, rgba(19, 135, 84, 0.12), rgba(255, 255, 255, 0.98));
+}
+
+.candidate-onboarding-banner--pending {
+  border-color: rgba(183, 129, 3, 0.24);
+  background: linear-gradient(135deg, rgba(183, 129, 3, 0.12), rgba(255, 255, 255, 0.98));
+}
+
+.candidate-onboarding-banner--required {
+  border-color: rgba(180, 35, 24, 0.2);
+  background: linear-gradient(135deg, rgba(180, 35, 24, 0.08), rgba(255, 255, 255, 0.98));
 }
 
 .candidate-onboarding-banner h3 {
@@ -931,6 +988,76 @@
   gap: 16px;
 }
 
+.candidate-status-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.candidate-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.candidate-signal-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 27, 63, 0.08);
+  background: rgba(248, 250, 255, 0.96);
+  box-shadow: 0 10px 28px rgba(15, 27, 63, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.candidate-signal-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  border-radius: 18px 0 0 18px;
+  background: rgba(47, 92, 197, 0.45);
+}
+
+.candidate-signal-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.candidate-signal-card--verified {
+  border-color: rgba(19, 135, 84, 0.22);
+  background: rgba(19, 135, 84, 0.1);
+}
+
+.candidate-signal-card--verified::before {
+  background: rgba(19, 135, 84, 0.92);
+}
+
+.candidate-signal-card--pending {
+  border-color: rgba(183, 129, 3, 0.24);
+  background: rgba(183, 129, 3, 0.11);
+}
+
+.candidate-signal-card--pending::before {
+  background: rgba(183, 129, 3, 0.92);
+}
+
+.candidate-signal-card--required {
+  border-color: rgba(180, 35, 24, 0.2);
+  background: rgba(180, 35, 24, 0.09);
+}
+
+.candidate-signal-card--required::before {
+  background: rgba(180, 35, 24, 0.92);
+}
+
 .candidate-payment-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -964,6 +1091,52 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.candidate-rtw-fieldset {
+  display: grid;
+  gap: 12px;
+}
+
+.candidate-rtw-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.candidate-rtw-option {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 27, 63, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.candidate-rtw-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  accent-color: var(--accent);
+  box-shadow: none;
+}
+
+.candidate-rtw-other {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.candidate-rtw-other.is-hidden {
+  display: none;
+}
+
 .candidate-application-card,
 .candidate-document-card {
   display: grid;
@@ -992,6 +1165,29 @@
 .candidate-document-card__body {
   display: grid;
   gap: 6px;
+}
+
+.candidate-document-card__detail {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+
+.candidate-document-card--verified {
+  border-color: rgba(19, 135, 84, 0.22);
+  background: linear-gradient(180deg, rgba(19, 135, 84, 0.08), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 10px 24px rgba(19, 135, 84, 0.08);
+}
+
+.candidate-document-card--pending {
+  border-color: rgba(183, 129, 3, 0.24);
+  background: linear-gradient(180deg, rgba(183, 129, 3, 0.08), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 10px 24px rgba(183, 129, 3, 0.08);
+}
+
+.candidate-document-card--required {
+  border-color: rgba(180, 35, 24, 0.2);
+  background: linear-gradient(180deg, rgba(180, 35, 24, 0.06), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 10px 24px rgba(180, 35, 24, 0.08);
 }
 
 .candidate-document-card__topline {
@@ -1062,6 +1258,21 @@
   color: var(--ok);
 }
 
+.candidate-status-pill--verified {
+  background: rgba(19, 135, 84, 0.12);
+  color: var(--ok);
+}
+
+.candidate-status-pill--pending {
+  background: rgba(183, 129, 3, 0.12);
+  color: var(--warn);
+}
+
+.candidate-status-pill--required {
+  background: rgba(180, 35, 24, 0.12);
+  color: var(--bad);
+}
+
 .candidate-status-pill--red {
   background: rgba(180, 35, 24, 0.12);
   color: var(--bad);
@@ -1120,6 +1331,10 @@
     grid-template-columns: 1fr;
   }
 
+  .candidate-status-grid {
+    grid-template-columns: 1fr;
+  }
+
   .candidate-onboarding-banner {
     flex-direction: column;
     align-items: flex-start;
@@ -1136,6 +1351,11 @@
   .candidate-application-meta,
   .candidate-settings-list,
   .candidate-payment-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .candidate-status-grid,
+  .candidate-rtw-grid {
     grid-template-columns: 1fr;
   }
 

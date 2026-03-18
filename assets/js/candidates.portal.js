@@ -117,6 +117,180 @@ import {
     return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
   }
 
+  const RTW_OTHER_VALUE = '__other__';
+  const RTW_REGION_OPTIONS = [
+    'United Kingdom',
+    'European Union / EEA',
+    'United Arab Emirates (UAE)',
+    'Asia-Pacific',
+    'North America',
+    'Latin America (incl. Central America)',
+  ];
+  const RECRUITMENT_DOCUMENT_TYPES = new Set([
+    'cv',
+    'cover_letter',
+    'certificate',
+    'qualification_certificate',
+    'reference',
+    'other',
+  ]);
+
+  function normaliseOtherRtwNote(value) {
+    return trimText(String(value || '').replace(/\s+/g, ' '), 40);
+  }
+
+  function buildRightToWorkStatusSummary(regions = [], otherNote = '') {
+    const items = normaliseSkillList(regions);
+    const cleanOther = normaliseOtherRtwNote(otherNote);
+    if (cleanOther) {
+      items.push(`Other: ${cleanOther}`);
+    }
+    return items.length ? `Candidate-declared work authorisation: ${items.join(', ')}` : '';
+  }
+
+  function parseRightToWorkStatusParts(value) {
+    const text = trimText(value, 240)
+      .replace(/^candidate-declared work authorisation:\s*/i, '')
+      .trim();
+    if (!text) return [];
+    return text
+      .split(',')
+      .map((item) => trimText(item, 80))
+      .filter(Boolean);
+  }
+
+  function rightToWorkSelectionState(candidate = state.candidate || {}) {
+    const known = new Set(RTW_REGION_OPTIONS.map((value) => value.toLowerCase()));
+    const selected = [];
+    const extra = [];
+    const regionValues = Array.isArray(candidate.right_to_work_regions)
+      ? candidate.right_to_work_regions
+      : normaliseSkillList(candidate.right_to_work_regions || candidate.right_to_work || '');
+
+    regionValues.forEach((value) => {
+      const clean = trimText(value, 80);
+      if (!clean) return;
+      if (known.has(clean.toLowerCase())) {
+        if (!selected.some((entry) => entry.toLowerCase() === clean.toLowerCase())) {
+          selected.push(clean);
+        }
+      } else {
+        extra.push(clean);
+      }
+    });
+
+    parseRightToWorkStatusParts(candidate.right_to_work_status).forEach((value) => {
+      if (/^other:/i.test(value)) {
+        extra.push(value.replace(/^other:\s*/i, ''));
+        return;
+      }
+      if (known.has(value.toLowerCase())) {
+        if (!selected.some((entry) => entry.toLowerCase() === value.toLowerCase())) {
+          selected.push(value);
+        }
+        return;
+      }
+      if (!/full right to work|right to work in place|share code provided|passport provided/i.test(value)) {
+        extra.push(value);
+      }
+    });
+
+    const otherNote = normaliseOtherRtwNote(extra.join(', '));
+    return {
+      selected,
+      otherSelected: !!otherNote,
+      otherNote,
+      summary: buildRightToWorkStatusSummary(selected, otherNote),
+    };
+  }
+
+  function parseRightToWorkFormData(formData) {
+    const selectedValues = formData.getAll('right_to_work').map((value) => trimText(value, 80)).filter(Boolean);
+    const otherSelected = selectedValues.includes(RTW_OTHER_VALUE);
+    const selected = normaliseSkillList(selectedValues.filter((value) => value !== RTW_OTHER_VALUE));
+    const otherNote = otherSelected ? normaliseOtherRtwNote(formData.get('right_to_work_other')) : '';
+    return {
+      selected,
+      otherSelected,
+      otherNote,
+      summary: buildRightToWorkStatusSummary(selected, otherNote),
+    };
+  }
+
+  function renderRightToWorkFieldset(candidate = state.candidate || {}) {
+    const rightToWork = rightToWorkSelectionState(candidate);
+    return `
+      <div class="candidate-dashboard-form__full candidate-rtw-fieldset">
+        <div class="candidate-inline-panel candidate-inline-panel--subtle candidate-inline-panel--compact">
+          <strong>Right to work regions</strong>
+          <p>Choose all that apply. Use Other only if none of the listed routes fit. HMJ will still review your uploaded evidence separately.</p>
+        </div>
+        <div class="candidate-rtw-grid" role="group" aria-label="Right to work regions">
+          ${RTW_REGION_OPTIONS.map((value) => `
+            <label class="candidate-rtw-option">
+              <input type="checkbox" name="right_to_work" value="${escapeHtml(value)}" ${rightToWork.selected.some((entry) => entry.toLowerCase() === value.toLowerCase()) ? 'checked' : ''}>
+              <span>${escapeHtml(value)}</span>
+            </label>
+          `).join('')}
+          <label class="candidate-rtw-option">
+            <input type="checkbox" name="right_to_work" value="${RTW_OTHER_VALUE}" ${rightToWork.otherSelected ? 'checked' : ''}>
+            <span>Other / specify below</span>
+          </label>
+        </div>
+        <label class="candidate-rtw-other ${rightToWork.otherSelected ? '' : 'is-hidden'}" data-rtw-other-wrap>
+          Other right-to-work route
+          <input type="text" name="right_to_work_other" value="${escapeHtml(rightToWork.otherNote)}" maxlength="40" placeholder="Up to 40 characters">
+        </label>
+      </div>
+    `;
+  }
+
+  function documentStatusPresentation(documentRow = {}) {
+    const requiresVerification = documentRow.verification_required === true;
+    const verificationStatus = trimText(documentRow.verification_status, 40).toLowerCase();
+    if (requiresVerification && verificationStatus === 'verified') {
+      return {
+        tone: 'verified',
+        label: 'Verified by HMJ',
+        detail: 'This document has been reviewed and accepted by HMJ.',
+      };
+    }
+    if (requiresVerification && verificationStatus === 'rejected') {
+      return {
+        tone: 'required',
+        label: 'Needs attention',
+        detail: 'HMJ reviewed this document and needs a replacement or updated copy.',
+      };
+    }
+    if (requiresVerification) {
+      return {
+        tone: 'pending',
+        label: 'Awaiting HMJ verification',
+        detail: 'Your upload is on file and waiting for HMJ review.',
+      };
+    }
+    return {
+      tone: 'verified',
+      label: 'On file',
+      detail: 'Stored in your HMJ candidate portal.',
+    };
+  }
+
+  function renderStatusSignalCard({ title, tone, status, detail, buttonLabel, buttonTab, buttonFocus }) {
+    return `
+      <article class="candidate-signal-card candidate-signal-card--${escapeHtml(tone)}">
+        <div class="candidate-signal-card__head">
+          <strong>${escapeHtml(title)}</strong>
+          <span class="candidate-status-pill candidate-status-pill--${escapeHtml(tone)}">${escapeHtml(status)}</span>
+        </div>
+        <p>${escapeHtml(detail)}</p>
+        ${buttonLabel
+          ? `<button class="candidate-portal-btn candidate-portal-btn--${escapeHtml(tone)}" type="button" data-dashboard-tab="${escapeHtml(buttonTab || 'documents')}" data-dashboard-focus="${escapeHtml(buttonFocus || '')}">${escapeHtml(buttonLabel)}</button>`
+          : ''}
+      </article>
+    `;
+  }
+
   function normaliseSalaryExpectationUnit(value) {
     const raw = trimText(value, 40).toLowerCase();
     if (!raw) return 'annual';
@@ -637,43 +811,52 @@ import {
     return [
       {
         label: 'Profile details completed',
-        complete: onboardingAddressComplete(candidate),
+        status: onboardingAddressComplete(candidate) ? 'verified' : 'required',
       },
       {
         label: 'CV uploaded',
-        complete: (state.documents || []).some((documentRow) => String(documentRow?.document_type || '').toLowerCase() === 'cv'),
+        status: (state.documents || []).some((documentRow) => String(documentRow?.document_type || '').toLowerCase() === 'cv')
+          ? 'verified'
+          : 'required',
       },
       {
         label: 'Right to work uploaded',
-        complete: onboarding.hasRightToWork || onboarding.hasRightToWorkUpload,
+        status: onboarding.hasRightToWork
+          ? 'verified'
+          : (onboarding.hasRightToWorkPendingVerification || onboarding.hasRightToWorkUpload ? 'pending' : 'required'),
       },
       {
         label: 'Address completed',
-        complete: onboardingAddressComplete(candidate),
+        status: onboardingAddressComplete(candidate) ? 'verified' : 'required',
       },
       {
         label: 'Payroll details completed',
-        complete: onboarding.hasPayment,
+        status: onboarding.hasPayment ? 'verified' : 'required',
       },
       {
         label: 'Emergency contact added',
-        complete: emergencyContactComplete(candidate),
+        status: emergencyContactComplete(candidate) ? 'verified' : 'required',
       },
       {
         label: 'Ready for Timesheet Portal',
-        complete: onboarding.complete && emergencyContactComplete(candidate) && onboardingAddressComplete(candidate),
+        status: onboarding.complete && emergencyContactComplete(candidate) && onboardingAddressComplete(candidate)
+          ? 'verified'
+          : (onboarding.pendingVerificationCount > 0 ? 'pending' : 'required'),
       },
     ];
   }
 
   function onboardingSummary() {
     const onboardingRequired = candidateOnboardingMode();
-    const documentTypes = new Set((state.documents || []).map((documentRow) => String(documentRow.document_type || '').toLowerCase()));
-    const hasRightToWork = documentTypes.has('right_to_work')
-      || documentTypes.has('passport')
-      || documentTypes.has('visa_permit')
+    const documents = Array.isArray(state.documents) ? state.documents : [];
+    const documentTypes = new Set(documents.map((documentRow) => String(documentRow.document_type || '').toLowerCase()));
+    const rightToWorkDocuments = documents.filter((documentRow) => ['right_to_work', 'passport', 'visa_permit'].includes(String(documentRow.document_type || '').toLowerCase()));
+    const hasRightToWork = rightToWorkDocuments.some((documentRow) => trimText(documentRow.verification_status, 40).toLowerCase() === 'verified')
       || !!trimText(state.candidate?.rtw_url, 2000);
+    const hasRightToWorkUpload = rightToWorkDocuments.length > 0 || hasRightToWork;
+    const hasRightToWorkPendingVerification = !hasRightToWork && rightToWorkDocuments.some((documentRow) => trimText(documentRow.verification_status, 40).toLowerCase() !== 'verified');
     const hasPayment = state.paymentDetails?.completion?.complete === true;
+    const pendingVerificationCount = documents.filter((documentRow) => documentRow.verification_required === true && trimText(documentRow.verification_status, 40).toLowerCase() !== 'verified').length;
     const missing = [];
     if (onboardingRequired && !hasRightToWork) missing.push('right_to_work');
     if (onboardingRequired && !hasPayment) missing.push('payment_details');
@@ -681,9 +864,13 @@ import {
       onboardingRequired,
       onboardingMode: onboardingRequired,
       hasRightToWork,
+      hasRightToWorkUpload,
+      hasRightToWorkPendingVerification,
       hasPayment,
       complete: onboardingRequired ? missing.length === 0 : false,
       missing,
+      pendingVerificationCount,
+      documentTypes: Array.from(documentTypes),
     };
   }
 
@@ -1007,9 +1194,12 @@ import {
     const requestedDocFocus = state.requestedDocuments[0] || (state.requestedFocus === 'right_to_work' ? 'right_to_work' : '');
     const documentTypeSelection = requestedDocFocus || 'cv';
     const requestedDocsText = requestedDocumentListText(state.requestedDocuments);
+    const onboardingBannerTone = onboarding.complete
+      ? 'verified'
+      : (onboarding.hasRightToWorkPendingVerification || onboarding.pendingVerificationCount > 0 ? 'pending' : 'required');
     const onboardingBanner = onboardingMode && (!onboarding.complete || state.onboardingPrompt)
       ? `
-        <div class="candidate-onboarding-banner">
+        <div class="candidate-onboarding-banner candidate-onboarding-banner--${escapeHtml(onboardingBannerTone)}">
           <div>
             <p class="candidate-portal-eyebrow">Onboarding</p>
             <h3>${onboarding.complete ? 'Your onboarding profile is ready' : 'Complete the final onboarding details'}</h3>
@@ -1031,9 +1221,9 @@ import {
           <p>${escapeHtml(candidateModeDescription(candidate))}</p>
           <ul class="candidate-checklist">
             ${onboardingChecklist(onboarding, candidate).map((item) => `
-              <li class="${item.complete ? 'is-complete' : 'is-pending'}">
+              <li class="is-${item.status}">
                 <span>${escapeHtml(item.label)}</span>
-                <strong>${item.complete ? 'Done' : 'Needed'}</strong>
+                <strong>${item.status === 'verified' ? 'Verified' : item.status === 'pending' ? 'Pending review' : 'Needed'}</strong>
               </li>
             `).join('')}
           </ul>
@@ -1061,6 +1251,70 @@ import {
     const documentOptions = onboardingMode
       ? recruitmentDocumentOptions.concat(onboardingDocumentOptions)
       : recruitmentDocumentOptions;
+    const recruitmentDocumentCount = documents.filter((documentRow) => RECRUITMENT_DOCUMENT_TYPES.has(String(documentRow.document_type || '').toLowerCase())).length;
+    const rightToWorkTone = onboarding.hasRightToWork
+      ? 'verified'
+      : (onboarding.hasRightToWorkPendingVerification || onboarding.hasRightToWorkUpload ? 'pending' : 'required');
+    const requestedTone = state.requestedDocuments.length
+      ? 'required'
+      : (onboarding.pendingVerificationCount > 0 ? 'pending' : 'verified');
+    const recruitmentTone = recruitmentDocumentCount ? 'verified' : 'required';
+    const statusGuide = `
+      <div class="candidate-status-guide">
+        <span class="candidate-status-pill candidate-status-pill--verified">Verified / on file</span>
+        <span class="candidate-status-pill candidate-status-pill--pending">Uploaded and awaiting HMJ verification</span>
+        <span class="candidate-status-pill candidate-status-pill--required">Still needed</span>
+      </div>
+    `;
+    const documentSignalCards = `
+      <div class="candidate-status-grid">
+        ${renderStatusSignalCard({
+          title: 'Recruitment profile documents',
+          tone: recruitmentTone,
+          status: recruitmentDocumentCount ? `${recruitmentDocumentCount} on file` : 'Not yet submitted',
+          detail: recruitmentDocumentCount
+            ? 'Your CV and supporting recruitment documents are already attached to this profile.'
+            : 'Upload your CV and any supporting recruitment documents so HMJ can represent you properly.',
+          buttonLabel: recruitmentDocumentCount ? 'Manage documents' : 'Upload CV',
+          buttonTab: 'documents',
+          buttonFocus: recruitmentDocumentCount ? '' : 'cv',
+        })}
+        ${renderStatusSignalCard({
+          title: 'Right-to-work evidence',
+          tone: rightToWorkTone,
+          status: rightToWorkTone === 'verified'
+            ? 'Verified'
+            : rightToWorkTone === 'pending'
+              ? 'Awaiting HMJ verification'
+              : 'Not yet submitted',
+          detail: rightToWorkTone === 'verified'
+            ? 'HMJ has accepted your right-to-work evidence.'
+            : rightToWorkTone === 'pending'
+              ? 'Your right-to-work evidence is on file and waiting for HMJ review.'
+              : 'Upload passport, visa, permit, or share-code evidence so HMJ can complete onboarding.',
+          buttonLabel: rightToWorkTone === 'verified' ? 'View documents' : 'Open upload area',
+          buttonTab: 'documents',
+          buttonFocus: 'right_to_work',
+        })}
+        ${renderStatusSignalCard({
+          title: 'Requested by HMJ',
+          tone: requestedTone,
+          status: requestedTone === 'verified'
+            ? 'All requested items covered'
+            : requestedTone === 'pending'
+              ? 'Submitted and under review'
+              : `${state.requestedDocuments.length} still needed`,
+          detail: requestedTone === 'verified'
+            ? 'Everything HMJ requested is already on file.'
+            : requestedTone === 'pending'
+              ? 'HMJ has the uploaded files and is still reviewing them.'
+              : `HMJ still needs ${requestedDocsText || 'the requested onboarding documents'} from you.`,
+          buttonLabel: requestedTone === 'verified' ? 'Review uploads' : 'Upload requested files',
+          buttonTab: 'documents',
+          buttonFocus: requestedDocFocus || 'right_to_work',
+        })}
+      </div>
+    `;
 
     const profilePane = `
       <section class="candidate-dashboard-pane ${activeTab === 'profile' ? 'is-active' : ''}" data-dashboard-pane="profile">
@@ -1174,13 +1428,7 @@ import {
             </label>
             ${onboardingMode ? `
               <div class="candidate-dashboard-form__section-title candidate-dashboard-form__full">Live assignment onboarding</div>
-              <label>Right to work status
-                <input type="text" name="right_to_work_status" value="${escapeHtml(candidate.right_to_work_status || '')}" placeholder="Full right to work already in place">
-              </label>
-              <label class="candidate-dashboard-form__full">Right to work regions
-                <input type="text" name="right_to_work_regions" value="${escapeHtml(Array.isArray(candidate.right_to_work_regions) ? candidate.right_to_work_regions.join(', ') : '')}" placeholder="United Kingdom, European Union / EEA">
-                <span class="candidate-field-help">Separate regions with commas.</span>
-              </label>
+              ${renderRightToWorkFieldset(candidate)}
               <div class="candidate-inline-panel candidate-inline-panel--subtle candidate-dashboard-form__full">
                 <strong>Emergency contact (next of kin)</strong>
                 <p>Provide a contact HMJ can reach in case of emergency while you are on assignment.</p>
@@ -1251,18 +1499,8 @@ import {
               ? 'Upload recruitment documents and the onboarding evidence HMJ has requested for your live placement.'
               : 'Upload your CV, cover letter, qualifications, and other recruitment profile documents into your private candidate area.'}</p>
           </div>
-          ${onboardingMode && (!onboarding.hasRightToWork || state.requestedFocus === 'right_to_work')
-            ? `<div class="candidate-inline-panel candidate-inline-panel--priority">
-                <strong>Right-to-work documents needed</strong>
-                <p>Upload your passport, visa, permit, or right-to-work evidence here so HMJ can complete onboarding.</p>
-              </div>`
-            : ''}
-          ${state.requestedDocuments.length
-            ? `<div class="candidate-inline-panel candidate-inline-panel--subtle">
-                <strong>Requested documents</strong>
-                <p>HMJ has asked you to upload ${escapeHtml(requestedDocsText)}. Upload each file here and label it clearly so the team can review it quickly.</p>
-              </div>`
-            : ''}
+          ${statusGuide}
+          ${documentSignalCards}
           <div class="candidate-inline-panel candidate-inline-panel--subtle">
             <strong>${onboardingMode ? 'Recruitment and onboarding documents' : 'Recruitment profile documents'}</strong>
             <p>${onboardingMode
@@ -1296,15 +1534,18 @@ import {
           <div class="candidate-dashboard-stack">
             ${documents.length ? documents.map((documentRow) => {
               const owned = candidateDocumentIsPortalOwned(documentRow, state.user?.id);
+              const presentation = documentStatusPresentation(documentRow);
               return `
-                <article class="candidate-document-card">
+                <article class="candidate-document-card candidate-document-card--${escapeHtml(presentation.tone)}">
                   <div class="candidate-document-card__body">
                     <div class="candidate-document-card__topline">
                       <span class="candidate-document-card__tag">${escapeHtml(String(documentRow.document_type || 'other').replace(/_/g, ' '))}</span>
+                      <span class="candidate-status-pill candidate-status-pill--${escapeHtml(presentation.tone)}">${escapeHtml(presentation.label)}</span>
                       <span class="candidate-field-help">${escapeHtml(formatDate(documentRow.uploaded_at || documentRow.created_at))}</span>
                     </div>
                     <h4>${escapeHtml(documentRow.label || documentRow.original_filename || documentRow.filename || 'Document')}</h4>
                     <p>${escapeHtml(documentRow.original_filename || documentRow.filename || 'File')}</p>
+                    <p class="candidate-document-card__detail">${escapeHtml(presentation.detail)}</p>
                   </div>
                   <div class="candidate-document-card__actions">
                     ${documentRow.download_url ? `<a class="candidate-portal-btn candidate-portal-btn--ghost" href="${escapeHtml(documentRow.download_url)}" target="_blank" rel="noreferrer">Download</a>` : ''}
@@ -1866,6 +2107,7 @@ import {
         const name = trimText(formData.get('name'), 240);
         const linkedinUrl = trimText(formData.get('linkedin_url'), 500);
         const onboardingMode = normaliseBooleanFlag(formData.get('onboarding_mode'));
+        const rightToWork = parseRightToWorkFormData(formData);
         const emergencyName = trimText(formData.get('emergency_name'), 240);
         const emergencyPhone = trimText(formData.get('emergency_phone'), 80);
         if (!name) {
@@ -1877,6 +2119,9 @@ import {
         if (onboardingMode) {
           if (!trimText(formData.get('address1'), 240) || !trimText(formData.get('town'), 160) || !trimText(formData.get('postcode'), 32) || !trimText(formData.get('country'), 120)) {
             throw new Error('Add your address details before saving live assignment onboarding.');
+          }
+          if (rightToWork.otherSelected && !rightToWork.otherNote) {
+            throw new Error('Add a short note for the Other right-to-work option before saving.');
           }
           if (!emergencyName || !emergencyPhone) {
             throw new Error('Add your emergency contact name and phone number before saving live assignment onboarding.');
@@ -1896,8 +2141,8 @@ import {
           country: formData.get('country'),
           location: formData.get('location'),
           nationality: formData.get('nationality'),
-          right_to_work_status: formData.get('right_to_work_status'),
-          right_to_work_regions: formData.get('right_to_work_regions'),
+          right_to_work_status: rightToWork.summary,
+          right_to_work_regions: rightToWork.selected,
           primary_specialism: formData.get('primary_specialism'),
           secondary_specialism: formData.get('secondary_specialism'),
           current_job_title: formData.get('current_job_title'),
@@ -1930,9 +2175,15 @@ import {
           documentType: formData.get('document_type'),
           label: formData.get('label'),
         });
-        state.authMessage = { tone: 'success', text: 'Document uploaded and linked to your candidate profile.' };
-        state.documents = await loadCandidateDocuments(state.candidate?.id);
         const uploadedType = normaliseRequestedDocumentType(formData.get('document_type'));
+        const requiresVerification = ['passport', 'right_to_work', 'visa_permit', 'qualification_certificate', 'reference', 'bank_document'].includes(uploadedType);
+        state.authMessage = {
+          tone: requiresVerification ? 'warn' : 'success',
+          text: requiresVerification
+            ? 'Document uploaded. HMJ now has it on file and still needs to verify it.'
+            : 'Document uploaded and linked to your candidate profile.',
+        };
+        state.documents = await loadCandidateDocuments(state.candidate?.id);
         if (uploadedType) {
           state.requestedDocuments = state.requestedDocuments.filter((type) => type !== uploadedType);
         }
@@ -2151,6 +2402,21 @@ import {
         state.activeTab = 'profile';
       }
       render();
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.name === 'right_to_work') {
+      const profileForm = target.closest('[data-dashboard-form="profile"]');
+      const otherWrap = profileForm?.querySelector('[data-rtw-other-wrap]');
+      const otherChecked = !!profileForm?.querySelector(`[name="right_to_work"][value="${RTW_OTHER_VALUE}"]`)?.checked;
+      if (otherWrap) {
+        otherWrap.classList.toggle('is-hidden', !otherChecked);
+      }
+      if (!otherChecked) {
+        const otherInput = profileForm?.querySelector('[name="right_to_work_other"]');
+        if (otherInput instanceof HTMLInputElement) {
+          otherInput.value = '';
+        }
+      }
       return;
     }
     if (!(target instanceof HTMLSelectElement)) return;

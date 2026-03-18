@@ -28,7 +28,12 @@ test('candidate portal switches between recruitment profile and live onboarding 
   assert.match(source, /requestedDocumentListText/);
   assert.match(source, /value: 'cover_letter', label: 'Cover letter'/);
   assert.match(source, /value: 'bank_document', label: 'Bank document'/);
+  assert.match(source, /candidate-status-grid/);
+  assert.match(source, /Verified by HMJ/);
+  assert.match(source, /renderRightToWorkFieldset/);
+  assert.match(source, /value="\$\{RTW_OTHER_VALUE\}"/);
   assert.match(source, /if \(target instanceof HTMLInputElement && target\.name === 'onboarding_mode'\)/);
+  assert.match(source, /if \(target instanceof HTMLInputElement && target\.name === 'right_to_work'\)/);
   assert.match(source, /state\.authMessage = null;/);
   assert.match(source, /if \(!state\.draftOnboardingMode && state\.activeTab === 'payment'\)/);
 });

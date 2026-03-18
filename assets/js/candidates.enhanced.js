@@ -56,6 +56,7 @@
     cv: doc.getElementById('cv'),
     rtwGroup: doc.getElementById('rtwGroup'),
     rtwHidden: doc.getElementById('rtwHidden'),
+    rtwStatusHidden: doc.getElementById('rightToWorkStatusHidden'),
     skillsHidden: doc.getElementById('skillsHidden'),
     tagInput: doc.getElementById('tagInput'),
     tagBox: doc.getElementById('tagBox'),
@@ -98,6 +99,7 @@
     'Project Planner',
     'Quantity Surveyor'
   ];
+  const RTW_OTHER_LABEL = 'Other / specify below';
   const ROLE_TIPS = {
     'Commissioning': 'Try titles like “MEP Commissioning Manager”, “Lead IST Engineer”, “BMS Commissioning Engineer”.',
     'Electrical (MEP)': 'Popular: “Electrical Supervisor”, “MEP Package Manager”, “AP/AE Electrical Engineer”.',
@@ -137,9 +139,37 @@
     return Array.from(els.rtwGroup.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value.trim());
   }
 
+  function normaliseOtherRtw(value) {
+    return value.replace(/\s+/g, ' ').trim().slice(0, 40);
+  }
+
+  function getRTWSummaryState() {
+    const selections = getRTWSelections();
+    const otherSelected = selections.some((value) => value.toLowerCase() === RTW_OTHER_LABEL.toLowerCase());
+    const listedRegions = selections.filter((value) => value.toLowerCase() !== RTW_OTHER_LABEL.toLowerCase());
+    const otherNote = otherSelected ? normaliseOtherRtw(state.otherRtw) : '';
+    const summary = listedRegions.slice();
+    if (otherSelected && otherNote) {
+      summary.push(`Other: ${otherNote}`);
+    }
+    return {
+      listedRegions,
+      otherSelected,
+      otherNote,
+      summary,
+    };
+  }
+
   function updateRTWHidden() {
-    if (!els.rtwHidden) return;
-    els.rtwHidden.value = getRTWSelections().join(', ');
+    const rightToWork = getRTWSummaryState();
+    if (els.rtwHidden) {
+      els.rtwHidden.value = rightToWork.listedRegions.join(', ');
+    }
+    if (els.rtwStatusHidden) {
+      els.rtwStatusHidden.value = rightToWork.summary.length
+        ? `Candidate-declared work authorisation: ${rightToWork.summary.join(', ')}`
+        : '';
+    }
   }
 
   function setFieldValidity(field, message) {
@@ -157,23 +187,30 @@
     const skillMessage = state.skills.length
       ? ''
       : 'Add at least one key skill before submitting your profile.';
-    const rtwMessage = getRTWSelections().length
+    const rightToWork = getRTWSummaryState();
+    const rtwMessage = rightToWork.summary.length
       ? ''
       : 'Select at least one region where you are already authorised to work.';
+    const rtwOtherMessage = rightToWork.otherSelected && !rightToWork.otherNote
+      ? 'Add a short right-to-work note for the Other option.'
+      : '';
     const firstRtwCheckbox = els.rtwGroup?.querySelector('input[type="checkbox"]');
 
     setFieldValidity(els.tagInput, skillMessage);
     setFieldValidity(firstRtwCheckbox, rtwMessage);
+    setFieldValidity(state.otherRtwInput, rtwOtherMessage);
 
     if (report) {
       if (skillMessage) {
         els.tagInput?.reportValidity?.();
       } else if (rtwMessage) {
         firstRtwCheckbox?.reportValidity?.();
+      } else if (rtwOtherMessage) {
+        state.otherRtwInput?.reportValidity?.();
       }
     }
 
-    return !skillMessage && !rtwMessage;
+    return !skillMessage && !rtwMessage && !rtwOtherMessage;
   }
 
   function ensureLocationDatalist() {
@@ -476,13 +513,10 @@
     if (linkedin) availabilityRows.push(`LinkedIn: ${linkedin}`);
 
     const skillsRows = state.skills.length ? [state.skills] : [];
-    const rtw = getRTWSelections();
+    const rightToWork = getRTWSummaryState();
     const locationRows = [];
-    if (rtw.length) {
-      locationRows.push(`Right to work: ${rtw.join(', ')}`);
-    }
-    if (state.otherRtw) {
-      locationRows.push(`Additional note: ${state.otherRtw}`);
+    if (rightToWork.summary.length) {
+      locationRows.push(`Right to work: ${rightToWork.summary.join(', ')}`);
     }
     if (locationRows.length === 0) {
       locationRows.push('Add right-to-work regions to complete this section.');
@@ -687,39 +721,43 @@
     otherWrap.className = 'c-otherText';
     const otherLabel = doc.createElement('label');
     otherLabel.setAttribute('for', 'rtwOther');
-    otherLabel.textContent = 'Other details (for preview only)';
+    otherLabel.textContent = 'Other right-to-work route';
     const otherInput = doc.createElement('input');
     otherInput.id = 'rtwOther';
     otherInput.type = 'text';
+    otherInput.maxLength = 40;
+    otherInput.placeholder = 'Up to 40 characters';
     otherInput.setAttribute('aria-describedby', 'rtwHelp');
     otherWrap.appendChild(otherLabel);
     otherWrap.appendChild(otherInput);
     chipWrap.insertAdjacentElement('afterend', otherWrap);
 
     otherInput.addEventListener('input', () => {
-      state.otherRtw = otherInput.value.trim();
+      state.otherRtw = normaliseOtherRtw(otherInput.value);
+      otherInput.value = state.otherRtw;
       scheduleAutosave();
+      validateRequiredCollections();
+      updateRTWHidden();
       updatePreview();
     });
 
     const updateChips = () => {
       chipWrap.innerHTML = '';
-      const selections = getRTWSelections();
-      if (!selections.length) {
+      const rightToWork = getRTWSummaryState();
+      if (!rightToWork.summary.length) {
         const placeholder = doc.createElement('span');
         placeholder.className = 'c-tagLimit';
         placeholder.textContent = 'No regions selected yet.';
         chipWrap.appendChild(placeholder);
       }
-      selections.forEach((value) => {
+      rightToWork.summary.forEach((value) => {
         const chip = doc.createElement('span');
         chip.className = 'c-chip';
         chip.textContent = value;
         chipWrap.appendChild(chip);
       });
-      const otherChecked = selections.some((value) => value.toLowerCase().includes('other'));
-      otherWrap.style.display = otherChecked ? 'block' : 'none';
-      if (!otherChecked) {
+      otherWrap.style.display = rightToWork.otherSelected ? 'block' : 'none';
+      if (!rightToWork.otherSelected) {
         state.otherRtw = '';
         otherInput.value = '';
       }

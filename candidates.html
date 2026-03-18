@@ -337,6 +337,7 @@
               <input type="hidden" name="skills" id="skillsHidden" />
               <input type="hidden" name="page_url" id="pageUrlHidden" />
               <input type="hidden" name="right_to_work" id="rtwHidden" />
+              <input type="hidden" name="right_to_work_status" id="rightToWorkStatusHidden" />
               <input type="hidden" name="candidate_account_requested" id="candidateAccountRequested" value="yes" />
 
               <fieldset class="candidate-form__section">
@@ -390,7 +391,7 @@
                   <div class="candidate-field">
                     <label for="phone">Mobile / phone *</label>
                     <input id="phone" name="phone" type="tel" required
-                           pattern="^\+?[0-9\s\-()]{7,}$" title="Include country code, e.g. +353 85 123 4567">
+                           pattern="^[+() 0-9-]{7,}$" title="Include country code, e.g. +353 85 123 4567">
                   </div>
                   <div class="candidate-field">
                     <label for="address1">Address line 1 *</label>
@@ -430,17 +431,6 @@
                   <div class="candidate-field">
                     <label for="nationality">Nationality</label>
                     <input id="nationality" name="nationality" type="text" autocomplete="country">
-                  </div>
-                  <div class="candidate-field">
-                    <label for="rightToWorkStatus">Right to work status *</label>
-                    <select id="rightToWorkStatus" name="right_to_work_status" required>
-                      <option value="">Select…</option>
-                      <option>Full right to work already in place</option>
-                      <option>EU / EEA work rights</option>
-                      <option>UK work rights</option>
-                      <option>Permit or visa already in place</option>
-                      <option>I need advice on this</option>
-                    </select>
                   </div>
                   <div class="candidate-field">
                     <label for="discipline">Primary specialism / discipline *</label>
@@ -595,9 +585,9 @@
                       <label class="rtw-item"><input type="checkbox" value="Asia–Pacific"> Asia–Pacific</label>
                       <label class="rtw-item"><input type="checkbox" value="North America"> North America</label>
                       <label class="rtw-item"><input type="checkbox" value="Latin America (incl. Central America)"> Latin America (incl. Central America)</label>
-                      <label class="rtw-item"><input type="checkbox" value="Other / Please specify in notes"> Other / Please specify in notes</label>
+                      <label class="rtw-item"><input type="checkbox" value="Other / specify below"> Other / specify below</label>
                     </div>
-                    <p id="rtwHelp" class="small">Choose all that apply. If you are dual national or hold more than one right-to-work route, include all of them.</p>
+                    <p id="rtwHelp" class="small">Choose all that apply. If you are dual national or hold more than one right-to-work route, include all of them. Use Other only if none of the listed routes fit.</p>
                   </div>
                   <div class="candidate-field">
                     <label for="linkedin">LinkedIn profile</label>
@@ -750,8 +740,8 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=13">
-  <script defer src="assets/js/candidates.enhanced.js?v=4"></script>
-  <script type="module" src="assets/js/candidates.portal.js?v=13"></script>
+  <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=14">
+  <script defer src="assets/js/candidates.enhanced.js?v=5"></script>
+  <script type="module" src="assets/js/candidates.portal.js?v=14"></script>
 </body>
 </html>
