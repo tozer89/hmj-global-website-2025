@@ -163,6 +163,8 @@ function buildQboDiagnostics(event = {}, connection = null, schemaReady = true) 
   const clientSecret = trimString(process.env.QBO_CLIENT_SECRET, 400);
   const redirectUri = resolveRedirectUri(event);
   const baseUrl = resolveBaseUrl(event);
+  const financeLaunchUrl = baseUrl ? `${baseUrl}/admin/finance/quickbooks.html` : '';
+  const financeHubUrl = baseUrl ? `${baseUrl}/admin/finance/` : '';
   const warnings = [];
 
   if (!schemaReady) warnings.push('Finance schema has not been applied to Supabase yet.');
@@ -183,6 +185,8 @@ function buildQboDiagnostics(event = {}, connection = null, schemaReady = true) 
     environment: resolveQboEnvironment(),
     redirectUri,
     baseUrl,
+    financeLaunchUrl,
+    financeHubUrl,
     callbackPath: buildCallbackPath(),
     scope: QBO_SCOPE,
     hasExplicitRedirectUri: !!process.env.QBO_REDIRECT_URI,

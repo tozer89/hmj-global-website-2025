@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/assets/css/admin.finance.css?v=2"/>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
-  <script defer src="/admin/finance/quickbooks.js?v=3"></script>
+  <script defer src="/admin/finance/quickbooks.js?v=4"></script>
 </head>
 <body class="finance-page">
   <div class="finance-top">
@@ -110,8 +110,20 @@
                 <small id="qboRedirectUriLabel">Waiting for callback URL</small>
               </div>
               <div class="finance-list-item">
+                <strong>Host domain</strong>
+                <small id="qboHostDomainValue">Waiting for finance URL</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>Launch URL</strong>
+                <small id="qboLaunchUrlValue">Waiting for finance URL</small>
+              </div>
+              <div class="finance-list-item">
                 <strong>What Intuit must whitelist</strong>
                 <small id="qboWhitelistValue">Waiting for callback URL</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>Environment expected in Intuit</strong>
+                <small id="qboEnvironmentValue">Waiting for finance status</small>
               </div>
               <div class="finance-list-item">
                 <strong>Realm / company id</strong>
@@ -120,6 +132,10 @@
               <div class="finance-list-item">
                 <strong>Connection guidance</strong>
                 <small>Use the production HMJ finance URL for OAuth. Avoid preview deploys for the initial QuickBooks connection unless the same callback URL has been whitelisted in Intuit.</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>If Intuit shows “undefined didn’t connect”</strong>
+                <small>That means Intuit blocked the app before the HMJ callback fired. Check the Intuit app Production keys, callback URI, and that the app is configured in the Production tab rather than Development.</small>
               </div>
               <div class="finance-list-item">
                 <strong>Cached entities</strong>

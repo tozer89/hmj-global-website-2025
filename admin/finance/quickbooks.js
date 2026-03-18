@@ -21,7 +21,10 @@
       'qboRuntimeList',
       'qboRunList',
       'qboRedirectUriLabel',
+      'qboHostDomainValue',
+      'qboLaunchUrlValue',
       'qboWhitelistValue',
+      'qboEnvironmentValue',
       'btnConnectQbo',
       'btnSyncQbo',
       'btnDisconnectQbo',
@@ -75,6 +78,9 @@
     if (runtimeStatus?.lastError) {
       messages.unshift(`Latest QuickBooks issue: ${runtimeStatus.lastError}`);
     }
+    if (runtimeStatus?.lastEvent === 'connect_requested') {
+      messages.unshift('Intuit has not returned to the HMJ callback yet. If QuickBooks showed an internal connection problem, check the Intuit Production app keys and callback settings below.');
+    }
     [...messages].forEach((message) => {
       const div = document.createElement('div');
       div.className = 'finance-alert';
@@ -100,7 +106,12 @@
     els.qboLastSync.textContent = connection?.lastSyncAt ? 'Synced' : 'Not synced';
     els.qboLastSyncMeta.textContent = connection?.lastSyncAt ? timeLabel(connection.lastSyncAt) : 'No sync recorded yet';
     els.qboRedirectUriLabel.textContent = diagnostics.redirectUri || 'QuickBooks callback URL not available';
+    els.qboHostDomainValue.textContent = diagnostics.baseUrl || 'HMJ base URL not resolved';
+    els.qboLaunchUrlValue.textContent = diagnostics.financeLaunchUrl || 'HMJ finance launch URL not resolved';
     els.qboWhitelistValue.textContent = diagnostics.redirectUri || 'QuickBooks callback URL not available';
+    els.qboEnvironmentValue.textContent = diagnostics.environment === 'sandbox'
+      ? 'Sandbox app keys and sandbox company'
+      : 'Production app keys and a live QuickBooks company';
     els.btnConnectQbo.textContent = connection ? 'Reconnect QuickBooks' : 'Connect QuickBooks';
 
     clearNode(els.qboConnectionList);
