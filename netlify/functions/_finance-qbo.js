@@ -30,8 +30,8 @@ function normaliseUrl(value) {
 
 function resolveBaseUrl(event = {}) {
   const envValue = trimString(
-    process.env.URL
-      || process.env.HMJ_CANONICAL_SITE_URL
+    process.env.HMJ_CANONICAL_SITE_URL
+      || process.env.URL
       || process.env.SITE_URL
       || process.env.DEPLOY_PRIME_URL
       || '',
@@ -57,11 +57,15 @@ function resolveBaseUrl(event = {}) {
   return '';
 }
 
+function buildCallbackPath() {
+  return '/.netlify/functions/admin-finance-qbo-callback';
+}
+
 function resolveRedirectUri(event = {}) {
   const configured = normaliseUrl(process.env.QBO_REDIRECT_URI || '');
   if (configured) return configured;
   const baseUrl = resolveBaseUrl(event);
-  return baseUrl ? `${baseUrl}/.netlify/functions/admin-finance-qbo-callback` : '';
+  return baseUrl ? `${baseUrl}${buildCallbackPath()}` : '';
 }
 
 function resolveQboEnvironment() {
@@ -76,6 +80,39 @@ function resolveStateSecret() {
       || '',
     4000
   );
+}
+
+function buildSafeQboMeta(meta = {}) {
+  const next = {};
+  Object.entries(meta || {}).forEach(([key, value]) => {
+    if (value == null) return;
+    if (typeof value === 'string') {
+      const lowered = key.toLowerCase();
+      if (lowered.includes('token') || lowered.includes('secret') || lowered.includes('client')) return;
+      next[key] = trimString(value, 500);
+      return;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      next[key] = value;
+      return;
+    }
+    if (Array.isArray(value)) {
+      next[key] = value.slice(0, 10).map((item) => trimString(item, 120));
+      return;
+    }
+    if (typeof value === 'object') {
+      next[key] = buildSafeQboMeta(value);
+    }
+  });
+  return next;
+}
+
+function logQbo(stage, meta = {}) {
+  try {
+    console.log(`[qbo] ${stage} ${JSON.stringify(buildSafeQboMeta(meta))}`);
+  } catch {
+    console.log(`[qbo] ${stage}`);
+  }
 }
 
 function buildSignedState(data = {}) {
@@ -132,6 +169,13 @@ function buildQboDiagnostics(event = {}, connection = null, schemaReady = true) 
   if (!clientId) warnings.push('QBO_CLIENT_ID is missing in Netlify.');
   if (!clientSecret) warnings.push('QBO_CLIENT_SECRET is missing in Netlify.');
   if (!redirectUri) warnings.push('QuickBooks redirect URI could not be resolved from Netlify/site settings.');
+  if (redirectUri && !process.env.QBO_REDIRECT_URI) warnings.push('QBO_REDIRECT_URI is not set explicitly. HMJ is deriving the callback URL at runtime.');
+  if (!process.env.HMJ_FINANCE_SECRET) warnings.push('HMJ_FINANCE_SECRET is not set explicitly. QBO state signing is falling back to an existing service secret.');
+
+  const origin = normaliseUrl(trimString(event?.headers?.origin, 1000));
+  if (origin && baseUrl && origin !== baseUrl) {
+    warnings.push(`QuickBooks OAuth is pinned to ${baseUrl}. Connect from the production HMJ finance URL rather than a preview deployment.`);
+  }
 
   return {
     configured: !!clientId && !!clientSecret,
@@ -139,7 +183,10 @@ function buildQboDiagnostics(event = {}, connection = null, schemaReady = true) 
     environment: resolveQboEnvironment(),
     redirectUri,
     baseUrl,
+    callbackPath: buildCallbackPath(),
     scope: QBO_SCOPE,
+    hasExplicitRedirectUri: !!process.env.QBO_REDIRECT_URI,
+    hasExplicitFinanceSecret: !!process.env.HMJ_FINANCE_SECRET,
     warnings,
     connection: connection ? normalizeConnectionForClient(connection) : null,
   };
@@ -156,6 +203,36 @@ function buildReturnUrl(event = {}, path = '/admin/finance/quickbooks.html', par
   return url.toString();
 }
 
+function normalizeReturnTo(event = {}, rawValue, fallbackPath = '/admin/finance/quickbooks.html') {
+  const fallback = buildReturnUrl(event, fallbackPath);
+  const raw = trimString(rawValue, 1000);
+  if (!raw) return fallback;
+  const baseUrl = resolveBaseUrl(event);
+  try {
+    if (raw.startsWith('/')) {
+      if (!baseUrl) return fallback;
+      return new URL(raw, `${baseUrl}/`).toString();
+    }
+    const next = new URL(raw);
+    if (!baseUrl) return fallback;
+    const base = new URL(baseUrl);
+    if (next.origin !== base.origin) return fallback;
+    return next.toString();
+  } catch {
+    return fallback;
+  }
+}
+
+function appendQueryParams(targetUrl, params = {}) {
+  const next = new URL(targetUrl);
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const safe = trimString(value, 1000);
+    if (!safe) return;
+    next.searchParams.set(key, safe);
+  });
+  return next.toString();
+}
+
 function buildAuthUrl({ event, user, returnTo }) {
   const clientId = trimString(process.env.QBO_CLIENT_ID, 400);
   const redirectUri = resolveRedirectUri(event);
@@ -168,7 +245,7 @@ function buildAuthUrl({ event, user, returnTo }) {
     provider: 'quickbooks',
     userId: trimString(user?.id, 240),
     email: lowerText(user?.email, 320),
-    returnTo: trimString(returnTo, 1000) || buildReturnUrl(event),
+    returnTo: normalizeReturnTo(event, returnTo),
     iat: Date.now(),
   });
   const url = new URL(QBO_AUTHORIZE_BASE);
@@ -177,6 +254,12 @@ function buildAuthUrl({ event, user, returnTo }) {
   url.searchParams.set('scope', QBO_SCOPE);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('state', state);
+  logQbo('auth_url_built', {
+    redirectUri,
+    returnTo: normalizeReturnTo(event, returnTo),
+    email: lowerText(user?.email, 320),
+    environment: resolveQboEnvironment(),
+  });
   return {
     url: url.toString(),
     state,
@@ -193,6 +276,10 @@ async function qboTokenRequest(params = {}) {
     throw error;
   }
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  logQbo('token_exchange_start', {
+    grantType: trimString(params.grant_type, 60),
+    redirectUri: trimString(params.redirect_uri, 1000),
+  });
   const response = await fetch(QBO_TOKEN_URL, {
     method: 'POST',
     headers: {
@@ -203,6 +290,11 @@ async function qboTokenRequest(params = {}) {
     body: new URLSearchParams(params).toString(),
   });
   const payload = await response.json().catch(() => ({}));
+  logQbo('token_exchange_response', {
+    status: response.status,
+    ok: response.ok,
+    providerError: trimString(payload?.error_description || payload?.error, 300),
+  });
   if (!response.ok) {
     const error = new Error(trimString(payload.error_description || payload.error || 'QuickBooks token request failed.', 500));
     error.code = response.status || 502;
@@ -323,6 +415,11 @@ async function ensureFreshConnection(event) {
 }
 
 async function connectFromCallback(event, user, callbackPayload = {}) {
+  logQbo('callback_connect_start', {
+    email: lowerText(user?.email, 320),
+    realmId: trimString(callbackPayload.realmId, 240),
+    environment: trimString(callbackPayload.environment, 20),
+  });
   const company = await fetchCompanyInfo({
     realm_id: trimString(callbackPayload.realmId, 240),
     access_token: trimString(callbackPayload.accessToken, 16000),
@@ -341,6 +438,11 @@ async function connectFromCallback(event, user, callbackPayload = {}) {
     connectedEmail: trimString(user?.email, 320),
     status: 'connected',
     rawCompany: company,
+  });
+  logQbo('callback_connect_saved', {
+    email: lowerText(user?.email, 320),
+    realmId: trimString(callbackPayload.realmId, 240),
+    companyName: trimString(company?.CompanyName || company?.LegalName, 240),
   });
   return readFinanceConnection(event);
 }
@@ -384,11 +486,14 @@ async function syncQuickBooksData(event, connection) {
 
 module.exports = {
   QBO_SCOPE,
+  logQbo,
   resolveBaseUrl,
   resolveRedirectUri,
   resolveQboEnvironment,
   buildQboDiagnostics,
   buildReturnUrl,
+  normalizeReturnTo,
+  appendQueryParams,
   buildSignedState,
   parseSignedState,
   buildAuthUrl,

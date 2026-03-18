@@ -37,3 +37,22 @@ test('QBO auth URL includes accounting scope and state signature', async () => {
   assert.match(auth.url, /response_type=code/);
   assert.ok(auth.state.includes('.'));
 });
+
+test('QBO auth URL normalises off-site return targets back to HMJ finance', async () => {
+  process.env.QBO_CLIENT_ID = 'client-id';
+  process.env.QBO_CLIENT_SECRET = 'client-secret';
+  process.env.HMJ_FINANCE_SECRET = 'finance-secret';
+  process.env.HMJ_CANONICAL_SITE_URL = 'https://hmjg.netlify.app';
+
+  delete require.cache[require.resolve('../netlify/functions/_finance-qbo.js')];
+  const qbo = require('../netlify/functions/_finance-qbo.js');
+
+  const auth = qbo.buildAuthUrl({
+    event: { headers: { origin: 'https://preview--hmjg.netlify.app' } },
+    user: { id: 'admin-user', email: 'info@hmj-global.com' },
+    returnTo: 'https://evil.example.com/steal-me',
+  });
+
+  const state = qbo.parseSignedState(auth.state);
+  assert.equal(state.returnTo, 'https://hmjg.netlify.app/admin/finance/quickbooks.html');
+});

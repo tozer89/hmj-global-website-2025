@@ -10,8 +10,9 @@ const {
   updateSyncRun,
   replaceCacheRows,
   normalizeConnectionForClient,
+  saveQboRuntimeStatus,
 } = require('./_finance-store.js');
-const { syncQuickBooksData, buildQboDiagnostics } = require('./_finance-qbo.js');
+const { syncQuickBooksData, buildQboDiagnostics, logQbo } = require('./_finance-qbo.js');
 
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
@@ -118,8 +119,27 @@ module.exports.handler = withAdminCors(async (event, context) => {
   const connection = await readFinanceConnection(event).catch(() => null);
   const diagnostics = buildQboDiagnostics(event, connection, schema.ready);
   if (!connection) {
+    await saveQboRuntimeStatus(event, {
+      lastEvent: 'sync_blocked',
+      lastEventAt: new Date().toISOString(),
+      lastError: 'QuickBooks is not connected.',
+      lastErrorAt: new Date().toISOString(),
+    }, user?.email || '').catch(() => null);
     return json(409, { ok: false, error: 'qbo_not_connected', diagnostics });
   }
+
+  logQbo('sync_started', {
+    email: user?.email,
+    realmId: connection.realm_id,
+    connectionId: connection.id,
+  });
+  await saveQboRuntimeStatus(event, {
+    lastEvent: 'sync_started',
+    lastEventAt: new Date().toISOString(),
+    lastError: '',
+    connectedEmail: connection.connected_email,
+    realmId: connection.realm_id,
+  }, user?.email || '').catch(() => null);
 
   const run = await createSyncRun(event, {
     connectionId: connection.id,
@@ -155,6 +175,21 @@ module.exports.handler = withAdminCors(async (event, context) => {
       status: 'completed',
       entityCounts: result.counts,
     });
+    await saveQboRuntimeStatus(event, {
+      lastEvent: 'sync_completed',
+      lastEventAt: new Date().toISOString(),
+      lastSuccessAt: new Date().toISOString(),
+      lastError: '',
+      lastErrorAt: '',
+      connectedEmail: connection.connected_email,
+      realmId: connection.realm_id,
+      lastSyncCounts: result.counts,
+    }, user?.email || '').catch(() => null);
+    logQbo('sync_completed', {
+      email: user?.email,
+      realmId: connection.realm_id,
+      counts: result.counts,
+    });
 
     return json(200, {
       ok: true,
@@ -177,6 +212,20 @@ module.exports.handler = withAdminCors(async (event, context) => {
       status: 'failed',
       errorMessage: error?.message || 'QuickBooks sync failed.',
     }).catch(() => null);
+    await saveQboRuntimeStatus(event, {
+      lastEvent: 'sync_failed',
+      lastEventAt: new Date().toISOString(),
+      lastError: error?.message || 'QuickBooks sync failed.',
+      lastErrorAt: new Date().toISOString(),
+      connectedEmail: connection.connected_email,
+      realmId: connection.realm_id,
+    }, user?.email || '').catch(() => null);
+    logQbo('sync_failed', {
+      email: user?.email,
+      realmId: connection.realm_id,
+      error: error?.message,
+      code: error?.code || error?.status || '',
+    });
     return json(Number(error?.code) || 500, {
       ok: false,
       error: error?.message || 'QuickBooks sync failed.',

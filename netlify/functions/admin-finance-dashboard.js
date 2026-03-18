@@ -9,6 +9,7 @@ const {
   normalizeConnectionForClient,
   listRecentSyncRuns,
   readCashflowState,
+  readQboRuntimeStatus,
 } = require('./_finance-store.js');
 const { buildQboDiagnostics } = require('./_finance-qbo.js');
 
@@ -16,6 +17,7 @@ module.exports.handler = withAdminCors(async (event, context) => {
   const { user } = await getContext(event, context, { requireAdmin: true });
   const schema = await getFinanceSchemaStatus(event);
   const connection = schema.ready ? await readFinanceConnection(event).catch(() => null) : null;
+  const runtimeStatus = schema.ready ? await readQboRuntimeStatus(event).catch(() => ({})) : {};
   const qbo = buildQboDiagnostics(event, connection, schema.ready);
   const syncRuns = schema.ready ? await listRecentSyncRuns(event, 8).catch(() => []) : [];
 
@@ -39,6 +41,7 @@ module.exports.handler = withAdminCors(async (event, context) => {
       finance: {
         schema,
         qbo,
+        qboRuntimeStatus: runtimeStatus,
         connection: connection ? normalizeConnectionForClient(connection) : null,
         cashflowSummary,
         recentSyncRuns: syncRuns,

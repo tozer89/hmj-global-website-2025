@@ -112,6 +112,20 @@ async function saveModuleSettings(event, moduleKey, settings = {}, updatedBy = '
   return data;
 }
 
+async function readQboRuntimeStatus(event) {
+  const row = await readModuleSettings(event, 'quickbooks_runtime_status');
+  return asJson(row?.settings, {});
+}
+
+async function saveQboRuntimeStatus(event, input = {}, updatedBy = '') {
+  const current = await readQboRuntimeStatus(event);
+  const next = {
+    ...current,
+    ...asJson(input, {}),
+  };
+  return saveModuleSettings(event, 'quickbooks_runtime_status', next, updatedBy);
+}
+
 async function readFinanceConnection(event) {
   const rows = await listRows(event, 'finance_qbo_connections', (query) => query
     .eq('provider', 'quickbooks')
@@ -550,6 +564,8 @@ module.exports = {
   getFinanceSchemaStatus,
   readModuleSettings,
   saveModuleSettings,
+  readQboRuntimeStatus,
+  saveQboRuntimeStatus,
   readFinanceConnection,
   saveFinanceConnection,
   disconnectFinanceConnection,

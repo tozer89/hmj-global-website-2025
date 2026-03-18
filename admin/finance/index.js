@@ -156,6 +156,7 @@
     const finance = payload.finance || {};
     const summary = finance.cashflowSummary || {};
     const qbo = finance.qbo || {};
+    const qboRuntimeStatus = finance.qboRuntimeStatus || {};
     const alerts = [];
 
     clearNode(els.financeStatusChips);
@@ -173,12 +174,15 @@
     els.heroQboStatus.textContent = qbo.connection ? 'Connected' : (qbo.connectReady ? 'Ready to connect' : 'Needs config');
     els.heroQboMeta.textContent = qbo.connection?.lastSyncAt
       ? `Last sync ${timeLabel(qbo.connection.lastSyncAt)}`
-      : (qbo.warnings?.[0] || 'No QuickBooks sync recorded yet.');
+      : (qboRuntimeStatus?.lastError || qbo.warnings?.[0] || 'No QuickBooks sync recorded yet.');
 
     if (!finance.schema?.ready) {
       alerts.push({ tone: 'warn', text: 'Finance schema is not available yet. Apply the new finance migration before using the cashflow workspace.' });
     }
     (qbo.warnings || []).forEach((warning) => alerts.push({ tone: 'warn', text: warning }));
+    if (qboRuntimeStatus?.lastError) {
+      alerts.push({ tone: 'warn', text: `QuickBooks callback issue: ${qboRuntimeStatus.lastError}` });
+    }
     if (summary?.error) alerts.push({ tone: 'warn', text: summary.error });
 
     renderAlerts(alerts);

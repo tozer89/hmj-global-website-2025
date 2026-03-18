@@ -18,8 +18,10 @@
       'qboLastSyncMeta',
       'qboAlerts',
       'qboConnectionList',
+      'qboRuntimeList',
       'qboRunList',
       'qboRedirectUriLabel',
+      'qboWhitelistValue',
       'btnConnectQbo',
       'btnSyncQbo',
       'btnDisconnectQbo',
@@ -61,12 +63,22 @@
     return payload;
   }
 
-  function renderAlerts(diagnostics, extra = []) {
+  function humanizeRuntimeEvent(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return 'No callback activity recorded yet';
+    return raw.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function renderAlerts(diagnostics, runtimeStatus = {}, extra = []) {
     clearNode(els.qboAlerts);
-    [...(diagnostics?.warnings || []), ...extra].forEach((message) => {
+    const messages = [...(diagnostics?.warnings || []), ...extra];
+    if (runtimeStatus?.lastError) {
+      messages.unshift(`Latest QuickBooks issue: ${runtimeStatus.lastError}`);
+    }
+    [...messages].forEach((message) => {
       const div = document.createElement('div');
       div.className = 'finance-alert';
-      div.dataset.tone = 'warn';
+      div.dataset.tone = String(message || '').toLowerCase().includes('successfully') ? 'ok' : 'warn';
       div.textContent = message;
       els.qboAlerts.appendChild(div);
     });
@@ -75,22 +87,27 @@
   function renderConnection(payload) {
     const diagnostics = payload.diagnostics || payload.qbo || {};
     const connection = payload.connection || diagnostics.connection || null;
+    const runtimeStatus = payload.runtimeStatus || payload.qboRuntimeStatus || {};
 
     clearNode(els.qboStatusChips);
     els.qboStatusChips.appendChild(statusChip(diagnostics.connectReady ? 'Ready to connect' : 'Needs config', diagnostics.connectReady ? 'ok' : 'warn'));
     els.qboStatusChips.appendChild(statusChip(connection ? 'Connected' : 'No live connection', connection ? 'ok' : 'warn'));
     if (diagnostics.environment) els.qboStatusChips.appendChild(statusChip(`QBO ${diagnostics.environment}`, 'ok'));
+    if (runtimeStatus?.lastError) els.qboStatusChips.appendChild(statusChip('Last callback needs attention', 'warn'));
 
     els.qboConnectionStatus.textContent = connection ? 'Connected' : (diagnostics.connectReady ? 'Ready to connect' : 'Needs config');
-    els.qboConnectionMeta.textContent = connection?.companyName || diagnostics.warnings?.[0] || 'Waiting for finance status';
+    els.qboConnectionMeta.textContent = connection?.companyName || runtimeStatus?.lastError || diagnostics.warnings?.[0] || 'Waiting for finance status';
     els.qboLastSync.textContent = connection?.lastSyncAt ? 'Synced' : 'Not synced';
     els.qboLastSyncMeta.textContent = connection?.lastSyncAt ? timeLabel(connection.lastSyncAt) : 'No sync recorded yet';
     els.qboRedirectUriLabel.textContent = diagnostics.redirectUri || 'QuickBooks callback URL not available';
+    els.qboWhitelistValue.textContent = diagnostics.redirectUri || 'QuickBooks callback URL not available';
+    els.btnConnectQbo.textContent = connection ? 'Reconnect QuickBooks' : 'Connect QuickBooks';
 
     clearNode(els.qboConnectionList);
     const items = [
       ['Environment', diagnostics.environment || 'production'],
       ['Redirect URI', diagnostics.redirectUri || 'Not resolved'],
+      ['Redirect source', diagnostics.hasExplicitRedirectUri ? 'QBO_REDIRECT_URI' : 'Derived from HMJ canonical site URL'],
       ['Scope', diagnostics.scope || 'com.intuit.quickbooks.accounting'],
       ['Company', connection?.companyName || 'Not connected'],
       ['Realm ID', connection?.realmId || 'Not connected'],
@@ -103,6 +120,23 @@
       item.className = 'finance-list-item';
       item.innerHTML = `<strong>${label}</strong><small>${value}</small>`;
       els.qboConnectionList.appendChild(item);
+    });
+
+    clearNode(els.qboRuntimeList);
+    const runtimeItems = [
+      ['Latest event', humanizeRuntimeEvent(runtimeStatus?.lastEvent)],
+      ['Event time', timeLabel(runtimeStatus?.lastEventAt)],
+      ['Last success', timeLabel(runtimeStatus?.lastSuccessAt)],
+      ['Last error', runtimeStatus?.lastError || 'None'],
+      ['Provider error', runtimeStatus?.lastProviderError || 'None'],
+      ['Last realm seen', runtimeStatus?.realmId || 'Not captured yet'],
+      ['Last return target', runtimeStatus?.returnTo || 'Not captured yet'],
+    ];
+    runtimeItems.forEach(([label, value]) => {
+      const item = document.createElement('div');
+      item.className = 'finance-list-item';
+      item.innerHTML = `<strong>${label}</strong><small>${value}</small>`;
+      els.qboRuntimeList.appendChild(item);
     });
 
     clearNode(els.qboRunList);
@@ -126,7 +160,7 @@
     const params = new URLSearchParams(location.search);
     if (params.get('qbo_error')) extra.push(decodeURIComponent(params.get('qbo_error')));
     if (params.get('qbo') === 'connected') extra.push('QuickBooks connected successfully.');
-    renderAlerts(diagnostics, extra);
+    renderAlerts(diagnostics, runtimeStatus, extra);
 
     els.btnConnectQbo.disabled = !diagnostics.connectReady;
     els.btnSyncQbo.disabled = !connection;
@@ -141,6 +175,7 @@
     renderConnection({
       ...connectionPayload,
       recentSyncRuns: dashboardPayload.finance?.recentSyncRuns || [],
+      qboRuntimeStatus: dashboardPayload.finance?.qboRuntimeStatus || {},
     });
   }
 
