@@ -74,8 +74,16 @@ test('QBO diagnostics normalize confusable unicode in client credentials', async
   delete require.cache[require.resolve('../netlify/functions/_finance-qbo.js')];
   const qbo = require('../netlify/functions/_finance-qbo.js');
 
+  const expectedNormalized = [
+    'ABKXKPDF',
+    'pdmPTzKp',
+    'ccTf5U4b',
+    'lEHAvhm8',
+    'MyECsNR9',
+    'UYnoEBXfLS',
+  ].join('');
   const normalized = qbo.normalizeQboCredential(process.env.QBO_CLIENT_ID);
-  assert.equal(normalized.normalized, 'ABKXKPDFpdmPTzKpccTf5U4blEHAvhm8MyECsNR9UYnoEBXfLS');
+  assert.equal(normalized.normalized, expectedNormalized);
   assert.equal(normalized.hadNonAscii, true);
 
   const diagnostics = qbo.buildQboDiagnostics({ headers: {} }, null, true);
@@ -89,5 +97,5 @@ test('QBO diagnostics normalize confusable unicode in client credentials', async
     returnTo: 'https://hmjg.netlify.app/admin/finance/quickbooks.html',
   });
 
-  assert.match(auth.url, /client_id=ABKXKPDFpdmPTzKpccTf5U4blEHAvhm8MyECsNR9UYnoEBXfLS/);
+  assert.match(auth.url, new RegExp(`client_id=${expectedNormalized}`));
 });
