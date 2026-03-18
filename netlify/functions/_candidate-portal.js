@@ -1,5 +1,7 @@
 'use strict';
 
+const { normalizeJobApplicationStatus } = require('./_job-applications.js');
+
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
     ? value.trim()
@@ -75,19 +77,7 @@ function splitName(value) {
 }
 
 function normaliseApplicationStatus(value) {
-  const raw = String(value == null ? '' : value).trim().toLowerCase();
-  if (!raw) return 'submitted';
-  if (raw === 'applied') return 'submitted';
-  if (raw === 'under review') return 'reviewing';
-  if (raw === 'on hold') return 'on_hold';
-  if (raw === 'offered') return 'offered';
-  if (raw === 'hired') return 'hired';
-  if (raw === 'placed') return 'hired';
-  if (raw === 'shortlisted') return 'shortlisted';
-  if (raw === 'interviewing') return 'interviewing';
-  if (raw === 'rejected') return 'rejected';
-  if (raw === 'reviewing') return 'reviewing';
-  return 'submitted';
+  return normalizeJobApplicationStatus(value);
 }
 
 function normaliseDocumentType(value) {

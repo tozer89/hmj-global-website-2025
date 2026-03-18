@@ -1291,8 +1291,20 @@
         };
       }
 
+      function mergeUrlFilters(baseFilters) {
+        const merged = { ...baseFilters };
+        try {
+          const params = new URLSearchParams(window.location.search || '');
+          const q = String(params.get('q') || params.get('job_title') || '').trim().toLowerCase();
+          if (q) merged.q = q;
+        } catch (err) {
+          console.warn('[jobs] unable to read URL filters', err);
+        }
+        return merged;
+      }
+
       const storedPreferences = loadPreferences();
-      const restoredFilters = normaliseStoredFilters(storedPreferences?.filters || DEFAULT_FILTERS);
+      const restoredFilters = mergeUrlFilters(normaliseStoredFilters(storedPreferences?.filters || DEFAULT_FILTERS));
       const state = {
         jobs: [],
         filters: { ...restoredFilters, tags: new Set(restoredFilters.tags) },

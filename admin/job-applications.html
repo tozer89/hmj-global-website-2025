@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Job Applications | HMJ Global Admin</title>
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
+  <link rel="stylesheet" href="/assets/css/admin.job-applications.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
+  <script defer src="/admin/job-applications.js?v=1"></script>
+</head>
+<body class="job-applications-page">
+  <div class="ja-top">
+    <div class="ja-row">
+      <div class="ja-brand">
+        <span class="ja-brand__mark">H</span>
+        <span>HMJ Global Admin</span>
+      </div>
+      <span class="ja-pill">Job applications</span>
+      <div class="ja-spacer"></div>
+      <a class="ja-link ja-btn--ghost" href="/admin/">Return to Admin Dash</a>
+      <a class="ja-link ja-btn--ghost" href="/">Website</a>
+      <button class="ja-btn ja-btn--ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="ja-wrap" id="gate" style="display:none">
+    <section class="ja-panel">
+      <div class="ja-panel__inner">
+        <p class="ja-eyebrow">Admin only</p>
+        <h1 class="ja-title" style="font-size:38px">Job application access requires an HMJ admin session</h1>
+        <p class="ja-muted">Checking your session…</p>
+        <div class="ja-hero__actions">
+          <button class="ja-btn ja-btn--primary" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="ja-link" href="/admin/">Back to dashboard</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="ja-wrap" id="app" style="display:none">
+    <section class="ja-panel">
+      <div class="ja-panel__inner ja-hero">
+        <div>
+          <p class="ja-eyebrow">Application workflow</p>
+          <h1 class="ja-title">Job applications</h1>
+          <p class="ja-muted" id="welcomeMeta">Loading admin context…</p>
+          <p class="ja-muted">Review website-submitted job applications separately from the broader candidates workspace. Search by candidate or role, update the application workflow, and jump into the linked candidate profile or jobs console where needed.</p>
+          <div class="ja-hero__actions">
+            <button class="ja-btn ja-btn--primary" type="button" id="btnRefresh">Refresh</button>
+            <a class="ja-link" href="/admin/candidates.html">Open candidates workspace</a>
+            <a class="ja-link" href="/admin/jobs.html">Open jobs workspace</a>
+          </div>
+        </div>
+        <aside class="ja-hero__stats" aria-label="Application summary">
+          <div class="ja-stat">
+            <span>Total applications</span>
+            <strong id="statTotal">—</strong>
+            <span id="statTotalMeta">Waiting for data</span>
+          </div>
+          <div class="ja-stat">
+            <span>Submitted</span>
+            <strong id="statSubmitted">—</strong>
+            <span>New applications waiting for review.</span>
+          </div>
+          <div class="ja-stat">
+            <span>In Progress</span>
+            <strong id="statInProgress">—</strong>
+            <span>Applications being reviewed or moved forward.</span>
+          </div>
+          <div class="ja-stat">
+            <span>Interview</span>
+            <strong id="statInterview">—</strong>
+            <span>Applications now at interview stage.</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="ja-panel">
+      <div class="ja-panel__inner ja-toolbar">
+        <div class="ja-filter-grid">
+          <div class="ja-field" style="grid-column:span 2">
+            <label for="filterSearch">Search</label>
+            <input class="ja-input" id="filterSearch" type="search" placeholder="Candidate, email, role, location, reference, source"/>
+          </div>
+          <div class="ja-field">
+            <label for="filterStatus">Status</label>
+            <select class="ja-select" id="filterStatus">
+              <option value="all">All statuses</option>
+              <option value="submitted">Submitted</option>
+              <option value="in_progress">In Progress</option>
+              <option value="interview">Interview</option>
+              <option value="reject">Reject</option>
+            </select>
+          </div>
+          <div class="ja-field">
+            <label for="filterSource">Source</label>
+            <select class="ja-select" id="filterSource">
+              <option value="all">All sources</option>
+            </select>
+          </div>
+          <div class="ja-field">
+            <label for="sortSelect">Sort</label>
+            <select class="ja-select" id="sortSelect">
+              <option value="applied_at:desc">Newest applications</option>
+              <option value="applied_at:asc">Oldest applications</option>
+              <option value="candidate_name:asc">Candidate A-Z</option>
+              <option value="job_title:asc">Role A-Z</option>
+              <option value="status:asc">Status</option>
+              <option value="updated_at:desc">Recently updated</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ja-filter-meta">
+          <div class="ja-chip-row" id="filterChips" aria-live="polite"></div>
+          <div class="ja-cell-actions">
+            <button class="ja-btn" type="button" id="btnApplyFilters">Apply filters</button>
+            <button class="ja-btn" type="button" id="btnClearFilters">Clear</button>
+          </div>
+        </div>
+
+        <div id="pageAlert" aria-live="polite"></div>
+
+        <div class="ja-summary-grid" aria-label="Current application counts">
+          <article class="ja-summary-card">
+            <span class="ja-eyebrow" style="margin:0">Submitted</span>
+            <strong id="cardSubmitted">0</strong>
+            <small>Default starting status for new website applications.</small>
+          </article>
+          <article class="ja-summary-card">
+            <span class="ja-eyebrow" style="margin:0">In Progress</span>
+            <strong id="cardInProgress">0</strong>
+            <small>Applications under active recruiter review.</small>
+          </article>
+          <article class="ja-summary-card">
+            <span class="ja-eyebrow" style="margin:0">Interview</span>
+            <strong id="cardInterview">0</strong>
+            <small>Applications currently at interview stage.</small>
+          </article>
+          <article class="ja-summary-card">
+            <span class="ja-eyebrow" style="margin:0">Reject</span>
+            <strong id="cardReject">0</strong>
+            <small>Applications marked as rejected.</small>
+          </article>
+          <article class="ja-summary-card">
+            <span class="ja-eyebrow" style="margin:0">Visible set</span>
+            <strong id="cardVisible">0</strong>
+            <small id="cardVisibleMeta">Waiting for filters</small>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="ja-panel">
+      <div class="ja-panel__inner">
+        <div class="ja-pagination" style="margin-bottom:16px">
+          <div class="ja-chip-row">
+            <span class="ja-chip" id="resultChip">Loading applications…</span>
+          </div>
+          <div class="ja-cell-actions">
+            <button class="ja-btn" type="button" id="btnPrevPage">Previous</button>
+            <span class="ja-chip" id="pageInfo">Page 1 of 1</span>
+            <button class="ja-btn" type="button" id="btnNextPage">Next</button>
+          </div>
+        </div>
+
+        <div class="ja-table-shell">
+          <table class="ja-table" aria-label="Job applications table">
+            <thead>
+              <tr>
+                <th>Application</th>
+                <th>Candidate</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="applicationRows"></tbody>
+          </table>
+          <div class="ja-empty" id="emptyState" hidden>No job applications match the current filters.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="ja-overlay" id="drawerOverlay"></div>
+  <aside class="ja-drawer" id="applicationDrawer" aria-hidden="true">
+    <div class="ja-drawer__head">
+      <div>
+        <p class="ja-eyebrow">Application review</p>
+        <h2 id="drawerTitle" style="margin:0;font-size:34px;line-height:1.05">Application</h2>
+        <p class="ja-muted" id="drawerMeta" style="margin:8px 0 0">Select an application to review it here.</p>
+      </div>
+      <button class="ja-btn" type="button" id="btnCloseDrawer">Close</button>
+    </div>
+    <div class="ja-drawer__body" id="drawerBody">
+      <div class="ja-drawer__section">
+        <p class="ja-muted">No application selected.</p>
+      </div>
+    </div>
+    <div class="ja-drawer__foot">
+      <div class="ja-chip-row" id="drawerStatusActions"></div>
+      <div class="ja-cell-actions">
+        <a class="ja-link" href="/admin/candidates.html" id="drawerCandidateLink">Candidate</a>
+        <a class="ja-link" href="/admin/jobs.html" id="drawerJobLink">Role</a>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

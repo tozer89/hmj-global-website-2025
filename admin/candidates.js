@@ -163,6 +163,19 @@
     }
   }
 
+  function readLaunchParams() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      return {
+        candidateId: String(params.get('candidate_id') || params.get('candidate') || '').trim(),
+        query: String(params.get('q') || '').trim(),
+      };
+    } catch (err) {
+      console.warn('[candidates] unable to read launch params', err);
+      return { candidateId: '', query: '' };
+    }
+  }
+
   function persistSelection() {
     try {
       localStorage.setItem(SELECTION_KEY, JSON.stringify(Array.from(state.selection)));
@@ -4889,6 +4902,11 @@
 
   function init(helpers) {
     state.helpers = helpers;
+    const launch = readLaunchParams();
+    if (launch.query) {
+      state.filters.query = launch.query;
+      saveFilters(state.filters);
+    }
     initElements();
     ensureDebugPanel();
     detectVersion();
@@ -4901,6 +4919,9 @@
     bindEvents();
     bindKeyboardShortcuts();
     loadCandidates().then(async () => {
+      if (launch.candidateId) {
+        openDrawer(launch.candidateId);
+      }
       await refreshVerificationQueue({ silent: true });
       await refreshActiveAssignments();
     });
