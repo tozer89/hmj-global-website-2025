@@ -38,4 +38,8 @@ test('quickbooks page includes connect, sync, and disconnect controls', () => {
   assert.match(html, /id="qboConnectionList"/);
   assert.match(html, /id="qboRuntimeList"/);
   assert.match(html, /id="qboWhitelistValue"/);
+  assert.match(html, /id="qboConnectUrlValue"/);
+  assert.match(html, /id="qboDisconnectUrlValue"/);
+  assert.match(html, /id="qboAcceptedConnectionsValue"/);
+  assert.match(html, /quickbooks\.js\?v=5/);
 });

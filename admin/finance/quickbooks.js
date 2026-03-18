@@ -23,6 +23,9 @@
       'qboRedirectUriLabel',
       'qboHostDomainValue',
       'qboLaunchUrlValue',
+      'qboConnectUrlValue',
+      'qboDisconnectUrlValue',
+      'qboAcceptedConnectionsValue',
       'qboWhitelistValue',
       'qboEnvironmentValue',
       'btnConnectQbo',
@@ -108,6 +111,9 @@
     els.qboRedirectUriLabel.textContent = diagnostics.redirectUri || 'QuickBooks callback URL not available';
     els.qboHostDomainValue.textContent = diagnostics.baseUrl || 'HMJ base URL not resolved';
     els.qboLaunchUrlValue.textContent = diagnostics.financeLaunchUrl || 'HMJ finance launch URL not resolved';
+    els.qboConnectUrlValue.textContent = diagnostics.financeLaunchUrl || 'HMJ finance connect URL not resolved';
+    els.qboDisconnectUrlValue.textContent = diagnostics.financeDisconnectUrl || 'HMJ finance disconnect URL not resolved';
+    els.qboAcceptedConnectionsValue.textContent = 'United Kingdom for HMJ, plus any other QuickBooks company regions you actively support in the Intuit app.';
     els.qboWhitelistValue.textContent = diagnostics.redirectUri || 'QuickBooks callback URL not available';
     els.qboEnvironmentValue.textContent = diagnostics.environment === 'sandbox'
       ? 'Sandbox app keys and sandbox company'

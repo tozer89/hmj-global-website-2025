@@ -11,9 +11,84 @@ const {
 const QBO_SCOPE = 'com.intuit.quickbooks.accounting';
 const QBO_AUTHORIZE_BASE = 'https://appcenter.intuit.com/connect/oauth2';
 const QBO_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+const CONFUSABLE_ASCII_MAP = Object.freeze({
+  '\u00D7': 'X',
+  '\u0391': 'A',
+  '\u0395': 'E',
+  '\u039A': 'K',
+  '\u039C': 'M',
+  '\u039D': 'N',
+  '\u039F': 'O',
+  '\u03A1': 'P',
+  '\u03A4': 'T',
+  '\u03A5': 'Y',
+  '\u03A7': 'X',
+  '\u03B1': 'a',
+  '\u03B5': 'e',
+  '\u03BA': 'k',
+  '\u03BF': 'o',
+  '\u03C1': 'p',
+  '\u03C4': 't',
+  '\u03C5': 'y',
+  '\u03C7': 'x',
+  '\u0410': 'A',
+  '\u0412': 'B',
+  '\u0415': 'E',
+  '\u041A': 'K',
+  '\u041C': 'M',
+  '\u041D': 'H',
+  '\u041E': 'O',
+  '\u0420': 'P',
+  '\u0421': 'C',
+  '\u0422': 'T',
+  '\u0423': 'Y',
+  '\u0425': 'X',
+  '\u0430': 'a',
+  '\u0435': 'e',
+  '\u043A': 'k',
+  '\u043C': 'm',
+  '\u043E': 'o',
+  '\u0440': 'p',
+  '\u0441': 'c',
+  '\u0442': 't',
+  '\u0445': 'x',
+  '\u0443': 'y',
+});
 
 function lowerText(value, maxLength) {
   return trimString(value, maxLength).toLowerCase();
+}
+
+function normalizeQboCredential(value, maxLength = 4000) {
+  const raw = trimString(value, maxLength);
+  if (!raw) {
+    return {
+      raw: '',
+      normalized: '',
+      changed: false,
+      hadNonAscii: false,
+    };
+  }
+  let normalized = '';
+  let hadNonAscii = false;
+  for (const char of raw) {
+    if (char.codePointAt(0) > 0x7f) hadNonAscii = true;
+    normalized += CONFUSABLE_ASCII_MAP[char] || char;
+  }
+  return {
+    raw,
+    normalized,
+    changed: normalized !== raw,
+    hadNonAscii,
+  };
+}
+
+function clientIdInfo() {
+  return normalizeQboCredential(process.env.QBO_CLIENT_ID, 400);
+}
+
+function clientSecretInfo() {
+  return normalizeQboCredential(process.env.QBO_CLIENT_SECRET, 400);
 }
 
 function normaliseUrl(value) {
@@ -159,17 +234,26 @@ function parseSignedState(raw) {
 }
 
 function buildQboDiagnostics(event = {}, connection = null, schemaReady = true) {
-  const clientId = trimString(process.env.QBO_CLIENT_ID, 400);
-  const clientSecret = trimString(process.env.QBO_CLIENT_SECRET, 400);
+  const clientIdMeta = clientIdInfo();
+  const clientSecretMeta = clientSecretInfo();
+  const clientId = clientIdMeta.normalized;
+  const clientSecret = clientSecretMeta.normalized;
   const redirectUri = resolveRedirectUri(event);
   const baseUrl = resolveBaseUrl(event);
   const financeLaunchUrl = baseUrl ? `${baseUrl}/admin/finance/quickbooks.html` : '';
   const financeHubUrl = baseUrl ? `${baseUrl}/admin/finance/` : '';
+  const financeDisconnectUrl = financeLaunchUrl ? `${financeLaunchUrl}?qbo=disconnected` : '';
   const warnings = [];
 
   if (!schemaReady) warnings.push('Finance schema has not been applied to Supabase yet.');
   if (!clientId) warnings.push('QBO_CLIENT_ID is missing in Netlify.');
   if (!clientSecret) warnings.push('QBO_CLIENT_SECRET is missing in Netlify.');
+  if (clientIdMeta.hadNonAscii || clientIdMeta.changed) {
+    warnings.push('QBO_CLIENT_ID contains Unicode lookalike characters. HMJ is normalizing them to ASCII at runtime, but the Netlify value should be replaced with the exact plain-text Intuit production client id.');
+  }
+  if (clientSecretMeta.hadNonAscii || clientSecretMeta.changed) {
+    warnings.push('QBO_CLIENT_SECRET contains Unicode lookalike characters. HMJ is normalizing them to ASCII at runtime, but the Netlify value should be replaced with the exact plain-text Intuit production secret.');
+  }
   if (!redirectUri) warnings.push('QuickBooks redirect URI could not be resolved from Netlify/site settings.');
   if (redirectUri && !process.env.QBO_REDIRECT_URI) warnings.push('QBO_REDIRECT_URI is not set explicitly. HMJ is deriving the callback URL at runtime.');
   if (!process.env.HMJ_FINANCE_SECRET) warnings.push('HMJ_FINANCE_SECRET is not set explicitly. QBO state signing is falling back to an existing service secret.');
@@ -187,10 +271,13 @@ function buildQboDiagnostics(event = {}, connection = null, schemaReady = true) 
     baseUrl,
     financeLaunchUrl,
     financeHubUrl,
+    financeDisconnectUrl,
     callbackPath: buildCallbackPath(),
     scope: QBO_SCOPE,
     hasExplicitRedirectUri: !!process.env.QBO_REDIRECT_URI,
     hasExplicitFinanceSecret: !!process.env.HMJ_FINANCE_SECRET,
+    clientIdNormalized: clientIdMeta.changed,
+    clientSecretNormalized: clientSecretMeta.changed,
     warnings,
     connection: connection ? normalizeConnectionForClient(connection) : null,
   };
@@ -238,7 +325,7 @@ function appendQueryParams(targetUrl, params = {}) {
 }
 
 function buildAuthUrl({ event, user, returnTo }) {
-  const clientId = trimString(process.env.QBO_CLIENT_ID, 400);
+  const clientId = clientIdInfo().normalized;
   const redirectUri = resolveRedirectUri(event);
   if (!clientId || !redirectUri) {
     const error = new Error('QuickBooks client configuration is incomplete.');
@@ -272,8 +359,8 @@ function buildAuthUrl({ event, user, returnTo }) {
 }
 
 async function qboTokenRequest(params = {}) {
-  const clientId = trimString(process.env.QBO_CLIENT_ID, 400);
-  const clientSecret = trimString(process.env.QBO_CLIENT_SECRET, 400);
+  const clientId = clientIdInfo().normalized;
+  const clientSecret = clientSecretInfo().normalized;
   if (!clientId || !clientSecret) {
     const error = new Error('QuickBooks client credentials are missing from Netlify.');
     error.code = 500;
@@ -491,6 +578,7 @@ async function syncQuickBooksData(event, connection) {
 module.exports = {
   QBO_SCOPE,
   logQbo,
+  normalizeQboCredential,
   resolveBaseUrl,
   resolveRedirectUri,
   resolveQboEnvironment,

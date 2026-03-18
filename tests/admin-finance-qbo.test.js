@@ -56,3 +56,31 @@ test('QBO auth URL normalises off-site return targets back to HMJ finance', asyn
   const state = qbo.parseSignedState(auth.state);
   assert.equal(state.returnTo, 'https://hmjg.netlify.app/admin/finance/quickbooks.html');
 });
+
+test('QBO diagnostics normalize confusable unicode in client credentials', async () => {
+  process.env.QBO_CLIENT_ID = 'АBK×KРDFpdmPTzKpcсТf5U4blЕHAvhm8МyЕCsNR9UYnoEBXfLS';
+  process.env.QBO_CLIENT_SECRET = 'client-secret';
+  process.env.HMJ_FINANCE_SECRET = 'finance-secret';
+  process.env.QBO_REDIRECT_URI = 'https://hmjg.netlify.app/.netlify/functions/admin-finance-qbo-callback';
+  process.env.HMJ_CANONICAL_SITE_URL = 'https://hmjg.netlify.app';
+
+  delete require.cache[require.resolve('../netlify/functions/_finance-qbo.js')];
+  const qbo = require('../netlify/functions/_finance-qbo.js');
+
+  const normalized = qbo.normalizeQboCredential(process.env.QBO_CLIENT_ID);
+  assert.equal(normalized.normalized, 'ABKXKPDFpdmPTzKpccTf5U4blEHAvhm8MyECsNR9UYnoEBXfLS');
+  assert.equal(normalized.hadNonAscii, true);
+
+  const diagnostics = qbo.buildQboDiagnostics({ headers: {} }, null, true);
+  assert.equal(diagnostics.connectReady, true);
+  assert.equal(diagnostics.clientIdNormalized, true);
+  assert.match(diagnostics.warnings.join(' '), /Unicode lookalike characters/);
+
+  const auth = qbo.buildAuthUrl({
+    event: { headers: {} },
+    user: { id: 'admin-user', email: 'info@hmj-global.com' },
+    returnTo: 'https://hmjg.netlify.app/admin/finance/quickbooks.html',
+  });
+
+  assert.match(auth.url, /client_id=ABKXKPDFpdmPTzKpccTf5U4blEHAvhm8MyECsNR9UYnoEBXfLS/);
+});
