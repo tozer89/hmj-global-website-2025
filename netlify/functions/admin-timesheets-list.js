@@ -39,6 +39,12 @@ function statusKey(value) {
   return raw;
 }
 
+function statusFilterKey(value) {
+  const raw = trimString(value, 80).toLowerCase();
+  if (!raw || raw === 'all') return '';
+  return statusKey(raw);
+}
+
 function toDateOnly(value) {
   const text = trimString(value, 80);
   if (!text) return '';
@@ -234,7 +240,7 @@ function mapLegacyRows(rows = [], baseWeekEnding = DEFAULT_SETTINGS.fiscal_week1
 
 function filterRows(rows = [], filters = {}) {
   const searchNeedle = trimString(filters.q || filters.search, 240).toLowerCase();
-  const status = statusKey(filters.status || '');
+  const status = statusFilterKey(filters.status || '');
   const candidateNeedle = trimString(filters.candidate || '', 240).toLowerCase();
   const clientNeedle = trimString(filters.client || '', 240).toLowerCase();
   const assignmentNeedle = trimString(filters.assignment_ref || filters.assignmentRef, 120).toLowerCase();
@@ -455,3 +461,9 @@ const baseHandler = async (event, context) => {
 };
 
 exports.handler = withAdminCors(baseHandler);
+exports.__test = {
+  filterRows,
+  mapTimesheetPortalRows,
+  statusFilterKey,
+  statusKey,
+};
