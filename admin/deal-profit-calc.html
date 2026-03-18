@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Deal Profit Calc | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
+  <link rel="stylesheet" href="/assets/css/admin.finance.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.deal-profit-calc.css?v=1"/>
+  <script defer src="/assets/js/deal-profit-calc-core.js?v=1"></script>
+  <script defer src="/admin/deal-profit-calc.js?v=1"></script>
+</head>
+<body class="finance-page deal-profit-page">
+  <div class="finance-top">
+    <div class="finance-row">
+      <div class="finance-brand">
+        <span class="finance-brand__mark">H</span>
+        <span>HMJ Global Admin</span>
+      </div>
+      <span class="finance-pill">Deal Profit Calc</span>
+      <div class="finance-spacer"></div>
+      <a class="finance-btn finance-btn--ghost" href="/admin/finance/">Finance hub</a>
+      <a class="finance-btn finance-btn--ghost" href="/admin/">Return to Admin Dash</a>
+      <a class="finance-btn finance-btn--ghost" href="/">Website</a>
+      <button class="finance-btn finance-btn--ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="finance-wrap" id="gate" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <p class="finance-eyebrow">Admin only</p>
+        <h1>Finance access requires an HMJ admin session</h1>
+        <p class="finance-muted">Checking your session…</p>
+        <div class="finance-inline-actions">
+          <button class="finance-btn finance-btn--primary" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="finance-btn finance-btn--ghost" href="/admin/finance/">Back to finance</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="finance-wrap" id="app" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner finance-hero">
+        <div class="finance-hero__copy">
+          <p class="finance-eyebrow">Commercial pricing</p>
+          <h1>Deal Profit Calc</h1>
+          <p class="finance-muted" id="dealProfitWelcomeMeta">Loading user…</p>
+          <p class="finance-muted">Model live assignment commercials during negotiations. This calculator combines pay rate, margin, hours, worker count, payment terms, and internal funding assumptions so HMJ can see charge rate, gross margin, finance drag, and estimated net profit across short and medium contract horizons.</p>
+          <div class="finance-hero__meta" id="dealProfitStatusChips" aria-live="polite"></div>
+          <div class="finance-hero__actions">
+            <button class="finance-btn finance-btn--primary" type="button" id="btnSaveScenario">Save scenario</button>
+            <button class="finance-btn finance-btn--soft" type="button" id="btnDuplicateScenario">Duplicate</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnExportScenarioCsv">Export CSV</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnPrintScenario">Print summary</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnResetScenario">Reset</button>
+          </div>
+        </div>
+        <aside class="finance-hero__aside">
+          <div class="finance-stat">
+            <span class="finance-kicker">Selected horizon net profit</span>
+            <strong id="heroSelectedNetProfit">—</strong>
+            <span id="heroSelectedNetMeta">Waiting for calculation</span>
+          </div>
+          <div class="finance-stat">
+            <span class="finance-kicker">Weekly net profit</span>
+            <strong id="heroWeeklyNetProfit">—</strong>
+            <span id="heroWeeklyNetMeta">Internal estimate after finance, overhead, and tax.</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-alert-stack" id="dealProfitAlerts" aria-live="polite"></div>
+        <div class="deal-shell">
+          <form id="dealProfitForm" class="deal-form-shell">
+            <section class="finance-form-block">
+              <div class="finance-section-head">
+                <div>
+                  <p class="finance-eyebrow">Deal setup</p>
+                  <h2>Assignment inputs</h2>
+                </div>
+                <p class="finance-muted">Set the worker, rate, term, and payment shape first. The calculator assumes net profitability and uses internal funding assumptions for the finance drag.</p>
+              </div>
+              <div class="finance-form-grid">
+                <label class="finance-field finance-field--wide">
+                  <span>Assignment / deal name</span>
+                  <input id="dealName" name="dealName" maxlength="160" placeholder="Hull cleanroom package — A+C Electrical"/>
+                </label>
+                <label class="finance-field">
+                  <span>Candidate name / label</span>
+                  <input id="candidateLabel" name="candidateLabel" maxlength="160" placeholder="Joseph Tozer or Generic Electrician"/>
+                </label>
+                <label class="finance-field">
+                  <span>Client name</span>
+                  <input id="clientName" name="clientName" maxlength="160" placeholder="Optional client reference"/>
+                </label>
+                <label class="finance-field">
+                  <span>Currency</span>
+                  <select id="currency" name="currency">
+                    <option value="GBP">GBP</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </label>
+                <label class="finance-field">
+                  <span>Worker count</span>
+                  <input id="workerCount" name="workerCount" type="number" min="1" step="1"/>
+                </label>
+                <label class="finance-field">
+                  <span>Hours per week</span>
+                  <input id="hoursPerWeek" name="hoursPerWeek" type="number" min="0" step="0.25"/>
+                </label>
+              </div>
+            </section>
+
+            <section class="finance-form-block">
+              <div class="finance-section-head">
+                <div>
+                  <p class="finance-eyebrow">Pricing</p>
+                  <h2>Pay and margin</h2>
+                </div>
+                <p class="finance-muted">Switch between margin-per-hour mode and a direct charge rate override. The calculator always surfaces the implied margin per hour so the commercial position stays visible.</p>
+              </div>
+              <div class="deal-toggle-group" id="marginModeToggle" role="radiogroup" aria-label="Margin input mode">
+                <label class="deal-toggle">
+                  <input type="radio" name="marginMode" value="margin_per_hour" checked/>
+                  <span>Margin per hour</span>
+                </label>
+                <label class="deal-toggle">
+                  <input type="radio" name="marginMode" value="charge_rate_override"/>
+                  <span>Direct charge rate override</span>
+                </label>
+              </div>
+              <div class="finance-form-grid">
+                <label class="finance-field">
+                  <span>Pay rate per hour</span>
+                  <input id="payRate" name="payRate" type="number" min="0" step="0.01"/>
+                </label>
+                <label class="finance-field" id="marginPerHourField">
+                  <span>Margin per hour</span>
+                  <input id="marginPerHour" name="marginPerHour" type="number" step="0.01"/>
+                </label>
+                <label class="finance-field" id="chargeRateOverrideField">
+                  <span>Charge rate override</span>
+                  <input id="chargeRateOverride" name="chargeRateOverride" type="number" min="0" step="0.01"/>
+                </label>
+              </div>
+            </section>
+
+            <section class="finance-form-block">
+              <div class="finance-section-head">
+                <div>
+                  <p class="finance-eyebrow">Timing</p>
+                  <h2>Contract term and client payment cycle</h2>
+                </div>
+                <p class="finance-muted">Use the live deal term for scenario comparisons. The breakdown always includes per week, 1 month, 3 months, and 6 months, regardless of the selected contract horizon.</p>
+              </div>
+              <div class="finance-form-grid">
+                <label class="finance-field">
+                  <span>Contract duration</span>
+                  <select id="durationPreset" name="durationPreset">
+                    <option value="week">1 week</option>
+                    <option value="month">1 month</option>
+                    <option value="quarter">3 months</option>
+                    <option value="half_year">6 months</option>
+                    <option value="custom">Custom weeks</option>
+                  </select>
+                </label>
+                <label class="finance-field" id="customWeeksField">
+                  <span>Custom weeks</span>
+                  <input id="customWeeks" name="customWeeks" type="number" min="0.5" step="0.5"/>
+                </label>
+                <label class="finance-field">
+                  <span>Client payment terms</span>
+                  <select id="paymentTermsPreset" name="paymentTermsPreset">
+                    <option value="7">7 days</option>
+                    <option value="14">14 days</option>
+                    <option value="30">30 days</option>
+                    <option value="45">45 days</option>
+                    <option value="60">60 days</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </label>
+                <label class="finance-field" id="customPaymentDaysField">
+                  <span>Custom payment days</span>
+                  <input id="customPaymentDays" name="customPaymentDays" type="number" min="0" step="1"/>
+                </label>
+                <label class="finance-field">
+                  <span>Optional overhead per week</span>
+                  <input id="weeklyOverhead" name="weeklyOverhead" type="number" min="0" step="0.01"/>
+                </label>
+              </div>
+            </section>
+
+            <section class="finance-form-block">
+              <div class="finance-section-head">
+                <div>
+                  <p class="finance-eyebrow">Internal assumptions</p>
+                  <h2>Funding, finance, and tax</h2>
+                </div>
+                <p class="finance-muted">Editable internal assumptions only. These are HMJ commercial estimates for pricing and planning, not lender statements or formal tax advice.</p>
+              </div>
+              <div class="finance-form-grid">
+                <label class="finance-field">
+                  <span>Funding advance %</span>
+                  <input id="fundingAdvancePercent" name="fundingAdvancePercent" type="number" min="0" max="100" step="0.01"/>
+                </label>
+                <label class="finance-field">
+                  <span>Annual discounting fee %</span>
+                  <input id="annualDiscountFeePercent" name="annualDiscountFeePercent" type="number" min="0" step="0.01"/>
+                </label>
+                <label class="finance-field">
+                  <span>Daily interest fee %</span>
+                  <input id="dailyInterestFeePercent" name="dailyInterestFeePercent" type="number" min="0" step="0.01"/>
+                </label>
+                <label class="finance-field">
+                  <span>Corporation tax %</span>
+                  <input id="taxRatePercent" name="taxRatePercent" type="number" min="0" max="100" step="0.01"/>
+                </label>
+                <label class="finance-field">
+                  <span>Show illustrative VAT rows</span>
+                  <select id="showVat" name="showVat">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                  </select>
+                </label>
+                <label class="finance-field" id="vatRateField">
+                  <span>Illustrative VAT rate %</span>
+                  <input id="vatRatePercent" name="vatRatePercent" type="number" min="0" step="0.01"/>
+                </label>
+                <label class="finance-field finance-field--wide">
+                  <span>Notes</span>
+                  <textarea id="notes" name="notes" placeholder="Internal assumptions, client context, or why this pricing is being considered."></textarea>
+                </label>
+              </div>
+            </section>
+          </form>
+
+          <aside class="deal-sidepanel">
+            <section class="finance-data-block">
+              <p class="finance-eyebrow">Margin metrics</p>
+              <h3>Commercial summary</h3>
+              <div class="deal-metric-list" id="dealMetricList"></div>
+            </section>
+            <section class="finance-data-block">
+              <p class="finance-eyebrow">Funding visibility</p>
+              <h3>Selected contract cash release</h3>
+              <div class="deal-metric-list" id="fundingMetricList"></div>
+            </section>
+            <section class="finance-data-block">
+              <p class="finance-eyebrow">Formula notes</p>
+              <h3>How HMJ is estimating this</h3>
+              <div class="finance-list">
+                <div class="finance-list-item">
+                  <strong>Discount fee</strong>
+                  <small>Invoice value × annual discounting fee × (payment days ÷ 365)</small>
+                </div>
+                <div class="finance-list-item">
+                  <strong>Interest fee</strong>
+                  <small>Funded amount × daily interest fee × payment days</small>
+                </div>
+                <div class="finance-list-item">
+                  <strong>Net profit</strong>
+                  <small>Gross margin less finance cost, overhead, and estimated corporation tax on positive profit only.</small>
+                </div>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Outputs</p>
+            <h2>Headline profitability</h2>
+          </div>
+          <p class="finance-muted">Use these cards during live client conversations to keep the pricing stance, finance drag, and net return visible at a glance.</p>
+        </div>
+        <div class="finance-metric-grid" id="dealSummaryGrid" aria-label="Deal profitability summary"></div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Detailed breakdown</p>
+            <h2>Period profitability table</h2>
+          </div>
+          <p class="finance-muted">Profitability is shown net of finance cost, overhead, and corporation tax assumptions. VAT is excluded from profit by default and can be displayed separately if needed.</p>
+        </div>
+        <div class="finance-table-wrap">
+          <table class="finance-table" id="dealBreakdownTable" aria-label="Deal profit breakdown table"></table>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner deal-results-grid">
+        <section class="finance-data-block">
+          <div class="finance-section-head">
+            <div>
+              <p class="finance-eyebrow">Scenario comparison</p>
+              <h2>Commercial pressure tests</h2>
+            </div>
+            <p class="finance-muted">The variants below test lower utilisation, slower cash collection, and tighter margin. They use the selected contract horizon, not just weekly snapshots.</p>
+          </div>
+          <div class="finance-card-grid" id="dealScenarioGrid"></div>
+        </section>
+        <aside class="finance-detail-drawer">
+          <div class="finance-data-block">
+            <div class="finance-section-head">
+              <div>
+                <p class="finance-eyebrow">Saved locally</p>
+                <h2>Scenario library</h2>
+              </div>
+              <p class="finance-muted">Stored in this browser for quick reuse during pricing calls. Use save or duplicate from the top action bar.</p>
+            </div>
+            <div class="finance-list" id="savedScenarioList"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

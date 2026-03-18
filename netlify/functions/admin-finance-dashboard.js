@@ -47,6 +47,13 @@ module.exports.handler = withAdminCors(async (event, context) => {
         recentSyncRuns: syncRuns,
         modules: [
           {
+            key: 'deal_profit_calc',
+            title: 'Deal Profit Calc',
+            href: '/admin/deal-profit-calc.html',
+            status: 'Live',
+            detail: 'Model charge rates, finance costs, and net assignment profit across multiple horizons.',
+          },
+          {
             key: 'cashflow',
             title: '13 Week Cashflow Forecast',
             href: '/admin/finance/cashflow.html',
