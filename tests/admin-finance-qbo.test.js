@@ -35,7 +35,10 @@ test('QBO auth URL includes accounting scope and state signature', async () => {
 
   assert.match(auth.url, /com\.intuit\.quickbooks\.accounting/);
   assert.match(auth.url, /response_type=code/);
+  assert.match(auth.url, /appcenter\.intuit\.com\/app\/connect\/oauth2/);
   assert.ok(auth.state.includes('.'));
+  assert.equal(auth.pendingState.email, 'info@hmj-global.com');
+  assert.equal(auth.pendingState.returnTo, 'https://hmjg.netlify.app/admin/finance/quickbooks.html');
 });
 
 test('QBO auth URL normalises off-site return targets back to HMJ finance', async () => {
@@ -54,7 +57,8 @@ test('QBO auth URL normalises off-site return targets back to HMJ finance', asyn
   });
 
   const state = qbo.parseSignedState(auth.state);
-  assert.equal(state.returnTo, 'https://hmjg.netlify.app/admin/finance/quickbooks.html');
+  assert.ok(state.nonce);
+  assert.equal(auth.pendingState.returnTo, 'https://hmjg.netlify.app/admin/finance/quickbooks.html');
 });
 
 test('QBO diagnostics normalize confusable unicode in client credentials', async () => {

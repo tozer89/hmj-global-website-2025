@@ -1,6 +1,6 @@
 'use strict';
 
-const { createHmac } = require('node:crypto');
+const { createHmac, randomBytes } = require('node:crypto');
 const {
   trimString,
   readFinanceConnection,
@@ -9,7 +9,7 @@ const {
 } = require('./_finance-store.js');
 
 const QBO_SCOPE = 'com.intuit.quickbooks.accounting';
-const QBO_AUTHORIZE_BASE = 'https://appcenter.intuit.com/connect/oauth2';
+const QBO_AUTHORIZE_BASE = 'https://appcenter.intuit.com/app/connect/oauth2';
 const QBO_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const CONFUSABLE_ASCII_MAP = Object.freeze({
   '\u00D7': 'X',
@@ -332,11 +332,11 @@ function buildAuthUrl({ event, user, returnTo }) {
     error.code = 500;
     throw error;
   }
+  const normalizedReturnTo = normalizeReturnTo(event, returnTo);
+  const nonce = randomBytes(12).toString('hex');
   const state = buildSignedState({
     provider: 'quickbooks',
-    userId: trimString(user?.id, 240),
-    email: lowerText(user?.email, 320),
-    returnTo: normalizeReturnTo(event, returnTo),
+    nonce,
     iat: Date.now(),
   });
   const url = new URL(QBO_AUTHORIZE_BASE);
@@ -347,7 +347,7 @@ function buildAuthUrl({ event, user, returnTo }) {
   url.searchParams.set('state', state);
   logQbo('auth_url_built', {
     redirectUri,
-    returnTo: normalizeReturnTo(event, returnTo),
+    returnTo: normalizedReturnTo,
     email: lowerText(user?.email, 320),
     environment: resolveQboEnvironment(),
   });
@@ -355,6 +355,13 @@ function buildAuthUrl({ event, user, returnTo }) {
     url: url.toString(),
     state,
     redirectUri,
+    pendingState: {
+      nonce,
+      userId: trimString(user?.id, 240),
+      email: lowerText(user?.email, 320),
+      returnTo: normalizedReturnTo,
+      createdAt: new Date().toISOString(),
+    },
   };
 }
 

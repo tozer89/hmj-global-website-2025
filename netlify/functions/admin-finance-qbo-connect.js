@@ -54,6 +54,7 @@ module.exports.handler = withAdminCors(async (event, context) => {
         redirectUri: auth.redirectUri,
         returnTo,
         connectedEmail: String(user?.email || '').toLowerCase(),
+        pendingAuth: auth.pendingState || null,
       }, user?.email || '');
       return json(200, { ok: true, diagnostics, runtimeStatus, authUrl: auth.url, redirectUri: auth.redirectUri });
     }

@@ -3,6 +3,7 @@
 const { withAdminCors } = require('./_http.js');
 const {
   getFinanceSchemaStatus,
+  readQboRuntimeStatus,
   saveQboRuntimeStatus,
 } = require('./_finance-store.js');
 const {
@@ -69,6 +70,7 @@ module.exports.handler = withAdminCors(async (event) => {
     return callbackRedirect(event, fallbackReturnTo, { qbo: 'finance-schema-missing' });
   }
 
+  const runtimeStatus = await readQboRuntimeStatus(event).catch(() => ({}));
   let state = null;
   if (params.state) {
     try {
@@ -90,14 +92,45 @@ module.exports.handler = withAdminCors(async (event) => {
     }
   }
 
-  const returnTo = state?.returnTo || fallbackReturnTo;
+  let effectiveState = state;
+  const pendingAuth = runtimeStatus?.pendingAuth && typeof runtimeStatus.pendingAuth === 'object'
+    ? runtimeStatus.pendingAuth
+    : null;
+  if (state?.nonce && !state?.email) {
+    if (pendingAuth?.nonce === state.nonce) {
+      effectiveState = {
+        nonce: state.nonce,
+        userId: pendingAuth.userId || '',
+        email: pendingAuth.email || '',
+        returnTo: pendingAuth.returnTo || fallbackReturnTo,
+      };
+    } else {
+      const error = new Error('QuickBooks callback state could not be matched to the HMJ connect request.');
+      logQbo('callback_state_nonce_mismatch', {
+        hasPendingAuth: !!pendingAuth,
+      });
+      await saveQboRuntimeStatus(event, {
+        lastEvent: 'callback_state_nonce_mismatch',
+        lastEventAt: new Date().toISOString(),
+        lastError: error.message,
+        lastErrorAt: new Date().toISOString(),
+        pendingAuth: null,
+      }).catch(() => null);
+      return callbackRedirect(event, fallbackReturnTo, {
+        qbo_error: buildUserFacingError(error),
+        qbo_error_code: 'state_nonce_mismatch',
+      });
+    }
+  }
+
+  const returnTo = effectiveState?.returnTo || fallbackReturnTo;
 
   if (params.error || params.error_description) {
     const providerError = safeMessage(params.error_description || params.error, 'QuickBooks returned an error.');
     logQbo('callback_provider_error', {
       providerError,
       realmId: params.realmId || params.realmid || '',
-      email: state?.email || '',
+      email: effectiveState?.email || '',
     });
     await saveQboRuntimeStatus(event, {
       lastEvent: 'callback_provider_error',
@@ -106,16 +139,17 @@ module.exports.handler = withAdminCors(async (event) => {
       lastErrorAt: new Date().toISOString(),
       lastProviderError: providerError,
       realmId: params.realmId || params.realmid || '',
-      connectedEmail: state?.email || '',
+      connectedEmail: effectiveState?.email || '',
+      pendingAuth: null,
       returnTo,
-    }, state?.email || '').catch(() => null);
+    }, effectiveState?.email || '').catch(() => null);
     return callbackRedirect(event, returnTo, {
       qbo_error: buildUserFacingError({ message: providerError }),
       qbo_error_code: 'provider_error',
     });
   }
 
-  if (!state?.email) {
+  if (!effectiveState?.email) {
     const error = new Error('QuickBooks callback state is missing the HMJ admin email.');
     logQbo('callback_state_missing_email', { returnTo });
     await saveQboRuntimeStatus(event, {
@@ -123,6 +157,7 @@ module.exports.handler = withAdminCors(async (event) => {
       lastEventAt: new Date().toISOString(),
       lastError: error.message,
       lastErrorAt: new Date().toISOString(),
+      pendingAuth: null,
       returnTo,
     }).catch(() => null);
     return callbackRedirect(event, returnTo, {
@@ -134,7 +169,7 @@ module.exports.handler = withAdminCors(async (event) => {
   if (!params.code) {
     const error = new Error('QuickBooks did not return an authorisation code.');
     logQbo('callback_missing_code', {
-      email: state.email,
+      email: effectiveState.email,
       realmId: params.realmId || params.realmid || '',
     });
     await saveQboRuntimeStatus(event, {
@@ -142,10 +177,11 @@ module.exports.handler = withAdminCors(async (event) => {
       lastEventAt: new Date().toISOString(),
       lastError: error.message,
       lastErrorAt: new Date().toISOString(),
-      connectedEmail: state.email,
+      connectedEmail: effectiveState.email,
       realmId: params.realmId || params.realmid || '',
+      pendingAuth: null,
       returnTo,
-    }, state.email).catch(() => null);
+    }, effectiveState.email).catch(() => null);
     return callbackRedirect(event, returnTo, {
       qbo_error: buildUserFacingError(error),
       qbo_error_code: 'missing_code',
@@ -155,16 +191,17 @@ module.exports.handler = withAdminCors(async (event) => {
   if (!(params.realmId || params.realmid)) {
     const error = new Error('QuickBooks did not return a realm/company id.');
     logQbo('callback_missing_realm', {
-      email: state.email,
+      email: effectiveState.email,
     });
     await saveQboRuntimeStatus(event, {
       lastEvent: 'callback_missing_realm',
       lastEventAt: new Date().toISOString(),
       lastError: error.message,
       lastErrorAt: new Date().toISOString(),
-      connectedEmail: state.email,
+      connectedEmail: effectiveState.email,
+      pendingAuth: null,
       returnTo,
-    }, state.email).catch(() => null);
+    }, effectiveState.email).catch(() => null);
     return callbackRedirect(event, returnTo, {
       qbo_error: buildUserFacingError(error),
       qbo_error_code: 'missing_realm',
@@ -175,21 +212,22 @@ module.exports.handler = withAdminCors(async (event) => {
     lastEvent: 'callback_received',
     lastEventAt: new Date().toISOString(),
     lastError: '',
-    connectedEmail: state.email,
+    connectedEmail: effectiveState.email,
     realmId: params.realmId || params.realmid || '',
+    pendingAuth: null,
     returnTo,
-  }, state.email).catch(() => null);
+  }, effectiveState.email).catch(() => null);
 
   try {
     logQbo('callback_token_exchange_attempt', {
-      email: state.email,
+      email: effectiveState.email,
       realmId: params.realmId || params.realmid || '',
     });
 
     const tokens = await exchangeCodeForTokens(event, params.code || '');
     await connectFromCallback(event, {
-      id: state.userId || '',
-      email: state.email,
+      id: effectiveState.userId || '',
+      email: effectiveState.email,
     }, {
       environment: resolveQboEnvironment(),
       realmId: params.realmId || params.realmid || '',
@@ -204,15 +242,16 @@ module.exports.handler = withAdminCors(async (event) => {
       lastError: '',
       lastErrorAt: '',
       lastSuccessAt: new Date().toISOString(),
-      connectedEmail: state.email,
+      connectedEmail: effectiveState.email,
       realmId: params.realmId || params.realmid || '',
+      pendingAuth: null,
       returnTo,
-    }, state.email).catch(() => null);
+    }, effectiveState.email).catch(() => null);
 
     return callbackRedirect(event, returnTo, { qbo: 'connected' });
   } catch (error) {
     logQbo('callback_failed', {
-      email: state.email,
+      email: effectiveState.email,
       realmId: params.realmId || params.realmid || '',
       error: error?.message,
       code: error?.code || error?.status || '',
@@ -224,10 +263,11 @@ module.exports.handler = withAdminCors(async (event) => {
       lastError: safeMessage(error?.message, 'QuickBooks connection failed.'),
       lastErrorAt: new Date().toISOString(),
       lastProviderError: safeMessage(error?.details?.error_description || error?.details?.error, ''),
-      connectedEmail: state.email,
+      connectedEmail: effectiveState.email,
       realmId: params.realmId || params.realmid || '',
+      pendingAuth: null,
       returnTo,
-    }, state.email).catch(() => null);
+    }, effectiveState.email).catch(() => null);
 
     return callbackRedirect(event, returnTo, {
       qbo_error: buildUserFacingError(error),
