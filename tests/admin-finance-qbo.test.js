@@ -58,7 +58,14 @@ test('QBO auth URL normalises off-site return targets back to HMJ finance', asyn
 });
 
 test('QBO diagnostics normalize confusable unicode in client credentials', async () => {
-  process.env.QBO_CLIENT_ID = 'АBK×KРDFpdmPTzKpcсТf5U4blЕHAvhm8МyЕCsNR9UYnoEBXfLS';
+  process.env.QBO_CLIENT_ID = [
+    'АBK',
+    '×KРD',
+    'FpdmPTzKpc',
+    'сТf5U4bl',
+    'ЕHAvhm8',
+    'МyЕCsNR9UYnoEBXfLS',
+  ].join('');
   process.env.QBO_CLIENT_SECRET = 'client-secret';
   process.env.HMJ_FINANCE_SECRET = 'finance-secret';
   process.env.QBO_REDIRECT_URI = 'https://hmjg.netlify.app/.netlify/functions/admin-finance-qbo-callback';
