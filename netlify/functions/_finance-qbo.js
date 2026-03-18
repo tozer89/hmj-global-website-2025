@@ -557,7 +557,7 @@ async function syncQuickBooksData(event, connection) {
     : await fetchCompanyInfo(current).catch(() => ({}));
 
   const [customers, invoices, payments, bills, purchases] = await Promise.all([
-    pagedQuery(current, (start) => `select Id, DisplayName, PrimaryEmailAddr, CurrencyRef, Balance, Active, MetaData from Customer startposition ${start} maxresults 1000`),
+    pagedQuery(current, (start) => `select Id, DisplayName, PrimaryEmailAddr, Balance, Active, MetaData from Customer startposition ${start} maxresults 1000`),
     pagedQuery(current, (start) => `select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, CurrencyRef, ExchangeRate, PrivateNote, MetaData from Invoice startposition ${start} maxresults 1000`),
     pagedQuery(current, (start) => `select Id, CustomerRef, TxnDate, TotalAmt, CurrencyRef, PaymentRefNum, UnappliedAmt, MetaData from Payment startposition ${start} maxresults 1000`),
     pagedQuery(current, (start) => `select Id, VendorRef, TxnDate, DueDate, TotalAmt, Balance, CurrencyRef, PrivateNote, MetaData from Bill startposition ${start} maxresults 1000`),

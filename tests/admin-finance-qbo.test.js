@@ -103,3 +103,49 @@ test('QBO diagnostics normalize confusable unicode in client credentials', async
 
   assert.match(auth.url, new RegExp(`client_id=${expectedNormalized}`));
 });
+
+test('QBO sync customer query avoids unsupported CurrencyRef field', async () => {
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url) => {
+    requests.push(String(url));
+    const parsed = new URL(String(url));
+    const query = decodeURIComponent(parsed.searchParams.get('query') || '');
+    const entityMatch = query.match(/from\s+([A-Za-z]+)/i);
+    const entity = entityMatch ? entityMatch[1] : '';
+    const payloadByEntity = {
+      Customer: { QueryResponse: { Customer: [] } },
+      Invoice: { QueryResponse: { Invoice: [] } },
+      Payment: { QueryResponse: { Payment: [] } },
+      Bill: { QueryResponse: { Bill: [] } },
+      Purchase: { QueryResponse: { Purchase: [] } },
+    };
+    return {
+      ok: true,
+      status: 200,
+      json: async () => payloadByEntity[entity] || { QueryResponse: {} },
+    };
+  };
+
+  try {
+    process.env.QBO_CLIENT_ID = 'client-id';
+    process.env.QBO_CLIENT_SECRET = 'client-secret';
+
+    delete require.cache[require.resolve('../netlify/functions/_finance-qbo.js')];
+    const qbo = require('../netlify/functions/_finance-qbo.js');
+
+    await qbo.syncQuickBooksData({}, {
+      access_token: 'access-token',
+      realm_id: '9341454325500420',
+      environment: 'production',
+      raw_company: { CompanyName: 'HMJ Global Limited' },
+    });
+
+    const customerQueryUrl = requests.find((value) => value.includes('query=') && decodeURIComponent(new URL(value).searchParams.get('query') || '').includes('from Customer'));
+    assert.ok(customerQueryUrl, 'expected a customer query to be issued');
+    const customerQuery = decodeURIComponent(new URL(customerQueryUrl).searchParams.get('query') || '');
+    assert.doesNotMatch(customerQuery, /CurrencyRef/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

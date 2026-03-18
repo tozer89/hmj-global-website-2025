@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | HMJ Global</title>
+  <meta name="description" content="Privacy policy for HMJ Global website, candidate portal, and connected admin services." />
+  <link rel="canonical" href="https://hmjg.netlify.app/privacy.html" />
+  <link rel="icon" href="/images/logo.png" type="image/png" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/assets/css/public.facelift.css" />
+  <style>
+    :root {
+      --hmj-ink: #12224b;
+      --hmj-accent: #3157a8;
+      --hmj-muted: #66738f;
+      --hmj-border: rgba(49, 87, 168, 0.18);
+      --hmj-bg: #f5f8ff;
+      --hmj-panel: #ffffff;
+    }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--hmj-ink);
+      background:
+        radial-gradient(circle at top left, rgba(49, 87, 168, 0.12), transparent 28%),
+        linear-gradient(180deg, #f8fbff 0%, #eef3ff 100%);
+    }
+    .legal-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 72px;
+    }
+    .legal-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .legal-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--hmj-ink);
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+    .legal-brand img {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      object-fit: cover;
+      box-shadow: 0 12px 30px rgba(18, 34, 75, 0.14);
+    }
+    .legal-home {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid var(--hmj-border);
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--hmj-accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .legal-card {
+      background: var(--hmj-panel);
+      border: 1px solid var(--hmj-border);
+      border-radius: 28px;
+      box-shadow: 0 26px 60px rgba(18, 34, 75, 0.10);
+      overflow: hidden;
+    }
+    .legal-hero {
+      padding: 34px 34px 28px;
+      background: linear-gradient(135deg, #163171 0%, #3157a8 100%);
+      color: #fff;
+    }
+    .legal-eyebrow {
+      margin: 0 0 10px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      opacity: 0.86;
+    }
+    .legal-hero h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.1rem);
+      line-height: 1.05;
+    }
+    .legal-meta {
+      margin-top: 14px;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 1rem;
+      line-height: 1.6;
+      max-width: 760px;
+    }
+    .legal-content {
+      padding: 30px 34px 40px;
+    }
+    .legal-summary {
+      margin: 0 0 26px;
+      padding: 18px 20px;
+      border-radius: 20px;
+      background: var(--hmj-bg);
+      border: 1px solid rgba(49, 87, 168, 0.12);
+      color: var(--hmj-muted);
+      line-height: 1.7;
+    }
+    .legal-section + .legal-section {
+      margin-top: 28px;
+    }
+    .legal-section h2 {
+      margin: 0 0 10px;
+      font-size: 1.35rem;
+    }
+    .legal-section p,
+    .legal-section li {
+      margin: 0 0 10px;
+      color: #344260;
+      line-height: 1.75;
+    }
+    .legal-section ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .legal-note {
+      margin-top: 32px;
+      padding: 18px 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(49, 87, 168, 0.14);
+      background: linear-gradient(180deg, rgba(49, 87, 168, 0.06), rgba(49, 87, 168, 0.02));
+    }
+    .legal-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 26px;
+    }
+    .legal-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid var(--hmj-border);
+      background: #fff;
+      color: var(--hmj-accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .legal-footer {
+      margin-top: 24px;
+      color: var(--hmj-muted);
+      font-size: 0.95rem;
+    }
+    @media (max-width: 720px) {
+      .legal-topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .legal-hero,
+      .legal-content {
+        padding-left: 22px;
+        padding-right: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="legal-shell">
+    <div class="legal-topbar">
+      <a class="legal-brand" href="/index.html">
+        <img src="/images/logo.png" alt="HMJ Global logo" />
+        <span>HMJ Global</span>
+      </a>
+      <a class="legal-home" href="/index.html">Back to website</a>
+    </div>
+
+    <article class="legal-card">
+      <header class="legal-hero">
+        <p class="legal-eyebrow">Legal</p>
+        <h1>Privacy Policy</h1>
+        <p class="legal-meta">
+          This policy explains how HMJ-Global Ltd collects, uses, stores, and protects personal data across the HMJ Global website,
+          candidate registration flow, candidate portal, admin systems, and connected finance or operations tools.
+        </p>
+      </header>
+
+      <div class="legal-content">
+        <p class="legal-summary">
+          HMJ-Global Ltd is a recruitment and staffing business. We process personal data so we can respond to enquiries, manage candidate profiles,
+          handle job applications, administer placements, support onboarding and payroll processes, and operate our website and internal systems.
+        </p>
+
+        <section class="legal-section">
+          <h2>Who we are</h2>
+          <p>HMJ-Global Ltd trading as HMJ Global, registered in England and Wales under company number 16029938.</p>
+          <p>Contact email: <a href="mailto:info@hmj-global.com">info@hmj-global.com</a></p>
+        </section>
+
+        <section class="legal-section">
+          <h2>What data we may collect</h2>
+          <ul>
+            <li>Identity and contact information such as your name, email address, telephone number, and location.</li>
+            <li>Recruitment and application information such as CVs, certificates, references, right-to-work data, availability, skills, and job preferences.</li>
+            <li>Portal and onboarding information such as document uploads, payroll details, emergency contacts, and activity records where relevant to a live placement.</li>
+            <li>Website and technical data such as page views, browser/device information, cookies, and audit or security logs.</li>
+            <li>Commercial or finance-related information where required for supplier, client, or operational workflows.</li>
+          </ul>
+        </section>
+
+        <section class="legal-section">
+          <h2>How we use data</h2>
+          <ul>
+            <li>To operate the HMJ Global website and candidate portal.</li>
+            <li>To review job applications and candidate registrations.</li>
+            <li>To contact candidates, clients, contractors, and operational users about recruitment, onboarding, assignments, and related services.</li>
+            <li>To carry out compliance checks, right-to-work reviews, document verification, and onboarding administration.</li>
+            <li>To support payroll, timesheet, finance, reporting, audit, and internal task-management processes.</li>
+            <li>To improve site performance, reliability, security, and service quality.</li>
+          </ul>
+        </section>
+
+        <section class="legal-section">
+          <h2>Lawful basis</h2>
+          <p>
+            Depending on the context, HMJ Global may process data because it is necessary for pre-contract steps, contract performance,
+            legitimate interests, legal or regulatory obligations, or consent where consent is the appropriate basis.
+          </p>
+        </section>
+
+        <section class="legal-section">
+          <h2>Sharing</h2>
+          <p>
+            HMJ Global may share data with clients, payroll providers, document or email delivery services, infrastructure providers,
+            and professional advisers where this is necessary to provide services, manage placements, meet compliance obligations, or operate the platform securely.
+          </p>
+          <p>
+            We do not sell personal data.
+          </p>
+        </section>
+
+        <section class="legal-section">
+          <h2>Storage and retention</h2>
+          <p>
+            Data is stored using HMJ Global systems and trusted service providers, including cloud hosting, database, storage, email,
+            and recruitment/workflow tools. Retention periods depend on the type of record, the recruitment or placement lifecycle, and applicable legal obligations.
+          </p>
+        </section>
+
+        <section class="legal-section">
+          <h2>Your rights</h2>
+          <p>
+            Where applicable, you may request access, correction, deletion, restriction, objection, or portability of your data.
+            You may also contact HMJ Global if you have questions or concerns about how your data is handled.
+          </p>
+        </section>
+
+        <section class="legal-section">
+          <h2>Security</h2>
+          <p>
+            HMJ Global uses reasonable technical and organisational measures to protect data against unauthorised access, loss, misuse, or disclosure.
+            No online service can guarantee absolute security, but we aim to operate appropriate safeguards for the level of data involved.
+          </p>
+        </section>
+
+        <section class="legal-section">
+          <h2>Updates</h2>
+          <p>
+            We may update this policy from time to time. The latest version published on this page will apply.
+          </p>
+        </section>
+
+        <div class="legal-note">
+          <strong>Effective date:</strong> 18 March 2026
+        </div>
+
+        <div class="legal-links">
+          <a class="legal-link" href="/eula.html">End-user licence agreement</a>
+          <a class="legal-link" href="/contact.html">Contact HMJ Global</a>
+        </div>
+
+        <p class="legal-footer">
+          HMJ-Global Ltd trading as HMJ Global, registered in England and Wales, company number 16029938.
+        </p>
+      </div>
+    </article>
+  </main>
+</body>
+</html>
