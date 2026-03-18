@@ -202,6 +202,41 @@
     .dialog-check{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--stroke);border-radius:14px;background:#f8fbff}
     .dialog-check input{margin-top:4px}
     .dialog-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    dialog.bulk-email-dialog{max-width:min(1120px,96vw)}
+    .bulk-email-card{gap:18px}
+    .bulk-email-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .bulk-email-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:16px;align-items:start}
+    .bulk-email-compose,.bulk-email-preview{display:grid;gap:14px}
+    .bulk-email-section{display:grid;gap:12px;padding:16px;border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,#ffffff,#f8fbff)}
+    .bulk-email-section h4{margin:0;font-size:16px;color:var(--ink)}
+    .bulk-email-section p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+    .bulk-email-field{display:grid;gap:6px}
+    .bulk-email-field label,.bulk-email-field span.label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .bulk-email-field input,.bulk-email-field select,.bulk-email-field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;color:var(--ink);font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+    .bulk-email-field textarea{min-height:220px;resize:vertical}
+    .bulk-email-token-palette{display:flex;gap:8px;flex-wrap:wrap}
+    .bulk-email-token{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--blue);font-size:12px;font-weight:800;cursor:pointer}
+    .bulk-email-token:hover{background:#eef4ff;border-color:rgba(47,78,162,.34)}
+    .bulk-email-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .bulk-email-preview-card{display:grid;gap:16px;padding:18px;border-radius:22px;background:linear-gradient(180deg,#173779,#244999 58%,#f4f7fb 58%,#f4f7fb 100%);box-shadow:0 22px 48px rgba(15,23,42,.18)}
+    .bulk-email-preview-meta{display:grid;gap:8px;color:#dbe6ff}
+    .bulk-email-preview-meta strong{font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+    .bulk-email-preview-subject{font-size:22px;line-height:1.2;color:#fff;font-weight:800}
+    .bulk-email-preview-recipient{font-size:14px;color:#dbe6ff}
+    .bulk-email-preview-shell{display:grid;gap:16px;padding:22px;border-radius:22px;background:#fff;border:1px solid #d7e0f5}
+    .bulk-email-preview-hero{display:grid;gap:10px;padding:22px;border-radius:20px;background:#173779;color:#fff}
+    .bulk-email-preview-hero span{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#dbe6ff}
+    .bulk-email-preview-hero strong{font-size:28px;line-height:1.16}
+    .bulk-email-preview-body{display:grid;gap:12px;color:#42557f;font-size:15px;line-height:1.7}
+    .bulk-email-preview-body p{margin:0}
+    .bulk-email-preview-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .bulk-email-preview-btn{display:inline-flex;align-items:center;justify-content:center;padding:13px 18px;border-radius:14px;border:1px solid #3154b3;background:#3154b3;color:#fff;font-weight:800;font-size:14px;text-decoration:none}
+    .bulk-email-preview-btn.secondary{background:#fff;color:#3154b3;border-color:#cfdaf6}
+    .bulk-email-preview-footer{display:grid;gap:6px;padding-top:12px;border-top:1px solid #e6ecfb;font-size:13px;color:#5f74a8}
+    .bulk-email-summary-list{display:grid;gap:8px}
+    .bulk-email-summary-item{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;border:1px solid var(--stroke);background:#fff;font-size:14px}
+    .bulk-email-summary-item strong{color:var(--ink)}
+    .bulk-email-help{padding:12px 14px;border-radius:14px;border:1px dashed rgba(47,78,162,.2);background:#fff;color:var(--muted);font-size:13px;line-height:1.55}
 
     .muted{color:var(--muted)}
 
@@ -218,6 +253,7 @@
       .payment-sensitive-fields,.doc-upload-controls{grid-template-columns:1fr}
       .toolbar-main,.toolbar-meta{align-items:flex-start}
       .totals{justify-content:flex-start}
+      .bulk-email-grid{grid-template-columns:1fr}
     }
     @media (max-width:720px){
       header.card.intro{padding:18px}
@@ -236,6 +272,8 @@
       .doc-row{display:grid}
       .payment-sensitive-fields{grid-template-columns:1fr}
       .dialog-grid{grid-template-columns:1fr}
+      .bulk-email-options{grid-template-columns:1fr}
+      .bulk-email-preview-hero strong{font-size:24px}
     }
     @media (min-width:1560px){
       body.drawer-open .wrap.layout{padding-right:calc(16px + min(360px,22vw))}
@@ -438,6 +476,7 @@
           </div>
           <div class="bulkbar-actions">
             <button class="btn ghost" id="bulk-copy-emails">Copy emails</button>
+            <button class="btn" id="bulk-send-email">Send HMJ email</button>
             <button class="btn" id="bulk-intro-email">Send intro email</button>
             <button class="btn" id="bulk-assign">Assign recruiter</button>
             <button class="btn" id="bulk-status">Update status</button>
@@ -498,7 +537,122 @@
     </form>
   </dialog>
 
+  <dialog class="hmj-dialog bulk-email-dialog" id="bulk-email-dialog">
+    <form method="dialog" class="dialog-card bulk-email-card">
+      <div class="bulk-email-head">
+        <div>
+          <h3>Send HMJ bulk email</h3>
+          <p>Create one branded HMJ email and personalize it per recipient with merge fields. Each selected candidate receives an individual HMJ email rather than a BCC blast.</p>
+        </div>
+        <span class="pill" id="bulk-email-audience">0 deliverable</span>
+      </div>
+      <div class="bulk-email-grid">
+        <section class="bulk-email-compose">
+          <div class="bulk-email-section">
+            <div class="bulk-email-field">
+              <label for="bulk-email-preset">Template preset</label>
+              <select id="bulk-email-preset">
+                <option value="general_update">General update</option>
+                <option value="onboarding_request">Onboarding request</option>
+                <option value="availability_check">Availability check-in</option>
+              </select>
+            </div>
+            <div class="dialog-grid">
+              <div class="bulk-email-field">
+                <label for="bulk-email-subject">Subject</label>
+                <input id="bulk-email-subject" maxlength="160" placeholder="HMJ Global update for &lt;FIRST_NAME&gt;" />
+              </div>
+              <div class="bulk-email-field">
+                <label for="bulk-email-heading">Email heading</label>
+                <input id="bulk-email-heading" maxlength="160" placeholder="An update from HMJ Global" />
+              </div>
+            </div>
+            <div class="bulk-email-field">
+              <label for="bulk-email-body">Message</label>
+              <textarea id="bulk-email-body" placeholder="Hi &lt;FIRST_NAME&gt;,\n\nWe are contacting you about your HMJ profile and current position with &lt;CLIENT_NAME&gt;.\n\nUse the HMJ button below to open the correct next step in your account."></textarea>
+            </div>
+            <div class="dialog-grid">
+              <div class="bulk-email-field">
+                <label for="bulk-email-fallback-client">Fallback client / company</label>
+                <input id="bulk-email-fallback-client" maxlength="180" placeholder="Used when no client is on the candidate record" />
+              </div>
+              <div class="bulk-email-field">
+                <label for="bulk-email-fallback-job">Fallback job title</label>
+                <input id="bulk-email-fallback-job" maxlength="180" placeholder="Used when no role/job title is available" />
+              </div>
+            </div>
+          </div>
+
+          <div class="bulk-email-section">
+            <div>
+              <h4>Merge fields</h4>
+              <p>Click a field to insert it into the subject, heading, or message. Bullhorn-style tags such as <code>&lt;FIRST_NAME&gt;</code> are supported.</p>
+            </div>
+            <div class="bulk-email-token-palette" id="bulk-email-token-palette">
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;FIRST_NAME&gt;">First name</button>
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;LAST_NAME&gt;">Last name</button>
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;FULL_NAME&gt;">Full name</button>
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;EMAIL_ADDRESS&gt;">Email address</button>
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;REFERENCE&gt;">Candidate ref</button>
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;CLIENT_NAME&gt;">Client name</button>
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;JOB_TITLE&gt;">Job title</button>
+              <button class="bulk-email-token" type="button" data-merge-token="&lt;SUPPORT_EMAIL&gt;">Support email</button>
+            </div>
+            <div class="bulk-email-help">Useful CRM-style practice: keep the narrative in the message body, and let HMJ buttons handle the secure links. This avoids raw payload URLs appearing in the email copy.</div>
+          </div>
+
+          <div class="bulk-email-section">
+            <div>
+              <h4>Buttons and links</h4>
+              <p>Choose the main HMJ button the recipient should use. A secondary HMJ timesheets button can be added as well.</p>
+            </div>
+            <div class="bulk-email-options">
+              <label class="bulk-email-field">
+                <span class="label">Primary HMJ button</span>
+                <select id="bulk-email-primary-action">
+                  <option value="portal_access">Open secure HMJ access</option>
+                  <option value="documents_upload">Open HMJ documents</option>
+                  <option value="timesheets">Open HMJ timesheets / portal access</option>
+                </select>
+              </label>
+              <label class="dialog-check">
+                <input id="bulk-email-include-timesheets" type="checkbox" />
+                <span>
+                  <strong>Add HMJ timesheets button</strong>
+                  <span class="muted" style="display:block;font-size:12px">Useful when the main button is profile or documents, but you also want Timesheet Portal access in the same email.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="bulk-email-section">
+            <div>
+              <h4>Audience summary</h4>
+              <p>The wizard deduplicates by email address and skips rows with no deliverable email target.</p>
+            </div>
+            <div class="bulk-email-summary-list" id="bulk-email-summary"></div>
+          </div>
+        </section>
+
+        <aside class="bulk-email-preview">
+          <div class="bulk-email-preview-card">
+            <div class="bulk-email-preview-meta">
+              <strong>Live preview</strong>
+              <div class="bulk-email-preview-subject" id="bulk-email-preview-subject">HMJ email preview</div>
+              <div class="bulk-email-preview-recipient" id="bulk-email-preview-recipient">Previewing the first deliverable candidate in this selection.</div>
+            </div>
+            <div class="bulk-email-preview-shell" id="bulk-email-preview-shell"></div>
+          </div>
+        </aside>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn ghost" type="button" id="bulk-email-cancel">Cancel</button>
+        <button class="btn" type="button" id="bulk-email-send">Send HMJ email</button>
+      </div>
+    </form>
+  </dialog>
+
   <script defer src="/js/candidate-active-assignments-core.js?v=2"></script>
-  <script defer src="/admin/candidates.js?v=21"></script>
+  <script defer src="/admin/candidates.js?v=22"></script>
 </body>
 </html>

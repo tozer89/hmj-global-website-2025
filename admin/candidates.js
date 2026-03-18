@@ -34,6 +34,29 @@
     'timesheet-portal': { label: 'Timesheet Portal only' },
     combined: { label: 'Combined / all' }
   });
+  const BULK_EMAIL_PRESETS = Object.freeze({
+    general_update: {
+      subject: 'HMJ Global update for <FIRST_NAME>',
+      heading: 'An update from HMJ Global',
+      body: 'Hi <FIRST_NAME>,\n\nWe are getting in touch with a quick update on your HMJ candidate profile.\n\nIf anything has changed with your availability, role focus, or current assignment with <CLIENT_NAME>, use the HMJ button below to review the next step in your account.\n\nIf you need anything from the team, reply to this email and we will update your record.',
+      primaryAction: 'portal_access',
+      includeTimesheets: false,
+    },
+    onboarding_request: {
+      subject: 'HMJ onboarding update for <FIRST_NAME>',
+      heading: 'Complete your HMJ onboarding',
+      body: 'Hi <FIRST_NAME>,\n\nWe are progressing your HMJ setup for <CLIENT_NAME> and need you to review the next onboarding step.\n\nUse the HMJ button below to open the correct secure area for your documents and profile updates. This is especially important if you are working as <JOB_TITLE> or are already preparing to start.\n\nOnce you have reviewed the requested items, HMJ can keep your mobilisation moving.',
+      primaryAction: 'documents_upload',
+      includeTimesheets: true,
+    },
+    availability_check: {
+      subject: 'HMJ check-in for <FIRST_NAME>',
+      heading: 'A quick HMJ check-in',
+      body: 'Hi <FIRST_NAME>,\n\nWe are checking whether your HMJ profile is still current for upcoming work.\n\nIf your availability, location, preferred role, or current client details have changed, use the HMJ button below to review your profile and keep your record up to date.\n\nThis helps the team move faster when the right vacancy or assignment comes in.',
+      primaryAction: 'portal_access',
+      includeTimesheets: false,
+    },
+  });
 
   const elements = {};
   const rowsInner = document.createElement('div');
@@ -64,6 +87,7 @@
     tspCompare: null,
     verificationQueue: null,
     pendingDocRequest: null,
+    pendingBulkEmail: null,
     outreachDiagnostics: null,
     assignmentRows: [],
     assignmentLookups: null,
@@ -423,6 +447,415 @@
       if (typeof elements.docRequestDialog.showModal === 'function') elements.docRequestDialog.showModal();
       else elements.docRequestDialog.setAttribute('open', 'open');
     }
+  }
+
+  function bulkEmailPrimaryActionMeta(action) {
+    if (action === 'documents_upload') {
+      return {
+        value: 'documents_upload',
+        label: 'Open HMJ documents',
+        previewCopy: 'Use the HMJ button below to open your documents area securely.',
+      };
+    }
+    if (action === 'timesheets') {
+      return {
+        value: 'timesheets',
+        label: 'Open HMJ timesheets / portal access',
+        previewCopy: 'Use the HMJ button below to open the HMJ timesheets path.',
+      };
+    }
+    return {
+      value: 'portal_access',
+      label: 'Open secure HMJ access',
+      previewCopy: 'Use the HMJ button below to open the correct secure HMJ access path.',
+    };
+  }
+
+  function buildBulkEmailRecipient(candidate) {
+    const rawNameParts = String(candidate?.name || '').trim().split(/\s+/).filter(Boolean);
+    const assignment = candidate?.active_assignment_summary || null;
+    const firstName = String(candidate?.first_name || rawNameParts[0] || '').trim();
+    const lastName = String(candidate?.last_name || rawNameParts.slice(1).join(' ') || '').trim();
+    const fullName = String(candidate?.name || [firstName, lastName].filter(Boolean).join(' ') || '').trim();
+    return {
+      candidateId: String(candidate?.id || '').trim(),
+      firstName,
+      lastName,
+      fullName,
+      email: lowerEmail(candidate?.email),
+      reference: String(candidate?.payroll_ref || candidate?.ref || '').trim(),
+      role: String(candidate?.role || candidate?.headline_role || '').trim(),
+      clientName: String(assignment?.client_name || '').trim(),
+      jobTitle: String(assignment?.job_title || candidate?.role || candidate?.headline_role || '').trim(),
+      onboardingMode: candidate?.onboarding_mode === true,
+      activeAssignmentCount: Number(candidate?.active_assignment_count || 0),
+    };
+  }
+
+  function preferredBulkEmailCandidate(rows = []) {
+    return rows
+      .slice()
+      .sort((left, right) => {
+        const score = (candidate) => {
+          let total = 0;
+          if (!isRawTimesheetPortalCandidate(candidate)) total += 100;
+          if (candidate?.onboarding_mode === true) total += 20;
+          if (Number(candidate?.active_assignment_count || 0) > 0) total += 10;
+          if (String(candidate?.ref || candidate?.payroll_ref || '').trim()) total += 5;
+          if (String(candidate?.phone || '').trim()) total += 2;
+          return total;
+        };
+        return score(right) - score(left);
+      })[0] || null;
+  }
+
+  function buildBulkEmailAudience(rows = []) {
+    const selectedRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
+    const groups = new Map();
+    const missingEmail = [];
+    selectedRows.forEach((candidate) => {
+      const email = lowerEmail(candidate?.email);
+      if (!email) {
+        missingEmail.push(candidate);
+        return;
+      }
+      const current = groups.get(email) || [];
+      current.push(candidate);
+      groups.set(email, current);
+    });
+
+    const deliverableRows = [];
+    const duplicates = [];
+    groups.forEach((rowsForEmail) => {
+      const preferred = preferredBulkEmailCandidate(rowsForEmail);
+      if (preferred) deliverableRows.push(preferred);
+      rowsForEmail.forEach((candidate) => {
+        if (preferred && String(candidate?.id) !== String(preferred.id)) duplicates.push(candidate);
+      });
+    });
+
+    return {
+      selectedCount: selectedRows.length,
+      deliverableRows,
+      duplicates,
+      missingEmail,
+      requiresPromotion: deliverableRows.some((candidate) => isRawTimesheetPortalCandidate(candidate)),
+      previewRecipient: deliverableRows.length ? buildBulkEmailRecipient(deliverableRows[0]) : null,
+    };
+  }
+
+  function bulkEmailTemplateContext(recipient = {}, template = {}) {
+    const firstName = String(recipient?.firstName || recipient?.fullName?.split(/\s+/).filter(Boolean)[0] || 'there').trim() || 'there';
+    const lastName = String(recipient?.lastName || recipient?.fullName?.split(/\s+/).slice(1).join(' ') || '').trim();
+    const fullName = String(recipient?.fullName || [firstName, lastName].filter(Boolean).join(' ') || firstName).trim() || firstName;
+    const clientName = String(recipient?.clientName || template?.fallbackClient || 'your HMJ client').trim() || 'your HMJ client';
+    const jobTitle = String(recipient?.jobTitle || recipient?.role || template?.fallbackJob || 'your role').trim() || 'your role';
+    return {
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+      email_address: String(recipient?.email || '').trim(),
+      reference: String(recipient?.reference || '').trim(),
+      client_name: clientName,
+      job_title: jobTitle,
+      support_email: 'info@hmj-global.com',
+    };
+  }
+
+  function bulkEmailTokenValue(rawToken, context = {}) {
+    const normalized = String(rawToken || '')
+      .trim()
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase();
+    const key = ({
+      FIRST_NAME: 'first_name',
+      LAST_NAME: 'last_name',
+      FULL_NAME: 'full_name',
+      EMAIL: 'email_address',
+      EMAIL_ADDRESS: 'email_address',
+      REFERENCE: 'reference',
+      CANDIDATE_REFERENCE: 'reference',
+      CLIENT: 'client_name',
+      CLIENT_NAME: 'client_name',
+      COMPANY: 'client_name',
+      JOB_TITLE: 'job_title',
+      ROLE: 'job_title',
+      SUPPORT_EMAIL: 'support_email',
+    })[normalized];
+    if (!key) return null;
+    return String(context[key] || '').trim();
+  }
+
+  function renderBulkEmailTokens(text, context = {}) {
+    const source = String(text == null ? '' : text);
+    const replaceToken = (match, token) => {
+      const value = bulkEmailTokenValue(token, context);
+      return value == null ? match : value;
+    };
+    return source
+      .replace(/<\s*([A-Za-z0-9 _-]+?)\s*>/g, replaceToken)
+      .replace(/\{\{\s*([A-Za-z0-9 _-]+?)\s*\}\}/g, replaceToken);
+  }
+
+  function splitBulkEmailParagraphs(text) {
+    return String(text || '')
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean);
+  }
+
+  function bulkEmailTemplateFromForm() {
+    return {
+      subject: String(elements.bulkEmailSubject?.value || '').trim(),
+      heading: String(elements.bulkEmailHeading?.value || '').trim(),
+      body: String(elements.bulkEmailBody?.value || '').trim(),
+      fallbackClient: String(elements.bulkEmailFallbackClient?.value || '').trim(),
+      fallbackJob: String(elements.bulkEmailFallbackJob?.value || '').trim(),
+      primaryAction: String(elements.bulkEmailPrimaryAction?.value || 'portal_access').trim() || 'portal_access',
+      includeTimesheets: !!elements.bulkEmailIncludeTimesheets?.checked,
+    };
+  }
+
+  function renderBulkEmailSummary() {
+    if (!elements.bulkEmailSummary || !elements.bulkEmailAudience) return;
+    const audience = state.pendingBulkEmail;
+    if (!audience) {
+      elements.bulkEmailSummary.innerHTML = '';
+      elements.bulkEmailAudience.textContent = '0 deliverable';
+      return;
+    }
+    elements.bulkEmailAudience.textContent = `${audience.deliverableRows.length} deliverable`;
+    const preview = audience.previewRecipient;
+    elements.bulkEmailSummary.innerHTML = [
+      `<div class="bulk-email-summary-item"><span>Selected rows</span><strong>${audience.selectedCount}</strong></div>`,
+      `<div class="bulk-email-summary-item"><span>Deliverable emails</span><strong>${audience.deliverableRows.length}</strong></div>`,
+      `<div class="bulk-email-summary-item"><span>Duplicate emails skipped</span><strong>${audience.duplicates.length}</strong></div>`,
+      `<div class="bulk-email-summary-item"><span>Missing email address</span><strong>${audience.missingEmail.length}</strong></div>`,
+      preview ? `<div class="bulk-email-summary-item"><span>Previewing recipient</span><strong>${escapeHtml(preview.fullName || preview.email || 'Candidate')}</strong></div>` : '',
+      audience.requiresPromotion ? `<div class="bulk-email-summary-item"><span>Website accounts needed</span><strong>Some selected TSP rows will be prepared for secure HMJ access before sending.</strong></div>` : '',
+    ].filter(Boolean).join('');
+  }
+
+  function renderBulkEmailPreview() {
+    if (!elements.bulkEmailPreviewShell || !elements.bulkEmailPreviewSubject || !elements.bulkEmailPreviewRecipient) return;
+    const audience = state.pendingBulkEmail;
+    const template = bulkEmailTemplateFromForm();
+    const preview = audience?.previewRecipient;
+    if (!preview) {
+      elements.bulkEmailPreviewSubject.textContent = 'HMJ email preview';
+      elements.bulkEmailPreviewRecipient.textContent = 'No deliverable candidate is selected yet.';
+      elements.bulkEmailPreviewShell.innerHTML = '<div class="bulk-email-help">Select at least one candidate with an email address to preview the branded HMJ email.</div>';
+      return;
+    }
+    const context = bulkEmailTemplateContext(preview, template);
+    const subject = renderBulkEmailTokens(template.subject || 'HMJ Global update', context);
+    const heading = renderBulkEmailTokens(template.heading || 'An update from HMJ Global', context);
+    const paragraphs = splitBulkEmailParagraphs(renderBulkEmailTokens(template.body, context));
+    const primaryAction = bulkEmailPrimaryActionMeta(template.primaryAction);
+    const actionButtons = [
+      `<span class="bulk-email-preview-btn">${escapeHtml(primaryAction.label)}</span>`,
+      template.includeTimesheets && primaryAction.value !== 'timesheets'
+        ? '<span class="bulk-email-preview-btn secondary">Open HMJ timesheets / portal access</span>'
+        : '',
+    ].filter(Boolean).join('');
+    elements.bulkEmailPreviewSubject.textContent = subject || 'HMJ email preview';
+    elements.bulkEmailPreviewRecipient.textContent = `Previewing ${preview.fullName || preview.email} · ${preview.email || 'no email'}`;
+    elements.bulkEmailPreviewShell.innerHTML = `
+      <div class="bulk-email-preview-hero">
+        <span>HMJ Global</span>
+        <strong>${escapeHtml(heading || 'An update from HMJ Global')}</strong>
+      </div>
+      <div class="bulk-email-preview-body">
+        ${(paragraphs.length ? paragraphs : ['Write the email message here.']).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}
+        <p>${escapeHtml(primaryAction.previewCopy)}</p>
+      </div>
+      <div class="bulk-email-preview-actions">${actionButtons}</div>
+      <div class="bulk-email-preview-footer">
+        <div>Need help? Email info@hmj-global.com.</div>
+        <div>Merge fields are rendered per recipient before delivery.</div>
+      </div>
+    `;
+  }
+
+  function applyBulkEmailPreset(presetName) {
+    const preset = BULK_EMAIL_PRESETS[presetName] || BULK_EMAIL_PRESETS.general_update;
+    if (elements.bulkEmailPreset) elements.bulkEmailPreset.value = presetName in BULK_EMAIL_PRESETS ? presetName : 'general_update';
+    if (elements.bulkEmailSubject) elements.bulkEmailSubject.value = preset.subject;
+    if (elements.bulkEmailHeading) elements.bulkEmailHeading.value = preset.heading;
+    if (elements.bulkEmailBody) elements.bulkEmailBody.value = preset.body;
+    if (elements.bulkEmailPrimaryAction) elements.bulkEmailPrimaryAction.value = preset.primaryAction;
+    if (elements.bulkEmailIncludeTimesheets) elements.bulkEmailIncludeTimesheets.checked = !!preset.includeTimesheets;
+    renderBulkEmailPreview();
+  }
+
+  function preferredBulkEmailPreset(audience) {
+    if (!audience?.deliverableRows?.length) return 'general_update';
+    if (state.sourceTab === 'timesheet-portal-active') return 'onboarding_request';
+    return audience.deliverableRows.some((candidate) => candidate?.onboarding_mode === true || Number(candidate?.active_assignment_count || 0) > 0)
+      ? 'onboarding_request'
+      : 'general_update';
+  }
+
+  function closeBulkEmailDialog() {
+    state.pendingBulkEmail = null;
+    if (!elements.bulkEmailDialog) return;
+    if (typeof elements.bulkEmailDialog.close === 'function' && elements.bulkEmailDialog.open) elements.bulkEmailDialog.close();
+    else elements.bulkEmailDialog.removeAttribute('open');
+  }
+
+  function openBulkEmailDialog() {
+    const rows = selectedCandidates({ allowRaw: true, includeRaw: true });
+    if (!rows.length) {
+      showToast('Select candidates first.', 'warn', 2800);
+      return;
+    }
+    const audience = buildBulkEmailAudience(rows);
+    if (!audience.deliverableRows.length) {
+      showToast('Select candidates with a valid email address first.', 'warn', 3200);
+      return;
+    }
+    state.pendingBulkEmail = audience;
+    applyBulkEmailPreset(preferredBulkEmailPreset(audience));
+    renderBulkEmailSummary();
+    renderBulkEmailPreview();
+    if (elements.bulkEmailDialog) {
+      if (typeof elements.bulkEmailDialog.showModal === 'function') elements.bulkEmailDialog.showModal();
+      else elements.bulkEmailDialog.setAttribute('open', 'open');
+    }
+  }
+
+  function insertBulkEmailToken(token) {
+    const field = [elements.bulkEmailSubject, elements.bulkEmailHeading, elements.bulkEmailBody]
+      .find((input) => input === document.activeElement)
+      || elements.bulkEmailBody
+      || elements.bulkEmailSubject;
+    if (!field) return;
+    const value = String(field.value || '');
+    const start = Number.isInteger(field.selectionStart) ? field.selectionStart : value.length;
+    const end = Number.isInteger(field.selectionEnd) ? field.selectionEnd : value.length;
+    field.value = `${value.slice(0, start)}${token}${value.slice(end)}`;
+    const nextCaret = start + token.length;
+    if (typeof field.setSelectionRange === 'function') field.setSelectionRange(nextCaret, nextCaret);
+    field.focus();
+    renderBulkEmailPreview();
+  }
+
+  async function sendBulkEmailWizard() {
+    const pending = state.pendingBulkEmail;
+    if (!pending?.deliverableRows?.length) {
+      showToast('Select candidates with email addresses first.', 'warn', 3200);
+      return;
+    }
+    if (state.outreachDiagnostics && state.outreachDiagnostics.publicDeliveryReady !== true) {
+      showOutreachConfigurationError(
+        state.outreachDiagnostics.smtpStatus === 'invalid_credentials'
+          ? (state.outreachDiagnostics.smtpMessage || 'Candidate emails are currently blocked because the saved SMTP login was rejected by the mail server.')
+          : state.outreachDiagnostics.resendConfigured && state.outreachDiagnostics.resendReady === false
+            ? 'Candidate emails are currently blocked because the configured RESEND_API_KEY is invalid.'
+            : state.outreachDiagnostics.smtpCredentialsSaved
+              ? (state.outreachDiagnostics.smtpMessage || 'Candidate emails are currently blocked because the saved SMTP configuration could not be verified.')
+              : 'Candidate emails are not configured on this website yet.'
+      );
+      return;
+    }
+
+    const template = bulkEmailTemplateFromForm();
+    if (!template.subject || !template.heading || !template.body) {
+      showToast('Add a subject, heading, and message before sending.', 'warn', 3200);
+      return;
+    }
+
+    let rows = pending.deliverableRows.slice();
+    const needsSecureAccess = template.primaryAction === 'portal_access' || template.primaryAction === 'documents_upload';
+    if (needsSecureAccess) {
+      rows = await ensureWebsiteCandidatesForOutreach(rows, {
+        onboardingMode: template.primaryAction === 'documents_upload' || rows.some((candidate) => candidate?.onboarding_mode === true || Number(candidate?.active_assignment_count || 0) > 0),
+      });
+    }
+
+    const dedupedAudience = buildBulkEmailAudience(rows);
+    const sendRows = dedupedAudience.deliverableRows.filter((candidate) => !!lowerEmail(candidate?.email));
+    if (!sendRows.length) {
+      showToast('No deliverable candidate email targets are available.', 'warn', 3200);
+      return;
+    }
+
+    if (elements.bulkEmailSend) {
+      elements.bulkEmailSend.disabled = true;
+      elements.bulkEmailSend.textContent = `Sending 0 of ${sendRows.length}…`;
+    }
+    if (elements.bulkEmailCancel) elements.bulkEmailCancel.disabled = true;
+
+    const failures = [];
+    let sent = 0;
+    let completed = 0;
+    let cursor = 0;
+    const concurrency = Math.min(4, sendRows.length);
+    const payloadTemplate = {
+      subject: template.subject,
+      heading: template.heading,
+      body: template.body,
+      fallback_client_name: template.fallbackClient,
+      fallback_job_title: template.fallbackJob,
+      primary_action: template.primaryAction,
+      include_timesheets_button: template.includeTimesheets,
+    };
+
+    const workers = Array.from({ length: concurrency }, async () => {
+      while (cursor < sendRows.length) {
+        const currentIndex = cursor;
+        cursor += 1;
+        const candidate = sendRows[currentIndex];
+        try {
+          await state.helpers.api('admin-candidate-bulk-email', 'POST', {
+            candidate_id: candidate?.id || null,
+            recipient: buildBulkEmailRecipient(candidate),
+            template: payloadTemplate,
+          });
+          sent += 1;
+        } catch (error) {
+          failures.push({
+            candidate,
+            error: error?.message || 'send_failed',
+          });
+        } finally {
+          completed += 1;
+          if (elements.bulkEmailSend) {
+            elements.bulkEmailSend.textContent = `Sending ${completed} of ${sendRows.length}…`;
+          }
+        }
+      }
+    });
+
+    await Promise.all(workers);
+
+    if (elements.bulkEmailSend) {
+      elements.bulkEmailSend.disabled = false;
+      elements.bulkEmailSend.textContent = 'Send HMJ email';
+    }
+    if (elements.bulkEmailCancel) elements.bulkEmailCancel.disabled = false;
+
+    const skipped = dedupedAudience.duplicates.length + pending.missingEmail.length;
+    pushLog({
+      action: 'email:bulk',
+      detail: `${sent} accepted${failures.length ? `, ${failures.length} failed` : ''}${skipped ? `, ${skipped} skipped` : ''}`,
+    });
+
+    renderBulkEmailSummary();
+    renderBulkEmailPreview();
+
+    if (!failures.length) {
+      closeBulkEmailDialog();
+    }
+
+    showToast(
+      failures.length
+        ? `Accepted ${sent} HMJ email${sent === 1 ? '' : 's'} for delivery. ${failures.length} failed.${skipped ? ` ${skipped} ${skipped === 1 ? 'was' : 'were'} skipped.` : ''}`
+        : `Accepted ${sent} HMJ email${sent === 1 ? '' : 's'} for delivery.${skipped ? ` ${skipped} ${skipped === 1 ? 'was' : 'were'} skipped.` : ''}`,
+      failures.length ? 'warn' : 'info',
+      4600,
+    );
   }
 
   function parseDocumentRequestList(value) {
@@ -1751,6 +2184,7 @@
     if (elements.bulkArchive) elements.bulkArchive.disabled = websiteCount === 0;
     if (elements.bulkExport) elements.bulkExport.disabled = websiteCount === 0;
     if (elements.bulkCopyEmails) elements.bulkCopyEmails.disabled = outreachCount === 0;
+    if (elements.bulkSendEmail) elements.bulkSendEmail.disabled = outreachCount === 0;
     if (elements.bulkIntroEmail) elements.bulkIntroEmail.disabled = outreachCount === 0;
     if (elements.bulkDocRequest) elements.bulkDocRequest.disabled = outreachCount === 0;
     if (elements.bulkReminder) elements.bulkReminder.disabled = outreachCount === 0;
@@ -3485,6 +3919,7 @@
 
   function bindBulkActions() {
     elements.bulkCopyEmails.addEventListener('click', () => bulkCopyEmails());
+    elements.bulkSendEmail.addEventListener('click', () => openBulkEmailDialog());
     elements.bulkIntroEmail.addEventListener('click', () => bulkIntroEmail());
     elements.bulkAssign.addEventListener('click', () => bulkAssign());
     elements.bulkStatus.addEventListener('click', () => bulkStatus());
@@ -4170,6 +4605,7 @@
     elements.bulkbar = qs('#bulkbar');
     elements.bulkCount = qs('#bulk-count');
     elements.bulkCopyEmails = qs('#bulk-copy-emails');
+    elements.bulkSendEmail = qs('#bulk-send-email');
     elements.bulkAssign = qs('#bulk-assign');
     elements.bulkIntroEmail = qs('#bulk-intro-email');
     elements.bulkStatus = qs('#bulk-status');
@@ -4238,6 +4674,23 @@
     elements.docRequestCancel = qs('#doc-request-cancel');
     elements.docRequestCopyLink = qs('#doc-request-copy-link');
     elements.docRequestSend = qs('#doc-request-send');
+    elements.bulkEmailDialog = qs('#bulk-email-dialog');
+    elements.bulkEmailAudience = qs('#bulk-email-audience');
+    elements.bulkEmailPreset = qs('#bulk-email-preset');
+    elements.bulkEmailSubject = qs('#bulk-email-subject');
+    elements.bulkEmailHeading = qs('#bulk-email-heading');
+    elements.bulkEmailBody = qs('#bulk-email-body');
+    elements.bulkEmailFallbackClient = qs('#bulk-email-fallback-client');
+    elements.bulkEmailFallbackJob = qs('#bulk-email-fallback-job');
+    elements.bulkEmailPrimaryAction = qs('#bulk-email-primary-action');
+    elements.bulkEmailIncludeTimesheets = qs('#bulk-email-include-timesheets');
+    elements.bulkEmailSummary = qs('#bulk-email-summary');
+    elements.bulkEmailPreviewSubject = qs('#bulk-email-preview-subject');
+    elements.bulkEmailPreviewRecipient = qs('#bulk-email-preview-recipient');
+    elements.bulkEmailPreviewShell = qs('#bulk-email-preview-shell');
+    elements.bulkEmailCancel = qs('#bulk-email-cancel');
+    elements.bulkEmailSend = qs('#bulk-email-send');
+    elements.bulkEmailTokens = Array.from(document.querySelectorAll('[data-merge-token]'));
   }
 
   function bindEvents() {
@@ -4382,6 +4835,48 @@
           if (elements.docRequestSend && !elements.docRequestDialog?.open) {
             elements.docRequestSend.disabled = false;
           }
+        }
+      });
+    }
+    if (elements.bulkEmailPreset) {
+      elements.bulkEmailPreset.addEventListener('change', () => applyBulkEmailPreset(elements.bulkEmailPreset.value));
+    }
+    [elements.bulkEmailSubject, elements.bulkEmailHeading, elements.bulkEmailBody, elements.bulkEmailFallbackClient, elements.bulkEmailFallbackJob, elements.bulkEmailPrimaryAction, elements.bulkEmailIncludeTimesheets]
+      .filter(Boolean)
+      .forEach((field) => {
+        const eventName = field instanceof HTMLInputElement && field.type === 'checkbox' ? 'change' : 'input';
+        field.addEventListener(eventName, () => renderBulkEmailPreview());
+        if (eventName !== 'change') field.addEventListener('change', () => renderBulkEmailPreview());
+      });
+    if (Array.isArray(elements.bulkEmailTokens)) {
+      elements.bulkEmailTokens.forEach((button) => {
+        button.addEventListener('click', () => insertBulkEmailToken(button.dataset.mergeToken || ''));
+      });
+    }
+    if (elements.bulkEmailCancel) {
+      elements.bulkEmailCancel.addEventListener('click', () => closeBulkEmailDialog());
+    }
+    if (elements.bulkEmailDialog) {
+      elements.bulkEmailDialog.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeBulkEmailDialog();
+      });
+      elements.bulkEmailDialog.addEventListener('close', () => {
+        if (!elements.bulkEmailDialog.open) state.pendingBulkEmail = null;
+      });
+    }
+    if (elements.bulkEmailSend) {
+      elements.bulkEmailSend.addEventListener('click', async () => {
+        try {
+          await sendBulkEmailWizard();
+        } catch (error) {
+          console.error('[candidates] bulk email send failed', error);
+          showToast(error?.message || 'Bulk email send failed.', 'error', 4200);
+          if (elements.bulkEmailSend) {
+            elements.bulkEmailSend.disabled = false;
+            elements.bulkEmailSend.textContent = 'Send HMJ email';
+          }
+          if (elements.bulkEmailCancel) elements.bulkEmailCancel.disabled = false;
         }
       });
     }

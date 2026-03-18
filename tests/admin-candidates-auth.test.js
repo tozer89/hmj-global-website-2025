@@ -13,8 +13,9 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=34/);
   assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=2/);
-  assert.match(html, /\/admin\/candidates\.js\?v=21/);
+  assert.match(html, /\/admin\/candidates\.js\?v=22/);
   assert.match(html, /id="bulk-intro-email"/);
+  assert.match(html, /id="bulk-send-email"/);
   assert.match(html, /id="bulk-copy-emails"/);
   assert.match(html, /id="bulk-rtw-reminder"/);
   assert.match(html, /id="btn-select-missing-rtw"/);
@@ -30,6 +31,12 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /id="outreach-status"/);
   assert.match(html, /id="doc-request-dialog"/);
   assert.match(html, /id="doc-request-copy-link"/);
+  assert.match(html, /id="bulk-email-dialog"/);
+  assert.match(html, /id="bulk-email-preset"/);
+  assert.match(html, /id="bulk-email-subject"/);
+  assert.match(html, /id="bulk-email-body"/);
+  assert.match(html, /id="bulk-email-primary-action"/);
+  assert.match(html, /id="bulk-email-preview-shell"/);
   assert.match(html, /id="dw-payment"/);
   assert.match(html, /id="dw-assignments"/);
   assert.match(html, /id="candidate-source-tabs"/);
@@ -158,6 +165,10 @@ test('candidate admin UI can switch between website, timesheet portal, and combi
   assert.match(source, /function renderActiveFilterChips/);
   assert.match(source, /function selectVisibleCandidates/);
   assert.match(source, /function bulkCopyEmails/);
+  assert.match(source, /function buildBulkEmailAudience/);
+  assert.match(source, /function renderBulkEmailPreview/);
+  assert.match(source, /function sendBulkEmailWizard/);
+  assert.match(source, /admin-candidate-bulk-email/);
   assert.match(source, /function renderTableHeader/);
   assert.match(source, /function buildActiveAssignmentRow/);
   assert.match(source, /data-role="open-assignment"/);
