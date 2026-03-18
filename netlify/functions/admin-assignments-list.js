@@ -9,6 +9,43 @@ const {
   loadTimesheetPortalAssignmentMirror,
 } = require('./_timesheet-portal-assignment-meta.js');
 
+const REQUIRED_ASSIGNMENT_COLUMNS = Object.freeze([
+  'id',
+  'candidate_id',
+  'contractor_id',
+  'project_id',
+  'site_id',
+  'job_title',
+  'status',
+  'candidate_name',
+  'client_name',
+  'client_site',
+  'as_ref',
+  'po_number',
+  'po_ref',
+  'rate_std',
+  'rate_pay',
+  'charge_std',
+  'charge_ot',
+  'rate_charge',
+  'start_date',
+  'end_date',
+  'currency',
+  'consultant_name',
+  'approver',
+  'active',
+]);
+
+const OPTIONAL_ASSIGNMENT_COLUMNS = Object.freeze([
+  'assignment_description',
+  'branch_name',
+  'cost_centre',
+  'ir35_status',
+  'assigned_approvers',
+  'assigned_contractors',
+  'assignment_category',
+]);
+
 function normaliseLike(value = '') {
   return String(value)
     .replace(/[\%_]/g, (m) => `\\${m}`)
@@ -18,6 +55,22 @@ function normaliseLike(value = '') {
 function toNumber(value, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
+}
+
+function buildAssignmentSelect(optionalColumns = []) {
+  return REQUIRED_ASSIGNMENT_COLUMNS.concat(optionalColumns).join(',');
+}
+
+function extractMissingColumnName(error) {
+  const message = String(error?.message || '');
+  if (!message) return '';
+  const postgresMatch = message.match(/column\s+assignments\.([a-zA-Z0-9_]+)\s+does not exist/i);
+  if (postgresMatch) return postgresMatch[1];
+  const genericMatch = message.match(/column\s+"?([a-zA-Z0-9_]+)"?\s+does not exist/i);
+  if (genericMatch) return genericMatch[1];
+  const postgrestMatch = message.match(/Could not find the '([a-zA-Z0-9_]+)' column/i);
+  if (postgrestMatch) return postgrestMatch[1];
+  return '';
 }
 
 async function loadClientCodeRows() {
@@ -194,51 +247,28 @@ const baseHandler = async (event, context) => {
       throw countError;
     }
 
-    let dataQuery = baseFilters(
-      supabase
-        .from('assignments')
-        .select(
-          [
-            'id',
-            'candidate_id',
-            'contractor_id',
-            'project_id',
-            'site_id',
-            'job_title',
-            'status',
-            'candidate_name',
-            'client_name',
-            'client_site',
-            'as_ref',
-            'po_number',
-            'po_ref',
-            'assignment_description',
-            'branch_name',
-            'cost_centre',
-            'ir35_status',
-            'assigned_approvers',
-            'assigned_contractors',
-            'assignment_category',
-            'rate_std',
-            'rate_pay',
-            'charge_std',
-            'charge_ot',
-            'rate_charge',
-            'start_date',
-            'end_date',
-            'currency',
-            'consultant_name',
-            'active',
-          ].join(',')
-        )
-        .order('start_date', { ascending: false })
-    );
+    const optionalColumns = new Set(OPTIONAL_ASSIGNMENT_COLUMNS);
+    const runDataQuery = () => {
+      let query = baseFilters(
+        supabase
+          .from('assignments')
+          .select(buildAssignmentSelect(Array.from(optionalColumns)))
+          .order('start_date', { ascending: false })
+      );
 
-    if (!wantsCsv) {
-      dataQuery = dataQuery.range(offset, offset + pageSize - 1);
+      if (!wantsCsv) {
+        query = query.range(offset, offset + pageSize - 1);
+      }
+      return query;
+    };
+
+    let { data, error } = await runDataQuery();
+    while (error) {
+      const missingColumn = extractMissingColumnName(error);
+      if (!missingColumn || !optionalColumns.has(missingColumn)) break;
+      optionalColumns.delete(missingColumn);
+      ({ data, error } = await runDataQuery());
     }
-
-    const { data, error } = await dataQuery;
     if (error) {
       if (shouldFallback(error)) {
         console.warn('[assignments] data fetch failed (%s) — falling back to static dataset', error.message);

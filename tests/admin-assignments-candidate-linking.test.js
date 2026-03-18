@@ -53,6 +53,8 @@ test('assignment save, list and publish flows preserve candidate_id', () => {
   assert.match(listSource, /'ir35_status',/);
   assert.match(listSource, /'assigned_approvers',/);
   assert.match(listSource, /'assigned_contractors',/);
+  assert.match(listSource, /OPTIONAL_ASSIGNMENT_COLUMNS/);
+  assert.match(listSource, /extractMissingColumnName/);
   assert.match(listSource, /decorateAssignmentRowWithTimesheetPortal/);
   assert.match(listSource, /const clientName = String\(body\.client_name \|\| ''\)\.trim\(\)/);
   assert.match(publishSource, /if \(!assignment\.candidate_id && !assignment\.contractor_id\)/);
