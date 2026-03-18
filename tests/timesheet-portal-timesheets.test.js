@@ -15,10 +15,10 @@ function restoreEnv(key, value) {
 test('normalizeTimesheetPortalTimesheetRecord maps a TSP timesheet-management row into admin shape', () => {
   const row = normalizeTimesheetPortalTimesheetRecord({
     TimesheetId: 'TS-201',
-    TimesheetWeekStart: '2026-03-09',
-    TimesheetWeekEnd: '2026-03-15',
+    TimesheetWeekStart: '09/03/2026 00:00:00',
+    TimesheetWeekEnd: '15/03/2026 00:00:00',
     EmployeeName: 'Joseph Tozer',
-    EmployeeEmail: 'tozer89@gmail.com',
+    EmployeeEmailAddress: 'tozer89@gmail.com',
     EmployeeAccountingReference: '5580',
     ChargeCode: 'ACEHULL-4434',
     ChargeCodeDesc: 'Assistant Project Manager',
@@ -27,8 +27,10 @@ test('normalizeTimesheetPortalTimesheetRecord maps a TSP timesheet-management ro
     StandardHours: 40,
     OvertimeHours: 6,
     Status: 'Submitted',
-    Notes: 'Waiting on approval',
-    AttachmentCount: 2,
+    SubmitDate: '15/03/2026 09:10:00',
+    ApprovalDate: '',
+    TimesheetNotes: 'Waiting on approval',
+    TimesheetContainsAttachment: true,
   });
 
   assert.equal(row.id, 'TS-201');
@@ -42,13 +44,14 @@ test('normalizeTimesheetPortalTimesheetRecord maps a TSP timesheet-management ro
   assert.equal(row.clientName, 'A+C Electrical Ltd');
   assert.equal(row.approverName, 'Laura Miles');
   assert.equal(row.status, 'submitted');
+  assert.equal(row.submittedAt, '2026-03-15');
   assert.equal(row.totals.standardHours, 40);
   assert.equal(row.totals.overtimeHours, 6);
   assert.equal(row.totals.hours, 46);
-  assert.equal(row.attachmentCount, 2);
+  assert.equal(row.attachmentCount, 1);
 });
 
-test('listTimesheetPortalTimesheets pages through /v2/rec/timesheets and normalizes rows', async () => {
+test('listTimesheetPortalTimesheets prefers the timesheet report and normalizes rows', async () => {
   const previous = {
     clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
     clientSecret: process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
@@ -64,50 +67,68 @@ test('listTimesheetPortalTimesheets pages through /v2/rec/timesheets and normali
   process.env.TIMESHEET_PORTAL_BASE_URL = 'https://gb3.api.timesheetportal.test';
   process.env.TIMESHEET_PORTAL_TOKEN_PATH = '/oauth/token';
 
-  global.fetch = async (url) => {
+  global.fetch = async (url, options = {}) => {
     const value = String(url);
-    if (value === 'https://gb3.api.timesheetportal.test/oauth/token') {
+    if (value === 'https://gb3.api.timesheetportal.test/oauth/token' || value === 'https://brightwater.api.timesheetportal.test/oauth/token') {
       return {
         ok: true,
         status: 200,
         json: async () => ({ access_token: 'oauth-access', expires_in: 3600 }),
       };
     }
-    if (value === 'https://gb3.api.timesheetportal.test/v2/rec/timesheets?take=2') {
+    if (value === 'https://gb3.api.timesheetportal.test/reports/timesheets' || value === 'https://brightwater.api.timesheetportal.test/reports/timesheets') {
+      assert.equal(options.method, 'POST');
+      const payload = JSON.parse(String(options.body || '{}'));
+      assert.equal(payload.reportTimeGrouping, 'Timesheet');
+      assert.deepEqual(payload.reportFields.slice(0, 4), [
+        'TimesheetId',
+        'TimesheetWeekStart',
+        'TimesheetWeekEnd',
+        'EmployeeName',
+      ]);
+      assert.equal(payload.startDate, '2026-03-01');
+      assert.equal(payload.endDate, '2026-03-31');
       return {
         ok: true,
         status: 200,
         text: async () => JSON.stringify([
-          {
-            TimesheetId: 'TS-1',
-            TimesheetWeekEnd: '2026-03-15',
-            EmployeeName: 'Jordan Smith',
-            EmployeeAccountingReference: '8842',
-            ChargeCode: 'AS-99',
-            ChargeCodeDesc: 'Package Manager',
-            CompanyName: 'BluePeak Pharma',
-            EntryQuantity: 40,
-            Status: 'Approved',
-          },
-          {
-            TimesheetId: 'TS-2',
-            TimesheetWeekEnd: '2026-03-22',
-            EmployeeName: 'Clare Singh',
-            EmployeeAccountingReference: '9911',
-            ChargeCode: 'AS-100',
-            ChargeCodeDesc: 'Planner',
-            CompanyName: 'BluePeak Pharma',
-            EntryQuantity: 38,
-            Status: 'Submitted',
-          },
+          [
+            'TimesheetId',
+            'TimesheetWeekStart',
+            'TimesheetWeekEnd',
+            'EmployeeName',
+            'EmployeeAccountingReference',
+            'CompanyName',
+            'ChargeCode',
+            'ChargeCodeDesc',
+            'EntryQuantity',
+            'Status',
+          ],
+          [
+            'TS-1',
+            '2026-03-09',
+            '2026-03-15',
+            'Jordan Smith',
+            '8842',
+            'BluePeak Pharma',
+            'AS-99',
+            'Package Manager',
+            40,
+            'Approved',
+          ],
+          [
+            'TS-2',
+            '2026-03-16',
+            '2026-03-22',
+            'Clare Singh',
+            '9911',
+            'BluePeak Pharma',
+            'AS-100',
+            'Planner',
+            38,
+            'Submitted',
+          ],
         ]),
-      };
-    }
-    if (value === 'https://gb3.api.timesheetportal.test/v2/rec/timesheets?take=2&page=2') {
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify([]),
       };
     }
     throw new Error(`Unexpected fetch ${url}`);
@@ -115,12 +136,12 @@ test('listTimesheetPortalTimesheets pages through /v2/rec/timesheets and normali
 
   try {
     const result = await listTimesheetPortalTimesheets(readTimesheetPortalConfig(), {
-      take: 2,
-      pageLimit: 3,
+      fromDate: '2026-03-01',
+      toDate: '2026-03-31',
     });
 
-    assert.equal(result.discovery.timesheetPath, '/v2/rec/timesheets');
-    assert.equal(result.discovery.mode, 'timesheets');
+    assert.equal(result.discovery.timesheetPath, '/reports/timesheets');
+    assert.equal(result.discovery.mode, 'report');
     assert.equal(result.rows.length, 2);
     assert.equal(result.rows[0].id, 'TS-1');
     assert.equal(result.rows[0].status, 'approved');
@@ -135,7 +156,7 @@ test('listTimesheetPortalTimesheets pages through /v2/rec/timesheets and normali
   }
 });
 
-test('listTimesheetPortalTimesheets stops after a successful oauth empty result instead of retrying stale api tokens', async () => {
+test('listTimesheetPortalTimesheets falls back to /v2/rec/timesheets if the report path is unavailable', async () => {
   const previous = {
     enabled: process.env.TIMESHEET_PORTAL_ENABLED,
     clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
@@ -164,11 +185,26 @@ test('listTimesheetPortalTimesheets stops after a successful oauth empty result 
         json: async () => ({ access_token: 'oauth-access', expires_in: 3600 }),
       };
     }
+    if (value === 'https://gb3.api.timesheetportal.test/reports/timesheets') {
+      return {
+        ok: false,
+        status: 404,
+        text: async () => JSON.stringify({ Message: 'Not found' }),
+      };
+    }
     if (value === 'https://gb3.api.timesheetportal.test/v2/rec/timesheets?take=2') {
       return {
         ok: true,
         status: 200,
-        text: async () => JSON.stringify([]),
+        text: async () => JSON.stringify([
+          {
+            TimesheetId: 'TS-9',
+            TimesheetWeekEnd: '2026-03-29',
+            EmployeeName: 'Fallback Person',
+            EntryQuantity: 12,
+            Status: 'Submitted',
+          },
+        ]),
       };
     }
     throw new Error(`Unexpected fetch ${url}`);
@@ -180,7 +216,9 @@ test('listTimesheetPortalTimesheets stops after a successful oauth empty result 
       pageLimit: 1,
     });
 
-    assert.equal(result.rows.length, 0);
+    assert.equal(result.rows.length, 1);
+    assert.equal(result.discovery.timesheetPath, '/v2/rec/timesheets');
+    assert.equal(calls.filter((value) => value.includes('/reports/timesheets')).length, 1);
     assert.equal(calls.filter((value) => value.includes('/v2/rec/timesheets')).length, 1);
   } finally {
     global.fetch = originalFetch;

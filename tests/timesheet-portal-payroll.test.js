@@ -80,6 +80,10 @@ test('listTimesheetPortalPayroll parses matrix report payloads from /reports/tim
       assert.equal(options.headers.authorization, 'Bearer oauth-access');
       const payload = JSON.parse(String(options.body || '{}'));
       assert.equal(payload.reportTimeGrouping, 'Timesheet');
+      assert.ok(Array.isArray(payload.reportFields));
+      assert.equal('fields' in payload, false);
+      assert.equal(payload.startDate, '2026-03-01');
+      assert.equal(payload.endDate, '2026-03-31');
       return {
         ok: true,
         status: 200,

@@ -61,6 +61,33 @@ const DEFAULT_PAYROLL_REPORT_FIELDS = [
   'InvoicePaidDate',
   'InvoiceSelfBilling',
 ];
+const DEFAULT_TIMESHEET_REPORT_FIELDS = [
+  'TimesheetId',
+  'TimesheetWeekStart',
+  'TimesheetWeekEnd',
+  'EmployeeName',
+  'EmployeeEmailAddress',
+  'EmployeeReference',
+  'EmployeeAccountingReference',
+  'CompanyName',
+  'ChargeCode',
+  'ChargeCodeDesc',
+  'PurchaseOrder',
+  'CostCentreCode',
+  'EntryQuantity',
+  'Status',
+  'ApprovalDate',
+  'ApproverName',
+  'ApproverEmailAddress',
+  'SubmitDate',
+  'TotalPay',
+  'TotalCharge',
+  'PayCurrencyIsoSymbol',
+  'ChargeCurrencyIsoSymbol',
+  'TimesheetNotes',
+  'TimesheetContainsAttachment',
+  'TimesheetLastUpdated',
+];
 
 let cachedToken = null;
 
@@ -625,6 +652,11 @@ function readNumberKeys(record = {}, keys = []) {
 function toDateOnly(value) {
   const text = trimString(value, 80);
   if (!text) return '';
+  const dayMonthYearMatch = text.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (dayMonthYearMatch) {
+    const [, dd, mm, yyyy] = dayMonthYearMatch;
+    return `${yyyy}-${mm}-${dd}`;
+  }
   const match = text.match(/^(\d{4}-\d{2}-\d{2})/);
   if (match) return match[1];
   const parsed = Date.parse(text);
@@ -872,6 +904,9 @@ function normalizeTimesheetPortalTimesheetRecord(record = {}) {
     weekStart,
     candidateName,
     candidateEmail: lowerEmail(
+      record.EmployeeEmailAddress
+      || record.employeeEmailAddress
+      ||
       record.EmployeeEmail
       || record.employeeEmail
       || record.candidateEmail
@@ -888,8 +923,9 @@ function normalizeTimesheetPortalTimesheetRecord(record = {}) {
     jobTitle: readStringKeys(record, ['ChargeCodeDesc', 'chargeCodeDesc', 'jobTitle', 'title', 'description'], 240),
     clientName: readStringKeys(record, ['CompanyName', 'companyName', 'clientName', 'customerName'], 240),
     approverName: readStringKeys(record, ['ApproverName', 'approverName', 'approvedBy', 'authoriserName', 'authorizerName'], 240),
-    submittedAt: toDateOnly(record.SubmittedDate || record.submittedDate || record.submittedAt),
+    submittedAt: toDateOnly(record.SubmitDate || record.submitDate || record.SubmittedDate || record.submittedDate || record.submittedAt),
     approvedAt: toDateOnly(record.ApprovedDate || record.approvedDate || record.approvedAt || record.authorisedDate || record.authorizedDate),
+    updatedAt: toDateOnly(record.TimesheetLastUpdated || record.timesheetLastUpdated || record.updatedAt || record.modifiedAt),
     status: normalizeTimesheetPortalTimesheetStatus(record),
     totals: {
       hours: computedTotal,
@@ -899,8 +935,8 @@ function normalizeTimesheetPortalTimesheetRecord(record = {}) {
       charge: readNumberKeys(record, ['TotalCharge', 'totalCharge', 'chargeAmount']) || 0,
     },
     currency,
-    notes: readStringKeys(record, ['Notes', 'notes', 'Comment', 'comment', 'Comments', 'comments'], 2000),
-    attachmentCount: readNumberKeys(record, ['AttachmentCount', 'attachmentCount']) || 0,
+    notes: readStringKeys(record, ['TimesheetNotes', 'timesheetNotes', 'Notes', 'notes', 'Comment', 'comment', 'Comments', 'comments'], 2000),
+    attachmentCount: readNumberKeys(record, ['AttachmentCount', 'attachmentCount']) || (normalizeBoolean(record.TimesheetContainsAttachment ?? record.timesheetContainsAttachment) ? 1 : 0),
     raw: record,
   };
 }
@@ -938,20 +974,23 @@ async function fetchAssignmentsCollection(config, auth, assignmentPath, options 
   return rows;
 }
 
-function buildPayrollReportPayload(options = {}) {
+function buildReportSettingsPayload(reportFields = [], options = {}) {
   const payload = {
+    useIsoDateFormat: true,
     reportTimeGrouping: 'Timesheet',
-    fields: DEFAULT_PAYROLL_REPORT_FIELDS.slice(),
+    reportFields: Array.isArray(reportFields) && reportFields.length
+      ? reportFields.slice()
+      : DEFAULT_PAYROLL_REPORT_FIELDS.slice(),
   };
-  const fromDate = toDateOnly(options.fromDate);
-  const toDate = toDateOnly(options.toDate);
-  if (fromDate) payload.fromDate = fromDate;
-  if (toDate) payload.toDate = toDate;
+  const startDate = toDateOnly(options.fromDate || options.startDate);
+  const endDate = toDateOnly(options.toDate || options.endDate);
+  if (startDate) payload.startDate = startDate;
+  if (endDate) payload.endDate = endDate;
   return payload;
 }
 
-async function fetchTimesheetPortalPayrollReport(config, auth, reportPath, options = {}) {
-  const payload = buildPayrollReportPayload(options);
+async function fetchTimesheetPortalReportRecords(config, auth, reportPath, reportFields = [], options = {}) {
+  const payload = buildReportSettingsPayload(reportFields, options);
   const result = await postJson(joinUrl(config.resourceBaseUrl, reportPath), auth, payload);
   if (!result.response.ok) {
     const error = new Error(`Timesheet Portal payroll report failed (${result.response.status})`);
@@ -961,8 +1000,29 @@ async function fetchTimesheetPortalPayrollReport(config, auth, reportPath, optio
   }
 
   const tabularRows = extractTabularRows(result.json);
-  const records = tableRowsToRecords(tabularRows);
+  return tableRowsToRecords(tabularRows);
+}
+
+async function fetchTimesheetPortalPayrollReport(config, auth, reportPath, options = {}) {
+  const records = await fetchTimesheetPortalReportRecords(
+    config,
+    auth,
+    reportPath,
+    DEFAULT_PAYROLL_REPORT_FIELDS,
+    options,
+  );
   return records.map(normalizeTimesheetPortalPayrollRecord).filter((row) => row.id || row.candidateName || row.invoiceNumberText);
+}
+
+async function fetchTimesheetPortalTimesheetReport(config, auth, reportPath, options = {}) {
+  const records = await fetchTimesheetPortalReportRecords(
+    config,
+    auth,
+    reportPath,
+    DEFAULT_TIMESHEET_REPORT_FIELDS,
+    options,
+  );
+  return records.map(normalizeTimesheetPortalTimesheetRecord).filter((row) => row.id || row.candidateName || row.assignmentRef || row.weekEnding);
 }
 
 async function fetchTimesheetPortalTimesheets(config, auth, listPath, options = {}) {
@@ -1339,15 +1399,18 @@ async function listTimesheetPortalTimesheets(config, options = {}) {
 
     for (const auth of auths) {
       let authHadSuccess = false;
-      for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
+      for (const path of ['/reports/timesheets', ...DEFAULT_TIMESHEET_LIST_PATHS]) {
         try {
-          const rows = await fetchTimesheetPortalManagementTimesheets(variant, auth, path, options);
+          const rows = path === '/reports/timesheets'
+            ? await fetchTimesheetPortalTimesheetReport(variant, auth, path, options)
+            : await fetchTimesheetPortalManagementTimesheets(variant, auth, path, options);
+          const mode = path === '/reports/timesheets' ? 'report' : 'timesheets';
           authHadSuccess = true;
           attempts.push({
             baseUrl: variant.baseUrl,
             resourceBaseUrl: variant.resourceBaseUrl,
             path,
-            mode: 'timesheets',
+            mode,
             status: 200,
             authSource: auth.source,
             authScheme: auth.scheme,
@@ -1357,7 +1420,7 @@ async function listTimesheetPortalTimesheets(config, options = {}) {
             return {
               discovery: {
                 timesheetPath: path,
-                mode: 'timesheets',
+                mode,
                 auth,
                 attempts,
                 baseUrl: variant.baseUrl,
@@ -1370,7 +1433,7 @@ async function listTimesheetPortalTimesheets(config, options = {}) {
             emptySuccess = {
               discovery: {
                 timesheetPath: path,
-                mode: 'timesheets',
+                mode,
                 auth,
                 attempts,
                 baseUrl: variant.baseUrl,
@@ -1381,11 +1444,12 @@ async function listTimesheetPortalTimesheets(config, options = {}) {
           }
         } catch (error) {
           const status = Number(error?.status) || 500;
+          const mode = path === '/reports/timesheets' ? 'report' : 'timesheets';
           attempts.push({
             baseUrl: variant.baseUrl,
             resourceBaseUrl: variant.resourceBaseUrl,
             path,
-            mode: 'timesheets',
+            mode,
             status,
             authSource: auth.source,
             authScheme: auth.scheme,
