@@ -222,6 +222,68 @@ test('listTimesheetPortalContractors uses oauth bearer auth and /users discovery
   }
 });
 
+test('listTimesheetPortalContractors can fall back to a decoded client id when a copied base64 value is rejected', async () => {
+  const previous = {
+    apiToken: process.env.TIMESHEET_PORTAL_API_TOKEN,
+    clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
+    clientSecret: process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
+    baseUrl: process.env.TIMESHEET_PORTAL_BASE_URL,
+  };
+  const originalFetch = global.fetch;
+  const encodedClientId = Buffer.from('client-id-success', 'utf8').toString('base64');
+
+  process.env.TIMESHEET_PORTAL_API_TOKEN = '';
+  process.env.TIMESHEET_PORTAL_CLIENT_ID = encodedClientId;
+  process.env.TIMESHEET_PORTAL_CLIENT_SECRET = 'client-secret-success';
+  process.env.TIMESHEET_PORTAL_BASE_URL = 'https://brightwater.api.timesheetportal.test';
+
+  global.fetch = async (url, options = {}) => {
+    if (String(url) === 'https://brightwater.api.timesheetportal.test/oauth/token') {
+      const body = new URLSearchParams(String(options.body || ''));
+      if (body.get('client_id') === encodedClientId) {
+        return {
+          ok: false,
+          status: 401,
+          json: async () => ({ error_description: 'Invalid credentials' }),
+        };
+      }
+      assert.equal(body.get('client_id'), 'client-id-success');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'oauth-access', expires_in: 3600 }),
+      };
+    }
+    if (String(url) === 'https://brightwater.api.timesheetportal.test/users?page=1') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ id: 'u1', firstName: 'Joe', lastName: 'Tozer', email: 'joe@example.com' }]),
+      };
+    }
+    if (String(url) === 'https://brightwater.api.timesheetportal.test/users?page=2') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => '[]',
+      };
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+
+  try {
+    const result = await listTimesheetPortalContractors(readTimesheetPortalConfig(), { take: 5 });
+    assert.equal(result.discovery.candidatePath, '/users');
+    assert.equal(result.contractors.length, 1);
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv('TIMESHEET_PORTAL_API_TOKEN', previous.apiToken);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_ID', previous.clientId);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_SECRET', previous.clientSecret);
+    restoreEnv('TIMESHEET_PORTAL_BASE_URL', previous.baseUrl);
+  }
+});
+
 test('listTimesheetPortalContractors falls back to raw api token auth when oauth fails', async () => {
   const previous = {
     apiToken: process.env.TIMESHEET_PORTAL_API_TOKEN,
@@ -280,6 +342,104 @@ test('listTimesheetPortalContractors falls back to raw api token auth when oauth
     restoreEnv('TIMESHEET_PORTAL_CLIENT_ID', previous.clientId);
     restoreEnv('TIMESHEET_PORTAL_CLIENT_SECRET', previous.clientSecret);
     restoreEnv('TIMESHEET_PORTAL_BASE_URL', previous.baseUrl);
+  }
+});
+
+test('listTimesheetPortalContractors retries against the Brightwater host when the legacy gb3 host rejects candidate discovery', async () => {
+  const previous = {
+    apiToken: process.env.TIMESHEET_PORTAL_API_TOKEN,
+    clientId: process.env.TIMESHEET_PORTAL_CLIENT_ID,
+    clientSecret: process.env.TIMESHEET_PORTAL_CLIENT_SECRET,
+    baseUrl: process.env.TIMESHEET_PORTAL_BASE_URL,
+    candidateOverride: process.env.TSP_CANDIDATE_PATH_OVERRIDE,
+  };
+  const originalFetch = global.fetch;
+
+  process.env.TIMESHEET_PORTAL_API_TOKEN = '';
+  process.env.TIMESHEET_PORTAL_CLIENT_ID = 'client-id-success';
+  process.env.TIMESHEET_PORTAL_CLIENT_SECRET = 'client-secret-success';
+  process.env.TIMESHEET_PORTAL_BASE_URL = 'https://gb3.api.timesheetportal.test';
+  process.env.TSP_CANDIDATE_PATH_OVERRIDE = '/contractors';
+
+  global.fetch = async (url, options = {}) => {
+    const value = String(url);
+    if (value === 'https://gb3.api.timesheetportal.test/oauth/token') {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'legacy-access', expires_in: 3600 }),
+      };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/contractors?take=5') {
+      assert.equal(options.headers.authorization, 'Bearer legacy-access');
+      return {
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ message: 'unauthorized' }),
+      };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/users?page=1') {
+      assert.equal(options.headers.authorization, 'Bearer legacy-access');
+      return {
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ message: 'unauthorized' }),
+      };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/recruitment/candidates?take=5') {
+      return { ok: false, status: 404, text: async () => '{}' };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/recruitment/contractors?take=5') {
+      return { ok: false, status: 404, text: async () => '{}' };
+    }
+    if (value === 'https://gb3.api.timesheetportal.test/api/recruitment/contractors?take=5') {
+      return { ok: false, status: 404, text: async () => '{}' };
+    }
+    if (value === 'https://brightwater.api.timesheetportal.test/oauth/token') {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'brightwater-access', expires_in: 3600 }),
+      };
+    }
+    if (value === 'https://brightwater.api.timesheetportal.test/contractors?take=5') {
+      assert.equal(options.headers.authorization, 'Bearer brightwater-access');
+      return {
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ message: 'unauthorized' }),
+      };
+    }
+    if (value === 'https://brightwater.api.timesheetportal.test/users?page=1') {
+      assert.equal(options.headers.authorization, 'Bearer brightwater-access');
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ id: 'u1', firstName: 'Bright', lastName: 'Water', email: 'bright@example.com' }]),
+      };
+    }
+    if (value === 'https://brightwater.api.timesheetportal.test/users?page=2') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => '[]',
+      };
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+
+  try {
+    const result = await listTimesheetPortalContractors(readTimesheetPortalConfig(), { take: 5 });
+    assert.equal(result.discovery.baseUrl, 'https://brightwater.api.timesheetportal.test');
+    assert.equal(result.discovery.candidatePath, '/users');
+    assert.equal(result.contractors[0].email, 'bright@example.com');
+  } finally {
+    global.fetch = originalFetch;
+    restoreEnv('TIMESHEET_PORTAL_API_TOKEN', previous.apiToken);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_ID', previous.clientId);
+    restoreEnv('TIMESHEET_PORTAL_CLIENT_SECRET', previous.clientSecret);
+    restoreEnv('TIMESHEET_PORTAL_BASE_URL', previous.baseUrl);
+    restoreEnv('TSP_CANDIDATE_PATH_OVERRIDE', previous.candidateOverride);
   }
 });
 

@@ -1,6 +1,8 @@
 'use strict';
 
-const DEFAULT_BASE_URL = 'https://gb3.api.timesheetportal.com';
+const LEGACY_GB3_BASE_URL = 'https://gb3.api.timesheetportal.com';
+const BRIGHTWATER_BASE_URL = 'https://brightwater.api.timesheetportal.com';
+const DEFAULT_BASE_URL = LEGACY_GB3_BASE_URL;
 const DEFAULT_TOKEN_PATH = '/oauth/token';
 const DEFAULT_CANDIDATE_PATHS = [
   '/users',
@@ -78,6 +80,45 @@ function lowerEmail(value) {
 
 function normalizeCredential(value) {
   return String(value == null ? '' : value).replace(/[\r\n]+/g, '').trim();
+}
+
+function tryDecodeBase64Text(value) {
+  const raw = normalizeCredential(value);
+  if (!raw || raw.length < 12 || /[^A-Za-z0-9+/=]/.test(raw)) return '';
+  try {
+    const decoded = Buffer.from(raw, 'base64').toString('utf8').trim();
+    if (!decoded || decoded === raw) return '';
+    if (/[^ -~]/.test(decoded)) return '';
+    return decoded;
+  } catch {
+    return '';
+  }
+}
+
+function credentialCandidates(value) {
+  const raw = normalizeCredential(value);
+  const decoded = tryDecodeBase64Text(raw);
+  return Array.from(new Set([raw, decoded].filter(Boolean)));
+}
+
+function alternateTimesheetPortalHost(value) {
+  const base = normalizeBaseUrl(value);
+  if (!base) return '';
+  try {
+    const url = new URL(base);
+    const host = url.host;
+    if (/^gb3\.api\.timesheetportal\./i.test(host)) {
+      url.host = host.replace(/^gb3\.api\.timesheetportal\./i, 'brightwater.api.timesheetportal.');
+      return url.toString().replace(/\/+$/, '');
+    }
+    if (/^brightwater\.api\.timesheetportal\./i.test(host)) {
+      url.host = host.replace(/^brightwater\.api\.timesheetportal\./i, 'gb3.api.timesheetportal.');
+      return url.toString().replace(/\/+$/, '');
+    }
+  } catch {
+    return '';
+  }
+  return '';
 }
 
 function normalizeBaseUrl(value) {
@@ -188,6 +229,7 @@ function readTimesheetPortalConfig() {
     baseUrl,
     resourceBaseUrl,
     clientId,
+    clientIdVariants: credentialCandidates(clientId),
     clientSecret,
     apiToken,
     tokenPath,
@@ -195,6 +237,43 @@ function readTimesheetPortalConfig() {
     candidatePaths,
     assignmentPaths,
   };
+}
+
+function buildConfigVariants(config = {}) {
+  const out = [];
+  const seen = new Set();
+
+  function pushVariant(baseUrl, resourceBaseUrl) {
+    const normalizedBaseUrl = normalizeBaseUrl(baseUrl || config.baseUrl || DEFAULT_BASE_URL);
+    const normalizedResourceBaseUrl = normalizeBaseUrl(resourceBaseUrl || config.resourceBaseUrl || normalizedBaseUrl);
+    const key = `${normalizedBaseUrl}::${normalizedResourceBaseUrl}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({
+      ...config,
+      baseUrl: normalizedBaseUrl,
+      resourceBaseUrl: normalizedResourceBaseUrl,
+    });
+  }
+
+  pushVariant(config.baseUrl, config.resourceBaseUrl);
+
+  const currentHosts = [normalizeBaseUrl(config.baseUrl), normalizeBaseUrl(config.resourceBaseUrl)];
+  const alternateHosts = new Set();
+  currentHosts.forEach((host) => {
+    const alternate = alternateTimesheetPortalHost(host);
+    if (alternate) alternateHosts.add(alternate);
+    if (host === LEGACY_GB3_BASE_URL) alternateHosts.add(BRIGHTWATER_BASE_URL);
+    if (host === BRIGHTWATER_BASE_URL) alternateHosts.add(LEGACY_GB3_BASE_URL);
+  });
+
+  alternateHosts.forEach((host) => {
+    pushVariant(host, host);
+    pushVariant(config.baseUrl, host);
+    pushVariant(host, config.resourceBaseUrl);
+  });
+
+  return out;
 }
 
 function authHeaders(auth) {
@@ -212,37 +291,47 @@ async function getBearerToken(config) {
     error.code = 'timesheet_portal_not_configured';
     throw error;
   }
-  const cacheKey = JSON.stringify([config.baseUrl, config.tokenPath, config.clientId, config.clientSecret, config.scope || '']);
-  if (cachedToken && cachedToken.key === cacheKey && cachedToken.expiresAt > Date.now()) return cachedToken.value;
+  const clientIds = Array.isArray(config.clientIdVariants) && config.clientIdVariants.length
+    ? config.clientIdVariants
+    : credentialCandidates(config.clientId);
+  let lastError = null;
 
-  const body = new URLSearchParams();
-  body.set('grant_type', 'client_credentials');
-  body.set('client_id', config.clientId);
-  body.set('client_secret', config.clientSecret);
-  if (config.scope) body.set('scope', config.scope);
+  for (const clientId of clientIds) {
+    const cacheKey = JSON.stringify([config.baseUrl, config.tokenPath, clientId, config.clientSecret, config.scope || '']);
+    if (cachedToken && cachedToken.key === cacheKey && cachedToken.expiresAt > Date.now()) return cachedToken.value;
 
-  const response = await fetch(joinUrl(config.baseUrl, config.tokenPath), {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'content-type': 'application/x-www-form-urlencoded',
-    },
-    body: body.toString(),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || !trimString(data.access_token, 8000)) {
-    const error = new Error(data?.error_description || data?.message || `Timesheet Portal token request failed (${response.status})`);
-    error.code = 'timesheet_portal_token_failed';
-    error.status = response.status;
-    throw error;
+    const body = new URLSearchParams();
+    body.set('grant_type', 'client_credentials');
+    body.set('client_id', clientId);
+    body.set('client_secret', config.clientSecret);
+    if (config.scope) body.set('scope', config.scope);
+
+    const response = await fetch(joinUrl(config.baseUrl, config.tokenPath), {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && trimString(data.access_token, 8000)) {
+      const expiresIn = Math.max(120, Number(data.expires_in) || 900);
+      cachedToken = {
+        key: cacheKey,
+        value: trimString(data.access_token, 8000),
+        expiresAt: Date.now() + ((expiresIn - 60) * 1000),
+      };
+      return cachedToken.value;
+    }
+    lastError = new Error(data?.error_description || data?.message || `Timesheet Portal token request failed (${response.status})`);
+    lastError.code = 'timesheet_portal_token_failed';
+    lastError.status = response.status;
   }
-  const expiresIn = Math.max(120, Number(data.expires_in) || 900);
-  cachedToken = {
-    key: cacheKey,
-    value: trimString(data.access_token, 8000),
-    expiresAt: Date.now() + ((expiresIn - 60) * 1000),
-  };
-  return cachedToken.value;
+
+  throw lastError || Object.assign(new Error('Timesheet Portal token request failed.'), {
+    code: 'timesheet_portal_token_failed',
+  });
 }
 
 async function getAuthCandidates(config) {
@@ -421,6 +510,8 @@ async function discoverCandidatePath(config, authCandidates) {
       const url = buildPagedUrl(config.resourceBaseUrl, cleanPath, { take: 5, page: 1 });
       const result = await fetchJson(url, auth);
       attempts.push({
+        baseUrl: config.baseUrl,
+        resourceBaseUrl: config.resourceBaseUrl,
         path: cleanPath,
         status: result.response.status,
         authSource: auth.source,
@@ -449,6 +540,8 @@ async function discoverAssignmentPath(config, authCandidates) {
       const url = buildCollectionUrl(config.resourceBaseUrl, cleanPath, { take: 5, page: 1 });
       const result = await fetchJson(url, auth);
       attempts.push({
+        baseUrl: config.baseUrl,
+        resourceBaseUrl: config.resourceBaseUrl,
         path: cleanPath,
         status: result.response.status,
         authSource: auth.source,
@@ -954,37 +1047,64 @@ async function listTimesheetPortalContractors(config, options = {}) {
     throw error;
   }
 
-  const { auths, oauthError } = await getAuthCandidates(config);
-  if (!auths.length) {
-    if (oauthError) throw oauthError;
-    const error = new Error('Timesheet Portal credentials are not configured.');
-    error.code = 'timesheet_portal_not_configured';
-    throw error;
+  const variants = buildConfigVariants(config);
+  let lastError = null;
+  const aggregatedAttempts = [];
+
+  for (const variant of variants) {
+    try {
+      const { auths, oauthError } = await getAuthCandidates(variant);
+      if (!auths.length) {
+        if (oauthError) throw oauthError;
+        const error = new Error('Timesheet Portal credentials are not configured.');
+        error.code = 'timesheet_portal_not_configured';
+        throw error;
+      }
+
+      const discovery = await discoverCandidatePath(variant, auths);
+      const take = Math.max(1, Math.min(1000, Number(options.take) || 500));
+      const contractors = discovery.candidatePath.startsWith('/users')
+        ? await fetchUsersCollection(variant, discovery.auth, discovery.candidatePath)
+        : (() => null)();
+      if (contractors) {
+        return {
+          discovery: {
+            ...discovery,
+            baseUrl: variant.baseUrl,
+            resourceBaseUrl: variant.resourceBaseUrl,
+          },
+          contractors,
+        };
+      }
+      const url = buildPagedUrl(variant.resourceBaseUrl, discovery.candidatePath, { take });
+      const result = await fetchJson(url, discovery.auth);
+      if (!result.response.ok) {
+        const error = new Error(`Timesheet Portal candidate list failed (${result.response.status})`);
+        error.code = 'timesheet_portal_candidate_list_failed';
+        error.status = result.response.status;
+        throw error;
+      }
+      return {
+        discovery: {
+          ...discovery,
+          baseUrl: variant.baseUrl,
+          resourceBaseUrl: variant.resourceBaseUrl,
+        },
+        contractors: extractCollection(result.json).map(normalizeContractor).filter((row) => row.id || row.email || row.reference),
+      };
+    } catch (error) {
+      if (Array.isArray(error?.attempts)) aggregatedAttempts.push(...error.attempts);
+      lastError = error;
+    }
   }
 
-  const discovery = await discoverCandidatePath(config, auths);
-  const take = Math.max(1, Math.min(1000, Number(options.take) || 500));
-  const contractors = discovery.candidatePath.startsWith('/users')
-    ? await fetchUsersCollection(config, discovery.auth, discovery.candidatePath)
-    : (() => null)();
-  if (contractors) {
-    return {
-      discovery,
-      contractors,
-    };
+  if (lastError) {
+    if (aggregatedAttempts.length) lastError.attempts = aggregatedAttempts;
+    throw lastError;
   }
-  const url = buildPagedUrl(config.resourceBaseUrl, discovery.candidatePath, { take });
-  const result = await fetchJson(url, discovery.auth);
-  if (!result.response.ok) {
-    const error = new Error(`Timesheet Portal candidate list failed (${result.response.status})`);
-    error.code = 'timesheet_portal_candidate_list_failed';
-    error.status = result.response.status;
-    throw error;
-  }
-  return {
-    discovery,
-    contractors: extractCollection(result.json).map(normalizeContractor).filter((row) => row.id || row.email || row.reference),
-  };
+  throw Object.assign(new Error('Timesheet Portal candidate sync failed.'), {
+    code: 'timesheet_portal_candidate_list_failed',
+  });
 }
 
 async function listTimesheetPortalAssignments(config, options = {}) {
@@ -994,20 +1114,43 @@ async function listTimesheetPortalAssignments(config, options = {}) {
     throw error;
   }
 
-  const { auths, oauthError } = await getAuthCandidates(config);
-  if (!auths.length) {
-    if (oauthError) throw oauthError;
-    const error = new Error('Timesheet Portal credentials are not configured.');
-    error.code = 'timesheet_portal_not_configured';
-    throw error;
+  const variants = buildConfigVariants(config);
+  let lastError = null;
+  const aggregatedAttempts = [];
+
+  for (const variant of variants) {
+    try {
+      const { auths, oauthError } = await getAuthCandidates(variant);
+      if (!auths.length) {
+        if (oauthError) throw oauthError;
+        const error = new Error('Timesheet Portal credentials are not configured.');
+        error.code = 'timesheet_portal_not_configured';
+        throw error;
+      }
+
+      const discovery = await discoverAssignmentPath(variant, auths);
+      const assignments = await fetchAssignmentsCollection(variant, discovery.auth, discovery.assignmentPath, options);
+      return {
+        discovery: {
+          ...discovery,
+          baseUrl: variant.baseUrl,
+          resourceBaseUrl: variant.resourceBaseUrl,
+        },
+        assignments,
+      };
+    } catch (error) {
+      if (Array.isArray(error?.attempts)) aggregatedAttempts.push(...error.attempts);
+      lastError = error;
+    }
   }
 
-  const discovery = await discoverAssignmentPath(config, auths);
-  const assignments = await fetchAssignmentsCollection(config, discovery.auth, discovery.assignmentPath, options);
-  return {
-    discovery,
-    assignments,
-  };
+  if (lastError) {
+    if (aggregatedAttempts.length) lastError.attempts = aggregatedAttempts;
+    throw lastError;
+  }
+  throw Object.assign(new Error('Timesheet Portal assignment sync failed.'), {
+    code: 'timesheet_portal_assignment_list_failed',
+  });
 }
 
 async function listTimesheetPortalPayroll(config, options = {}) {
@@ -1017,123 +1160,155 @@ async function listTimesheetPortalPayroll(config, options = {}) {
     throw error;
   }
 
-  const { auths, oauthError } = await getAuthCandidates(config);
-  if (!auths.length) {
-    if (oauthError) throw oauthError;
-    const error = new Error('Timesheet Portal credentials are not configured.');
-    error.code = 'timesheet_portal_not_configured';
-    throw error;
-  }
+  const variants = buildConfigVariants(config);
+  let lastError = null;
+  const aggregatedAttempts = [];
 
-  const attempts = [];
-  let emptySuccess = null;
-
-  for (const auth of auths) {
-    let authHadSuccess = false;
-    for (const path of DEFAULT_PAYROLL_REPORT_PATHS) {
-      try {
-        const rows = await fetchTimesheetPortalPayrollReport(config, auth, path, options);
-        authHadSuccess = true;
-        attempts.push({
-          path,
-          mode: 'report',
-          status: 200,
-          authSource: auth.source,
-          authScheme: auth.scheme,
-          count: rows.length,
-        });
-        if (rows.length) {
-          return {
-            discovery: {
-              payrollPath: path,
-              mode: 'report',
-              auth,
-              attempts,
-            },
-            rows,
-          };
-        }
-        if (!emptySuccess) {
-          emptySuccess = {
-            discovery: {
-              payrollPath: path,
-              mode: 'report',
-              auth,
-              attempts,
-            },
-            rows: [],
-          };
-        }
-      } catch (error) {
-        const status = Number(error?.status) || 500;
-        attempts.push({
-          path,
-          mode: 'report',
-          status,
-          authSource: auth.source,
-          authScheme: auth.scheme,
-        });
+  for (const variant of variants) {
+    const { auths, oauthError } = await getAuthCandidates(variant);
+    if (!auths.length) {
+      if (oauthError) {
+        lastError = oauthError;
+        continue;
       }
+      const error = new Error('Timesheet Portal credentials are not configured.');
+      error.code = 'timesheet_portal_not_configured';
+      throw error;
     }
 
-    for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
-      try {
-        const rows = await fetchTimesheetPortalTimesheets(config, auth, path, options);
-        authHadSuccess = true;
-        attempts.push({
-          path,
-          mode: 'timesheets',
-          status: 200,
-          authSource: auth.source,
-          authScheme: auth.scheme,
-          count: rows.length,
-        });
-        if (rows.length) {
-          return {
-            discovery: {
-              payrollPath: path,
-              mode: 'timesheets',
-              auth,
-              attempts,
-            },
-            rows,
-          };
+    const attempts = [];
+    let emptySuccess = null;
+
+    for (const auth of auths) {
+      let authHadSuccess = false;
+      for (const path of DEFAULT_PAYROLL_REPORT_PATHS) {
+        try {
+          const rows = await fetchTimesheetPortalPayrollReport(variant, auth, path, options);
+          authHadSuccess = true;
+          attempts.push({
+            baseUrl: variant.baseUrl,
+            resourceBaseUrl: variant.resourceBaseUrl,
+            path,
+            mode: 'report',
+            status: 200,
+            authSource: auth.source,
+            authScheme: auth.scheme,
+            count: rows.length,
+          });
+          if (rows.length) {
+            return {
+              discovery: {
+                payrollPath: path,
+                mode: 'report',
+                auth,
+                attempts,
+                baseUrl: variant.baseUrl,
+                resourceBaseUrl: variant.resourceBaseUrl,
+              },
+              rows,
+            };
+          }
+          if (!emptySuccess) {
+            emptySuccess = {
+              discovery: {
+                payrollPath: path,
+                mode: 'report',
+                auth,
+                attempts,
+                baseUrl: variant.baseUrl,
+                resourceBaseUrl: variant.resourceBaseUrl,
+              },
+              rows: [],
+            };
+          }
+        } catch (error) {
+          const status = Number(error?.status) || 500;
+          attempts.push({
+            baseUrl: variant.baseUrl,
+            resourceBaseUrl: variant.resourceBaseUrl,
+            path,
+            mode: 'report',
+            status,
+            authSource: auth.source,
+            authScheme: auth.scheme,
+          });
         }
-        if (!emptySuccess) {
-          emptySuccess = {
-            discovery: {
-              payrollPath: path,
-              mode: 'timesheets',
-              auth,
-              attempts,
-            },
-            rows: [],
-          };
-        }
-      } catch (error) {
-        const status = Number(error?.status) || 500;
-        attempts.push({
-          path,
-          mode: 'timesheets',
-          status,
-          authSource: auth.source,
-          authScheme: auth.scheme,
-        });
       }
+
+      for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
+        try {
+          const rows = await fetchTimesheetPortalTimesheets(variant, auth, path, options);
+          authHadSuccess = true;
+          attempts.push({
+            baseUrl: variant.baseUrl,
+            resourceBaseUrl: variant.resourceBaseUrl,
+            path,
+            mode: 'timesheets',
+            status: 200,
+            authSource: auth.source,
+            authScheme: auth.scheme,
+            count: rows.length,
+          });
+          if (rows.length) {
+            return {
+              discovery: {
+                payrollPath: path,
+                mode: 'timesheets',
+                auth,
+                attempts,
+                baseUrl: variant.baseUrl,
+                resourceBaseUrl: variant.resourceBaseUrl,
+              },
+              rows,
+            };
+          }
+          if (!emptySuccess) {
+            emptySuccess = {
+              discovery: {
+                payrollPath: path,
+                mode: 'timesheets',
+                auth,
+                attempts,
+                baseUrl: variant.baseUrl,
+                resourceBaseUrl: variant.resourceBaseUrl,
+              },
+              rows: [],
+            };
+          }
+        } catch (error) {
+          const status = Number(error?.status) || 500;
+          attempts.push({
+            baseUrl: variant.baseUrl,
+            resourceBaseUrl: variant.resourceBaseUrl,
+            path,
+            mode: 'timesheets',
+            status,
+            authSource: auth.source,
+            authScheme: auth.scheme,
+          });
+        }
+      }
+
+      if (authHadSuccess && emptySuccess) return emptySuccess;
     }
 
-    if (authHadSuccess && emptySuccess) return emptySuccess;
+    if (emptySuccess) return emptySuccess;
+    aggregatedAttempts.push(...attempts);
+    const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
+    lastError = new Error(sawUnauthorized
+      ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
+      : 'Timesheet Portal payroll endpoint could not be discovered for this account.');
+    lastError.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_payroll_path_missing';
+    lastError.attempts = attempts;
   }
 
-  if (emptySuccess) return emptySuccess;
-
-  const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
-  const error = new Error(sawUnauthorized
-    ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
-    : 'Timesheet Portal payroll endpoint could not be discovered for this account.');
-  error.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_payroll_path_missing';
-  error.attempts = attempts;
-  throw error;
+  if (lastError) {
+    if (aggregatedAttempts.length) lastError.attempts = aggregatedAttempts;
+    throw lastError;
+  }
+  throw Object.assign(new Error('Timesheet Portal payroll lookup failed.'), {
+    code: 'timesheet_portal_payroll_path_missing',
+  });
 }
 
 async function listTimesheetPortalTimesheets(config, options = {}) {
@@ -1143,77 +1318,101 @@ async function listTimesheetPortalTimesheets(config, options = {}) {
     throw error;
   }
 
-  const { auths, oauthError } = await getAuthCandidates(config);
-  if (!auths.length) {
-    if (oauthError) throw oauthError;
-    const error = new Error('Timesheet Portal credentials are not configured.');
-    error.code = 'timesheet_portal_not_configured';
-    throw error;
-  }
+  const variants = buildConfigVariants(config);
+  let lastError = null;
+  const aggregatedAttempts = [];
 
-  const attempts = [];
-  let emptySuccess = null;
-
-  for (const auth of auths) {
-    let authHadSuccess = false;
-    for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
-      try {
-        const rows = await fetchTimesheetPortalManagementTimesheets(config, auth, path, options);
-        authHadSuccess = true;
-        attempts.push({
-          path,
-          mode: 'timesheets',
-          status: 200,
-          authSource: auth.source,
-          authScheme: auth.scheme,
-          count: rows.length,
-        });
-        if (rows.length) {
-          return {
-            discovery: {
-              timesheetPath: path,
-              mode: 'timesheets',
-              auth,
-              attempts,
-            },
-            rows,
-          };
-        }
-        if (!emptySuccess) {
-          emptySuccess = {
-            discovery: {
-              timesheetPath: path,
-              mode: 'timesheets',
-              auth,
-              attempts,
-            },
-            rows: [],
-          };
-        }
-      } catch (error) {
-        const status = Number(error?.status) || 500;
-        attempts.push({
-          path,
-          mode: 'timesheets',
-          status,
-          authSource: auth.source,
-          authScheme: auth.scheme,
-        });
+  for (const variant of variants) {
+    const { auths, oauthError } = await getAuthCandidates(variant);
+    if (!auths.length) {
+      if (oauthError) {
+        lastError = oauthError;
+        continue;
       }
+      const error = new Error('Timesheet Portal credentials are not configured.');
+      error.code = 'timesheet_portal_not_configured';
+      throw error;
     }
 
-    if (authHadSuccess && emptySuccess) return emptySuccess;
+    const attempts = [];
+    let emptySuccess = null;
+
+    for (const auth of auths) {
+      let authHadSuccess = false;
+      for (const path of DEFAULT_TIMESHEET_LIST_PATHS) {
+        try {
+          const rows = await fetchTimesheetPortalManagementTimesheets(variant, auth, path, options);
+          authHadSuccess = true;
+          attempts.push({
+            baseUrl: variant.baseUrl,
+            resourceBaseUrl: variant.resourceBaseUrl,
+            path,
+            mode: 'timesheets',
+            status: 200,
+            authSource: auth.source,
+            authScheme: auth.scheme,
+            count: rows.length,
+          });
+          if (rows.length) {
+            return {
+              discovery: {
+                timesheetPath: path,
+                mode: 'timesheets',
+                auth,
+                attempts,
+                baseUrl: variant.baseUrl,
+                resourceBaseUrl: variant.resourceBaseUrl,
+              },
+              rows,
+            };
+          }
+          if (!emptySuccess) {
+            emptySuccess = {
+              discovery: {
+                timesheetPath: path,
+                mode: 'timesheets',
+                auth,
+                attempts,
+                baseUrl: variant.baseUrl,
+                resourceBaseUrl: variant.resourceBaseUrl,
+              },
+              rows: [],
+            };
+          }
+        } catch (error) {
+          const status = Number(error?.status) || 500;
+          attempts.push({
+            baseUrl: variant.baseUrl,
+            resourceBaseUrl: variant.resourceBaseUrl,
+            path,
+            mode: 'timesheets',
+            status,
+            authSource: auth.source,
+            authScheme: auth.scheme,
+          });
+        }
+      }
+
+      if (authHadSuccess && emptySuccess) return emptySuccess;
+    }
+
+    if (emptySuccess) return emptySuccess;
+    aggregatedAttempts.push(...attempts);
+    const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
+    lastError = new Error(sawUnauthorized
+      ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
+      : 'Timesheet Portal timesheet-management endpoint could not be discovered for this account.');
+    lastError.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_timesheet_path_missing';
+    lastError.attempts = attempts;
   }
 
-  if (emptySuccess) return emptySuccess;
-
-  const sawUnauthorized = attempts.some((attempt) => Number(attempt.status) === 401 || Number(attempt.status) === 403);
-  const error = new Error(sawUnauthorized
-    ? 'Timesheet Portal credentials were rejected by the API. Check the Brightwater token/OAuth credentials in Netlify.'
-    : 'Timesheet Portal timesheet-management endpoint could not be discovered for this account.');
-  error.code = sawUnauthorized ? 'timesheet_portal_auth_failed' : 'timesheet_portal_timesheet_path_missing';
-  error.attempts = attempts;
-  throw error;
+  if (lastError) {
+    if (aggregatedAttempts.length) lastError.attempts = aggregatedAttempts;
+    throw lastError;
+  }
+  throw Object.assign(new Error('Timesheet Portal timesheet lookup failed.'), {
+    code: 'timesheet_portal_timesheet_path_missing',
+  });
 }
 
 function candidateName(candidate = {}) {
