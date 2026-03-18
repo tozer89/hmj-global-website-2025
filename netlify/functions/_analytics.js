@@ -1361,6 +1361,12 @@ function summariseAnalytics(rows, filters, recentRows, truncated) {
   return {
     source: 'supabase',
     truncated,
+    meta: {
+      matchedEvents: allRows.length,
+      recentEvents: recent.length,
+      topPageCount: pageRows.length,
+      appliedRangeDays: countRangeDays(filters),
+    },
     definitions: {
       visitor_id: 'Anonymous browser-level identifier stored locally in the visitor browser.',
       session_id: 'Session identifier that rotates per browser tab session.',

@@ -291,6 +291,8 @@ test('summariseAnalytics builds KPI, page, click, and path insights from raw eve
   assert.equal(summary.listings.jobs[0].views, 2);
   assert.equal(summary.listings.specs[0].title, 'MEP Manager');
   assert.equal(summary.listings.specs[0].avgTimeOnPageSeconds, 63);
+  assert.equal(summary.meta.matchedEvents, rows.length);
+  assert.equal(summary.meta.topPageCount, 4);
   assert.deepEqual(summary.pathInsights.landingPages[0], { path: '/', sessions: 1 });
   assert.equal(summary.pathInsights.topTransitions[0].from, '/');
   assert.equal(summary.pathInsights.topTransitions[0].to, '/jobs.html');

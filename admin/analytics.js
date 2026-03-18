@@ -202,6 +202,55 @@
     return !!(filters?.eventType || filters?.deviceType);
   }
 
+  function readQueryState() {
+    try {
+      const url = new URL(window.location.href);
+      const scope = trimString(url.searchParams.get('scope')).toLowerCase();
+      const preset = trimString(url.searchParams.get('preset')).toLowerCase();
+      const compare = trimString(url.searchParams.get('compare')).toLowerCase();
+      return {
+        filters: {
+          from: trimString(url.searchParams.get('from')),
+          to: trimString(url.searchParams.get('to')),
+          pagePath: trimString(url.searchParams.get('page')),
+          eventType: trimString(url.searchParams.get('event')).toLowerCase(),
+          source: trimString(url.searchParams.get('source')).toLowerCase(),
+          deviceType: trimString(url.searchParams.get('device')).toLowerCase(),
+          scope: ['public', 'admin', 'combined'].includes(scope) ? scope : '',
+        },
+        preset: PRESET_OPTIONS.some((item) => item.key === preset) ? preset : '',
+        compareMode: compare ? compare !== '0' && compare !== 'false' : null,
+      };
+    } catch {
+      return { filters: {}, preset: '', compareMode: null };
+    }
+  }
+
+  function updateUrlState(state) {
+    if (!window.history?.replaceState) return;
+    try {
+      const url = new URL(window.location.href);
+      const defaults = defaultFilters(state.filters.scope || 'combined');
+      const setMaybe = (key, value, fallback = '') => {
+        const safe = trimString(value);
+        if (!safe || safe === trimString(fallback)) url.searchParams.delete(key);
+        else url.searchParams.set(key, safe);
+      };
+
+      setMaybe('scope', state.filters.scope, 'combined');
+      setMaybe('preset', state.preset, 'last-30');
+      setMaybe('from', state.filters.from, defaults.from);
+      setMaybe('to', state.filters.to, defaults.to);
+      setMaybe('page', state.filters.pagePath, '');
+      setMaybe('source', state.filters.source, '');
+      setMaybe('event', state.filters.eventType, '');
+      setMaybe('device', state.filters.deviceType, '');
+      if (state.compareMode) url.searchParams.delete('compare');
+      else url.searchParams.set('compare', '0');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch {}
+  }
+
   function loadStoredState() {
     const defaults = {
       filters: defaultFilters('combined'),
@@ -213,6 +262,7 @@
 
     try {
       const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}');
+      const query = readQueryState();
       const scope = ['public', 'admin', 'combined'].includes(parsed?.filters?.scope) ? parsed.filters.scope : 'combined';
       const base = {
         ...defaults,
@@ -223,15 +273,39 @@
           scope,
         },
       };
+      base.filters = {
+        ...base.filters,
+        ...(query.filters || {}),
+        scope: ['public', 'admin', 'combined'].includes(query.filters?.scope) ? query.filters.scope : base.filters.scope,
+      };
+      if (query.compareMode !== null) {
+        base.compareMode = query.compareMode;
+      }
+      if (query.preset) {
+        base.preset = query.preset;
+      }
       base.preset = derivePreset(base.filters);
       base.advancedOpen = parsed?.advancedOpen === true || hasAdvancedFilters(base.filters);
       base.compareMode = parsed?.compareMode !== false;
       base.trendMetric = TREND_METRICS.some((metric) => metric.key === parsed?.trendMetric)
         ? parsed.trendMetric
         : TREND_METRICS[0].key;
+      if (query.compareMode !== null) {
+        base.compareMode = query.compareMode;
+      }
       return base;
     } catch {
-      return defaults;
+      const query = readQueryState();
+      return {
+        ...defaults,
+        filters: {
+          ...defaults.filters,
+          ...(query.filters || {}),
+          scope: ['public', 'admin', 'combined'].includes(query.filters?.scope) ? query.filters.scope : defaults.filters.scope,
+        },
+        preset: query.preset || defaults.preset,
+        compareMode: query.compareMode !== null ? query.compareMode : defaults.compareMode,
+      };
     }
   }
 
@@ -413,6 +487,7 @@
       };
 
       const els = {
+        analyticsShell: sel('.analytics-shell'),
         statusBanner: sel('#statusBanner'),
         filterSummary: sel('#filterSummary'),
         filterFrom: sel('#filterFrom'),
@@ -427,11 +502,13 @@
         toggleAdvancedFilters: sel('#toggleAdvancedFilters'),
         advancedFilters: sel('#advancedFilters'),
         activeFilterChips: sel('#activeFilterChips'),
+        applyFilters: sel('#applyFilters'),
         refreshData: sel('#refreshData'),
         resetFilters: sel('#resetFilters'),
         exportCsv: sel('#exportCsv'),
         printReport: sel('#printReport'),
         sourceChip: sel('#sourceChip'),
+        volumeChip: sel('#volumeChip'),
         rangeChip: sel('#rangeChip'),
         truncationChip: sel('#truncationChip'),
         definitionNote: sel('#definitionNote'),
@@ -463,11 +540,46 @@
         sourceOptions: sel('#sourceOptions'),
       };
 
-      function setStatus(message, tone, visible) {
+      function setStatus(message, tone, visible, actions) {
         if (!els.statusBanner) return;
-        els.statusBanner.textContent = message || '';
+        const actionButtons = Array.isArray(actions) ? actions : [];
+        els.statusBanner.innerHTML = message ? `
+          <div class="status-banner__inner">
+            <div class="status-banner__text">${escapeHtml(message)}</div>
+            ${actionButtons.length ? `<div class="status-banner__actions">
+              ${actionButtons.map((action) => `<button class="btn outline" type="button" data-status-action="${escapeHtml(action.action || '')}">${escapeHtml(action.label || 'Open')}</button>`).join('')}
+            </div>` : ''}
+          </div>
+        ` : '';
         els.statusBanner.dataset.tone = tone || 'warn';
         els.statusBanner.classList.toggle('is-visible', !!visible && !!message);
+      }
+
+      function setBusyState(isBusy) {
+        if (els.analyticsShell) {
+          els.analyticsShell.dataset.busy = isBusy ? 'true' : 'false';
+        }
+        [
+          els.filterFrom,
+          els.filterTo,
+          els.filterPagePath,
+          els.filterSource,
+          els.filterEventType,
+          els.filterDeviceType,
+          els.compareToggle,
+          els.toggleAdvancedFilters,
+          els.applyFilters,
+          els.resetFilters,
+          els.refreshData,
+        ].forEach((control) => {
+          if (control) control.disabled = !!isBusy;
+        });
+        document.querySelectorAll('#scopeToggle button, #presetToggle button, .sort-btn').forEach((button) => {
+          button.disabled = !!isBusy;
+        });
+        if (els.applyFilters) {
+          els.applyFilters.textContent = isBusy ? 'Applying…' : 'Apply filters';
+        }
       }
 
       function formatSchemaWarning(field) {
@@ -511,6 +623,7 @@
 
       function persistState() {
         saveStoredState(state);
+        updateUrlState(state);
       }
 
       function renderScopeToggle() {
@@ -595,6 +708,7 @@
         const schemaWarnings = Array.isArray(summary.schemaWarnings) ? summary.schemaWarnings : [];
         const compareSummary = summary.comparison || {};
         const topPage = summary.topPages?.[0];
+        const meta = summary.meta || {};
         const summaryFragments = [
           scopeLabel(filters.scope || state.filters.scope),
           presetLabel(state.preset),
@@ -605,7 +719,11 @@
         ];
 
         if (els.filterSummary) {
-          els.filterSummary.textContent = summaryFragments.join(' • ');
+          const baseSummary = summaryFragments.join(' • ');
+          const volumeSummary = !setupRequired && !schemaMismatch && meta.matchedEvents
+            ? ` • ${formatNumber(meta.matchedEvents)} matched events`
+            : '';
+          els.filterSummary.textContent = `${baseSummary}${volumeSummary}`;
         }
 
         if (els.sourceChip) {
@@ -629,6 +747,17 @@
             ? ` • vs ${compareSummary.previousPeriod.from} → ${compareSummary.previousPeriod.to}`
             : '';
           els.rangeChip.textContent = `${filters.from || state.filters.from} → ${filters.to || state.filters.to}${compareText}`;
+        }
+
+        if (els.volumeChip) {
+          els.volumeChip.textContent = setupRequired || schemaMismatch
+            ? 'Volume pending'
+            : `${formatNumber(meta.matchedEvents || 0)} events • ${formatNumber(summary.kpis?.sessions || 0)} visits`;
+          els.volumeChip.dataset.tone = setupRequired || schemaMismatch
+            ? 'warn'
+            : meta.matchedEvents
+            ? 'good'
+            : 'warn';
         }
 
         if (summary.truncated) {
@@ -1170,6 +1299,7 @@
         renderRecent();
         renderSortStates();
         state.csvText = createCsv(state.data?.recentActivity || []);
+        setBusyState(state.isLoading);
       }
 
       function updateFilter(key, value) {
@@ -1238,10 +1368,6 @@
 
         state.isLoading = true;
         renderAll();
-        if (els.refreshData) {
-          els.refreshData.disabled = true;
-          els.refreshData.textContent = 'Refreshing…';
-        }
         setStatus('Loading live analytics from Supabase…', 'good', true);
 
         try {
@@ -1259,7 +1385,9 @@
           if (response.setupRequired) {
             setStatus(response.message || 'Apply the website analytics SQL in Supabase, then refresh this page.', 'warn', true);
           } else if (response.schemaMismatch) {
-            setStatus(response.message || 'Analytics schema mismatch detected. Apply the Supabase reconciliation SQL.', 'error', true);
+            setStatus(response.message || 'Analytics schema mismatch detected. Apply the Supabase reconciliation SQL.', 'error', true, [
+              { label: 'Retry', action: 'retry' },
+            ]);
           } else if (response.schemaWarnings?.length) {
             setStatus(response.message || `Live analytics loaded in compatibility mode. Missing schema support: ${response.schemaWarnings.map(formatSchemaWarning).join(', ')}.`, 'warn', true);
           } else if (!response.topPages?.length && !response.recentActivity?.length) {
@@ -1267,20 +1395,21 @@
           } else if (response.truncated) {
             setStatus('A large date range was sampled for speed. Narrow the range if you need the full raw event spread.', 'warn', true);
           } else {
-            setStatus('Live HMJ analytics loaded successfully.', 'good', true);
+            setStatus(`Live HMJ analytics loaded successfully. ${formatNumber(response.meta?.matchedEvents || 0)} events matched these filters.`, 'good', true);
           }
         } catch (error) {
           if (requestId !== state.requestId) return;
           state.isLoading = false;
-          setStatus(error?.message || 'Analytics failed to load.', 'error', true);
+          setStatus(error?.message || 'Analytics failed to load.', 'error', true, [
+            { label: 'Retry', action: 'retry' },
+          ]);
           if (!state.data) {
             state.data = normaliseEmptyResponse(state.filters);
             renderAll();
           }
         } finally {
-          if (requestId === state.requestId && els.refreshData) {
-            els.refreshData.disabled = false;
-            els.refreshData.textContent = 'Refresh';
+          if (requestId === state.requestId) {
+            renderAll();
           }
         }
       }
@@ -1292,19 +1421,24 @@
         }, Number.isFinite(delay) ? delay : 260);
       }
 
+      function applyCurrentFilters(options) {
+        window.clearTimeout(state.debounceTimer);
+        void loadDashboard(options);
+      }
+
       function bindEvents() {
         els.scopeToggle?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-scope]');
           if (!button) return;
           updateFilter('scope', button.getAttribute('data-scope') || 'combined');
-          void loadDashboard();
+          applyCurrentFilters();
         });
 
         els.presetToggle?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-preset]');
           if (!button) return;
           applyPreset(button.getAttribute('data-preset') || 'custom');
-          void loadDashboard();
+          applyCurrentFilters();
         });
 
         els.filterFrom?.addEventListener('change', () => {
@@ -1312,7 +1446,7 @@
           state.preset = 'custom';
           persistState();
           renderPresetToggle();
-          void loadDashboard();
+          applyCurrentFilters();
         });
 
         els.filterTo?.addEventListener('change', () => {
@@ -1320,33 +1454,43 @@
           state.preset = 'custom';
           persistState();
           renderPresetToggle();
-          void loadDashboard();
+          applyCurrentFilters();
         });
 
-        els.filterPagePath?.addEventListener('input', () => {
-          updateFilter('pagePath', trimString(els.filterPagePath.value));
-          scheduleLoad(320);
-        });
+        const bindTextFilter = (element, key) => {
+          if (!element) return;
+          const update = () => {
+            updateFilter(key, trimString(element.value));
+            scheduleLoad(320);
+          };
+          element.addEventListener('input', update);
+          element.addEventListener('search', update);
+          element.addEventListener('change', update);
+          element.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            updateFilter(key, trimString(element.value));
+            applyCurrentFilters();
+          });
+        };
 
-        els.filterSource?.addEventListener('input', () => {
-          updateFilter('source', trimString(els.filterSource.value));
-          scheduleLoad(320);
-        });
+        bindTextFilter(els.filterPagePath, 'pagePath');
+        bindTextFilter(els.filterSource, 'source');
 
         els.filterEventType?.addEventListener('change', () => {
           updateFilter('eventType', els.filterEventType.value || '');
-          void loadDashboard();
+          applyCurrentFilters();
         });
 
         els.filterDeviceType?.addEventListener('change', () => {
           updateFilter('deviceType', els.filterDeviceType.value || '');
-          void loadDashboard();
+          applyCurrentFilters();
         });
 
         els.compareToggle?.addEventListener('change', () => {
           state.compareMode = !!els.compareToggle.checked;
           persistState();
-          void loadDashboard({ force: true });
+          applyCurrentFilters({ force: true });
         });
 
         els.toggleAdvancedFilters?.addEventListener('click', () => {
@@ -1357,12 +1501,20 @@
 
         els.resetFilters?.addEventListener('click', () => {
           resetFilters();
-          void loadDashboard({ force: true });
+          applyCurrentFilters({ force: true });
+        });
+
+        els.applyFilters?.addEventListener('click', () => {
+          updateFilter('pagePath', trimString(els.filterPagePath?.value || ''));
+          updateFilter('source', trimString(els.filterSource?.value || ''));
+          updateFilter('eventType', els.filterEventType?.value || '');
+          updateFilter('deviceType', els.filterDeviceType?.value || '');
+          applyCurrentFilters({ force: true });
         });
 
         els.refreshData?.addEventListener('click', () => {
           state.cache.delete(cacheKey());
-          void loadDashboard({ force: true });
+          applyCurrentFilters({ force: true });
         });
 
         els.exportCsv?.addEventListener('click', () => {
@@ -1391,7 +1543,15 @@
             const key = clearButton.getAttribute('data-clear-filter');
             if (key && Object.prototype.hasOwnProperty.call(state.filters, key)) {
               updateFilter(key, '');
-              void loadDashboard();
+              applyCurrentFilters();
+            }
+            return;
+          }
+
+          const statusAction = event.target.closest('[data-status-action]');
+          if (statusAction) {
+            if (statusAction.getAttribute('data-status-action') === 'retry') {
+              applyCurrentFilters({ force: true });
             }
             return;
           }
@@ -1414,8 +1574,23 @@
           if (pathButton) {
             const path = pathButton.getAttribute('data-filter-path') || '';
             updateFilter('pagePath', path);
-            void loadDashboard();
+            applyCurrentFilters();
           }
+        });
+
+        window.addEventListener('popstate', () => {
+          const query = readQueryState();
+          state.filters = {
+            ...state.filters,
+            ...(query.filters || {}),
+            scope: ['public', 'admin', 'combined'].includes(query.filters?.scope) ? query.filters.scope : state.filters.scope,
+          };
+          if (query.compareMode !== null) state.compareMode = query.compareMode;
+          state.preset = derivePreset(state.filters);
+          state.advancedOpen = hasAdvancedFilters(state.filters) || state.advancedOpen;
+          syncInputs();
+          renderAll();
+          applyCurrentFilters({ force: true });
         });
       }
 

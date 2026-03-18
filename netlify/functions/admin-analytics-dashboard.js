@@ -37,6 +37,12 @@ function buildEmptySummary(filters, overrides = {}) {
     schemaMismatch: false,
     schemaWarnings: [],
     message: '',
+    meta: {
+      matchedEvents: 0,
+      recentEvents: 0,
+      topPageCount: 0,
+      appliedRangeDays: 0,
+    },
     filters: {
       applied: filters,
       options: {

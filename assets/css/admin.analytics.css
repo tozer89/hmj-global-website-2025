@@ -168,6 +168,18 @@ a {
   gap: 22px;
 }
 
+.analytics-shell[data-busy="true"] .panel {
+  position: relative;
+}
+
+.analytics-shell[data-busy="true"] .panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(47, 78, 162, 0.03));
+  pointer-events: none;
+}
+
 .panel {
   background: var(--analytics-panel);
   border: 1px solid var(--analytics-border);
@@ -210,6 +222,29 @@ a {
   border: 1px solid rgba(47, 78, 162, 0.16);
   background: var(--analytics-panel-soft);
   font-weight: 700;
+}
+
+.status-banner__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status-banner__text {
+  min-width: 0;
+}
+
+.status-banner__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status-banner__actions .btn {
+  min-height: 38px;
+  padding: 8px 12px;
 }
 
 .status-banner.is-visible {
@@ -453,6 +488,19 @@ a {
   border-color: rgba(47, 78, 162, 0.28);
 }
 
+.field input:disabled,
+.field select:disabled,
+.segmented button:disabled,
+.chip-toggle button:disabled,
+.btn:disabled,
+.btn-quiet:disabled,
+.sort-btn:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+  box-shadow: none;
+}
+
 .control-footer {
   justify-content: space-between;
   align-items: center;
@@ -464,6 +512,10 @@ a {
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.control-footer__right .btn.primary {
+  box-shadow: 0 14px 24px rgba(41, 72, 158, 0.18);
 }
 
 .toggle-switch {
@@ -1266,6 +1318,14 @@ a {
   .analytics-table,
   .analytics-table--compact {
     min-width: 580px;
+  }
+
+  .status-banner__inner {
+    align-items: stretch;
+  }
+
+  .status-banner__actions {
+    width: 100%;
   }
 }
 
