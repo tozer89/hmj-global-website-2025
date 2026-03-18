@@ -2735,7 +2735,16 @@
       await loadAllData({ silent: true });
       openDrawer(task.id);
     } catch (error) {
-      state.helpers.toast.err(error?.message || 'Unable to upload task files.', 5400);
+      const rawMessage = error?.message || 'Unable to upload task files.';
+      const friendlyMessage = /row-level security policy/i.test(rawMessage)
+        ? 'File upload permissions were rejected. The Team Tasks attachment policies need to allow this admin upload.'
+        : rawMessage;
+      console.warn('[team-tasks] attachment upload failed', {
+        code: error?.code || null,
+        status: error?.status || error?.statusCode || null,
+        message: rawMessage,
+      });
+      state.helpers.toast.err(friendlyMessage, 5400);
     } finally {
       state.attachmentUploadBusy = false;
       els.uploadAttachmentBtn.disabled = false;

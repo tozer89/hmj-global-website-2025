@@ -9,7 +9,7 @@ function read(relPath) {
 
 test('team tasks admin page exposes assignment email controls, planner upgrades, and quick-add aids', () => {
   const html = read('admin/team-tasks.html');
-  assert.match(html, /team-tasks\.js\?v=5/);
+  assert.match(html, /team-tasks\.js\?v=6/);
   assert.match(html, /settingAssignmentEmails/);
   assert.match(html, /emailStatusDetail/);
   assert.match(html, /sendAssignmentEmailBtn/);
@@ -45,8 +45,17 @@ test('team tasks client wires assignment emails, planner interactions, and guide
   assert.match(source, /setPlannerDensity/);
   assert.match(source, /setPlannerExpansionForVisibleDays/);
   assert.match(source, /renderOperationsPanels/);
+  assert.match(source, /File upload permissions were rejected/);
   assert.doesNotMatch(source, /description:\s*trimText\(els\.quickDescription\.value,\s*5000\)/);
   assert.doesNotMatch(source, /payload\.description\s*=\s*trimText\(els\.detailDescription\.value,\s*5000\)/);
+});
+
+test('team task attachment migration tracks RLS and storage policies', () => {
+  const source = read('supabase/migrations/20260318183000_team_task_attachment_policies.sql');
+  assert.match(source, /task_attachments_insert_admins/);
+  assert.match(source, /Task files admin insert/);
+  assert.match(source, /insert into storage\.buckets/);
+  assert.match(source, /public\.hmj_task_is_admin\(\)/);
 });
 
 test('team tasks backend uses shared email config and new send endpoint', () => {
