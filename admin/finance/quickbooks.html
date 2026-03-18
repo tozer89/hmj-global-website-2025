@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>QuickBooks Connection | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
+  <link rel="stylesheet" href="/assets/css/admin.finance.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
+  <script defer src="/admin/finance/quickbooks.js?v=1"></script>
+</head>
+<body class="finance-page">
+  <div class="finance-top">
+    <div class="finance-row">
+      <div class="finance-brand">
+        <span class="finance-brand__mark">H</span>
+        <span>HMJ Global Admin</span>
+      </div>
+      <span class="finance-pill">QuickBooks Connection</span>
+      <div class="finance-spacer"></div>
+      <a class="finance-btn finance-btn--ghost" href="/admin/finance/">Finance hub</a>
+      <a class="finance-btn finance-btn--ghost" href="/admin/">Return to Admin Dash</a>
+      <a class="finance-btn finance-btn--ghost" href="/">Website</a>
+      <button class="finance-btn finance-btn--ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="finance-wrap" id="gate" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <p class="finance-eyebrow">Admin only</p>
+        <h1>QuickBooks access requires an HMJ admin session</h1>
+        <p class="finance-muted">Checking your session…</p>
+        <div class="finance-inline-actions">
+          <button class="finance-btn finance-btn--primary" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="finance-btn finance-btn--ghost" href="/admin/finance/">Back to finance</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="finance-wrap" id="app" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner finance-hero">
+        <div class="finance-hero__copy">
+          <p class="finance-eyebrow">Accounting sync</p>
+          <h1>QuickBooks Online</h1>
+          <p class="finance-muted" id="qboWelcomeMeta">Loading user…</p>
+          <p class="finance-muted">Use the HMJ QuickBooks connection to pull customers, invoices, payments, bills, and purchases into the finance workspace. The finance pages use the cached data for actuals and aged open items rather than making live API calls on every screen load.</p>
+          <div class="finance-hero__meta" id="qboStatusChips"></div>
+          <div class="finance-hero__actions">
+            <button class="finance-btn finance-btn--primary" type="button" id="btnConnectQbo">Connect QuickBooks</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnSyncQbo">Sync now</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnDisconnectQbo">Disconnect</button>
+          </div>
+        </div>
+        <aside class="finance-hero__aside">
+          <div class="finance-stat">
+            <span class="finance-kicker">Connection status</span>
+            <strong id="qboConnectionStatus">—</strong>
+            <span id="qboConnectionMeta">Waiting for finance status</span>
+          </div>
+          <div class="finance-stat">
+            <span class="finance-kicker">Last sync</span>
+            <strong id="qboLastSync">—</strong>
+            <span id="qboLastSyncMeta">No sync recorded yet</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner finance-split">
+        <div class="finance-list">
+          <div class="finance-alert-stack" id="qboAlerts" aria-live="polite"></div>
+          <section class="finance-data-block">
+            <p class="finance-eyebrow">Connection details</p>
+            <h3>Current QuickBooks configuration</h3>
+            <div class="finance-list" id="qboConnectionList"></div>
+          </section>
+          <section class="finance-data-block">
+            <p class="finance-eyebrow">Recent sync runs</p>
+            <h3>Sync history</h3>
+            <div class="finance-list" id="qboRunList"></div>
+          </section>
+        </div>
+        <aside class="finance-detail-drawer">
+          <div class="finance-data-block">
+            <p class="finance-eyebrow">Setup notes</p>
+            <h3>What this needs</h3>
+            <div class="finance-list">
+              <div class="finance-list-item">
+                <strong>Netlify env already in place</strong>
+                <small>QBO client id and secret are read from the existing QBO_CLIENT_ID and QBO_CLIENT_SECRET variables.</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>Redirect URI</strong>
+                <small id="qboRedirectUriLabel">Waiting for callback URL</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>Realm / company id</strong>
+                <small>QuickBooks returns the realm id after a successful OAuth callback. It is not hardcoded in HMJ admin.</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>Cached entities</strong>
+                <small>Customers, invoices, payments, bills, and purchases are cached in Supabase for finance use.</small>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div id="financeToast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

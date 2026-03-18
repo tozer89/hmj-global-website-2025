@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Finance | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
+  <link rel="stylesheet" href="/assets/css/admin.finance.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
+  <script defer src="/admin/finance/index.js?v=1"></script>
+</head>
+<body class="finance-page">
+  <div class="finance-top">
+    <div class="finance-row">
+      <div class="finance-brand">
+        <span class="finance-brand__mark">H</span>
+        <span>HMJ Global Admin</span>
+      </div>
+      <span class="finance-pill">Finance</span>
+      <div class="finance-spacer"></div>
+      <a class="finance-btn finance-btn--ghost" href="/admin/">Return to Admin Dash</a>
+      <a class="finance-btn finance-btn--ghost" href="/">Website</a>
+      <button class="finance-btn finance-btn--ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="finance-wrap" id="gate" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <p class="finance-eyebrow">Admin only</p>
+        <h1>Finance access requires an HMJ admin session</h1>
+        <p class="finance-muted">Checking your session…</p>
+        <div class="finance-inline-actions">
+          <button class="finance-btn finance-btn--primary" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="finance-btn finance-btn--ghost" href="/admin/">Back to dashboard</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="finance-wrap" id="app" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner finance-hero">
+        <div class="finance-hero__copy">
+          <p class="finance-eyebrow">Shared finance workspace</p>
+          <h1>Finance</h1>
+          <p class="finance-muted" id="financeWelcomeMeta">Loading user…</p>
+          <p class="finance-muted">Run forecasting, funding analysis, credit planning, and accounting sync from one HMJ finance workspace. The first release centres on a rolling 13-week cashflow model backed by QuickBooks Online actuals and HMJ-managed forecast assumptions.</p>
+          <div class="finance-hero__meta" id="financeStatusChips" aria-live="polite"></div>
+          <div class="finance-hero__actions">
+            <a class="finance-btn finance-btn--primary" href="/admin/finance/cashflow.html">Open 13 week cashflow</a>
+            <a class="finance-btn finance-btn--ghost" href="/admin/finance/quickbooks.html">QuickBooks connection</a>
+            <a class="finance-btn finance-btn--ghost" href="/admin/credit-limit-forecaster.html">Credit limit forecaster</a>
+          </div>
+        </div>
+        <aside class="finance-hero__aside">
+          <div class="finance-stat">
+            <span class="finance-kicker">Forecast minimum cash</span>
+            <strong id="heroMinCash">—</strong>
+            <span id="heroMinCashMeta">Waiting for finance data</span>
+          </div>
+          <div class="finance-stat">
+            <span class="finance-kicker">QuickBooks status</span>
+            <strong id="heroQboStatus">—</strong>
+            <span id="heroQboMeta">Checking connection</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Live view</p>
+            <h2>Finance module summary</h2>
+          </div>
+          <div class="finance-toolbar">
+            <button class="finance-btn finance-btn--soft" type="button" id="btnRefreshFinance">Refresh</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnSyncFinanceQbo">Sync QuickBooks now</button>
+          </div>
+        </div>
+        <div class="finance-alert-stack" id="financeAlerts" aria-live="polite"></div>
+        <div class="finance-summary-grid" id="financeSummaryGrid" aria-label="Finance summary metrics"></div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Modules</p>
+            <h2>Finance workspace modules</h2>
+          </div>
+          <p class="finance-muted">The Finance area is intended to grow into HMJ’s shared credit, funding, AR, VAT, and cash-planning workspace. This landing page keeps the current modules in one place and gives truthful connection status for anything still being configured.</p>
+        </div>
+        <div class="finance-card-grid" id="financeModuleGrid" aria-label="Finance modules"></div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner finance-split">
+        <div>
+          <div class="finance-section-head">
+            <div>
+              <p class="finance-eyebrow">QuickBooks</p>
+              <h2>Connection and sync</h2>
+            </div>
+          </div>
+          <div class="finance-list" id="qboRunList" aria-live="polite"></div>
+        </div>
+        <aside class="finance-detail-drawer">
+          <div class="finance-data-block">
+            <p class="finance-eyebrow">Future modules</p>
+            <h3>Roadmap placeholders</h3>
+            <div class="finance-list">
+              <div class="finance-list-item">
+                <strong>AR ageing & receipts</strong>
+                <small>Age buckets, expected collections, and overdue exposure by client.</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>Funding & retention reconciliation</strong>
+                <small>Initial drawdowns, retention releases, and fee deductions across the factor.</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>VAT planner</strong>
+                <small>Quarterly VAT obligations, reverse-charge positioning, and cash impact.</small>
+              </div>
+              <div class="finance-list-item">
+                <strong>Payroll funding projection</strong>
+                <small>Gross pay, employer cost, timesheet timing, and funding pressure for weekly runs.</small>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div id="financeToast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
