@@ -4,8 +4,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const {
+  APPLICATION_SOURCE_LABELS,
   APPLICATION_STATUS_VALUES,
   filterJobApplications,
+  normaliseApplicationRow,
   normalizeJobApplicationStatus,
   sortJobApplications,
   summariseJobApplications,
@@ -54,6 +56,24 @@ test('job application helper filters and sorts the application workflow view', (
     interview: 1,
     reject: 0,
   });
+});
+
+test('job application helper maps live website sources to readable labels without requiring optional schema columns', () => {
+  assert.equal(APPLICATION_SOURCE_LABELS['jobs-board'], 'Jobs board');
+  assert.equal(APPLICATION_SOURCE_LABELS['job-public-detail'], 'Job detail page');
+  assert.equal(APPLICATION_SOURCE_LABELS['job-share'], 'Shared job link');
+
+  const row = normaliseApplicationRow({
+    id: 'app-1',
+    status: 'submitted',
+    source: 'job-public-detail',
+    source_submission_id: 'public-123',
+    job_title: 'Project Planner',
+  });
+
+  assert.equal(row.sourceLabel, 'Job detail page');
+  assert.equal(row.sourceSubmissionId, 'public-123');
+  assert.equal(row.shareCode, null);
 });
 
 test('job applications migration narrows legacy statuses safely', () => {

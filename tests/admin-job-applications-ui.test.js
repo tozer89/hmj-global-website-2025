@@ -9,6 +9,7 @@ const pageScript = fs.readFileSync(path.join(__dirname, '..', 'admin', 'job-appl
 const jobsSource = fs.readFileSync(path.join(__dirname, '..', 'admin', 'jobs.html'), 'utf8');
 const candidatesSource = fs.readFileSync(path.join(__dirname, '..', 'admin', 'candidates.js'), 'utf8');
 const updateFunctionSource = fs.readFileSync(path.join(__dirname, '..', 'netlify', 'functions', 'admin-job-applications-update.js'), 'utf8');
+const listFunctionSource = fs.readFileSync(path.join(__dirname, '..', 'netlify', 'functions', 'admin-job-applications-list.js'), 'utf8');
 
 test('admin dashboard exposes the Job applications module card', () => {
   assert.match(dashboardSource, /href="\/admin\/job-applications\.html"/);
@@ -49,4 +50,11 @@ test('job application status updates fall back to legacy stored values if the ol
   assert.match(updateFunctionSource, /reviewing/);
   assert.match(updateFunctionSource, /interviewing/);
   assert.match(updateFunctionSource, /rejected/);
+});
+
+test('job applications list endpoint tolerates optional columns missing from older live schemas', () => {
+  assert.match(listFunctionSource, /OPTIONAL_APPLICATION_COLUMNS/);
+  assert.match(listFunctionSource, /share_code/);
+  assert.match(listFunctionSource, /extractMissingColumnName/);
+  assert.match(listFunctionSource, /optionalColumns\.delete\(missingColumn\)/);
 });

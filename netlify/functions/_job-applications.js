@@ -21,6 +21,14 @@ const APPLICATION_STATUS_TONES = Object.freeze({
   reject: 'red',
 });
 
+const APPLICATION_SOURCE_LABELS = Object.freeze({
+  candidate_portal: 'Website portal',
+  contact_form: 'Website form',
+  'jobs-board': 'Jobs board',
+  'job-public-detail': 'Job detail page',
+  'job-share': 'Shared job link',
+});
+
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
     ? value.trim()
@@ -105,11 +113,7 @@ function normaliseApplicationRow(row = {}, candidateMap = new Map(), jobMap = ne
     updatedAt: row.updated_at || null,
     notes: trimString(row.notes, 4000),
     source,
-    sourceLabel: source === 'candidate_portal'
-      ? 'Website portal'
-      : source === 'contact_form'
-        ? 'Website form'
-        : source,
+    sourceLabel: APPLICATION_SOURCE_LABELS[source] || source,
     shareCode: trimString(row.share_code, 120),
     sourceSubmissionId: trimString(row.source_submission_id, 160),
     jobType: trimString(row.job_type, 120),
@@ -200,6 +204,7 @@ function summariseJobApplications(rows = []) {
 }
 
 module.exports = {
+  APPLICATION_SOURCE_LABELS,
   APPLICATION_STATUS_LABELS,
   APPLICATION_STATUS_TONES,
   APPLICATION_STATUS_VALUES,

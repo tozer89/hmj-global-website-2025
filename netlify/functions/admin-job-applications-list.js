@@ -11,7 +11,7 @@ const {
 } = require('./_job-applications.js');
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
-const APPLICATION_SELECT = [
+const REQUIRED_APPLICATION_COLUMNS = Object.freeze([
   'id',
   'candidate_id',
   'job_id',
@@ -26,8 +26,10 @@ const APPLICATION_SELECT = [
   'job_pay',
   'source',
   'source_submission_id',
+]);
+const OPTIONAL_APPLICATION_COLUMNS = Object.freeze([
   'share_code',
-].join(',');
+]);
 
 function chunk(values = [], size = 500) {
   const out = [];
@@ -55,17 +57,43 @@ function parseBody(event) {
   }
 }
 
+function buildApplicationSelect(optionalColumns = []) {
+  return REQUIRED_APPLICATION_COLUMNS.concat(optionalColumns).join(',');
+}
+
+function extractMissingColumnName(error) {
+  const message = String(error?.message || '');
+  if (!message) return '';
+  const postgresMatch = message.match(/column\s+job_applications\.([a-zA-Z0-9_]+)\s+does not exist/i);
+  if (postgresMatch) return postgresMatch[1];
+  const genericMatch = message.match(/column\s+"?([a-zA-Z0-9_]+)"?\s+does not exist/i);
+  if (genericMatch) return genericMatch[1];
+  const postgrestMatch = message.match(/Could not find the '([a-zA-Z0-9_]+)' column/i);
+  if (postgrestMatch) return postgrestMatch[1];
+  return '';
+}
+
 async function fetchAllApplications(supabase) {
   const pageSize = 1000;
   let from = 0;
   const rows = [];
+  const optionalColumns = new Set(OPTIONAL_APPLICATION_COLUMNS);
 
   while (true) {
-    const { data, error } = await supabase
+    const runQuery = () => supabase
       .from('job_applications')
-      .select(APPLICATION_SELECT)
+      .select(buildApplicationSelect(Array.from(optionalColumns)))
       .order('applied_at', { ascending: false, nullsFirst: false })
       .range(from, from + pageSize - 1);
+
+    let { data, error } = await runQuery();
+
+    while (error) {
+      const missingColumn = extractMissingColumnName(error);
+      if (!missingColumn || !optionalColumns.has(missingColumn)) break;
+      optionalColumns.delete(missingColumn);
+      ({ data, error } = await runQuery());
+    }
 
     if (error) throw error;
     if (!Array.isArray(data) || !data.length) break;
