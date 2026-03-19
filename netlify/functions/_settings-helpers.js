@@ -31,6 +31,13 @@ const DEFAULT_SETTINGS = {
     syncEnabled: true,
     weekStartsOn: 'monday',
   },
+  annual_leave_settings: {
+    defaultRegion: 'england-and-wales',
+    remindersEnabled: true,
+    overlapWarningThreshold: 2,
+    reminderRunHourLocal: 8,
+    holidayCacheTtlHours: 168,
+  },
   chatbot_settings: DEFAULT_CHATBOT_SETTINGS,
 };
 

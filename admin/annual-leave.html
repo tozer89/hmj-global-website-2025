@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Annual Leave | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=34"></script>
+  <link rel="stylesheet" href="/assets/css/admin.finance.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.annual-leave.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
+  <script defer src="/admin/annual-leave.js?v=1"></script>
+</head>
+<body class="finance-page annual-leave-page">
+  <div class="finance-top">
+    <div class="finance-row">
+      <div class="finance-brand">
+        <span class="finance-brand__mark">H</span>
+        <span>HMJ Global Admin</span>
+      </div>
+      <span class="finance-pill">Annual Leave</span>
+      <div class="finance-spacer"></div>
+      <a class="finance-btn finance-btn--ghost" href="/admin/">Return to Admin Dash</a>
+      <a class="finance-btn finance-btn--ghost" href="/">Website</a>
+      <button class="finance-btn finance-btn--ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="finance-wrap" id="gate" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <p class="finance-eyebrow">Admin only</p>
+        <h1>Annual Leave requires an HMJ admin session</h1>
+        <p class="finance-muted">Checking your session…</p>
+        <div class="finance-inline-actions">
+          <button class="finance-btn finance-btn--primary" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="finance-btn finance-btn--ghost" href="/admin/">Back to dashboard</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="finance-wrap" id="app" style="display:none">
+    <section class="finance-panel">
+      <div class="finance-panel__inner annual-hero">
+        <div class="annual-hero__copy">
+          <p class="finance-eyebrow">Team leave calendar</p>
+          <h1>Annual Leave</h1>
+          <p class="finance-muted" id="annualWelcomeMeta">Loading user…</p>
+          <p class="finance-muted">Manage team leave bookings, calendar coverage, reminder emails, and yearly visibility in one secure HMJ workspace. Leave is calculated against the calendar year, excludes weekends and UK bank holidays, and stays visible in a single shared operations view.</p>
+          <div class="annual-chip-row" id="annualStatusChips" aria-live="polite"></div>
+          <div class="annual-year-bar">
+            <div>
+              <span class="annual-kicker">Leave year</span>
+              <strong id="leaveYearLabel">Loading…</strong>
+            </div>
+            <label class="annual-select annual-select--year">
+              <span>Year</span>
+              <select id="leaveYearSelect" aria-label="Leave year"></select>
+            </label>
+          </div>
+          <div class="finance-hero__actions">
+            <button class="finance-btn finance-btn--primary" type="button" id="btnNewBooking">New booking</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnToday">Today</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnThisMonth">This month</button>
+            <button class="finance-btn finance-btn--soft" type="button" id="btnExportAnnualLeaveCsv">Export CSV</button>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnRefreshAnnualLeave">Refresh</button>
+          </div>
+        </div>
+        <aside class="annual-hero__stats">
+          <article class="finance-stat">
+            <span class="finance-kicker">Total leave booked</span>
+            <strong id="heroTotalLeave">—</strong>
+            <span id="heroTotalLeaveMeta">Current leave year</span>
+          </article>
+          <article class="finance-stat">
+            <span class="finance-kicker">Upcoming next 30 days</span>
+            <strong id="heroUpcoming">—</strong>
+            <span id="heroUpcomingMeta">Waiting for data</span>
+          </article>
+          <article class="finance-stat">
+            <span class="finance-kicker">People off this week</span>
+            <strong id="heroThisWeek">—</strong>
+            <span id="heroThisWeekMeta">Waiting for data</span>
+          </article>
+          <article class="finance-stat">
+            <span class="finance-kicker">Bank holidays remaining</span>
+            <strong id="heroBankHolidays">—</strong>
+            <span id="heroBankHolidaysMeta">England and Wales default</span>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <div class="annual-main-grid">
+      <section class="finance-panel">
+        <div class="finance-panel__inner annual-booking-panel">
+          <div class="finance-section-head">
+            <div>
+              <p class="finance-eyebrow">Booking panel</p>
+              <h2 id="bookingPanelHeading">New booking</h2>
+            </div>
+            <div class="finance-toolbar">
+              <button class="finance-btn finance-btn--ghost" type="button" id="btnBookLeaveForMe">Book leave for me</button>
+              <button class="finance-btn finance-btn--soft" type="button" id="btnResetBooking">Clear</button>
+            </div>
+          </div>
+          <p class="finance-muted">Create or edit annual leave inside the current leave year. Weekends and UK bank holidays are excluded automatically from effective leave days.</p>
+
+          <form id="leaveBookingForm" class="annual-form" novalidate>
+            <input id="bookingId" type="hidden"/>
+            <div class="annual-form-grid">
+              <label class="annual-field annual-field--wide">
+                <span>User</span>
+                <select id="bookingUser" required></select>
+              </label>
+              <label class="annual-field">
+                <span>Start date</span>
+                <input id="bookingStartDate" type="date" required/>
+              </label>
+              <label class="annual-field">
+                <span>End date</span>
+                <input id="bookingEndDate" type="date" required/>
+              </label>
+              <label class="annual-field">
+                <span>Duration mode</span>
+                <select id="bookingDurationMode">
+                  <option value="full_day">Full day(s)</option>
+                  <option value="half_day_am">Half day AM</option>
+                  <option value="half_day_pm">Half day PM</option>
+                </select>
+              </label>
+              <label class="annual-field">
+                <span>Leave type</span>
+                <select id="bookingLeaveType">
+                  <option value="annual_leave">Annual leave</option>
+                  <option value="unpaid_leave">Unpaid leave</option>
+                  <option value="sick">Sick</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label class="annual-field annual-field--wide">
+                <span>Reason / note</span>
+                <textarea id="bookingNote" rows="4" placeholder="Optional operational note for the team."></textarea>
+              </label>
+            </div>
+
+            <div class="annual-booking-metrics" id="bookingMetrics" aria-live="polite">
+              <article class="annual-mini-stat">
+                <span>Calendar days</span>
+                <strong id="metricCalendarDays">0</strong>
+              </article>
+              <article class="annual-mini-stat">
+                <span>Working days</span>
+                <strong id="metricWorkingDays">0</strong>
+              </article>
+              <article class="annual-mini-stat">
+                <span>Bank holidays excluded</span>
+                <strong id="metricBankHolidays">0</strong>
+              </article>
+              <article class="annual-mini-stat">
+                <span>Effective leave</span>
+                <strong id="metricEffectiveLeave">0</strong>
+              </article>
+            </div>
+
+            <div class="annual-form-feedback" id="bookingFormFeedback" hidden></div>
+            <div class="finance-inline-actions">
+              <button class="finance-btn finance-btn--primary" type="submit" id="btnSaveBooking">Save booking</button>
+              <button class="finance-btn finance-btn--ghost" type="button" id="btnCancelEditing" hidden>Cancel editing</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="finance-panel">
+        <div class="finance-panel__inner annual-calendar-panel">
+          <div class="finance-section-head">
+            <div>
+              <p class="finance-eyebrow">Calendar view</p>
+              <h2>Month calendar</h2>
+            </div>
+            <div class="finance-toolbar">
+              <button class="finance-btn finance-btn--ghost" type="button" id="btnPrevMonth">Previous</button>
+              <button class="finance-btn finance-btn--soft" type="button" id="btnCurrentMonth">Current month</button>
+              <button class="finance-btn finance-btn--ghost" type="button" id="btnNextMonth">Next</button>
+            </div>
+          </div>
+          <div class="annual-calendar-toolbar">
+            <strong id="calendarMonthLabel">Loading…</strong>
+            <div class="annual-filter-grid">
+              <label class="annual-field">
+                <span>Filter by user</span>
+                <select id="filterUser">
+                  <option value="all">All admins</option>
+                </select>
+              </label>
+              <label class="annual-field">
+                <span>Status</span>
+                <select id="filterStatus">
+                  <option value="all">All statuses</option>
+                  <option value="booked">Booked</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </label>
+              <label class="annual-field">
+                <span>Leave type</span>
+                <select id="filterLeaveType">
+                  <option value="all">All leave types</option>
+                  <option value="annual_leave">Annual leave</option>
+                  <option value="unpaid_leave">Unpaid leave</option>
+                  <option value="sick">Sick</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label class="annual-field annual-field--wide">
+                <span>Search</span>
+                <input id="filterSearch" type="search" placeholder="Person, note, leave type, status"/>
+              </label>
+            </div>
+          </div>
+          <div class="annual-alert-stack" id="annualAlerts" aria-live="polite"></div>
+          <div class="annual-legend" id="calendarLegend">
+            <span><i class="annual-dot annual-dot--annual"></i>Annual leave</span>
+            <span><i class="annual-dot annual-dot--unpaid"></i>Unpaid leave</span>
+            <span><i class="annual-dot annual-dot--sick"></i>Sick</span>
+            <span><i class="annual-dot annual-dot--other"></i>Other</span>
+            <span><i class="annual-dot annual-dot--holiday"></i>Bank holiday</span>
+          </div>
+          <div class="annual-calendar-head" id="calendarWeekdays"></div>
+          <div class="annual-calendar-grid" id="calendarGrid" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Upcoming leave</p>
+            <h2>Bookings table</h2>
+          </div>
+          <div class="finance-toolbar">
+            <span class="finance-status" id="resultsChip">0 bookings in view</span>
+            <button class="finance-btn finance-btn--ghost" type="button" id="btnClearFilters">Clear filters</button>
+          </div>
+        </div>
+        <div class="annual-table-shell">
+          <table class="annual-table" aria-label="Annual leave bookings">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Dates</th>
+                <th>Working days</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th>Created by</th>
+                <th>Created at</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="bookingTableBody"></tbody>
+          </table>
+          <div class="finance-empty" id="bookingEmptyState" hidden>No leave bookings match the current filters.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="finance-panel">
+      <div class="finance-panel__inner annual-analytics">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Operational view</p>
+            <h2>Summaries and analytics</h2>
+          </div>
+          <p class="finance-muted">Use the cards and compact breakdowns below to see who is off, where pressure is building, and how leave is distributed across the year.</p>
+        </div>
+
+        <div class="annual-kpi-grid">
+          <article class="annual-kpi-card">
+            <span>Total leave booked</span>
+            <strong id="kpiTotalLeaveDays">—</strong>
+            <small>Effective leave days in the selected year.</small>
+          </article>
+          <article class="annual-kpi-card">
+            <span>Upcoming in next 30 days</span>
+            <strong id="kpiUpcoming30">—</strong>
+            <small id="kpiUpcoming30Meta">Waiting for data</small>
+          </article>
+          <article class="annual-kpi-card">
+            <span>People off this week</span>
+            <strong id="kpiThisWeek">—</strong>
+            <small>Unique team members with booked leave this week.</small>
+          </article>
+          <article class="annual-kpi-card">
+            <span>People off next week</span>
+            <strong id="kpiNextWeek">—</strong>
+            <small>Forward look for next week’s coverage.</small>
+          </article>
+          <article class="annual-kpi-card">
+            <span>Bank holidays remaining</span>
+            <strong id="kpiBankHolidaysRemaining">—</strong>
+            <small>England and Wales by default.</small>
+          </article>
+        </div>
+
+        <div class="annual-analytics-grid">
+          <section class="annual-analytics-card">
+            <div class="annual-card-head">
+              <div>
+                <p class="finance-eyebrow">Coverage</p>
+                <h3>Who is off</h3>
+              </div>
+            </div>
+            <div class="annual-dual-list">
+              <div>
+                <h4>Today</h4>
+                <div class="finance-list" id="peopleOffTodayList"></div>
+              </div>
+              <div>
+                <h4>This week</h4>
+                <div class="finance-list" id="peopleOffThisWeekList"></div>
+              </div>
+              <div>
+                <h4>Next week</h4>
+                <div class="finance-list" id="peopleOffNextWeekList"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="annual-analytics-card">
+            <div class="annual-card-head">
+              <div>
+                <p class="finance-eyebrow">Distribution</p>
+                <h3>Monthly leave load</h3>
+              </div>
+            </div>
+            <div class="annual-month-chart" id="monthDistributionChart"></div>
+            <div class="annual-footnote" id="busiestMonthsMeta"></div>
+          </section>
+
+          <section class="annual-analytics-card">
+            <div class="annual-card-head">
+              <div>
+                <p class="finance-eyebrow">People</p>
+                <h3>Leave days per person</h3>
+              </div>
+            </div>
+            <div class="finance-list" id="perPersonList"></div>
+          </section>
+
+          <section class="annual-analytics-card">
+            <div class="annual-card-head">
+              <div>
+                <p class="finance-eyebrow">Alerts</p>
+                <h3>Overlap warnings</h3>
+              </div>
+            </div>
+            <div class="finance-list" id="overlapWarningsList"></div>
+          </section>
+
+          <section class="annual-analytics-card">
+            <div class="annual-card-head">
+              <div>
+                <p class="finance-eyebrow">Bank holidays</p>
+                <h3>Remaining this year</h3>
+              </div>
+            </div>
+            <div class="finance-list" id="bankHolidayList"></div>
+          </section>
+
+          <section class="annual-analytics-card">
+            <div class="annual-card-head">
+              <div>
+                <p class="finance-eyebrow">Recent activity</p>
+                <h3>Recent requests</h3>
+              </div>
+            </div>
+            <div class="finance-list" id="recentLeaveList"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="annual-detail-overlay" id="detailOverlay" hidden></div>
+  <aside class="annual-detail-drawer" id="detailDrawer" aria-hidden="true">
+    <div class="annual-detail-head">
+      <div>
+        <p class="finance-eyebrow">Booking detail</p>
+        <h2 id="detailTitle">Leave booking</h2>
+        <p class="finance-muted" id="detailMeta">Select a leave event to inspect it here.</p>
+      </div>
+      <button class="finance-btn finance-btn--ghost" type="button" id="btnCloseDetail">Close</button>
+    </div>
+    <div class="annual-detail-body" id="detailBody"></div>
+    <div class="annual-detail-actions">
+      <button class="finance-btn finance-btn--primary" type="button" id="btnEditDetail">Edit booking</button>
+      <button class="finance-btn finance-btn--ghost" type="button" id="btnCancelDetail">Cancel booking</button>
+    </div>
+  </aside>
+
+  <div id="financeToast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

@@ -12,6 +12,9 @@
 [functions."admin-team-tasks-reminders-run"]
   schedule = "@hourly"
 
+[functions."admin-annual-leave-reminders-run"]
+  schedule = "@hourly"
+
 [[redirects]]
   from = "/go/:slug"
   to = "/.netlify/functions/short-link-go?slug=:slug"
@@ -212,6 +215,17 @@
 [[redirects]]
   from = "/admin/analytics.html"
   to = "/admin/?next=analytics.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/annual-leave.html"
+  to = "/admin/annual-leave.html"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/admin/annual-leave.html"
+  to = "/admin/?next=annual-leave.html"
   status = 302
 
 [[redirects]]
