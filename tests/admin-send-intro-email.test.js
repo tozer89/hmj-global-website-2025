@@ -18,7 +18,7 @@ test('send intro email page uses the shared admin bootstrap and expected operati
   const html = read('admin/send-intro-email.html');
 
   assert.match(html, /identity-loader\.js\?v=3/);
-  assert.match(html, /\/admin\/common\.js\?v=35/);
+  assert.match(html, /\/admin\/common\.js\?v=36/);
   assert.match(html, /id="introFirstName"/);
   assert.match(html, /id="introLastName"/);
   assert.match(html, /id="introEmail"/);

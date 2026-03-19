@@ -1731,7 +1731,7 @@
       scrubAuthCallbackUrl();
     }
 
-    if (who.ok && (!adminOnly || who.role === 'admin')) {
+    if (who.ok && (!adminOnly || hasAdminAccess(who.roles || [who.role]))) {
       if (g) g.style.display = 'none';
       if (app) app.style.display = '';
       return who; // { ok, user, token, role, email }

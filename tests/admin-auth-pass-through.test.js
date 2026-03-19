@@ -309,6 +309,29 @@ test('authenticated admin landing renders cleanly across small, mobile, tablet, 
   }
 });
 
+test('owner-role sessions are allowed through the admin landing gate', async () => {
+  const harness = createAdminHarness({
+    url: 'https://example.com/admin/',
+    width: 1280,
+  });
+
+  harness.state.currentUser = createIdentityUser({
+    email: 'owner@hmj-global.com',
+    roles: ['admin', 'owner'],
+    token: createJwt('owner@hmj-global.com', ['admin', 'owner']),
+  });
+
+  let mainRan = false;
+  await harness.window.Admin.bootAdmin(async () => {
+    mainRan = true;
+  });
+
+  assert.equal(mainRan, true);
+  assert.deepEqual(harness.navigation, []);
+  assert.equal(harness.window.document.getElementById('gate').style.display, 'none');
+  assert.equal(harness.window.document.getElementById('app').style.display, '');
+});
+
 test('logout transition returns the user to the admin entry page with a signed-out notice', () => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/',
