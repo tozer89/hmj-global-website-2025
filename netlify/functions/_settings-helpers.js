@@ -37,6 +37,8 @@ const DEFAULT_SETTINGS = {
     overlapWarningThreshold: 2,
     reminderRunHourLocal: 8,
     holidayCacheTtlHours: 168,
+    defaultEntitlementDays: 28,
+    entitlementOverrides: {},
   },
   chatbot_settings: DEFAULT_CHATBOT_SETTINGS,
 };

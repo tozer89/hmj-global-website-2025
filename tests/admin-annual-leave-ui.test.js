@@ -20,6 +20,8 @@ test('annual leave page exposes booking, calendar, analytics, and detail control
   const html = read('admin/annual-leave.html');
   assert.match(html, /Annual Leave/);
   assert.match(html, /id="leaveBookingForm"/);
+  assert.match(html, /id="ownerControlsPanel"/);
+  assert.match(html, /id="ownerEntitlementsBody"/);
   assert.match(html, /id="bookingUser"/);
   assert.match(html, /id="calendarGrid"/);
   assert.match(html, /id="bookingTableBody"/);
@@ -27,6 +29,7 @@ test('annual leave page exposes booking, calendar, analytics, and detail control
   assert.match(html, /id="peopleOffThisWeekList"/);
   assert.match(html, /id="overlapWarningsList"/);
   assert.match(html, /id="detailDrawer"/);
+  assert.match(html, /id="btnDeleteDetail"/);
   assert.match(html, /admin\.annual-leave\.css\?v=\d+/);
   assert.match(html, /annual-leave\.js\?v=\d+/);
 });
@@ -34,7 +37,7 @@ test('annual leave page exposes booking, calendar, analytics, and detail control
 test('annual leave route is protected and reminder runner is scheduled', () => {
   const netlify = read('netlify.toml');
   assert.match(netlify, /\[functions\."admin-annual-leave-reminders-run"\][\s\S]*schedule = "@hourly"/);
-  assert.match(netlify, /from = "\/admin\/annual-leave\.html"[\s\S]*conditions = \{ Role = \["admin"\] \}/);
+  assert.match(netlify, /from = "\/admin\/annual-leave\.html"[\s\S]*conditions = \{ Role = \["admin", "owner"\] \}/);
   assert.match(netlify, /to = "\/admin\/\?next=annual-leave\.html"/);
 });
 
@@ -45,4 +48,6 @@ test('annual leave frontend calls the expected secure backend endpoints', () => 
   assert.match(source, /admin-annual-leave-create/);
   assert.match(source, /admin-annual-leave-update/);
   assert.match(source, /admin-annual-leave-cancel/);
+  assert.match(source, /admin-annual-leave-delete/);
+  assert.match(source, /admin-annual-leave-settings-save/);
 });

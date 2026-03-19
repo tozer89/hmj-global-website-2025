@@ -47,6 +47,7 @@
     activeId: '',
     loading: false,
     saving: false,
+    ownerSaving: false,
     filters: {
       userId: 'all',
       status: 'all',
@@ -80,6 +81,14 @@
       'heroThisWeekMeta',
       'heroBankHolidays',
       'heroBankHolidaysMeta',
+      'ownerControlsPanel',
+      'ownerDefaultEntitlementDays',
+      'ownerOverlapThreshold',
+      'ownerReminderHour',
+      'ownerRemindersEnabled',
+      'ownerEntitlementsBody',
+      'ownerSettingsFeedback',
+      'btnSaveOwnerSettings',
       'bookingPanelHeading',
       'bookingId',
       'leaveBookingForm',
@@ -137,6 +146,7 @@
       'btnCloseDetail',
       'btnEditDetail',
       'btnCancelDetail',
+      'btnDeleteDetail',
     ].forEach((id) => {
       els[id] = $(id);
     });
@@ -226,6 +236,11 @@
     return [baseYear - 1, baseYear, baseYear + 1, baseYear + 2];
   }
 
+  function isOwnerViewer() {
+    const roles = Array.isArray(state.viewer?.roles) ? state.viewer.roles : [];
+    return !!state.viewer?.isOwner || roles.includes('owner');
+  }
+
   function fillYearSelect() {
     if (!els.leaveYearSelect) return;
     els.leaveYearSelect.innerHTML = yearOptions(new Date().getFullYear())
@@ -263,6 +278,27 @@
     return row.displayName || row.userName || row.userEmail || 'Admin';
   }
 
+  function compactUserLabel(name) {
+    const safe = String(name || '').trim();
+    if (!safe) return 'Admin';
+    if (safe.length <= 18) return safe;
+    const parts = safe.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return `${safe.slice(0, 15)}…`;
+    const first = parts[0];
+    const last = parts[parts.length - 1].replace(/[^A-Za-z0-9'-]/g, '');
+    if (!last) return `${first}…`;
+    const shortenedLast = last.length > 10 ? `${last.slice(0, 8)}…` : last;
+    const candidate = `${first} ${shortenedLast}`;
+    if (candidate.length <= 18) return candidate;
+    return `${first} ${shortenedLast.charAt(0)}.`;
+  }
+
+  function compactDurationLabel(mode) {
+    if (mode === 'half_day_am') return 'AM half day';
+    if (mode === 'half_day_pm') return 'PM half day';
+    return 'Full day';
+  }
+
   function setFormFeedback(message, tone) {
     if (!els.bookingFormFeedback) return;
     if (!message) {
@@ -274,6 +310,19 @@
     els.bookingFormFeedback.hidden = false;
     els.bookingFormFeedback.textContent = message;
     els.bookingFormFeedback.dataset.tone = tone || 'info';
+  }
+
+  function setOwnerFeedback(message, tone) {
+    if (!els.ownerSettingsFeedback) return;
+    if (!message) {
+      els.ownerSettingsFeedback.hidden = true;
+      els.ownerSettingsFeedback.textContent = '';
+      els.ownerSettingsFeedback.removeAttribute('data-tone');
+      return;
+    }
+    els.ownerSettingsFeedback.hidden = false;
+    els.ownerSettingsFeedback.textContent = message;
+    els.ownerSettingsFeedback.dataset.tone = tone || 'info';
   }
 
   function computeDraftMetrics() {
@@ -400,6 +449,7 @@
       { label: '7 day + 1 working day reminders', tone: state.settings?.remindersEnabled ? 'ok' : 'warn' },
       { label: state.region.replace(/-/g, ' '), tone: 'ok' },
     ];
+    if (isOwnerViewer()) chips.push({ label: 'Owner controls enabled', tone: 'warn' });
     els.annualStatusChips.innerHTML = chips.map((chip) => `<span class="finance-status" data-tone="${chip.tone}">${escapeHtml(chip.label)}</span>`).join('');
   }
 
@@ -537,13 +587,15 @@
       const outside = iso.slice(0, 7) !== monthStartIso.slice(0, 7);
       const holiday = holidayForDate(iso);
       const bookings = bookingsForDate(iso);
+      const activeCount = bookings.filter((row) => row.status !== 'cancelled').length;
       const bookingMarkup = bookings.slice(0, 3).map((row) => (
         `<button type="button" class="annual-leave-chip" data-booking-id="${escapeHtml(row.id)}" data-type="${escapeHtml(row.leaveType)}" data-status="${escapeHtml(row.status)}" style="${escapeHtml(userChipStyle(row))}">
           <span class="annual-leave-chip__person">
             <i class="annual-leave-chip__swatch" aria-hidden="true"></i>
-            <span>${escapeHtml(row.userName)}</span>
+            <span class="annual-leave-chip__person-text" title="${escapeHtml(row.userName)}">${escapeHtml(compactUserLabel(row.userName))}</span>
           </span>
-          <span class="annual-leave-chip__meta">${escapeHtml(bookingDurationLabel(row.durationMode))}</span>
+          <span class="annual-leave-chip__meta">${escapeHtml(compactDurationLabel(row.durationMode))}</span>
+          ${row.status === 'cancelled' ? '<span class="annual-leave-chip__stamp">Cancelled</span>' : ''}
         </button>`
       )).join('');
       const moreMarkup = bookings.length > 3
@@ -554,7 +606,7 @@
         <article class="annual-day" data-date="${iso}" data-outside-month="${outside}" data-weekend="${date.getUTCDay() === 0 || date.getUTCDay() === 6}" data-today="${iso === todayIso}">
           <div class="annual-day__head">
             <strong class="annual-day__num">${date.getUTCDate()}</strong>
-            <span class="annual-day__meta">${bookings.length ? `${bookings.length} off` : ''}</span>
+            <span class="annual-day__meta">${activeCount ? `${activeCount} off` : ''}</span>
           </div>
           <div class="annual-day__items">
             ${holiday ? `<div class="annual-holiday-chip">${escapeHtml(holiday.title)}</div>` : ''}
@@ -698,7 +750,7 @@
     renderFinanceList(els.perPersonList, summary.perPerson || [], (row) => `
       <div class="finance-list-item">
         <strong>${escapeHtml(row.userName)}</strong>
-        <small>${escapeHtml(formatLeaveDays(row.effectiveLeaveDays))} day${Number(row.effectiveLeaveDays) === 1 ? '' : 's'} • ${escapeHtml(String(row.bookingsCount || 0))} booking${row.bookingsCount === 1 ? '' : 's'}</small>
+        <small>${escapeHtml(formatLeaveDays(row.effectiveLeaveDays))} booked • ${escapeHtml(formatLeaveDays(row.remainingLeaveDays || 0))} remaining • ${escapeHtml(String(row.bookingsCount || 0))} booking${row.bookingsCount === 1 ? '' : 's'}</small>
       </div>
     `);
 
@@ -724,6 +776,68 @@
     `);
   }
 
+  function ownerEntitlementValue(row) {
+    if (!row) return 0;
+    return Number(row.entitlementDays || state.settings?.defaultEntitlementDays || 28);
+  }
+
+  function renderOwnerControls() {
+    if (!els.ownerControlsPanel) return;
+    const ownerVisible = isOwnerViewer();
+    els.ownerControlsPanel.hidden = !ownerVisible;
+    if (!ownerVisible) return;
+
+    if (els.ownerDefaultEntitlementDays) els.ownerDefaultEntitlementDays.value = String(state.settings?.defaultEntitlementDays ?? 28);
+    if (els.ownerOverlapThreshold) els.ownerOverlapThreshold.value = String(state.settings?.overlapWarningThreshold ?? 2);
+    if (els.ownerReminderHour) els.ownerReminderHour.value = String(state.settings?.reminderRunHourLocal ?? 8);
+    if (els.ownerRemindersEnabled) els.ownerRemindersEnabled.checked = state.settings?.remindersEnabled !== false;
+
+    const rows = Array.isArray(state.summary?.perPerson) ? state.summary.perPerson : [];
+    if (els.ownerEntitlementsBody) {
+      els.ownerEntitlementsBody.innerHTML = rows.map((row) => {
+        const key = row.userEmail || row.userId || '';
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(row.userName)}</strong>
+              <small>${escapeHtml(row.userEmail || '—')}</small>
+            </td>
+            <td><span class="finance-status" data-tone="${row.role === 'owner' ? 'warn' : 'ok'}">${escapeHtml(row.role === 'owner' ? 'Owner' : 'Admin')}</span></td>
+            <td>${escapeHtml(formatLeaveDays(row.effectiveLeaveDays || 0))}</td>
+            <td>${escapeHtml(formatLeaveDays(row.remainingLeaveDays || 0))}</td>
+            <td>
+              <input
+                class="annual-owner-input"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                data-entitlement-key="${escapeHtml(key)}"
+                value="${escapeHtml(String(ownerEntitlementValue(row)))}"
+              />
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  function readOwnerSettingsPayload() {
+    const entitlementOverrides = {};
+    els.ownerEntitlementsBody?.querySelectorAll('[data-entitlement-key]').forEach((input) => {
+      const key = input.getAttribute('data-entitlement-key') || '';
+      if (!key) return;
+      entitlementOverrides[key] = Number(input.value || 0);
+    });
+    return {
+      defaultEntitlementDays: Number(els.ownerDefaultEntitlementDays?.value || state.settings?.defaultEntitlementDays || 28),
+      overlapWarningThreshold: Number(els.ownerOverlapThreshold?.value || state.settings?.overlapWarningThreshold || 2),
+      reminderRunHourLocal: Number(els.ownerReminderHour?.value || state.settings?.reminderRunHourLocal || 8),
+      remindersEnabled: !!els.ownerRemindersEnabled?.checked,
+      entitlementOverrides,
+    };
+  }
+
   function detailBooking() {
     return state.bookings.find((row) => row.id === state.activeId) || null;
   }
@@ -740,12 +854,14 @@
       if (els.detailTitle) els.detailTitle.textContent = 'Leave booking';
       if (els.detailMeta) els.detailMeta.textContent = 'Select a leave event to inspect it here.';
       if (els.btnCancelDetail) els.btnCancelDetail.disabled = true;
+      if (els.btnDeleteDetail) els.btnDeleteDetail.hidden = true;
       return;
     }
 
     if (els.detailTitle) els.detailTitle.textContent = row.userName;
     if (els.detailMeta) els.detailMeta.textContent = `${formatDateRange(row.startDate, row.endDate)} • ${formatLeaveDays(row.effectiveLeaveDays)} effective day${Number(row.effectiveLeaveDays) === 1 ? '' : 's'}`;
     if (els.btnCancelDetail) els.btnCancelDetail.disabled = row.status === 'cancelled';
+    if (els.btnDeleteDetail) els.btnDeleteDetail.hidden = !isOwnerViewer();
     if (els.detailBody) {
       els.detailBody.innerHTML = `
         <div class="annual-detail-block">
@@ -766,6 +882,12 @@
           <strong>Note</strong>
           <div>${escapeHtml(row.note || 'No note recorded.')}</div>
         </div>
+        ${row.status === 'cancelled' ? `
+          <div class="annual-detail-block annual-detail-block--cancelled">
+            <strong>Cancelled</strong>
+            <div>This booking has been cancelled and is now non-live on the calendar. It remains visible for audit and planning context.</div>
+          </div>
+        ` : ''}
         <div class="annual-detail-block">
           <div class="annual-detail-grid">
             <div><span>Created by</span><strong>${escapeHtml(row.createdByEmail || '—')}</strong></div>
@@ -870,7 +992,7 @@
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      state.helpers.toast(response.message || 'Annual leave booking saved.', 'ok', 2600);
+      state.helpers.toast(response.message || 'Annual leave booking saved.', response.notification?.warning ? 'warn' : 'ok', 3200);
       resetForm();
       await loadWorkspace();
     } catch (error) {
@@ -893,11 +1015,46 @@
         method: 'POST',
         body: JSON.stringify({ id: bookingId }),
       });
-      state.helpers.toast(response.message || 'Annual leave booking cancelled.', 'ok', 2600);
+      state.helpers.toast(response.message || 'Annual leave booking cancelled.', response.notification?.warning ? 'warn' : 'ok', 3200);
       closeDetail();
       await loadWorkspace();
     } catch (error) {
       state.helpers.toast(error.message, 'warn', 3200);
+    }
+  }
+
+  async function deleteBooking(bookingId) {
+    if (!bookingId || !isOwnerViewer()) return;
+    if (!window.confirm('Delete this leave booking permanently? This cannot be undone.')) return;
+    try {
+      const response = await fetchJson(annualUrl('admin-annual-leave-delete'), {
+        method: 'POST',
+        body: JSON.stringify({ id: bookingId }),
+      });
+      state.helpers.toast(response.message || 'Annual leave booking deleted.', 'ok', 2600);
+      closeDetail();
+      await loadWorkspace();
+    } catch (error) {
+      state.helpers.toast(error.message, 'warn', 3200);
+    }
+  }
+
+  async function saveOwnerSettings() {
+    if (!isOwnerViewer() || state.ownerSaving) return;
+    state.ownerSaving = true;
+    setOwnerFeedback('Saving owner settings…', 'info');
+    try {
+      const response = await fetchJson(annualUrl('admin-annual-leave-settings-save'), {
+        method: 'POST',
+        body: JSON.stringify(readOwnerSettingsPayload()),
+      });
+      state.settings = response.settings || state.settings;
+      setOwnerFeedback(response.message || 'Owner settings saved.', 'ok');
+      await loadWorkspace();
+    } catch (error) {
+      setOwnerFeedback(error.message, 'error');
+    } finally {
+      state.ownerSaving = false;
     }
   }
 
@@ -957,11 +1114,18 @@
   async function loadWorkspace() {
     state.loading = true;
     const payload = await fetchJson(`${annualUrl('admin-annual-leave-list')}?year=${encodeURIComponent(state.year)}&region=${encodeURIComponent(state.region)}`);
-    state.viewer = payload.viewer || {};
+    state.viewer = {
+      ...(state.viewer || {}),
+      ...(payload.viewer || {}),
+    };
     state.settings = payload.settings || {};
     state.region = payload.region || state.region;
     state.holidays = Array.isArray(payload.holidays) ? payload.holidays : [];
     state.holidayWarning = payload.holidayWarning || '';
+    if (Array.isArray(payload.adminUsers) && payload.adminUsers.length) {
+      state.adminUsers = payload.adminUsers;
+      fillUserSelects();
+    }
     state.bookings = Array.isArray(payload.rows) ? payload.rows : [];
     state.summary = payload.summary || {};
     if (els.annualWelcomeMeta) {
@@ -974,6 +1138,7 @@
     renderCalendar();
     renderTable();
     renderAnalytics();
+    renderOwnerControls();
     renderDetailDrawer();
     renderDraftMetrics();
     state.loading = false;
@@ -1072,6 +1237,7 @@
       renderTable();
     });
     els.btnExportAnnualLeaveCsv?.addEventListener('click', exportCsv);
+    els.btnSaveOwnerSettings?.addEventListener('click', saveOwnerSettings);
     els.detailOverlay?.addEventListener('click', closeDetail);
     els.btnCloseDetail?.addEventListener('click', closeDetail);
     els.btnEditDetail?.addEventListener('click', () => {
@@ -1084,6 +1250,11 @@
       const row = detailBooking();
       if (!row) return;
       cancelBooking(row.id);
+    });
+    els.btnDeleteDetail?.addEventListener('click', () => {
+      const row = detailBooking();
+      if (!row) return;
+      deleteBooking(row.id);
     });
   }
 

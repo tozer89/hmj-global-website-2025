@@ -83,6 +83,16 @@ test('annual leave summary reports monthly totals, people off, and overlaps', ()
     year: 2026,
     now: new Date('2026-03-19T08:00:00Z'),
     overlapThreshold: 2,
+    members: [
+      { userId: 'u1', email: 'one@example.com', displayName: 'One', role: 'admin' },
+      { userId: 'u2', email: 'two@example.com', displayName: 'Two', role: 'owner' },
+    ],
+    settings: {
+      defaultEntitlementDays: 28,
+      entitlementOverrides: {
+        'two@example.com': 30,
+      },
+    },
   });
 
   assert.equal(summary.totalEffectiveDays, 3.5);
@@ -90,6 +100,8 @@ test('annual leave summary reports monthly totals, people off, and overlaps', ()
   assert.equal(summary.monthly.find((row) => row.key === '2026-03').effectiveDays, 3.5);
   assert.equal(summary.overlaps.length, 1);
   assert.equal(summary.overlaps[0].date, '2026-03-20');
+  assert.equal(summary.perPerson.find((row) => row.userId === 'u1').remainingLeaveDays, 25);
+  assert.equal(summary.perPerson.find((row) => row.userId === 'u2').entitlementDays, 30);
 });
 
 test('reminder dates honour seven-day and one-working-day calculations', () => {

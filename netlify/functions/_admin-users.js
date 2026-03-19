@@ -34,6 +34,18 @@ function normaliseMemberRecord(row = {}) {
     : {};
   const email = lowerEmail(row.email || row.actor_email || meta.email);
   const userId = trimString(row.userId || row.user_id || row.id || meta.user_id, 120);
+  const roles = normaliseRoleList(
+    row.roles
+      || row.role
+      || row?.app_metadata?.roles
+      || row?.user_metadata?.roles
+      || meta.roles
+      || meta.netlify_roles
+      || meta.role
+  );
+  const preferredRole = roles.includes('owner')
+    ? 'owner'
+    : (roles.includes('admin') ? 'admin' : (trimString(row.role || meta.role, 64) || 'admin'));
   return {
     id: trimString(row.id, 120) || userId || email,
     userId: userId || email,
@@ -49,8 +61,9 @@ function normaliseMemberRecord(row = {}) {
         || meta.name,
       160
     ) || memberDisplayName({ email, userId }),
-    role: trimString(row.role || meta.role, 64) || 'admin',
+    role: preferredRole,
     isActive: row.isActive !== false && row.is_active !== false,
+    roles: roles.length ? roles : [preferredRole],
     meta,
   };
 }
@@ -120,7 +133,9 @@ function normaliseIdentityUser(raw = {}, match = null) {
     userId: userId || email,
     email,
     displayName,
-    role: trimString(tableMatch?.role, 64) || roles[0] || 'admin',
+    role: roles.includes('owner')
+      ? 'owner'
+      : (trimString(tableMatch?.role, 64) || roles[0] || 'admin'),
     isActive: raw?.banned !== true
       && raw?.disabled !== true
       && raw?.blocked !== true
@@ -165,8 +180,18 @@ function mergeMemberRecords(rows = []) {
       userId: trimString(existing.userId, 120) || userId || email,
       email: lowerEmail(existing.email) || email,
       displayName: pickPreferredText(existing.displayName, member.displayName),
-      role: trimString(existing.role, 64) || trimString(member.role, 64) || 'admin',
+      role: (
+        normaliseRoleList([existing.role, ...(existing.roles || []), member.role, ...(member.roles || [])]).includes('owner')
+          ? 'owner'
+          : (trimString(existing.role, 64) || trimString(member.role, 64) || 'admin')
+      ),
       isActive: existing.isActive !== false && member.isActive !== false,
+      roles: Array.from(new Set([
+        ...normaliseRoleList(existing.roles || []),
+        ...normaliseRoleList(member.roles || []),
+        trimString(existing.role, 64),
+        trimString(member.role, 64),
+      ].filter(Boolean))),
       meta: {
         ...(existing.meta || {}),
         ...(member.meta || {}),

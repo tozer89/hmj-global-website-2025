@@ -22,6 +22,8 @@ module.exports.handler = withAdminCors(async (event, context) => {
         email: trimString(row.email, 320),
         displayName: trimString(row.displayName, 160) || trimString(row.email, 320),
         role: trimString(row.role, 40) || 'admin',
+        roles: Array.isArray(row.roles) ? row.roles : [trimString(row.role, 40) || 'admin'],
+        isOwner: trimString(row.role, 40) === 'owner' || (Array.isArray(row.roles) && row.roles.includes('owner')),
       })),
     }),
   };

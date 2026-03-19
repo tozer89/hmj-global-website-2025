@@ -1226,6 +1226,16 @@
 
   // Public, promise-based identity snapshot used by pages & console
   async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' | undefined */, options) {
+    const roleAllowed = (rolesList, roleName, requiredName) => {
+      const roles = Array.isArray(rolesList) ? rolesList : [];
+      const required = String(requiredName || '').toLowerCase();
+      if (!required) return true;
+      if (required === 'admin') {
+        return roleName === 'admin' || roleName === 'owner' || roles.includes('admin') || roles.includes('owner');
+      }
+      return roleName === required || roles.includes(required);
+    };
+
     let opts = {};
     if (typeof requiredRole === 'object' && requiredRole !== null && options == null) {
       opts = Object.assign({}, requiredRole);
@@ -1244,8 +1254,7 @@
     if (!forceFresh && identityCache && (now - identityCacheTs) < cacheTtlMs) {
       const cached = Object.assign({}, identityCache);
       if (required) {
-        const hasRole = Array.isArray(cached.roles) && cached.roles.includes(required);
-        cached.ok = hasVerifiedSession(cached) && (cached.role === required || hasRole);
+        cached.ok = hasVerifiedSession(cached) && roleAllowed(cached.roles, cached.role, required);
       }
       if (verbose && cached.ok) {
         toast.ok(`Gate opened for role: ${cached.role || 'unknown'}`, 3800);
@@ -1370,7 +1379,8 @@
       }
     }
 
-    role = roles.includes('admin') ? 'admin' :
+    role = roles.includes('owner') ? 'owner' :
+           roles.includes('admin') ? 'admin' :
            roles.includes('recruiter') ? 'recruiter' :
            roles.includes('client') ? 'client' :
            (roles[0] || '');
@@ -1394,7 +1404,7 @@
 
     if (user && jwtPayload && !user.__hmjJwt) user.__hmjJwt = jwtPayload;
 
-    base.ok = base.ok && (!required || role === required || roles.includes(required));
+    base.ok = base.ok && roleAllowed(roles, role, required);
 
     const enriched = Object.assign({}, base);
 
@@ -1406,7 +1416,7 @@
           toast.warn(`Gate opened using verified host session for role: ${enriched.role || 'unknown'}`, 4600);
         }
       } else {
-        const reason = !enriched.sessionVerified ? 'missing session' : 'no admin role';
+        const reason = !enriched.sessionVerified ? 'missing session' : 'no admin/owner role';
         if (!enriched.sessionVerified) {
           toast.err('No verified admin session is available in this browser. Sign in again here.', 5200);
           if (tokenError) Debug.warn('Token retrieval failed', tokenError);

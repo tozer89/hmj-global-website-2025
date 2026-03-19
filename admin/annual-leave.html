@@ -12,10 +12,10 @@
   <script defer src="/js/identity-loader.js?v=3"></script>
   <script defer src="/admin/common.js?v=34"></script>
   <link rel="stylesheet" href="/assets/css/admin.finance.css?v=1"/>
-  <link rel="stylesheet" href="/assets/css/admin.annual-leave.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.annual-leave.css?v=3"/>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
-  <script defer src="/admin/annual-leave.js?v=2"></script>
+  <script defer src="/admin/annual-leave.js?v=3"></script>
 </head>
 <body class="finance-page annual-leave-page">
   <div class="finance-top">
@@ -95,6 +95,55 @@
             <span id="heroBankHolidaysMeta">England and Wales default</span>
           </article>
         </aside>
+      </div>
+    </section>
+
+    <section class="finance-panel annual-owner-panel" id="ownerControlsPanel" hidden>
+      <div class="finance-panel__inner">
+        <div class="finance-section-head">
+          <div>
+            <p class="finance-eyebrow">Owner controls</p>
+            <h2>Entitlements and reminder settings</h2>
+          </div>
+          <div class="finance-toolbar">
+            <span class="finance-status" data-tone="warn">Owner only</span>
+            <button class="finance-btn finance-btn--primary" type="button" id="btnSaveOwnerSettings">Save owner settings</button>
+          </div>
+        </div>
+        <p class="finance-muted">Control the annual leave entitlement by person, reminder timing, and overlap warning sensitivity. Permanent booking deletion is also limited to owner-role users.</p>
+        <div class="annual-owner-grid">
+          <label class="annual-field">
+            <span>Default entitlement days</span>
+            <input id="ownerDefaultEntitlementDays" type="number" min="0" max="100" step="0.5"/>
+          </label>
+          <label class="annual-field">
+            <span>Overlap warning threshold</span>
+            <input id="ownerOverlapThreshold" type="number" min="1" max="20" step="1"/>
+          </label>
+          <label class="annual-field">
+            <span>Reminder run hour (UK)</span>
+            <input id="ownerReminderHour" type="number" min="0" max="23" step="1"/>
+          </label>
+          <label class="annual-field annual-field--checkbox">
+            <span>Reminder emails enabled</span>
+            <input id="ownerRemindersEnabled" type="checkbox"/>
+          </label>
+        </div>
+        <div class="annual-owner-feedback" id="ownerSettingsFeedback" hidden></div>
+        <div class="annual-owner-table-shell">
+          <table class="annual-table annual-table--compact" aria-label="Annual leave entitlements">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Role</th>
+                <th>Booked</th>
+                <th>Remaining</th>
+                <th>Entitlement</th>
+              </tr>
+            </thead>
+            <tbody id="ownerEntitlementsBody"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -404,6 +453,7 @@
     <div class="annual-detail-actions">
       <button class="finance-btn finance-btn--primary" type="button" id="btnEditDetail">Edit booking</button>
       <button class="finance-btn finance-btn--ghost" type="button" id="btnCancelDetail">Cancel booking</button>
+      <button class="finance-btn finance-btn--ghost finance-btn--danger" type="button" id="btnDeleteDetail" hidden>Delete permanently</button>
     </div>
   </aside>
 

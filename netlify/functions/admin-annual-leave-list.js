@@ -6,6 +6,7 @@ const { getSupabase, supabaseStatus } = require('./_supabase.js');
 const {
   DEFAULT_REGION,
   getBankHolidays,
+  listAdminUsers,
   leaveYearBounds,
   normaliseBookingRow,
   normaliseRegion,
@@ -30,7 +31,7 @@ function parseQuery(event) {
 }
 
 module.exports.handler = withAdminCors(async (event, context) => {
-  const { user } = await getContext(event, context, { requireAdmin: true });
+  const { user, roles } = await getContext(event, context, { requireAdmin: true });
   const query = parseQuery(event);
   const year = parseYear(query.year);
   const settings = await readAnnualLeaveSettings(event);
@@ -38,7 +39,7 @@ module.exports.handler = withAdminCors(async (event, context) => {
   const supabase = getSupabase(event);
   const yearBounds = leaveYearBounds(year);
 
-  const [{ data, error }, holidayBundle] = await Promise.all([
+  const [{ data, error }, holidayBundle, adminUsers] = await Promise.all([
     supabase
       .from('annual_leave_bookings')
       .select('*')
@@ -51,6 +52,7 @@ module.exports.handler = withAdminCors(async (event, context) => {
       year,
       settings,
     }),
+    listAdminUsers(event, context, { supabase, currentUser: user }),
   ]);
 
   if (error) throw error;
@@ -60,6 +62,8 @@ module.exports.handler = withAdminCors(async (event, context) => {
   const summary = summariseBookings(rows, holidays, {
     year,
     overlapThreshold: settings.overlapWarningThreshold,
+    members: adminUsers,
+    settings,
   });
 
   return {
@@ -69,6 +73,8 @@ module.exports.handler = withAdminCors(async (event, context) => {
       ok: true,
       viewer: {
         email: trimString(user?.email, 320),
+        roles,
+        isOwner: Array.isArray(roles) && roles.includes('owner'),
       },
       leaveYear: {
         year,
@@ -82,6 +88,14 @@ module.exports.handler = withAdminCors(async (event, context) => {
       holidaySource: holidayBundle.source,
       holidayFetchedAt: holidayBundle.fetchedAt || '',
       holidayWarning: holidayBundle.warning || '',
+      adminUsers: adminUsers.map((row) => ({
+        userId: trimString(row.userId, 120),
+        email: trimString(row.email, 320),
+        displayName: trimString(row.displayName, 160) || trimString(row.email, 320),
+        role: trimString(row.role, 40) || 'admin',
+        roles: Array.isArray(row.roles) ? row.roles : [trimString(row.role, 40) || 'admin'],
+        isOwner: trimString(row.role, 40) === 'owner' || (Array.isArray(row.roles) && row.roles.includes('owner')),
+      })),
       rows,
       summary,
       supabase: supabaseStatus(),

@@ -5,6 +5,7 @@ const { getContext } = require('./_auth.js');
 const { getSupabase } = require('./_supabase.js');
 const { loadExistingBooking, parseBody } = require('./_annual-leave-write.js');
 const { BOOKING_STATUS, getBankHolidays, lowerEmail, normaliseBookingRow, trimString } = require('./_annual-leave.js');
+const { sendAnnualLeaveNotifications } = require('./_annual-leave-email.js');
 
 const JSON_HEADERS = {
   'content-type': 'application/json',
@@ -56,6 +57,26 @@ module.exports.handler = withAdminCors(async (event, context) => {
     region: data?.source_region,
     year: data?.leave_year,
   });
+  const booking = normaliseBookingRow(data, holidayBundle.holidays);
+
+  let notification = null;
+  try {
+    notification = await sendAnnualLeaveNotifications(event, context, {
+      supabase,
+      booking,
+      type: 'cancelled',
+      actorEmail: lowerEmail(user?.email),
+      currentUser: user,
+    });
+  } catch (notificationError) {
+    notification = {
+      ok: false,
+      warning: notificationError?.message || 'Leave email notifications could not be sent.',
+      sent: 0,
+      failed: 0,
+    };
+    console.warn('[annual-leave] cancel notification failed (%s)', notificationError?.message || notificationError);
+  }
 
   return {
     statusCode: 200,
@@ -65,8 +86,11 @@ module.exports.handler = withAdminCors(async (event, context) => {
       row: {
         id: data.id,
       },
-      booking: normaliseBookingRow(data, holidayBundle.holidays),
-      message: 'Annual leave booking cancelled.',
+      booking,
+      notification,
+      message: notification?.warning
+        ? 'Annual leave booking cancelled, but the email notification did not fully send.'
+        : 'Annual leave booking cancelled.',
     }),
   };
 });

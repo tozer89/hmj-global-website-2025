@@ -1,21 +1,15 @@
 'use strict';
 
 const { getSupabase } = require('./_supabase.js');
-const { readCandidateEmailSettings, buildEmailTemplate } = require('./_candidate-email-settings.js');
-const { sendTransactionalEmail } = require('./_mail-delivery.js');
+const { sendAnnualLeaveNotifications } = require('./_annual-leave-email.js');
 const {
   BOOKING_STATUS,
   asIsoDate,
   getBankHolidays,
   isBookingActive,
-  leaveTypeLabel,
-  listAdminUsers,
-  lowerEmail,
   normaliseBookingRow,
-  previousWorkingDay,
   readAnnualLeaveSettings,
   reminderDue,
-  resolveSevenDayReminderDate,
   trimString,
 } = require('./_annual-leave.js');
 
@@ -85,54 +79,6 @@ function londonClock(now = new Date()) {
   };
 }
 
-function currentSiteUrl() {
-  return trimString(
-    process.env.URL
-      || process.env.DEPLOY_PRIME_URL
-      || process.env.SITE_URL
-      || '',
-    500
-  ).replace(/\/$/, '');
-}
-
-function buildReminderMessage(emailSettings, booking, reminderType, holidays) {
-  const adminUrl = `${currentSiteUrl()}/admin/annual-leave.html`;
-  const heading = reminderType === '1wd'
-    ? `${booking.userName} is off on the next working day`
-    : `${booking.userName} has leave coming up in 7 days`;
-  const dateRange = booking.startDate === booking.endDate
-    ? booking.startDate
-    : `${booking.startDate} to ${booking.endDate}`;
-  const reminderMeta = reminderType === '1wd'
-    ? `1 working day reminder • run date ${previousWorkingDay(booking.startDate, holidays)}`
-    : `7 day reminder • run date ${resolveSevenDayReminderDate(booking.startDate, holidays)}`;
-
-  const bodyHtml = `
-    <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">HMJ team reminder.</p>
-    <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7"><strong>${booking.userName}</strong> is booked off from <strong>${dateRange}</strong>.</p>
-    <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Effective leave booked: <strong>${booking.effectiveLeaveDays}</strong> day${booking.effectiveLeaveDays === 1 ? '' : 's'}.</p>
-    <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Leave type: <strong>${leaveTypeLabel(booking.leaveType)}</strong>. ${reminderMeta}.</p>
-    ${booking.note ? `<p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Note: ${String(booking.note).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''}
-    <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">Use the HMJ Annual Leave workspace to review calendar coverage and any overlap warnings.</p>
-  `;
-
-  return {
-    subject: reminderType === '1wd'
-      ? `Annual leave tomorrow: ${booking.userName}`
-      : `Upcoming annual leave: ${booking.userName}`,
-    html: buildEmailTemplate(emailSettings, {
-      heading,
-      intro: 'This is an HMJ Global annual leave reminder for the admin team.',
-      actionLabel: 'Open annual leave workspace',
-      actionUrl: adminUrl,
-      bodyHtml,
-      fallbackLinks: [
-        { label: 'Open annual leave workspace', url: adminUrl },
-      ],
-    }),
-  };
-}
-
 async function loadReminderCandidates(event, supabase, todayIso) {
   const endIso = (() => {
     const date = new Date(`${todayIso}T00:00:00Z`);
@@ -188,17 +134,6 @@ exports.handler = async (event = {}, context = {}) => {
     }
 
     const supabase = getSupabase(event);
-    const emailConfig = await readCandidateEmailSettings(event);
-    const senderSettings = emailConfig.settings || {};
-    const senderEmail = lowerEmail(senderSettings.senderEmail || senderSettings.supportEmail || 'info@hmj-global.com');
-    if (!senderEmail) {
-      return json(409, {
-        ok: false,
-        code: 'email_sender_missing',
-        message: 'Candidate email settings do not have an HMJ sender configured.',
-      });
-    }
-
     const rawBookings = await loadReminderCandidates(event, supabase, clock.isoDate);
     const years = Array.from(new Set(rawBookings.map((row) => Number.parseInt(String(row.leave_year || ''), 10)).filter((value) => Number.isInteger(value))));
     const holidayBundle = await getBankHolidays(event, {
@@ -208,13 +143,6 @@ exports.handler = async (event = {}, context = {}) => {
       settings,
     });
     const bookings = rawBookings.map((row) => normaliseBookingRow(row, holidayBundle.allHolidays || holidayBundle.holidays || []));
-    const recipients = await listAdminUsers(event, context, { supabase, includeIdentity: false });
-    const recipientIndex = new Map(
-      recipients.map((row) => [lowerEmail(row.email), {
-        email: lowerEmail(row.email),
-        name: trimString(row.displayName, 160) || lowerEmail(row.email),
-      }]).filter((entry) => entry[0])
-    );
 
     const summary = {
       ok: true,
@@ -230,46 +158,28 @@ exports.handler = async (event = {}, context = {}) => {
       if (reminderDue(booking, clock.isoDate, holidayBundle.allHolidays || holidayBundle.holidays || [], '1wd')) reminderTypes.push('1wd');
       if (!reminderTypes.length) continue;
 
-      const bookingRecipients = new Map(recipientIndex);
-      if (booking.userEmail) {
-        bookingRecipients.set(booking.userEmail, {
-          email: booking.userEmail,
-          name: booking.userName,
-        });
-      }
-
       for (const reminderType of reminderTypes) {
         summary.processed += 1;
-        const message = buildReminderMessage(senderSettings, booking, reminderType, holidayBundle.allHolidays || holidayBundle.holidays || []);
-        let failed = false;
+        const notification = await sendAnnualLeaveNotifications(event, context, {
+          supabase,
+          booking,
+          settings,
+          type: reminderType,
+          includeIdentity: false,
+        });
+        summary.sent += Number(notification?.sent || 0);
+        summary.failed += Number(notification?.failed || 0);
+        summary.bookings.push({
+          bookingId: booking.id,
+          userName: booking.userName,
+          reminderType,
+          startDate: booking.startDate,
+          sent: Number(notification?.sent || 0),
+          warning: notification?.warning || '',
+        });
 
-        for (const recipient of bookingRecipients.values()) {
-          try {
-            await sendTransactionalEmail({
-              toEmail: recipient.email,
-              fromEmail: senderEmail,
-              fromName: trimString(senderSettings.senderName, 160) || 'HMJ Global',
-              replyTo: lowerEmail(senderSettings.supportEmail || senderEmail) || undefined,
-              subject: message.subject,
-              html: message.html,
-              smtpSettings: senderSettings,
-            });
-            summary.sent += 1;
-          } catch (error) {
-            failed = true;
-            summary.failed += 1;
-            console.error('[annual-leave-reminders] send failed for %s (%s)', recipient.email, error?.message || error);
-          }
-        }
-
-        if (!failed) {
+        if (!notification?.failed) {
           await markReminderSent(supabase, booking.id, reminderType);
-          summary.bookings.push({
-            bookingId: booking.id,
-            userName: booking.userName,
-            reminderType,
-            startDate: booking.startDate,
-          });
         }
       }
     }

@@ -18,6 +18,7 @@ const BOOKING_STATUS = Object.freeze({
 const BOOKING_STATUSES = Object.freeze(Object.values(BOOKING_STATUS));
 const LEAVE_TYPES = Object.freeze(['annual_leave', 'unpaid_leave', 'sick', 'other']);
 const DURATION_MODES = Object.freeze(['full_day', 'half_day_am', 'half_day_pm']);
+const ADMIN_TEAM_ROLES = Object.freeze(['admin', 'owner']);
 
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
@@ -73,6 +74,28 @@ function normaliseDurationMode(value) {
 function normaliseStatus(value) {
   const status = trimString(value, 40).toLowerCase();
   return BOOKING_STATUSES.includes(status) ? status : BOOKING_STATUS.BOOKED;
+}
+
+function normaliseRole(value) {
+  const role = trimString(value, 40).toLowerCase();
+  return ADMIN_TEAM_ROLES.includes(role) ? role : 'admin';
+}
+
+function normaliseRoleList(value) {
+  const list = Array.isArray(value) ? value : (value == null ? [] : [value]);
+  return Array.from(new Set(list.map((entry) => trimString(entry, 40).toLowerCase()).filter(Boolean)));
+}
+
+function isAdminTeamRole(input) {
+  if (typeof input === 'string') {
+    return ADMIN_TEAM_ROLES.includes(normaliseRole(input));
+  }
+  if (input && typeof input === 'object') {
+    const roles = normaliseRoleList(input.roles || []);
+    if (roles.some((role) => ADMIN_TEAM_ROLES.includes(role))) return true;
+    return ADMIN_TEAM_ROLES.includes(normaliseRole(input.role));
+  }
+  return false;
 }
 
 function asIsoDate(date) {
@@ -191,12 +214,19 @@ async function writeAdminSettingValue(supabase, key, value) {
 async function readAnnualLeaveSettings(event) {
   const result = await fetchSettings(event, [LEAVE_SETTINGS_KEY]);
   const stored = parseJson(result?.settings?.[LEAVE_SETTINGS_KEY], {});
+  const entitlementOverrides = Object.fromEntries(
+    Object.entries(parseJson(stored.entitlementOverrides, {}))
+      .map(([key, value]) => [trimString(key, 320), roundHalf(Math.max(0, toNumber(value, 0)))])
+      .filter(([key]) => key)
+  );
   return {
     defaultRegion: normaliseRegion(stored.defaultRegion || DEFAULT_REGION),
     remindersEnabled: stored.remindersEnabled !== false,
     overlapWarningThreshold: Math.max(1, Number.parseInt(String(stored.overlapWarningThreshold || 2), 10) || 2),
     reminderRunHourLocal: Math.max(0, Math.min(23, Number.parseInt(String(stored.reminderRunHourLocal || 8), 10) || 8)),
     holidayCacheTtlHours: Math.max(12, Number.parseInt(String(stored.holidayCacheTtlHours || 168), 10) || 168),
+    defaultEntitlementDays: roundHalf(Math.max(0, toNumber(stored.defaultEntitlementDays, 28))),
+    entitlementOverrides,
   };
 }
 
@@ -546,8 +576,45 @@ function buildMonthlyDistribution(bookings = [], year) {
   return months;
 }
 
-function aggregatePerPerson(bookings = []) {
+function entitlementLookupKeys(member = {}) {
+  const keys = [
+    trimString(member.userId || member.user_id, 120),
+    lowerEmail(member.userEmail || member.user_email || member.email),
+  ].filter(Boolean);
+  return Array.from(new Set(keys));
+}
+
+function resolveEntitlementDays(member = {}, settings = {}) {
+  const overrides = settings && typeof settings.entitlementOverrides === 'object'
+    ? settings.entitlementOverrides
+    : {};
+  const overrideValue = entitlementLookupKeys(member)
+    .map((key) => overrides[key])
+    .find((value) => Number.isFinite(toNumber(value, Number.NaN)));
+  if (Number.isFinite(toNumber(overrideValue, Number.NaN))) {
+    return roundHalf(Math.max(0, toNumber(overrideValue, 0)));
+  }
+  return roundHalf(Math.max(0, toNumber(settings.defaultEntitlementDays, 28)));
+}
+
+function aggregatePerPerson(bookings = [], members = [], settings = {}) {
   const map = new Map();
+  (Array.isArray(members) ? members : []).forEach((member) => {
+    const key = trimString(member.userId || member.user_id, 320) || lowerEmail(member.email || member.userEmail) || trimString(member.displayName || member.userName, 160);
+    if (!key || map.has(key) || !isAdminTeamRole(member)) return;
+    map.set(key, {
+      userId: trimString(member.userId || member.user_id, 120),
+      userEmail: lowerEmail(member.email || member.userEmail),
+      userName: trimString(member.displayName || member.userName, 160) || lowerEmail(member.email || member.userEmail) || 'Admin',
+      role: normaliseRole(member.role || (Array.isArray(member.roles) && member.roles.includes('owner') ? 'owner' : 'admin')),
+      effectiveLeaveDays: 0,
+      bookingsCount: 0,
+      nextStartDate: '',
+      entitlementDays: resolveEntitlementDays(member, settings),
+      remainingLeaveDays: resolveEntitlementDays(member, settings),
+    });
+  });
+
   bookings.forEach((booking) => {
     if (!isBookingActive(booking)) return;
     const key = trimString(booking.userId || booking.userEmail, 320) || booking.userName;
@@ -557,9 +624,12 @@ function aggregatePerPerson(bookings = []) {
         userId: booking.userId,
         userEmail: booking.userEmail,
         userName: booking.userName,
+        role: 'admin',
         effectiveLeaveDays: 0,
         bookingsCount: 0,
         nextStartDate: '',
+        entitlementDays: resolveEntitlementDays(booking, settings),
+        remainingLeaveDays: resolveEntitlementDays(booking, settings),
       });
     }
     const entry = map.get(key);
@@ -569,6 +639,12 @@ function aggregatePerPerson(bookings = []) {
       entry.nextStartDate = booking.startDate;
     }
   });
+
+  map.forEach((entry) => {
+    entry.entitlementDays = resolveEntitlementDays(entry, settings);
+    entry.remainingLeaveDays = roundHalf(Math.max(0, entry.entitlementDays - entry.effectiveLeaveDays));
+  });
+
   return Array.from(map.values())
     .sort((left, right) => right.effectiveLeaveDays - left.effectiveLeaveDays || left.userName.localeCompare(right.userName, 'en-GB', { sensitivity: 'base' }));
 }
@@ -650,7 +726,7 @@ function summariseBookings(bookings = [], holidays = [], options = {}) {
     peopleOffNextWeek: uniquePeople(nextWeekBookings),
     bankHolidaysRemaining: remainingHolidays.length,
     remainingBankHolidays: remainingHolidays.slice(0, 8),
-    perPerson: aggregatePerPerson(activeBookings),
+    perPerson: aggregatePerPerson(activeBookings, options.members || [], options.settings || {}),
     monthly,
     busiestMonths: monthly
       .filter((entry) => entry.effectiveDays > 0)
@@ -710,7 +786,7 @@ async function listAdminUsers(event, context, options = {}) {
     .from('admin_users')
     .select('id,user_id,email,role,is_active,meta')
     .eq('is_active', true)
-    .eq('role', 'admin');
+    .in('role', ADMIN_TEAM_ROLES);
   if (error) throw error;
 
   let identityUsers = [];
@@ -726,10 +802,11 @@ async function listAdminUsers(event, context, options = {}) {
     tableRows: Array.isArray(data) ? data : [],
     identityUsers,
     currentUser: options.currentUser || null,
-  }).filter((member) => member.role === 'admin' && member.isActive !== false && lowerEmail(member.email));
+  }).filter((member) => isAdminTeamRole(member) && member.isActive !== false && lowerEmail(member.email));
 }
 
 module.exports = {
+  ADMIN_TEAM_ROLES,
   BANK_HOLIDAY_CACHE_PREFIX,
   BOOKING_STATUS,
   BOOKING_STATUSES,
@@ -751,6 +828,7 @@ module.exports = {
   getBankHolidays,
   isBookingActive,
   iterateDates,
+  isAdminTeamRole,
   leaveTypeLabel,
   leaveYearBounds,
   listAdminUsers,
@@ -759,6 +837,7 @@ module.exports = {
   normaliseDurationMode,
   normaliseLeaveType,
   normaliseRegion,
+  normaliseRole,
   normaliseStatus,
   parseDateOnly,
   parseDateOnlySafe,
@@ -766,6 +845,7 @@ module.exports = {
   rangesOverlap,
   readAnnualLeaveSettings,
   reminderDue,
+  resolveEntitlementDays,
   resolveSevenDayReminderDate,
   round2,
   roundHalf,

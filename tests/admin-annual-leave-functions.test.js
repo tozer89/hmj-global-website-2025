@@ -14,6 +14,8 @@ function read(file) {
   'netlify/functions/admin-annual-leave-create.js',
   'netlify/functions/admin-annual-leave-update.js',
   'netlify/functions/admin-annual-leave-cancel.js',
+  'netlify/functions/admin-annual-leave-delete.js',
+  'netlify/functions/admin-annual-leave-settings-save.js',
   'netlify/functions/admin-annual-leave-admin-users.js',
   'netlify/functions/admin-annual-leave-bank-holidays.js',
 ].forEach((file) => {
@@ -27,9 +29,7 @@ function read(file) {
 test('annual leave reminders run through the shared HMJ email wrapper and cron secret guard', () => {
   const source = read('netlify/functions/admin-annual-leave-reminders-run.js');
   assert.match(source, /ANNUAL_LEAVE_CRON_SECRET/);
-  assert.match(source, /readCandidateEmailSettings/);
-  assert.match(source, /buildEmailTemplate/);
-  assert.match(source, /sendTransactionalEmail/);
+  assert.match(source, /sendAnnualLeaveNotifications/);
 });
 
 test('annual leave helper uses GOV.UK bank holidays and admin user merge helpers', () => {
@@ -38,4 +38,20 @@ test('annual leave helper uses GOV.UK bank holidays and admin user merge helpers
   assert.match(source, /fetchNetlifyIdentityUsers/);
   assert.match(source, /buildAssignableAdminMembers/);
   assert.match(source, /annual_leave_settings/);
+  assert.match(source, /defaultEntitlementDays/);
+});
+
+test('owner-only annual leave functions enforce owner role checks', () => {
+  const deleteSource = read('netlify/functions/admin-annual-leave-delete.js');
+  const settingsSource = read('netlify/functions/admin-annual-leave-settings-save.js');
+  assert.match(deleteSource, /roles\.includes\('owner'\)/);
+  assert.match(settingsSource, /roles\.includes\('owner'\)/);
+});
+
+test('create, update, and cancel flows send annual leave notifications', () => {
+  ['netlify/functions/admin-annual-leave-create.js', 'netlify/functions/admin-annual-leave-update.js', 'netlify/functions/admin-annual-leave-cancel.js']
+    .forEach((file) => {
+      const source = read(file);
+      assert.match(source, /sendAnnualLeaveNotifications/);
+    });
 });

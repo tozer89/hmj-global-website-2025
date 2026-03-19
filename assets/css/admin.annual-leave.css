@@ -23,6 +23,11 @@
   grid-template-columns: minmax(340px, 0.92fr) minmax(0, 1.45fr);
 }
 
+.annual-owner-panel .finance-panel__inner {
+  display: grid;
+  gap: 18px;
+}
+
 .annual-hero {
   display: grid;
   gap: 24px;
@@ -135,7 +140,8 @@
 
 .annual-form-grid,
 .annual-filter-grid,
-.annual-analytics-grid {
+.annual-analytics-grid,
+.annual-owner-grid {
   display: grid;
   gap: 14px;
 }
@@ -152,9 +158,23 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.annual-owner-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .annual-field {
   display: grid;
   gap: 6px;
+}
+
+.annual-field--checkbox {
+  align-content: end;
+}
+
+.annual-field--checkbox input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin-top: 10px;
 }
 
 .annual-field--wide {
@@ -364,7 +384,11 @@
 
 .annual-leave-chip {
   cursor: pointer;
-  justify-content: space-between;
+  position: relative;
+  justify-content: flex-start;
+  align-content: start;
+  gap: 4px;
+  display: grid;
   text-align: left;
   background: var(--annual-user-fill, rgba(47, 78, 162, 0.1));
   border-color: var(--annual-user-border, rgba(47, 78, 162, 0.16));
@@ -376,31 +400,35 @@
   transform: translateY(-1px);
 }
 
-.annual-leave-chip__person,
-.annual-leave-chip__meta {
+.annual-leave-chip__person {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.annual-leave-chip__person {
   min-width: 0;
   font-weight: 800;
 }
 
-.annual-leave-chip__person span {
+.annual-leave-chip__person-text {
   min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
+  line-height: 1.25;
 }
 
 .annual-leave-chip__meta {
+  display: block;
   color: color-mix(in srgb, var(--annual-user-text, var(--annual-ink)) 78%, white 22%);
   font-size: 11px;
   font-weight: 700;
-  flex-shrink: 0;
-  margin-left: 8px;
+  padding-left: 18px;
+  white-space: nowrap;
 }
 
 .annual-leave-chip__swatch {
@@ -425,16 +453,38 @@
 }
 
 .annual-leave-chip[data-status="cancelled"] {
-  text-decoration: line-through;
+  background: rgba(166, 54, 43, 0.07);
+  border-color: rgba(166, 54, 43, 0.24);
+  box-shadow: inset 3px 0 0 rgba(166, 54, 43, 0.72);
 }
 
-.annual-alert-stack,
+.annual-leave-chip__stamp {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-18deg);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(166, 54, 43, 0.86);
+  pointer-events: none;
+}
+
+.annual-owner-feedback,
 .annual-form-feedback {
   display: grid;
   gap: 10px;
 }
 
+.annual-alert-stack {
+  display: grid;
+  gap: 10px;
+}
+
 .annual-alert,
+.annual-owner-feedback,
 .annual-form-feedback {
   padding: 13px 15px;
   border-radius: 14px;
@@ -454,6 +504,31 @@
   border-color: rgba(166, 54, 43, 0.25);
   background: rgba(166, 54, 43, 0.08);
   color: var(--annual-red);
+}
+
+.annual-owner-feedback[data-tone="ok"],
+.annual-form-feedback[data-tone="ok"] {
+  border-color: rgba(20, 132, 90, 0.25);
+  background: rgba(20, 132, 90, 0.08);
+  color: var(--annual-green);
+}
+
+.annual-owner-table-shell {
+  overflow: auto;
+}
+
+.annual-owner-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--annual-border);
+  border-radius: 12px;
+  font: inherit;
+}
+
+.annual-table--compact td small {
+  display: block;
+  margin-top: 4px;
 }
 
 .annual-table-shell {
@@ -614,6 +689,11 @@
   background: rgba(255, 255, 255, 0.96);
 }
 
+.annual-detail-block--cancelled {
+  border-color: rgba(166, 54, 43, 0.22);
+  background: rgba(166, 54, 43, 0.06);
+}
+
 .annual-detail-grid {
   display: grid;
   gap: 10px 14px;
@@ -649,7 +729,8 @@
   .annual-filter-grid,
   .annual-form-grid,
   .annual-booking-metrics,
-  .annual-dual-list {
+  .annual-dual-list,
+  .annual-owner-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -662,7 +743,8 @@
   .annual-booking-metrics,
   .annual-kpi-grid,
   .annual-dual-list,
-  .annual-detail-grid {
+  .annual-detail-grid,
+  .annual-owner-grid {
     grid-template-columns: 1fr;
   }
 

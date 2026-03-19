@@ -25,6 +25,10 @@ function normalizeRoles(list) {
   return list.map((role) => String(role || '').toLowerCase()).filter(Boolean);
 }
 
+function hasAdminAccess(roles = []) {
+  return Array.isArray(roles) && (roles.includes('admin') || roles.includes('owner'));
+}
+
 function rolesFromClaims(claims) {
   const roles = claims?.app_metadata?.roles || claims?.roles || [];
   return normalizeRoles(Array.isArray(roles) ? roles : [roles].filter(Boolean));
@@ -92,7 +96,7 @@ exports.getContext = async (event, context, opts = {}) => {
   }
 
   const requireAdmin = !!opts.requireAdmin;
-  const hasAdminRole = roles.includes('admin');
+  const hasAdminRole = hasAdminAccess(roles);
   let adminVerifiedViaTable = false;
 
   async function checkAdminTable() {
@@ -132,12 +136,12 @@ exports.getContext = async (event, context, opts = {}) => {
 
   if (requireAdmin && !hasAdminRole) {
     adminVerifiedViaTable = await checkAdminTable();
-    if (adminVerifiedViaTable && !roles.includes('admin')) {
+    if (adminVerifiedViaTable && !hasAdminAccess(roles)) {
       roles = [...roles, 'admin'];
     }
   }
 
-  if (requireAdmin && !roles.includes('admin')) {
+  if (requireAdmin && !hasAdminAccess(roles)) {
     if (supabaseError) {
       console.warn('[auth] requireAdmin failed — supabase unavailable (%s)', supabaseError.message);
     }

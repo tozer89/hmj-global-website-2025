@@ -221,7 +221,7 @@
   from = "/admin/annual-leave.html"
   to = "/admin/annual-leave.html"
   status = 200
-  conditions = { Role = ["admin"] }
+  conditions = { Role = ["admin", "owner"] }
 
 [[redirects]]
   from = "/admin/annual-leave.html"
