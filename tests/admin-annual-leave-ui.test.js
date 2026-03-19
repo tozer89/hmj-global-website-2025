@@ -27,8 +27,8 @@ test('annual leave page exposes booking, calendar, analytics, and detail control
   assert.match(html, /id="peopleOffThisWeekList"/);
   assert.match(html, /id="overlapWarningsList"/);
   assert.match(html, /id="detailDrawer"/);
-  assert.match(html, /admin\.annual-leave\.css\?v=1/);
-  assert.match(html, /annual-leave\.js\?v=1/);
+  assert.match(html, /admin\.annual-leave\.css\?v=\d+/);
+  assert.match(html, /annual-leave\.js\?v=\d+/);
 });
 
 test('annual leave route is protected and reminder runner is scheduled', () => {
