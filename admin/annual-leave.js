@@ -20,6 +20,16 @@
   };
 
   const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const USER_COLOR_PALETTE = [
+    { fill: 'rgba(47, 78, 162, 0.14)', border: 'rgba(47, 78, 162, 0.28)', accent: '#2f4ea2', text: '#16244c' },
+    { fill: 'rgba(20, 132, 90, 0.14)', border: 'rgba(20, 132, 90, 0.28)', accent: '#14845a', text: '#12382b' },
+    { fill: 'rgba(185, 116, 5, 0.14)', border: 'rgba(185, 116, 5, 0.28)', accent: '#b97405', text: '#5e4309' },
+    { fill: 'rgba(114, 69, 199, 0.14)', border: 'rgba(114, 69, 199, 0.28)', accent: '#7245c7', text: '#35205f' },
+    { fill: 'rgba(166, 54, 43, 0.14)', border: 'rgba(166, 54, 43, 0.28)', accent: '#a6362b', text: '#5d221d' },
+    { fill: 'rgba(13, 116, 144, 0.14)', border: 'rgba(13, 116, 144, 0.28)', accent: '#0d7490', text: '#143540' },
+    { fill: 'rgba(123, 86, 34, 0.14)', border: 'rgba(123, 86, 34, 0.28)', accent: '#7b5622', text: '#46341d' },
+    { fill: 'rgba(32, 103, 171, 0.14)', border: 'rgba(32, 103, 171, 0.28)', accent: '#2067ab', text: '#18324f' },
+  ];
 
   const state = {
     helpers: null,
@@ -405,6 +415,34 @@
     return DURATION_LABELS[mode] || DURATION_LABELS.full_day;
   }
 
+  function hashString(value) {
+    const text = String(value || '');
+    let hash = 0;
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) - hash) + text.charCodeAt(index);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function userCalendarColor(row) {
+    const key = row?.userId || row?.userEmail || row?.userName || row?.id || '';
+    const index = hashString(key) % USER_COLOR_PALETTE.length;
+    return USER_COLOR_PALETTE[index];
+  }
+
+  function userChipStyle(row) {
+    const palette = userCalendarColor(row);
+    const cancelledOpacity = row?.status === 'cancelled' ? '0.62' : '1';
+    return [
+      `--annual-user-fill:${palette.fill}`,
+      `--annual-user-border:${palette.border}`,
+      `--annual-user-accent:${palette.accent}`,
+      `--annual-user-text:${palette.text}`,
+      `opacity:${cancelledOpacity}`,
+    ].join(';');
+  }
+
   function sortBookings(rows) {
     return rows.slice().sort((left, right) => {
       if (left.status !== right.status) {
@@ -500,9 +538,12 @@
       const holiday = holidayForDate(iso);
       const bookings = bookingsForDate(iso);
       const bookingMarkup = bookings.slice(0, 3).map((row) => (
-        `<button type="button" class="annual-leave-chip" data-booking-id="${escapeHtml(row.id)}" data-type="${escapeHtml(row.leaveType)}" data-status="${escapeHtml(row.status)}">
-          <span>${escapeHtml(row.userName)}</span>
-          <span>${escapeHtml(bookingDurationLabel(row.durationMode))}</span>
+        `<button type="button" class="annual-leave-chip" data-booking-id="${escapeHtml(row.id)}" data-type="${escapeHtml(row.leaveType)}" data-status="${escapeHtml(row.status)}" style="${escapeHtml(userChipStyle(row))}">
+          <span class="annual-leave-chip__person">
+            <i class="annual-leave-chip__swatch" aria-hidden="true"></i>
+            <span>${escapeHtml(row.userName)}</span>
+          </span>
+          <span class="annual-leave-chip__meta">${escapeHtml(bookingDurationLabel(row.durationMode))}</span>
         </button>`
       )).join('');
       const moreMarkup = bookings.length > 3

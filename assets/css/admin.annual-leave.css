@@ -366,34 +366,65 @@
   cursor: pointer;
   justify-content: space-between;
   text-align: left;
+  background: var(--annual-user-fill, rgba(47, 78, 162, 0.1));
+  border-color: var(--annual-user-border, rgba(47, 78, 162, 0.16));
+  color: var(--annual-user-text, var(--annual-ink));
+  box-shadow: inset 3px 0 0 var(--annual-user-accent, var(--annual-blue));
 }
 
 .annual-leave-chip:hover {
   transform: translateY(-1px);
 }
 
-.annual-leave-chip[data-type="annual_leave"] {
-  background: rgba(47, 78, 162, 0.1);
-  border-color: rgba(47, 78, 162, 0.16);
+.annual-leave-chip__person,
+.annual-leave-chip__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.annual-leave-chip[data-type="unpaid_leave"] {
-  background: rgba(185, 116, 5, 0.1);
-  border-color: rgba(185, 116, 5, 0.18);
+.annual-leave-chip__person {
+  min-width: 0;
+  font-weight: 800;
 }
 
-.annual-leave-chip[data-type="sick"] {
-  background: rgba(166, 54, 43, 0.1);
-  border-color: rgba(166, 54, 43, 0.18);
+.annual-leave-chip__person span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.annual-leave-chip[data-type="other"] {
-  background: rgba(114, 69, 199, 0.1);
-  border-color: rgba(114, 69, 199, 0.18);
+.annual-leave-chip__meta {
+  color: color-mix(in srgb, var(--annual-user-text, var(--annual-ink)) 78%, white 22%);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.annual-leave-chip__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  background: var(--annual-user-accent, var(--annual-blue));
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
+}
+
+.annual-leave-chip[data-type="unpaid_leave"] .annual-leave-chip__meta {
+  color: #8a5d09;
+}
+
+.annual-leave-chip[data-type="sick"] .annual-leave-chip__meta {
+  color: #8c2a22;
+}
+
+.annual-leave-chip[data-type="other"] .annual-leave-chip__meta {
+  color: #5a32a5;
 }
 
 .annual-leave-chip[data-status="cancelled"] {
-  opacity: 0.58;
   text-decoration: line-through;
 }
 
