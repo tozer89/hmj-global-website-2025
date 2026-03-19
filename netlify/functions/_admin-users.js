@@ -18,6 +18,15 @@ function normaliseRoleList(input) {
     .filter(Boolean);
 }
 
+function collectRoles(...sources) {
+  const raw = [];
+  sources.forEach((entry) => {
+    if (Array.isArray(entry)) raw.push(...entry);
+    else if (entry != null) raw.push(entry);
+  });
+  return normaliseRoleList(raw);
+}
+
 function pickPreferredText(existing, incoming, maxLength = 160) {
   const left = trimString(existing, maxLength);
   const right = trimString(incoming, maxLength);
@@ -34,14 +43,18 @@ function normaliseMemberRecord(row = {}) {
     : {};
   const email = lowerEmail(row.email || row.actor_email || meta.email);
   const userId = trimString(row.userId || row.user_id || row.id || meta.user_id, 120);
-  const roles = normaliseRoleList(
-    row.roles
-      || row.role
-      || row?.app_metadata?.roles
-      || row?.user_metadata?.roles
-      || meta.roles
-      || meta.netlify_roles
-      || meta.role
+  const roles = collectRoles(
+    row.roles,
+    row.role,
+    row?.app_metadata?.roles,
+    row?.app_metadata?.role,
+    row?.app_metadata?.authorization?.roles,
+    row?.app_metadata?.authorization?.role,
+    row?.user_metadata?.roles,
+    row?.user_metadata?.role,
+    meta.roles,
+    meta.netlify_roles,
+    meta.role
   );
   const preferredRole = roles.includes('owner')
     ? 'owner'
@@ -106,13 +119,15 @@ function normaliseIdentityUser(raw = {}, match = null) {
   const appMeta = raw?.app_metadata && typeof raw.app_metadata === 'object' && !Array.isArray(raw.app_metadata)
     ? raw.app_metadata
     : {};
-  const roles = normaliseRoleList(
-    appMeta.roles
-      || raw.roles
-      || raw.role
-      || appMeta.role
-      || userMeta.roles
-      || userMeta.role
+  const roles = collectRoles(
+    appMeta.roles,
+    appMeta.role,
+    appMeta?.authorization?.roles,
+    appMeta?.authorization?.role,
+    raw.roles,
+    raw.role,
+    userMeta.roles,
+    userMeta.role
   );
 
   const displayName = pickPreferredText(

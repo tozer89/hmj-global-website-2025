@@ -1082,8 +1082,7 @@
     const token = getNFJwtFromCookie();
     if (token) {
       const payload = decodeJwt(token);
-      const rawRoles = payload?.app_metadata?.roles || payload?.roles || payload?.role;
-      const roles = Array.isArray(rawRoles) ? rawRoles : (rawRoles ? [rawRoles] : []);
+      const roles = extractRoles(payload);
       const email = payload?.email || payload?.sub || undefined;
       return {
         token: async () => token,
@@ -1167,11 +1166,52 @@
     return list.map((role) => String(role || '').toLowerCase()).filter(Boolean);
   }
 
+  function extractRoles(input) {
+    if (!input || typeof input !== 'object') return [];
+    const appMeta = input.app_metadata && typeof input.app_metadata === 'object' ? input.app_metadata : {};
+    const userMeta = input.user_metadata && typeof input.user_metadata === 'object' ? input.user_metadata : {};
+    const appAuthorization = appMeta.authorization && typeof appMeta.authorization === 'object' ? appMeta.authorization : {};
+    const authorization = input.authorization && typeof input.authorization === 'object' ? input.authorization : {};
+    const raw = [
+      input.roles,
+      input.role,
+      appMeta.roles,
+      appMeta.role,
+      appAuthorization.roles,
+      appAuthorization.role,
+      authorization.roles,
+      authorization.role,
+      userMeta.roles,
+      userMeta.role,
+    ];
+    const values = [];
+    raw.forEach((entry) => {
+      if (Array.isArray(entry)) values.push(...entry);
+      else if (entry != null) values.push(entry);
+    });
+    return normaliseRolesList(values);
+  }
+
+  function hasAdminAccess(roles) {
+    const list = Array.isArray(roles) ? roles : [];
+    return list.includes('admin') || list.includes('owner');
+  }
+
+  function resolvePrimaryRole(roles) {
+    const list = Array.isArray(roles) ? roles : [];
+    return list.includes('owner') ? 'owner' :
+      list.includes('admin') ? 'admin' :
+      list.includes('recruiter') ? 'recruiter' :
+      list.includes('client') ? 'client' :
+      (list[0] || '');
+  }
+
   function hasVerifiedSession(snapshot) {
     return !!(snapshot?.token || snapshot?.sessionVerified);
   }
 
   const WHOAMI_CACHE = { token: '', data: null, ts: 0 };
+  const ADMIN_CHECK_CACHE = { token: '', data: null, ts: 0 };
 
   function resetIdentityCaches() {
     identityCache = null;
@@ -1179,6 +1219,9 @@
     WHOAMI_CACHE.token = '';
     WHOAMI_CACHE.data = null;
     WHOAMI_CACHE.ts = 0;
+    ADMIN_CHECK_CACHE.token = '';
+    ADMIN_CHECK_CACHE.data = null;
+    ADMIN_CHECK_CACHE.ts = 0;
   }
 
   async function fetchWhoamiSnapshot(token, opts = {}) {
@@ -1224,6 +1267,43 @@
     }
   }
 
+  async function fetchAdminAccessSnapshot(token, opts = {}) {
+    if (typeof fetch !== 'function') return null;
+    const key = token || '';
+    const now = Date.now();
+    const ttl = opts.ttlMs || 60000;
+    if (!opts.force && ADMIN_CHECK_CACHE.data && ADMIN_CHECK_CACHE.token === key && (now - ADMIN_CHECK_CACHE.ts) < ttl) {
+      return ADMIN_CHECK_CACHE.data;
+    }
+    const headers = {
+      'Accept': 'application/json',
+      'Cache-Control': 'no-store',
+      'x-trace': typeof getTrace === 'function' ? getTrace() : ''
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    try {
+      const res = await fetch('/.netlify/functions/admin-role-check', {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      let data = null;
+      try { data = await res.json(); } catch {}
+      if (!res.ok) {
+        Debug.warn('admin-role-check failed', res.status, data);
+        return null;
+      }
+      ADMIN_CHECK_CACHE.token = key;
+      ADMIN_CHECK_CACHE.data = data;
+      ADMIN_CHECK_CACHE.ts = now;
+      return data;
+    } catch (err) {
+      Debug.warn('admin-role-check fetch threw', err);
+      return null;
+    }
+  }
+
   // Public, promise-based identity snapshot used by pages & console
   async function identity(requiredRole /* 'admin' | 'recruiter' | 'client' | undefined */, options) {
     const roleAllowed = (rolesList, roleName, requiredName) => {
@@ -1231,7 +1311,7 @@
       const required = String(requiredName || '').toLowerCase();
       if (!required) return true;
       if (required === 'admin') {
-        return roleName === 'admin' || roleName === 'owner' || roles.includes('admin') || roles.includes('owner');
+        return roleName === 'admin' || roleName === 'owner' || hasAdminAccess(roles);
       }
       return roleName === required || roles.includes(required);
     };
@@ -1318,19 +1398,15 @@
       if (jwtPayload) {
         const jwtEmail = jwtPayload?.email || jwtPayload?.user_metadata?.email || jwtPayload?.sub || '';
         if (!email && jwtEmail) email = jwtEmail;
-        const payloadRoles = jwtPayload?.app_metadata?.roles || jwtPayload?.roles || jwtPayload?.role;
-        if (payloadRoles) {
-          roles = Array.isArray(payloadRoles) ? payloadRoles : [payloadRoles];
-          roles = normaliseRolesList(roles);
+        const payloadRoles = extractRoles(jwtPayload);
+        if (payloadRoles.length) {
+          roles = payloadRoles;
         }
       }
     }
 
-    if (!roles.length && user?.app_metadata?.roles) {
-      roles = normaliseRolesList(user.app_metadata.roles);
-    }
-    if (!roles.length && Array.isArray(user?.roles)) {
-      roles = normaliseRolesList(user.roles);
+    if (!roles.length) {
+      roles = extractRoles(user);
     }
 
     let whoami = null;
@@ -1362,7 +1438,7 @@
       email = whoami.identityEmail || email;
     }
     if (Array.isArray(whoami?.roles) && whoami.roles.length) {
-      roles = normaliseRolesList(whoami.roles);
+      roles = extractRoles(whoami);
     }
 
     if (token && !jwtPayload) {
@@ -1371,21 +1447,25 @@
         const jwtEmail = jwtPayload?.email || jwtPayload?.user_metadata?.email || jwtPayload?.sub || '';
         if (!email && jwtEmail) email = jwtEmail;
         if (!roles.length) {
-          const payloadRoles = jwtPayload?.app_metadata?.roles || jwtPayload?.roles || jwtPayload?.role;
-          if (payloadRoles) {
-            roles = normaliseRolesList(Array.isArray(payloadRoles) ? payloadRoles : [payloadRoles]);
-          }
+          roles = extractRoles(jwtPayload);
         }
       }
     }
 
-    role = roles.includes('owner') ? 'owner' :
-           roles.includes('admin') ? 'admin' :
-           roles.includes('recruiter') ? 'recruiter' :
-           roles.includes('client') ? 'client' :
-           (roles[0] || '');
-
     const sessionVerified = !!token || !!whoami?.identityEmail;
+    if (required === 'admin' && sessionVerified && !hasAdminAccess(roles)) {
+      const adminCheck = await fetchAdminAccessSnapshot(token, {
+        force: forceFresh,
+        ttlMs: forceFresh ? 0 : undefined
+      });
+      if (adminCheck?.ok) {
+        const serverRoles = extractRoles(adminCheck);
+        if (serverRoles.length) roles = serverRoles;
+        if (!email && adminCheck.email) email = adminCheck.email;
+      }
+    }
+
+    role = resolvePrimaryRole(roles);
     const authMode = token ? 'jwt' : (sessionVerified ? 'cookie' : 'none');
 
     const base = {

@@ -25,13 +25,82 @@ function normalizeRoles(list) {
   return list.map((role) => String(role || '').toLowerCase()).filter(Boolean);
 }
 
+function requestOrigin(event = {}) {
+  const headers = event?.headers || {};
+  const host = String(
+    headers['x-forwarded-host']
+    || headers['X-Forwarded-Host']
+    || headers.host
+    || headers.Host
+    || ''
+  ).split(',')[0].trim();
+  if (!host) return '';
+  const proto = String(headers['x-forwarded-proto'] || headers['X-Forwarded-Proto'] || 'https').trim() || 'https';
+  return `${proto}://${host.replace(/:\d+$/, '')}`;
+}
+
+function resolveIdentityBase(event = {}) {
+  const origin = requestOrigin(event);
+  if (origin) return `${origin.replace(/\/$/, '')}/.netlify/identity`;
+
+  const siteUrl = String(process.env.URL || process.env.SITE_URL || '').trim();
+  if (siteUrl) {
+    try {
+      const parsed = new URL(siteUrl);
+      return `${parsed.origin.replace(/\/$/, '')}/.netlify/identity`;
+    } catch {}
+  }
+
+  return 'https://hmjg.netlify.app/.netlify/identity';
+}
+
 function hasAdminAccess(roles = []) {
   return Array.isArray(roles) && (roles.includes('admin') || roles.includes('owner'));
 }
 
 function rolesFromClaims(claims) {
-  const roles = claims?.app_metadata?.roles || claims?.roles || [];
-  return normalizeRoles(Array.isArray(roles) ? roles : [roles].filter(Boolean));
+  const appMeta = claims?.app_metadata && typeof claims.app_metadata === 'object' ? claims.app_metadata : {};
+  const authorization = appMeta?.authorization && typeof appMeta.authorization === 'object' ? appMeta.authorization : {};
+  const userMeta = claims?.user_metadata && typeof claims.user_metadata === 'object' ? claims.user_metadata : {};
+  const raw = [
+    appMeta.roles,
+    appMeta.role,
+    authorization.roles,
+    authorization.role,
+    claims?.roles,
+    claims?.role,
+    userMeta.roles,
+    userMeta.role
+  ];
+  const roles = [];
+  raw.forEach((entry) => {
+    if (Array.isArray(entry)) roles.push(...entry);
+    else if (entry != null) roles.push(entry);
+  });
+  return normalizeRoles(roles);
+}
+
+async function verifyIdentityToken(token, event = {}, opts = {}) {
+  const bearer = String(token || '').trim();
+  if (!bearer) return null;
+  const fetchImpl = opts.fetchImpl || global.fetch;
+  if (typeof fetchImpl !== 'function') return null;
+
+  const target = `${resolveIdentityBase(event)}/user`;
+  try {
+    const response = await fetchImpl(target, {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${bearer}`,
+        accept: 'application/json'
+      }
+    });
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => null);
+    return payload && typeof payload === 'object' ? payload : null;
+  } catch {
+    return null;
+  }
 }
 
 function getSupabaseAdmin() {
@@ -63,14 +132,19 @@ exports.getContext = async (event, context, opts = {}) => {
 
   if (!user && token) {
     const claims = decodeJWT(token);
-    const email = claims?.email || claims?.user_metadata?.email || claims?.sub || '';
-    roles = rolesFromClaims(claims);
+    const verifiedUser = await verifyIdentityToken(token, event, opts);
+    const email = verifiedUser?.email || claims?.email || claims?.user_metadata?.email || claims?.sub || '';
+    roles = normalizeRoles([
+      ...rolesFromClaims(claims),
+      ...rolesFromClaims(verifiedUser),
+      ...(Array.isArray(verifiedUser?.roles) ? verifiedUser.roles : [])
+    ]);
     if (email) {
       user = {
         email,
-        app_metadata: { roles },
-        user_metadata: claims?.user_metadata || {},
-        id: claims?.sub || 'nf',
+        app_metadata: verifiedUser?.app_metadata || { roles },
+        user_metadata: verifiedUser?.user_metadata || claims?.user_metadata || {},
+        id: verifiedUser?.id || claims?.sub || 'nf',
       };
     }
   }
@@ -162,3 +236,6 @@ exports.getContext = async (event, context, opts = {}) => {
 
 exports.coded = coded;
 exports.getSupabaseAdmin = getSupabaseAdmin;
+exports.hasAdminAccess = hasAdminAccess;
+exports.rolesFromClaims = rolesFromClaims;
+exports.verifyIdentityToken = verifyIdentityToken;

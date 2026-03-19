@@ -69,7 +69,7 @@ function createIdentityStub(state) {
   };
 }
 
-function createAdminHarness({ url, width, whoamiResponses = [] }) {
+function createAdminHarness({ url, width, whoamiResponses = [], adminRoleCheckResponses = [] }) {
   const html = `<!doctype html>
   <html>
     <body>
@@ -99,7 +99,7 @@ function createAdminHarness({ url, width, whoamiResponses = [] }) {
 
   const { window } = dom;
   const state = { currentUser: null };
-  const calls = { whoami: 0 };
+  const calls = { whoami: 0, adminRoleCheck: 0 };
   const navigation = [];
   const identity = createIdentityStub(state);
 
@@ -120,6 +120,18 @@ function createAdminHarness({ url, width, whoamiResponses = [] }) {
       return {
         ok: true,
         status: 200,
+        async json() {
+          return payload;
+        },
+      };
+    }
+    if (href.includes('/.netlify/functions/admin-role-check')) {
+      const index = Math.min(calls.adminRoleCheck, Math.max(adminRoleCheckResponses.length - 1, 0));
+      const payload = adminRoleCheckResponses[index] || { ok: false, error: 'Forbidden' };
+      calls.adminRoleCheck += 1;
+      return {
+        ok: !!payload.ok,
+        status: payload.ok ? 200 : Number(payload.status || 403),
         async json() {
           return payload;
         },
@@ -165,6 +177,32 @@ test('forceFresh identity checks refetch whoami after an empty cookie-based snap
   assert.equal(first.ok, false);
   assert.equal(second.ok, true);
   assert.equal(harness.calls.whoami, 2);
+});
+
+test('admin identity falls back to the server-side admin check when the browser-side role list is empty', async () => {
+  const harness = createAdminHarness({
+    url: 'https://example.com/admin/',
+    width: 390,
+    whoamiResponses: [
+      { ok: true, identityEmail: 'owner@hmj-global.com', roles: [] },
+    ],
+    adminRoleCheckResponses: [
+      { ok: true, email: 'owner@hmj-global.com', roles: ['owner', 'admin'] },
+    ],
+  });
+
+  harness.state.currentUser = createIdentityUser({
+    email: 'owner@hmj-global.com',
+    roles: [],
+    token: createJwt('owner@hmj-global.com', []),
+  });
+
+  const snapshot = await harness.window.getIdentity({ requiredRole: 'admin', forceFresh: true, cacheTtlMs: 0 });
+
+  assert.equal(snapshot.ok, true);
+  assert.deepEqual(Array.from(snapshot.roles), ['owner', 'admin']);
+  assert.equal(snapshot.role, 'owner');
+  assert.equal(harness.calls.adminRoleCheck, 1);
 });
 
 test('successful login waits for admin session verification before routing to the requested admin page', async () => {

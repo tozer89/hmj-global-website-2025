@@ -11,7 +11,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   const html = read('admin/candidates.html');
 
   assert.match(html, /identity-loader\.js\?v=3/);
-  assert.match(html, /\/admin\/common\.js\?v=34/);
+  assert.match(html, /\/admin\/common\.js\?v=35/);
   assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=2/);
   assert.match(html, /\/admin\/candidates\.js\?v=22/);
   assert.match(html, /id="bulk-intro-email"/);
@@ -73,6 +73,13 @@ test('candidate admin functions allow valid cookie-backed admin sessions without
     const source = read(file);
     assert.match(source, /withAdminCors\(baseHandler,\s*\{\s*requireToken:\s*false\s*\}\)/, `${file} should disable the preflight token gate`);
   });
+});
+
+test('Netlify admin route rules allow owner-role users onto protected admin pages', () => {
+  const config = read('netlify.toml');
+  assert.match(config, /from = "\/admin\/candidates\.html"[\s\S]*conditions = \{ Role = \["admin", "owner"\] \}/);
+  assert.match(config, /from = "\/admin\/timesheets\.html"[\s\S]*conditions = \{ Role = \["admin", "owner"\] \}/);
+  assert.match(config, /from = "\/admin\/reports\.html"[\s\S]*conditions = \{ Role = \["admin", "owner"\] \}/);
 });
 
 test('candidate row actions use closest() event delegation so button text clicks still resolve the action', () => {
