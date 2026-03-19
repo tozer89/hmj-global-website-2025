@@ -1,5 +1,5 @@
 // netlify/functions/timesheets-history.js
-const { supabase, getContext } = require('./_timesheet-helpers.js');
+const { supabase, getContext, isTimesheetSchemaUnavailable } = require('./_timesheet-helpers.js');
 
 const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
@@ -10,7 +10,15 @@ exports.handler = async (event, context) => {
     const weekEnding = (qs.week_ending || '').trim(); // detail mode if provided
 
     // getContext should give us the authenticated contractor + active assignment + friendly names
-    const { assignment } = await getContext(context);
+    let assignment;
+    try {
+      ({ assignment } = await getContext(context));
+    } catch (error) {
+      if ((error?.message || '') === 'timesheets_backend_unavailable') {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
+      throw error;
+    }
     if (!assignment?.id) return respond(404, { error: 'no_active_assignment' });
 
     // ---------- DETAIL MODE ----------
@@ -23,7 +31,12 @@ exports.handler = async (event, context) => {
         .eq('week_ending', weekEnding)
         .maybeSingle();
 
-      if (eTs) throw eTs;
+      if (eTs) {
+        if (isTimesheetSchemaUnavailable(eTs)) {
+          return respond(503, { error: 'timesheets_backend_unavailable' });
+        }
+        throw eTs;
+      }
       if (!ts) return respond(404, { error: 'timesheet_not_found' });
 
       // Pull entries for that timesheet
@@ -32,7 +45,12 @@ exports.handler = async (event, context) => {
         .select('day, hours_std, hours_ot, note')
         .eq('timesheet_id', ts.id);
 
-      if (eRows) throw eRows;
+      if (eRows) {
+        if (isTimesheetSchemaUnavailable(eRows)) {
+          return respond(503, { error: 'timesheets_backend_unavailable' });
+        }
+        throw eRows;
+      }
 
       // Sort client-side into Sun..Sat order
       const DAY_ORDER = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
@@ -70,7 +88,12 @@ exports.handler = async (event, context) => {
       .order('week_ending', { ascending: false })
       .limit(10);
 
-    if (error) throw error;
+    if (error) {
+      if (isTimesheetSchemaUnavailable(error)) {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
+      throw error;
+    }
 
     const items = [];
     for (const ts of (list || [])) {
@@ -78,7 +101,12 @@ exports.handler = async (event, context) => {
         .from('timesheet_entries')
         .select('hours_std,hours_ot')
         .eq('timesheet_id', ts.id);
-      if (e2) throw e2;
+      if (e2) {
+        if (isTimesheetSchemaUnavailable(e2)) {
+          return respond(503, { error: 'timesheets_backend_unavailable' });
+        }
+        throw e2;
+      }
 
       const std = (rows || []).reduce((a, r) => a + Number(r.hours_std || 0), 0);
       const ot  = (rows || []).reduce((a, r) => a + Number(r.hours_ot  || 0), 0);
@@ -96,6 +124,8 @@ exports.handler = async (event, context) => {
     return respond(200, { items });
   } catch (e) {
     console.error('[timesheets-history] exception:', e);
-    return respond(400, { error: e.message || 'history_failed' });
+    const message = e.message || 'history_failed';
+    const status = message === 'timesheets_backend_unavailable' ? 503 : 400;
+    return respond(status, { error: message });
   }
 };

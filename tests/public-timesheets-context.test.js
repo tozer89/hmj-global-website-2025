@@ -54,6 +54,24 @@ test('timesheet page handles unmatched contractor and no-assignment states witho
 
   assert.match(source, /contractor_not_found_for_email/);
   assert.match(source, /no_active_assignment/);
+  assert.match(source, /timesheets_backend_unavailable/);
   assert.match(source, /HMJ could not match this login to a contractor profile yet\./);
   assert.match(source, /No active assignment is linked to this account right now\./);
+  assert.match(source, /Open Timesheet Portal dashboard/);
+  assert.match(source, /https:\/\/hmjglobal\.timesheetportal\.com\/Dashboard\//);
+});
+
+test('timesheet schema helper flags missing legacy public tables and columns as unavailable', () => {
+  assert.equal(
+    __test.isTimesheetSchemaUnavailable({ message: "Could not find the table 'public.timesheets' in the schema cache" }),
+    true
+  );
+  assert.equal(
+    __test.isTimesheetSchemaUnavailable({ message: "Could not find the 'submitted_at' column of 'timesheets' in the schema cache" }),
+    true
+  );
+  assert.equal(
+    __test.isTimesheetSchemaUnavailable({ message: 'something else entirely' }),
+    false
+  );
 });

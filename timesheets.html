@@ -398,6 +398,7 @@
       return n;
     }
     const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const TSP_DASHBOARD_URL = 'https://hmjglobal.timesheetportal.com/Dashboard/';
     const money = n => (Number(n||0)).toLocaleString('en-GB',{style:'currency',currency:'GBP'});
     function toast(msg, ms=3500){ const t=$('#toast'); t.textContent=msg; t.classList.remove('hidden'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.add('hidden'),ms); }
 
@@ -530,13 +531,19 @@
       }
     }
 
-    function renderUnavailableState(message, detail=''){
+    function renderUnavailableState(message, detail='', action=null){
       $('#weekTitle').textContent = 'My Timesheet';
       $('#statusHelp').textContent = message;
-      $('#profileBox').innerHTML = `<div class="muted">${detail || message}</div>`;
+      const actionHtml = action?.href
+        ? `<div style="margin-top:12px"><a class="btn primary" href="${action.href}" target="_blank" rel="noopener">${action.label || 'Open Timesheet Portal'}</a></div>`
+        : '';
+      $('#profileBox').innerHTML = `<div class="muted">${detail || message}</div>${actionHtml}`;
       $('#tbody').innerHTML = `
         <tr>
-          <td colspan="4" class="muted" style="padding:14px 0">${message}</td>
+          <td colspan="4" class="muted" style="padding:14px 0">
+            <div>${message}</div>
+            ${action?.href ? `<div style="margin-top:12px"><a class="btn primary" href="${action.href}" target="_blank" rel="noopener">${action.label || 'Open Timesheet Portal'}</a></div>` : ''}
+          </td>
         </tr>
       `;
       $('#sheet').classList.add('locked');
@@ -801,6 +808,13 @@
         const m = e.message || String(e);
         if (m === 'identity_required'){
           showGate();
+        } else if (m === 'timesheets_backend_unavailable') {
+          showApp();
+          renderUnavailableState(
+            'HMJ timesheet capture is currently handled in Timesheet Portal for this account.',
+            'Use the secure Timesheet Portal dashboard to review or submit timesheets while the legacy HMJ mirror remains unavailable.',
+            { href: TSP_DASHBOARD_URL, label: 'Open Timesheet Portal dashboard' }
+          );
         } else if (m === 'contractor_not_found_for_email') {
           showApp();
           renderUnavailableState('HMJ could not match this login to a contractor profile yet.', 'Ask HMJ admin to connect your email to your contractor record before submitting timesheets.');

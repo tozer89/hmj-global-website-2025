@@ -15,6 +15,17 @@ function getIdentityEmail(context) {
   return context?.clientContext?.user?.email || null;
 }
 
+function isTimesheetSchemaUnavailable(error) {
+  const message = String(error?.message || error || '');
+  if (!message) return false;
+  return (
+    /Could not find the table 'public\.(contractors|timesheets|timesheet_entries|projects|sites|clients)' in the schema cache/i.test(message) ||
+    /Could not find the '(?:[a-z0-9_]+)' column of '(?:contractors|timesheets|timesheet_entries|projects|sites|clients|assignments)' in the schema cache/i.test(message) ||
+    /relation "public\.(contractors|timesheets|timesheet_entries|projects|sites|clients)" does not exist/i.test(message) ||
+    /column ".+" of relation "(?:contractors|timesheets|timesheet_entries|projects|sites|clients|assignments)" does not exist/i.test(message)
+  );
+}
+
 async function loadNamedEntity(client, table, id, columns = 'id,name,client_id') {
   if (!id) return null;
   const { data, error } = await client
@@ -23,7 +34,10 @@ async function loadNamedEntity(client, table, id, columns = 'id,name,client_id')
     .eq('id', id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (isTimesheetSchemaUnavailable(error)) return null;
+    throw error;
+  }
   return data || null;
 }
 
@@ -58,7 +72,10 @@ async function getContext(context) {
     .eq('email', email)
     .maybeSingle();
 
-  if (cErr) throw cErr;
+  if (cErr) {
+    if (isTimesheetSchemaUnavailable(cErr)) throw new Error('timesheets_backend_unavailable');
+    throw cErr;
+  }
   if (!contractor) return { contractor: null, assignment: null };
 
   // Most recent active assignment
@@ -71,7 +88,10 @@ async function getContext(context) {
     .limit(1)
     .maybeSingle();
 
-  if (aErr) throw aErr;
+  if (aErr) {
+    if (isTimesheetSchemaUnavailable(aErr)) throw new Error('timesheets_backend_unavailable');
+    throw aErr;
+  }
 
   const hydratedAssignment = await hydrateAssignmentContext(supabase, assignment);
 
@@ -94,7 +114,10 @@ async function ensureTimesheet(arg1, arg2, arg3) {
     .eq('week_ending', week_ending)
     .maybeSingle();
 
-  if (sErr) throw sErr;
+  if (sErr) {
+    if (isTimesheetSchemaUnavailable(sErr)) throw new Error('timesheets_backend_unavailable');
+    throw sErr;
+  }
   if (existing) return existing;
 
   // Create one (default draft)
@@ -104,7 +127,10 @@ async function ensureTimesheet(arg1, arg2, arg3) {
     .select('id, week_ending, status')
     .single();
 
-  if (iErr) throw iErr;
+  if (iErr) {
+    if (isTimesheetSchemaUnavailable(iErr)) throw new Error('timesheets_backend_unavailable');
+    throw iErr;
+  }
   return created;
 }
 
@@ -114,7 +140,9 @@ module.exports = {
   getContext,
   ensureTimesheet,
   getIdentityEmail,
+  isTimesheetSchemaUnavailable,
   __test: {
     hydrateAssignmentContext,
+    isTimesheetSchemaUnavailable,
   },
 };

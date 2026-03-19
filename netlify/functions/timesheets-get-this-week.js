@@ -1,5 +1,5 @@
 // netlify/functions/timesheets-get-this-week.js
-const { supabase, weekEndingSaturdayISO, getContext, ensureTimesheet } = require('./_timesheet-helpers.js');
+const { supabase, weekEndingSaturdayISO, getContext, ensureTimesheet, isTimesheetSchemaUnavailable } = require('./_timesheet-helpers.js');
 
 const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
@@ -23,6 +23,9 @@ exports.handler = async (event, context) => {
       if ((err?.message || '') === 'identity_required') {
         return respond(401, { error: 'identity_required' });
       }
+      if ((err?.message || '') === 'timesheets_backend_unavailable') {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
       return respond(500, { error: 'context_failed' });
     }
 
@@ -38,6 +41,9 @@ exports.handler = async (event, context) => {
       ts = await ensureTimesheet(assignment.id, week_ending);
     } catch (err) {
       console.error('[get-this-week] ensureTimesheet error:', err);
+      if ((err?.message || '') === 'timesheets_backend_unavailable') {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
       return respond(500, { error: 'timesheet_create_failed' });
     }
     if (!ts?.id) return respond(500, { error: 'timesheet_create_failed' });
@@ -50,6 +56,9 @@ exports.handler = async (event, context) => {
 
     if (error) {
       console.error('[get-this-week] select timesheet_entries error:', error);
+      if (isTimesheetSchemaUnavailable(error)) {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
       return respond(500, { error: 'db_select_failed_timesheet_entries' });
     }
 

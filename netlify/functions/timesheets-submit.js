@@ -1,5 +1,5 @@
 // netlify/functions/timesheets-submit.js
-const { supabase, weekEndingSaturdayISO, getContext, ensureTimesheet } = require('./_timesheet-helpers.js');
+const { supabase, weekEndingSaturdayISO, getContext, ensureTimesheet, isTimesheetSchemaUnavailable } = require('./_timesheet-helpers.js');
 
 const HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const respond = (status, body) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
@@ -30,7 +30,10 @@ async function upsertEntry(tsId, day, row) {
         hours_ot: payload.p_ot,
         note: payload.p_note
       }, { onConflict: 'timesheet_id,day' });
-    if (upErr) throw upErr;
+    if (upErr) {
+      if (isTimesheetSchemaUnavailable(upErr)) throw new Error('timesheets_backend_unavailable');
+      throw upErr;
+    }
   }
 }
 
@@ -44,9 +47,25 @@ exports.handler = async (event, context) => {
 
     const entries = body.entries && typeof body.entries === 'object' ? body.entries : {};
 
-    const { assignment } = await getContext(context);
+    let assignment;
+    try {
+      ({ assignment } = await getContext(context));
+    } catch (error) {
+      if ((error?.message || '') === 'timesheets_backend_unavailable') {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
+      throw error;
+    }
     const week_ending = weekEndingSaturdayISO();
-    const ts = await ensureTimesheet(assignment.id, week_ending);
+    let ts;
+    try {
+      ts = await ensureTimesheet(assignment.id, week_ending);
+    } catch (error) {
+      if ((error?.message || '') === 'timesheets_backend_unavailable') {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
+      throw error;
+    }
 
     const tasks = [];
     for (const [day, row] of Object.entries(entries)) {
@@ -70,6 +89,9 @@ exports.handler = async (event, context) => {
 
     if (upd.error) {
       console.error('timesheet submit update error:', upd.error);
+      if (isTimesheetSchemaUnavailable(upd.error)) {
+        return respond(503, { error: 'timesheets_backend_unavailable' });
+      }
       return respond(500, { error: 'Database error (timesheets submit)' });
     }
 
@@ -78,6 +100,7 @@ exports.handler = async (event, context) => {
     const msg = e?.message || 'Failed to submit';
     const status =
       e?.code === 401 || msg === 'Unauthorized' ? 401 :
+      msg === 'timesheets_backend_unavailable' ? 503 :
       e?.code === 404 ? 404 : 500;
 
     console.error('timesheets-submit exception:', e);
