@@ -26,7 +26,7 @@ test('send intro email page uses the shared admin bootstrap and expected operati
   assert.match(html, /id="introPhone"/);
   assert.match(html, /id="introJobTitle"/);
   assert.match(html, /id="sendIntroStatus"/);
-  assert.match(html, /send-intro-email\.js\?v=2/);
+  assert.match(html, /send-intro-email\.js\?v=3/);
 });
 
 test('send intro email page reuses candidate email diagnostics and the dedicated send endpoint', () => {
@@ -69,7 +69,7 @@ test('send intro email backend normalises input and builds branded website links
 
   assert.equal(message.subject, 'Welcome to HMJ Global – next steps for your new assignment');
   assert.equal(message.registrationUrl, 'https://hmjg.netlify.app/candidates.html');
-  assert.equal(message.timesheetsUrl, 'https://hmjg.netlify.app/timesheets.html');
+  assert.equal(message.timesheetsUrl, 'https://hmjglobal.timesheetportal.com/Dashboard/');
   assert.match(message.html, /Complete HMJ registration/);
   assert.match(message.html, /Open HMJ timesheets \/ portal access/);
   assert.match(message.html, /ACME Pharma/);

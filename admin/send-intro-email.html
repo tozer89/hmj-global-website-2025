@@ -128,14 +128,14 @@
           <div>
             <p class="muted" style="margin:0 0 6px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;">Live summary</p>
             <h2 style="margin:0 0 8px;font-size:20px">Email preview</h2>
-            <p class="muted" style="margin:0">This module sends a welcome email with HMJ registration steps, onboarding context, and the website path to Timesheet Portal.</p>
+            <p class="muted" style="margin:0">This module sends a welcome email with HMJ registration steps, onboarding context, and the Timesheet Portal dashboard link.</p>
           </div>
           <ul class="summary-list" id="sendIntroPreview">
             <li><strong>Recipient</strong><span>—</span></li>
             <li><strong>Role / client</strong><span>—</span></li>
             <li><strong>Sender</strong><span>Loading current settings…</span></li>
             <li><strong>Registration path</strong><span>/candidates.html</span></li>
-            <li><strong>Timesheets path</strong><span>/timesheets.html</span></li>
+            <li><strong>Timesheets path</strong><span>https://hmjglobal.timesheetportal.com/Dashboard/</span></li>
           </ul>
         </section>
 
@@ -147,13 +147,13 @@
           <p class="summary-note">The intro email uses the sender and delivery configuration already managed in Candidate account email settings. If delivery is not ready, this page will block sending and show the exact issue instead of failing silently.</p>
           <div class="preview-actions">
             <a class="btn ghost" href="/candidates.html" target="_blank" rel="noreferrer">Open candidate page</a>
-            <a class="btn ghost" href="/timesheets.html" target="_blank" rel="noreferrer">Open timesheets page</a>
+            <a class="btn ghost" href="https://hmjglobal.timesheetportal.com/Dashboard/" target="_blank" rel="noreferrer">Open Timesheet Portal</a>
           </div>
         </section>
       </aside>
     </div>
   </div>
 
-  <script src="/admin/send-intro-email.js?v=2"></script>
+  <script src="/admin/send-intro-email.js?v=3"></script>
 </body>
 </html>

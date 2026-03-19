@@ -32,6 +32,8 @@ const PROVIDER_PRESETS = {
   },
 };
 
+const DEFAULT_CANDIDATE_TIMESHEETS_DASHBOARD_URL = 'https://hmjglobal.timesheetportal.com/Dashboard/';
+
 function trimString(value, maxLength) {
   const text = typeof value === 'string'
     ? value.trim()
@@ -72,6 +74,15 @@ function normaliseCommaSeparatedList(value) {
       .join(',');
   }
   return trimString(value, 4000);
+}
+
+function resolveCandidateTimesheetsDashboardUrl() {
+  const configured = normaliseUrl(
+    process.env.CANDIDATE_TIMESHEETS_DASHBOARD_URL
+      || process.env.TIMESHEET_PORTAL_DASHBOARD_URL
+      || ''
+  );
+  return configured || DEFAULT_CANDIDATE_TIMESHEETS_DASHBOARD_URL;
 }
 
 function toBoolean(value, fallback = false) {
@@ -641,6 +652,7 @@ async function applyCandidateEmailSettingsToSupabase(event, options = {}) {
 module.exports = {
   SETTINGS_KEY,
   PROVIDER_PRESETS,
+  DEFAULT_CANDIDATE_TIMESHEETS_DASHBOARD_URL,
   buildEmailTemplate,
   defaultCandidateEmailSettings,
   deriveEmailRouteSettings,
@@ -656,5 +668,6 @@ module.exports = {
   applyCandidateEmailSettingsToSupabase,
   resolveProjectRef,
   resolveManagementToken,
+  resolveCandidateTimesheetsDashboardUrl,
   normaliseCommaSeparatedList,
 };

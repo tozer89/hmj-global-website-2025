@@ -2,7 +2,11 @@
 
 const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
-const { buildEmailTemplate, readCandidateEmailSettings } = require('./_candidate-email-settings.js');
+const {
+  buildEmailTemplate,
+  readCandidateEmailSettings,
+  resolveCandidateTimesheetsDashboardUrl,
+} = require('./_candidate-email-settings.js');
 const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-delivery.js');
 const { recordAudit } = require('./_audit.js');
 const { _buildRedirectUrl: buildRedirectUrl } = require('./candidate-auth-config.js');
@@ -55,7 +59,7 @@ function validateIntroEmailRequest(input = {}) {
 function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
   const siteUrl = trimString(settings.siteUrl, 1000) || 'https://hmjg.netlify.app/';
   const registrationUrl = trimString(links.registrationUrl, 4000) || buildRedirectUrl(siteUrl, '/candidates.html');
-  const timesheetsUrl = buildRedirectUrl(siteUrl, '/timesheets.html');
+  const timesheetsUrl = resolveCandidateTimesheetsDashboardUrl();
   const supportEmail = trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com';
   const senderName = trimString(settings.senderName, 160) || 'HMJ Global';
   const firstName = trimString(request.firstName, 120) || 'there';
@@ -97,7 +101,7 @@ function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
       <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">Hi ${escapeHtml(firstName)},</p>
       <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">${escapeHtml(primaryActionIntro)}</p>
       <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">HMJ needs your profile, right-to-work, onboarding, and payment details where relevant so we can move your setup forward properly.</p>
-      <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">We will also use this information to help get you set up on the Timesheet Portal system. You can also find Timesheets in the top menu on the HMJ website once your setup is underway.</p>
+      <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">We will also use this information to help get you set up on the HMJ Timesheet Portal dashboard so you can submit hours once your setup is underway.</p>
       <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">Use the HMJ buttons below rather than saving direct system links. They will take you to the correct HMJ access path.</p>
     `,
     preheader: `Welcome to HMJ Global. Complete your registration and onboarding steps for ${clientName}.`,

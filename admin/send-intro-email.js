@@ -28,6 +28,10 @@
     return `${base.replace(/\/?$/, '/')}${String(path || '').replace(/^\/+/, '')}`;
   }
 
+  function candidateTimesheetsDashboardUrl() {
+    return 'https://hmjglobal.timesheetportal.com/Dashboard/';
+  }
+
   function fieldValue(element) {
     return trimString(element?.value || '');
   }
@@ -92,7 +96,7 @@
         <li><strong>Role / client</strong><span>${escapeHtml(jobTitle || 'Role pending')} · ${escapeHtml(clientCompany || 'Client pending')}</span></li>
         <li><strong>Sender</strong><span>${escapeHtml(sender)}</span></li>
         <li><strong>Registration path</strong><span>${escapeHtml(joinPreviewUrl(siteUrl, '/candidates.html'))}</span></li>
-        <li><strong>Timesheets path</strong><span>${escapeHtml(joinPreviewUrl(siteUrl, '/timesheets.html'))}${phone ? ` · phone logged: ${escapeHtml(phone)}` : ''}</span></li>
+        <li><strong>Timesheets path</strong><span>${escapeHtml(candidateTimesheetsDashboardUrl())}${phone ? ` · phone logged: ${escapeHtml(phone)}` : ''}</span></li>
       `;
     }
 

@@ -2,7 +2,11 @@
 
 const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
-const { buildEmailTemplate, readCandidateEmailSettings } = require('./_candidate-email-settings.js');
+const {
+  buildEmailTemplate,
+  readCandidateEmailSettings,
+  resolveCandidateTimesheetsDashboardUrl,
+} = require('./_candidate-email-settings.js');
 const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-delivery.js');
 const { recordAudit } = require('./_audit.js');
 const { _buildRedirectUrl: buildRedirectUrl, _resolveCandidatePortalBaseUrl: resolveCandidatePortalBaseUrl } = require('./candidate-auth-config.js');
@@ -188,7 +192,7 @@ async function resolveBulkEmailLinks(event, supabase, request = {}, settings = {
     tab: 'documents',
     onboarding: candidate?.onboarding_mode === true || request?.template?.primaryAction === 'documents_upload',
   });
-  const timesheetsUrl = buildRedirectUrl(siteUrl, '/timesheets.html');
+  const timesheetsUrl = resolveCandidateTimesheetsDashboardUrl();
   const primaryAction = trimString(request?.template?.primaryAction, 40).toLowerCase();
 
   if (primaryAction === 'timesheets') {

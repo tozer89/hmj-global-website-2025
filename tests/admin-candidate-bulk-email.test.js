@@ -83,7 +83,7 @@ test('bulk candidate email builder creates branded HMJ HTML with button labels i
     },
   }, {
     primaryActionUrl: 'https://mftwpbpwisxyaenfoizb.supabase.co/auth/v1/verify?token=abc',
-    timesheetsUrl: 'https://hmjg.netlify.app/timesheets.html',
+    timesheetsUrl: 'https://hmjglobal.timesheetportal.com/Dashboard/',
   });
 
   assert.equal(message.subject, 'HMJ update for Ava');
