@@ -4,8 +4,8 @@
   var currentModel = null;
   var currentHelpers = null;
   var storageKeys = {
-    current: 'hmj.finance.dealProfit.current.v1',
-    saved: 'hmj.finance.dealProfit.saved.v1',
+    current: 'hmj.finance.dealProfit.current.v2',
+    saved: 'hmj.finance.dealProfit.saved.v2',
   };
   var els = {};
 
@@ -100,18 +100,23 @@
       'heroWeeklyNetMeta',
       'dealProfitAlerts',
       'dealProfitForm',
+      'startDate',
       'durationPreset',
       'customWeeksField',
       'customWeeks',
       'paymentTermsPreset',
       'customPaymentDaysField',
       'customPaymentDays',
+      'financeFeeMode',
+      'discountFeeLabel',
+      'annualInterestFeeField',
       'marginPerHourField',
       'chargeRateOverrideField',
       'showVat',
       'vatRateField',
       'dealMetricList',
       'fundingMetricList',
+      'formulaNotesList',
       'dealSummaryGrid',
       'dealBreakdownTable',
       'dealScenarioGrid',
@@ -121,6 +126,7 @@
       'btnExportScenarioCsv',
       'btnPrintScenario',
       'btnResetScenario',
+      'btnApplyZodeqPreset',
     ].forEach(function (id) {
       els[id] = $(id);
     });
@@ -166,6 +172,7 @@
     var marginMode = trimString(els.dealProfitForm.elements.marginMode.value);
     var durationPreset = trimString(els.durationPreset.value);
     var paymentPreset = trimString(els.paymentTermsPreset.value);
+    var financeFeeMode = trimString(els.financeFeeMode.value);
     var showVat = trimString(els.showVat.value) === 'true';
 
     els.marginPerHourField.hidden = marginMode !== 'margin_per_hour';
@@ -179,6 +186,12 @@
     els.customPaymentDaysField.hidden = paymentPreset !== 'custom';
     els.customPaymentDays.disabled = paymentPreset !== 'custom';
 
+    els.annualInterestFeeField.hidden = financeFeeMode === 'bundled_invoice_fee';
+    els.annualInterestFeeField.querySelector('input').disabled = financeFeeMode === 'bundled_invoice_fee';
+    els.discountFeeLabel.textContent = financeFeeMode === 'bundled_invoice_fee'
+      ? 'Bundled service fee % of gross invoice'
+      : 'Annual discounting fee %';
+
     els.vatRateField.hidden = !showVat;
     els.vatRateField.querySelector('input').disabled = !showVat;
   }
@@ -189,7 +202,8 @@
       createStatusChip('Internal estimate only', 'warn'),
       createStatusChip(model.input.currency, 'ok'),
       createStatusChip(model.input.workerCount + ' worker' + (model.input.workerCount === 1 ? '' : 's'), 'ok'),
-      createStatusChip(model.input.paymentDays + ' day terms', model.input.paymentDays > 45 ? 'warn' : 'ok'),
+      createStatusChip(model.input.paymentTermsLabel, model.input.paymentDays > 45 ? 'warn' : 'ok'),
+      createStatusChip('Starts ' + model.input.startDate, 'ok'),
       createStatusChip(model.selectedPeriod.label, 'ok'),
     ].forEach(function (chip) {
       els.dealProfitStatusChips.appendChild(chip);
@@ -214,7 +228,7 @@
 
   function renderHero(model) {
     els.heroSelectedNetProfit.textContent = money(model.selectedPeriod.netProfit, model.input.currency);
-    els.heroSelectedNetMeta.textContent = model.selectedPeriod.label + ' horizon • ' + plainNumber(model.selectedPeriod.weeks, 2) + ' weeks • ' + model.input.paymentDays + ' day terms';
+    els.heroSelectedNetMeta.textContent = model.selectedPeriod.label + ' horizon • ' + plainNumber(model.selectedPeriod.weeks, 2) + ' weeks • starts ' + model.input.startDate + ' • avg ' + plainNumber(model.selectedPeriod.daysOutstanding, 2) + ' days outstanding';
     els.heroWeeklyNetProfit.textContent = money(model.periodMap.week.netProfit, model.input.currency);
     els.heroWeeklyNetMeta.textContent = 'Charge ' + money(model.chargeRate, model.input.currency) + '/hr • net margin ' + percent(model.metrics.netMarginPercent, 2);
   }
@@ -275,7 +289,9 @@
       {
         label: 'Total finance cost',
         value: money(model.funding.totalFinanceCost, model.input.currency),
-        detail: 'Discounting + interest across current payment terms',
+        detail: model.input.financeFeeMode === 'bundled_invoice_fee'
+          ? 'Bundled fee model across assigned invoices'
+          : 'Discounting + interest across current payment terms',
       },
       {
         label: 'Net cash released after fees',
@@ -302,11 +318,34 @@
     }).join('');
   }
 
+  function renderFormulaNotes(model) {
+    var notes = model.input.financeFeeMode === 'bundled_invoice_fee'
+      ? [
+          ['Bundled service fee', 'Gross invoice value × bundled fee %. This aligns more closely with the signed Zodeq offer letter wording.'],
+          ['Interest fee', 'Not applied in bundled mode unless you switch back to annualised split fees.'],
+          ['Net profit', 'Gross margin less finance cost, overhead, and estimated corporation tax on positive profit only.'],
+        ]
+      : [
+          ['Discount fee', 'Invoice value × annual discounting fee × (days outstanding ÷ 365), summed per weekly invoice.'],
+          ['Interest fee', 'Funded amount × annual interest fee × (days outstanding ÷ 365), summed per weekly invoice.'],
+          ['Net profit', 'Gross margin less finance cost, overhead, and estimated corporation tax on positive profit only.'],
+        ];
+
+    els.formulaNotesList.innerHTML = notes.map(function (item) {
+      return (
+        '<div class="finance-list-item">' +
+          '<strong>' + escapeHtml(item[0]) + '</strong>' +
+          '<small>' + escapeHtml(item[1]) + '</small>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
   function renderSummaryCards(model) {
     var cards = [
       ['Charge rate', money(model.chargeRate, model.input.currency) + ' / hr', 'Current charge to client based on mode selection.'],
       ['Weekly gross margin', money(model.periodMap.week.grossMargin, model.input.currency), 'Gross margin before finance, overhead, and tax.'],
-      ['Weekly finance cost', money(model.periodMap.week.totalFinanceCost, model.input.currency), 'Discounting plus interest on the weekly invoice.'],
+      ['Weekly finance cost', money(model.periodMap.week.totalFinanceCost, model.input.currency), model.input.financeFeeMode === 'bundled_invoice_fee' ? 'Bundled fee on the weekly invoice value.' : 'Discounting plus annualised interest on the weekly invoice.'],
       ['Weekly net profit', money(model.periodMap.week.netProfit, model.input.currency), 'Estimated weekly profit after finance, overhead, and tax.'],
       ['1 month net profit', money(model.periodMap.month.netProfit, model.input.currency), 'Using 52/12 weeks for one month.'],
       ['3 month net profit', money(model.periodMap.quarter.netProfit, model.input.currency), 'Using 13 weeks.'],
@@ -357,7 +396,7 @@
     var body = rows.map(function (row) {
       var mainRow = (
         '<tr>' +
-          '<td><strong>' + escapeHtml(row.label) + '</strong><div class="deal-inline-note">' + escapeHtml(plainNumber(row.weeks, 2) + ' weeks • ' + row.daysOutstanding + ' days outstanding') + '</div></td>' +
+          '<td><strong>' + escapeHtml(row.label) + '</strong><div class="deal-inline-note">' + escapeHtml(plainNumber(row.weeks, 2) + ' weeks • ' + plainNumber(row.daysOutstanding, 2) + ' avg days outstanding • ' + row.paymentTermsLabel) + '</div></td>' +
           '<td>' + escapeHtml(money(row.revenue, model.input.currency)) + '</td>' +
           '<td>' + escapeHtml(money(row.payCost, model.input.currency)) + '</td>' +
           '<td>' + escapeHtml(money(row.grossMargin, model.input.currency)) + '</td>' +
@@ -475,6 +514,7 @@
     renderAlerts(currentModel);
     renderHero(currentModel);
     renderMetricLists(currentModel);
+    renderFormulaNotes(currentModel);
     renderSummaryCards(currentModel);
     renderBreakdownTable(currentModel);
     renderScenarioComparison(currentModel);
@@ -514,11 +554,14 @@
       ['Deal name', currentModel.input.dealName],
       ['Candidate', currentModel.input.candidateLabel],
       ['Client', currentModel.input.clientName],
+      ['Start date', currentModel.input.startDate],
       ['Currency', currentModel.input.currency],
       ['Worker count', currentModel.input.workerCount],
       ['Hours per week', currentModel.input.hoursPerWeek],
       ['Charge rate', currentModel.chargeRate],
-      ['Payment days', currentModel.input.paymentDays],
+      ['Payment terms', currentModel.input.paymentTermsLabel],
+      ['Representative days outstanding', currentModel.input.paymentDays],
+      ['Finance fee model', currentModel.input.financeFeeMode],
       [],
       ['Period', 'Weeks', 'Revenue', 'Pay cost', 'Gross margin', 'Discount fee', 'Interest fee', 'Total finance cost', 'Overheads', 'Profit before tax', 'Tax', 'Net profit'],
     ];
@@ -592,6 +635,11 @@
     });
     els.btnPrintScenario.addEventListener('click', function () { window.print(); });
     els.btnResetScenario.addEventListener('click', function () { resetScenario(); });
+    els.btnApplyZodeqPreset.addEventListener('click', function () {
+      syncForm(window.HMJDealProfitCalc.applyZodeqOfferPreset(serialiseForm()));
+      recalc();
+      currentHelpers.toast('Zodeq offer assumptions applied.', 'ok', 2400);
+    });
   }
 
   function loadInitialState() {

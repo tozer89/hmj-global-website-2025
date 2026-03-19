@@ -49,11 +49,15 @@ test('deal profit calc page exposes calculator controls and result containers', 
   const html = read('admin/deal-profit-calc.html');
   assert.match(html, /Deal Profit Calc/);
   assert.match(html, /id="dealProfitForm"/);
+  assert.match(html, /id="startDate"/);
   assert.match(html, /id="marginModeToggle"/);
+  assert.match(html, /id="financeFeeMode"/);
+  assert.match(html, /id="btnApplyZodeqPreset"/);
   assert.match(html, /id="dealSummaryGrid"/);
   assert.match(html, /id="dealBreakdownTable"/);
   assert.match(html, /id="dealScenarioGrid"/);
   assert.match(html, /id="savedScenarioList"/);
-  assert.match(html, /deal-profit-calc\.js\?v=1/);
-  assert.match(html, /deal-profit-calc-core\.js\?v=1/);
+  assert.match(html, /id="formulaNotesList"/);
+  assert.match(html, /deal-profit-calc\.js\?v=2/);
+  assert.match(html, /deal-profit-calc-core\.js\?v=2/);
 });

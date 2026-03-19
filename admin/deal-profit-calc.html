@@ -14,9 +14,9 @@
   <link rel="stylesheet" href="/assets/css/admin.finance.css?v=1"/>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
-  <link rel="stylesheet" href="/assets/css/admin.deal-profit-calc.css?v=1"/>
-  <script defer src="/assets/js/deal-profit-calc-core.js?v=1"></script>
-  <script defer src="/admin/deal-profit-calc.js?v=1"></script>
+  <link rel="stylesheet" href="/assets/css/admin.deal-profit-calc.css?v=2"/>
+  <script defer src="/assets/js/deal-profit-calc-core.js?v=2"></script>
+  <script defer src="/admin/deal-profit-calc.js?v=2"></script>
 </head>
 <body class="finance-page deal-profit-page">
   <div class="finance-top">
@@ -107,6 +107,10 @@
                   <input id="clientName" name="clientName" maxlength="160" placeholder="Optional client reference"/>
                 </label>
                 <label class="finance-field">
+                  <span>Start date</span>
+                  <input id="startDate" name="startDate" type="date"/>
+                </label>
+                <label class="finance-field">
                   <span>Currency</span>
                   <select id="currency" name="currency">
                     <option value="GBP">GBP</option>
@@ -184,11 +188,13 @@
                 <label class="finance-field">
                   <span>Client payment terms</span>
                   <select id="paymentTermsPreset" name="paymentTermsPreset">
-                    <option value="7">7 days</option>
-                    <option value="14">14 days</option>
-                    <option value="30">30 days</option>
-                    <option value="45">45 days</option>
-                    <option value="60">60 days</option>
+                    <option value="7_doi">7 days from invoice</option>
+                    <option value="14_doi">14 days date of invoice</option>
+                    <option value="30_doi">30 days from invoice</option>
+                    <option value="30_eom">30 days EOM</option>
+                    <option value="45_doi">45 days from invoice</option>
+                    <option value="60_doi">60 days from invoice</option>
+                    <option value="90_eom">90 days EOM</option>
                     <option value="custom">Custom</option>
                   </select>
                 </label>
@@ -211,18 +217,28 @@
                 </div>
                 <p class="finance-muted">Editable internal assumptions only. These are HMJ commercial estimates for pricing and planning, not lender statements or formal tax advice.</p>
               </div>
+              <div class="finance-inline-actions">
+                <button class="finance-btn finance-btn--soft" type="button" id="btnApplyZodeqPreset">Apply Zodeq offer terms</button>
+              </div>
               <div class="finance-form-grid">
+                <label class="finance-field finance-field--wide">
+                  <span>Finance fee model</span>
+                  <select id="financeFeeMode" name="financeFeeMode">
+                    <option value="annualised_split">Annualised split fees</option>
+                    <option value="bundled_invoice_fee">Bundled gross-invoice fee (Zodeq-style)</option>
+                  </select>
+                </label>
                 <label class="finance-field">
                   <span>Funding advance %</span>
                   <input id="fundingAdvancePercent" name="fundingAdvancePercent" type="number" min="0" max="100" step="0.01"/>
                 </label>
                 <label class="finance-field">
-                  <span>Annual discounting fee %</span>
+                  <span id="discountFeeLabel">Annual discounting fee %</span>
                   <input id="annualDiscountFeePercent" name="annualDiscountFeePercent" type="number" min="0" step="0.01"/>
                 </label>
-                <label class="finance-field">
-                  <span>Daily interest fee %</span>
-                  <input id="dailyInterestFeePercent" name="dailyInterestFeePercent" type="number" min="0" step="0.01"/>
+                <label class="finance-field" id="annualInterestFeeField">
+                  <span>Annual interest fee %</span>
+                  <input id="annualInterestFeePercent" name="annualInterestFeePercent" type="number" min="0" step="0.01"/>
                 </label>
                 <label class="finance-field">
                   <span>Corporation tax %</span>
@@ -261,20 +277,7 @@
             <section class="finance-data-block">
               <p class="finance-eyebrow">Formula notes</p>
               <h3>How HMJ is estimating this</h3>
-              <div class="finance-list">
-                <div class="finance-list-item">
-                  <strong>Discount fee</strong>
-                  <small>Invoice value × annual discounting fee × (payment days ÷ 365)</small>
-                </div>
-                <div class="finance-list-item">
-                  <strong>Interest fee</strong>
-                  <small>Funded amount × daily interest fee × payment days</small>
-                </div>
-                <div class="finance-list-item">
-                  <strong>Net profit</strong>
-                  <small>Gross margin less finance cost, overhead, and estimated corporation tax on positive profit only.</small>
-                </div>
-              </div>
+              <div class="finance-list" id="formulaNotesList"></div>
             </section>
           </aside>
         </div>
