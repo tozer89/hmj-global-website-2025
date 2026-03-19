@@ -15,6 +15,37 @@ function getIdentityEmail(context) {
   return context?.clientContext?.user?.email || null;
 }
 
+async function loadNamedEntity(client, table, id, columns = 'id,name,client_id') {
+  if (!id) return null;
+  const { data, error } = await client
+    .from(table)
+    .select(columns)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function hydrateAssignmentContext(client, assignment) {
+  if (!assignment) return null;
+
+  const [project, site] = await Promise.all([
+    loadNamedEntity(client, 'projects', assignment.project_id, 'id,name,client_id'),
+    loadNamedEntity(client, 'sites', assignment.site_id, 'id,name,client_id'),
+  ]);
+
+  const clientId = project?.client_id || site?.client_id || null;
+  const linkedClient = await loadNamedEntity(client, 'clients', clientId, 'id,name');
+
+  return {
+    ...assignment,
+    project_name: project?.name || null,
+    site_name: site?.name || assignment.client_site || null,
+    client_name: linkedClient?.name || assignment.client_name || null,
+  };
+}
+
 // Load contractor + most recent active assignment (with names & rates)
 async function getContext(context) {
   const email = getIdentityEmail(context);
@@ -33,12 +64,7 @@ async function getContext(context) {
   // Most recent active assignment
   const { data: assignment, error: aErr } = await supabase
     .from('assignments')
-    .select(`
-      id, contractor_id, rate_std, rate_ot, start_date, end_date, active,
-      projects:project_id ( name ),
-      sites:site_id ( name ),
-      clients:project_id!inner ( clients:client_id ( name ) )
-    `)
+    .select('id, contractor_id, project_id, site_id, client_name, client_site, rate_std, rate_ot, start_date, end_date, active')
     .eq('contractor_id', contractor.id)
     .eq('active', true)
     .order('start_date', { ascending: false })
@@ -47,17 +73,9 @@ async function getContext(context) {
 
   if (aErr) throw aErr;
 
-  if (assignment) {
-    assignment.project_name = assignment.projects?.name || null;
-    assignment.site_name    = assignment.sites?.name || null;
-    // “clients” comes via the projects join; flatten:
-    assignment.client_name  = assignment.clients?.clients?.name || null;
-    delete assignment.projects;
-    delete assignment.sites;
-    delete assignment.clients;
-  }
+  const hydratedAssignment = await hydrateAssignmentContext(supabase, assignment);
 
-  return { contractor, assignment };
+  return { contractor, assignment: hydratedAssignment };
 }
 
 // Ensure there is a single timesheet row for (assignment_id, week_ending).
@@ -95,5 +113,8 @@ module.exports = {
   weekEndingSaturdayISO,
   getContext,
   ensureTimesheet,
-  getIdentityEmail
+  getIdentityEmail,
+  __test: {
+    hydrateAssignmentContext,
+  },
 };

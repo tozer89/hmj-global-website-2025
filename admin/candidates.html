@@ -151,6 +151,7 @@
 
     .fab{position:fixed;right:24px;bottom:24px;background:var(--blue);color:#fff;border:none;border-radius:14px;padding:14px 18px;box-shadow:0 20px 44px rgba(15,23,42,.25);font-weight:800;cursor:pointer}
     .fab:hover{background:var(--blue-2)}
+    .btn.mobile-new-candidate{display:none}
 
     .drawer{position:fixed;top:0;right:0;bottom:0;width:min(580px,94vw);background:#fff;border-left:1px solid var(--stroke);box-shadow:-24px 0 60px rgba(15,23,42,.18);transform:translateX(100%);transition:transform .24s ease;overflow:auto;z-index:120}
     .drawer.open{transform:translateX(0)}
@@ -274,6 +275,8 @@
       .dialog-grid{grid-template-columns:1fr}
       .bulk-email-options{grid-template-columns:1fr}
       .bulk-email-preview-hero strong{font-size:24px}
+      .btn.mobile-new-candidate{display:inline-flex}
+      .fab{display:none}
     }
     @media (min-width:1560px){
       body.drawer-open .wrap.layout{padding-right:calc(16px + min(360px,22vw))}
@@ -434,6 +437,7 @@
               <button class="btn" id="btn-refresh">Refresh</button>
             </div>
             <div class="toolbar-actions">
+              <button class="btn mobile-new-candidate" id="btn-new-inline" type="button">+ New candidate</button>
               <button class="btn ghost small" id="btn-select-visible" type="button">Select visible</button>
               <button class="btn ghost small" id="btn-select-missing-rtw" type="button">Select missing RTW</button>
             </div>
@@ -653,6 +657,6 @@
   </dialog>
 
   <script defer src="/js/candidate-active-assignments-core.js?v=2"></script>
-  <script defer src="/admin/candidates.js?v=22"></script>
+  <script defer src="/admin/candidates.js?v=23"></script>
 </body>
 </html>

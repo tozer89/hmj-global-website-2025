@@ -216,7 +216,7 @@
       .wrap{ margin-bottom:120px; }
     }
   </style>
-  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=3" />
 </head>
 <body class="public-page timesheets-page">
   <!-- Announcement -->
@@ -530,6 +530,22 @@
       }
     }
 
+    function renderUnavailableState(message, detail=''){
+      $('#weekTitle').textContent = 'My Timesheet';
+      $('#statusHelp').textContent = message;
+      $('#profileBox').innerHTML = `<div class="muted">${detail || message}</div>`;
+      $('#tbody').innerHTML = `
+        <tr>
+          <td colspan="4" class="muted" style="padding:14px 0">${message}</td>
+        </tr>
+      `;
+      $('#sheet').classList.add('locked');
+      $('#btnReqEdit').classList.add('hidden');
+      $('#btnReqDelete').classList.add('hidden');
+      $('#fabBar').classList.add('hidden');
+      $('#histBody').textContent = '—';
+    }
+
     // ---------- loaders ----------
     async function loadWeek(){
       const res = await api('/timesheets-get-this-week');
@@ -785,6 +801,12 @@
         const m = e.message || String(e);
         if (m === 'identity_required'){
           showGate();
+        } else if (m === 'contractor_not_found_for_email') {
+          showApp();
+          renderUnavailableState('HMJ could not match this login to a contractor profile yet.', 'Ask HMJ admin to connect your email to your contractor record before submitting timesheets.');
+        } else if (m === 'no_active_assignment') {
+          showApp();
+          renderUnavailableState('No active assignment is linked to this account right now.', 'You can view this page, but HMJ has not linked a live assignment to your account yet.');
         } else {
           toast(`Could not load timesheet: ${m}`);
         }

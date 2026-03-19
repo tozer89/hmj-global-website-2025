@@ -13,7 +13,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=36/);
   assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=2/);
-  assert.match(html, /\/admin\/candidates\.js\?v=22/);
+  assert.match(html, /\/admin\/candidates\.js\?v=23/);
   assert.match(html, /id="bulk-intro-email"/);
   assert.match(html, /id="bulk-send-email"/);
   assert.match(html, /id="bulk-copy-emails"/);
@@ -26,6 +26,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /id="btn-refresh-tsp"/);
   assert.match(html, /id="btn-sync-tsp"/);
   assert.match(html, /id="btn-sync-tsp-portal"/);
+  assert.match(html, /id="btn-new-inline"/);
   assert.match(html, /id="btn-refresh-verify"/);
   assert.match(html, /id="btn-select-to-verify"/);
   assert.match(html, /id="outreach-status"/);
@@ -86,6 +87,8 @@ test('candidate row actions use closest() event delegation so button text clicks
   const source = read('admin/candidates.js');
   assert.match(source, /target\.closest\('\[data-role\]'\)/);
   assert.match(source, /rawTarget && rawTarget\.parentElement instanceof Element/);
+  assert.match(source, /elements\.inlineNew = qs\('#btn-new-inline'\);/);
+  assert.match(source, /if \(elements\.inlineNew\) elements\.inlineNew\.addEventListener\('click', \(\) => createNewCandidate\(\)\);/);
 });
 
 test('candidate normalizer keeps synthetic display names out of persisted full_name payloads', () => {

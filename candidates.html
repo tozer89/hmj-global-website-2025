@@ -147,7 +147,7 @@
     }
     .toast.show{ opacity:1; transform:translateY(0); }
   </style>
-  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/public.responsive.css?v=3" />
   <link rel="stylesheet" href="/assets/css/public.harmony.css?v=2" />
 </head>
 
@@ -330,7 +330,7 @@
                   enctype="multipart/form-data" class="cv-form candidate-form" id="candForm">
               <input type="hidden" name="form-name" value="candidate-cv" />
               <!-- Honeypot -->
-              <p style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">
+              <p style="position:absolute;clip:rect(0 0 0 0);clip-path:inset(50%);width:1px;height:1px;margin:-1px;overflow:hidden;white-space:nowrap;border:0;padding:0;">
                 <label>Don’t fill this out if you’re human: <input name="bot-field"></label>
               </p>
               <!-- Hidden field to collect tags + page URL + RTW selections -->

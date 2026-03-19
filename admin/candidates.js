@@ -4649,6 +4649,7 @@
     elements.dwBlock = qs('#dw-block');
     elements.dwClose = qs('#dw-close');
     elements.fab = qs('#fab-new');
+    elements.inlineNew = qs('#btn-new-inline');
     elements.query = qs('#q');
     elements.status = qs('#flt-status');
     elements.role = qs('#flt-role');
@@ -4894,7 +4895,8 @@
       });
     }
     elements.dwClose.addEventListener('click', () => closeDrawer());
-    elements.fab.addEventListener('click', () => createNewCandidate());
+    if (elements.fab) elements.fab.addEventListener('click', () => createNewCandidate());
+    if (elements.inlineNew) elements.inlineNew.addEventListener('click', () => createNewCandidate());
     elements.applyFilters.addEventListener('click', () => { captureFilters(); applyFilters(); loadCandidates({ silent: true }); });
     elements.clearFilters.addEventListener('click', () => { clearFilters(); loadCandidates({ silent: true }); });
     bindBulkActions();

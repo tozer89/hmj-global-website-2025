@@ -18,6 +18,12 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+function normaliseRows(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.rows)) return value.rows;
+  return [];
+}
+
 function makeTimesheetRow(ts, assignment, baseWeekEnding) {
   const stdHours = toNumber(ts.total_hours) - toNumber(ts.ot_hours);
   const otHours = toNumber(ts.ot_hours);
@@ -61,11 +67,12 @@ function makeTimesheetRow(ts, assignment, baseWeekEnding) {
 }
 
 function summarise(rows = []) {
+  const safeRows = normaliseRows(rows);
   const byCurrency = new Map();
   const byContractor = new Map();
   const byWeek = new Map();
 
-  rows.forEach((row) => {
+  safeRows.forEach((row) => {
     const { currency, totals, candidateId, candidateName, weekNo } = row;
     const curKey = currency || 'GBP';
     const curSum = byCurrency.get(curKey) || { pay: 0, charge: 0, gp: 0 };
@@ -121,23 +128,26 @@ const baseHandler = async (event, context) => {
       currencies: ensureArray(currencies).map((c) => String(c).toUpperCase()),
     };
 
-    const respond = (rows, source, warning = null) => ({
-      statusCode: 200,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({
-        ok: true,
-        rows,
-        summary: summarise(rows),
-        filters,
-        source,
-        warning,
-        supabase: supabaseStatus(),
-        config: { week1Ending: baseWeekEnding, source: settings.source },
-      }),
-    });
+    const respond = (rows, source, warning = null) => {
+      const safeRows = normaliseRows(rows);
+      return {
+        statusCode: 200,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({
+          ok: true,
+          rows: safeRows,
+          summary: summarise(safeRows),
+          filters,
+          source,
+          warning,
+          supabase: supabaseStatus(),
+          config: { week1Ending: baseWeekEnding, source: settings.source },
+        }),
+      };
+    };
 
     if (!hasSupabase()) {
-      const rows = loadStatic(baseWeekEnding);
+      const rows = normaliseRows(loadStatic(baseWeekEnding));
       return respond(rows, 'static', settings.error || 'Supabase unavailable');
     }
 
@@ -159,18 +169,18 @@ const baseHandler = async (event, context) => {
     const { data, error } = await query;
     if (error) {
       console.warn('[report-gp] supabase query failed — falling back to static', error.message);
-      const rows = loadStatic(baseWeekEnding);
+      const rows = normaliseRows(loadStatic(baseWeekEnding));
       return respond(rows, 'static-error', error.message);
     }
 
-    const rows = (data || []).map((ts) => makeTimesheetRow(ts, ts.assignments || null, baseWeekEnding));
+    const rows = normaliseRows(data).map((ts) => makeTimesheetRow(ts, ts.assignments || null, baseWeekEnding));
     const filtered = rows.filter((row) => {
       if (filters.currencies.length && !filters.currencies.includes((row.currency || 'GBP').toUpperCase())) return false;
       return true;
     });
 
     if (!filtered.length) {
-      const fallback = loadStatic(baseWeekEnding);
+      const fallback = normaliseRows(loadStatic(baseWeekEnding));
       if (fallback.length) {
         return respond(fallback, 'static-empty', 'No live rows returned; showing fallback data.');
       }
@@ -187,3 +197,7 @@ const baseHandler = async (event, context) => {
 };
 
 exports.handler = withAdminCors(baseHandler);
+exports.__test = {
+  normaliseRows,
+  summarise,
+};

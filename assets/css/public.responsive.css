@@ -695,13 +695,13 @@ body:not(.public-page):not(.clients-body) .status-shell {
   }
 
   .jobs-page .jobs-overview__grid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(220px, 82vw);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    padding-bottom: 4px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow: visible;
+    overscroll-behavior-x: auto;
+    scroll-snap-type: none;
+    padding-bottom: 0;
   }
 
   .jobs-page .jobs-overview__card {
@@ -739,14 +739,14 @@ body:not(.public-page):not(.clients-body) .status-shell {
 
   body.public-page.jobs-page .entry-hero--jobs .entry-hero__meta {
     gap: 5px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: none;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding-bottom: 0;
+    scrollbar-width: auto;
   }
 
   body.public-page.jobs-page .entry-hero--jobs .entry-hero__chip {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     padding: 6px 9px;
     font-size: 0.79rem;
   }
@@ -943,7 +943,9 @@ body:not(.public-page):not(.clients-body) .status-shell {
   }
 
   .jobs-page .jobs-overview__grid {
-    grid-auto-columns: minmax(188px, 78vw);
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
     gap: 10px;
   }
 
@@ -1022,7 +1024,9 @@ body:not(.public-page):not(.clients-body) .status-shell {
   }
 
   .jobs-page .jobs-overview__grid {
-    grid-auto-columns: minmax(180px, 82vw);
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
   }
 
   .jobs-page .jobs-overview__card {

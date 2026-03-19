@@ -20,6 +20,9 @@ exports.handler = async (event, context) => {
       assignment = ctx?.assignment || null;
     } catch (err) {
       console.error('[get-this-week] getContext error:', err);
+      if ((err?.message || '') === 'identity_required') {
+        return respond(401, { error: 'identity_required' });
+      }
       return respond(500, { error: 'context_failed' });
     }
 
