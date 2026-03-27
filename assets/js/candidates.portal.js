@@ -334,6 +334,10 @@ import {
   }
 
   function registrationPaymentEnabled() {
+    // New starter mode (path chooser flow): check the hidden onboarding_mode field
+    const modeHidden = doc.getElementById('onboardingModeHidden');
+    if (modeHidden && (modeHidden.value === 'true' || modeHidden.value === true)) return true;
+    // Legacy: gate toggle checkbox (kept for backwards compatibility)
     return !!(paymentToggle && paymentToggle.checked);
   }
 
@@ -422,9 +426,21 @@ import {
   }
 
   function syncPaymentGateControls() {
-    if (!paymentToggle || !paymentPanel || !paymentGate) return;
-
+    // In new path-chooser flow the gate toggle elements may not exist — that's fine
     const enabled = registrationPaymentEnabled();
+    // If no legacy gate elements exist, just sync payment method groups and return
+    if (!paymentToggle || !paymentPanel || !paymentGate) {
+      if (enabled && paymentFields.method) {
+        const paymentMethod = normaliseRegistrationPaymentMethod(
+          (paymentFields.currency?.value || 'GBP').toUpperCase(),
+          paymentFields.method.value
+        );
+        document.querySelectorAll('.candidate-payment-group').forEach((g) => {
+          g.style.display = g.dataset.paymentGroup === paymentMethod ? '' : 'none';
+        });
+      }
+      return;
+    }
     const accountCurrency = trimText(paymentFields.currency?.value, 12).toUpperCase() || 'GBP';
     const paymentMethod = normaliseRegistrationPaymentMethod(accountCurrency, paymentFields.method?.value);
 
