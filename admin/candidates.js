@@ -1601,7 +1601,8 @@
     if (state.quickSearch && !haystack.includes(state.quickSearch)) return false;
     // Candidate type filter
     if (filters.candidateType === 'starter' && !candidateOnboardingMode(candidate)) return false;
-    if (filters.candidateType === 'seeker' && candidateOnboardingMode(candidate)) return false;
+    // Seekers = website-registered recruitment profiles only (must have a portal account and not be in onboarding mode)
+    if (filters.candidateType === 'seeker' && (candidateOnboardingMode(candidate) || !candidate.has_portal_account)) return false;
     if (filters.status.length && !filters.status.includes(candidate.status)) return false;
     if (filters.role && !(candidate.role || '').toLowerCase().includes(filters.role.toLowerCase())) return false;
     if (filters.region && !(candidate.region || '').toLowerCase().includes(filters.region.toLowerCase())) return false;

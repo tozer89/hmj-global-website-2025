@@ -957,7 +957,7 @@
     var TAB_PRESETS = {
       all:        { sourceTab: 'combined',  type: '',        statusReset: true },
       seekers:    { sourceTab: 'website',   type: 'seeker',  statusReset: true },
-      starters:   { sourceTab: 'website',   type: 'starter', statusReset: true },
+      starters:   { sourceTab: 'combined',  type: 'starter', statusReset: true },
       attention:  { sourceTab: 'website',   type: '',        statusReset: true, selectMissingRtw: true },
       tsp:        {},
       operations: {}
@@ -1161,9 +1161,14 @@
       var clientSet = {};
       var ir35Inside = 0, ir35Outside = 0;
 
-      contractors.forEach(function (c) {
+      /* Only show contractors that have at least one assignment in aMap */
+      var activeContractors = contractors.filter(function (c) {
+        return aMap[String(c.id || '')];
+      });
+
+      activeContractors.forEach(function (c) {
         var cid = String(c.id || '');
-        var aList = aMap[cid] || [{}]; /* at least one row per contractor */
+        var aList = aMap[cid]; /* always has entries — we filtered above */
         aList.forEach(function (a, idx) {
           if (a.clientName) clientSet[a.clientName] = true;
           if (/inside/i.test(a.ir35Status || '')) ir35Inside++;
@@ -1183,19 +1188,20 @@
         });
       });
 
-      tbody.innerHTML = rows || '<tr><td colspan="9" style="padding:32px;text-align:center;color:var(--muted)">No active TSP contractors found.</td></tr>';
+      tbody.innerHTML = rows || '<tr><td colspan="9" style="padding:32px;text-align:center;color:var(--muted)">No contractors with live TSP assignments found.</td></tr>';
 
       /* Summary pills */
       var clientCount = Object.keys(clientSet).length;
-      var pillsHtml = '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#e8edfa;color:#3154b3;font-size:12px;font-weight:800">' + contractors.length + ' contractors</span>';
+      var pillsHtml = '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#e8edfa;color:#3154b3;font-size:12px;font-weight:800">' + activeContractors.length + ' active</span>';
+      if (contractors.length > activeContractors.length) pillsHtml += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:var(--surface);color:var(--muted);font-size:12px;font-weight:800">' + contractors.length + ' total in TSP</span>';
       if (clientCount) pillsHtml += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:800">' + clientCount + ' clients</span>';
       if (ir35Inside) pillsHtml += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:800">' + ir35Inside + ' inside IR35</span>';
       if (ir35Outside) pillsHtml += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:800">' + ir35Outside + ' outside IR35</span>';
       if (pillsEl) pillsEl.innerHTML = pillsHtml;
 
-      /* Update tab badge */
+      /* Update tab badge — show only those with live assignments */
       var badge = document.getElementById('pt-badge-tsp');
-      if (badge) badge.textContent = contractors.length || '—';
+      if (badge) badge.textContent = activeContractors.length || '—';
     }
 
     function loadTspActive() {
@@ -1219,7 +1225,10 @@
           var contractors = data.contractors || [];
           var assignments = data.assignments || [];
           var ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-          if (statusEl) { statusEl.textContent = '✓ Updated at ' + ts + ' · ' + contractors.length + ' contractor' + (contractors.length !== 1 ? 's' : ''); statusEl.style.color = 'var(--ok)'; }
+          var activeCount = contractors.filter(function (c) {
+            return assignments.some(function (a) { return String(a.contractorId||'') === String(c.id||''); });
+          }).length;
+          if (statusEl) { statusEl.textContent = '✓ Updated at ' + ts + ' · ' + activeCount + ' with live assignments (' + contractors.length + ' total in TSP)'; statusEl.style.color = 'var(--ok)'; }
           renderTspTable(contractors, assignments);
         })
         .catch(function (err) {
