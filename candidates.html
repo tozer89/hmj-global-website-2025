@@ -365,7 +365,7 @@
         <li><a href="clients.html" data-page="clients">Clients</a></li>
         <li><a href="candidates.html" data-page="candidates">Candidates</a></li>
         <li><a href="jobs.html" data-page="jobs">Jobs</a></li>
-        <li><a href="contact.html" data-page="contact">Contact</a></li>
+        <li><a href="enquiry.html" data-page="enquiry">Contact</a></li>
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
@@ -590,7 +590,9 @@
                     <input id="candidateCreateAccount" type="checkbox" checked>
                     <span>Set up a secure HMJ candidate account</span>
                   </label>
-                  <p class="small candidate-account-copy">Recommended — your account lets you update your profile, upload documents and track your applications at any time.</p>
+                  <p class="small candidate-account-copy"
+                     data-seeker-text="Recommended — your account lets you update your profile, upload documents and track your applications at any time."
+                     data-starter-text="Recommended — your account gives you access to your secure onboarding area where you can upload documents, check your right-to-work status and manage your payroll setup.">Recommended — your account lets you update your profile, upload documents and track your applications at any time.</p>
                 </div>
                 <div class="candidate-password-panel" id="candidatePasswordFields">
                   <div class="candidate-form__grid candidate-form__grid--two">
@@ -660,15 +662,21 @@
                     <input id="country" name="country" type="text" autocomplete="country-name" required placeholder="United Kingdom">
                   </div>
                   <div class="candidate-field candidate-field--full">
-                    <label for="location">Current location *</label>
+                    <label for="location"
+                           data-seeker-text="Current location *"
+                           data-starter-text="Home / base location *">Current location *</label>
                     <input id="location" name="location" type="text" required placeholder="Where are you based right now?">
-                    <p class="small">This helps us judge travel, mobilisation, and rotation suitability.</p>
+                    <p class="small"
+                       data-seeker-text="This helps us judge travel, mobilisation, and rotation suitability."
+                       data-starter-text="Used for travel and site logistics coordination by HMJ.">This helps us judge travel, mobilisation, and rotation suitability.</p>
                   </div>
                 </div>
               </fieldset>
 
               <fieldset class="candidate-form__section" id="fieldsetRole">
-                <legend id="fieldsetRoleLegend">Role &amp; discipline</legend>
+                <legend id="fieldsetRoleLegend"
+                        data-seeker-text="Role &amp; discipline"
+                        data-starter-text="Your confirmed role">Role &amp; discipline</legend>
                 <div class="candidate-form__grid candidate-form__grid--two">
 
                   <!-- ── Shared by both paths ── -->
@@ -691,8 +699,13 @@
                     </select>
                   </div>
                   <div class="candidate-field">
-                    <label for="currentJobTitle">Current job title *</label>
-                    <input id="currentJobTitle" name="current_job_title" type="text" required placeholder="e.g. Lead Electrical Supervisor">
+                    <label for="currentJobTitle"
+                           data-seeker-text="Current job title *"
+                           data-starter-text="Job title on your assignment *">Current job title *</label>
+                    <input id="currentJobTitle" name="current_job_title" type="text" required
+                           placeholder="e.g. Lead Electrical Supervisor"
+                           data-seeker-placeholder="e.g. Lead Electrical Supervisor"
+                           data-starter-placeholder="e.g. MEP Commissioning Engineer">
                   </div>
 
                   <!-- ── Starter: just the start date ── -->
@@ -818,10 +831,12 @@
               </fieldset>
 
               <fieldset class="candidate-form__section">
-                <legend>Mobility, skills &amp; supporting details</legend>
+                <legend data-seeker-text="Mobility, skills &amp; supporting details"
+                        data-starter-text="Right to work, skills &amp; supporting documents">Mobility, skills &amp; supporting details</legend>
                 <div class="candidate-form__grid candidate-form__grid--two">
                   <div class="candidate-field candidate-field--full">
-                    <label>Regions you are authorised to work in now * <span class="small">(select all that apply)</span></label>
+                    <label data-seeker-text="Regions you are authorised to work in * <span class='small'>(select all that apply)</span>"
+                           data-starter-text="Confirm your right-to-work regions * <span class='small'>(required for payroll)</span>">Regions you are authorised to work in now * <span class="small">(select all that apply)</span></label>
                     <div class="candidate-rtw-required-note" id="rtwRequiredNote" role="note">
                       ✅ As a new starter, you must confirm your right-to-work regions and upload a right-to-work document (passport, visa, or settlement status confirmation) below before HMJ can process your payroll.
                     </div>
@@ -841,15 +856,21 @@
                     <input id="linkedin" name="linkedin" type="url" placeholder="https://…">
                   </div>
                   <div class="candidate-field candidate-field--full">
-                    <label>Key skills *</label>
+                    <label data-seeker-text="Key skills *"
+                           data-starter-text="Key skills &amp; competencies">Key skills *</label>
                     <div class="tag-input" id="tagBox">
                       <input id="tagInput" type="text" placeholder="e.g. IST, BMS, 33kV, Cleanrooms" style="border:0; outline:none; flex:1;">
                     </div>
                     <p class="small" id="skillHints"></p>
                   </div>
                   <div class="candidate-field candidate-field--full">
-                    <label for="message">Summary / notes</label>
-                    <textarea id="message" name="message" rows="5" placeholder="Tell us what you are looking for, preferred locations, rotations, travel limits, or anything else HMJ should know."></textarea>
+                    <label for="message"
+                           data-seeker-text="Summary / notes"
+                           data-starter-text="Anything else we should know">Summary / notes</label>
+                    <textarea id="message" name="message" rows="5"
+                              placeholder="Tell us what you are looking for, preferred locations, rotations, travel limits, or anything else HMJ should know."
+                              data-seeker-placeholder="Tell us what you are looking for, preferred locations, rotations, travel limits, or anything else HMJ should know."
+                              data-starter-placeholder="Any additional details HMJ should know before your start date — site inductions, special requirements, or equipment needs."></textarea>
                   </div>
                   <div class="candidate-field candidate-field--full" data-show-for="seeker">
                     <label for="cv">Attach CV (PDF/DOC/DOCX) *</label>
@@ -876,7 +897,10 @@
 
                   <div class="candidate-field candidate-field--full candidate-consent">
                     <label class="candidate-consent__label">
-                      <input type="checkbox" required> I consent to HMJ-Global processing my data to find suitable roles.
+                      <input type="checkbox" required>
+                      <span id="consentText"
+                            data-seeker-text="I consent to HMJ-Global processing my data to find suitable roles."
+                            data-starter-text="I consent to HMJ-Global processing my data to manage my onboarding, payroll setup and right-to-work compliance.">I consent to HMJ-Global processing my data to find suitable roles.</span>
                     </label>
                   </div>
                   <div class="candidate-form__actions">
@@ -975,7 +999,7 @@
           <a href="clients.html">Clients</a>
           <a href="candidates.html">Candidates</a>
           <a href="jobs.html">Jobs</a>
-          <a href="contact.html">Contact</a>
+          <a href="enquiry.html">Contact</a>
         </nav>
       </div>
       <div class="hmj-site-footer__col">
@@ -1116,6 +1140,20 @@
       if (chooser) chooser.classList.remove('chooser-collapsed');
     }
 
+    /* ── Swap context-sensitive text ─────────────────────────────── */
+    function swapContextualText(key) {
+      var attr = key === 'starter' ? 'data-starter-text' : 'data-seeker-text';
+      var placeholderAttr = key === 'starter' ? 'data-starter-placeholder' : 'data-seeker-placeholder';
+      document.querySelectorAll('[' + attr + ']').forEach(function (el) {
+        var text = el.getAttribute(attr);
+        if (text) el.innerHTML = text;
+      });
+      document.querySelectorAll('[' + placeholderAttr + ']').forEach(function (el) {
+        var ph = el.getAttribute(placeholderAttr);
+        if (ph) el.placeholder = ph;
+      });
+    }
+
     /* ── Apply path ──────────────────────────────────────────────── */
     function applyPath(key) {
       var cfg  = PATHS[key];
@@ -1130,6 +1168,9 @@
       // 2. Swap mode class on form (drives data-show-for CSS gating)
       form.classList.remove('mode-seeker', 'mode-starter');
       form.classList.add(cfg.modeClass);
+
+      // 2b. Swap context-sensitive field labels, help text, placeholders
+      swapContextualText(key);
 
       // 3. Update form title / intro / submit label
       var titleEl  = el('candidateFormTitle');

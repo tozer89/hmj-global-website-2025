@@ -12,95 +12,205 @@
   <script defer src="../js/identity-loader.js?v=3"></script>
   <script defer src="/admin/common.js?v=36"></script>
   <style>
-    :root {
-      --ink:#0f172a; --muted:#64748b; --bg:#f4f7fb;
-      --blue:#2f4ea2; --blue-2:#27408f;
-      --card:#ffffff; --stroke:#e2e8f0; --ring:#c7d2fe; --chip:#eef2ff;
-      --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+    :root{
+      --ink:#0f172a;--muted:#64748b;--bg:#f1f5fa;
+      --blue:#2f4ea2;--blue-2:#27408f;--blue-light:#eff6ff;
+      --card:#ffffff;--stroke:#e2e8f0;--ring:#c7d2fe;--chip:#eef2ff;
+      --ok:#16a34a;--warn:#f59e0b;--bad:#dc2626;
     }
     *{box-sizing:border-box}
     html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
     a{color:inherit;text-decoration:none}
 
-    .top{position:sticky;top:0;z-index:90;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.2);box-shadow:0 14px 34px rgba(15,23,42,.26)}
-    .row{max-width:1400px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center}
+    /* ── Sticky nav ────────────────────────────────────────── */
+    .top{position:sticky;top:0;z-index:90;background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.15);box-shadow:0 8px 24px rgba(15,23,42,.22)}
+    .row{max-width:1440px;margin:0 auto;padding:12px 20px;display:flex;gap:12px;align-items:center}
     .brand{font-weight:800;letter-spacing:.02em;display:flex;gap:10px;align-items:center}
     .brand a{display:inline-flex;gap:10px;align-items:center;color:#fff}
     .logo{width:28px;height:28px;border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--blue);font-weight:900}
     .sp{flex:1}
 
+    /* ── Buttons ───────────────────────────────────────────── */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--blue);color:#fff;border:1px solid var(--blue);padding:9px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s,box-shadow .2s,background .2s,border-color .2s;text-decoration:none;font:inherit;font-size:14px;white-space:nowrap}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(47,78,162,.22);background:var(--blue-2);border-color:var(--blue-2)}
+    .btn:disabled{cursor:not-allowed;opacity:.55;box-shadow:none;transform:none}
+    .btn.small{padding:7px 11px;font-size:13px;border-radius:10px}
+    .btn.ghost{background:#fff;color:var(--blue);border-color:rgba(47,78,162,.28)}
+    .btn.ghost:hover{background:#f4f8ff;border-color:rgba(47,78,162,.4)}
+    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
+    .btn.red{background:#7a1f28;border-color:#7a1f28;color:#fff}
+    .btn.red:hover{background:#6a1a23;border-color:#6a1a23}
+    .btn.green{background:var(--ok);border-color:var(--ok);color:#fff}
+    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    .top .btn.ghost{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);color:#fff}
+    .top .btn.ghost:hover{background:rgba(255,255,255,.2)}
+    .top .btn.light{background:#fff;color:var(--blue)}
+    :focus{outline:3px solid var(--ring);outline-offset:2px;border-radius:8px}
+
+    /* ── Pills ─────────────────────────────────────────────── */
     .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--stroke);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
     .top .pill{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff}
     .pill.ok{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
     .pill.warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
     .pill.err,.pill.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--blue);color:#fff;border:1px solid var(--blue);padding:9px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease;text-decoration:none}
-    .btn:hover{transform:translateY(-1px);box-shadow:0 18px 34px rgba(47,78,162,.26);background:var(--blue-2);border-color:var(--blue-2)}
-    .btn:disabled{cursor:not-allowed;opacity:.58;box-shadow:none;transform:none}
-    .btn.small{padding:7px 11px;border-radius:10px;font-size:13px}
-    .btn.ghost{background:#fff;color:var(--blue);border-color:rgba(47,78,162,.28)}
-    .btn.ghost:hover{background:#f8fafc}
-    .btn.light{background:#fff;color:var(--blue);border-color:#fff}
-    .btn.red{background:#7a1f28;border-color:#7a1f28;color:#fff}
-    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
-
-    :focus{outline:3px solid var(--ring);outline-offset:2px;border-radius:8px}
-
-    header.card.intro{max-width:1400px;margin:24px auto 0;padding:22px;background:var(--card);border:1px solid var(--stroke);border-radius:20px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;justify-content:space-between;box-shadow:0 18px 40px rgba(15,23,42,.08)}
-    header.card.intro .crumbs{margin:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
-    header.card.intro h1{margin:6px 0 8px;font-size:28px;line-height:1.15;color:var(--ink)}
-    header.card.intro .lead{margin:0;color:var(--muted);max-width:720px}
-    header.card.intro .debug{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    /* ── Page header ───────────────────────────────────────── */
+    .page-hdr{background:var(--blue);color:#fff;border-bottom:1px solid rgba(255,255,255,.1)}
+    .page-hdr__inner{max-width:1440px;margin:0 auto;padding:28px 20px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+    .page-hdr__text .crumbs{margin:0 0 4px;font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
+    .page-hdr__text h1{margin:0 0 4px;font-size:30px;line-height:1.1;font-weight:900;color:#fff}
+    .page-hdr__text .lead{margin:0;font-size:14px;opacity:.75;max-width:560px}
+    .page-hdr__status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:6px}
     #debug-panel{position:relative}
     #debug-panel #debug-toggle{font-size:13px}
-    #debug-panel .dbg-body{display:none;position:absolute;top:calc(100% + 10px);right:0;background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:16px;box-shadow:0 18px 40px rgba(15,23,42,.16);min-width:260px;z-index:20}
+    #debug-panel .dbg-body{display:none;position:absolute;top:calc(100% + 10px);right:0;background:#fff;border:1px solid var(--stroke);border-radius:14px;padding:16px;box-shadow:0 18px 40px rgba(15,23,42,.18);min-width:260px;z-index:200}
     #debug-panel.open .dbg-body{display:grid;gap:10px}
     #debug-panel .dbg-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted)}
     #debug-panel .dbg-logs{margin:0;padding-left:18px;display:grid;gap:6px;max-height:180px;overflow:auto;font-size:12px;color:var(--muted)}
 
-    .wrap{max-width:1400px;margin:24px auto;padding:0 16px 40px}
-    .wrap.layout{display:grid;grid-template-columns:minmax(260px,320px) 1fr;gap:18px;align-items:start}
-    .wrap.gate{display:flex;justify-content:center}
+    /* ── Page-level tabs ───────────────────────────────────── */
+    .pg-tabs{max-width:1440px;margin:0 auto;padding:0 20px;display:flex;gap:0;align-items:flex-end;overflow-x:auto}
+    .pg-tab{display:inline-flex;align-items:center;gap:8px;padding:14px 18px;border:none;border-bottom:3px solid transparent;background:none;color:rgba(255,255,255,.65);font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:color .2s,border-color .2s,background .2s;border-radius:10px 10px 0 0}
+    .pg-tab:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.07)}
+    .pg-tab.active{color:#fff;border-bottom-color:#fff;background:rgba(255,255,255,.1)}
+    .pg-tab__badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.18);font-size:11px;font-weight:800;letter-spacing:.04em}
+    .pg-tab.active .pg-tab__badge{background:rgba(255,255,255,.28)}
+    .pg-tab--warn{color:rgba(251,191,36,.85)}
+    .pg-tab--warn.active{color:#fbbf24;border-bottom-color:#fbbf24}
 
-    .card{background:var(--card);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 18px 36px rgba(15,23,42,.08)}
+    /* ── Main layout ───────────────────────────────────────── */
+    .pg-main{max-width:1440px;margin:0 auto;padding:24px 20px 48px;display:grid;gap:20px}
+    .pg-panel{display:grid;gap:20px}
+
+    /* ── Metrics strip ─────────────────────────────────────── */
+    .metrics-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+    .metric-tile{background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:16px 18px;display:grid;gap:4px;box-shadow:0 2px 8px rgba(15,23,42,.05);transition:box-shadow .2s,transform .2s;cursor:default}
+    .metric-tile:hover{box-shadow:0 8px 24px rgba(15,23,42,.1);transform:translateY(-2px)}
+    .metric-tile.clickable{cursor:pointer}
+    .metric-tile__label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+    .metric-tile__value{font-size:1.75rem;font-weight:900;color:var(--ink);line-height:1}
+    .metric-tile--blue{border-color:#bfdbfe;background:linear-gradient(135deg,#eff6ff,#dbeafe)}
+    .metric-tile--blue .metric-tile__value{color:#1d4ed8}
+    .metric-tile--blue .metric-tile__label{color:#3b82f6}
+    .metric-tile--green{border-color:#bbf7d0;background:linear-gradient(135deg,#f0fdf4,#dcfce7)}
+    .metric-tile--green .metric-tile__value{color:#16a34a}
+    .metric-tile--green .metric-tile__label{color:#22c55e}
+    .metric-tile--orange{border-color:#fde68a;background:linear-gradient(135deg,#fffbeb,#fef3c7)}
+    .metric-tile--orange .metric-tile__value{color:#92400e}
+    .metric-tile--orange .metric-tile__label{color:#f59e0b}
+    .metric-tile--red{border-color:#fecaca;background:linear-gradient(135deg,#fef2f2,#fee2e2)}
+    .metric-tile--red .metric-tile__value{color:#b91c1c}
+    .metric-tile--red .metric-tile__label{color:#ef4444}
+
+    /* ── Filter bar ────────────────────────────────────────── */
+    .filter-bar{background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:16px 20px;box-shadow:0 2px 8px rgba(15,23,42,.05);display:grid;gap:14px}
+    .filter-bar__main{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .filter-bar__search{flex:1;min-width:220px;position:relative}
+    .filter-bar__search input{width:100%;padding:11px 14px 11px 38px;border-radius:12px;border:1px solid var(--stroke);background:#f8fbff;color:var(--ink);font:inherit;font-weight:600;font-size:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);transition:border-color .2s,box-shadow .2s}
+    .filter-bar__search input:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(47,78,162,.1)}
+    .filter-bar__search::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+    .filter-bar__controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .filter-bar__expanded{display:none}
+    .filter-bar__expanded.open{display:block;padding-top:14px;border-top:1px solid var(--stroke)}
+    .filter-bar__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+    .filter-group{display:grid;gap:6px}
+    .filter-group__label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+    .filter-group input,.filter-group select{padding:9px 11px;border-radius:10px;border:1px solid var(--stroke);background:#fff;color:var(--ink);font:inherit;font-weight:600;font-size:13px;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+    .filter-group select{appearance:auto}
+    .filter-group select[multiple]{min-height:100px}
+    .filter-bar__foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .filter-bar__count{font-size:13px;font-weight:700;color:var(--muted)}
+
+    /* ── Card ──────────────────────────────────────────────── */
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:18px;box-shadow:0 4px 16px rgba(15,23,42,.07)}
+
+    /* ── Toolbar (inside table card) ───────────────────────── */
     .table-card{display:flex;flex-direction:column;overflow:hidden}
-    .sidebar{display:grid;gap:16px;padding:18px;position:sticky;top:140px}
-    .sidebar h3{margin:0;font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-    .sidebar input,.sidebar select,.sidebar textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;color:var(--ink);font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
-    .sidebar select{appearance:auto}
-    .sidebar select[multiple]{min-height:120px}
-    .sidebar .group{display:grid;gap:10px}
-    #flt-count{font-size:13px;color:var(--muted)}
-
-    .grid{display:grid;gap:18px}
-
-    .toolbar{display:grid;gap:14px;padding:18px 20px;border-bottom:1px solid var(--stroke);background:linear-gradient(180deg,#fff,#fbfdff)}
-    .toolbar-main{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
-    .toolbar-meta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
-    .search{display:flex;gap:10px;flex:1;align-items:center;min-width:min(520px,100%)}
-    .search input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+    .toolbar{display:grid;gap:12px;padding:16px 20px;border-bottom:1px solid var(--stroke);background:linear-gradient(180deg,#fff,#f8fbff)}
+    .toolbar-main{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+    .toolbar-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+    .search{display:flex;gap:10px;flex:1;align-items:center;min-width:min(420px,100%)}
+    .search input{flex:1;padding:10px 13px;border-radius:12px;border:1px solid var(--stroke);background:#fff;font:inherit;font-weight:600;font-size:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
     .search .btn,.toolbar-actions .btn,.drawer-toolbar .btn,.bulkbar-actions .btn{white-space:nowrap;flex:0 0 auto}
-    .totals{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-    .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-    .source-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0}
-    .source-tab{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.22);background:#fff;color:var(--blue);font:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:background .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease}
-    .source-tab:hover{background:#f8fbff;border-color:rgba(47,78,162,.36)}
-    .source-tab.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 14px 28px rgba(47,78,162,.2)}
-    .source-tab__count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 7px;border-radius:999px;background:rgba(47,78,162,.1);font-size:11px;letter-spacing:.04em}
-    .source-tab.active .source-tab__count{background:rgba(255,255,255,.16);color:#fff}
-    .filter-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:0}
-    .filter-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#f8fbff;color:var(--blue);font-size:12px;font-weight:700;line-height:1}
+    .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    /* ── Source tabs (within toolbar) ──────────────────────── */
+    .source-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .source-tab{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;border:1px solid rgba(47,78,162,.2);background:#fff;color:var(--blue);font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s,box-shadow .2s}
+    .source-tab:hover{background:#f0f5ff;border-color:rgba(47,78,162,.35)}
+    .source-tab.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 8px 20px rgba(47,78,162,.22)}
+    .source-tab__count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;padding:1px 6px;border-radius:999px;background:rgba(47,78,162,.1);font-size:11px}
+    .source-tab.active .source-tab__count{background:rgba(255,255,255,.2);color:#fff}
+
+    /* ── Filter chips ──────────────────────────────────────── */
+    .filter-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .filter-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#f0f5ff;color:var(--blue);font-size:12px;font-weight:700;line-height:1}
     .filter-chip button{border:0;background:none;color:inherit;font:inherit;font-weight:900;cursor:pointer;padding:0;line-height:1}
     .filter-chip.static{background:#eef2ff;border-color:#c7d2fe}
-    .ops-card{padding:18px 20px}
-    .ops-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:16px}
-    .ops-panel{display:grid;gap:14px;padding:18px;border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fbff)}
-    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
-    .panel-head h2{margin:4px 0 6px;font-size:20px;line-height:1.2}
-    .panel-head p{margin:0;color:var(--muted)}
+
+    /* ── Bulk action bar ───────────────────────────────────── */
+    .bulkbar{background:linear-gradient(135deg,#1e3a8a,#2f4ea2);border-bottom:1px solid rgba(255,255,255,.1);padding:16px 20px;display:none;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+    .bulkbar.show{display:flex}
+    .bulkbar > div:first-child{color:#fff;font-weight:700}
+    .bulkbar-help{margin-top:4px;font-size:13px;line-height:1.45;color:rgba(255,255,255,.7);font-weight:600}
+    .bulkbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .bulkbar-actions .btn.ghost{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff}
+    .bulkbar-actions .btn.ghost:hover{background:rgba(255,255,255,.22)}
+    .bulkbar-actions .btn{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff}
+    .bulkbar-actions .btn:hover{background:rgba(255,255,255,.28)}
+    .bulkbar-actions .btn.red{background:#991b1b;border-color:#991b1b}
+
+    /* ── Table ─────────────────────────────────────────────── */
+    .table{display:flex;flex-direction:column;min-height:480px}
+    .thead,.trow{display:grid;grid-template-columns:40px 80px minmax(240px,1.2fr) minmax(220px,1fr) minmax(220px,1fr) 120px 240px;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--stroke)}
+    .thead{position:sticky;top:0;background:#f4f8ff;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;z-index:1;border-bottom:2px solid var(--stroke)}
+    .table.assignments-view .thead,.table.assignments-view .trow{grid-template-columns:40px 88px minmax(170px,.8fr) minmax(220px,.9fr) minmax(220px,.9fr) minmax(220px,1fr) minmax(180px,.8fr) 120px 120px minmax(170px,.8fr) 120px minmax(190px,.9fr) minmax(210px,.95fr) 248px;min-width:2460px}
+    .table.assignments-view .rows-inner{min-width:2460px}
+    .table.assignments-view .vscroll{overflow:auto}
+    .trow{font-size:14px;min-height:96px;background:#fff;transition:background .15s}
+    .trow:hover{background:#f8fbff;box-shadow:inset 0 0 0 1px rgba(47,78,162,.07)}
+    .vscroll{position:relative;overflow:auto;flex:1;background:#fff}
+    .row-actions{display:flex;gap:7px;justify-content:flex-start;white-space:nowrap;flex-wrap:wrap;align-items:center}
+    .row-actions .btn{min-width:0;font-size:13px;padding:7px 11px}
+    .row-ref{font-weight:800;color:var(--blue-2);font-variant-numeric:tabular-nums;letter-spacing:.02em;font-size:13px}
+    .row-card{display:grid;gap:5px;min-width:0}
+    .row-title{font-size:.95rem;font-weight:800;line-height:1.25;color:var(--ink);word-break:break-word}
+    .row-subtle{font-size:13px;line-height:1.4;color:var(--muted);word-break:break-word}
+    .row-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:2px}
+    .row-inline-strong{font-weight:800;color:var(--ink)}
+    .row-inline-strong.green{color:#166534}
+    .row-inline-strong.orange{color:#92400e}
+    .row-inline-strong.gray{color:#475569}
+    .skeleton-bar{height:16px;border-radius:999px;background:linear-gradient(90deg,#eef2ff,#f7f9ff,#eef2ff);animation:shimmer 1.4s infinite}
+    @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+    .trow.skeleton{opacity:.5;pointer-events:none}
+
+    /* ── Candidate type badges ─────────────────────────────── */
+    .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid var(--stroke);background:var(--chip);font-size:12px;font-weight:700;color:var(--blue)}
+    .chip.green{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
+    .chip.orange{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .chip.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+    .chip.gray{background:#f1f5f9;border-color:#cbd5f5;color:#475569}
+    .chip.red{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+    .type-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .type-badge--seeker{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+    .type-badge--starter{background:#ecfdf5;border:1px solid #bbf7d0;color:#166534}
+    .type-badge--starter::before{content:"✅ "}
+    .type-badge--seeker::before{content:"📋 "}
+    .dw-mode-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;margin-bottom:14px;font-size:13px;font-weight:700}
+    .dw-mode-banner--seeker{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+    .dw-mode-banner--starter{background:#ecfdf5;border:1px solid #bbf7d0;color:#166534}
+
+    /* ── Operations panels ─────────────────────────────────── */
+    .ops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:18px}
+    .ops-panel{background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:22px;box-shadow:0 4px 16px rgba(15,23,42,.06);display:grid;gap:16px}
+    .ops-panel__head{display:grid;gap:4px}
+    .ops-panel__eyebrow{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0}
+    .ops-panel__title{font-size:20px;font-weight:800;color:var(--ink);margin:0}
+    .ops-panel__desc{font-size:14px;color:var(--muted);margin:0;line-height:1.6}
     .ops-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .import-meta{padding:12px 14px;border-radius:14px;border:1px dashed rgba(47,78,162,.18);background:#fff;color:var(--muted);font-weight:600}
+    .import-meta{padding:12px 14px;border-radius:12px;border:1px dashed rgba(47,78,162,.18);background:#f8fbff;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55}
     .mapping-table{display:grid;gap:10px}
     .mapping-row{display:grid;grid-template-columns:minmax(120px,180px) minmax(120px,180px) 1fr;gap:10px;align-items:start;padding:12px 14px;border:1px solid var(--stroke);border-radius:14px;background:#fff}
     .mapping-row strong{display:block;color:var(--ink)}
@@ -112,73 +222,21 @@
     .mapping-item strong{display:block;margin-bottom:4px;color:var(--ink)}
     .mapping-item p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 
-    .table{display:flex;flex-direction:column;min-height:520px}
-    .thead,.trow{display:grid;grid-template-columns:40px 84px minmax(250px,1.2fr) minmax(240px,1fr) minmax(230px,1fr) 128px 248px;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--stroke)}
-    .thead{position:sticky;top:0;background:#f8fbff;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;z-index:1}
-    .table.assignments-view .thead,.table.assignments-view .trow{grid-template-columns:40px 88px minmax(170px,.8fr) minmax(220px,.9fr) minmax(220px,.9fr) minmax(220px,1fr) minmax(180px,.8fr) 120px 120px minmax(170px,.8fr) 120px minmax(190px,.9fr) minmax(210px,.95fr) 248px;min-width:2460px}
-    .table.assignments-view .rows-inner{min-width:2460px}
-    .table.assignments-view .vscroll{overflow:auto}
-    .trow{font-size:15px;min-height:112px;background:#fff}
-    .trow:hover{background:#f8fbff;box-shadow:inset 0 0 0 1px rgba(47,78,162,.08)}
-    .vscroll{position:relative;overflow:auto;flex:1;background:#fff}
-    .row-actions{display:flex;gap:8px;justify-content:flex-start;white-space:nowrap;flex-wrap:wrap;align-items:center}
-    .row-actions .btn{min-width:0}
-    .row-ref{font-weight:800;color:var(--blue-2);font-variant-numeric:tabular-nums;letter-spacing:.02em}
-    .row-card{display:grid;gap:6px;min-width:0}
-    .row-title{font-size:1rem;font-weight:800;line-height:1.25;color:var(--ink);word-break:break-word}
-    .row-subtle{font-size:13px;line-height:1.4;color:var(--muted);word-break:break-word}
-    .row-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-    .row-inline-strong{font-weight:800;color:var(--ink)}
-    .row-inline-strong.green{color:#166534}
-    .row-inline-strong.orange{color:#92400e}
-    .row-inline-strong.gray{color:#475569}
-    .skeleton-bar{height:18px;border-radius:999px;background:linear-gradient(90deg,#eef2ff,#f7f9ff,#eef2ff)}
-
-    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--stroke);background:var(--chip);font-size:12px;font-weight:700;color:var(--blue)}
-    .chip.green{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
-    .chip.orange{background:#fffbeb;border-color:#fde68a;color:#92400e}
-    .chip.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
-    .chip.gray{background:#f1f5f9;border-color:#cbd5f5;color:#475569}
-    .chip.red{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
-    /* Candidate type badges */
-    .type-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-    .type-badge--seeker{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
-    .type-badge--starter{background:#ecfdf5;border:1px solid #bbf7d0;color:#166534}
-    .type-badge--starter::before{content:"✅ ";}
-    .type-badge--seeker::before{content:"📋 ";}
-    /* Drawer mode banner */
-    .dw-mode-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;margin-bottom:14px;font-size:13px;font-weight:700}
-    .dw-mode-banner--seeker{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
-    .dw-mode-banner--starter{background:#ecfdf5;border:1px solid #bbf7d0;color:#166534}
-    /* Pill variants for totals */
-    .pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
-
-    .trow.skeleton{opacity:.55;pointer-events:none}
-
-    .bulkbar{background:linear-gradient(180deg,#f8faff,#f3f7ff);border-bottom:1px solid var(--stroke);padding:14px 20px;display:none;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
-    .bulkbar.show{display:flex}
-    .bulkbar > div:first-child{font-weight:700}
-    .bulkbar-help{margin-top:4px;font-size:13px;line-height:1.45;color:var(--muted);font-weight:600}
-    .bulkbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-
-    .fab{position:fixed;right:24px;bottom:24px;background:var(--blue);color:#fff;border:none;border-radius:14px;padding:14px 18px;box-shadow:0 20px 44px rgba(15,23,42,.25);font-weight:800;cursor:pointer}
-    .fab:hover{background:var(--blue-2)}
-    .btn.mobile-new-candidate{display:none}
-
-    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(580px,94vw);background:#fff;border-left:1px solid var(--stroke);box-shadow:-24px 0 60px rgba(15,23,42,.18);transform:translateX(100%);transition:transform .24s ease;overflow:auto;z-index:120}
+    /* ── Drawer ────────────────────────────────────────────── */
+    .drawer{position:fixed;top:0;right:0;bottom:0;width:min(600px,94vw);background:#fff;border-left:1px solid var(--stroke);box-shadow:-24px 0 60px rgba(15,23,42,.15);transform:translateX(100%);transition:transform .26s ease;overflow:auto;z-index:120}
     .drawer.open{transform:translateX(0)}
-    .drawer .head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--stroke);background:rgba(255,255,255,.96);backdrop-filter:blur(10px);z-index:2}
+    .drawer .head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--stroke);background:rgba(255,255,255,.96);backdrop-filter:blur(10px);z-index:2;gap:12px}
     .drawer .sec{padding:20px;border-bottom:1px solid var(--stroke)}
-    .drawer-toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .drawer-toolbar{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
     .drawer-section{display:grid;gap:16px}
     .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .drawer-field{display:grid;gap:6px;min-width:0}
-    .drawer-field span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .drawer-field span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
     .drawer-field strong{color:var(--ink);line-height:1.4;word-break:break-word}
-    .drawer-input{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;color:var(--ink);font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+    .drawer-input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--stroke);background:#fff;color:var(--ink);font:inherit;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
     .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-    .summary-tile{display:grid;gap:6px;padding:14px 16px;border:1px solid rgba(15,23,42,.08);border-radius:16px;background:linear-gradient(180deg,#fbfdff,#f5f8ff)}
-    .summary-tile span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .summary-tile{display:grid;gap:5px;padding:14px 16px;border:1px solid rgba(15,23,42,.08);border-radius:16px;background:linear-gradient(180deg,#fbfdff,#f5f8ff)}
+    .summary-tile span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
     .summary-tile strong{font-size:1rem;color:var(--ink)}
     .summary-tile p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
     .payment-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -204,23 +262,30 @@
     .empty-state{display:grid;place-items:center;gap:10px;min-height:220px;padding:24px;color:var(--muted);text-align:center}
     .rows-inner .empty-state{position:absolute;inset:0}
 
-    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#fff;border:1px solid var(--stroke);padding:12px 16px;border-radius:12px;box-shadow:0 18px 40px rgba(15,23,42,.18);display:none;font-weight:700}
+    /* ── Toast & dialogs ───────────────────────────────────── */
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#fff;border:1px solid var(--stroke);padding:12px 18px;border-radius:14px;box-shadow:0 18px 40px rgba(15,23,42,.2);display:none;font-weight:700;z-index:200}
     .toast.show{display:block}
+    .fab{position:fixed;right:24px;bottom:24px;background:var(--blue);color:#fff;border:none;border-radius:14px;padding:14px 18px;box-shadow:0 20px 44px rgba(15,23,42,.25);font-weight:800;cursor:pointer;font:inherit;font-size:14px}
+    .fab:hover{background:var(--blue-2)}
+    .btn.mobile-new-candidate{display:none}
+
     dialog.hmj-dialog{border:0;border-radius:20px;padding:0;max-width:min(560px,92vw);width:100%;box-shadow:0 28px 60px rgba(15,23,42,.28)}
-    dialog.hmj-dialog::backdrop{background:rgba(15,23,42,.42)}
-    .dialog-card{display:grid;gap:16px;padding:22px;background:#fff}
+    dialog.hmj-dialog::backdrop{background:rgba(15,23,42,.44)}
+    .dialog-card{display:grid;gap:16px;padding:24px;background:#fff}
     .dialog-card h3{margin:0;font-size:22px;color:var(--ink)}
     .dialog-card p{margin:0;color:var(--muted)}
     .dialog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .dialog-check{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--stroke);border-radius:14px;background:#f8fbff}
     .dialog-check input{margin-top:4px}
     .dialog-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
-    dialog.bulk-email-dialog{max-width:min(1120px,96vw)}
+
+    /* ── Bulk email dialog ─────────────────────────────────── */
+    dialog.bulk-email-dialog{max-width:min(1140px,96vw)}
     .bulk-email-card{gap:18px}
     .bulk-email-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
-    .bulk-email-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:16px;align-items:start}
+    .bulk-email-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:18px;align-items:start}
     .bulk-email-compose,.bulk-email-preview{display:grid;gap:14px}
-    .bulk-email-section{display:grid;gap:12px;padding:16px;border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,#ffffff,#f8fbff)}
+    .bulk-email-section{display:grid;gap:12px;padding:16px;border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fbff)}
     .bulk-email-section h4{margin:0;font-size:16px;color:var(--ink)}
     .bulk-email-section p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
     .bulk-email-field{display:grid;gap:6px}
@@ -253,33 +318,24 @@
 
     .muted{color:var(--muted)}
 
+    /* ── Responsive ────────────────────────────────────────── */
     @media (max-width:1100px){
-      .wrap.layout{grid-template-columns:1fr}
-      .row{flex-wrap:wrap}
-      .search{min-width:100%}
-      .sidebar{position:static}
       .ops-grid{grid-template-columns:1fr}
-      .thead,.trow{grid-template-columns:40px 84px minmax(220px,1.2fr) minmax(220px,1fr) minmax(200px,1fr) 120px 230px}
-      .table.assignments-view .thead,.table.assignments-view .trow{min-width:2320px}
+      .metrics-strip{grid-template-columns:repeat(4,1fr)}
       .summary-grid{grid-template-columns:1fr}
       .payment-summary{grid-template-columns:1fr}
       .payment-sensitive-fields,.doc-upload-controls{grid-template-columns:1fr}
       .toolbar-main,.toolbar-meta{align-items:flex-start}
-      .totals{justify-content:flex-start}
       .bulk-email-grid{grid-template-columns:1fr}
     }
-    @media (max-width:720px){
-      header.card.intro{padding:18px}
-      .ops-card{padding:16px}
-      .ops-panel{padding:16px}
-      .mapping-row,.mapping-row.compact{grid-template-columns:1fr}
-      .thead,.trow{grid-template-columns:40px minmax(0,1fr) 120px 152px}
+    @media (max-width:800px){
+      .page-hdr__inner{padding:20px 16px 0}
+      .pg-main{padding:16px 14px 40px}
+      .metrics-strip{grid-template-columns:repeat(2,1fr)}
+      .thead,.trow{grid-template-columns:40px minmax(0,1fr) 110px 144px}
       .thead > :nth-child(2),.trow > :nth-child(2),
       .thead > :nth-child(4),.trow > :nth-child(4),
       .thead > :nth-child(5),.trow > :nth-child(5){display:none}
-      .bulkbar{gap:10px}
-      .bulkbar > div:first-child,.bulkbar-actions{width:100%}
-      .bulkbar-actions .btn{flex:1 1 160px}
       .profile-grid{grid-template-columns:1fr}
       .drawer-toolbar{justify-content:flex-start}
       .doc-row{display:grid}
@@ -289,175 +345,206 @@
       .bulk-email-preview-hero strong{font-size:24px}
       .btn.mobile-new-candidate{display:inline-flex}
       .fab{display:none}
+      .filter-bar__grid{grid-template-columns:1fr 1fr}
+      .bulkbar{gap:10px}
+      .bulkbar > div:first-child,.bulkbar-actions{width:100%}
+      .bulkbar-actions .btn{flex:1 1 140px}
+    }
+    @media (max-width:480px){
+      .metrics-strip{grid-template-columns:1fr 1fr}
+      .filter-bar__grid{grid-template-columns:1fr}
     }
     @media (min-width:1560px){
-      body.drawer-open .wrap.layout{padding-right:calc(16px + min(360px,22vw))}
+      body.drawer-open .pg-main{padding-right:calc(16px + min(380px,22vw))}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
 </head>
 <body>
+
+  <!-- ── Sticky nav ──────────────────────────────────────────────── -->
   <div class="top"><div class="row">
     <div class="brand">
       <a href="../"><span class="logo">H</span> HMJ Global</a>
-      <span class="pill">Admin</span>
-      <span class="pill">Candidates</span>
     </div>
     <div class="sp"></div>
     <a class="btn ghost small" href="/">← Website</a>
-    <a class="btn ghost" href="./">⟵ Return to Admin Dash</a>
-    <button class="btn light" type="button" data-admin-logout>Sign out</button>
+    <a class="btn ghost small" href="./">Admin dash</a>
+    <button class="btn light small" type="button" data-admin-logout>Sign out</button>
   </div></div>
 
-  <header class="card intro">
-    <div>
-      <p class="crumbs">Admin console</p>
-      <h1>Candidates overview</h1>
-      <p class="lead">Search, filter, and manage the HMJ Global talent pool. Use the filters to refine results and open a candidate for full details.</p>
-    </div>
-    <div class="debug">
-      <span class="pill ok" id="dbg-identity">identity: ok</span>
-      <span class="pill ok" id="dbg-token">token: ok</span>
-      <span class="pill ok" id="dbg-role">role: admin</span>
-      <span class="pill" id="dbg-sb">supabase: live</span>
-      <span class="pill" id="dbg-version">build: -</span>
-      <div id="debug-panel">
-        <button id="debug-toggle" class="btn ghost small" type="button">Show debug</button>
-        <div class="dbg-body">
-          <div class="dbg-row"><strong>Identity</strong><span id="dbg-ident-value">-</span></div>
-          <div class="dbg-row"><strong>Token</strong><span id="dbg-token-value">-</span></div>
-          <div class="dbg-row"><strong>Supabase</strong><span id="dbg-sb-value">-</span></div>
-          <div class="dbg-row"><strong>Last query</strong><span id="dbg-query">-</span></div>
-          <div class="dbg-row"><strong>Logs</strong></div>
-          <ul id="dbg-logs" class="dbg-logs"></ul>
-          <button id="dbg-export" class="btn" type="button" style="margin-top:12px">Export logs</button>
+  <!-- ── Page header + tab strip ─────────────────────────────────── -->
+  <div class="page-hdr">
+    <div class="page-hdr__inner">
+      <div class="page-hdr__text">
+        <p class="crumbs">Admin console</p>
+        <h1>Candidates</h1>
+        <p class="lead">Search, filter and manage the HMJ Global talent pool — job seekers, new starters and active workers.</p>
+      </div>
+      <div class="page-hdr__status">
+        <span class="pill ok" id="dbg-identity">identity: ok</span>
+        <span class="pill ok" id="dbg-token">token: ok</span>
+        <span class="pill ok" id="dbg-role">role: admin</span>
+        <span class="pill" id="dbg-sb">supabase: live</span>
+        <span class="pill" id="dbg-version">build: -</span>
+        <div id="debug-panel">
+          <button id="debug-toggle" class="btn ghost small" type="button">Debug</button>
+          <div class="dbg-body">
+            <div class="dbg-row"><strong>Identity</strong><span id="dbg-ident-value">-</span></div>
+            <div class="dbg-row"><strong>Token</strong><span id="dbg-token-value">-</span></div>
+            <div class="dbg-row"><strong>Supabase</strong><span id="dbg-sb-value">-</span></div>
+            <div class="dbg-row"><strong>Last query</strong><span id="dbg-query">-</span></div>
+            <div class="dbg-row"><strong>Logs</strong></div>
+            <ul id="dbg-logs" class="dbg-logs"></ul>
+            <button id="dbg-export" class="btn" type="button" style="margin-top:10px">Export logs</button>
+          </div>
         </div>
       </div>
     </div>
-  </header>
 
-  <div class="wrap layout">
-    <!-- Filters -->
-    <aside class="card sidebar" id="filters">
-      <div class="group">
-        <h3>Search</h3>
-        <input id="q" placeholder='name, email, ref… (supports AND/OR/NOT)' />
-      </div>
-      <div class="group">
-        <h3>Candidate type</h3>
-        <select id="flt-type">
-          <option value="">All types</option>
-          <option value="seeker">Job seekers (recruitment profile)</option>
-          <option value="starter">New starters (onboarding)</option>
-        </select>
-      </div>
-      <div class="group">
-        <h3>Status</h3>
-        <select id="flt-status" multiple>
-          <option>active</option><option>in progress</option><option>complete</option>
-          <option>archived</option><option>blocked</option>
-        </select>
-      </div>
-      <div class="group">
-        <h3>Role &amp; region</h3>
-        <input id="flt-role" placeholder="role title" />
-        <input id="flt-region" placeholder="country / region / depot" />
-      </div>
-      <div class="group">
-        <h3>Skills / tags</h3>
-        <input id="flt-skills" placeholder="comma separated e.g. SAP, LV, MV" />
-      </div>
-      <div class="group">
-        <h3>Availability</h3>
-        <input id="flt-avail" type="date" />
-      </div>
-      <div class="group">
-        <h3>Dates</h3>
-        <input id="flt-created-from" type="date" />
-        <input id="flt-created-to" type="date" />
-      </div>
-      <div class="group" style="display:flex;gap:8px">
-        <button class="btn" id="btn-clear">Clear all</button>
-        <button class="btn primary" id="btn-apply">Apply</button>
-      </div>
-      <div class="muted" id="flt-count">0 results</div>
-    </aside>
+    <!-- Page-level tabs -->
+    <nav class="pg-tabs" id="pg-nav" aria-label="Candidate views">
+      <button class="pg-tab active" type="button" data-pg-tab="all" aria-selected="true">
+        All candidates
+        <span class="pg-tab__badge" id="pt-badge-all">—</span>
+      </button>
+      <button class="pg-tab" type="button" data-pg-tab="seekers" aria-selected="false">
+        📋 Job seekers
+        <span class="pg-tab__badge" id="pt-badge-seekers">—</span>
+      </button>
+      <button class="pg-tab" type="button" data-pg-tab="starters" aria-selected="false">
+        ✅ New starters
+        <span class="pg-tab__badge" id="pt-badge-starters">—</span>
+      </button>
+      <button class="pg-tab pg-tab--warn" type="button" data-pg-tab="attention" aria-selected="false">
+        ⚠ Needs action
+        <span class="pg-tab__badge" id="pt-badge-attention">—</span>
+      </button>
+      <button class="pg-tab" type="button" data-pg-tab="operations" aria-selected="false">
+        ⚙ Operations
+      </button>
+    </nav>
+  </div>
 
-    <!-- Main -->
-    <main class="grid">
-      <section class="card ops-card">
-        <div class="ops-grid">
-          <article class="ops-panel">
-            <div class="panel-head">
-              <div>
-                <p class="crumbs" style="margin:0">Candidate data</p>
-                <h2>Import &amp; templates</h2>
-                <p>Download the HMJ candidate template, preview field mapping, then import safe inserts and updates into the live candidate module.</p>
-              </div>
-              <div class="toolbar-actions">
-                <a class="btn ghost small" id="candidate-template-xlsx" href="/.netlify/functions/admin-candidates-import?action=template&amp;format=xlsx">Download XLSX template</a>
-                <a class="btn ghost small" id="candidate-template-csv" href="/.netlify/functions/admin-candidates-import?action=template&amp;format=csv">Download CSV template</a>
-              </div>
-            </div>
-            <div class="ops-actions">
-              <button class="btn" id="btn-import-file" type="button">Choose import file</button>
-              <button class="btn ghost" id="btn-import-preview" type="button" disabled>Preview mapping</button>
-              <button class="btn" id="btn-import-confirm" type="button" disabled>Import valid rows</button>
-              <input id="candidate-import-file" type="file" hidden accept=".csv,.xlsx,.xls" />
-            </div>
-            <div class="import-meta" id="import-status">No import file selected. Upload a CSV or Excel workbook, preview the mapping, then confirm the import.</div>
-            <div class="mapping-table" id="import-summary"></div>
-            <div class="mapping-table" id="import-mapping"></div>
-          </article>
+  <!-- ── Main ────────────────────────────────────────────────────── -->
+  <main class="pg-main">
 
-          <article class="ops-panel">
-            <div class="panel-head">
-              <div>
-                <p class="crumbs" style="margin:0">Operations</p>
-                <h2>Timesheet Portal &amp; outreach</h2>
-                <p>Compare website candidates against Timesheet Portal and send bulk onboarding document requests from the same workspace.</p>
-              </div>
-              <div class="toolbar-actions">
-                <button class="btn ghost small" id="btn-refresh-tsp" type="button">Refresh TSP compare</button>
-                <button class="btn ghost small" id="btn-sync-tsp" type="button">Sync TSP candidates</button>
-                <button class="btn ghost small" id="btn-sync-tsp-portal" type="button">Sync + invite portal accounts</button>
-                <button class="btn ghost small" id="btn-visible-doc-request" type="button">Request docs from visible list</button>
-              </div>
-            </div>
-            <div class="import-meta" id="tsp-status">Checking Timesheet Portal configuration…</div>
-            <div class="import-meta" id="tsp-sync-status">No Timesheet Portal candidate sync has been run in this session.</div>
-            <div class="import-meta" id="outreach-status">Checking candidate outreach delivery…</div>
-            <div class="mapping-table" id="tsp-summary"></div>
-          </article>
+    <!-- ── Candidates panel (All / Seekers / Starters / Needs action) ── -->
+    <div class="pg-panel" id="pg-candidates">
 
-          <article class="ops-panel">
-            <div class="panel-head">
-              <div>
-                <p class="crumbs" style="margin:0">Verification</p>
-                <h2>To verify</h2>
-                <p>Review uploaded right-to-work, certificate, reference, and payroll documents that still need an HMJ verification decision.</p>
-              </div>
-              <div class="toolbar-actions">
-                <button class="btn ghost small" id="btn-refresh-verify" type="button">Refresh queue</button>
-                <button class="btn ghost small" id="btn-select-to-verify" type="button">Select queued candidates</button>
-              </div>
-            </div>
-            <div class="import-meta" id="verify-status">Loading candidate document verification queue…</div>
-            <div class="mapping-table" id="verify-summary"></div>
-          </article>
+      <!-- Metric tiles -->
+      <div class="metrics-strip" id="metrics-strip">
+        <div class="metric-tile clickable" data-metric-action="all" title="All candidates in current view">
+          <span class="metric-tile__label">Total</span>
+          <strong class="metric-tile__value" id="t-total">—</strong>
         </div>
-      </section>
+        <div class="metric-tile metric-tile--blue clickable" data-metric-action="seekers" title="Filter to job seekers">
+          <span class="metric-tile__label">Job seekers</span>
+          <strong class="metric-tile__value" id="t-seekers">—</strong>
+        </div>
+        <div class="metric-tile metric-tile--green clickable" data-metric-action="starters" title="Filter to new starters">
+          <span class="metric-tile__label">New starters</span>
+          <strong class="metric-tile__value" id="t-starters">—</strong>
+        </div>
+        <div class="metric-tile metric-tile--orange clickable" data-metric-action="attention" title="RTW missing">
+          <span class="metric-tile__label">RTW missing</span>
+          <strong class="metric-tile__value" id="t-rtw-missing">—</strong>
+        </div>
+        <div class="metric-tile metric-tile--orange clickable" data-metric-action="attention" title="Documents waiting verification">
+          <span class="metric-tile__label">To verify</span>
+          <strong class="metric-tile__value" id="t-to-verify">—</strong>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile__label">In progress</span>
+          <strong class="metric-tile__value" id="t-progress">—</strong>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile__label">Ready</span>
+          <strong class="metric-tile__value" id="t-ready">—</strong>
+        </div>
+        <div class="metric-tile metric-tile--red">
+          <span class="metric-tile__label">Archived / blocked</span>
+          <strong class="metric-tile__value" id="t-archived">—</strong>
+          <strong class="metric-tile__value" id="t-blocked" style="display:none">—</strong>
+        </div>
+      </div>
 
+      <!-- Filter bar -->
+      <div class="filter-bar" id="filter-bar">
+        <div class="filter-bar__main">
+          <div class="filter-bar__search">
+            <input id="q" type="search" placeholder="Search by name, email, ref, role or skills… (AND / OR / NOT)" autocomplete="off" />
+          </div>
+          <div class="filter-bar__controls">
+            <button class="btn ghost small" id="btn-filter-toggle" type="button">Filters ▾</button>
+            <button class="btn" id="btn-apply" type="button">Apply</button>
+            <button class="btn ghost" id="btn-clear" type="button">Clear all</button>
+          </div>
+        </div>
+
+        <div class="filter-bar__expanded" id="filter-bar-expanded">
+          <div class="filter-bar__grid">
+            <label class="filter-group">
+              <span class="filter-group__label">Candidate type</span>
+              <select id="flt-type">
+                <option value="">All types</option>
+                <option value="seeker">Job seekers (recruitment)</option>
+                <option value="starter">New starters (onboarding)</option>
+              </select>
+            </label>
+            <label class="filter-group">
+              <span class="filter-group__label">Status</span>
+              <select id="flt-status" multiple>
+                <option>active</option>
+                <option>in progress</option>
+                <option>complete</option>
+                <option>archived</option>
+                <option>blocked</option>
+              </select>
+            </label>
+            <label class="filter-group">
+              <span class="filter-group__label">Role title</span>
+              <input id="flt-role" placeholder="e.g. Commissioning Engineer" />
+            </label>
+            <label class="filter-group">
+              <span class="filter-group__label">Country / region</span>
+              <input id="flt-region" placeholder="country / region / depot" />
+            </label>
+            <label class="filter-group">
+              <span class="filter-group__label">Skills / tags</span>
+              <input id="flt-skills" placeholder="SAP, LV, MV, HV (comma separated)" />
+            </label>
+            <label class="filter-group">
+              <span class="filter-group__label">Available from</span>
+              <input id="flt-avail" type="date" />
+            </label>
+            <label class="filter-group">
+              <span class="filter-group__label">Registered from</span>
+              <input id="flt-created-from" type="date" />
+            </label>
+            <label class="filter-group">
+              <span class="filter-group__label">Registered to</span>
+              <input id="flt-created-to" type="date" />
+            </label>
+          </div>
+        </div>
+
+        <div class="filter-bar__foot">
+          <span id="flt-count" class="filter-bar__count">Loading…</span>
+        </div>
+      </div>
+
+      <!-- Candidates table card -->
       <section class="card table-card">
         <div class="toolbar">
           <div class="toolbar-main">
             <div class="search">
-              <input id="search" placeholder="Quick search ( / to focus )" />
-              <button class="btn" id="btn-refresh">Refresh</button>
+              <input id="search" placeholder="Quick search  ( / to focus )" autocomplete="off" />
+              <button class="btn" id="btn-refresh" type="button">Refresh</button>
             </div>
             <div class="toolbar-actions">
-              <button class="btn mobile-new-candidate" id="btn-new-inline" type="button">+ New candidate</button>
+              <button class="btn ghost small mobile-new-candidate" id="btn-new-inline" type="button">+ New candidate</button>
               <button class="btn ghost small" id="btn-select-visible" type="button">Select visible</button>
               <button class="btn ghost small" id="btn-select-missing-rtw" type="button">Select missing RTW</button>
             </div>
@@ -469,82 +556,144 @@
                 <span class="source-tab__count" data-source-count="website">0</span>
               </button>
               <button class="source-tab" type="button" data-source-tab="timesheet-portal-active" aria-selected="false" aria-controls="rows">
-                TSP active assignments
+                TSP active
                 <span class="source-tab__count" data-source-count="timesheet-portal-active">0</span>
               </button>
               <button class="source-tab" type="button" data-source-tab="timesheet-portal" aria-selected="false" aria-controls="rows">
-                Timesheet Portal only
+                TSP only
                 <span class="source-tab__count" data-source-count="timesheet-portal">0</span>
               </button>
               <button class="source-tab" type="button" data-source-tab="combined" aria-selected="false" aria-controls="rows">
-                Combined / all
+                Combined
                 <span class="source-tab__count" data-source-count="combined">0</span>
               </button>
-            </div>
-            <div class="totals">
-              <span class="pill" id="t-total">Total: 0</span>
-              <span class="pill blue" id="t-seekers" title="Job seekers (recruitment profile)">Seekers: 0</span>
-              <span class="pill ok" id="t-starters" title="New starters (onboarding)">Starters: 0</span>
-              <span class="pill" id="t-progress">In progress: 0</span>
-              <span class="pill" id="t-ready">Ready: 0</span>
-              <span class="pill warn" id="t-rtw-missing">RTW missing: 0</span>
-              <span class="pill warn" id="t-to-verify">To verify: 0</span>
-              <span class="pill" id="t-archived">Archived: 0</span>
-              <span class="pill" id="t-blocked">Blocked: 0</span>
             </div>
           </div>
           <div class="filter-chips" id="active-filter-chips" aria-live="polite"></div>
         </div>
+
+        <!-- Bulk action bar -->
         <div class="bulkbar" id="bulkbar">
           <div>
-            <div id="bulk-count">0 selected</div>
+            <div id="bulk-count" style="font-size:15px">0 selected</div>
             <div class="bulkbar-help">Bulk actions apply to the current selection in this view.</div>
           </div>
           <div class="bulkbar-actions">
-            <button class="btn ghost" id="bulk-copy-emails">Copy emails</button>
-            <button class="btn" id="bulk-send-email">Send HMJ email</button>
-            <button class="btn" id="bulk-intro-email">Send intro email</button>
-            <button class="btn" id="bulk-assign">Assign recruiter</button>
-            <button class="btn" id="bulk-status">Update status</button>
-            <button class="btn" id="bulk-doc-request">Send document request</button>
-            <button class="btn" id="bulk-rtw-reminder">Send RTW reminder</button>
-            <button class="btn red" id="bulk-block">Block</button>
-            <button class="btn" id="bulk-archive">Archive</button>
-            <button class="btn" id="bulk-export">Export CSV</button>
-            <button class="btn ghost" id="bulk-clear">Clear</button>
+            <button class="btn ghost" id="bulk-copy-emails" type="button">Copy emails</button>
+            <button class="btn" id="bulk-send-email" type="button">Send HMJ email</button>
+            <button class="btn" id="bulk-intro-email" type="button">Send intro email</button>
+            <button class="btn" id="bulk-assign" type="button">Assign recruiter</button>
+            <button class="btn" id="bulk-status" type="button">Update status</button>
+            <button class="btn" id="bulk-doc-request" type="button">Request docs</button>
+            <button class="btn" id="bulk-rtw-reminder" type="button">Send RTW reminder</button>
+            <button class="btn" id="bulk-archive" type="button">Archive</button>
+            <button class="btn" id="bulk-export" type="button">Export CSV</button>
+            <button class="btn red" id="bulk-block" type="button">Block</button>
+            <button class="btn ghost" id="bulk-clear" type="button">✕ Clear</button>
           </div>
         </div>
 
+        <!-- Table -->
         <div class="table" id="candidate-table">
           <div class="thead" id="candidate-thead">
-            <div><input type="checkbox" id="chk-all"/></div>
-            <div>Ref</div><div>Candidate</div><div>Contact</div><div>Type / Onboarding</div><div>Status</div><div>Actions</div>
+            <div><input type="checkbox" id="chk-all" /></div>
+            <div>Ref</div>
+            <div>Candidate</div>
+            <div>Contact</div>
+            <div>Type / Onboarding</div>
+            <div>Status</div>
+            <div>Actions</div>
           </div>
           <div class="vscroll" id="rows" aria-live="polite"></div>
         </div>
       </section>
-    </main>
-  </div>
 
-  <!-- Drawer -->
+    </div><!-- /pg-candidates -->
+
+    <!-- ── Operations panel ─────────────────────────────────────── -->
+    <div class="pg-panel" id="pg-operations" hidden>
+
+      <div class="ops-grid">
+
+        <!-- Import & templates -->
+        <article class="ops-panel">
+          <div class="ops-panel__head">
+            <p class="ops-panel__eyebrow">Candidate data</p>
+            <h2 class="ops-panel__title">Import &amp; templates</h2>
+            <p class="ops-panel__desc">Download the HMJ candidate template, preview field mapping, then import safe inserts and updates into the live candidate module.</p>
+          </div>
+          <div class="ops-actions">
+            <a class="btn ghost small" id="candidate-template-xlsx" href="/.netlify/functions/admin-candidates-import?action=template&amp;format=xlsx">Download XLSX template</a>
+            <a class="btn ghost small" id="candidate-template-csv" href="/.netlify/functions/admin-candidates-import?action=template&amp;format=csv">Download CSV template</a>
+          </div>
+          <div class="ops-actions">
+            <button class="btn" id="btn-import-file" type="button">Choose import file</button>
+            <button class="btn ghost" id="btn-import-preview" type="button" disabled>Preview mapping</button>
+            <button class="btn" id="btn-import-confirm" type="button" disabled>Import valid rows</button>
+            <input id="candidate-import-file" type="file" hidden accept=".csv,.xlsx,.xls" />
+          </div>
+          <div class="import-meta" id="import-status">No import file selected. Upload a CSV or Excel workbook, preview the mapping, then confirm the import.</div>
+          <div class="mapping-table" id="import-summary"></div>
+          <div class="mapping-table" id="import-mapping"></div>
+        </article>
+
+        <!-- Timesheet Portal & outreach -->
+        <article class="ops-panel">
+          <div class="ops-panel__head">
+            <p class="ops-panel__eyebrow">Operations</p>
+            <h2 class="ops-panel__title">Timesheet Portal &amp; outreach</h2>
+            <p class="ops-panel__desc">Compare website candidates against Timesheet Portal and send bulk onboarding document requests from the same workspace.</p>
+          </div>
+          <div class="ops-actions">
+            <button class="btn ghost small" id="btn-refresh-tsp" type="button">Refresh TSP compare</button>
+            <button class="btn ghost small" id="btn-sync-tsp" type="button">Sync TSP candidates</button>
+            <button class="btn ghost small" id="btn-sync-tsp-portal" type="button">Sync + invite portal accounts</button>
+            <button class="btn ghost small" id="btn-visible-doc-request" type="button">Request docs from visible list</button>
+          </div>
+          <div class="import-meta" id="tsp-status">Checking Timesheet Portal configuration…</div>
+          <div class="import-meta" id="tsp-sync-status">No Timesheet Portal candidate sync has been run in this session.</div>
+          <div class="import-meta" id="outreach-status">Checking candidate outreach delivery…</div>
+          <div class="mapping-table" id="tsp-summary"></div>
+        </article>
+
+        <!-- Verification queue -->
+        <article class="ops-panel">
+          <div class="ops-panel__head">
+            <p class="ops-panel__eyebrow">Verification</p>
+            <h2 class="ops-panel__title">Document verification queue</h2>
+            <p class="ops-panel__desc">Review uploaded right-to-work, certificates, references and payroll documents that still need an HMJ verification decision.</p>
+          </div>
+          <div class="ops-actions">
+            <button class="btn ghost small" id="btn-refresh-verify" type="button">Refresh queue</button>
+            <button class="btn ghost small" id="btn-select-to-verify" type="button">Select queued candidates</button>
+          </div>
+          <div class="import-meta" id="verify-status">Loading candidate document verification queue…</div>
+          <div class="mapping-table" id="verify-summary"></div>
+        </article>
+
+      </div>
+    </div><!-- /pg-operations -->
+
+  </main>
+
+  <!-- ── Drawer ───────────────────────────────────────────────────── -->
   <aside class="drawer" id="drawer">
     <div class="head">
       <div style="display:grid;gap:6px;min-width:0">
-        <strong id="dw-name">Candidate</strong>
+        <strong id="dw-name" style="font-size:18px;line-height:1.2">Candidate</strong>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <span id="dw-type-badge" style="display:none"></span>
           <span id="dw-ref" style="font-size:12px;color:var(--muted);font-weight:700"></span>
         </div>
       </div>
       <div class="drawer-toolbar">
-        <button class="btn" id="dw-email">Email</button>
-        <button class="btn" id="dw-call">Call</button>
-        <button class="btn ghost" id="dw-archive">Archive</button>
-        <button class="btn red" id="dw-block">Block</button>
-        <button class="btn ghost" id="dw-close">Close</button>
+        <button class="btn small" id="dw-email" type="button">Email</button>
+        <button class="btn small" id="dw-call" type="button">Call</button>
+        <button class="btn ghost small" id="dw-archive" type="button">Archive</button>
+        <button class="btn red small" id="dw-block" type="button">Block</button>
+        <button class="btn ghost small" id="dw-close" type="button">✕ Close</button>
       </div>
     </div>
-    <!-- Mode banner inserted by JS into dw-profile -->
     <div class="sec" id="dw-profile"></div>
     <div class="sec" id="dw-payment"></div>
     <div class="sec" id="dw-assignments"></div>
@@ -553,8 +702,11 @@
     <div class="sec" id="dw-audit"></div>
   </aside>
 
-  <button class="fab" id="fab-new">+ New candidate</button>
-  <div class="toast" id="toast"></div>
+  <!-- ── FAB + Toast ──────────────────────────────────────────────── -->
+  <button class="fab" id="fab-new" type="button">+ New candidate</button>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ── Document request dialog ──────────────────────────────────── -->
   <dialog class="hmj-dialog" id="doc-request-dialog">
     <form method="dialog" class="dialog-card">
       <div>
@@ -570,12 +722,13 @@
     </form>
   </dialog>
 
+  <!-- ── Bulk email dialog ─────────────────────────────────────────── -->
   <dialog class="hmj-dialog bulk-email-dialog" id="bulk-email-dialog">
     <form method="dialog" class="dialog-card bulk-email-card">
       <div class="bulk-email-head">
         <div>
           <h3>Send HMJ bulk email</h3>
-          <p>Create one branded HMJ email and personalize it per recipient with merge fields. Each selected candidate receives an individual HMJ email rather than a BCC blast.</p>
+          <p>Create one branded HMJ email and personalise it per recipient with merge fields. Each candidate receives an individual email rather than a BCC blast.</p>
         </div>
         <span class="pill" id="bulk-email-audience">0 deliverable</span>
       </div>
@@ -602,16 +755,16 @@
             </div>
             <div class="bulk-email-field">
               <label for="bulk-email-body">Message</label>
-              <textarea id="bulk-email-body" placeholder="Hi &lt;FIRST_NAME&gt;,\n\nWe are contacting you about your HMJ profile and current position with &lt;CLIENT_NAME&gt;.\n\nUse the HMJ button below to open the correct next step in your account."></textarea>
+              <textarea id="bulk-email-body" placeholder="Hi &lt;FIRST_NAME&gt;,&#10;&#10;We are contacting you about your HMJ profile…"></textarea>
             </div>
             <div class="dialog-grid">
               <div class="bulk-email-field">
                 <label for="bulk-email-fallback-client">Fallback client / company</label>
-                <input id="bulk-email-fallback-client" maxlength="180" placeholder="Used when no client is on the candidate record" />
+                <input id="bulk-email-fallback-client" maxlength="180" placeholder="Used when no client is on the record" />
               </div>
               <div class="bulk-email-field">
                 <label for="bulk-email-fallback-job">Fallback job title</label>
-                <input id="bulk-email-fallback-job" maxlength="180" placeholder="Used when no role/job title is available" />
+                <input id="bulk-email-fallback-job" maxlength="180" placeholder="Used when no role is available" />
               </div>
             </div>
           </div>
@@ -619,7 +772,7 @@
           <div class="bulk-email-section">
             <div>
               <h4>Merge fields</h4>
-              <p>Click a field to insert it into the subject, heading, or message. Bullhorn-style tags such as <code>&lt;FIRST_NAME&gt;</code> are supported.</p>
+              <p>Click a field to insert it into the subject, heading or message.</p>
             </div>
             <div class="bulk-email-token-palette" id="bulk-email-token-palette">
               <button class="bulk-email-token" type="button" data-merge-token="&lt;FIRST_NAME&gt;">First name</button>
@@ -631,13 +784,13 @@
               <button class="bulk-email-token" type="button" data-merge-token="&lt;JOB_TITLE&gt;">Job title</button>
               <button class="bulk-email-token" type="button" data-merge-token="&lt;SUPPORT_EMAIL&gt;">Support email</button>
             </div>
-            <div class="bulk-email-help">Useful CRM-style practice: keep the narrative in the message body, and let HMJ buttons handle the secure links. This avoids raw payload URLs appearing in the email copy.</div>
+            <div class="bulk-email-help">Keep the narrative in the message body and let HMJ buttons handle the secure links — avoids raw URLs appearing in the email copy.</div>
           </div>
 
           <div class="bulk-email-section">
             <div>
               <h4>Buttons and links</h4>
-              <p>Choose the main HMJ button the recipient should use. A secondary HMJ timesheets button can be added as well.</p>
+              <p>Choose the main HMJ button the recipient should use.</p>
             </div>
             <div class="bulk-email-options">
               <label class="bulk-email-field">
@@ -678,12 +831,152 @@
           </div>
         </aside>
       </div>
+
       <div class="dialog-actions">
         <button class="btn ghost" type="button" id="bulk-email-cancel">Cancel</button>
         <button class="btn" type="button" id="bulk-email-send">Send HMJ email</button>
       </div>
     </form>
   </dialog>
+
+  <!-- ── Page tab logic ────────────────────────────────────────────── -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* Tab → preset filter values */
+    var TAB_PRESETS = {
+      all:        { type: '',        statusReset: false },
+      seekers:    { type: 'seeker',  statusReset: true },
+      starters:   { type: 'starter', statusReset: true },
+      attention:  { type: '',        statusReset: true, selectMissingRtw: true },
+      operations: {}
+    };
+
+    function applyTabPreset(key) {
+      var preset = TAB_PRESETS[key];
+      if (!preset) return;
+
+      /* Set flt-type value */
+      var typeSelect = document.getElementById('flt-type');
+      if (typeSelect && 'type' in preset) typeSelect.value = preset.type;
+
+      /* Clear status on type-specific tabs */
+      if (preset.statusReset) {
+        var statusSelect = document.getElementById('flt-status');
+        if (statusSelect) {
+          Array.from(statusSelect.options).forEach(function (opt) {
+            opt.selected = false;
+          });
+        }
+      }
+
+      /* Fire apply */
+      var applyBtn = document.getElementById('btn-apply');
+      if (applyBtn) applyBtn.click();
+
+      /* For "Needs action" — also click Select missing RTW */
+      if (preset.selectMissingRtw) {
+        setTimeout(function () {
+          var rtwBtn = document.getElementById('btn-select-missing-rtw');
+          if (rtwBtn) rtwBtn.click();
+        }, 600);
+      }
+    }
+
+    function switchTab(key) {
+      /* Update pg-tab buttons */
+      document.querySelectorAll('[data-pg-tab]').forEach(function (btn) {
+        var active = btn.dataset.pgTab === key;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+
+      /* Show/hide panels */
+      var candidatesPanel = document.getElementById('pg-candidates');
+      var operationsPanel = document.getElementById('pg-operations');
+      if (key === 'operations') {
+        if (candidatesPanel) candidatesPanel.hidden = true;
+        if (operationsPanel) operationsPanel.hidden = false;
+      } else {
+        if (candidatesPanel) candidatesPanel.hidden = false;
+        if (operationsPanel) operationsPanel.hidden = true;
+        applyTabPreset(key);
+      }
+
+      /* Persist active tab */
+      try { sessionStorage.setItem('hmj:candidates:tab', key); } catch (e) {}
+    }
+
+    /* Wire tab clicks */
+    document.querySelectorAll('[data-pg-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function () { switchTab(btn.dataset.pgTab); });
+    });
+
+    /* Wire metric tile clicks */
+    document.querySelectorAll('[data-metric-action]').forEach(function (tile) {
+      tile.addEventListener('click', function () {
+        var action = tile.dataset.metricAction;
+        switchTab(action);
+      });
+    });
+
+    /* Filter bar toggle */
+    var filterToggle = document.getElementById('btn-filter-toggle');
+    var filterExpanded = document.getElementById('filter-bar-expanded');
+    if (filterToggle && filterExpanded) {
+      filterToggle.addEventListener('click', function () {
+        var open = filterExpanded.classList.toggle('open');
+        filterToggle.textContent = open ? 'Filters ▲' : 'Filters ▾';
+        filterToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+
+    /* Restore last tab from session */
+    try {
+      var saved = sessionStorage.getItem('hmj:candidates:tab');
+      if (saved && document.querySelector('[data-pg-tab="' + saved + '"]')) {
+        switchTab(saved);
+      }
+    } catch (e) {}
+
+    /* Update page-tab badges from metric tile values */
+    function syncTabBadges() {
+      var seekersEl = document.getElementById('t-seekers');
+      var startersEl = document.getElementById('t-starters');
+      var totalEl = document.getElementById('t-total');
+      var rtwEl = document.getElementById('t-rtw-missing');
+      var verifyEl = document.getElementById('t-to-verify');
+
+      var seekers = seekersEl ? seekersEl.textContent.trim() : '—';
+      var starters = startersEl ? startersEl.textContent.trim() : '—';
+      var total = totalEl ? totalEl.textContent.trim() : '—';
+
+      var rtwCount = parseInt((rtwEl ? rtwEl.textContent : '0') || '0', 10) || 0;
+      var verifyCount = parseInt((verifyEl ? verifyEl.textContent : '0') || '0', 10) || 0;
+      var attentionCount = rtwCount + verifyCount;
+
+      var badgeAll = document.getElementById('pt-badge-all');
+      var badgeSeekers = document.getElementById('pt-badge-seekers');
+      var badgeStarters = document.getElementById('pt-badge-starters');
+      var badgeAttention = document.getElementById('pt-badge-attention');
+
+      if (badgeAll) badgeAll.textContent = total;
+      if (badgeSeekers) badgeSeekers.textContent = seekers;
+      if (badgeStarters) badgeStarters.textContent = starters;
+      if (badgeAttention) badgeAttention.textContent = attentionCount > 0 ? attentionCount : '—';
+    }
+
+    /* Watch metric values for changes (MutationObserver) */
+    var metricsStrip = document.getElementById('metrics-strip');
+    if (metricsStrip) {
+      var obs = new MutationObserver(syncTabBadges);
+      obs.observe(metricsStrip, { childList: true, subtree: true, characterData: true });
+    }
+    /* Also sync on interval as fallback */
+    setInterval(syncTabBadges, 2000);
+  })();
+  </script>
 
   <script defer src="/js/candidate-active-assignments-core.js?v=2"></script>
   <script defer src="/admin/candidates.js?v=23"></script>
