@@ -557,26 +557,6 @@
               <button class="btn ghost small" id="btn-select-missing-rtw" type="button">Select missing RTW</button>
             </div>
           </div>
-          <div class="toolbar-meta">
-            <div class="source-tabs" id="candidate-source-tabs" role="tablist" aria-label="Candidate source views">
-              <button class="source-tab active" type="button" data-source-tab="website" aria-selected="true" aria-controls="rows">
-                Website only
-                <span class="source-tab__count" data-source-count="website">0</span>
-              </button>
-              <button class="source-tab" type="button" data-source-tab="timesheet-portal-active" aria-selected="false" aria-controls="rows">
-                TSP active
-                <span class="source-tab__count" data-source-count="timesheet-portal-active">0</span>
-              </button>
-              <button class="source-tab" type="button" data-source-tab="timesheet-portal" aria-selected="false" aria-controls="rows">
-                TSP only
-                <span class="source-tab__count" data-source-count="timesheet-portal">0</span>
-              </button>
-              <button class="source-tab" type="button" data-source-tab="combined" aria-selected="false" aria-controls="rows">
-                Combined
-                <span class="source-tab__count" data-source-count="combined">0</span>
-              </button>
-            </div>
-          </div>
           <div class="filter-chips" id="active-filter-chips" aria-live="polite"></div>
         </div>
 
@@ -615,6 +595,31 @@
           <div class="vscroll" id="rows" aria-live="polite"></div>
         </div>
       </section>
+
+      <!-- Data source selector — advanced, placed at the bottom so it stays out of the way.
+           Each page tab drives this automatically; only power users need to change it manually. -->
+      <div style="margin-top:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--stroke);border-radius:14px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Data source</span>
+        <div class="source-tabs" id="candidate-source-tabs" role="tablist" aria-label="Candidate source views">
+          <button class="source-tab active" type="button" data-source-tab="website" aria-selected="true" aria-controls="rows">
+            Website only
+            <span class="source-tab__count" data-source-count="website">0</span>
+          </button>
+          <button class="source-tab" type="button" data-source-tab="timesheet-portal-active" aria-selected="false" aria-controls="rows">
+            TSP active
+            <span class="source-tab__count" data-source-count="timesheet-portal-active">0</span>
+          </button>
+          <button class="source-tab" type="button" data-source-tab="timesheet-portal" aria-selected="false" aria-controls="rows">
+            TSP only
+            <span class="source-tab__count" data-source-count="timesheet-portal">0</span>
+          </button>
+          <button class="source-tab" type="button" data-source-tab="combined" aria-selected="false" aria-controls="rows">
+            Combined
+            <span class="source-tab__count" data-source-count="combined">0</span>
+          </button>
+        </div>
+        <span style="font-size:12px;color:var(--muted)">Auto-selected by the active tab above. Override here if needed.</span>
+      </div>
 
     </div><!-- /pg-candidates -->
 
@@ -944,12 +949,16 @@
   (function () {
     'use strict';
 
-    /* Tab → preset filter values */
+    /* Tab → preset filter values.
+       sourceTab: which data-source-tab to activate ('website', 'combined', etc.)
+       type: value for #flt-type select
+       statusReset: clear any active status filters
+       selectMissingRtw: also trigger the missing-RTW selection helper */
     var TAB_PRESETS = {
-      all:        { type: '',        statusReset: false },
-      seekers:    { type: 'seeker',  statusReset: true },
-      starters:   { type: 'starter', statusReset: true },
-      attention:  { type: '',        statusReset: true, selectMissingRtw: true },
+      all:        { sourceTab: 'combined',  type: '',        statusReset: true },
+      seekers:    { sourceTab: 'website',   type: 'seeker',  statusReset: true },
+      starters:   { sourceTab: 'website',   type: 'starter', statusReset: true },
+      attention:  { sourceTab: 'website',   type: '',        statusReset: true, selectMissingRtw: true },
       tsp:        {},
       operations: {}
     };
@@ -957,6 +966,12 @@
     function applyTabPreset(key) {
       var preset = TAB_PRESETS[key];
       if (!preset) return;
+
+      /* Drive the source tab to control which dataset this page tab operates on */
+      if (preset.sourceTab) {
+        var sourceBtn = document.querySelector('[data-source-tab="' + preset.sourceTab + '"]');
+        if (sourceBtn) sourceBtn.click();
+      }
 
       /* Set flt-type value */
       var typeSelect = document.getElementById('flt-type');
@@ -972,7 +987,7 @@
         }
       }
 
-      /* Fire apply */
+      /* Fire apply to capture all filters and re-render */
       var applyBtn = document.getElementById('btn-apply');
       if (applyBtn) applyBtn.click();
 

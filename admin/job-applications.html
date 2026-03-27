@@ -10,169 +10,331 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="/js/identity-loader.js?v=3"></script>
   <script defer src="/admin/common.js?v=36"></script>
-  <link rel="stylesheet" href="/assets/css/admin.job-applications.css?v=1"/>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
   <script defer src="/admin/job-applications.js?v=1"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; color: var(--ink) }
+
+    /* ── Shared layout tokens (mirrors candidates.html) ─────────── */
+    :root {
+      --surface: #f7f9ff;
+      --ok: #16a34a;
+      --warn: #f59e0b;
+      --bad: #dc2626;
+      --muted: #61729c;
+      --stroke: #dbe3f4;
+    }
+
+    /* ── Page header ────────────────────────────────────────────── */
+    .page-hdr { padding: 32px 24px 0; max-width: 1440px; margin: 0 auto }
+    .page-hdr__inner { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap }
+    .page-hdr__text { flex: 1 1 300px }
+    .page-hdr__text h1 { margin: 4px 0 6px; font-size: clamp(26px, 3vw, 36px); color: var(--ink) }
+    .page-hdr__text .lead { margin: 0; color: var(--muted); font-size: 15px; max-width: 600px }
+    .crumbs { margin: 0 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700 }
+    .page-hdr__status { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding-top: 8px }
+
+    /* ── Pill badges ────────────────────────────────────────────── */
+    .pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--surface); color: var(--muted); border: 1px solid var(--stroke) }
+    .pill.ok { background: #f0fdf4; color: var(--ok); border-color: #bbf7d0 }
+    .pill.warn { background: #fffbeb; color: var(--warn); border-color: #fde68a }
+    .pill.bad { background: #fef2f2; color: var(--bad); border-color: #fecaca }
+
+    /* ── Page-level tabs ────────────────────────────────────────── */
+    .pg-tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 20px 24px 0; max-width: 1440px; margin: 0 auto; border-bottom: 2px solid var(--stroke) }
+    .pg-tab { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border: none; background: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; border-radius: 8px 8px 0 0; transition: color .2s, background .2s }
+    .pg-tab:hover { background: var(--surface); color: var(--ink) }
+    .pg-tab.active { color: var(--blue); border-bottom-color: var(--blue); background: var(--surface) }
+    .pg-tab__badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--stroke); font-size: 11px; font-weight: 800 }
+    .pg-tab.active .pg-tab__badge { background: var(--blue); color: #fff }
+    .pg-tab--warn.active { color: var(--bad); border-bottom-color: var(--bad) }
+    .pg-tab--warn.active .pg-tab__badge { background: var(--bad); color: #fff }
+
+    /* ── Main content area ──────────────────────────────────────── */
+    .pg-main { max-width: 1440px; margin: 0 auto; padding: 24px }
+
+    /* ── Metric tiles ───────────────────────────────────────────── */
+    .metrics-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px }
+    .metric-tile { background: #fff; border: 1px solid var(--stroke); border-radius: 16px; padding: 14px 16px; display: grid; gap: 4px }
+    .metric-tile__label { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em }
+    .metric-tile__value { font-size: 26px; font-weight: 800; color: var(--ink); line-height: 1 }
+    .metric-tile--blue { border-color: #bfcfff; background: #f0f5ff }
+    .metric-tile--blue .metric-tile__value { color: var(--blue) }
+    .metric-tile--green { border-color: #bbf7d0; background: #f0fdf4 }
+    .metric-tile--green .metric-tile__value { color: var(--ok) }
+    .metric-tile--orange { border-color: #fde68a; background: #fffbeb }
+    .metric-tile--orange .metric-tile__value { color: var(--warn) }
+    .metric-tile--red { border-color: #fecaca; background: #fef2f2 }
+    .metric-tile--red .metric-tile__value { color: var(--bad) }
+    .metric-tile.clickable { cursor: pointer; transition: box-shadow .2s }
+    .metric-tile.clickable:hover { box-shadow: 0 8px 24px rgba(15,23,42,.1) }
+
+    /* ── Card ───────────────────────────────────────────────────── */
+    .card { background: #fff; border-radius: 20px; border: 1px solid var(--stroke); overflow: hidden; box-shadow: 0 2px 12px rgba(15,23,42,.06) }
+
+    /* ── Filter bar ─────────────────────────────────────────────── */
+    .filter-bar { background: var(--surface); border: 1px solid var(--stroke); border-radius: 16px; padding: 14px 16px; margin-bottom: 16px }
+    .filter-bar__main { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+    .filter-bar__search { flex: 1 1 260px }
+    .filter-bar__search input { width: 100%; padding: 9px 14px; border: 1px solid var(--stroke); border-radius: 10px; font: inherit; font-size: 14px; background: #fff; color: var(--ink) }
+    .filter-bar__search input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(36,73,141,.12) }
+    .filter-bar__controls { display: flex; gap: 8px; flex-wrap: wrap }
+    .filter-bar__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 12px }
+    .filter-group { display: grid; gap: 4px }
+    .filter-group__label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted) }
+    .filter-group select, .filter-group input { padding: 8px 10px; border: 1px solid var(--stroke); border-radius: 8px; font: inherit; font-size: 13px; background: #fff; color: var(--ink) }
+
+    /* ── Buttons ────────────────────────────────────────────────── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px; border: none; background: var(--blue); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap; transition: background .2s, box-shadow .2s }
+    .btn:hover { background: var(--blue-2); box-shadow: 0 4px 16px rgba(36,73,141,.18) }
+    .btn.ghost { background: transparent; color: var(--blue); border: 1px solid rgba(36,73,141,.25) }
+    .btn.ghost:hover { background: #f0f5ff; box-shadow: none }
+    .btn.small { padding: 6px 12px; font-size: 12px }
+    .btn.red { background: var(--bad) }
+    .btn.red:hover { background: #b91c1c }
+
+    /* ── Table card ─────────────────────────────────────────────── */
+    .toolbar { padding: 12px 16px; border-bottom: 1px solid var(--stroke); display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+    .table-shell { overflow-x: auto }
+    .ja-table { width: 100%; border-collapse: collapse; font-size: 13px }
+    .ja-table thead tr { background: var(--surface) }
+    .ja-table th { padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 800; white-space: nowrap; border-bottom: 1px solid var(--stroke) }
+    .ja-table td { padding: 12px 14px; border-bottom: 1px solid var(--stroke); vertical-align: middle }
+    .ja-table tbody tr:hover { background: #f9fbff }
+    .ja-table tbody tr:last-child td { border-bottom: none }
+
+    /* ── JS-generated content classes (must preserve) ───────────── */
+    .ja-cell-stack { display: grid; gap: 2px }
+    .ja-cell-title { font-weight: 700; color: var(--ink); font-size: 13px }
+    .ja-cell-sub { font-size: 12px; color: var(--muted) }
+    .ja-cell-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center }
+    .ja-status { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 800 }
+    .ja-status[data-tone="blue"] { background: #e8edfa; color: var(--blue) }
+    .ja-status[data-tone="green"] { background: #f0fdf4; color: var(--ok) }
+    .ja-status[data-tone="orange"] { background: #fffbeb; color: var(--warn) }
+    .ja-status[data-tone="red"] { background: #fef2f2; color: var(--bad) }
+    .ja-status[data-tone="gray"] { background: #f1f5f9; color: #64748b }
+    .ja-chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--stroke); font-size: 12px; font-weight: 700; color: var(--ink) }
+    .ja-chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+    .ja-select { padding: 7px 10px; border: 1px solid var(--stroke); border-radius: 8px; font: inherit; font-size: 12px; background: #fff; color: var(--ink); cursor: pointer }
+    .ja-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(36,73,141,.2); background: #fff; color: var(--blue); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; transition: background .2s, box-shadow .2s; white-space: nowrap }
+    .ja-btn:hover { background: #f0f5ff }
+    .ja-btn--primary { background: var(--blue); color: #fff; border-color: var(--blue) }
+    .ja-btn--primary:hover { background: var(--blue-2) }
+    .ja-link { color: var(--blue); font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer }
+    .ja-link:hover { text-decoration: underline }
+    .ja-alert { padding: 10px 14px; border-radius: 10px; background: #fef2f2; color: var(--bad); font-size: 13px; font-weight: 700 }
+    .ja-drawer__section { padding: 16px 0; border-bottom: 1px solid var(--stroke) }
+    .ja-drawer__section:last-child { border-bottom: none }
+    .ja-drawer__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin-top: 12px }
+    .ja-meta { display: grid; gap: 2px }
+    .ja-meta span { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700 }
+    .ja-meta strong { font-size: 13px; font-weight: 700; color: var(--ink); word-break: break-word }
+    .ja-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 800 }
+    .ja-note { font-size: 13px; color: var(--ink); margin: 8px 0 0; line-height: 1.6; white-space: pre-wrap; background: var(--surface); border-radius: 8px; padding: 10px 12px; border: 1px solid var(--stroke) }
+
+    /* ── Drawer ─────────────────────────────────────────────────── */
+    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 96vw); background: #fff; z-index: 400; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); overflow-y: auto; display: flex; flex-direction: column; box-shadow: -12px 0 48px rgba(15,23,42,.14) }
+    .drawer.open { transform: none }
+    .drawer-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 399; opacity: 0; pointer-events: none; transition: opacity .3s }
+    .drawer-overlay.open { opacity: 1; pointer-events: auto }
+    .drawer__head { padding: 20px 20px 16px; border-bottom: 1px solid var(--stroke); display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; position: sticky; top: 0; background: #fff; z-index: 1 }
+    .drawer__body { padding: 16px 20px; flex: 1 }
+    .drawer__foot { padding: 14px 20px; border-top: 1px solid var(--stroke); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; position: sticky; bottom: 0; background: #fff }
+
+    /* ── Empty state ────────────────────────────────────────────── */
+    .empty-state { display: grid; place-items: center; gap: 10px; min-height: 180px; padding: 32px; color: var(--muted); text-align: center; font-size: 14px }
+
+    /* ── Pagination ─────────────────────────────────────────────── */
+    .pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--stroke); flex-wrap: wrap }
+
+    /* ── Auth gate ──────────────────────────────────────────────── */
+    .auth-gate { display: grid; place-items: center; min-height: 50vh; padding: 40px }
+    .auth-gate__inner { text-align: center; max-width: 420px }
+    .auth-gate__inner h2 { font-size: 22px; margin: 0 0 8px }
+    .auth-gate__inner p { color: var(--muted); margin: 0 0 20px }
+
+    /* ── Toast ──────────────────────────────────────────────────── */
+    .toast { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 10px; z-index: 9999; pointer-events: none; min-width: 0; max-width: 360px }
+    .toast > * { pointer-events: auto }
+
+    @media (max-width: 720px) {
+      .pg-main { padding: 16px }
+      .page-hdr { padding: 20px 16px 0 }
+      .metrics-strip { grid-template-columns: repeat(2, 1fr) }
+      .filter-bar__grid { grid-template-columns: 1fr }
+    }
+  </style>
 </head>
-<body class="job-applications-page">
-  <div class="ja-top">
-    <div class="ja-row">
-      <div class="ja-brand">
-        <span class="ja-brand__mark">H</span>
-        <span>HMJ Global Admin</span>
+<body>
+
+  <!-- ── Sticky nav ──────────────────────────────────────────────── -->
+  <div class="top"><div class="row">
+    <div class="brand">
+      <a href="../"><span class="logo">H</span> HMJ Global</a>
+    </div>
+    <div class="sp"></div>
+    <a class="btn ghost small" href="/">← Website</a>
+    <a class="btn ghost small" href="./">Admin dash</a>
+    <button class="btn light small" type="button" data-admin-logout>Sign out</button>
+  </div></div>
+
+  <!-- ── Auth gate ────────────────────────────────────────────────── -->
+  <div id="gate" style="display:none">
+    <div class="auth-gate">
+      <div class="auth-gate__inner">
+        <p class="crumbs" style="text-align:center">Admin only</p>
+        <h2>Sign-in required</h2>
+        <p>Job applications require an active HMJ admin session. Checking your session…</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="btn" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="btn ghost" href="/admin/">Back to dashboard</a>
+        </div>
       </div>
-      <span class="ja-pill">Job applications</span>
-      <div class="ja-spacer"></div>
-      <a class="ja-link ja-btn--ghost" href="/admin/">Return to Admin Dash</a>
-      <a class="ja-link ja-btn--ghost" href="/">Website</a>
-      <button class="ja-btn ja-btn--ghost" type="button" data-admin-logout>Sign out</button>
     </div>
   </div>
 
-  <div class="ja-wrap" id="gate" style="display:none">
-    <section class="ja-panel">
-      <div class="ja-panel__inner">
-        <p class="ja-eyebrow">Admin only</p>
-        <h1 class="ja-title" style="font-size:38px">Job application access requires an HMJ admin session</h1>
-        <p class="ja-muted">Checking your session…</p>
-        <div class="ja-hero__actions">
-          <button class="ja-btn ja-btn--primary" type="button" data-admin-login>Open secure sign-in</button>
-          <a class="ja-link" href="/admin/">Back to dashboard</a>
+  <!-- ── Page header ──────────────────────────────────────────────── -->
+  <div id="app" style="display:none">
+
+    <div class="page-hdr">
+      <div class="page-hdr__inner">
+        <div class="page-hdr__text">
+          <p class="crumbs">Admin console</p>
+          <h1>Job applications</h1>
+          <p class="lead">Review website-submitted job applications, update workflow status, and jump into linked candidate or role profiles.</p>
+        </div>
+        <div class="page-hdr__status">
+          <span class="pill ok" id="dbg-identity">identity: ok</span>
+          <span class="pill ok" id="dbg-token">token: ok</span>
         </div>
       </div>
-    </section>
-  </div>
+      <p id="welcomeMeta" style="margin:8px 24px 0;font-size:13px;color:var(--muted)">Loading admin context…</p>
+    </div>
 
-  <div class="ja-wrap" id="app" style="display:none">
-    <section class="ja-panel">
-      <div class="ja-panel__inner ja-hero">
-        <div>
-          <p class="ja-eyebrow">Application workflow</p>
-          <h1 class="ja-title">Job applications</h1>
-          <p class="ja-muted" id="welcomeMeta">Loading admin context…</p>
-          <p class="ja-muted">Review website-submitted job applications separately from the broader candidates workspace. Search by candidate or role, update the application workflow, and jump into the linked candidate profile or jobs console where needed.</p>
-          <div class="ja-hero__actions">
-            <button class="ja-btn ja-btn--primary" type="button" id="btnRefresh">Refresh</button>
-            <a class="ja-link" href="/admin/candidates.html">Open candidates workspace</a>
-            <a class="ja-link" href="/admin/jobs.html">Open jobs workspace</a>
+    <!-- ── Page-level tabs ─────────────────────────────────────────── -->
+    <nav class="pg-tabs" aria-label="Application status views">
+      <button class="pg-tab active" type="button" data-app-tab="all" aria-selected="true">
+        All applications
+        <span class="pg-tab__badge" id="pt-badge-all">—</span>
+      </button>
+      <button class="pg-tab" type="button" data-app-tab="submitted" aria-selected="false">
+        📥 Submitted
+        <span class="pg-tab__badge" id="pt-badge-submitted">—</span>
+      </button>
+      <button class="pg-tab" type="button" data-app-tab="in_progress" aria-selected="false">
+        🔄 In progress
+        <span class="pg-tab__badge" id="pt-badge-inprogress">—</span>
+      </button>
+      <button class="pg-tab" type="button" data-app-tab="interview" aria-selected="false">
+        📅 Interview
+        <span class="pg-tab__badge" id="pt-badge-interview">—</span>
+      </button>
+      <button class="pg-tab pg-tab--warn" type="button" data-app-tab="reject" aria-selected="false">
+        ✗ Rejected
+        <span class="pg-tab__badge" id="pt-badge-rejected">—</span>
+      </button>
+    </nav>
+
+    <main class="pg-main">
+
+      <!-- Metric tiles -->
+      <div class="metrics-strip" id="metricsStrip">
+        <div class="metric-tile clickable" data-app-tab-action="all">
+          <span class="metric-tile__label">Total</span>
+          <strong class="metric-tile__value" id="statTotal">—</strong>
+          <span style="font-size:11px;color:var(--muted)" id="statTotalMeta"></span>
+        </div>
+        <div class="metric-tile metric-tile--blue clickable" data-app-tab-action="submitted">
+          <span class="metric-tile__label">Submitted</span>
+          <strong class="metric-tile__value" id="statSubmitted">—</strong>
+          <span aria-hidden="true" hidden id="cardSubmitted">0</span>
+        </div>
+        <div class="metric-tile clickable" data-app-tab-action="in_progress">
+          <span class="metric-tile__label">In progress</span>
+          <strong class="metric-tile__value" id="statInProgress">—</strong>
+          <span aria-hidden="true" hidden id="cardInProgress">0</span>
+        </div>
+        <div class="metric-tile metric-tile--green clickable" data-app-tab-action="interview">
+          <span class="metric-tile__label">Interview</span>
+          <strong class="metric-tile__value" id="statInterview">—</strong>
+          <span aria-hidden="true" hidden id="cardInterview">0</span>
+        </div>
+        <div class="metric-tile metric-tile--red clickable" data-app-tab-action="reject">
+          <span class="metric-tile__label">Rejected</span>
+          <strong class="metric-tile__value" id="cardReject">—</strong>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile__label">Visible set</span>
+          <strong class="metric-tile__value" id="cardVisible">—</strong>
+          <span style="font-size:11px;color:var(--muted)" id="cardVisibleMeta">Waiting for filters</span>
+        </div>
+      </div>
+
+      <!-- Alert area -->
+      <div id="pageAlert" aria-live="polite" style="margin-bottom:12px"></div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="filter-bar__main">
+          <div class="filter-bar__search">
+            <input id="filterSearch" type="search" placeholder="Search candidate, email, role, location, reference, source…" autocomplete="off"/>
+          </div>
+          <div class="filter-bar__controls">
+            <button class="btn" type="button" id="btnApplyFilters">Apply</button>
+            <button class="btn ghost" type="button" id="btnClearFilters">Clear</button>
+            <button class="btn ghost" type="button" id="btnRefresh">↻ Refresh</button>
           </div>
         </div>
-        <aside class="ja-hero__stats" aria-label="Application summary">
-          <div class="ja-stat">
-            <span>Total applications</span>
-            <strong id="statTotal">—</strong>
-            <span id="statTotalMeta">Waiting for data</span>
-          </div>
-          <div class="ja-stat">
-            <span>Submitted</span>
-            <strong id="statSubmitted">—</strong>
-            <span>New applications waiting for review.</span>
-          </div>
-          <div class="ja-stat">
-            <span>In Progress</span>
-            <strong id="statInProgress">—</strong>
-            <span>Applications being reviewed or moved forward.</span>
-          </div>
-          <div class="ja-stat">
-            <span>Interview</span>
-            <strong id="statInterview">—</strong>
-            <span>Applications now at interview stage.</span>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <section class="ja-panel">
-      <div class="ja-panel__inner ja-toolbar">
-        <div class="ja-filter-grid">
-          <div class="ja-field" style="grid-column:span 2">
-            <label for="filterSearch">Search</label>
-            <input class="ja-input" id="filterSearch" type="search" placeholder="Candidate, email, role, location, reference, source"/>
-          </div>
-          <div class="ja-field">
-            <label for="filterStatus">Status</label>
-            <select class="ja-select" id="filterStatus">
+        <div class="filter-bar__grid" style="margin-top:12px">
+          <label class="filter-group">
+            <span class="filter-group__label">Status</span>
+            <select id="filterStatus">
               <option value="all">All statuses</option>
               <option value="submitted">Submitted</option>
               <option value="in_progress">In Progress</option>
               <option value="interview">Interview</option>
-              <option value="reject">Reject</option>
+              <option value="reject">Rejected</option>
             </select>
-          </div>
-          <div class="ja-field">
-            <label for="filterSource">Source</label>
-            <select class="ja-select" id="filterSource">
+          </label>
+          <label class="filter-group">
+            <span class="filter-group__label">Source</span>
+            <select id="filterSource">
               <option value="all">All sources</option>
             </select>
-          </div>
-          <div class="ja-field">
-            <label for="sortSelect">Sort</label>
-            <select class="ja-select" id="sortSelect">
+          </label>
+          <label class="filter-group">
+            <span class="filter-group__label">Sort</span>
+            <select id="sortSelect">
               <option value="applied_at:desc">Newest applications</option>
               <option value="applied_at:asc">Oldest applications</option>
-              <option value="candidate_name:asc">Candidate A-Z</option>
-              <option value="job_title:asc">Role A-Z</option>
+              <option value="candidate_name:asc">Candidate A–Z</option>
+              <option value="job_title:asc">Role A–Z</option>
               <option value="status:asc">Status</option>
               <option value="updated_at:desc">Recently updated</option>
             </select>
-          </div>
+          </label>
         </div>
-
-        <div class="ja-filter-meta">
+        <div style="margin-top:10px">
           <div class="ja-chip-row" id="filterChips" aria-live="polite"></div>
-          <div class="ja-cell-actions">
-            <button class="ja-btn" type="button" id="btnApplyFilters">Apply filters</button>
-            <button class="ja-btn" type="button" id="btnClearFilters">Clear</button>
-          </div>
-        </div>
-
-        <div id="pageAlert" aria-live="polite"></div>
-
-        <div class="ja-summary-grid" aria-label="Current application counts">
-          <article class="ja-summary-card">
-            <span class="ja-eyebrow" style="margin:0">Submitted</span>
-            <strong id="cardSubmitted">0</strong>
-            <small>Default starting status for new website applications.</small>
-          </article>
-          <article class="ja-summary-card">
-            <span class="ja-eyebrow" style="margin:0">In Progress</span>
-            <strong id="cardInProgress">0</strong>
-            <small>Applications under active recruiter review.</small>
-          </article>
-          <article class="ja-summary-card">
-            <span class="ja-eyebrow" style="margin:0">Interview</span>
-            <strong id="cardInterview">0</strong>
-            <small>Applications currently at interview stage.</small>
-          </article>
-          <article class="ja-summary-card">
-            <span class="ja-eyebrow" style="margin:0">Reject</span>
-            <strong id="cardReject">0</strong>
-            <small>Applications marked as rejected.</small>
-          </article>
-          <article class="ja-summary-card">
-            <span class="ja-eyebrow" style="margin:0">Visible set</span>
-            <strong id="cardVisible">0</strong>
-            <small id="cardVisibleMeta">Waiting for filters</small>
-          </article>
         </div>
       </div>
-    </section>
 
-    <section class="ja-panel">
-      <div class="ja-panel__inner">
-        <div class="ja-pagination" style="margin-bottom:16px">
+      <!-- Applications table card -->
+      <div class="card">
+        <div class="toolbar" style="justify-content:space-between">
           <div class="ja-chip-row">
             <span class="ja-chip" id="resultChip">Loading applications…</span>
           </div>
           <div class="ja-cell-actions">
-            <button class="ja-btn" type="button" id="btnPrevPage">Previous</button>
-            <span class="ja-chip" id="pageInfo">Page 1 of 1</span>
-            <button class="ja-btn" type="button" id="btnNextPage">Next</button>
+            <button class="btn ghost small" type="button" id="btnPrevPage">← Prev</button>
+            <span style="font-size:13px;font-weight:700;color:var(--muted)" id="pageInfo">Page 1 of 1</span>
+            <button class="btn ghost small" type="button" id="btnNextPage">Next →</button>
           </div>
         </div>
-
-        <div class="ja-table-shell">
+        <div class="table-shell">
           <table class="ja-table" aria-label="Job applications table">
             <thead>
               <tr>
@@ -186,36 +348,129 @@
             </thead>
             <tbody id="applicationRows"></tbody>
           </table>
-          <div class="ja-empty" id="emptyState" hidden>No job applications match the current filters.</div>
+          <div class="empty-state" id="emptyState" hidden>
+            <span style="font-size:32px">📋</span>
+            No job applications match the current filters.
+          </div>
         </div>
       </div>
-    </section>
-  </div>
 
-  <div class="ja-overlay" id="drawerOverlay"></div>
-  <aside class="ja-drawer" id="applicationDrawer" aria-hidden="true">
-    <div class="ja-drawer__head">
+      <!-- Quick links -->
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn ghost small" href="/admin/candidates.html">Open candidates workspace →</a>
+        <a class="btn ghost small" href="/admin/jobs.html">Open jobs workspace →</a>
+      </div>
+
+    </main>
+
+  </div><!-- /#app -->
+
+  <!-- ── Drawer overlay ────────────────────────────────────────────── -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+
+  <!-- ── Application drawer ────────────────────────────────────────── -->
+  <aside class="drawer" id="applicationDrawer" aria-hidden="true">
+    <div class="drawer__head">
       <div>
-        <p class="ja-eyebrow">Application review</p>
-        <h2 id="drawerTitle" style="margin:0;font-size:34px;line-height:1.05">Application</h2>
-        <p class="ja-muted" id="drawerMeta" style="margin:8px 0 0">Select an application to review it here.</p>
+        <p class="crumbs" style="margin:0 0 4px">Application review</p>
+        <h2 id="drawerTitle" style="margin:0;font-size:22px;line-height:1.2">Application</h2>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted)" id="drawerMeta">Select an application to review it here.</p>
       </div>
-      <button class="ja-btn" type="button" id="btnCloseDrawer">Close</button>
+      <button class="btn ghost small" type="button" id="btnCloseDrawer">✕ Close</button>
     </div>
-    <div class="ja-drawer__body" id="drawerBody">
+    <div class="drawer__body" id="drawerBody">
       <div class="ja-drawer__section">
-        <p class="ja-muted">No application selected.</p>
+        <p style="color:var(--muted);font-size:13px">No application selected.</p>
       </div>
     </div>
-    <div class="ja-drawer__foot">
+    <div class="drawer__foot">
       <div class="ja-chip-row" id="drawerStatusActions"></div>
-      <div class="ja-cell-actions">
-        <a class="ja-link" href="/admin/candidates.html" id="drawerCandidateLink">Candidate</a>
-        <a class="ja-link" href="/admin/jobs.html" id="drawerJobLink">Role</a>
+      <div class="ja-cell-actions" style="margin-top:8px">
+        <a class="btn ghost small" href="/admin/candidates.html" id="drawerCandidateLink">View candidate</a>
+        <a class="btn ghost small" href="/admin/jobs.html" id="drawerJobLink">View role</a>
       </div>
     </div>
   </aside>
 
-  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+  <!-- ── Toast ─────────────────────────────────────────────────────── -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ── Page tab wiring ────────────────────────────────────────────── -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* Status → filter-select value mapping */
+    var TAB_STATUS = {
+      all: 'all',
+      submitted: 'submitted',
+      in_progress: 'in_progress',
+      interview: 'interview',
+      reject: 'reject'
+    };
+
+    function switchAppTab(key) {
+      document.querySelectorAll('[data-app-tab]').forEach(function (btn) {
+        var active = btn.dataset.appTab === key;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      /* Update the status filter select and fire apply */
+      var statusSelect = document.getElementById('filterStatus');
+      if (statusSelect && key in TAB_STATUS) {
+        statusSelect.value = TAB_STATUS[key];
+      }
+      var applyBtn = document.getElementById('btnApplyFilters');
+      if (applyBtn) applyBtn.click();
+    }
+
+    document.querySelectorAll('[data-app-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function () { switchAppTab(btn.dataset.appTab); });
+    });
+
+    document.querySelectorAll('[data-app-tab-action]').forEach(function (tile) {
+      tile.addEventListener('click', function () { switchAppTab(tile.dataset.appTabAction); });
+    });
+
+    /* Sync tab badges from metric tile values */
+    function syncAppBadges() {
+      var map = {
+        'pt-badge-all': 'statTotal',
+        'pt-badge-submitted': 'statSubmitted',
+        'pt-badge-inprogress': 'statInProgress',
+        'pt-badge-interview': 'statInterview',
+        'pt-badge-rejected': 'cardReject'
+      };
+      Object.keys(map).forEach(function (badgeId) {
+        var badge = document.getElementById(badgeId);
+        var src = document.getElementById(map[badgeId]);
+        if (badge && src) badge.textContent = src.textContent.trim() || '—';
+      });
+    }
+    var metricsStrip = document.getElementById('metricsStrip');
+    if (metricsStrip) {
+      new MutationObserver(syncAppBadges).observe(metricsStrip, { childList: true, subtree: true, characterData: true });
+    }
+    setInterval(syncAppBadges, 2000);
+
+    /* Drawer open/close class upgrade (open → CSS class instead of inline) */
+    var drawerOverlay = document.getElementById('drawerOverlay');
+    var appDrawer = document.getElementById('applicationDrawer');
+    /* Observe class changes on the drawer element so overlay syncs */
+    if (appDrawer && drawerOverlay) {
+      new MutationObserver(function () {
+        var isOpen = appDrawer.classList.contains('open');
+        drawerOverlay.classList.toggle('open', isOpen);
+        appDrawer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      }).observe(appDrawer, { attributes: true, attributeFilter: ['class'] });
+    }
+    if (drawerOverlay) {
+      drawerOverlay.addEventListener('click', function () {
+        if (appDrawer) appDrawer.classList.remove('open');
+      });
+    }
+  })();
+  </script>
+
 </body>
 </html>
