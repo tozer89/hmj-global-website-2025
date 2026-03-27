@@ -15,7 +15,9 @@
     complete: { label: 'Complete', tone: 'green' },
     archived: { label: 'Archived', tone: 'gray' },
     blocked: { label: 'Blocked', tone: 'red' },
-    'timesheet portal': { label: 'TSP raw', tone: 'blue' }
+    'timesheet portal': { label: 'TSP raw', tone: 'blue' },
+    invited: { label: 'Invited — awaiting registration', tone: 'purple' },
+    cancelled: { label: 'Cancelled', tone: 'gray' },
   };
 
   const DEFAULT_FILTERS = Object.freeze({
@@ -1601,8 +1603,8 @@
     if (state.quickSearch && !haystack.includes(state.quickSearch)) return false;
     // Candidate type filter
     if (filters.candidateType === 'starter' && !candidateOnboardingMode(candidate)) return false;
-    // Seekers = website-registered recruitment profiles only (must have a portal account and not be in onboarding mode)
-    if (filters.candidateType === 'seeker' && (candidateOnboardingMode(candidate) || !candidate.has_portal_account)) return false;
+    // Seekers = website-registered recruitment profiles (not in onboarding/new-starter mode)
+    if (filters.candidateType === 'seeker' && candidateOnboardingMode(candidate)) return false;
     if (filters.status.length && !filters.status.includes(candidate.status)) return false;
     if (filters.role && !(candidate.role || '').toLowerCase().includes(filters.role.toLowerCase())) return false;
     if (filters.region && !(candidate.region || '').toLowerCase().includes(filters.region.toLowerCase())) return false;
@@ -1673,6 +1675,8 @@
       total,
       seekers: countBy((row) => !candidateOnboardingMode(row)),
       starters: countBy((row) => candidateOnboardingMode(row)),
+      // 'Invited' = provisional new starters awaiting registration (created via send-intro-email)
+      invited: countBy((row) => candidateOnboardingMode(row) && String(row.status || '').toLowerCase() === 'invited'),
       progress: countStatus('in progress'),
       ready: countBy((row) => row.onboarding?.onboardingComplete === true),
       rtwMissing: countBy((row) => row.onboarding?.hasRightToWork !== true && row.onboarding?.hasRightToWorkUpload !== true),
@@ -2645,7 +2649,38 @@
       : onboarding.hasRightToWorkPendingVerification
       ? 'Candidate has uploaded RTW evidence, but HMJ still needs to verify it.'
       : 'Candidate still needs to upload RTW evidence.';
-    return `
+    const isInvitedStarter = onboardingMode && String(candidate.status || '').toLowerCase() === 'invited';
+    const isCancelledStarter = onboardingMode && String(candidate.status || '').toLowerCase() === 'cancelled';
+    const starterBanner = isInvitedStarter ? `
+      <div style="background:#f3f0ff;border:1px solid #c4b5fd;border-radius:14px;padding:14px 16px;margin-bottom:16px">
+        <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:13px;color:#5b21b6;margin-bottom:4px">🕐 Provisional new starter — awaiting registration</div>
+            <div style="font-size:13px;color:#6d28d9;line-height:1.5">Intro email sent. This starter hasn't completed their HMJ registration yet. Send a reminder or cancel if they're no longer starting.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn" type="button" data-starter-action="send-reminder" style="background:#7c3aed;color:#fff;font-size:13px;padding:8px 14px"
+            data-candidate-id="${candidate.id}"
+            data-first-name="${(candidate.first_name || '').replace(/"/g, '&quot;')}"
+            data-last-name="${(candidate.last_name || '').replace(/"/g, '&quot;')}"
+            data-email="${(candidate.email || '').replace(/"/g, '&quot;')}"
+            data-company="${(candidate.client_name || '').replace(/"/g, '&quot;')}"
+            data-job-title="${(candidate.job_title || '').replace(/"/g, '&quot;')}">
+            ↻ Send reminder email
+          </button>
+          <button class="btn ghost" type="button" data-starter-action="cancel"
+            data-candidate-id="${candidate.id}"
+            style="font-size:13px;padding:8px 14px;border-color:#ef4444;color:#ef4444">
+            ✕ Cancel — no longer starting
+          </button>
+        </div>
+      </div>` : isCancelledStarter ? `
+      <div style="background:#f8f8f8;border:1px solid #d1d5db;border-radius:14px;padding:12px 16px;margin-bottom:16px">
+        <div style="font-weight:800;font-size:13px;color:#6b7280">✕ Starter cancelled — no longer starting</div>
+        <div style="font-size:13px;color:#9ca3af;margin-top:4px">This provisional profile was cancelled. Archive it or update the status if circumstances change.</div>
+      </div>` : '';
+    return `${starterBanner}
       <div class="drawer-section">
         <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">
           <span class="chip ${statusTone(candidate.status)}">${statusLabel(candidate.status)}</span>
@@ -3558,6 +3593,62 @@
         await runPortalAccountAction(candidate, action, btn);
       });
     });
+
+    // ── Provisional starter CRM actions ──────────────────────────────────
+    section.querySelectorAll('[data-starter-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.starterAction;
+        if (!action) return;
+
+        if (action === 'send-reminder') {
+          btn.disabled = true;
+          btn.textContent = 'Sending…';
+          try {
+            const res = await state.helpers.api('admin-send-intro-email', 'POST', {
+              first_name: btn.dataset.firstName || candidate.first_name || '',
+              last_name: btn.dataset.lastName || candidate.last_name || '',
+              email: btn.dataset.email || candidate.email || '',
+              company: btn.dataset.company || candidate.client_name || '',
+              job_title: btn.dataset.jobTitle || candidate.job_title || '',
+              candidate_id: candidate.id,
+              is_reminder: true,
+            });
+            showToast(res?.ok
+              ? `Reminder sent to ${candidate.email || 'starter'}.`
+              : (res?.message || 'Reminder send failed.'), res?.ok ? 'ok' : 'error', 4000);
+            // Refresh to show new activity in audit tab
+            const refreshed = await fetchCandidate(candidate.id).catch(() => null);
+            if (refreshed) renderDrawer(refreshed);
+          } catch (err) {
+            showToast(err.message || 'Could not send reminder.', 'error', 4200);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = '↻ Send reminder email';
+          }
+          return;
+        }
+
+        if (action === 'cancel') {
+          if (!confirm(`Cancel ${candidate.name || candidate.email || 'this starter'}? This will mark them as no longer starting and can be undone by updating their status.`)) return;
+          btn.disabled = true;
+          try {
+            await state.helpers.api('admin-candidate-starter-cancel', 'POST', {
+              candidateId: candidate.id,
+              reason: 'Cancelled by admin — no longer starting.',
+            });
+            showToast('Starter cancelled. Profile marked as no longer starting.', 'ok', 4000);
+            const refreshed = await fetchCandidate(candidate.id).catch(() => null);
+            if (refreshed) renderDrawer(refreshed);
+          } catch (err) {
+            showToast(err.message || 'Could not cancel starter.', 'error', 4200);
+          } finally {
+            btn.disabled = false;
+          }
+          return;
+        }
+      });
+    });
+
     updateSaveState();
   }
 

@@ -1149,26 +1149,37 @@
       var pillsEl = document.getElementById('tsp-active-pills');
       if (!tbody) return;
 
-      /* Build lookup: contractorId → assignments[] */
-      var aMap = {};
+      /* Build lookup maps: by contractorId, contractorCode, and candidateEmail */
+      var aMapById = {};
+      var aMapByCode = {};
+      var aMapByEmail = {};
       (assignments || []).forEach(function (a) {
-        var cid = String(a.contractorId || '');
-        if (!aMap[cid]) aMap[cid] = [];
-        aMap[cid].push(a);
+        var cid   = String(a.contractorId || '').trim();
+        var ccode = String(a.contractorCode || '').trim().toLowerCase();
+        var cemail = String(a.candidateEmail || a.contractorEmail || '').trim().toLowerCase();
+        if (cid)    { if (!aMapById[cid])      aMapById[cid]      = []; aMapById[cid].push(a); }
+        if (ccode)  { if (!aMapByCode[ccode])  aMapByCode[ccode]  = []; aMapByCode[ccode].push(a); }
+        if (cemail) { if (!aMapByEmail[cemail]) aMapByEmail[cemail] = []; aMapByEmail[cemail].push(a); }
       });
+
+      function lookupContractorAssignments(c) {
+        var id    = String(c.id || '').trim();
+        var code  = String(c.reference || c.accountingReference || '').trim().toLowerCase();
+        var email = String(c.email || '').trim().toLowerCase();
+        return (id && aMapById[id]) || (code && aMapByCode[code]) || (email && aMapByEmail[email]) || null;
+      }
 
       var rows = '';
       var clientSet = {};
       var ir35Inside = 0, ir35Outside = 0;
 
-      /* Only show contractors that have at least one assignment in aMap */
+      /* Only show contractors that have at least one assignment */
       var activeContractors = contractors.filter(function (c) {
-        return aMap[String(c.id || '')];
+        return !!lookupContractorAssignments(c);
       });
 
       activeContractors.forEach(function (c) {
-        var cid = String(c.id || '');
-        var aList = aMap[cid]; /* always has entries — we filtered above */
+        var aList = lookupContractorAssignments(c); /* always has entries — we filtered above */
         aList.forEach(function (a, idx) {
           if (a.clientName) clientSet[a.clientName] = true;
           if (/inside/i.test(a.ir35Status || '')) ir35Inside++;
@@ -1226,7 +1237,14 @@
           var assignments = data.assignments || [];
           var ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
           var activeCount = contractors.filter(function (c) {
-            return assignments.some(function (a) { return String(a.contractorId||'') === String(c.id||''); });
+            var cid   = String(c.id || '').trim();
+            var ccode = String(c.reference || c.accountingReference || '').trim().toLowerCase();
+            var cemail = String(c.email || '').trim().toLowerCase();
+            return assignments.some(function (a) {
+              return (cid   && String(a.contractorId   || '').trim()                        === cid)   ||
+                     (ccode && String(a.contractorCode || '').trim().toLowerCase()          === ccode) ||
+                     (cemail && String(a.candidateEmail || a.contractorEmail || '').trim().toLowerCase() === cemail);
+            });
           }).length;
           if (statusEl) { statusEl.textContent = '✓ Updated at ' + ts + ' · ' + activeCount + ' with live assignments (' + contractors.length + ' total in TSP)'; statusEl.style.color = 'var(--ok)'; }
           renderTspTable(contractors, assignments);

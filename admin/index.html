@@ -41,9 +41,26 @@
     .section-head .eyebrow{margin:0;color:var(--highlight);font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
     .section-head p:last-child{margin:0;max-width:54ch}
 
-    .hero-shell{display:grid;gap:18px;grid-template-columns:minmax(0,1.18fr) minmax(300px,.9fr) minmax(300px,.9fr);align-items:start}
+    .hero-shell{display:grid;gap:18px;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);align-items:start}
     .hero-copy{display:grid;gap:16px}
     .hero-copy__intro{margin:0;max-width:60ch}
+    /* Compact notes column in hero */
+    .compact-notes-col{display:flex;flex-direction:column;min-height:0}
+    .notes-board--compact{border-radius:16px;border:1px solid rgba(47,78,162,.14);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.92));padding:14px 16px;max-height:310px;overflow-y:auto;scrollbar-width:thin;gap:10px}
+    .notes-board--compact header{padding-bottom:8px;border-bottom:1px solid rgba(47,78,162,.1);margin-bottom:2px}
+    .notes-board--compact .notes-board__title h3{font-size:14px;font-weight:800;letter-spacing:.01em}
+    .notes-board--compact .notes-board__title p{display:none}
+    .notes-board--compact .notes-toolbar{display:none}
+    .notes-board--compact form{display:none}
+    .notes-board--compact .notes-board__actions{display:none}
+    /* Short links utilities panel at bottom */
+    .utilities-details{border:none;padding:0;margin:0}
+    .utilities-details summary{display:flex;align-items:center;gap:10px;cursor:pointer;padding:14px 20px;border-radius:14px;border:1px solid rgba(47,78,162,.14);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.92));font-weight:700;font-size:15px;list-style:none;transition:background .16s,border-color .16s}
+    .utilities-details summary::-webkit-details-marker{display:none}
+    .utilities-details summary::before{content:'▶';font-size:11px;color:var(--muted);transition:transform .2s}
+    .utilities-details[open] summary::before{transform:rotate(90deg)}
+    .utilities-details summary:hover{background:rgba(47,78,162,.06);border-color:rgba(47,78,162,.24)}
+    .utilities-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));padding-top:14px}
     .shortlink-panel{display:grid;gap:14px;padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.16);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 18px 36px rgba(15,27,63,.08);height:100%;align-content:start}
     .shortlink-panel .btn:not(.outline){background:linear-gradient(180deg,#3657b3,#29489e);color:#fff;border-color:rgba(41,72,158,.48);box-shadow:0 12px 24px rgba(47,78,162,.16)}
     .shortlink-panel .btn:not(.outline):hover{border-color:rgba(41,72,158,.62)}
@@ -114,16 +131,16 @@
     #toast{position:fixed;right:18px;bottom:18px;display:grid;gap:10px;z-index:9999}
     #toast .notice{padding:10px 12px;border-radius:12px;background:#fff;border:1px solid rgba(47,78,162,.25);box-shadow:0 16px 30px rgba(15,27,63,.18);font-weight:700}
 
-    @media (max-width:1120px){
-      .hero-shell{grid-template-columns:minmax(0,1fr) minmax(300px,1fr)}
-      .hero-copy{grid-column:1 / -1}
+    @media (max-width:900px){
+      .hero-shell{grid-template-columns:1fr}
+      .notes-board--compact{max-height:240px}
     }
 
     @media (max-width:720px){
       .section-head{align-items:flex-start}
       .card{min-height:unset}
       .quick-link{min-height:unset}
-      .shortlink-fields,.shortlink-result__row,.hero-shell{grid-template-columns:1fr}
+      .shortlink-fields,.shortlink-result__row,.utilities-grid{grid-template-columns:1fr}
       .shortlink-item__top{flex-direction:column}
     }
 
@@ -298,66 +315,8 @@
           </div>
         </div>
 
-        <aside class="shortlink-panel shortlink-panel--builder" aria-labelledby="shortLinkHeading">
-          <div class="shortlink-panel__head">
-            <div>
-              <p class="eyebrow">Admin utility</p>
-              <h3 id="shortLinkHeading">Short links</h3>
-            </div>
-            <span class="shortlink-badge">Internal create only</span>
-          </div>
-          <p class="muted shortlink-panel__intro">Create clean HMJ links at <strong>/go/:slug</strong> for jobs, forms, specs, and polished outbound sharing.</p>
-
-          <form id="shortLinkForm" class="shortlink-form" novalidate>
-            <div class="shortlink-fields">
-              <label class="utility-field">
-                <span>Label</span>
-                <input id="shortLinkTitle" type="text" maxlength="120" placeholder="Candidate pack"/>
-              </label>
-              <label class="utility-field">
-                <span>Short code</span>
-                <input id="shortLinkSlug" type="text" maxlength="80" inputmode="text" placeholder="Leave blank to auto-generate"/>
-              </label>
-              <label class="utility-field utility-field--wide">
-                <span>Destination URL</span>
-                <input id="shortLinkDestination" type="url" required placeholder="https://example.com/long/path"/>
-              </label>
-            </div>
-            <p class="utility-note" id="shortLinkPreview">Leave the short code blank to auto-generate a clean HMJ short link.</p>
-            <div class="shortlink-actions">
-              <button type="button" class="btn outline small" id="btnSuggestShortLink">Suggest code</button>
-              <button type="submit" class="btn small" id="btnCreateShortLink">Generate link</button>
-            </div>
-          </form>
-
-          <div class="shortlink-feedback" id="shortLinkFeedback" hidden></div>
-
-          <section class="shortlink-result" id="shortLinkResult" hidden aria-labelledby="shortLinkResultHeading">
-            <div>
-              <p class="eyebrow">Generated link</p>
-              <h4 id="shortLinkResultHeading" style="margin:4px 0 0;font-size:16px">Ready to copy</h4>
-            </div>
-            <div class="shortlink-result__row">
-              <input id="shortLinkOutput" type="text" readonly aria-label="Generated HMJ short link"/>
-              <button type="button" class="btn outline small" id="btnCopyShortLink">Copy</button>
-              <a class="btn small" id="shortLinkOpen" target="_blank" rel="noopener" hidden aria-hidden="true">Open</a>
-            </div>
-            <p class="utility-note" id="shortLinkMeta"></p>
-          </section>
-        </aside>
-
-        <aside class="shortlink-panel shortlink-panel--history" aria-labelledby="shortLinkHistoryHeading">
-          <div class="shortlink-panel__head">
-            <div>
-              <p class="eyebrow">Recent links</p>
-              <h3 id="shortLinkHistoryHeading">Reuse recent HMJ links</h3>
-            </div>
-            <button type="button" class="btn outline small" id="btnRefreshShortLinks">Refresh</button>
-          </div>
-          <p class="muted shortlink-panel__intro">Open, reuse, or copy the latest branded links without scrolling through a long utility stack.</p>
-          <section class="shortlink-history" aria-labelledby="shortLinkHistoryHeading">
-            <div class="shortlink-list" id="shortLinkList" aria-live="polite"></div>
-          </section>
+        <aside class="compact-notes-col" aria-label="Team notes">
+          <section id="notesBoard" class="notes-board notes-board--compact" aria-label="Team notes"></section>
         </aside>
       </div>
     </section>
@@ -487,7 +446,80 @@
       <p class="section-note muted" id="settings-placeholder">The quick access strip above covers the headline modules. This section now avoids duplicates, while Settings holds the platform tools and recent activity that no longer need to dominate the dashboard.</p>
     </section>
 
-    <section id="notesBoard" class="panel notes-board" hidden></section>
+    <!-- Short links utilities — moved here to keep hero lean -->
+    <section class="panel" id="utilities-panel" aria-labelledby="utilitiesHeading">
+      <details class="utilities-details" id="utilitiesDetails">
+        <summary>
+          <span style="flex:1">
+            <span class="eyebrow" style="display:block;margin-bottom:2px">Admin utilities</span>
+            <span id="utilitiesHeading">Short links &amp; recent links</span>
+          </span>
+        </summary>
+        <div class="utilities-grid">
+          <aside class="shortlink-panel shortlink-panel--builder" aria-labelledby="shortLinkHeading">
+            <div class="shortlink-panel__head">
+              <div>
+                <p class="eyebrow">Admin utility</p>
+                <h3 id="shortLinkHeading">Short links</h3>
+              </div>
+              <span class="shortlink-badge">Internal create only</span>
+            </div>
+            <p class="muted shortlink-panel__intro">Create clean HMJ links at <strong>/go/:slug</strong> for jobs, forms, specs, and polished outbound sharing.</p>
+
+            <form id="shortLinkForm" class="shortlink-form" novalidate>
+              <div class="shortlink-fields">
+                <label class="utility-field">
+                  <span>Label</span>
+                  <input id="shortLinkTitle" type="text" maxlength="120" placeholder="Candidate pack"/>
+                </label>
+                <label class="utility-field">
+                  <span>Short code</span>
+                  <input id="shortLinkSlug" type="text" maxlength="80" inputmode="text" placeholder="Leave blank to auto-generate"/>
+                </label>
+                <label class="utility-field utility-field--wide">
+                  <span>Destination URL</span>
+                  <input id="shortLinkDestination" type="url" required placeholder="https://example.com/long/path"/>
+                </label>
+              </div>
+              <p class="utility-note" id="shortLinkPreview">Leave the short code blank to auto-generate a clean HMJ short link.</p>
+              <div class="shortlink-actions">
+                <button type="button" class="btn outline small" id="btnSuggestShortLink">Suggest code</button>
+                <button type="submit" class="btn small" id="btnCreateShortLink">Generate link</button>
+              </div>
+            </form>
+
+            <div class="shortlink-feedback" id="shortLinkFeedback" hidden></div>
+
+            <section class="shortlink-result" id="shortLinkResult" hidden aria-labelledby="shortLinkResultHeading">
+              <div>
+                <p class="eyebrow">Generated link</p>
+                <h4 id="shortLinkResultHeading" style="margin:4px 0 0;font-size:16px">Ready to copy</h4>
+              </div>
+              <div class="shortlink-result__row">
+                <input id="shortLinkOutput" type="text" readonly aria-label="Generated HMJ short link"/>
+                <button type="button" class="btn outline small" id="btnCopyShortLink">Copy</button>
+                <a class="btn small" id="shortLinkOpen" target="_blank" rel="noopener" hidden aria-hidden="true">Open</a>
+              </div>
+              <p class="utility-note" id="shortLinkMeta"></p>
+            </section>
+          </aside>
+
+          <aside class="shortlink-panel shortlink-panel--history" aria-labelledby="shortLinkHistoryHeading">
+            <div class="shortlink-panel__head">
+              <div>
+                <p class="eyebrow">Recent links</p>
+                <h3 id="shortLinkHistoryHeading">Reuse recent HMJ links</h3>
+              </div>
+              <button type="button" class="btn outline small" id="btnRefreshShortLinks">Refresh</button>
+            </div>
+            <p class="muted shortlink-panel__intro">Open, reuse, or copy the latest branded links without scrolling through a long utility stack.</p>
+            <section class="shortlink-history" aria-labelledby="shortLinkHistoryHeading">
+              <div class="shortlink-list" id="shortLinkList" aria-live="polite"></div>
+            </section>
+          </aside>
+        </div>
+      </details>
+    </section>
   </div>
 
   <div id="toast" aria-live="polite" aria-atomic="true"></div>
