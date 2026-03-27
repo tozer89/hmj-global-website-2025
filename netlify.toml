@@ -9,6 +9,16 @@
   node_bundler = "esbuild"
   included_files = ["data/*.json", "netlify/functions/_data/*.json"]
 
+# QuickBooks OAuth callback bridge:
+# - Public callback path: /api/connectors/quickbooks/callback
+# - Required Netlify env var: HMJ_ASSISTANT_QBO_CALLBACK_TARGET
+# - Optional Netlify env var: HMJ_ASSISTANT_QBO_ALLOWED_HOSTS
+# - Intuit redirect URI must be: https://hmj-global.com/api/connectors/quickbooks/callback
+[[redirects]]
+  from = "/api/connectors/quickbooks/callback"
+  to = "/.netlify/functions/quickbooks-callback-bridge"
+  status = 200
+
 [functions."admin-team-tasks-reminders-run"]
   schedule = "@hourly"
 

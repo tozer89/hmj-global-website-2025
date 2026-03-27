@@ -368,6 +368,7 @@
   </style>
   <link rel="stylesheet" href="/assets/css/public.responsive.css?v=3" />
   <link rel="stylesheet" href="/assets/css/public.harmony.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/hmj-footer.css" />
 </head>
 <body class="public-page contact-page">
   <!-- Announcement -->
@@ -391,8 +392,7 @@
         <li><a href="candidates.html">Candidates</a></li>
         <li><a href="clients.html">Clients</a></li>
         <li><a href="jobs.html">Jobs</a></li>
-        <li><a href="https://hmjglobal.timesheetportal.com" id="nav-timesheets">Timesheets</a></li>
-        <li><a href="/admin/" id="nav-admin" class="requires-admin nav-admin-link" style="display:none" aria-disabled="true">Admin</a></li>
+        <li><a href="contact.html" data-page="contact">Contact</a></li>
       </ul>
       <div class="hmj-scrim" hidden></div>
     </nav>
@@ -663,11 +663,44 @@
   </main>
 
   <!-- ===== Footer ===== -->
-  <footer>
-    <p><strong>HMJ-Global Ltd</strong> — Data Centre &amp; Infrastructure Recruitment Specialists</p>
-    <p>Email: <a href="mailto:info@HMJ-Global.com">info@HMJ-Global.com</a> · WhatsApp: <a href="https://wa.me/447842550187" target="_blank">Message Us</a> ·
-       <a href="https://www.linkedin.com/company/hmj-global/" target="_blank">LinkedIn</a></p>
-    <p>&copy; 2025 HMJ-Global Ltd. All rights reserved.</p>
+  <footer class="hmj-site-footer">
+    <div class="hmj-site-footer__inner">
+      <div class="hmj-site-footer__col">
+        <strong>HMJ Global</strong>
+        <nav aria-label="Footer navigation">
+          <a href="index.html">Home</a>
+          <a href="about.html">About</a>
+          <a href="clients.html">Clients</a>
+          <a href="candidates.html">Candidates</a>
+          <a href="jobs.html">Jobs</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+      </div>
+      <div class="hmj-site-footer__col">
+        <strong>Candidates &amp; Staff</strong>
+        <nav aria-label="Portal links">
+          <a href="https://hmjglobal.timesheetportal.com" target="_blank" rel="noopener">Contractor Timesheets</a>
+          <a href="/admin/">Staff Login</a>
+        </nav>
+      </div>
+      <div class="hmj-site-footer__col">
+        <strong>Get in touch</strong>
+        <p>Email: <a href="mailto:info@hmj-global.com">info@hmj-global.com</a></p>
+        <p>Phone: <a href="tel:08008611230">0800 861 1230</a></p>
+        <p><a href="https://wa.me/447842550187" target="_blank" rel="noopener">WhatsApp us</a></p>
+      </div>
+      <div class="hmj-site-footer__col">
+        <strong>Follow us</strong>
+        <a class="hmj-site-footer__linkedin" href="https://www.linkedin.com/company/hmj-global/" target="_blank" rel="noopener">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          Follow on LinkedIn
+        </a>
+      </div>
+    </div>
+    <div class="hmj-site-footer__legal">
+      <p>&copy; 2025 HMJ-Global Ltd. All rights reserved. &middot; <a href="/privacy.html">Privacy Policy</a></p>
+      <p>HMJ-Global is a trading name of HMJ-Global Ltd, registered in England &amp; Wales, company number 16029938. Registered office: 905 Lightbox Blue, Media City, UK.</p>
+    </div>
   </footer>
 
   <!-- ===== Scripts ===== -->
@@ -847,5 +880,6 @@
   <script type="module" src="assets/js/contact.portal.js?v=4"></script>
 
   <!-- OPTIONAL toast for jobs.html?submitted=1 is the same as before -->
+  <script defer src="/js/hmj-cookie-consent.js"></script>
 </body>
 </html>

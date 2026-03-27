@@ -1,0 +1,258 @@
+/* ============================================================
+   HMJ Global – Site Footer + Cookie Consent Banner
+   ============================================================ */
+
+/* ── Site Footer ─────────────────────────────────────────── */
+.hmj-site-footer {
+  background: #0f1322;
+  color: #cfd7ff;
+  border-top: 1px solid rgba(255,255,255,.06);
+  font-family: inherit;
+}
+
+.hmj-site-footer__inner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 32px;
+}
+
+@media (max-width: 860px) {
+  .hmj-site-footer__inner {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    padding: 36px 20px 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .hmj-site-footer__inner {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.hmj-site-footer__col strong {
+  display: block;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.hmj-site-footer__col nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hmj-site-footer__col nav a,
+.hmj-site-footer__col p a,
+.hmj-site-footer__col > a {
+  color: #a5b4d4;
+  text-decoration: none;
+  font-size: .9rem;
+  line-height: 1.5;
+  transition: color .15s ease;
+}
+
+.hmj-site-footer__col nav a:hover,
+.hmj-site-footer__col p a:hover,
+.hmj-site-footer__col > a:hover {
+  color: #fff;
+}
+
+.hmj-site-footer__col p {
+  margin: 0 0 6px;
+  font-size: .9rem;
+  color: #a5b4d4;
+  line-height: 1.5;
+}
+
+/* LinkedIn button */
+.hmj-site-footer__linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: rgba(58,102,179,.18);
+  border: 1px solid rgba(58,102,179,.4);
+  color: #a5c4ff !important;
+  font-size: .9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.hmj-site-footer__linkedin:hover {
+  background: rgba(58,102,179,.35) !important;
+  border-color: rgba(58,102,179,.7) !important;
+  color: #fff !important;
+}
+
+.hmj-site-footer__linkedin svg {
+  flex-shrink: 0;
+}
+
+/* Legal bar */
+.hmj-site-footer__legal {
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding: 18px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  align-items: center;
+}
+
+.hmj-site-footer__legal p {
+  margin: 0;
+  font-size: .8rem;
+  color: #7a89b0;
+  line-height: 1.5;
+}
+
+.hmj-site-footer__legal a {
+  color: #a5b4d4;
+  text-decoration: none;
+}
+
+.hmj-site-footer__legal a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* ── Cookie Consent Banner ───────────────────────────────── */
+#hmj-cookie-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 720px;
+  z-index: 9999;
+  background: #0f1322;
+  border: 1px solid rgba(58,102,179,.45);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.04);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  animation: cookieFadeIn .3s ease both;
+}
+
+@keyframes cookieFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+#hmj-cookie-banner p {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+  font-size: .875rem;
+  color: #cfd7ff;
+  line-height: 1.5;
+}
+
+#hmj-cookie-banner p a {
+  color: #7aa8ff;
+  text-decoration: underline;
+}
+
+#hmj-cookie-banner p a:hover {
+  color: #fff;
+}
+
+.hmj-cookie-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+#hmj-cookie-accept {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #3A66B3;
+  color: #fff;
+  font-size: .875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+#hmj-cookie-accept:hover {
+  background: #2e54a0;
+}
+
+#hmj-cookie-decline {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.2);
+  background: transparent;
+  color: #a5b4d4;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease;
+}
+
+#hmj-cookie-decline:hover {
+  border-color: rgba(255,255,255,.4);
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  #hmj-cookie-banner {
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    border-radius: 14px 14px 0 0;
+  }
+  .hmj-cookie-actions {
+    width: 100%;
+  }
+  #hmj-cookie-accept,
+  #hmj-cookie-decline {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+/* ── LinkedIn follow button (inline, on homepage feed) ───── */
+.btn-linkedin-follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(58,102,179,.5);
+  background: rgba(58,102,179,.1);
+  color: #3A66B3;
+  font-weight: 700;
+  font-size: .9rem;
+  text-decoration: none;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.btn-linkedin-follow:hover {
+  background: rgba(58,102,179,.18);
+  border-color: rgba(58,102,179,.75);
+  color: #2e54a0;
+}
+
+.btn-linkedin-follow svg {
+  flex-shrink: 0;
+}
