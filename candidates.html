@@ -139,6 +139,116 @@
     .reveal{opacity:0; transform:translateY(12px); transition:opacity .5s ease, transform .5s ease}
     .reveal.revealed{opacity:1; transform:none}
 
+    /* ========= Path Chooser ========= */
+    .path-chooser{
+      padding:56px 20px 64px;
+      background:linear-gradient(180deg,#f0f4ff 0%,#fafbff 100%);
+      border-top:1px solid rgba(58,102,179,.1);
+    }
+    .path-chooser__wrap{max-width:920px;margin:0 auto;}
+    .path-chooser__head{text-align:center;margin-bottom:40px;}
+    .path-chooser__eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;}
+    .path-chooser__title{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;color:var(--ink);margin:0 0 12px;line-height:1.18;}
+    .path-chooser__subtitle{color:var(--muted);margin:0;font-size:1rem;max-width:560px;margin-left:auto;margin-right:auto;}
+    .path-chooser__grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;}
+    @media(max-width:640px){.path-chooser__grid{grid-template-columns:1fr;gap:16px;}}
+
+    .path-card{
+      display:flex;flex-direction:column;gap:18px;
+      padding:32px 28px;border-radius:22px;
+      border:2px solid rgba(58,102,179,.18);
+      background:#fff;
+      box-shadow:0 8px 28px rgba(15,23,42,.08);
+      cursor:pointer;transition:transform .2s ease,box-shadow .22s ease,border-color .2s ease,background .18s ease;
+      text-align:left;color:inherit;position:relative;overflow:hidden;
+      width:100%;font:inherit;
+    }
+    .path-card::after{
+      content:"";position:absolute;top:0;right:0;bottom:0;width:4px;
+      background:var(--accent);opacity:0;transition:opacity .2s ease;
+    }
+    .path-card:hover{transform:translateY(-5px);box-shadow:0 20px 48px rgba(58,102,179,.16);border-color:var(--accent);}
+    .path-card.path-selected{border-color:var(--accent);background:linear-gradient(180deg,rgba(58,102,179,.04),#fff 60%);}
+    .path-card.path-selected::after{opacity:1;}
+    .path-card--starter{border-color:rgba(20,160,98,.2);}
+    .path-card--starter:hover{border-color:#14a062;box-shadow:0 20px 48px rgba(20,160,98,.14);}
+    .path-card--starter.path-selected{border-color:#14a062;background:linear-gradient(180deg,rgba(20,160,98,.04),#fff 60%);}
+    .path-card--starter.path-selected::after{background:#14a062;}
+
+    .path-card__icon{
+      width:54px;height:54px;border-radius:14px;
+      display:grid;place-items:center;
+      background:rgba(58,102,179,.1);color:var(--accent);
+      flex-shrink:0;
+    }
+    .path-card--starter .path-card__icon{background:rgba(20,160,98,.1);color:#14a062;}
+
+    .path-card__tag{
+      display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;
+      font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+      background:rgba(58,102,179,.08);color:var(--accent);width:fit-content;
+    }
+    .path-card--starter .path-card__tag{background:rgba(20,160,98,.09);color:#0d8f55;}
+
+    .path-card__title{font-size:clamp(1.15rem,2.5vw,1.45rem);font-weight:800;color:var(--ink);margin:0;line-height:1.2;}
+    .path-card__desc{color:var(--muted);margin:0;font-size:.95rem;line-height:1.65;flex:1;}
+
+    .path-card__checklist{list-style:none;margin:0;padding:0;display:grid;gap:9px;}
+    .path-card__checklist li{
+      display:flex;align-items:flex-start;gap:10px;
+      font-size:.88rem;color:var(--ink);font-weight:600;line-height:1.4;
+    }
+    .path-card__checklist li::before{
+      content:"";width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;
+      background:rgba(58,102,179,.12);border:1.5px solid rgba(58,102,179,.3);
+    }
+    .path-card--starter .path-card__checklist li::before{
+      background:rgba(20,160,98,.1);border-color:rgba(20,160,98,.35);
+    }
+    .path-card__cta{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      padding:13px 20px;border-radius:12px;
+      font-weight:700;font-size:.95rem;
+      background:var(--accent);color:#fff;border:none;cursor:pointer;width:100%;
+      transition:background .15s ease,transform .1s ease;margin-top:4px;
+    }
+    .path-card:hover .path-card__cta{background:#2d55a0;}
+    .path-card--starter .path-card__cta{background:#14a062;}
+    .path-card--starter:hover .path-card__cta{background:#0e7a4e;}
+
+    /* ========= Mode indicator bar ========= */
+    .candidate-mode-bar{
+      display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+      padding:14px 18px;border-radius:14px;margin-bottom:20px;
+      border:2px solid var(--accent);background:rgba(58,102,179,.05);
+    }
+    .candidate-mode-bar--starter{border-color:#14a062;background:rgba(20,160,98,.05);}
+    .candidate-mode-bar__icon{font-size:1.2rem;flex-shrink:0;}
+    .candidate-mode-bar__label{font-weight:700;color:var(--ink);flex:1;min-width:0;}
+    .candidate-mode-bar__label span{font-weight:400;color:var(--muted);font-size:.85rem;display:block;}
+    .candidate-mode-bar__change{
+      padding:6px 14px;border-radius:8px;border:1px solid rgba(58,102,179,.3);
+      background:#fff;color:var(--accent);font:inherit;font-size:.82rem;font-weight:700;
+      cursor:pointer;flex-shrink:0;transition:background .15s ease;
+    }
+    .candidate-mode-bar__change:hover{background:#eef2ff;}
+    .candidate-mode-bar--starter .candidate-mode-bar__change{color:#14a062;border-color:rgba(20,160,98,.3);}
+    .candidate-mode-bar--starter .candidate-mode-bar__change:hover{background:#ecfdf5;}
+
+    /* new starter: payment gate becomes an always-open required panel */
+    .candidate-form__section--payment-required .candidate-payment-gate__toggle{display:none !important;}
+    .candidate-form__section--payment-required .candidate-payment-gate__copy{display:none !important;}
+    .candidate-form__section--payment-required .candidate-payment-gate__summary{display:none !important;}
+    .candidate-form__section--payment-required .candidate-payment-panel{display:block !important;aria-hidden:false;}
+
+    /* new starter: RTW prominence */
+    .candidate-rtw-required-note{
+      display:none;padding:12px 16px;border-radius:12px;border:1px solid rgba(20,160,98,.3);
+      background:rgba(20,160,98,.06);color:#0d6b42;font-size:.88rem;font-weight:600;
+      margin-bottom:10px;
+    }
+    .mode-starter .candidate-rtw-required-note{display:block;}
+
     /* ========= Toast ========= */
     .toast{
       position:fixed; bottom:18px; left:18px; background:#1A1A2E; color:#fff;
@@ -304,6 +414,59 @@
     </div>
   </section>
 
+  <!-- ===== Path Chooser ===== -->
+  <section class="path-chooser" id="pathChooser" aria-labelledby="pathChooserTitle">
+    <div class="path-chooser__wrap">
+      <div class="path-chooser__head reveal">
+        <p class="path-chooser__eyebrow">How can we help?</p>
+        <h2 class="path-chooser__title" id="pathChooserTitle">What brings you here today?</h2>
+        <p class="path-chooser__subtitle">Choose your path and we'll take you to the right form — no wasted time, no guesswork.</p>
+      </div>
+      <div class="path-chooser__grid">
+
+        <!-- Card 1: Job Seeker -->
+        <button class="path-card path-card--seeker reveal" type="button" id="pathSeeker" aria-pressed="false">
+          <div class="path-card__icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+              <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+            </svg>
+          </div>
+          <span class="path-card__tag">Job seekers</span>
+          <h3 class="path-card__title">Create recruitment profile</h3>
+          <p class="path-card__desc">Looking for your next role in data centres, pharma, substations or critical facilities? Build your profile and let HMJ connect you with the right opportunities.</p>
+          <ul class="path-card__checklist">
+            <li>Share your CV, discipline and availability</li>
+            <li>Get matched to live roles within 48 hours</li>
+            <li>Access UK &amp; European opportunities</li>
+          </ul>
+          <span class="path-card__cta">Create my recruitment profile →</span>
+        </button>
+
+        <!-- Card 2: New Starter -->
+        <button class="path-card path-card--starter reveal" type="button" id="pathStarter" aria-pressed="false">
+          <div class="path-card__icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+              <rect x="9" y="3" width="6" height="4" rx="1"/>
+              <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/>
+            </svg>
+          </div>
+          <span class="path-card__tag">New starters</span>
+          <h3 class="path-card__title">New starter registration</h3>
+          <p class="path-card__desc">Already confirmed an assignment with HMJ? Complete your onboarding — set up payroll, upload your documents and get ready for day one.</p>
+          <ul class="path-card__checklist">
+            <li>Set up your payroll details securely</li>
+            <li>Upload right-to-work &amp; ID documents</li>
+            <li>Complete onboarding in one session</li>
+          </ul>
+          <span class="path-card__cta">Start my onboarding →</span>
+        </button>
+
+      </div>
+    </div>
+  </section>
+
   <section class="section candidate-portal-section" id="candidatePortalAuthSection">
     <div class="wrap">
       <div id="candidatePortalAuthRoot"></div>
@@ -322,8 +485,18 @@
       <div class="candidate-profile-stage" id="candidateApplicationView">
         <div class="candidate-profile-layout">
           <div class="card candidate-form-shell" id="candidateRegisterAnchor">
-            <h2 class="candidate-form-shell__title">Create your candidate profile</h2>
-            <p class="small candidate-form-shell__intro">Complete this form to send your details to HMJ. If you keep the account option ticked, we will also set up your candidate login so you can save your profile, track applications, and upload documents later.</p>
+            <!-- Mode indicator bar — updated by path chooser JS -->
+            <div class="candidate-mode-bar" id="candidateModeBar" hidden aria-live="polite">
+              <span class="candidate-mode-bar__icon" id="candidateModeIcon" aria-hidden="true"></span>
+              <div class="candidate-mode-bar__label">
+                <span id="candidateModeLabel">Registration type selected</span>
+                <span id="candidateModeSubLabel"></span>
+              </div>
+              <button class="candidate-mode-bar__change" type="button" id="candidateModeChange" aria-label="Change registration type">← Change</button>
+            </div>
+
+            <h2 class="candidate-form-shell__title" id="candidateFormTitle">Create your candidate profile</h2>
+            <p class="small candidate-form-shell__intro" id="candidateFormIntro">Complete this form to send your details to HMJ. If you keep the account option ticked, we will also set up your candidate login so you can save your profile, track applications, and upload documents later.</p>
             <div id="candidateFormStatusRoot" hidden aria-live="polite"></div>
 
             <form name="candidate-cv" action="/candidates.html?submitted=1" method="POST" data-netlify="true" netlify-honeypot="bot-field"
@@ -333,12 +506,13 @@
               <p style="position:absolute;clip:rect(0 0 0 0);clip-path:inset(50%);width:1px;height:1px;margin:-1px;overflow:hidden;white-space:nowrap;border:0;padding:0;">
                 <label>Don’t fill this out if you’re human: <input name="bot-field"></label>
               </p>
-              <!-- Hidden field to collect tags + page URL + RTW selections -->
+              <!-- Hidden field to collect tags + page URL + RTW selections + onboarding mode -->
               <input type="hidden" name="skills" id="skillsHidden" />
               <input type="hidden" name="page_url" id="pageUrlHidden" />
               <input type="hidden" name="right_to_work" id="rtwHidden" />
               <input type="hidden" name="right_to_work_status" id="rightToWorkStatusHidden" />
               <input type="hidden" name="candidate_account_requested" id="candidateAccountRequested" value="yes" />
+              <input type="hidden" name="onboarding_mode" id="onboardingModeHidden" value="false" />
 
               <fieldset class="candidate-form__section">
                 <legend>Account options</legend>
@@ -578,6 +752,9 @@
                 <div class="candidate-form__grid candidate-form__grid--two">
                   <div class="candidate-field candidate-field--full">
                     <label>Regions you are authorised to work in now * <span class="small">(select all that apply)</span></label>
+                    <div class="candidate-rtw-required-note" id="rtwRequiredNote" role="note">
+                      ✅ As a new starter, you must confirm your right-to-work regions and upload a right-to-work document (passport, visa, or settlement status confirmation) below before HMJ can process your payroll.
+                    </div>
                     <div class="rtw-wrap" id="rtwGroup" aria-describedby="rtwHelp">
                       <label class="rtw-item"><input type="checkbox" value="United Kingdom"> United Kingdom</label>
                       <label class="rtw-item"><input type="checkbox" value="European Union / EEA"> European Union / EEA</label>
@@ -777,5 +954,158 @@
   <script defer src="assets/js/candidates.enhanced.js?v=5"></script>
   <script type="module" src="assets/js/candidates.portal.js?v=14"></script>
   <script defer src="/js/hmj-cookie-consent.js"></script>
+
+  <!-- ===== Path Chooser Logic ===== -->
+  <script>
+  (function () {
+    'use strict';
+
+    var SEEKER_CONFIG = {
+      mode: 'false',
+      barClass: '',
+      barIcon: '📋',
+      barLabel: 'Recruitment profile',
+      barSub: 'Register your profile and get matched to live roles.',
+      formTitle: 'Create your candidate profile',
+      formIntro: 'Complete this form to send your details to HMJ. If you keep the account option ticked, we will also set up your candidate login so you can save your profile, track applications, and upload documents later.',
+      submitLabel: 'Create account and send profile',
+      tag: 'Job seeker'
+    };
+
+    var STARTER_CONFIG = {
+      mode: 'true',
+      barClass: 'candidate-mode-bar--starter',
+      barIcon: '✅',
+      barLabel: 'New starter onboarding',
+      barSub: 'Set up payroll, upload documents and confirm your right-to-work.',
+      formTitle: 'New starter registration',
+      formIntro: 'Welcome to HMJ. Complete this onboarding form to set up your payroll details, confirm your right-to-work regions, and upload the documents HMJ needs before your first day. Your data is stored securely.',
+      submitLabel: 'Submit onboarding registration',
+      tag: 'New starter'
+    };
+
+    function selectPath(config) {
+      // 1. Set hidden onboarding_mode field
+      var modeField = document.getElementById('onboardingModeHidden');
+      if (modeField) modeField.value = config.mode;
+
+      // 2. Update aria-pressed on both cards
+      var seekerBtn = document.getElementById('pathSeeker');
+      var starterBtn = document.getElementById('pathStarter');
+      if (seekerBtn) seekerBtn.setAttribute('aria-pressed', config === SEEKER_CONFIG ? 'true' : 'false');
+      if (starterBtn) starterBtn.setAttribute('aria-pressed', config === STARTER_CONFIG ? 'true' : 'false');
+      if (seekerBtn) seekerBtn.classList.toggle('path-selected', config === SEEKER_CONFIG);
+      if (starterBtn) starterBtn.classList.toggle('path-selected', config === STARTER_CONFIG);
+
+      // 3. Show mode bar
+      var bar = document.getElementById('candidateModeBar');
+      var icon = document.getElementById('candidateModeIcon');
+      var label = document.getElementById('candidateModeLabel');
+      var sub = document.getElementById('candidateModeSubLabel');
+      if (bar) {
+        bar.removeAttribute('hidden');
+        bar.className = 'candidate-mode-bar' + (config.barClass ? ' ' + config.barClass : '');
+        if (icon) icon.textContent = config.barIcon;
+        if (label) label.textContent = config.barLabel;
+        if (sub) sub.textContent = config.barSub;
+      }
+
+      // 4. Update form title + intro
+      var title = document.getElementById('candidateFormTitle');
+      var intro = document.getElementById('candidateFormIntro');
+      if (title) title.textContent = config.formTitle;
+      if (intro) intro.textContent = config.formIntro;
+
+      // 5. Update submit button label
+      var submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) submitBtn.textContent = config.submitLabel;
+
+      // 6. Toggle new-starter-specific styling on form section
+      var form = document.getElementById('candForm');
+      if (form) {
+        form.classList.toggle('mode-starter', config === STARTER_CONFIG);
+      }
+
+      // 7. Handle payment panel for new starters
+      var paymentSection = document.querySelector('.candidate-form__section:has(#candidatePaymentGate)') ||
+                           (function () {
+                             var gate = document.getElementById('candidatePaymentGate');
+                             return gate ? gate.closest('.candidate-form__section') : null;
+                           })();
+      var payOptIn = document.getElementById('candidatePaymentOptIn');
+      var payPanel = document.getElementById('candidatePaymentPanel');
+      var payGate  = document.getElementById('candidatePaymentGate');
+
+      if (config === STARTER_CONFIG) {
+        // Auto-open and require payment details
+        if (paymentSection) paymentSection.classList.add('candidate-form__section--payment-required');
+        if (payOptIn && !payOptIn.checked) payOptIn.click(); // trigger existing JS to open panel
+        if (payGate) payGate.setAttribute('data-open', 'true');
+        if (payPanel) {
+          payPanel.setAttribute('data-open', 'true');
+          payPanel.removeAttribute('aria-hidden');
+          payPanel.style.display = '';
+        }
+        // Make payment inputs required
+        var payInputs = document.querySelectorAll('[data-payment-sensitive]');
+        payInputs.forEach(function (el) {
+          // mark visible ones required
+          var group = el.closest('.candidate-payment-group');
+          if (!group || group.style.display !== 'none') {
+            el.setAttribute('data-starter-required', 'true');
+          }
+        });
+      } else {
+        // Restore optional payment
+        if (paymentSection) paymentSection.classList.remove('candidate-form__section--payment-required');
+        var payInputs2 = document.querySelectorAll('[data-starter-required]');
+        payInputs2.forEach(function (el) { el.removeAttribute('data-starter-required'); });
+      }
+
+      // 8. Scroll to form
+      var anchor = document.getElementById('candidateRegisterAnchor');
+      if (anchor) {
+        setTimeout(function () {
+          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      }
+    }
+
+    function init() {
+      var seekerBtn = document.getElementById('pathSeeker');
+      var starterBtn = document.getElementById('pathStarter');
+      var changeBtn = document.getElementById('candidateModeChange');
+
+      if (seekerBtn) {
+        seekerBtn.addEventListener('click', function () { selectPath(SEEKER_CONFIG); });
+      }
+      if (starterBtn) {
+        starterBtn.addEventListener('click', function () { selectPath(STARTER_CONFIG); });
+      }
+      if (changeBtn) {
+        changeBtn.addEventListener('click', function () {
+          // Scroll back to chooser
+          var chooser = document.getElementById('pathChooser');
+          if (chooser) chooser.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+
+      // Check URL parameter for deep-link: ?path=starter or ?path=seeker
+      var params = new URLSearchParams(window.location.search);
+      var pathParam = params.get('path');
+      if (pathParam === 'starter' || pathParam === 'onboarding') {
+        selectPath(STARTER_CONFIG);
+      } else if (pathParam === 'seeker' || pathParam === 'register') {
+        selectPath(SEEKER_CONFIG);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+      init();
+    }
+  })();
+  </script>
 </body>
 </html>

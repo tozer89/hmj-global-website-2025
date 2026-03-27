@@ -140,6 +140,18 @@
     .chip.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
     .chip.gray{background:#f1f5f9;border-color:#cbd5f5;color:#475569}
     .chip.red{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+    /* Candidate type badges */
+    .type-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .type-badge--seeker{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+    .type-badge--starter{background:#ecfdf5;border:1px solid #bbf7d0;color:#166534}
+    .type-badge--starter::before{content:"✅ ";}
+    .type-badge--seeker::before{content:"📋 ";}
+    /* Drawer mode banner */
+    .dw-mode-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;margin-bottom:14px;font-size:13px;font-weight:700}
+    .dw-mode-banner--seeker{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+    .dw-mode-banner--starter{background:#ecfdf5;border:1px solid #bbf7d0;color:#166534}
+    /* Pill variants for totals */
+    .pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 
     .trow.skeleton{opacity:.55;pointer-events:none}
 
@@ -333,6 +345,14 @@
         <input id="q" placeholder='name, email, ref… (supports AND/OR/NOT)' />
       </div>
       <div class="group">
+        <h3>Candidate type</h3>
+        <select id="flt-type">
+          <option value="">All types</option>
+          <option value="seeker">Job seekers (recruitment profile)</option>
+          <option value="starter">New starters (onboarding)</option>
+        </select>
+      </div>
+      <div class="group">
         <h3>Status</h3>
         <select id="flt-status" multiple>
           <option>active</option><option>in progress</option><option>complete</option>
@@ -463,6 +483,8 @@
             </div>
             <div class="totals">
               <span class="pill" id="t-total">Total: 0</span>
+              <span class="pill blue" id="t-seekers" title="Job seekers (recruitment profile)">Seekers: 0</span>
+              <span class="pill ok" id="t-starters" title="New starters (onboarding)">Starters: 0</span>
               <span class="pill" id="t-progress">In progress: 0</span>
               <span class="pill" id="t-ready">Ready: 0</span>
               <span class="pill warn" id="t-rtw-missing">RTW missing: 0</span>
@@ -496,7 +518,7 @@
         <div class="table" id="candidate-table">
           <div class="thead" id="candidate-thead">
             <div><input type="checkbox" id="chk-all"/></div>
-            <div>Ref</div><div>Candidate</div><div>Contact</div><div>Onboarding</div><div>Status</div><div>Actions</div>
+            <div>Ref</div><div>Candidate</div><div>Contact</div><div>Type / Onboarding</div><div>Status</div><div>Actions</div>
           </div>
           <div class="vscroll" id="rows" aria-live="polite"></div>
         </div>
@@ -507,7 +529,13 @@
   <!-- Drawer -->
   <aside class="drawer" id="drawer">
     <div class="head">
-      <strong id="dw-name">Candidate</strong>
+      <div style="display:grid;gap:6px;min-width:0">
+        <strong id="dw-name">Candidate</strong>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span id="dw-type-badge" style="display:none"></span>
+          <span id="dw-ref" style="font-size:12px;color:var(--muted);font-weight:700"></span>
+        </div>
+      </div>
       <div class="drawer-toolbar">
         <button class="btn" id="dw-email">Email</button>
         <button class="btn" id="dw-call">Call</button>
@@ -516,6 +544,7 @@
         <button class="btn ghost" id="dw-close">Close</button>
       </div>
     </div>
+    <!-- Mode banner inserted by JS into dw-profile -->
     <div class="sec" id="dw-profile"></div>
     <div class="sec" id="dw-payment"></div>
     <div class="sec" id="dw-assignments"></div>

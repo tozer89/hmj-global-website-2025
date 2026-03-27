@@ -20,6 +20,7 @@
 
   const DEFAULT_FILTERS = Object.freeze({
     query: '',
+    candidateType: '',
     status: [],
     role: '',
     region: '',
@@ -1464,6 +1465,7 @@
 
   function applyFilterInputs() {
     elements.query.value = state.filters.query || '';
+    if (elements.candidateType) elements.candidateType.value = state.filters.candidateType || '';
     Array.from(elements.status.options).forEach((opt) => {
       opt.selected = state.filters.status.includes(opt.value.toLowerCase());
     });
@@ -1478,6 +1480,7 @@
   function captureFilters() {
     state.filters = {
       query: elements.query.value.trim(),
+      candidateType: elements.candidateType ? elements.candidateType.value : '',
       status: Array.from(elements.status.selectedOptions).map((opt) => opt.value.toLowerCase()),
       role: elements.role.value.trim(),
       region: elements.region.value.trim(),
@@ -1518,6 +1521,7 @@
       static: true,
     }];
     if (state.filters.query) chips.push({ key: 'query', label: `Search: ${state.filters.query}` });
+    if (state.filters.candidateType) chips.push({ key: 'candidateType', label: `Type: ${state.filters.candidateType === 'starter' ? 'New starters' : 'Job seekers'}` });
     if (state.filters.status.length) chips.push({ key: 'status', label: `Status: ${state.filters.status.join(', ')}` });
     if (state.filters.role) chips.push({ key: 'role', label: `Role: ${state.filters.role}` });
     if (state.filters.region) chips.push({ key: 'region', label: `Region: ${state.filters.region}` });
@@ -1536,6 +1540,9 @@
     switch (String(key || '')) {
       case 'query':
         state.filters.query = '';
+        break;
+      case 'candidateType':
+        state.filters.candidateType = '';
         break;
       case 'status':
         state.filters.status = [];
@@ -1592,6 +1599,9 @@
     ].join(' ').toLowerCase();
     if (filters.query && !booleanMatch(haystack, filters.query)) return false;
     if (state.quickSearch && !haystack.includes(state.quickSearch)) return false;
+    // Candidate type filter
+    if (filters.candidateType === 'starter' && !candidateOnboardingMode(candidate)) return false;
+    if (filters.candidateType === 'seeker' && candidateOnboardingMode(candidate)) return false;
     if (filters.status.length && !filters.status.includes(candidate.status)) return false;
     if (filters.role && !(candidate.role || '').toLowerCase().includes(filters.role.toLowerCase())) return false;
     if (filters.region && !(candidate.region || '').toLowerCase().includes(filters.region.toLowerCase())) return false;
@@ -1660,6 +1670,8 @@
     const countBy = (predicate) => websiteBackedRows.filter(predicate).length;
     state.metrics = {
       total,
+      seekers: countBy((row) => !candidateOnboardingMode(row)),
+      starters: countBy((row) => candidateOnboardingMode(row)),
       progress: countStatus('in progress'),
       ready: countBy((row) => row.onboarding?.onboardingComplete === true),
       rtwMissing: countBy((row) => row.onboarding?.hasRightToWork !== true && row.onboarding?.hasRightToWorkUpload !== true),
@@ -1673,6 +1685,8 @@
   function updateTotals() {
     if (elements.total) elements.total.textContent = `Total: ${state.metrics.total}`;
     const showWorkflowCounts = state.sourceTab !== 'timesheet-portal';
+    if (elements.tSeekers) elements.tSeekers.textContent = `Seekers: ${showWorkflowCounts ? state.metrics.seekers : '—'}`;
+    if (elements.tStarters) elements.tStarters.textContent = `Starters: ${showWorkflowCounts ? state.metrics.starters : '—'}`;
     if (elements.progress) elements.progress.textContent = `In progress: ${showWorkflowCounts ? state.metrics.progress : '—'}`;
     if (elements.ready) elements.ready.textContent = `Ready: ${showWorkflowCounts ? state.metrics.ready : '—'}`;
     if (elements.rtwMissing) elements.rtwMissing.textContent = `RTW missing: ${showWorkflowCounts ? state.metrics.rtwMissing : '—'}`;
@@ -2101,6 +2115,7 @@
         <div class="row-title" title="${candidate.name || 'Candidate'}">${candidate.name || '—'}</div>
         <div class="row-subtle" title="${candidate.role || 'Role pending'}">${candidate.role || 'Role pending'}</div>
         <div class="row-meta">
+          <span class="type-badge type-badge--${onboardingMode ? 'starter' : 'seeker'}" title="${onboardingMode ? 'New starter: onboarding & payroll setup' : 'Job seeker: recruitment profile'}">${onboardingMode ? 'New Starter' : 'Job Seeker'}</span>
           ${candidate.region ? `<span class="chip gray">${candidate.region}</span>` : ''}
           ${referenceChip(candidate)}
           ${portalChip}
@@ -2551,6 +2566,20 @@
   function renderDrawer(candidate) {
     if (!candidate) return;
     elements.dwName.textContent = candidate.name || 'Candidate';
+    // Update type badge in drawer header
+    const dwOnboardingMode = candidateOnboardingMode(candidate);
+    if (elements.dwTypeBadge) {
+      elements.dwTypeBadge.style.display = '';
+      elements.dwTypeBadge.className = `type-badge type-badge--${dwOnboardingMode ? 'starter' : 'seeker'}`;
+      elements.dwTypeBadge.textContent = dwOnboardingMode ? 'New Starter' : 'Job Seeker';
+      elements.dwTypeBadge.title = dwOnboardingMode
+        ? 'This candidate is completing onboarding for a live assignment'
+        : 'This candidate registered for recruitment profile / job matching';
+    }
+    if (elements.dwRef) {
+      const ref = candidateReference(candidate);
+      elements.dwRef.textContent = ref && ref !== '—' ? `Ref: ${ref}` : '';
+    }
     const blocked = isBlocked(candidate);
     const archived = isArchived(candidate);
     elements.dwEmail.disabled = blocked;
@@ -4629,6 +4658,8 @@
     elements.bulkExport = qs('#bulk-export');
     elements.bulkClear = qs('#bulk-clear');
     elements.total = qs('#t-total');
+    elements.tSeekers = qs('#t-seekers');
+    elements.tStarters = qs('#t-starters');
     elements.progress = qs('#t-progress');
     elements.archived = qs('#t-archived');
     elements.blocked = qs('#t-blocked');
@@ -4637,6 +4668,8 @@
     elements.toVerify = qs('#t-to-verify');
     elements.drawer = qs('#drawer');
     elements.dwName = qs('#dw-name');
+    elements.dwTypeBadge = qs('#dw-type-badge');
+    elements.dwRef = qs('#dw-ref');
     elements.dwProfile = qs('#dw-profile');
     elements.dwPayment = qs('#dw-payment');
     elements.dwAssignments = qs('#dw-assignments');
@@ -4651,6 +4684,7 @@
     elements.fab = qs('#fab-new');
     elements.inlineNew = qs('#btn-new-inline');
     elements.query = qs('#q');
+    elements.candidateType = qs('#flt-type');
     elements.status = qs('#flt-status');
     elements.role = qs('#flt-role');
     elements.region = qs('#flt-region');

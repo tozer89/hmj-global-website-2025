@@ -1954,7 +1954,10 @@ import {
       message: formData.get('message'),
       skills: normaliseSkillList(formData.get('skills')),
       source_submission_id: submissionId,
-      onboarding_mode: !!paymentDetails,
+      // Prefer the explicit hidden field set by the path chooser; fall back to presence of payment details
+      onboarding_mode: formData.has('onboarding_mode') && formData.get('onboarding_mode') !== ''
+        ? normaliseBooleanFlag(formData.get('onboarding_mode'))
+        : !!paymentDetails,
     };
 
     return {
