@@ -197,40 +197,72 @@ const baseHandler = async (event, context) => {
   let candidateId = links?.candidate?.id ? String(links.candidate.id) : null;
   let provisionalCreated = false;
 
+  let provisionalError = null;
+
   if (supabase) {
     try {
       if (!candidateId) {
-        // No existing profile — create provisional new starter record
+        // No existing profile — create a provisional new-starter record.
+        // Uses a resilient retry loop: if a column doesn't exist in the schema
+        // (e.g. onboarding_mode), it is dropped and the insert is retried.
         const fullName = [request.firstName, request.lastName].filter(Boolean).join(' ');
-        const { data: newRecord, error: insertErr } = await supabase
-          .from('candidates')
-          .insert({
-            first_name: request.firstName || null,
-            last_name: request.lastName || null,
-            full_name: fullName || null,
-            email: request.email,
-            phone: request.phone || null,
-            client_name: request.company || null,
-            job_title: request.jobTitle || null,
-            onboarding_mode: true,
-            status: 'Invited',
-            created_at: new Date().toISOString(),
-          })
-          .select('id')
-          .single();
+        const baseInsert = {
+          first_name: request.firstName || null,
+          last_name: request.lastName || null,
+          full_name: fullName || null,
+          email: request.email,
+          phone: request.phone || null,
+          client_name: request.company || null,
+          job_title: request.jobTitle || null,
+          onboarding_mode: true,
+          status: 'Invited',
+          created_at: new Date().toISOString(),
+        };
+
+        let insertPayload = { ...baseInsert };
+        let insertAttempt = 0;
+        let newRecord = null;
+        let insertErr = null;
+
+        while (insertAttempt < 10) {
+          insertAttempt++;
+          const res = await supabase.from('candidates').insert(insertPayload).select('id').single();
+          newRecord = res.data;
+          insertErr = res.error;
+          if (!insertErr) break;
+
+          // Drop unknown columns and retry (mirrors admin-candidates-save.js strategy)
+          const colMatch = /column "?([a-zA-Z0-9_]+)"? does not exist/i.exec(insertErr.message || '')
+            || /Could not find the '([a-zA-Z0-9_]+)' column of '[^']+' in the schema cache/i.exec(insertErr.message || '');
+          if (colMatch) {
+            const col = colMatch[1];
+            if (col && col in insertPayload) {
+              console.warn('[send-intro-email] dropping unknown column %s and retrying insert', col);
+              delete insertPayload[col];
+              continue;
+            }
+          }
+          break; // Non-column error — stop retrying
+        }
 
         if (!insertErr && newRecord?.id) {
           candidateId = String(newRecord.id);
           provisionalCreated = true;
         } else if (insertErr) {
-          console.warn('[send-intro-email] provisional candidate create failed', insertErr?.message);
+          provisionalError = insertErr.message || 'Unknown insert error';
+          console.warn('[send-intro-email] provisional candidate create failed after retries', provisionalError);
         }
-      } else if (links?.candidate && links.candidate.onboarding_mode !== true) {
-        // Profile exists but isn't marked as a new starter — correct it
-        await supabase
+      } else if (links?.candidate) {
+        // Profile exists — ensure it's flagged as a new starter
+        const updatePayload = { status: 'Invited' };
+        // Try to set onboarding_mode too; silently skip if column missing
+        const updateRes = await supabase
           .from('candidates')
-          .update({ onboarding_mode: true })
+          .update({ ...updatePayload, onboarding_mode: true })
           .eq('id', candidateId);
+        if (updateRes.error && /column|schema cache/i.test(updateRes.error.message || '')) {
+          await supabase.from('candidates').update(updatePayload).eq('id', candidateId);
+        }
       }
 
       // Log the intro/reminder email to candidate_activity so it appears in the CRM trail
@@ -239,17 +271,21 @@ const baseHandler = async (event, context) => {
         const description = request.isReminder
           ? `Reminder email sent by ${user?.email || 'admin'}${request.jobTitle ? ` for ${request.jobTitle}` : ''}${request.company ? ` at ${request.company}` : ''}.`
           : `Intro/welcome email sent by ${user?.email || 'admin'}${request.jobTitle ? ` for ${request.jobTitle}` : ''}${request.company ? ` at ${request.company}` : ''}. Profile provisionally created.`;
-        await supabase.from('candidate_activity').insert({
+        const actRes = await supabase.from('candidate_activity').insert({
           candidate_id: candidateId,
           activity_type: activityType,
           description,
           actor_role: 'admin',
           created_at: new Date().toISOString(),
         });
+        if (actRes.error) {
+          console.warn('[send-intro-email] candidate_activity insert failed', actRes.error.message);
+        }
       }
     } catch (profileErr) {
       // Non-fatal — email was already sent; just log and continue
-      console.warn('[send-intro-email] post-send profile/activity step failed', profileErr?.message || profileErr);
+      provisionalError = profileErr?.message || String(profileErr);
+      console.warn('[send-intro-email] post-send profile/activity step failed', provisionalError);
     }
   }
 
@@ -282,9 +318,12 @@ const baseHandler = async (event, context) => {
     delivery,
     candidateId,
     provisionalCreated,
+    provisionalError: provisionalError || null,
     message: provisionalCreated
       ? 'Intro email sent and provisional new-starter profile created.'
-      : 'Intro email accepted for delivery.',
+      : provisionalError
+        ? `Intro email sent, but provisional profile creation failed: ${provisionalError}`
+        : 'Intro email accepted for delivery.',
   });
 };
 

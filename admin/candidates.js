@@ -1838,7 +1838,11 @@
   }
 
   function candidateOnboardingMode(candidate) {
-    return normaliseBooleanFlag(candidate?.onboarding_mode ?? candidate?.onboardingMode);
+    if (normaliseBooleanFlag(candidate?.onboarding_mode ?? candidate?.onboardingMode)) return true;
+    // Fallback: 'Invited' status = provisionally created via send-intro-email flow.
+    // This catches records where onboarding_mode failed to save (e.g. column missing from schema).
+    const status = String(candidate?.status || '').toLowerCase().trim();
+    return status === 'invited';
   }
 
   function candidateModeLabel(candidate) {
