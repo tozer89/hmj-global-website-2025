@@ -235,19 +235,98 @@
     .candidate-mode-bar--starter .candidate-mode-bar__change{color:#14a062;border-color:rgba(20,160,98,.3);}
     .candidate-mode-bar--starter .candidate-mode-bar__change:hover{background:#ecfdf5;}
 
-    /* new starter: payment gate becomes an always-open required panel */
-    .candidate-form__section--payment-required .candidate-payment-gate__toggle{display:none !important;}
-    .candidate-form__section--payment-required .candidate-payment-gate__copy{display:none !important;}
-    .candidate-form__section--payment-required .candidate-payment-gate__summary{display:none !important;}
-    .candidate-form__section--payment-required .candidate-payment-panel{display:block !important;aria-hidden:false;}
-
-    /* new starter: RTW prominence */
-    .candidate-rtw-required-note{
-      display:none;padding:12px 16px;border-radius:12px;border:1px solid rgba(20,160,98,.3);
-      background:rgba(20,160,98,.06);color:#0d6b42;font-size:.88rem;font-weight:600;
-      margin-bottom:10px;
+    /* ========= Form section: hidden until path is chosen ========= */
+    .candidate-profile-section{
+      display:none;
+      opacity:0;
+      transform:translateY(22px);
+      transition:opacity .48s ease, transform .48s ease;
     }
-    .mode-starter .candidate-rtw-required-note{display:block;}
+    .candidate-profile-section.section-visible{ display:block; }
+    .candidate-profile-section.section-revealed{ opacity:1; transform:none; }
+
+    /* ========= Path chooser: collapse to slim breadcrumb after selection ========= */
+    .path-chooser{ transition:padding .35s ease; }
+    .path-chooser.chooser-collapsed{ padding:14px 20px 18px; }
+    .path-chooser.chooser-collapsed .path-chooser__head{ display:none; }
+    .path-chooser.chooser-collapsed .path-chooser__grid{ display:none; }
+    .path-chooser__selected-banner{
+      display:none;align-items:center;gap:14px;flex-wrap:wrap;
+      max-width:920px;margin:0 auto;
+      padding:14px 18px;border-radius:14px;
+      background:#fff;border:1.5px solid rgba(58,102,179,.2);
+      box-shadow:0 4px 14px rgba(15,23,42,.08);
+    }
+    .path-chooser.chooser-collapsed .path-chooser__selected-banner{ display:flex; }
+    .path-chooser__selected-icon{ font-size:1.4rem;flex-shrink:0; }
+    .path-chooser__selected-text{ flex:1;min-width:0; }
+    .path-chooser__selected-text strong{ display:block;font-size:1rem;font-weight:800;color:var(--ink); }
+    .path-chooser__selected-text span{ font-size:.85rem;color:var(--muted); }
+    .path-chooser__back-btn{
+      padding:8px 16px;border-radius:10px;border:1px solid rgba(58,102,179,.25);
+      background:#fff;color:var(--accent);font:inherit;font-size:.85rem;font-weight:700;
+      cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s ease;
+    }
+    .path-chooser__back-btn:hover{ background:#f0f4ff; }
+    .path-chooser__back-btn--starter{ color:#14a062;border-color:rgba(20,160,98,.3); }
+    .path-chooser__back-btn--starter:hover{ background:#f0fdf4; }
+
+    /* ========= data-show-for field gating by mode ========= */
+    #candForm.mode-seeker [data-show-for="starter"]{ display:none !important; }
+    #candForm.mode-starter [data-show-for="seeker"]{ display:none !important; }
+    /* Fieldsets hidden by path */
+    .candidate-form__section[data-show-for] { display:none; }
+    #candForm.mode-seeker .candidate-form__section[data-show-for="seeker"]{ display:block; }
+    #candForm.mode-starter .candidate-form__section[data-show-for="starter"]{ display:block; }
+
+    /* ========= Starter callout notes ========= */
+    .starter-info-callout{
+      padding:14px 18px;border-radius:14px;margin-bottom:8px;
+      border:1px solid rgba(20,160,98,.3);background:rgba(20,160,98,.06);
+      color:#0d6b42;font-size:.9rem;font-weight:600;line-height:1.6;
+    }
+
+    /* ========= Payment section: no gate toggle, always open for starters ========= */
+    .payment-section-head{ padding:0 0 14px;margin-bottom:18px;border-bottom:1px solid rgba(20,160,98,.18); }
+    .payment-section-head__eyebrow{
+      font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+      color:#14a062;margin:0 0 6px;
+    }
+    .payment-section-head__title{ font-size:1.05rem;font-weight:800;color:var(--ink);margin:0 0 4px; }
+    .payment-section-head__copy{ margin:0;color:var(--muted);font-size:.88rem;line-height:1.55; }
+
+    /* ========= Upgrade to Onboarding CTA (inside seeker form) ========= */
+    .upgrade-cta{
+      display:flex;align-items:flex-start;gap:16px;
+      padding:20px 22px;border-radius:16px;
+      border:2px dashed rgba(20,160,98,.35);
+      background:linear-gradient(135deg,rgba(20,160,98,.04),rgba(20,160,98,.01));
+      margin:8px 0;
+    }
+    .upgrade-cta__icon{
+      width:44px;height:44px;border-radius:12px;
+      display:grid;place-items:center;
+      background:rgba(20,160,98,.12);color:#14a062;flex-shrink:0;font-size:1.3rem;
+    }
+    .upgrade-cta__body{ flex:1;min-width:0; }
+    .upgrade-cta__title{ font-size:1rem;font-weight:800;color:var(--ink);margin:0 0 4px; }
+    .upgrade-cta__copy{ color:var(--muted);font-size:.88rem;line-height:1.55;margin:0 0 14px; }
+    .upgrade-cta__btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 20px;border-radius:11px;
+      background:#14a062;color:#fff;border:none;cursor:pointer;
+      font:inherit;font-weight:700;font-size:.9rem;
+      transition:background .15s ease,transform .12s ease;
+    }
+    .upgrade-cta__btn:hover{ background:#0e7a4e;transform:translateY(-1px); }
+    /* Payroll section head */
+    .payroll-section-head{ display:flex;align-items:flex-start;gap:14px;padding:18px 20px;border-radius:12px;background:rgba(20,160,98,.07);border:1px solid rgba(20,160,98,.2);margin-bottom:24px; }
+    .payroll-section-head__lock{ font-size:1.5rem;line-height:1;margin-top:2px; }
+    .payroll-section-head__title{ font-size:1rem;font-weight:800;color:var(--ink);margin:0 0 4px; }
+    .payroll-section-head__copy{ color:var(--muted);margin:0; }
+    /* RTW required note — starter mode only */
+    .candidate-rtw-required-note{ display:none;padding:12px 16px;border-radius:10px;background:rgba(20,160,98,.08);border:1px solid rgba(20,160,98,.25);font-size:.88rem;color:#0e7a4e;font-weight:600;margin-bottom:16px;line-height:1.55; }
+    #candForm.mode-starter .candidate-rtw-required-note{ display:block; }
 
     /* ========= Toast ========= */
     .toast{
@@ -417,11 +496,15 @@
   <!-- ===== Path Chooser ===== -->
   <section class="path-chooser" id="pathChooser" aria-labelledby="pathChooserTitle">
     <div class="path-chooser__wrap">
+
+      <!-- Heading (hidden once a path is selected) -->
       <div class="path-chooser__head reveal">
-        <p class="path-chooser__eyebrow">How can we help?</p>
+        <p class="path-chooser__eyebrow">Choose your path</p>
         <h2 class="path-chooser__title" id="pathChooserTitle">What brings you here today?</h2>
-        <p class="path-chooser__subtitle">Choose your path and we'll take you to the right form — no wasted time, no guesswork.</p>
+        <p class="path-chooser__subtitle">Select the option that fits your situation and we'll show you exactly the right form — nothing extra, nothing missing.</p>
       </div>
+
+      <!-- Choice cards (hidden once a path is selected) -->
       <div class="path-chooser__grid">
 
         <!-- Card 1: Job Seeker -->
@@ -432,15 +515,10 @@
               <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
             </svg>
           </div>
-          <span class="path-card__tag">Job seekers</span>
+          <span class="path-card__tag">Looking for work</span>
           <h3 class="path-card__title">Create recruitment profile</h3>
-          <p class="path-card__desc">Looking for your next role in data centres, pharma, substations or critical facilities? Build your profile and let HMJ connect you with the right opportunities.</p>
-          <ul class="path-card__checklist">
-            <li>Share your CV, discipline and availability</li>
-            <li>Get matched to live roles within 48 hours</li>
-            <li>Access UK &amp; European opportunities</li>
-          </ul>
-          <span class="path-card__cta">Create my recruitment profile →</span>
+          <p class="path-card__desc">Register your skills, discipline and availability. HMJ will match you to live roles in data centres, pharma, substations and critical facilities across the UK and Europe.</p>
+          <span class="path-card__cta">Create my profile →</span>
         </button>
 
         <!-- Card 2: New Starter -->
@@ -452,18 +530,24 @@
               <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/>
             </svg>
           </div>
-          <span class="path-card__tag">New starters</span>
+          <span class="path-card__tag">Starting with HMJ</span>
           <h3 class="path-card__title">New starter registration</h3>
-          <p class="path-card__desc">Already confirmed an assignment with HMJ? Complete your onboarding — set up payroll, upload your documents and get ready for day one.</p>
-          <ul class="path-card__checklist">
-            <li>Set up your payroll details securely</li>
-            <li>Upload right-to-work &amp; ID documents</li>
-            <li>Complete onboarding in one session</li>
-          </ul>
-          <span class="path-card__cta">Start my onboarding →</span>
+          <p class="path-card__desc">HMJ has confirmed your assignment. Use this form to submit your payroll details, right-to-work documents and personal information so we can get you set up before day one.</p>
+          <span class="path-card__cta">Start onboarding →</span>
         </button>
 
       </div>
+
+      <!-- Collapsed banner (shown once a path is selected, replaces cards) -->
+      <div class="path-chooser__selected-banner" id="pathSelectedBanner" aria-live="polite">
+        <span class="path-chooser__selected-icon" id="pathSelectedIcon" aria-hidden="true"></span>
+        <div class="path-chooser__selected-text">
+          <strong id="pathSelectedTitle">Path selected</strong>
+          <span id="pathSelectedDesc">Complete the form below</span>
+        </div>
+        <button class="path-chooser__back-btn" id="pathBackBtn" type="button">← Choose a different path</button>
+      </div>
+
     </div>
   </section>
 
@@ -473,30 +557,15 @@
     </div>
   </section>
 
-  <!-- ===== Application Form (full width) ===== -->
-  <section class="section candidate-profile-section">
+  <!-- ===== Application Form (hidden until path is chosen) ===== -->
+  <section class="section candidate-profile-section" id="candidateFormSection" aria-label="Registration form">
     <div class="wrap">
-      <div class="public-section-head public-section-head--left candidate-profile-section__head">
-        <p class="public-section-head__eyebrow">Candidate profile</p>
-        <h2>Register once, send your profile properly, and let HMJ represent you with context.</h2>
-        <p class="public-section-head__copy">This is the main candidate registration form. Keep the account box ticked if you want an HMJ login as well as a profile submission.</p>
-      </div>
       <div id="candidateDashboardRoot" hidden aria-live="polite"></div>
       <div class="candidate-profile-stage" id="candidateApplicationView">
         <div class="candidate-profile-layout">
           <div class="card candidate-form-shell" id="candidateRegisterAnchor">
-            <!-- Mode indicator bar — updated by path chooser JS -->
-            <div class="candidate-mode-bar" id="candidateModeBar" hidden aria-live="polite">
-              <span class="candidate-mode-bar__icon" id="candidateModeIcon" aria-hidden="true"></span>
-              <div class="candidate-mode-bar__label">
-                <span id="candidateModeLabel">Registration type selected</span>
-                <span id="candidateModeSubLabel"></span>
-              </div>
-              <button class="candidate-mode-bar__change" type="button" id="candidateModeChange" aria-label="Change registration type">← Change</button>
-            </div>
-
             <h2 class="candidate-form-shell__title" id="candidateFormTitle">Create your candidate profile</h2>
-            <p class="small candidate-form-shell__intro" id="candidateFormIntro">Complete this form to send your details to HMJ. If you keep the account option ticked, we will also set up your candidate login so you can save your profile, track applications, and upload documents later.</p>
+            <p class="small candidate-form-shell__intro" id="candidateFormIntro">Complete the details below. Your information is stored securely and only shared with your permission.</p>
             <div id="candidateFormStatusRoot" hidden aria-live="polite"></div>
 
             <form name="candidate-cv" action="/candidates.html?submitted=1" method="POST" data-netlify="true" netlify-honeypot="bot-field"
@@ -515,14 +584,13 @@
               <input type="hidden" name="onboarding_mode" id="onboardingModeHidden" value="false" />
 
               <fieldset class="candidate-form__section">
-                <legend>Account options</legend>
+                <legend>Create your account</legend>
                 <div class="candidate-account-control">
                   <label class="candidate-account-toggle" for="candidateCreateAccount">
                     <input id="candidateCreateAccount" type="checkbox" checked>
-                    <span>Create an HMJ Global candidate account</span>
+                    <span>Set up a secure HMJ candidate account</span>
                   </label>
-                  <p class="small candidate-account-copy">Recommended. Your account lets you save your profile, track applications, and keep documents in one secure place.</p>
-                  <p class="small candidate-account-copy" id="candidateAccountModeText">Leave this ticked if you want login access. Untick it if you only want to send your details today without creating a password.</p>
+                  <p class="small candidate-account-copy">Recommended — your account lets you update your profile, upload documents and track your applications at any time.</p>
                 </div>
                 <div class="candidate-password-panel" id="candidatePasswordFields">
                   <div class="candidate-form__grid candidate-form__grid--two">
@@ -599,9 +667,11 @@
                 </div>
               </fieldset>
 
-              <fieldset class="candidate-form__section">
-                <legend>Recruitment profile</legend>
+              <fieldset class="candidate-form__section" id="fieldsetRole">
+                <legend id="fieldsetRoleLegend">Role &amp; discipline</legend>
                 <div class="candidate-form__grid candidate-form__grid--two">
+
+                  <!-- ── Shared by both paths ── -->
                   <div class="candidate-field">
                     <label for="nationality">Nationality</label>
                     <input id="nationality" name="nationality" type="text" autocomplete="country">
@@ -614,46 +684,55 @@
                       <option>Electrical (MEP)</option>
                       <option>Mechanical (MEP)</option>
                       <option>Commissioning</option>
-                      <option>Security & Cabling</option>
+                      <option>Security &amp; Cabling</option>
                       <option>HV / Substations</option>
                       <option>Pharma / CQV</option>
                       <option>Critical Facilities</option>
                     </select>
                   </div>
                   <div class="candidate-field">
-                    <label for="secondarySpecialism">Secondary specialism</label>
-                    <input id="secondarySpecialism" name="secondary_specialism" type="text" placeholder="Optional second discipline">
-                  </div>
-                  <div class="candidate-field">
                     <label for="currentJobTitle">Current job title *</label>
                     <input id="currentJobTitle" name="current_job_title" type="text" required placeholder="e.g. Lead Electrical Supervisor">
                   </div>
-                  <div class="candidate-field candidate-field--full">
+
+                  <!-- ── Starter: just the start date ── -->
+                  <div class="candidate-field" data-show-for="starter">
+                    <label for="availability">Assignment start date *</label>
+                    <input id="availability" name="availability" type="text" placeholder="e.g. 14 April 2025, ASAP">
+                    <p class="small">Enter the confirmed date HMJ has given you for starting on site.</p>
+                  </div>
+
+                  <!-- ── Seeker-only fields ── -->
+                  <div class="candidate-field" data-show-for="seeker">
+                    <label for="secondarySpecialism">Secondary specialism</label>
+                    <input id="secondarySpecialism" name="secondary_specialism" type="text" placeholder="Optional second discipline">
+                  </div>
+                  <div class="candidate-field candidate-field--full" data-show-for="seeker">
                     <label for="role">Role(s) you are looking for *</label>
-                    <input id="role" name="role" type="text" placeholder="e.g. MEP Commissioning Manager, CSA Package Manager" required>
+                    <input id="role" name="role" type="text" placeholder="e.g. MEP Commissioning Manager, CSA Package Manager">
                     <p class="small" id="roleTip"></p>
                   </div>
-                  <div class="candidate-field">
+                  <div class="candidate-field" data-show-for="seeker">
                     <label for="yearsExperience">Years of experience *</label>
-                    <input id="yearsExperience" name="years_experience" type="number" min="0" max="60" step="1" required>
+                    <input id="yearsExperience" name="years_experience" type="number" min="0" max="60" step="1">
                   </div>
-                  <div class="candidate-field">
+                  <div class="candidate-field" data-show-for="seeker">
                     <label for="qualifications">Qualifications / certifications *</label>
-                    <textarea id="qualifications" name="qualifications" rows="4" required placeholder="e.g. SSSTS, AP, IOSH, IST, GMP, cleanroom certs"></textarea>
+                    <textarea id="qualifications" name="qualifications" rows="4" placeholder="e.g. SSSTS, AP, IOSH, IST, GMP, cleanroom certs"></textarea>
                   </div>
-                  <div class="candidate-field">
+                  <div class="candidate-field" data-show-for="seeker">
                     <label for="sectorExperience">Sector experience *</label>
-                    <input id="sectorExperience" name="sector_experience" type="text" required placeholder="e.g. Data centres, pharma, substations">
+                    <input id="sectorExperience" name="sector_experience" type="text" placeholder="e.g. Data centres, pharma, substations">
                   </div>
-                  <div class="candidate-field">
-                    <label for="availability">Availability / start date *</label>
-                    <input id="availability" name="availability" type="text" required placeholder="Immediate, two weeks, available from 15 April">
+                  <div class="candidate-field" data-show-for="seeker">
+                    <label for="seekerAvailability">Availability / start date *</label>
+                    <input id="seekerAvailability" name="availability" type="text" placeholder="Immediate, two weeks, available from 15 April">
                   </div>
-                  <div class="candidate-field">
+                  <div class="candidate-field" data-show-for="seeker">
                     <label for="notice">Notice period</label>
                     <input id="notice" name="notice_period" type="text" placeholder="e.g. Immediate, 2 weeks">
                   </div>
-                  <div class="candidate-field">
+                  <div class="candidate-field" data-show-for="seeker">
                     <label for="salary">Pay expectation</label>
                     <div class="candidate-field__compound">
                       <input id="salary" name="salary_expectation" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 75000">
@@ -663,88 +742,79 @@
                         <option value="hourly">Per hour</option>
                       </select>
                     </div>
-                    <p class="small">Use annual salary for permanent roles, or switch to daily/hourly for contract expectations.</p>
+                    <p class="small">Annual for permanent roles, daily/hourly for contract expectations.</p>
                   </div>
-                  <div class="candidate-field">
+                  <div class="candidate-field" data-show-for="seeker">
                     <label for="reloc">Open to relocation *</label>
-                    <select id="reloc" name="relocation" required>
+                    <select id="reloc" name="relocation">
                       <option value="" selected disabled>Select…</option>
                       <option>Yes</option>
                       <option>Maybe</option>
                       <option>No</option>
                     </select>
                   </div>
+
                 </div>
               </fieldset>
 
-              <fieldset class="candidate-form__section">
-                <legend>Secure payment details</legend>
-                <div class="candidate-payment-gate" id="candidatePaymentGate" data-open="false">
-                  <label class="candidate-payment-gate__toggle" for="candidatePaymentOptIn">
-                    <input id="candidatePaymentOptIn" type="checkbox" aria-controls="candidatePaymentPanel" aria-expanded="false">
-                    <span>
-                      <strong>Already have a new assignment?</strong>
-                      Populate your bank payment details below on this secure form.
-                    </span>
-                  </label>
-                  <p class="small candidate-payment-gate__copy">Only complete this secure section if HMJ has already confirmed a start and needs your payroll setup for onboarding. Portal-only registrations can leave it closed and continue as normal.</p>
-                  <div class="candidate-payment-gate__summary" id="candidatePaymentGateSummary">Optional secure payroll setup for workers who are already starting an assignment.</div>
-                  <div class="candidate-payment-panel" id="candidatePaymentPanel" data-open="false" aria-hidden="true">
-                    <div class="candidate-payment-panel__head">
-                      <p class="candidate-payment-panel__eyebrow">Secure payroll setup</p>
-                      <p class="small">These details are stored separately from the main profile and are mainly used for onboarding and payroll once an assignment is confirmed.</p>
-                    </div>
-                    <div class="candidate-form__grid candidate-form__grid--two">
-                      <div class="candidate-field">
-                        <label for="candidatePaymentCurrency">Account currency</label>
-                        <select id="candidatePaymentCurrency" data-payment-input autocomplete="off">
-                          <option value="GBP" selected>GBP</option>
-                          <option value="EUR">EUR</option>
-                        </select>
-                      </div>
-                      <div class="candidate-field">
-                        <label for="candidatePaymentMethod">Payment method</label>
-                        <select id="candidatePaymentMethod" data-payment-input autocomplete="off">
-                          <option value="gbp_local" selected>Sort code / account number</option>
-                          <option value="iban_swift">IBAN / SWIFT</option>
-                        </select>
-                      </div>
-                      <div class="candidate-field">
-                        <label for="candidatePaymentAccountHolder">Account holder name</label>
-                        <input id="candidatePaymentAccountHolder" data-payment-input type="text" autocomplete="name" placeholder="Name on the bank account">
-                      </div>
-                      <div class="candidate-field">
-                        <label for="candidatePaymentBankName">Bank name</label>
-                        <input id="candidatePaymentBankName" data-payment-input type="text" autocomplete="organization" placeholder="e.g. Barclays">
-                      </div>
-                      <div class="candidate-field">
-                        <label for="candidatePaymentBankLocation">Bank location / country</label>
-                        <input id="candidatePaymentBankLocation" data-payment-input type="text" autocomplete="country-name" placeholder="e.g. United Kingdom">
-                      </div>
-                      <div class="candidate-field">
-                        <label for="candidatePaymentAccountType">Account type</label>
-                        <input id="candidatePaymentAccountType" data-payment-input type="text" autocomplete="off" placeholder="Optional">
-                      </div>
-                      <div class="candidate-field candidate-payment-group" data-payment-group="gbp_local">
-                        <label for="candidatePaymentSortCode">Sort code</label>
-                        <input id="candidatePaymentSortCode" data-payment-input data-payment-sensitive type="text" inputmode="numeric" autocomplete="off" placeholder="12-34-56">
-                      </div>
-                      <div class="candidate-field candidate-payment-group" data-payment-group="gbp_local">
-                        <label for="candidatePaymentAccountNumber">Account number</label>
-                        <input id="candidatePaymentAccountNumber" data-payment-input data-payment-sensitive type="text" inputmode="numeric" autocomplete="off" placeholder="12345678">
-                      </div>
-                      <div class="candidate-field candidate-payment-group" data-payment-group="iban_swift">
-                        <label for="candidatePaymentIban">IBAN</label>
-                        <input id="candidatePaymentIban" data-payment-input data-payment-sensitive type="text" autocomplete="off" placeholder="GB00AAAA12345678901234">
-                      </div>
-                      <div class="candidate-field candidate-payment-group" data-payment-group="iban_swift">
-                        <label for="candidatePaymentSwift">SWIFT / BIC</label>
-                        <input id="candidatePaymentSwift" data-payment-input data-payment-sensitive type="text" autocomplete="off" placeholder="BARCGB22">
-                      </div>
-                    </div>
+              <fieldset class="candidate-form__section" data-show-for="starter">
+                <legend>Payroll setup</legend>
+                <div class="payroll-section-head">
+                  <span class="payroll-section-head__lock" aria-hidden="true">🔒</span>
+                  <div>
+                    <p class="payroll-section-head__title">Bank payment details</p>
+                    <p class="payroll-section-head__copy small">Your bank details are stored encrypted and used only for payroll processing once your assignment starts.</p>
                   </div>
-                  <div class="candidate-payment-status small" id="candidatePaymentStatus" aria-live="polite"></div>
                 </div>
+                <div class="candidate-form__grid candidate-form__grid--two">
+                  <div class="candidate-field">
+                    <label for="candidatePaymentCurrency">Account currency</label>
+                    <select id="candidatePaymentCurrency" data-payment-input autocomplete="off">
+                      <option value="GBP" selected>GBP</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="candidatePaymentMethod">Payment method</label>
+                    <select id="candidatePaymentMethod" data-payment-input autocomplete="off">
+                      <option value="gbp_local" selected>Sort code / account number</option>
+                      <option value="iban_swift">IBAN / SWIFT</option>
+                    </select>
+                  </div>
+                  <div class="candidate-field">
+                    <label for="candidatePaymentAccountHolder">Account holder name *</label>
+                    <input id="candidatePaymentAccountHolder" data-payment-input type="text" autocomplete="name" placeholder="Name on the bank account">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="candidatePaymentBankName">Bank name *</label>
+                    <input id="candidatePaymentBankName" data-payment-input type="text" autocomplete="organization" placeholder="e.g. Barclays">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="candidatePaymentBankLocation">Bank location / country</label>
+                    <input id="candidatePaymentBankLocation" data-payment-input type="text" autocomplete="country-name" placeholder="e.g. United Kingdom">
+                  </div>
+                  <div class="candidate-field">
+                    <label for="candidatePaymentAccountType">Account type</label>
+                    <input id="candidatePaymentAccountType" data-payment-input type="text" autocomplete="off" placeholder="Optional">
+                  </div>
+                  <div class="candidate-field candidate-payment-group" data-payment-group="gbp_local">
+                    <label for="candidatePaymentSortCode">Sort code *</label>
+                    <input id="candidatePaymentSortCode" data-payment-input data-payment-sensitive type="text" inputmode="numeric" autocomplete="off" placeholder="12-34-56">
+                  </div>
+                  <div class="candidate-field candidate-payment-group" data-payment-group="gbp_local">
+                    <label for="candidatePaymentAccountNumber">Account number *</label>
+                    <input id="candidatePaymentAccountNumber" data-payment-input data-payment-sensitive type="text" inputmode="numeric" autocomplete="off" placeholder="12345678">
+                  </div>
+                  <div class="candidate-field candidate-payment-group" data-payment-group="iban_swift">
+                    <label for="candidatePaymentIban">IBAN *</label>
+                    <input id="candidatePaymentIban" data-payment-input data-payment-sensitive type="text" autocomplete="off" placeholder="GB00AAAA12345678901234">
+                  </div>
+                  <div class="candidate-field candidate-payment-group" data-payment-group="iban_swift">
+                    <label for="candidatePaymentSwift">SWIFT / BIC *</label>
+                    <input id="candidatePaymentSwift" data-payment-input data-payment-sensitive type="text" autocomplete="off" placeholder="BARCGB22">
+                  </div>
+                </div>
+                <div class="candidate-payment-status small" id="candidatePaymentStatus" aria-live="polite"></div>
               </fieldset>
 
               <fieldset class="candidate-form__section">
@@ -766,7 +836,7 @@
                     </div>
                     <p id="rtwHelp" class="small">Choose all that apply. If you are dual national or hold more than one right-to-work route, include all of them. Use Other only if none of the listed routes fit.</p>
                   </div>
-                  <div class="candidate-field">
+                  <div class="candidate-field" data-show-for="seeker">
                     <label for="linkedin">LinkedIn profile</label>
                     <input id="linkedin" name="linkedin" type="url" placeholder="https://…">
                   </div>
@@ -781,14 +851,29 @@
                     <label for="message">Summary / notes</label>
                     <textarea id="message" name="message" rows="5" placeholder="Tell us what you are looking for, preferred locations, rotations, travel limits, or anything else HMJ should know."></textarea>
                   </div>
-                  <div class="candidate-field candidate-field--full">
+                  <div class="candidate-field candidate-field--full" data-show-for="seeker">
                     <label for="cv">Attach CV (PDF/DOC/DOCX) *</label>
-                    <input id="cv" name="attachment" type="file" accept=".pdf,.doc,.docx" required>
+                    <input id="cv" name="attachment" type="file" accept=".pdf,.doc,.docx">
+                  </div>
+                  <div class="candidate-field candidate-field--full" data-show-for="starter">
+                    <label for="cvStarter">Attach CV (PDF/DOC/DOCX) — optional</label>
+                    <input id="cvStarter" name="attachment" type="file" accept=".pdf,.doc,.docx">
                   </div>
                   <div class="candidate-field candidate-field--full">
                     <div class="small candidate-strength__label">Profile strength</div>
                     <div id="profileStrength" class="c-strength" role="status" aria-live="polite"></div>
                   </div>
+
+                  <!-- Upgrade CTA — shown in seeker mode only -->
+                  <div class="upgrade-cta candidate-field--full" data-show-for="seeker" id="upgradeCtaBlock">
+                    <div class="upgrade-cta__icon" aria-hidden="true">📋</div>
+                    <div class="upgrade-cta__body">
+                      <p class="upgrade-cta__title">Starting an assignment with HMJ?</p>
+                      <p class="upgrade-cta__copy">If HMJ has already confirmed your placement, switch to onboarding registration to add your payroll details and right-to-work documents.</p>
+                      <button class="upgrade-cta__btn" type="button" id="upgradeToOnboarding">Switch to new starter onboarding →</button>
+                    </div>
+                  </div>
+
                   <div class="candidate-field candidate-field--full candidate-consent">
                     <label class="candidate-consent__label">
                       <input type="checkbox" required> I consent to HMJ-Global processing my data to find suitable roles.
@@ -960,143 +1045,170 @@
   (function () {
     'use strict';
 
-    var SEEKER_CONFIG = {
-      mode: 'false',
-      barClass: '',
-      barIcon: '📋',
-      barLabel: 'Recruitment profile',
-      barSub: 'Register your profile and get matched to live roles.',
-      formTitle: 'Create your candidate profile',
-      formIntro: 'Complete this form to send your details to HMJ. If you keep the account option ticked, we will also set up your candidate login so you can save your profile, track applications, and upload documents later.',
-      submitLabel: 'Create account and send profile',
-      tag: 'Job seeker'
+    /* ── Config ──────────────────────────────────────────────────── */
+    var PATHS = {
+      seeker: {
+        modeClass:   'mode-seeker',
+        onboarding:  'false',
+        icon:        '📋',
+        bannerTitle: 'Recruitment profile',
+        bannerDesc:  'Register your details and get matched to live roles.',
+        formTitle:   'Create your recruitment profile',
+        formIntro:   'Complete this form to send your details to HMJ. Keep the account option ticked and we will set up your candidate login so you can save your profile and track applications.',
+        submitLabel: 'Create account and send profile'
+      },
+      starter: {
+        modeClass:   'mode-starter',
+        onboarding:  'true',
+        icon:        '✅',
+        bannerTitle: 'New starter onboarding',
+        bannerDesc:  'Set up payroll, upload documents and confirm right-to-work.',
+        formTitle:   'New starter registration',
+        formIntro:   'Welcome to HMJ. Complete this form to set up your payroll details, confirm your right-to-work regions and upload the documents needed before your first day. Your data is stored securely.',
+        submitLabel: 'Submit onboarding registration'
+      }
     };
 
-    var STARTER_CONFIG = {
-      mode: 'true',
-      barClass: 'candidate-mode-bar--starter',
-      barIcon: '✅',
-      barLabel: 'New starter onboarding',
-      barSub: 'Set up payroll, upload documents and confirm your right-to-work.',
-      formTitle: 'New starter registration',
-      formIntro: 'Welcome to HMJ. Complete this onboarding form to set up your payroll details, confirm your right-to-work regions, and upload the documents HMJ needs before your first day. Your data is stored securely.',
-      submitLabel: 'Submit onboarding registration',
-      tag: 'New starter'
-    };
+    /* ── State ───────────────────────────────────────────────────── */
+    var currentPath = null; // 'seeker' | 'starter' | null
 
-    function selectPath(config) {
-      // 1. Set hidden onboarding_mode field
-      var modeField = document.getElementById('onboardingModeHidden');
-      if (modeField) modeField.value = config.mode;
+    /* ── Elements ────────────────────────────────────────────────── */
+    function el(id) { return document.getElementById(id); }
 
-      // 2. Update aria-pressed on both cards
-      var seekerBtn = document.getElementById('pathSeeker');
-      var starterBtn = document.getElementById('pathStarter');
-      if (seekerBtn) seekerBtn.setAttribute('aria-pressed', config === SEEKER_CONFIG ? 'true' : 'false');
-      if (starterBtn) starterBtn.setAttribute('aria-pressed', config === STARTER_CONFIG ? 'true' : 'false');
-      if (seekerBtn) seekerBtn.classList.toggle('path-selected', config === SEEKER_CONFIG);
-      if (starterBtn) starterBtn.classList.toggle('path-selected', config === STARTER_CONFIG);
-
-      // 3. Show mode bar
-      var bar = document.getElementById('candidateModeBar');
-      var icon = document.getElementById('candidateModeIcon');
-      var label = document.getElementById('candidateModeLabel');
-      var sub = document.getElementById('candidateModeSubLabel');
-      if (bar) {
-        bar.removeAttribute('hidden');
-        bar.className = 'candidate-mode-bar' + (config.barClass ? ' ' + config.barClass : '');
-        if (icon) icon.textContent = config.barIcon;
-        if (label) label.textContent = config.barLabel;
-        if (sub) sub.textContent = config.barSub;
-      }
-
-      // 4. Update form title + intro
-      var title = document.getElementById('candidateFormTitle');
-      var intro = document.getElementById('candidateFormIntro');
-      if (title) title.textContent = config.formTitle;
-      if (intro) intro.textContent = config.formIntro;
-
-      // 5. Update submit button label
-      var submitBtn = document.getElementById('submitBtn');
-      if (submitBtn) submitBtn.textContent = config.submitLabel;
-
-      // 6. Toggle new-starter-specific styling on form section
-      var form = document.getElementById('candForm');
-      if (form) {
-        form.classList.toggle('mode-starter', config === STARTER_CONFIG);
-      }
-
-      // 7. Handle payment panel for new starters
-      var paymentSection = document.querySelector('.candidate-form__section:has(#candidatePaymentGate)') ||
-                           (function () {
-                             var gate = document.getElementById('candidatePaymentGate');
-                             return gate ? gate.closest('.candidate-form__section') : null;
-                           })();
-      var payOptIn = document.getElementById('candidatePaymentOptIn');
-      var payPanel = document.getElementById('candidatePaymentPanel');
-      var payGate  = document.getElementById('candidatePaymentGate');
-
-      if (config === STARTER_CONFIG) {
-        // Auto-open and require payment details
-        if (paymentSection) paymentSection.classList.add('candidate-form__section--payment-required');
-        if (payOptIn && !payOptIn.checked) payOptIn.click(); // trigger existing JS to open panel
-        if (payGate) payGate.setAttribute('data-open', 'true');
-        if (payPanel) {
-          payPanel.setAttribute('data-open', 'true');
-          payPanel.removeAttribute('aria-hidden');
-          payPanel.style.display = '';
-        }
-        // Make payment inputs required
-        var payInputs = document.querySelectorAll('[data-payment-sensitive]');
-        payInputs.forEach(function (el) {
-          // mark visible ones required
-          var group = el.closest('.candidate-payment-group');
-          if (!group || group.style.display !== 'none') {
-            el.setAttribute('data-starter-required', 'true');
-          }
+    /* ── Reveal form with CSS transition ────────────────────────── */
+    function revealFormSection() {
+      var section = el('candidateFormSection');
+      if (!section) return;
+      section.classList.add('section-visible');
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          section.classList.add('section-revealed');
         });
-      } else {
-        // Restore optional payment
-        if (paymentSection) paymentSection.classList.remove('candidate-form__section--payment-required');
-        var payInputs2 = document.querySelectorAll('[data-starter-required]');
-        payInputs2.forEach(function (el) { el.removeAttribute('data-starter-required'); });
-      }
-
-      // 8. Scroll to form
-      var anchor = document.getElementById('candidateRegisterAnchor');
-      if (anchor) {
-        setTimeout(function () {
-          anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 80);
-      }
+      });
     }
 
-    function init() {
-      var seekerBtn = document.getElementById('pathSeeker');
-      var starterBtn = document.getElementById('pathStarter');
-      var changeBtn = document.getElementById('candidateModeChange');
+    function hideFormSection() {
+      var section = el('candidateFormSection');
+      if (!section) return;
+      section.classList.remove('section-revealed');
+      // Wait for transition then hide display
+      setTimeout(function () {
+        section.classList.remove('section-visible');
+      }, 480);
+    }
 
-      if (seekerBtn) {
-        seekerBtn.addEventListener('click', function () { selectPath(SEEKER_CONFIG); });
-      }
-      if (starterBtn) {
-        starterBtn.addEventListener('click', function () { selectPath(STARTER_CONFIG); });
-      }
-      if (changeBtn) {
-        changeBtn.addEventListener('click', function () {
-          // Scroll back to chooser
-          var chooser = document.getElementById('pathChooser');
-          if (chooser) chooser.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    /* ── Collapse / restore chooser ──────────────────────────────── */
+    function collapseChooser(cfg) {
+      var chooser = el('pathChooser');
+      var banner  = el('pathSelectedBanner');
+      var icon    = el('pathSelectedIcon');
+      var title   = el('pathSelectedTitle');
+      var desc    = el('pathSelectedDesc');
+      if (!chooser) return;
+      if (icon)  icon.textContent  = cfg.icon;
+      if (title) title.textContent = cfg.bannerTitle;
+      if (desc)  desc.textContent  = cfg.bannerDesc;
+      chooser.classList.add('chooser-collapsed');
+    }
+
+    function restoreChooser() {
+      var chooser = el('pathChooser');
+      if (chooser) chooser.classList.remove('chooser-collapsed');
+    }
+
+    /* ── Apply path ──────────────────────────────────────────────── */
+    function applyPath(key) {
+      var cfg  = PATHS[key];
+      var form = el('candForm');
+      if (!cfg || !form) return;
+      currentPath = key;
+
+      // 1. Set hidden onboarding_mode value
+      var modeHidden = el('onboardingModeHidden');
+      if (modeHidden) modeHidden.value = cfg.onboarding;
+
+      // 2. Swap mode class on form (drives data-show-for CSS gating)
+      form.classList.remove('mode-seeker', 'mode-starter');
+      form.classList.add(cfg.modeClass);
+
+      // 3. Update form title / intro / submit label
+      var titleEl  = el('candidateFormTitle');
+      var introEl  = el('candidateFormIntro');
+      var submitEl = el('submitBtn');
+      if (titleEl)  titleEl.textContent  = cfg.formTitle;
+      if (introEl)  introEl.textContent  = cfg.formIntro;
+      if (submitEl) submitEl.textContent = cfg.submitLabel;
+
+      // 4. Collapse chooser to banner
+      collapseChooser(cfg);
+
+      // 5. Reveal form section
+      revealFormSection();
+
+      // 6. Smooth scroll to form (slight delay for transition to start)
+      setTimeout(function () {
+        var anchor = el('candidateRegisterAnchor');
+        if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+
+    /* ── Upgrade: seeker → starter ───────────────────────────────── */
+    function upgradeToStarter() {
+      applyPath('starter');
+    }
+
+    /* ── Reset: go back to chooser ───────────────────────────────── */
+    function resetPath() {
+      currentPath = null;
+      var form = el('candForm');
+      if (form) form.classList.remove('mode-seeker', 'mode-starter');
+      hideFormSection();
+      restoreChooser();
+      // Scroll back to chooser
+      setTimeout(function () {
+        var chooser = el('pathChooser');
+        if (chooser) chooser.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    }
+
+    /* ── Payment method toggle (GBP vs IBAN) ─────────────────────── */
+    function initPaymentMethodToggle() {
+      var methodSel = el('candidatePaymentMethod');
+      if (!methodSel) return;
+      function syncGroups() {
+        var val = methodSel.value;
+        document.querySelectorAll('.candidate-payment-group').forEach(function (g) {
+          var show = g.dataset.paymentGroup === val;
+          g.style.display = show ? '' : 'none';
         });
       }
+      methodSel.addEventListener('change', syncGroups);
+      syncGroups();
+    }
 
-      // Check URL parameter for deep-link: ?path=starter or ?path=seeker
-      var params = new URLSearchParams(window.location.search);
+    /* ── Init ────────────────────────────────────────────────────── */
+    function init() {
+      // Path card buttons
+      var seekerBtn  = el('pathSeeker');
+      var starterBtn = el('pathStarter');
+      var backBtn    = el('pathBackBtn');
+      var upgradeBtn = el('upgradeToOnboarding');
+
+      if (seekerBtn)  seekerBtn.addEventListener('click',  function () { applyPath('seeker'); });
+      if (starterBtn) starterBtn.addEventListener('click', function () { applyPath('starter'); });
+      if (backBtn)    backBtn.addEventListener('click',    resetPath);
+      if (upgradeBtn) upgradeBtn.addEventListener('click', upgradeToStarter);
+
+      // Payment method show/hide
+      initPaymentMethodToggle();
+
+      // URL deep-link: ?path=starter | ?path=seeker | ?path=onboarding | ?path=register
+      var params    = new URLSearchParams(window.location.search);
       var pathParam = params.get('path');
       if (pathParam === 'starter' || pathParam === 'onboarding') {
-        selectPath(STARTER_CONFIG);
+        applyPath('starter');
       } else if (pathParam === 'seeker' || pathParam === 'register') {
-        selectPath(SEEKER_CONFIG);
+        applyPath('seeker');
       }
     }
 
