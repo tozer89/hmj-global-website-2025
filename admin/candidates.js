@@ -1603,8 +1603,11 @@
     if (state.quickSearch && !haystack.includes(state.quickSearch)) return false;
     // Candidate type filter
     if (filters.candidateType === 'starter' && !candidateOnboardingMode(candidate)) return false;
-    // Seekers = website-registered recruitment profiles (not in onboarding/new-starter mode)
-    if (filters.candidateType === 'seeker' && candidateOnboardingMode(candidate)) return false;
+    // Seekers = candidates who submitted a job application through the website (not in onboarding/new-starter mode)
+    if (filters.candidateType === 'seeker') {
+      if (candidateOnboardingMode(candidate)) return false;
+      if (!candidate.has_application) return false;
+    }
     if (filters.status.length && !filters.status.includes(candidate.status)) return false;
     if (filters.role && !(candidate.role || '').toLowerCase().includes(filters.role.toLowerCase())) return false;
     if (filters.region && !(candidate.region || '').toLowerCase().includes(filters.region.toLowerCase())) return false;
@@ -1688,16 +1691,16 @@
   }
 
   function updateTotals() {
-    if (elements.total) elements.total.textContent = `Total: ${state.metrics.total}`;
+    if (elements.total) elements.total.textContent = state.metrics.total;
     const showWorkflowCounts = state.sourceTab !== 'timesheet-portal';
-    if (elements.tSeekers) elements.tSeekers.textContent = `Seekers: ${showWorkflowCounts ? state.metrics.seekers : '—'}`;
-    if (elements.tStarters) elements.tStarters.textContent = `Starters: ${showWorkflowCounts ? state.metrics.starters : '—'}`;
-    if (elements.progress) elements.progress.textContent = `In progress: ${showWorkflowCounts ? state.metrics.progress : '—'}`;
-    if (elements.ready) elements.ready.textContent = `Ready: ${showWorkflowCounts ? state.metrics.ready : '—'}`;
-    if (elements.rtwMissing) elements.rtwMissing.textContent = `RTW missing: ${showWorkflowCounts ? state.metrics.rtwMissing : '—'}`;
-    if (elements.toVerify) elements.toVerify.textContent = `To verify: ${showWorkflowCounts ? state.metrics.toVerify : '—'}`;
-    if (elements.archived) elements.archived.textContent = `Archived: ${showWorkflowCounts ? state.metrics.archived : '—'}`;
-    if (elements.blocked) elements.blocked.textContent = `Blocked: ${showWorkflowCounts ? state.metrics.blocked : '—'}`;
+    if (elements.tSeekers) elements.tSeekers.textContent = showWorkflowCounts ? state.metrics.seekers : '—';
+    if (elements.tStarters) elements.tStarters.textContent = showWorkflowCounts ? state.metrics.starters : '—';
+    if (elements.progress) elements.progress.textContent = showWorkflowCounts ? state.metrics.progress : '—';
+    if (elements.ready) elements.ready.textContent = showWorkflowCounts ? state.metrics.ready : '—';
+    if (elements.rtwMissing) elements.rtwMissing.textContent = showWorkflowCounts ? state.metrics.rtwMissing : '—';
+    if (elements.toVerify) elements.toVerify.textContent = showWorkflowCounts ? state.metrics.toVerify : '—';
+    if (elements.archived) elements.archived.textContent = showWorkflowCounts ? state.metrics.archived : '—';
+    if (elements.blocked) elements.blocked.textContent = showWorkflowCounts ? state.metrics.blocked : '—';
   }
 
   function ensureRowsContainer() {

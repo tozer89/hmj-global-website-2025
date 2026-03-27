@@ -1098,8 +1098,9 @@
       var obs = new MutationObserver(syncTabBadges);
       obs.observe(metricsStrip, { childList: true, subtree: true, characterData: true });
     }
-    /* Also sync on interval as fallback */
-    setInterval(syncTabBadges, 2000);
+    /* Also sync on interval as fallback, and run once immediately */
+    setInterval(syncTabBadges, 1000);
+    syncTabBadges();
 
     /* ── TSP Active tab ─────────────────────────────────────────── */
     var tspActiveLoading = false;

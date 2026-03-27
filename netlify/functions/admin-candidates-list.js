@@ -265,9 +265,31 @@ const baseHandler = async (event, context) => {
   const filtered = total;         // We requested count against the filtered selection
   const pages = Math.max(1, Math.ceil(filtered / pageSize));
 
+  // Cross-reference job_applications to flag genuine job seekers (candidates who applied via the website)
+  let applicationCandidateIds = new Set();
+  try {
+    const appRes = await supabase
+      .from('job_applications')
+      .select('candidate_id')
+      .not('candidate_id', 'is', null);
+    if (!appRes.error && Array.isArray(appRes.data)) {
+      appRes.data.forEach((r) => {
+        if (r.candidate_id) applicationCandidateIds.add(String(r.candidate_id));
+      });
+    } else if (appRes.error) {
+      console.warn('[candidates] job_applications lookup failed', appRes.error.message);
+    }
+  } catch (appErr) {
+    console.warn('[candidates] job_applications cross-reference threw', appErr?.message || appErr);
+  }
+
   const normalisedRows = await attachOnboardingSummaries(
     supabase,
-    (rows || []).map(toCandidate),
+    (rows || []).map((row) => {
+      const c = toCandidate(row);
+      c.has_application = applicationCandidateIds.has(String(row.id || ''));
+      return c;
+    }),
   );
 
   const response = {
