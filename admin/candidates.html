@@ -263,15 +263,19 @@
     .rows-inner .empty-state{position:absolute;inset:0}
 
     /* ── Toast & dialogs ───────────────────────────────────── */
-    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#fff;border:1px solid var(--stroke);padding:12px 18px;border-radius:14px;box-shadow:0 18px 40px rgba(15,23,42,.2);display:none;font-weight:700;z-index:200}
-    .toast.show{display:block}
+    /* #toast is managed by common.js – it appends child notification divs.
+       We must NOT set display:none or use left/transform positioning here,
+       as common.js only sets bottom/right inline when it creates the element
+       from scratch (not when it finds the existing one). */
+    .toast{position:fixed;right:16px;bottom:16px;display:grid;gap:10px;z-index:9999;pointer-events:none;min-width:0;max-width:360px}
+    .toast>*{pointer-events:auto}
     .fab{position:fixed;right:24px;bottom:24px;background:var(--blue);color:#fff;border:none;border-radius:14px;padding:14px 18px;box-shadow:0 20px 44px rgba(15,23,42,.25);font-weight:800;cursor:pointer;font:inherit;font-size:14px}
     .fab:hover{background:var(--blue-2)}
     .btn.mobile-new-candidate{display:none}
 
     dialog.hmj-dialog{border:0;border-radius:20px;padding:0;max-width:min(560px,92vw);width:100%;box-shadow:0 28px 60px rgba(15,23,42,.28)}
     dialog.hmj-dialog::backdrop{background:rgba(15,23,42,.44)}
-    .dialog-card{display:grid;gap:16px;padding:24px;background:#fff}
+    .dialog-card{display:grid;gap:16px;padding:24px;background:#fff;position:relative}
     .dialog-card h3{margin:0;font-size:22px;color:var(--ink)}
     .dialog-card p{margin:0;color:var(--muted)}
     .dialog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -420,6 +424,10 @@
       <button class="pg-tab pg-tab--warn" type="button" data-pg-tab="attention" aria-selected="false">
         ⚠ Needs action
         <span class="pg-tab__badge" id="pt-badge-attention">—</span>
+      </button>
+      <button class="pg-tab" type="button" data-pg-tab="tsp" aria-selected="false">
+        🕐 TSP active
+        <span class="pg-tab__badge" id="pt-badge-tsp">—</span>
       </button>
       <button class="pg-tab" type="button" data-pg-tab="operations" aria-selected="false">
         ⚙ Operations
@@ -674,6 +682,52 @@
       </div>
     </div><!-- /pg-operations -->
 
+    <!-- ── TSP Active Assignments panel ──────────────────────────── -->
+    <div class="pg-panel" id="pg-tsp" hidden>
+
+      <div class="ops-grid">
+
+        <!-- Live TSP assignments card -->
+        <article class="ops-panel" style="grid-column:1/-1">
+          <div class="ops-panel__head">
+            <p class="ops-panel__eyebrow">Timesheet Portal</p>
+            <h2 class="ops-panel__title">Active TSP contractors &amp; assignments</h2>
+            <p class="ops-panel__desc">Live data fetched from the Timesheet Portal every time this tab is opened. Shows each active contractor, their current assignment, client, IR35 status and payroll reference.</p>
+          </div>
+          <div class="ops-actions">
+            <button class="btn ghost small" id="btn-tsp-refresh" type="button">↻ Refresh now</button>
+            <span class="import-meta" id="tsp-active-status" style="display:inline-flex;align-items:center;gap:6px">Loading…</span>
+          </div>
+
+          <!-- Summary pills -->
+          <div id="tsp-active-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px"></div>
+
+          <!-- Table wrapper -->
+          <div style="overflow-x:auto;margin-top:8px">
+            <table class="mapping-table" id="tsp-active-table" style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--surface);text-align:left">
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">Contractor</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">Email</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">TSP Ref</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">Assignment</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">Client</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">Site</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">IR35</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">Payroll ref</th>
+                  <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:800;white-space:nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody id="tsp-active-tbody">
+                <tr><td colspan="9" style="padding:32px;text-align:center;color:var(--muted)">Fetching data from Timesheet Portal…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+      </div>
+    </div><!-- /pg-tsp -->
+
   </main>
 
   <!-- ── Drawer ───────────────────────────────────────────────────── -->
@@ -705,6 +759,52 @@
   <!-- ── FAB + Toast ──────────────────────────────────────────────── -->
   <button class="fab" id="fab-new" type="button">+ New candidate</button>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ── Push to TSP / Bullhorn dialog ───────────────────────────── -->
+  <dialog class="hmj-dialog" id="push-tsp-dialog">
+    <div class="dialog-card" style="gap:20px">
+      <div>
+        <h3 id="push-tsp-title">Push candidate to Timesheet Portal</h3>
+        <p id="push-tsp-desc">Before creating a TSP profile we need the candidate's Bullhorn reference number.</p>
+      </div>
+
+      <!-- Step 1: Bullhorn question -->
+      <div id="push-tsp-step1">
+        <p style="font-weight:700;color:var(--ink);margin:0 0 12px">Have you added this candidate to Bullhorn yet?</p>
+        <div style="display:flex;gap:10px">
+          <button class="btn" type="button" id="push-tsp-yes">✓ Yes — enter Bullhorn ref</button>
+          <button class="btn ghost" type="button" id="push-tsp-no">✕ Not yet — open Bullhorn</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Enter Bullhorn ref -->
+      <div id="push-tsp-step2" hidden>
+        <label style="display:grid;gap:6px;font-size:14px;font-weight:700;color:var(--ink)">
+          Bullhorn candidate reference
+          <input id="push-tsp-bh-ref" type="text" maxlength="6" pattern="[0-9]{1,6}"
+            placeholder="e.g. 12345"
+            style="font-size:18px;font-weight:800;letter-spacing:.1em;padding:10px 14px;border:2px solid var(--stroke);border-radius:10px;width:100%;box-sizing:border-box;font-family:inherit">
+          <span style="font-size:12px;color:var(--muted);font-weight:400">Numeric ID from Bullhorn — up to 6 digits</span>
+        </label>
+        <p id="push-tsp-ref-error" style="margin:8px 0 0;color:var(--bad);font-size:13px;display:none"></p>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn" type="button" id="push-tsp-submit">Push to TSP →</button>
+          <button class="btn ghost" type="button" id="push-tsp-back">← Back</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Result -->
+      <div id="push-tsp-step3" hidden>
+        <div id="push-tsp-result" style="background:var(--surface);border-radius:12px;padding:16px;font-size:14px;line-height:1.6"></div>
+        <div style="margin-top:16px">
+          <button class="btn ghost" type="button" id="push-tsp-done">Close</button>
+        </div>
+      </div>
+
+      <button class="btn ghost small" type="button" id="push-tsp-cancel"
+        style="position:absolute;top:16px;right:16px;padding:6px 12px">✕</button>
+    </div>
+  </dialog>
 
   <!-- ── Document request dialog ──────────────────────────────────── -->
   <dialog class="hmj-dialog" id="doc-request-dialog">
@@ -850,6 +950,7 @@
       seekers:    { type: 'seeker',  statusReset: true },
       starters:   { type: 'starter', statusReset: true },
       attention:  { type: '',        statusReset: true, selectMissingRtw: true },
+      tsp:        {},
       operations: {}
     };
 
@@ -895,12 +996,21 @@
       /* Show/hide panels */
       var candidatesPanel = document.getElementById('pg-candidates');
       var operationsPanel = document.getElementById('pg-operations');
+      var tspPanel = document.getElementById('pg-tsp');
+
       if (key === 'operations') {
         if (candidatesPanel) candidatesPanel.hidden = true;
         if (operationsPanel) operationsPanel.hidden = false;
+        if (tspPanel) tspPanel.hidden = true;
+      } else if (key === 'tsp') {
+        if (candidatesPanel) candidatesPanel.hidden = true;
+        if (operationsPanel) operationsPanel.hidden = true;
+        if (tspPanel) tspPanel.hidden = false;
+        loadTspActive(); // Always refresh on tab entry
       } else {
         if (candidatesPanel) candidatesPanel.hidden = false;
         if (operationsPanel) operationsPanel.hidden = true;
+        if (tspPanel) tspPanel.hidden = true;
         applyTabPreset(key);
       }
 
@@ -975,6 +1085,260 @@
     }
     /* Also sync on interval as fallback */
     setInterval(syncTabBadges, 2000);
+
+    /* ── TSP Active tab ─────────────────────────────────────────── */
+    var tspActiveLoading = false;
+
+    function pageToast(msg, type) {
+      /* Use common.js toast if available, otherwise fallback */
+      if (window._hmj && typeof window._hmj.toast === 'function') {
+        window._hmj.toast(msg, type);
+      } else if (window.state && window.state.helpers && typeof window.state.helpers.toast === 'function') {
+        window.state.helpers.toast(msg, type);
+      } else {
+        var host = document.getElementById('toast');
+        if (host) {
+          var n = document.createElement('div');
+          var bg = type === 'ok' ? '#0f3020' : type === 'error' ? '#3a1418' : type === 'warn' ? '#35240d' : '#0e2038';
+          n.style.cssText = 'background:' + bg + ';color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.3)';
+          n.textContent = msg;
+          host.appendChild(n);
+          setTimeout(function () { n.remove(); }, 4000);
+        }
+      }
+    }
+
+    function ir35Badge(ir35) {
+      if (!ir35) return '<span style="color:var(--muted)">—</span>';
+      var inside = /inside/i.test(ir35);
+      var outside = /outside/i.test(ir35);
+      var color = inside ? '#dc2626' : outside ? '#16a34a' : '#f59e0b';
+      var label = inside ? 'Inside' : outside ? 'Outside' : ir35;
+      return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:' + color + '20;color:' + color + ';font-size:11px;font-weight:800">' + label + '</span>';
+    }
+
+    function statusBadge(status) {
+      if (!status) return '<span style="color:var(--muted)">—</span>';
+      var active = /active|current|live/i.test(status);
+      var color = active ? '#16a34a' : '#f59e0b';
+      return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:' + color + '20;color:' + color + ';font-size:11px;font-weight:800">' + escT(status) + '</span>';
+    }
+
+    function escT(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderTspTable(contractors, assignments) {
+      var tbody = document.getElementById('tsp-active-tbody');
+      var pillsEl = document.getElementById('tsp-active-pills');
+      if (!tbody) return;
+
+      /* Build lookup: contractorId → assignments[] */
+      var aMap = {};
+      (assignments || []).forEach(function (a) {
+        var cid = String(a.contractorId || '');
+        if (!aMap[cid]) aMap[cid] = [];
+        aMap[cid].push(a);
+      });
+
+      var rows = '';
+      var clientSet = {};
+      var ir35Inside = 0, ir35Outside = 0;
+
+      contractors.forEach(function (c) {
+        var cid = String(c.id || '');
+        var aList = aMap[cid] || [{}]; /* at least one row per contractor */
+        aList.forEach(function (a, idx) {
+          if (a.clientName) clientSet[a.clientName] = true;
+          if (/inside/i.test(a.ir35Status || '')) ir35Inside++;
+          if (/outside/i.test(a.ir35Status || '')) ir35Outside++;
+          var rowBg = idx % 2 === 0 ? '' : 'background:#f9fbff';
+          rows += '<tr style="' + rowBg + ';border-top:1px solid var(--stroke)">' +
+            '<td style="padding:10px 12px;font-weight:700;color:var(--ink)">' + escT((c.firstName||'') + ' ' + (c.lastName||'')) + '</td>' +
+            '<td style="padding:10px 12px;color:var(--muted)">' + escT(c.email||'') + '</td>' +
+            '<td style="padding:10px 12px;font-family:monospace;font-size:12px">' + escT(c.reference||c.accountingReference||'—') + '</td>' +
+            '<td style="padding:10px 12px">' + escT(a.title||a.assignmentDescription||'—') + '</td>' +
+            '<td style="padding:10px 12px;font-weight:600">' + escT(a.clientName||'—') + '</td>' +
+            '<td style="padding:10px 12px;color:var(--muted)">' + escT(a.clientSite||'—') + '</td>' +
+            '<td style="padding:10px 12px">' + ir35Badge(a.ir35Status) + '</td>' +
+            '<td style="padding:10px 12px;font-family:monospace;font-size:12px">' + escT(a.payrollRef||a.contractorCode||'—') + '</td>' +
+            '<td style="padding:10px 12px">' + statusBadge(a.status) + '</td>' +
+          '</tr>';
+        });
+      });
+
+      tbody.innerHTML = rows || '<tr><td colspan="9" style="padding:32px;text-align:center;color:var(--muted)">No active TSP contractors found.</td></tr>';
+
+      /* Summary pills */
+      var clientCount = Object.keys(clientSet).length;
+      var pillsHtml = '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#e8edfa;color:#3154b3;font-size:12px;font-weight:800">' + contractors.length + ' contractors</span>';
+      if (clientCount) pillsHtml += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:800">' + clientCount + ' clients</span>';
+      if (ir35Inside) pillsHtml += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:800">' + ir35Inside + ' inside IR35</span>';
+      if (ir35Outside) pillsHtml += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:800">' + ir35Outside + ' outside IR35</span>';
+      if (pillsEl) pillsEl.innerHTML = pillsHtml;
+
+      /* Update tab badge */
+      var badge = document.getElementById('pt-badge-tsp');
+      if (badge) badge.textContent = contractors.length || '—';
+    }
+
+    function loadTspActive() {
+      if (tspActiveLoading) return;
+      tspActiveLoading = true;
+
+      var statusEl = document.getElementById('tsp-active-status');
+      var tbody = document.getElementById('tsp-active-tbody');
+      if (statusEl) { statusEl.textContent = 'Fetching from Timesheet Portal…'; statusEl.style.color = 'var(--muted)'; }
+      if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:32px;text-align:center;color:var(--muted)">Fetching data from Timesheet Portal…</td></tr>';
+
+      fetch('/.netlify/functions/admin-tsp-active', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          tspActiveLoading = false;
+          if (!data.ok) {
+            if (statusEl) { statusEl.textContent = '⚠ ' + (data.error || 'Could not load TSP data'); statusEl.style.color = 'var(--bad)'; }
+            if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:32px;text-align:center;color:var(--bad)">' + escT(data.error || 'Error loading data') + '</td></tr>';
+            return;
+          }
+          var contractors = data.contractors || [];
+          var assignments = data.assignments || [];
+          var ts = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          if (statusEl) { statusEl.textContent = '✓ Updated at ' + ts + ' · ' + contractors.length + ' contractor' + (contractors.length !== 1 ? 's' : ''); statusEl.style.color = 'var(--ok)'; }
+          renderTspTable(contractors, assignments);
+        })
+        .catch(function (err) {
+          tspActiveLoading = false;
+          var msg = err && err.message ? err.message : 'Network error';
+          if (statusEl) { statusEl.textContent = '⚠ ' + msg; statusEl.style.color = 'var(--bad)'; }
+          if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:32px;text-align:center;color:var(--bad)">' + escT(msg) + '</td></tr>';
+        });
+    }
+
+    /* Refresh button */
+    var btnTspRefresh = document.getElementById('btn-tsp-refresh');
+    if (btnTspRefresh) {
+      btnTspRefresh.addEventListener('click', function () {
+        tspActiveLoading = false; /* allow re-fetch */
+        loadTspActive();
+      });
+    }
+
+    /* ── Bullhorn / Push-to-TSP workflow ────────────────────────── */
+    var BULLHORN_URL = 'https://auth-emea.bullhornstaffing.com/oauth/authorize?response_type=code&client_id=889ac3e3-51da-42eb-b6d7-d029e6bb0b5e&source=Caldera&redirect_uri=https://m-emea.bullhorn.com/core/oauth/callback&state=https://em.bullhorn.com/&callingContext=okemo';
+    var pushTspCandidateId = null;
+    var pushTspCandidateName = '';
+
+    function openPushTspDialog(candidateId, candidateName) {
+      pushTspCandidateId = candidateId;
+      pushTspCandidateName = candidateName || 'this candidate';
+      var dialog = document.getElementById('push-tsp-dialog');
+      var title = document.getElementById('push-tsp-title');
+      var desc = document.getElementById('push-tsp-desc');
+      if (title) title.textContent = 'Push ' + pushTspCandidateName + ' to TSP';
+      if (desc) desc.textContent = 'Before creating a TSP profile for ' + pushTspCandidateName + ', we need their Bullhorn reference number.';
+      /* Reset to step 1 */
+      setStep('step1');
+      var refInput = document.getElementById('push-tsp-bh-ref');
+      var errEl = document.getElementById('push-tsp-ref-error');
+      if (refInput) refInput.value = '';
+      if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+      if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+    }
+
+    function setStep(step) {
+      ['step1','step2','step3'].forEach(function (s) {
+        var el = document.getElementById('push-tsp-' + s);
+        if (el) el.hidden = (s !== step);
+      });
+    }
+
+    var pushTspYes = document.getElementById('push-tsp-yes');
+    var pushTspNo  = document.getElementById('push-tsp-no');
+    var pushTspBack = document.getElementById('push-tsp-back');
+    var pushTspSubmit = document.getElementById('push-tsp-submit');
+    var pushTspDone  = document.getElementById('push-tsp-done');
+    var pushTspCancel = document.getElementById('push-tsp-cancel');
+
+    if (pushTspYes) pushTspYes.addEventListener('click', function () { setStep('step2'); });
+
+    if (pushTspNo) pushTspNo.addEventListener('click', function () {
+      window.open(BULLHORN_URL, '_blank', 'noopener,noreferrer');
+      var dialog = document.getElementById('push-tsp-dialog');
+      if (dialog && typeof dialog.close === 'function') dialog.close();
+    });
+
+    if (pushTspBack) pushTspBack.addEventListener('click', function () { setStep('step1'); });
+
+    if (pushTspCancel) pushTspCancel.addEventListener('click', function () {
+      var dialog = document.getElementById('push-tsp-dialog');
+      if (dialog && typeof dialog.close === 'function') dialog.close();
+    });
+
+    if (pushTspDone) pushTspDone.addEventListener('click', function () {
+      var dialog = document.getElementById('push-tsp-dialog');
+      if (dialog && typeof dialog.close === 'function') dialog.close();
+    });
+
+    if (pushTspSubmit) pushTspSubmit.addEventListener('click', function () {
+      var refInput = document.getElementById('push-tsp-bh-ref');
+      var errEl = document.getElementById('push-tsp-ref-error');
+      var ref = (refInput ? refInput.value : '').replace(/\D/g, '').slice(0, 6);
+      if (!ref || ref.length < 1) {
+        if (errEl) { errEl.textContent = 'Please enter a valid Bullhorn reference number.'; errEl.style.display = 'block'; }
+        return;
+      }
+      if (errEl) { errEl.style.display = 'none'; }
+      pushTspSubmit.disabled = true;
+      pushTspSubmit.textContent = 'Pushing…';
+
+      fetch('/.netlify/functions/admin-candidates-push-tsp', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ candidateId: pushTspCandidateId, bullhornRef: ref }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          pushTspSubmit.disabled = false;
+          pushTspSubmit.textContent = 'Push to TSP →';
+          var resultEl = document.getElementById('push-tsp-result');
+          if (data.ok) {
+            if (resultEl) {
+              resultEl.style.background = '#f0fdf4';
+              resultEl.innerHTML = '<strong style="color:var(--ok);font-size:16px">✓ Success</strong><br><br>' +
+                '<b>TSP profile created</b><br>' +
+                'Bullhorn ref: <code>' + escT(ref) + '</code><br>' +
+                (data.tspId ? 'TSP ID: <code>' + escT(String(data.tspId)) + '</code><br>' : '') +
+                (data.message ? '<br>' + escT(data.message) : '');
+            }
+            pageToast(pushTspCandidateName + ' pushed to TSP successfully', 'ok');
+          } else {
+            if (resultEl) {
+              resultEl.style.background = '#fef2f2';
+              resultEl.innerHTML = '<strong style="color:var(--bad);font-size:16px">⚠ Push failed</strong><br><br>' + escT(data.error || 'Unknown error');
+            }
+            pageToast('Push to TSP failed: ' + (data.error || 'unknown error'), 'error');
+          }
+          setStep('step3');
+        })
+        .catch(function (err) {
+          pushTspSubmit.disabled = false;
+          pushTspSubmit.textContent = 'Push to TSP →';
+          var msg = err && err.message ? err.message : 'Network error';
+          var resultEl = document.getElementById('push-tsp-result');
+          if (resultEl) {
+            resultEl.style.background = '#fef2f2';
+            resultEl.innerHTML = '<strong style="color:var(--bad)">⚠ Error</strong><br><br>' + escT(msg);
+          }
+          pageToast('Push to TSP failed: ' + msg, 'error');
+          setStep('step3');
+        });
+    });
+
+    /* Expose openPushTspDialog globally so candidates.js can call it */
+    window.openPushTspDialog = openPushTspDialog;
+
   })();
   </script>
 

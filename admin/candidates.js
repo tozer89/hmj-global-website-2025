@@ -2223,11 +2223,18 @@
       state.helpers.toast(message, tone, ms);
       return;
     }
+    /* Fallback: append a styled child notification div to the #toast container.
+       The container is always visible (display:grid) — managed by common.js CSS. */
     const host = qs('#toast');
     if (!host) return;
-    host.textContent = message;
-    host.classList.add('show');
-    setTimeout(() => host.classList.remove('show'), ms);
+    const palette = { error: '#3a1418', warn: '#35240d', ok: '#0f3020', info: '#0e2038' };
+    const n = document.createElement('div');
+    n.style.cssText = `background:${palette[tone] || palette.info};color:#fff;padding:12px 16px;border-radius:12px;` +
+      `font-size:14px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.3);` +
+      `border:1px solid rgba(255,255,255,.14);pointer-events:auto`;
+    n.textContent = message;
+    host.appendChild(n);
+    setTimeout(() => n.remove(), ms);
   }
 
   function updateImportButtons() {
@@ -2719,6 +2726,7 @@
           <button class="btn ghost" type="button" data-onboarding-action="send-rtw-reminder" ${canSendReminder ? '' : 'disabled'}>Send RTW reminder</button>
           <button class="btn ghost" type="button" data-onboarding-action="copy-upload-link">Copy upload link</button>
           <button class="btn ghost" type="button" data-tsp-action="sync-candidate" ${(!candidate.email && !String(candidate?.ref || candidate?.payroll_ref || '').trim()) || isArchived(candidate) ? 'disabled' : ''}>Sync from TSP</button>
+          ${candidateOnboardingMode(candidate) ? `<button class="btn" type="button" data-tsp-action="push-to-tsp" ${isArchived(candidate) ? 'disabled' : ''} style="background:var(--blue);color:#fff">Push to TSP →</button>` : ''}
           <button class="btn ghost" type="button" data-account-action="repair_profile">Repair portal profile</button>
           <button class="btn ghost" type="button" data-account-action="copy_access_link" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Copy secure access link</button>
           <button class="btn ghost" type="button" data-account-action="set_temporary_password" ${!accountEmail || portalStatus === 'Portal account closed' ? 'disabled' : ''}>Set temporary password</button>
@@ -3514,12 +3522,26 @@
     });
     section.querySelectorAll('[data-tsp-action]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        if (btn.dataset.tspAction !== 'sync-candidate') return;
+        const action = btn.dataset.tspAction;
+
+        if (action === 'push-to-tsp') {
+          /* Open the Bullhorn → Push-to-TSP dialog */
+          const name = [candidate.first_name, candidate.last_name].filter(Boolean).join(' ') || 'candidate';
+          if (typeof window.openPushTspDialog === 'function') {
+            window.openPushTspDialog(candidate.id, name);
+          } else {
+            showToast('Push-to-TSP dialog not available.', 'warn', 3000);
+          }
+          return;
+        }
+
+        if (action !== 'sync-candidate') return;
         btn.disabled = true;
         try {
           await runTimesheetPortalCandidateSync({ candidateIds: [candidate.id] });
           const refreshed = await fetchCandidate(candidate.id).catch(() => null);
           if (refreshed) renderDrawer(refreshed);
+          showToast('Candidate synced from Timesheet Portal.', 'ok', 3200);
         } catch (err) {
           console.error('[candidates] single candidate TSP sync failed', err);
           showToast(err.message || 'Could not sync this candidate from Timesheet Portal.', 'error', 4200);
