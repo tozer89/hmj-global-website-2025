@@ -20,7 +20,43 @@ const {
   withDocumentVerificationMeta,
 } = require('./_candidate-docs.js');
 
-const PUBLIC_APPLICATION_STORAGE_PREFIX = 'applications';
+const PUBLIC_DOCUMENT_CONTEXTS = {
+  application: {
+    name: 'application',
+    storagePrefix: 'applications',
+    uploadedVia: 'contact_form',
+    source: 'public_application',
+    candidateNotFoundMessage: 'Candidate profile could not be found for this application.',
+    candidateNotFoundCode: 'application_candidate_not_found',
+    invalidActionCode: 'application_document_action_invalid',
+    invalidActionMessage: 'Unknown application document action.',
+    activityDescription(label, linkedApplication) {
+      return `${label} uploaded from the public application form.`;
+    },
+    failureDescription(fileName) {
+      return `${fileName} could not be attached automatically after the public application form was submitted.`;
+    },
+  },
+  candidate_registration: {
+    name: 'candidate_registration',
+    storagePrefix: 'registrations',
+    uploadedVia: 'candidate_registration_form',
+    source: 'candidate_registration',
+    candidateNotFoundMessage: 'Candidate profile could not be found for this registration.',
+    candidateNotFoundCode: 'candidate_registration_not_found',
+    invalidActionCode: 'candidate_registration_document_action_invalid',
+    invalidActionMessage: 'Unknown candidate registration document action.',
+    allowedDocumentTypes: new Set(['passport', 'right_to_work', 'visa_permit']),
+    invalidDocumentTypeMessage: 'Only passport, right-to-work, or visa / permit evidence can be uploaded from the registration form.',
+    invalidDocumentTypeCode: 'candidate_registration_document_type_invalid',
+    activityDescription(label) {
+      return `${label} uploaded from the public candidate registration form.`;
+    },
+    failureDescription(fileName) {
+      return `${fileName} could not be attached automatically after the public candidate registration form was submitted.`;
+    },
+  },
+};
 
 function respond(event, statusCode, body) {
   return {
@@ -47,6 +83,34 @@ function coded(statusCode, message, code = null) {
   error.statusCode = statusCode;
   error.code = code || message;
   return error;
+}
+
+function resolvePublicDocumentContext(body = {}) {
+  const raw = (trimString(
+    body.source_context || body.sourceContext || body.public_context || body.publicContext || body.context,
+    80,
+  ) || '').toLowerCase();
+  if (
+    raw === 'candidate_registration'
+    || raw === 'candidate-registration'
+    || raw === 'registration'
+    || raw === 'candidate_form'
+  ) {
+    return PUBLIC_DOCUMENT_CONTEXTS.candidate_registration;
+  }
+  return PUBLIC_DOCUMENT_CONTEXTS.application;
+}
+
+function assertAllowedDocumentType(context, documentType) {
+  const normalised = normaliseDocumentType(documentType);
+  if (context?.allowedDocumentTypes && !context.allowedDocumentTypes.has(normalised)) {
+    throw coded(
+      400,
+      context.invalidDocumentTypeMessage || 'This document type is not supported from this public form.',
+      context.invalidDocumentTypeCode || 'public_document_type_invalid',
+    );
+  }
+  return normalised;
 }
 
 function validateDocumentRequest({ fileName, mimeType, sizeBytes }) {
@@ -101,23 +165,42 @@ function inferDocumentType({ documentType, fieldName, label, fileName }) {
   return 'other';
 }
 
-function buildPublicApplicationStoragePath(candidateId, submissionId, filename, timestamp = Date.now()) {
+function buildPublicStoragePath(candidateId, submissionId, filename, context = PUBLIC_DOCUMENT_CONTEXTS.application, timestamp = Date.now()) {
   const safeCandidateId = trimString(candidateId, 120);
   const safeSubmissionId = trimString(submissionId, 160);
   const safeFilename = slugifyFilename(filename);
   if (!safeCandidateId || !safeSubmissionId || !safeFilename) return '';
-  return `${PUBLIC_APPLICATION_STORAGE_PREFIX}/${safeCandidateId}/${safeSubmissionId}/${timestamp}-${safeFilename}`;
+  return `${context.storagePrefix}/${safeCandidateId}/${safeSubmissionId}/${timestamp}-${safeFilename}`;
 }
 
-function isApplicationStoragePathOwnedBySubmission(storagePath, candidateId, submissionId) {
+function buildPublicApplicationStoragePath(candidateId, submissionId, filename, timestamp = Date.now()) {
+  return buildPublicStoragePath(
+    candidateId,
+    submissionId,
+    filename,
+    PUBLIC_DOCUMENT_CONTEXTS.application,
+    timestamp,
+  );
+}
+
+function isStoragePathOwnedBySubmission(storagePath, candidateId, submissionId, context = PUBLIC_DOCUMENT_CONTEXTS.application) {
   const path = trimString(storagePath, 500);
   const safeCandidateId = trimString(candidateId, 120);
   const safeSubmissionId = trimString(submissionId, 160);
   if (!path || !safeCandidateId || !safeSubmissionId) return false;
-  return path.startsWith(`${PUBLIC_APPLICATION_STORAGE_PREFIX}/${safeCandidateId}/${safeSubmissionId}/`);
+  return path.startsWith(`${context.storagePrefix}/${safeCandidateId}/${safeSubmissionId}/`);
 }
 
-async function getCandidateById(supabase, candidateId) {
+function isApplicationStoragePathOwnedBySubmission(storagePath, candidateId, submissionId) {
+  return isStoragePathOwnedBySubmission(
+    storagePath,
+    candidateId,
+    submissionId,
+    PUBLIC_DOCUMENT_CONTEXTS.application,
+  );
+}
+
+async function getCandidateById(supabase, candidateId, context = PUBLIC_DOCUMENT_CONTEXTS.application) {
   const { data, error } = await supabase
     .from('candidates')
     .select('id,email,auth_user_id,first_name,last_name,full_name')
@@ -132,7 +215,11 @@ async function getCandidateById(supabase, candidateId) {
     throw error;
   }
   if (!data) {
-    throw coded(404, 'Candidate profile could not be found for this application.', 'application_candidate_not_found');
+    throw coded(
+      404,
+      context.candidateNotFoundMessage || 'Candidate profile could not be found.',
+      context.candidateNotFoundCode || 'candidate_not_found',
+    );
   }
   return data;
 }
@@ -257,13 +344,13 @@ async function removeStorageObject(supabase, storagePath) {
   }
 }
 
-function buildDocumentPayload(candidate, linkedApplication, body, validated, storagePath, now) {
-  const documentType = inferDocumentType({
+function buildDocumentPayload(candidate, linkedApplication, body, validated, storagePath, now, context = resolvePublicDocumentContext(body)) {
+  const documentType = assertAllowedDocumentType(context, inferDocumentType({
     documentType: body.document_type,
     fieldName: body.field_name,
     label: body.label,
     fileName: validated.fileName,
-  });
+  }));
   const label = trimString(body.label, 240)
     || (documentType === 'cv' ? 'CV' : validated.fileName);
 
@@ -283,8 +370,8 @@ function buildDocumentPayload(candidate, linkedApplication, body, validated, sto
     uploaded_at: now,
     updated_at: now,
     meta: withDocumentVerificationMeta(documentType, {
-      uploaded_via: 'contact_form',
-      source: 'public_application',
+      uploaded_via: context.uploadedVia,
+      source: context.source,
       field_name: trimString(body.field_name, 120) || null,
       source_submission_id: trimString(body.submission_id, 160) || null,
       application_id: linkedApplication?.id || trimString(body.application_id, 120) || null,
@@ -297,13 +384,14 @@ function buildDocumentPayload(candidate, linkedApplication, body, validated, sto
 }
 
 async function createPrepareUploadResponse(supabase, body) {
+  const context = resolvePublicDocumentContext(body);
   const candidateId = trimString(body.candidate_id, 120);
   const submissionId = trimString(body.submission_id, 160);
   if (!candidateId || !submissionId) {
     throw coded(400, 'Candidate and submission details are required before uploading documents.', 'application_document_context_required');
   }
 
-  await getCandidateById(supabase, candidateId);
+  await getCandidateById(supabase, candidateId, context);
 
   const validated = validateDocumentRequest({
     fileName: body.file_name,
@@ -311,14 +399,22 @@ async function createPrepareUploadResponse(supabase, body) {
     sizeBytes: body.size_bytes,
   });
 
-  const storagePath = buildPublicApplicationStoragePath(
+  const inferredDocumentType = assertAllowedDocumentType(context, inferDocumentType({
+    documentType: body.document_type,
+    fieldName: body.field_name,
+    label: body.label,
+    fileName: validated.fileName,
+  }));
+
+  const storagePath = buildPublicStoragePath(
     candidateId,
     submissionId,
     `${randomUUID().slice(0, 8)}-${validated.fileName}`,
+    context,
     Date.now(),
   );
 
-  if (!storagePath || !isApplicationStoragePathOwnedBySubmission(storagePath, candidateId, submissionId)) {
+  if (!storagePath || !isStoragePathOwnedBySubmission(storagePath, candidateId, submissionId, context)) {
     throw coded(500, 'A secure storage path could not be prepared.', 'application_document_storage_path_invalid');
   }
 
@@ -341,12 +437,7 @@ async function createPrepareUploadResponse(supabase, body) {
       token: signed.data.token,
     },
     document: {
-      document_type: inferDocumentType({
-        documentType: body.document_type,
-        fieldName: body.field_name,
-        label: body.label,
-        fileName: validated.fileName,
-      }),
+      document_type: inferredDocumentType,
       label: trimString(body.label, 240) || null,
       original_filename: validated.fileName,
       mime_type: validated.mimeType,
@@ -357,6 +448,7 @@ async function createPrepareUploadResponse(supabase, body) {
 }
 
 async function createFinalizeUploadResponse(supabase, body) {
+  const context = resolvePublicDocumentContext(body);
   const candidateId = trimString(body.candidate_id, 120);
   const submissionId = trimString(body.submission_id, 160);
   const storagePath = trimString(body.storage_path, 500);
@@ -365,11 +457,17 @@ async function createFinalizeUploadResponse(supabase, body) {
     throw coded(400, 'Candidate, submission, and storage details are required to finalise the upload.', 'application_document_finalize_required');
   }
 
-  if (!isApplicationStoragePathOwnedBySubmission(storagePath, candidateId, submissionId)) {
-    throw coded(403, 'That upload path is not valid for this application.', 'application_document_storage_forbidden');
+  if (!isStoragePathOwnedBySubmission(storagePath, candidateId, submissionId, context)) {
+    throw coded(
+      403,
+      context.name === 'candidate_registration'
+        ? 'That upload path is not valid for this candidate registration.'
+        : 'That upload path is not valid for this application.',
+      'application_document_storage_forbidden',
+    );
   }
 
-  const candidate = await getCandidateById(supabase, candidateId);
+  const candidate = await getCandidateById(supabase, candidateId, context);
   const linkedApplication = await resolveLinkedApplication(
     supabase,
     candidateId,
@@ -406,7 +504,7 @@ async function createFinalizeUploadResponse(supabase, body) {
   }
 
   const now = new Date().toISOString();
-  const payload = buildDocumentPayload(candidate, linkedApplication, body, validated, storagePath, now);
+  const payload = buildDocumentPayload(candidate, linkedApplication, body, validated, storagePath, now, context);
   const duplicate = await findDuplicateDocumentByFingerprint(supabase, candidateId, payload);
 
   if (duplicate) {
@@ -431,12 +529,12 @@ async function createFinalizeUploadResponse(supabase, body) {
     supabase,
     String(candidate.id),
     'document_uploaded',
-    `${payload.label} uploaded from the public application form.`,
+    context.activityDescription(payload.label, linkedApplication),
     {
       actorRole: 'candidate',
       actorIdentifier: trimString(candidate.auth_user_id, 120) || trimString(candidate.email, 320) || null,
       meta: {
-        source: 'contact_form',
+        source: context.source,
         document_id: insert.data?.id || null,
         document_type: payload.document_type,
         application_id: linkedApplication?.id || trimString(body.application_id, 120) || null,
@@ -457,13 +555,14 @@ async function createFinalizeUploadResponse(supabase, body) {
 }
 
 async function createFailureReportResponse(supabase, body) {
+  const context = resolvePublicDocumentContext(body);
   const candidateId = trimString(body.candidate_id, 120);
   const submissionId = trimString(body.submission_id, 160);
   if (!candidateId || !submissionId) {
     throw coded(400, 'Candidate and submission details are required for attachment diagnostics.', 'application_document_failure_context_required');
   }
 
-  const candidate = await getCandidateById(supabase, candidateId);
+  const candidate = await getCandidateById(supabase, candidateId, context);
   const linkedApplication = await resolveLinkedApplication(
     supabase,
     candidateId,
@@ -471,24 +570,26 @@ async function createFailureReportResponse(supabase, body) {
     submissionId,
   );
 
-  const fileName = trimString(body.file_name, 280) || 'Application document';
+  const fileName = trimString(body.file_name, 280)
+    || (context.name === 'candidate_registration' ? 'Candidate registration document' : 'Application document');
   const documentType = inferDocumentType({
     documentType: body.document_type,
     fieldName: body.field_name,
     label: body.label,
     fileName,
   });
+  assertAllowedDocumentType(context, documentType);
 
   await recordCandidateActivity(
     supabase,
     String(candidate.id),
     'document_upload_failed',
-    `${fileName} could not be attached automatically after the public application form was submitted.`,
+    context.failureDescription(fileName, linkedApplication),
     {
       actorRole: 'system',
-      actorIdentifier: 'contact_form',
+      actorIdentifier: context.uploadedVia,
       meta: {
-        source: 'contact_form',
+        source: context.source,
         file_name: fileName,
         document_type: documentType,
         application_id: linkedApplication?.id || trimString(body.application_id, 120) || null,
@@ -525,6 +626,7 @@ async function baseHandler(event = {}) {
 
   try {
     const body = parseBody(event);
+    const context = resolvePublicDocumentContext(body);
     const action = trimString(body.action, 80) || 'prepare_upload';
     const supabase = getSupabase(event);
 
@@ -540,23 +642,26 @@ async function baseHandler(event = {}) {
 
     return respond(event, 400, {
       ok: false,
-      code: 'application_document_action_invalid',
-      message: 'Unknown application document action.',
+      code: context.invalidActionCode,
+      message: context.invalidActionMessage,
     });
   } catch (error) {
     console.warn('[contact-application-documents] failed', error?.message || error);
     return respond(event, Number(error?.statusCode) || 500, {
       ok: false,
       code: error?.code || 'application_document_failed',
-      message: error?.message || 'Application document request failed.',
+      message: error?.message || 'Public document request failed.',
     });
   }
 }
 
 module.exports = {
   handler: baseHandler,
+  _handlePublicCandidateDocumentEvent: baseHandler,
+  _buildPublicStoragePath: buildPublicStoragePath,
   _buildPublicApplicationStoragePath: buildPublicApplicationStoragePath,
   _inferPublicApplicationDocumentType: inferDocumentType,
+  _resolvePublicDocumentContext: resolvePublicDocumentContext,
   _isApplicationStoragePathOwnedBySubmission: isApplicationStoragePathOwnedBySubmission,
   _validateApplicationDocumentRequest: validateDocumentRequest,
   _buildApplicationDocumentPayload: buildDocumentPayload,

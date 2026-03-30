@@ -1603,11 +1603,12 @@
     if (state.quickSearch && !haystack.includes(state.quickSearch)) return false;
     // Candidate type filter
     if (filters.candidateType === 'starter' && !candidateOnboardingMode(candidate)) return false;
-    // Seekers = candidates who submitted a job application through the website (not in onboarding/new-starter mode)
-    if (filters.candidateType === 'seeker') {
-      if (candidateOnboardingMode(candidate)) return false;
-      if (!candidate.has_application) return false;
-    }
+    // Seekers = candidates registered with a recruitment profile (onboarding_mode false).
+    // has_application is an informational flag (applied to a specific job posting) but
+    // is NOT required to be classed as a job seeker — registration alone qualifies them.
+    // Requiring has_application caused the tab count to be lower than the badge, which
+    // was confusing and excluded legitimate seekers who registered directly.
+    if (filters.candidateType === 'seeker' && candidateOnboardingMode(candidate)) return false;
     if (filters.status.length && !filters.status.includes(candidate.status)) return false;
     if (filters.role && !(candidate.role || '').toLowerCase().includes(filters.role.toLowerCase())) return false;
     if (filters.region && !(candidate.region || '').toLowerCase().includes(filters.region.toLowerCase())) return false;
@@ -1695,6 +1696,7 @@
     const showWorkflowCounts = state.sourceTab !== 'timesheet-portal';
     if (elements.tSeekers) elements.tSeekers.textContent = showWorkflowCounts ? state.metrics.seekers : '—';
     if (elements.tStarters) elements.tStarters.textContent = showWorkflowCounts ? state.metrics.starters : '—';
+    if (elements.tInvited) elements.tInvited.textContent = showWorkflowCounts ? state.metrics.invited : '—';
     if (elements.progress) elements.progress.textContent = showWorkflowCounts ? state.metrics.progress : '—';
     if (elements.ready) elements.ready.textContent = showWorkflowCounts ? state.metrics.ready : '—';
     if (elements.rtwMissing) elements.rtwMissing.textContent = showWorkflowCounts ? state.metrics.rtwMissing : '—';
@@ -4781,6 +4783,7 @@
     elements.total = qs('#t-total');
     elements.tSeekers = qs('#t-seekers');
     elements.tStarters = qs('#t-starters');
+    elements.tInvited = qs('#t-invited');
     elements.progress = qs('#t-progress');
     elements.archived = qs('#t-archived');
     elements.blocked = qs('#t-blocked');

@@ -2,6 +2,7 @@
 
 const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
+const { escapeHtml } = require('./_html.js');
 const {
   buildEmailTemplate,
   readCandidateEmailSettings,
@@ -29,16 +30,9 @@ function response(statusCode, body) {
   };
 }
 
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function normaliseIntroEmailRequest(input = {}) {
+  const candidateId = input.candidate_id || input.candidateId || null;
+  const isReminder = !!(input.is_reminder || input.isReminder);
   return {
     firstName: trimString(input.first_name != null ? input.first_name : input.firstName, 120),
     lastName: trimString(input.last_name != null ? input.last_name : input.lastName, 120),
@@ -46,8 +40,8 @@ function normaliseIntroEmailRequest(input = {}) {
     company: trimString(input.company != null ? input.company : input.client_company, 180),
     phone: trimString(input.phone, 80),
     jobTitle: trimString(input.job_title != null ? input.job_title : input.jobTitle, 180),
-    isReminder: !!(input.is_reminder || input.isReminder),
-    candidateId: input.candidate_id || input.candidateId || null,
+    ...(isReminder ? { isReminder: true } : {}),
+    ...(candidateId ? { candidateId } : {}),
   };
 }
 

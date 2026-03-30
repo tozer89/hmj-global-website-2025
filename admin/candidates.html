@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="/css/admin.css" />
   <script src="/admin/__env.js"></script>
-  <script>window.ADMIN_IDENTITY_URL = window.ADMIN_IDENTITY_URL || '/.netlify/identity';</script>
+  <script src="/admin/identity-bootstrap.js"></script>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js?v=3"></script>
   <script defer src="/admin/common.js?v=36"></script>
@@ -455,6 +455,10 @@
           <span class="metric-tile__label">New starters</span>
           <strong class="metric-tile__value" id="t-starters">—</strong>
         </div>
+        <div class="metric-tile metric-tile--purple" title="New starters invited but not yet registered">
+          <span class="metric-tile__label">Invited</span>
+          <strong class="metric-tile__value" id="t-invited">—</strong>
+        </div>
         <div class="metric-tile metric-tile--orange clickable" data-metric-action="attention" title="RTW missing">
           <span class="metric-tile__label">RTW missing</span>
           <strong class="metric-tile__value" id="t-rtw-missing">—</strong>
@@ -506,9 +510,11 @@
               <select id="flt-status" multiple>
                 <option>active</option>
                 <option>in progress</option>
+                <option>invited</option>
                 <option>complete</option>
                 <option>archived</option>
                 <option>blocked</option>
+                <option>cancelled</option>
               </select>
             </label>
             <label class="filter-group">

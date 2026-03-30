@@ -1,5 +1,7 @@
 'use strict';
 
+const { escapeHtml } = require('./_html.js');
+
 const CALLBACK_PATH = '/api/connectors/quickbooks/callback';
 const TARGET_ENV = 'HMJ_ASSISTANT_QBO_CALLBACK_TARGET';
 const ALLOWED_HOSTS_ENV = 'HMJ_ASSISTANT_QBO_ALLOWED_HOSTS';
@@ -8,25 +10,6 @@ function configError(message, code) {
   const error = new Error(message);
   error.code = code;
   return error;
-}
-
-function escapeHtml(value) {
-  return String(value || '').replace(/[&<>"']/g, (char) => {
-    switch (char) {
-      case '&':
-        return '&amp;';
-      case '<':
-        return '&lt;';
-      case '>':
-        return '&gt;';
-      case '"':
-        return '&quot;';
-      case '\'':
-        return '&#39;';
-      default:
-        return char;
-    }
-  });
 }
 
 function buildHeaders(extra = {}) {

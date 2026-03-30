@@ -1,10 +1,13 @@
 // netlify/functions/jobs-list.js
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const { toPublicJob, isSchemaError, resolvePublicSiteUrl } = require('./_jobs-helpers.js');
+const { buildRateLimitHeaders, enforceRateLimit } = require('./_rate-limit.js');
 
 const JOB_SELECT = '*';
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+const RATE_LIMIT_WINDOW_SECONDS = Math.max(Number.parseInt(process.env.JOBS_LIST_RATE_LIMIT_WINDOW_SECONDS || '60', 10) || 60, 1);
+const RATE_LIMIT_MAX = Math.max(Number.parseInt(process.env.JOBS_LIST_RATE_LIMIT_MAX || '90', 10) || 90, 1);
 
 function isLocalDebugRequest(event) {
   const host = String(event?.headers?.host || '');
@@ -24,10 +27,32 @@ function buildLocalDebugPayload(error) {
 
 exports.handler = async (event) => {
   const siteUrl = resolvePublicSiteUrl(event);
+  const limit = await enforceRateLimit({
+    event,
+    bucket: 'jobs_list',
+    max: RATE_LIMIT_MAX,
+    windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+    metadata: {
+      path: event?.path || '/.netlify/functions/jobs-list',
+    },
+  });
+  const rateLimitHeaders = buildRateLimitHeaders(limit);
+  if (!limit.allowed) {
+    return {
+      statusCode: 429,
+      headers: { ...JSON_HEADERS, ...rateLimitHeaders },
+      body: JSON.stringify({
+        error: 'Too many requests. Please wait a moment and try again.',
+        code: 'rate_limited',
+        retryAfterMs: limit.retryAfterMs,
+      }),
+    };
+  }
+
   if (!hasSupabase()) {
     return {
       statusCode: 503,
-      headers: JSON_HEADERS,
+      headers: { ...JSON_HEADERS, ...rateLimitHeaders },
       body: JSON.stringify({
         error: 'Live jobs service unavailable',
         code: 'supabase_unavailable',
@@ -56,7 +81,7 @@ exports.handler = async (event) => {
       : [];
     return {
       statusCode: 200,
-      headers: JSON_HEADERS,
+      headers: { ...JSON_HEADERS, ...rateLimitHeaders },
       body: JSON.stringify({
         jobs,
         source: 'supabase',
@@ -79,7 +104,7 @@ exports.handler = async (event) => {
     }
     return {
       statusCode: schemaIssue ? 409 : 503,
-      headers: JSON_HEADERS,
+      headers: { ...JSON_HEADERS, ...rateLimitHeaders },
       body: JSON.stringify({
         error: schemaIssue
           ? 'Jobs service is unavailable because the jobs table schema does not match the live site.'

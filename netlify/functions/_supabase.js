@@ -42,6 +42,17 @@ try {
   console.error('[supa] createClient failed:', e?.message || e);
 }
 
+const supabaseProxy = new Proxy({}, {
+  get(_target, prop) {
+    const client = assertSupabase();
+    const value = client[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
+
 function hasSupabase() {
   return !!(supabase && typeof supabase.from === 'function');
 }
@@ -151,7 +162,8 @@ function withSupabase(handler) {
 
 module.exports = {
   // Back-compat
-  supabase,
+  supabase: supabaseProxy,
+  rawSupabase: supabase,
   supabaseError,
   // Helpers
   getSupabase,

@@ -1,5 +1,6 @@
 'use strict';
 
+const { escapeHtml } = require('./_html.js');
 const { fetchSettings, saveSettings } = require('./_settings-helpers.js');
 const { probeResendProvider, probeSmtpProvider } = require('./_mail-delivery.js');
 const {
@@ -93,15 +94,6 @@ function toBoolean(value, fallback = false) {
   if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
   if (['0', 'false', 'no', 'off'].includes(raw)) return false;
   return fallback;
-}
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function resolveProjectRef() {

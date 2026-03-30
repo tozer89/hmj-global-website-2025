@@ -5,6 +5,8 @@
 // Public endpoint — no auth required.
 
 const { buildCors } = require('./_http.js');
+const { escapeHtml } = require('./_html.js');
+const { buildRateLimitHeaders, enforceRateLimit } = require('./_rate-limit.js');
 const { sendTransactionalEmail, trimString, lowerEmail } = require('./_mail-delivery.js');
 
 const RECIPIENT_EMAIL = 'info@hmj-global.com';
@@ -22,38 +24,8 @@ const ENQUIRY_TYPE_LABELS = {
   other: 'Other',
 };
 
-// Simple in-memory rate limiter per IP — resets on cold start.
-const ipHits = new Map();
-const RATE_WINDOW_MS = 60_000; // 1 minute
-const RATE_LIMIT = 3;          // max 3 enquiries per IP per window
-
-function checkRateLimit(ip) {
-  if (!ip) return false; // no IP = skip
-  const now = Date.now();
-  const entry = ipHits.get(ip);
-  if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
-    ipHits.set(ip, { windowStart: now, count: 1 });
-    return false;
-  }
-  entry.count++;
-  if (entry.count > RATE_LIMIT) return true; // rate limited
-  return false;
-}
-
-function getClientIp(event) {
-  return (
-    trimString(event?.headers?.['x-nf-client-connection-ip'] || event?.headers?.['x-forwarded-for'] || '', 64).split(',')[0].trim()
-  );
-}
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+const RATE_LIMIT_WINDOW_SECONDS = Math.max(Number.parseInt(process.env.CONTACT_ENQUIRY_RATE_LIMIT_WINDOW_SECONDS || '60', 10) || 60, 1);
+const RATE_LIMIT_MAX = Math.max(Number.parseInt(process.env.CONTACT_ENQUIRY_RATE_LIMIT_MAX || '3', 10) || 3, 1);
 
 function parseBody(event) {
   try {
@@ -218,12 +190,25 @@ const handler = async (event = {}) => {
   }
 
   // Rate limit
-  const ip = getClientIp(event);
-  if (checkRateLimit(ip)) {
+  const limit = await enforceRateLimit({
+    event,
+    bucket: 'contact_enquiry',
+    max: RATE_LIMIT_MAX,
+    windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+    metadata: {
+      recipient: RECIPIENT_EMAIL,
+    },
+  });
+  const rateLimitHeaders = buildRateLimitHeaders(limit);
+  if (!limit.allowed) {
     return {
       statusCode: 429,
-      headers: { ...cors, 'content-type': 'application/json' },
-      body: JSON.stringify({ ok: false, error: 'Too many requests. Please wait a moment and try again.' }),
+      headers: { ...cors, ...rateLimitHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ok: false,
+        error: 'Too many requests. Please wait a moment and try again.',
+        retryAfterMs: limit.retryAfterMs,
+      }),
     };
   }
 
@@ -234,7 +219,7 @@ const handler = async (event = {}) => {
   if (errors.length) {
     return {
       statusCode: 400,
-      headers: { ...cors, 'content-type': 'application/json' },
+      headers: { ...cors, ...rateLimitHeaders, 'content-type': 'application/json' },
       body: JSON.stringify({ ok: false, error: errors[0], errors }),
     };
   }
@@ -253,7 +238,7 @@ const handler = async (event = {}) => {
 
     return {
       statusCode: 200,
-      headers: { ...cors, 'content-type': 'application/json' },
+      headers: { ...cors, ...rateLimitHeaders, 'content-type': 'application/json' },
       body: JSON.stringify({
         ok: true,
         message: 'Enquiry received. We will be in touch shortly.',
@@ -264,7 +249,7 @@ const handler = async (event = {}) => {
     console.error('[contact-enquiry] email delivery error', err?.message || err);
     return {
       statusCode: 502,
-      headers: { ...cors, 'content-type': 'application/json' },
+      headers: { ...cors, ...rateLimitHeaders, 'content-type': 'application/json' },
       body: JSON.stringify({
         ok: false,
         error: 'We could not send your enquiry at this time. Please email us directly at info@hmj-global.com.',

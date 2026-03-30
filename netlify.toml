@@ -8,10 +8,11 @@
 # ---------------------------------------------------------------------------
 # Security headers — applied globally then tightened for /admin/*.
 #
-# CSP is intentionally omitted from this pass.  A CSP that breaks inline
-# scripts would take down the admin UI; a CSP audit (identifying every
-# inline script / eval / CDN origin) is a separate sprint.
-# Placeholder is documented here so it is not forgotten.
+# Admin still carries some inline scripts/styles, so the current CSP keeps
+# `'unsafe-inline'` for compatibility while still locking execution down to
+# HMJ-controlled origins plus the Netlify Identity / jsDelivr dependencies used
+# by the current admin bundle. Follow-up work should keep shrinking the inline
+# surface until `'unsafe-inline'` can be removed entirely.
 # ---------------------------------------------------------------------------
 [[headers]]
   for = "/*"
@@ -29,7 +30,7 @@
     Referrer-Policy           = "strict-origin-when-cross-origin"
     Permissions-Policy        = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
     Cache-Control             = "no-store, no-cache, must-revalidate"
-    # TODO (next sprint): add Content-Security-Policy after inline-script audit
+    Content-Security-Policy   = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://identity.netlify.com https://cdn.jsdelivr.net; connect-src 'self' https:; frame-src 'self' https://identity.netlify.com"
 
 [functions]
   node_bundler = "esbuild"

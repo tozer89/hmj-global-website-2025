@@ -2,6 +2,7 @@
 
 const { CHATBOT_SETTINGS_KEY, buildActionCatalog, resolveChatbotSettings } = require('./_chatbot-config.js');
 const { buildFallbackReply, buildUserTag, callOpenAIForChat, classifyIntent, sanitiseHistory } = require('./_chatbot-core.js');
+const { buildRateLimitHeaders, enforceRateLimit, getClientIp } = require('./_rate-limit.js');
 const { saveChatbotEventRecord, saveConversationRecord } = require('./_chatbot-storage.js');
 const { fetchSettings } = require('./_settings-helpers.js');
 
@@ -10,45 +11,8 @@ const HEADERS = {
   'cache-control': 'no-store',
 };
 
-const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX = 10;
-const rateLimitStore = new Map();
-
-function cleanIpAddress(value) {
-  return String(value || '')
-    .split(',')[0]
-    .trim()
-    .slice(0, 120);
-}
-
-function getRequesterIp(event) {
-  return cleanIpAddress(
-    event?.headers?.['x-nf-client-connection-ip']
-    || event?.headers?.['client-ip']
-    || event?.headers?.['x-forwarded-for']
-    || ''
-  );
-}
-
-function applyRateLimit(ipAddress) {
-  if (!ipAddress) return { allowed: true, remaining: RATE_LIMIT_MAX };
-  const now = Date.now();
-  const current = rateLimitStore.get(ipAddress);
-  if (!current || current.resetAt <= now) {
-    rateLimitStore.set(ipAddress, {
-      count: 1,
-      resetAt: now + RATE_LIMIT_WINDOW_MS,
-    });
-    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
-  }
-
-  current.count += 1;
-  if (current.count > RATE_LIMIT_MAX) {
-    return { allowed: false, remaining: 0, retryAfterMs: current.resetAt - now };
-  }
-
-  return { allowed: true, remaining: Math.max(RATE_LIMIT_MAX - current.count, 0) };
-}
+const RATE_LIMIT_WINDOW_SECONDS = Math.max(Number.parseInt(process.env.CHATBOT_RATE_LIMIT_WINDOW_SECONDS || '60', 10) || 60, 1);
+const RATE_LIMIT_MAX = Math.max(Number.parseInt(process.env.CHATBOT_RATE_LIMIT_MAX || '10', 10) || 10, 1);
 
 function json(statusCode, body, extraHeaders) {
   return {
@@ -137,8 +101,18 @@ exports.handler = async (event) => {
 
   try {
     const sessionId = String(payload?.sessionId || '').slice(0, 120);
-    const ipAddress = getRequesterIp(event);
-    const limit = applyRateLimit(ipAddress);
+    const ipAddress = getClientIp(event);
+    const context = normaliseContext(payload?.context);
+    const limit = await enforceRateLimit({
+      event,
+      bucket: 'chatbot_chat',
+      max: RATE_LIMIT_MAX,
+      windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+      metadata: {
+        route: context.route,
+      },
+    });
+    const rateLimitHeaders = buildRateLimitHeaders(limit);
     if (!limit.allowed) {
       return json(
         429,
@@ -155,7 +129,7 @@ exports.handler = async (event) => {
             handoffReason: '',
           },
         },
-        { 'retry-after': String(Math.ceil((limit.retryAfterMs || RATE_LIMIT_WINDOW_MS) / 1000)) },
+        rateLimitHeaders,
       );
     }
 
@@ -163,7 +137,6 @@ exports.handler = async (event) => {
     const resolved = resolveChatbotSettings(settings?.[CHATBOT_SETTINGS_KEY]);
     const actionCatalog = buildActionCatalog(resolved);
     const history = sanitiseHistory(payload?.history, resolved.dataPolicy.maxHistoryMessages);
-    const context = normaliseContext(payload?.context);
     const sessionProfile = normaliseSessionProfile(payload?.sessionProfile);
     const heuristicIntent = resolved.dataPolicy.classifyIntent
       ? classifyIntent(message, history, sessionProfile)
@@ -175,7 +148,7 @@ exports.handler = async (event) => {
         ok: false,
         error: 'chatbot_disabled',
         fallback: buildFallbackReply(resolved, actionCatalog, heuristicIntent),
-      });
+      }, rateLimitHeaders);
     }
 
     const response = await callOpenAIForChat({
@@ -270,7 +243,7 @@ exports.handler = async (event) => {
     return json(200, {
       ok: true,
       ...buildPublicReply(response, conversationId),
-    });
+    }, rateLimitHeaders);
   } catch (error) {
     const statusCode = Number(error?.statusCode || error?.status || 500);
     let fallback = null;
@@ -302,7 +275,7 @@ exports.handler = async (event) => {
       storage = await saveConversationRecord(event, {
         sessionId,
         context,
-        ipAddress: getRequesterIp(event),
+        ipAddress: getClientIp(event),
         userAgent: String(event?.headers?.['user-agent'] || '').slice(0, 240),
         userIntent: intent,
         userMessage: message,

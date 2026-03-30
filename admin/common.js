@@ -18,6 +18,12 @@
   const $ = (s, root = document) => root.querySelector(s);
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const isMobile = matchMedia('(max-width: 820px)').matches;
+  const escapeHtml = (value) => String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
   const Debug = {
     ts: () => new Date().toISOString().split('T')[1].replace('Z', ''),
@@ -1847,6 +1853,7 @@
   }
 
   window.Admin = window.Admin || {};
+  window.Admin.escapeHtml = escapeHtml;
   window.Admin.finishLoginTransition = finishAdminLoginTransition;
   window.Admin.finishLogoutTransition = finishAdminLogoutTransition;
   window.Admin.bootAdmin = async function bootAdmin(mainFn) {

@@ -30,6 +30,7 @@ import {
 
 (function () {
   const doc = document;
+  const registrationDocumentsEndpoint = '/.netlify/functions/candidate-registration-documents';
   const authRoot = doc.getElementById('candidatePortalAuthRoot');
   const authSection = doc.getElementById('candidatePortalAuthSection');
   const applicationView = doc.getElementById('candidateApplicationView');
@@ -50,6 +51,9 @@ import {
   const paymentPanel = doc.getElementById('candidatePaymentPanel');
   const paymentSummary = doc.getElementById('candidatePaymentGateSummary');
   const paymentStatus = doc.getElementById('candidatePaymentStatus');
+  const rightToWorkDocumentTypeField = doc.getElementById('candidateRightToWorkDocumentType');
+  const rightToWorkDocumentField = doc.getElementById('candidateRightToWorkDocument');
+  const rightToWorkDocumentStatus = doc.getElementById('candidateRightToWorkDocumentStatus');
   const paymentFields = {
     currency: doc.getElementById('candidatePaymentCurrency'),
     method: doc.getElementById('candidatePaymentMethod'),
@@ -117,7 +121,22 @@ import {
     return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
   }
 
+  function ensureHiddenField(name, value) {
+    if (!name) return;
+    let input = form.querySelector(`input[type="hidden"][name="${String(name).replace(/"/g, '\\"')}"]`);
+    if (!input) {
+      input = doc.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      form.appendChild(input);
+    }
+    input.value = value == null ? '' : String(value);
+  }
+
   const RTW_OTHER_VALUE = '__other__';
+  const REGISTRATION_DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;
+  const REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp']);
+  const REGISTRATION_RIGHT_TO_WORK_DOCUMENT_TYPES = new Set(['passport', 'right_to_work', 'visa_permit']);
   const RTW_REGION_OPTIONS = [
     'United Kingdom',
     'European Union / EEA',
@@ -425,6 +444,257 @@ import {
     };
   }
 
+  function registrationRightToWorkEvidenceRequired() {
+    return registrationPaymentEnabled();
+  }
+
+  function registrationDocumentTypeLabel(value) {
+    if (value === 'passport') return 'Passport';
+    if (value === 'visa_permit') return 'Visa / permit / BRP';
+    return 'Right-to-work evidence';
+  }
+
+  function registrationDocumentFieldName(documentType) {
+    if (documentType === 'passport') return 'passport_upload';
+    if (documentType === 'visa_permit') return 'visa_permit_upload';
+    return 'right_to_work_upload';
+  }
+
+  function registrationDocumentExtension(fileName = '') {
+    const match = /\.([a-z0-9]+)$/i.exec(trimText(fileName, 280));
+    return match ? match[1].toLowerCase() : '';
+  }
+
+  function setRegistrationDocumentFieldValidity(field, message) {
+    if (!field || typeof field.setCustomValidity !== 'function') return;
+    field.setCustomValidity(message || '');
+  }
+
+  function clearRegistrationDocumentValidity() {
+    setRegistrationDocumentFieldValidity(rightToWorkDocumentTypeField, '');
+    setRegistrationDocumentFieldValidity(rightToWorkDocumentField, '');
+  }
+
+  function validateRegistrationRightToWorkDocument() {
+    const required = registrationRightToWorkEvidenceRequired();
+    const documentType = normaliseRequestedDocumentType(rightToWorkDocumentTypeField?.value);
+    const file = rightToWorkDocumentField?.files?.[0] || null;
+
+    if (!required) {
+      clearRegistrationDocumentValidity();
+      return {
+        required: false,
+        valid: true,
+        text: '',
+        focusField: null,
+        documentType: '',
+        file: null,
+        label: '',
+      };
+    }
+
+    let documentTypeMessage = '';
+    let fileMessage = '';
+
+    if (!REGISTRATION_RIGHT_TO_WORK_DOCUMENT_TYPES.has(documentType)) {
+      documentTypeMessage = 'Choose whether you are uploading a passport, visa / permit, or other right-to-work evidence.';
+    }
+
+    if (!file || !trimText(file?.name, 280)) {
+      fileMessage = 'Upload passport or right-to-work evidence before submitting onboarding.';
+    } else {
+      const extension = registrationDocumentExtension(file.name);
+      if (!REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS.has(extension)) {
+        fileMessage = 'Upload a PDF, Word document, PNG, JPG, or WEBP file.';
+      } else if (!Number.isFinite(Number(file.size)) || Number(file.size) <= 0) {
+        fileMessage = 'The selected document could not be read. Please choose it again.';
+      } else if (Number(file.size) > REGISTRATION_DOCUMENT_MAX_BYTES) {
+        fileMessage = 'Right-to-work evidence must be 15 MB or smaller.';
+      }
+    }
+
+    setRegistrationDocumentFieldValidity(rightToWorkDocumentTypeField, documentTypeMessage);
+    setRegistrationDocumentFieldValidity(rightToWorkDocumentField, fileMessage);
+
+    return {
+      required: true,
+      valid: !documentTypeMessage && !fileMessage,
+      text: documentTypeMessage || fileMessage,
+      focusField: documentTypeMessage ? rightToWorkDocumentTypeField : rightToWorkDocumentField,
+      documentType,
+      file,
+      label: registrationDocumentTypeLabel(documentType),
+    };
+  }
+
+  function setRegistrationDocumentStatus(message, tone = 'info') {
+    if (!rightToWorkDocumentStatus) return;
+    rightToWorkDocumentStatus.dataset.tone = tone;
+    rightToWorkDocumentStatus.textContent = trimText(message, 400);
+  }
+
+  function syncRegistrationDocumentStatus() {
+    if (!rightToWorkDocumentStatus) return;
+
+    const validation = validateRegistrationRightToWorkDocument();
+    if (!validation.required) {
+      setRegistrationDocumentStatus('');
+      return;
+    }
+
+    if (!validation.file) {
+      setRegistrationDocumentStatus('Required for onboarding: upload one passport, visa, or right-to-work evidence file before submitting.', 'info');
+      return;
+    }
+
+    if (!validation.valid) {
+      setRegistrationDocumentStatus(validation.text, 'warn');
+      return;
+    }
+
+    const sizeMb = (Number(validation.file.size || 0) / (1024 * 1024)).toFixed(2);
+    setRegistrationDocumentStatus(
+      `${validation.label} selected: ${trimText(validation.file.name, 240)} (${sizeMb} MB). HMJ will attach this to your candidate profile before the form is submitted.`,
+      'success',
+    );
+  }
+
+  function listRegistrationDocumentsFromForm() {
+    const validation = validateRegistrationRightToWorkDocument();
+    if (!validation.required || !validation.valid || !validation.file || !validation.documentType) {
+      return [];
+    }
+    return [{
+      fieldName: registrationDocumentFieldName(validation.documentType),
+      file: validation.file,
+      documentType: validation.documentType,
+      label: validation.label,
+    }];
+  }
+
+  async function registrationDocumentsRequest(payload) {
+    const response = await fetch(registrationDocumentsEndpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+      credentials: 'same-origin',
+      keepalive: true,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.ok === false) {
+      const error = new Error(data?.message || data?.error || 'Right-to-work document sync failed.');
+      error.status = response.status;
+      error.details = data;
+      throw error;
+    }
+    return data;
+  }
+
+  async function reportRegistrationDocumentFailure(context, documentRow, error) {
+    if (!context?.candidateId || !context?.submissionId || !documentRow?.file) return;
+    try {
+      await registrationDocumentsRequest({
+        action: 'report_failure',
+        candidate_id: context.candidateId,
+        submission_id: context.submissionId,
+        file_name: trimText(documentRow.file.name, 280) || 'Document',
+        mime_type: trimText(documentRow.file.type, 120) || null,
+        size_bytes: Number(documentRow.file.size || 0) || 0,
+        field_name: documentRow.fieldName,
+        document_type: documentRow.documentType,
+        label: documentRow.label,
+        error_message: trimText(error?.message, 500) || 'Candidate registration document ingestion failed.',
+      });
+    } catch (reportError) {
+      console.warn('[candidates.portal] registration document failure reporting failed', reportError?.message || reportError);
+    }
+  }
+
+  async function persistRegistrationDocuments(context, documents) {
+    if (!context?.candidateId || !context?.submissionId || !Array.isArray(documents) || !documents.length) {
+      return [];
+    }
+
+    let client = null;
+    try {
+      ({ client } = await getCandidatePortalContext());
+    } catch (error) {
+      for (const documentRow of documents) {
+        await reportRegistrationDocumentFailure(context, documentRow, error);
+      }
+      throw error;
+    }
+
+    if (!client?.storage?.from) {
+      const error = new Error('The candidate document client is unavailable right now. Please try again.');
+      for (const documentRow of documents) {
+        await reportRegistrationDocumentFailure(context, documentRow, error);
+      }
+      throw error;
+    }
+
+    const uploaded = [];
+    for (const documentRow of documents) {
+      try {
+        const prepared = await registrationDocumentsRequest({
+          action: 'prepare_upload',
+          candidate_id: context.candidateId,
+          submission_id: context.submissionId,
+          file_name: trimText(documentRow.file?.name, 280) || 'document',
+          mime_type: trimText(documentRow.file?.type, 120) || null,
+          size_bytes: Number(documentRow.file?.size || 0) || 0,
+          field_name: documentRow.fieldName,
+          document_type: documentRow.documentType,
+          label: documentRow.label,
+        });
+
+        const uploadTarget = prepared?.upload || {};
+        const uploadBucket = trimText(uploadTarget.bucket, 120) || 'candidate-docs';
+        const uploadPath = trimText(uploadTarget.path, 500) || '';
+        const uploadToken = trimText(uploadTarget.token, 2000) || '';
+        if (!uploadPath || !uploadToken) {
+          throw new Error('A secure upload path could not be prepared for this right-to-work document.');
+        }
+
+        const upload = await client
+          .storage
+          .from(uploadBucket)
+          .uploadToSignedUrl(uploadPath, uploadToken, documentRow.file, {
+            cacheControl: '3600',
+            contentType: trimText(documentRow.file?.type, 120) || undefined,
+          });
+
+        if (upload.error) {
+          throw upload.error;
+        }
+
+        const finalized = await registrationDocumentsRequest({
+          action: 'finalize_upload',
+          candidate_id: context.candidateId,
+          submission_id: context.submissionId,
+          storage_path: uploadPath,
+          file_name: trimText(documentRow.file?.name, 280) || 'document',
+          mime_type: trimText(documentRow.file?.type, 120) || null,
+          size_bytes: Number(documentRow.file?.size || 0) || 0,
+          field_name: documentRow.fieldName,
+          document_type: documentRow.documentType,
+          label: documentRow.label,
+        });
+
+        if (!finalized?.document) {
+          throw new Error('The right-to-work document was uploaded, but the candidate profile could not be updated.');
+        }
+        uploaded.push(finalized.document);
+      } catch (error) {
+        console.warn('[candidates.portal] registration document persistence failed', error?.message || error);
+        await reportRegistrationDocumentFailure(context, documentRow, error);
+        throw error;
+      }
+    }
+
+    return uploaded;
+  }
+
   function syncPaymentGateControls() {
     // In new path-chooser flow the gate toggle elements may not exist — that's fine
     const enabled = registrationPaymentEnabled();
@@ -476,6 +746,24 @@ import {
       paymentStatus.dataset.tone = 'info';
       paymentStatus.textContent = '';
     }
+  }
+
+  async function syncRegistrationSubmissionContext(syncResult, submissionId, documents = []) {
+    if (syncResult?.candidateId) {
+      ensureHiddenField('candidate_id', syncResult.candidateId);
+    }
+    ensureHiddenField('source_submission_id', submissionId);
+
+    if (!documents.length) {
+      return [];
+    }
+    if (!syncResult?.candidateId) {
+      throw new Error('HMJ saved your onboarding details, but the right-to-work document could not be linked to a candidate profile. Please try again.');
+    }
+    return persistRegistrationDocuments({
+      candidateId: syncResult.candidateId,
+      submissionId,
+    }, documents);
   }
 
   function remainingRequestedDocuments(documents, requestedDocuments) {
@@ -2460,16 +2748,24 @@ import {
       return;
     }
 
+    const registrationDocumentValidation = validateRegistrationRightToWorkDocument();
     if (!form.checkValidity()) {
       event.preventDefault();
       state.formJustSubmitted = false;
       state.formMessage = {
         tone: 'warn',
-        text: 'Please complete the required fields highlighted below before sending your profile.',
+        text: registrationDocumentValidation.valid
+          ? 'Please complete the required fields highlighted below before sending your profile.'
+          : registrationDocumentValidation.text,
       };
       renderFormStatus();
       syncAccountControls();
-      form.reportValidity?.();
+      if (!registrationDocumentValidation.valid) {
+        registrationDocumentValidation.focusField?.reportValidity?.();
+        registrationDocumentValidation.focusField?.focus();
+      } else {
+        form.reportValidity?.();
+      }
       return;
     }
 
@@ -2489,7 +2785,9 @@ import {
       return;
     }
     const paymentDetails = buildRegistrationPaymentDetails();
+    const registrationDocuments = listRegistrationDocumentsFromForm();
     const requiresSecurePaymentSync = !!paymentDetails;
+    const requiresAwaitedCandidateSync = requiresSecurePaymentSync || registrationDocuments.length > 0;
     const payload = buildCandidateSyncPayload(formData, submissionId, paymentDetails);
 
     if (!creatingAccount) {
@@ -2500,16 +2798,19 @@ import {
         text: 'Submitting your profile to HMJ now. Please keep this page open until the confirmation appears.',
       };
       renderFormStatus();
-      if (requiresSecurePaymentSync) {
+      if (requiresAwaitedCandidateSync) {
         state.formBusy = true;
         syncAccountControls();
         try {
-          await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
+          const syncResult = await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
+          await syncRegistrationSubmissionContext(syncResult, submissionId, registrationDocuments);
         } catch (error) {
           state.formBusy = false;
           state.formMessage = {
             tone: 'error',
-            text: error?.message || 'Secure payment details could not be saved. Please try again or leave the payment section closed if you only need portal access today.',
+            text: error?.message || (registrationDocuments.length
+              ? 'HMJ could not finish onboarding because the right-to-work document was not attached to your candidate profile. Please try again.'
+              : 'Secure payment details could not be saved. Please try again or leave the payment section closed if you only need portal access today.'),
           };
           renderFormStatus();
           syncAccountControls();
@@ -2580,24 +2881,26 @@ import {
           ? 'That email already has an HMJ candidate account. We will still send your profile now.'
           : `${message} Your profile will still be sent to HMJ without blocking the live application workflow.`,
       };
-    } finally {
-      if (requiresSecurePaymentSync) {
-        try {
-          await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
-          requestNativeFormSubmit(accountState, { signedIn: accountSignedIn });
-        } catch (error) {
-          state.formBusy = false;
-          state.formMessage = {
-            tone: 'error',
-            text: error?.message || 'Secure payment details could not be saved. Please try again or untick the payment section if you only need a portal account today.',
-          };
-          renderFormStatus();
-          syncAccountControls();
-        }
+    }
+
+    try {
+      if (requiresAwaitedCandidateSync) {
+        const syncResult = await backgroundSyncCandidatePayload(payload, { awaitResponse: true });
+        await syncRegistrationSubmissionContext(syncResult, submissionId, registrationDocuments);
       } else {
         void backgroundSyncCandidatePayload(payload);
-        requestNativeFormSubmit(accountState, { signedIn: accountSignedIn });
       }
+      requestNativeFormSubmit(accountState, { signedIn: accountSignedIn });
+    } catch (error) {
+      state.formBusy = false;
+      state.formMessage = {
+        tone: 'error',
+        text: error?.message || (registrationDocuments.length
+          ? 'HMJ could not finish onboarding because the right-to-work document was not attached to your candidate profile. Please try again.'
+          : 'Secure payment details could not be saved. Please try again or untick the payment section if you only need a portal account today.'),
+      };
+      renderFormStatus();
+      syncAccountControls();
     }
   }
 
@@ -2623,10 +2926,13 @@ import {
   form.addEventListener('submit', handleCandidateFormSubmit);
   form.addEventListener('invalid', () => {
     if (state.formBusy) return;
+    const registrationDocumentValidation = validateRegistrationRightToWorkDocument();
     state.formJustSubmitted = false;
     state.formMessage = {
       tone: 'warn',
-      text: 'Please complete the required fields highlighted below before sending your profile.',
+      text: registrationDocumentValidation.valid
+        ? 'Please complete the required fields highlighted below before sending your profile.'
+        : registrationDocumentValidation.text,
     };
     renderFormStatus();
     syncAccountControls();
@@ -2657,11 +2963,18 @@ import {
       }
     });
   });
+  rightToWorkDocumentTypeField?.addEventListener('change', () => {
+    syncRegistrationDocumentStatus();
+  });
+  rightToWorkDocumentField?.addEventListener('change', () => {
+    syncRegistrationDocumentStatus();
+  });
   [passwordInput, confirmPasswordInput].forEach((input) => {
     input.addEventListener('input', () => {
       syncAccountControls();
     });
   });
+  syncRegistrationDocumentStatus();
   syncAccountControls();
 
   initialiseAuthState().then(() => {

@@ -2,6 +2,7 @@
 
 const { withAdminCors } = require('./_http.js');
 const { getContext, coded } = require('./_auth.js');
+const { escapeHtml } = require('./_html.js');
 const {
   buildEmailTemplate,
   readCandidateEmailSettings,
@@ -27,15 +28,6 @@ function response(statusCode, body) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   };
-}
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function normaliseBoolean(value) {

@@ -18,9 +18,13 @@ function stripSensitiveCandidateFields(candidate = {}) {
 
 async function loadDocumentsByCandidateId(supabase, candidateIds = []) {
   if (!candidateIds.length) return new Map();
+  // verification_status and verification_required are required so that
+  // normaliseOnboarding() can correctly compute hasRightToWork and
+  // pendingVerificationCount.  Without them every document appears as
+  // "not verified", inflating the "to verify" count and mis-reporting RTW status.
   const { data, error } = await supabase
     .from('candidate_documents')
-    .select('id,candidate_id,document_type,label,filename,original_filename,uploaded_at,created_at')
+    .select('id,candidate_id,document_type,label,filename,original_filename,uploaded_at,created_at,verification_status,verification_required')
     .in('candidate_id', candidateIds.map(String));
   if (error && !isMissingColumnError(error) && !isMissingRelationError(error)) throw error;
   const map = new Map();

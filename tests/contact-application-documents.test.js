@@ -2,8 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  _buildPublicStoragePath,
   _buildPublicApplicationStoragePath,
   _inferPublicApplicationDocumentType,
+  _resolvePublicDocumentContext,
   _isApplicationStoragePathOwnedBySubmission,
   _validateApplicationDocumentRequest,
   _buildApplicationDocumentPayload,
@@ -86,4 +88,44 @@ test('public application document endpoint builds candidate document rows with c
   assert.equal(payload.meta.source_submission_id, 'submission-1');
   assert.equal(payload.meta.application_id, 'app-1');
   assert.equal(payload.meta.job_id, 'job-42');
+});
+
+test('public candidate registration documents use a dedicated storage prefix and registration metadata', () => {
+  const context = _resolvePublicDocumentContext({ source_context: 'candidate_registration' });
+  const storagePath = _buildPublicStoragePath(
+    'cand-9',
+    'submission-rtw',
+    'Passport Scan.pdf',
+    context,
+    999,
+  );
+  const payload = _buildApplicationDocumentPayload(
+    {
+      id: 'cand-9',
+      auth_user_id: 'user-9',
+    },
+    null,
+    {
+      submission_id: 'submission-rtw',
+      source_context: 'candidate_registration',
+      field_name: 'passport_upload',
+      document_type: 'passport',
+      label: 'Passport',
+    },
+    {
+      fileName: 'Passport Scan.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 4096,
+      extension: 'pdf',
+    },
+    storagePath,
+    '2026-03-30T10:00:00.000Z',
+  );
+
+  assert.equal(storagePath, 'registrations/cand-9/submission-rtw/999-passport-scan.pdf');
+  assert.equal(payload.document_type, 'passport');
+  assert.equal(payload.meta.uploaded_via, 'candidate_registration_form');
+  assert.equal(payload.meta.source, 'candidate_registration');
+  assert.equal(payload.meta.source_submission_id, 'submission-rtw');
+  assert.equal(payload.meta.application_id, null);
 });

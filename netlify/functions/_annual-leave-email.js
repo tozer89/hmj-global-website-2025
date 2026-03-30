@@ -1,6 +1,7 @@
 'use strict';
 
 const { readCandidateEmailSettings, buildEmailTemplate } = require('./_candidate-email-settings.js');
+const { escapeHtml } = require('./_html.js');
 const { sendTransactionalEmail } = require('./_mail-delivery.js');
 const {
   BOOKING_STATUS,
@@ -17,15 +18,6 @@ const {
   roundHalf,
   trimString,
 } = require('./_annual-leave.js');
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 function currentSiteUrl() {
   return trimString(

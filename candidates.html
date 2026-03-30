@@ -872,6 +872,21 @@
                               data-seeker-placeholder="Tell us what you are looking for, preferred locations, rotations, travel limits, or anything else HMJ should know."
                               data-starter-placeholder="Any additional details HMJ should know before your start date — site inductions, special requirements, or equipment needs."></textarea>
                   </div>
+                  <div class="candidate-field" data-show-for="starter">
+                    <label for="candidateRightToWorkDocumentType">Right-to-work evidence type *</label>
+                    <select id="candidateRightToWorkDocumentType" name="right_to_work_document_type" autocomplete="off">
+                      <option value="">Select evidence type…</option>
+                      <option value="passport">Passport</option>
+                      <option value="right_to_work">Share code / settlement / right-to-work evidence</option>
+                      <option value="visa_permit">Visa / permit / BRP</option>
+                    </select>
+                  </div>
+                  <div class="candidate-field candidate-field--full" data-show-for="starter">
+                    <label for="candidateRightToWorkDocument">Upload passport or right-to-work evidence *</label>
+                    <input id="candidateRightToWorkDocument" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp">
+                    <p class="small">Accepted: PDF, Word, PNG, JPG, or WEBP up to 15 MB. Upload one clear document here now, then add extra evidence later from your dashboard if HMJ asks for it.</p>
+                    <p id="candidateRightToWorkDocumentStatus" class="small" aria-live="polite">Required for onboarding: upload one passport, visa, or right-to-work evidence file before submitting.</p>
+                  </div>
                   <div class="candidate-field candidate-field--full" data-show-for="seeker">
                     <label for="cv">Attach CV (PDF/DOC/DOCX) *</label>
                     <input id="cv" name="attachment" type="file" accept=".pdf,.doc,.docx">
@@ -1061,7 +1076,7 @@
   </script>
   <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=14">
   <script defer src="assets/js/candidates.enhanced.js?v=5"></script>
-  <script type="module" src="assets/js/candidates.portal.js?v=14"></script>
+  <script type="module" src="assets/js/candidates.portal.js?v=15"></script>
   <script defer src="/js/hmj-cookie-consent.js"></script>
 
   <!-- ===== Path Chooser Logic ===== -->

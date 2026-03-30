@@ -8,18 +8,17 @@ function read(filePath) {
   return fs.readFileSync(path.join(process.cwd(), filePath), 'utf8');
 }
 
-test('candidate registration page exposes an optional secure payment gate with non-Netlify fields', () => {
+test('candidate registration page keeps starter payment fields out of the native Netlify payload', () => {
   const html = read('candidates.html');
   const document = new JSDOM(html).window.document;
 
-  const toggle = document.querySelector('#candidatePaymentOptIn');
-  const panel = document.querySelector('#candidatePaymentPanel');
-  const sensitiveFields = Array.from(document.querySelectorAll('#candidatePaymentPanel [data-payment-sensitive]'));
-  const namedPaymentFields = Array.from(document.querySelectorAll('#candidatePaymentPanel [name]'));
+  const payrollHeading = Array.from(document.querySelectorAll('legend')).find((node) => /Payroll setup/i.test(node.textContent || ''));
+  const paymentInputs = Array.from(document.querySelectorAll('[data-payment-input]'));
+  const sensitiveFields = Array.from(document.querySelectorAll('[data-payment-sensitive]'));
+  const namedPaymentFields = paymentInputs.filter((field) => field.hasAttribute('name'));
 
-  assert.ok(toggle);
-  assert.ok(panel);
-  assert.equal(toggle.getAttribute('aria-controls'), 'candidatePaymentPanel');
+  assert.ok(payrollHeading);
+  assert.ok(paymentInputs.length >= 8);
   assert.equal(namedPaymentFields.length, 0);
   assert.ok(sensitiveFields.length >= 4);
 });

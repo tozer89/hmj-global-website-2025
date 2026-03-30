@@ -1,5 +1,7 @@
 'use strict';
 
+const { escapeHtml } = require('./_html.js');
+
 const TEAM_TASKS_SETTINGS_KEY = 'team_tasks_settings';
 const HMJ_EMAIL_BRAND = {
   eyebrow: 'HMJ Team Tasks',
@@ -316,15 +318,6 @@ function formatFileSize(bytes) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)} KB`;
   return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)} MB`;
-}
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function buildTaskUrl(task = {}, siteUrl = '') {
