@@ -10,27 +10,47 @@ const { syncPortalAuthUsersToCandidates } = require('./_candidate-account-admin.
 // Small helper to coalesce falsy/empty strings to null
 const nz = (s) => (s === undefined || s === null || String(s).trim() === '' ? null : s);
 
+// Sanitize a free-text search term before embedding it in a PostgREST .or()
+// filter string.  PostgREST splits .or() expressions on commas and uses
+// parentheses for grouping — any of these characters in a user-supplied value
+// would allow injection of extra filter clauses.  We strip them and cap length.
+function sanitizeFilterTerm(value, maxLen = 200) {
+  return String(value == null ? '' : value)
+    .slice(0, maxLen)
+    // Remove chars with structural meaning in PostgREST filter syntax
+    .replace(/[(),]/g, '');
+}
+
 // Build a flexible filter for Supabase .or()
 function buildOrFilter({ q, emailHas, job }) {
   const parts = [];
   if (q) {
-    // try matching across common text fields
-    const like = `%${q}%`;
-    parts.push(`full_name.ilike.${like}`);
-    parts.push(`first_name.ilike.${like}`);
-    parts.push(`last_name.ilike.${like}`);
-    parts.push(`email.ilike.${like}`);
-    parts.push(`phone.ilike.${like}`);
-    parts.push(`job_title.ilike.${like}`);
-    parts.push(`headline_role.ilike.${like}`);
-    parts.push(`location.ilike.${like}`);
-    parts.push(`sector_focus.ilike.${like}`);
-    parts.push(`address.ilike.${like}`);
+    const safeQ = sanitizeFilterTerm(q);
+    if (safeQ) {
+      // try matching across common text fields
+      const like = `%${safeQ}%`;
+      parts.push(`full_name.ilike.${like}`);
+      parts.push(`first_name.ilike.${like}`);
+      parts.push(`last_name.ilike.${like}`);
+      parts.push(`email.ilike.${like}`);
+      parts.push(`phone.ilike.${like}`);
+      parts.push(`job_title.ilike.${like}`);
+      parts.push(`headline_role.ilike.${like}`);
+      parts.push(`location.ilike.${like}`);
+      parts.push(`sector_focus.ilike.${like}`);
+      parts.push(`address.ilike.${like}`);
+    }
   }
-  if (emailHas) parts.push(`email.ilike.%${emailHas}%`);
+  if (emailHas) {
+    const safeEmail = sanitizeFilterTerm(emailHas);
+    if (safeEmail) parts.push(`email.ilike.%${safeEmail}%`);
+  }
   if (job) {
-    parts.push(`job_title.ilike.%${job}%`);
-    parts.push(`headline_role.ilike.%${job}%`);
+    const safeJob = sanitizeFilterTerm(job);
+    if (safeJob) {
+      parts.push(`job_title.ilike.%${safeJob}%`);
+      parts.push(`headline_role.ilike.%${safeJob}%`);
+    }
   }
   return parts.join(',');
 }
@@ -53,7 +73,7 @@ const baseHandler = async (event, context) => {
     page = 1,
     size = 25,
     sort = { key: 'id', dir: 'desc' },
-    debug = true
+    debug = false   // debug MUST default false — true leaks admin email/roles in every response
   } = payload;
 
   const pageNum = Math.max(1, Number(page) || 1);

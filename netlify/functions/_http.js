@@ -1,6 +1,31 @@
 // netlify/functions/_http.js
 // Shared HTTP helpers for admin Netlify Functions (CORS, tracing, auth hints)
 
+// ---------------------------------------------------------------------------
+// CORS allowlist — only origins on this list receive credentialed CORS headers.
+// Reflecting arbitrary Origin values with Access-Control-Allow-Credentials:true
+// would allow any website to make credentialed requests to admin endpoints.
+//
+// To add a new allowed origin (e.g. a staging branch), append it here.
+// process.env.URL is injected by Netlify and equals the current deploy URL,
+// covering branch-deploy and deploy-preview contexts automatically.
+// ---------------------------------------------------------------------------
+function buildAllowedOrigins() {
+  const staticOrigins = new Set([
+    'https://hmj-global.com',
+    'https://www.hmj-global.com',
+    'https://hmjg.netlify.app',
+  ]);
+  // Include the Netlify-injected deploy URL so branch/preview deploys work.
+  const deployUrl = (process.env.URL || process.env.DEPLOY_URL || '').trim().replace(/\/$/, '');
+  if (deployUrl && /^https?:\/\//i.test(deployUrl)) {
+    staticOrigins.add(deployUrl.toLowerCase());
+  }
+  return staticOrigins;
+}
+
+const ALLOWED_ORIGINS = buildAllowedOrigins();
+
 function header(event, name) {
   if (!event || !event.headers) return '';
   const direct = event.headers[name];
@@ -13,14 +38,24 @@ function header(event, name) {
 }
 
 function buildCors(event) {
-  const origin = header(event, 'origin');
-  return {
-    'Access-Control-Allow-Origin': origin || '*',
+  const requestOrigin = (header(event, 'origin') || '').trim().toLowerCase().replace(/\/$/, '');
+  // Only grant credentialed CORS to origins on the allowlist.
+  // Unrecognised origins receive no ACAO header, which causes the browser to
+  // block the response — correct and intentional behaviour.
+  const allowedOrigin = requestOrigin && ALLOWED_ORIGINS.has(requestOrigin)
+    ? requestOrigin
+    : null;
+
+  const headers = {
     'Vary': 'Origin',
-    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-trace',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   };
+  if (allowedOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+  return headers;
 }
 
 function parseCookies(cookieHeader) {

@@ -1,3 +1,9 @@
+// DEAD CODE — NOT LOADED BY ANY PAGE.
+// Verified: no <script> tag or import in any .html file references this file.
+// Canonical file is admin/timesheets.js.
+// Note: this copy also renders ${row.contractor} / ${row.client} into innerHTML
+// without escapeHtml — do not load this file without fixing those renders first.
+// Safe to delete in a future cleanup sprint once confirmed no external references exist.
 (function (global) {
   const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   const STORAGE_KEY = 'hmj_admin_timesheets_filters_v2';

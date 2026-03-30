@@ -5,6 +5,32 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# ---------------------------------------------------------------------------
+# Security headers — applied globally then tightened for /admin/*.
+#
+# CSP is intentionally omitted from this pass.  A CSP that breaks inline
+# scripts would take down the admin UI; a CSP audit (identifying every
+# inline script / eval / CDN origin) is a separate sprint.
+# Placeholder is documented here so it is not forgotten.
+# ---------------------------------------------------------------------------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options    = "nosniff"
+    X-Frame-Options           = "DENY"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Permissions-Policy        = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Content-Type-Options    = "nosniff"
+    X-Frame-Options           = "DENY"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Permissions-Policy        = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Cache-Control             = "no-store, no-cache, must-revalidate"
+    # TODO (next sprint): add Content-Security-Policy after inline-script audit
+
 [functions]
   node_bundler = "esbuild"
   included_files = ["data/*.json", "netlify/functions/_data/*.json"]
@@ -247,6 +273,88 @@
 [[redirects]]
   from = "/admin/timesheets.html"
   to = "/admin/?next=timesheets.html"
+  status = 302
+
+# ---------------------------------------------------------------------------
+# Admin pages that were previously missing role-condition guards.
+# Pattern is identical to all guards above: allow with role, redirect without.
+# Intentionally open pages (login gate, password flows) are NOT listed here.
+# ---------------------------------------------------------------------------
+[[redirects]]
+  from = "/admin/crm.html"
+  to = "/admin/crm.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/crm.html"
+  to = "/admin/?next=crm.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/send-intro-email.html"
+  to = "/admin/send-intro-email.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/send-intro-email.html"
+  to = "/admin/?next=send-intro-email.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/deal-profit-calc.html"
+  to = "/admin/deal-profit-calc.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/deal-profit-calc.html"
+  to = "/admin/?next=deal-profit-calc.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/credit-limit-forecaster.html"
+  to = "/admin/credit-limit-forecaster.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/credit-limit-forecaster.html"
+  to = "/admin/?next=credit-limit-forecaster.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/settings.html"
+  to = "/admin/settings.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/settings.html"
+  to = "/admin/?next=settings.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/job-applications.html"
+  to = "/admin/job-applications.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/job-applications.html"
+  to = "/admin/?next=job-applications.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/complete-account.html"
+  to = "/admin/complete-account.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/complete-account.html"
+  to = "/admin/?next=complete-account.html"
   status = 302
 
 [[plugins]]

@@ -191,8 +191,12 @@ exports.getContext = async (event, context, opts = {}) => {
         if (error) {
           const msg = error.message || '';
           if (/relation .+ does not exist/i.test(msg)) {
-            console.warn('[auth] admin_users table missing — allowing Identity role check only');
-            return true;
+            // Table doesn't exist — cannot verify admin via DB.
+            // Return false so the caller falls through to the Identity-role check.
+            // Returning true here would grant admin to any authenticated user when
+            // the table is missing, which is a dangerous permissive default.
+            console.warn('[auth] admin_users table missing — falling back to Identity role check only');
+            return false;
           }
           console.warn('[auth] admin_users lookup failed via %s (%s)', column, msg);
           continue;

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep \"\\\\.html$\")",
+      "Bash(node -e \":*)"
+    ]
+  }
+}

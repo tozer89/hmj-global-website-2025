@@ -1,4 +1,9 @@
 // netlify/functions/admin-candidates-lists-2.js
+// DEPRECATED — this endpoint is NOT called by the live UI (admin-candidates-list.js
+// without the trailing 's' is the canonical live endpoint).
+// Kept deployed to avoid 404s from any cached/external references; all auth bugs
+// have been patched in this copy.  Consolidation planned for the next sprint.
+//
 // Lists candidates with strong debugging so we can see why it's empty.
 
 const { withAdminCors } = require('./_http.js');
@@ -7,21 +12,38 @@ const { getContext, coded } = require('./_auth.js');
 // Small helper to coalesce falsy/empty strings to null
 const nz = (s) => (s === undefined || s === null || String(s).trim() === '' ? null : s);
 
+// Sanitize a free-text search term before embedding in a PostgREST .or() filter string.
+// PostgREST splits .or() on commas and uses parentheses for grouping — stripping these
+// prevents injection of additional filter clauses.
+function sanitizeFilterTerm(value, maxLen = 200) {
+  return String(value == null ? '' : value)
+    .slice(0, maxLen)
+    .replace(/[(),]/g, '');
+}
+
 // Build a flexible filter for Supabase .or()
 function buildOrFilter({ q, emailHas, job }) {
   const parts = [];
   if (q) {
-    // try matching across common text fields
-    const like = `%${q}%`;
-    parts.push(`first_name.ilike.${like}`);
-    parts.push(`last_name.ilike.${like}`);
-    parts.push(`email.ilike.${like}`);
-    parts.push(`phone.ilike.${like}`);
-    parts.push(`job_title.ilike.${like}`);
-    parts.push(`address.ilike.${like}`);
+    const safeQ = sanitizeFilterTerm(q);
+    if (safeQ) {
+      const like = `%${safeQ}%`;
+      parts.push(`first_name.ilike.${like}`);
+      parts.push(`last_name.ilike.${like}`);
+      parts.push(`email.ilike.${like}`);
+      parts.push(`phone.ilike.${like}`);
+      parts.push(`job_title.ilike.${like}`);
+      parts.push(`address.ilike.${like}`);
+    }
   }
-  if (emailHas) parts.push(`email.ilike.%${emailHas}%`);
-  if (job) parts.push(`job_title.ilike.%${job}%`);
+  if (emailHas) {
+    const safeEmail = sanitizeFilterTerm(emailHas);
+    if (safeEmail) parts.push(`email.ilike.%${safeEmail}%`);
+  }
+  if (job) {
+    const safeJob = sanitizeFilterTerm(job);
+    if (safeJob) parts.push(`job_title.ilike.%${safeJob}%`);
+  }
   return parts.join(',');
 }
 
@@ -43,13 +65,13 @@ const baseHandler = async (event, context) => {
     page = 1,
     size = 25,
     sort = { key: 'id', dir: 'desc' },
-    debug = true
+    debug = false   // debug MUST default false — true leaks admin email/roles in every response
   } = payload;
 
   let ctx;
   try {
-    // We always require admin for this endpoint
-    ctx = await getContext(event, { requireAdmin: true });
+    // requireAdmin passed as third arg (opts) — context must be the second arg
+    ctx = await getContext(event, context, { requireAdmin: true });
   } catch (e) {
     const code = e.code || 500;
     return {
