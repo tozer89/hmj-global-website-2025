@@ -92,6 +92,7 @@ test('public application document endpoint builds candidate document rows with c
 
 test('public candidate registration documents use a dedicated storage prefix and registration metadata', () => {
   const context = _resolvePublicDocumentContext({ source_context: 'candidate_registration' });
+  assert.equal(context.allowedDocumentTypes.has('cv'), true);
   const storagePath = _buildPublicStoragePath(
     'cand-9',
     'submission-rtw',

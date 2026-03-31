@@ -550,6 +550,25 @@
       </div>
 
       <!-- Candidates table card -->
+      <section class="card" id="onboarding-module" hidden style="margin-bottom:16px">
+        <div class="toolbar" style="border-bottom:1px solid var(--stroke)">
+          <div class="toolbar-main">
+            <div>
+              <div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Onboarding</div>
+              <div style="font-size:20px;font-weight:800;color:var(--ink)">New starter operations</div>
+              <div class="muted" id="onboarding-module-summary" style="margin-top:4px">Track onboarding status, missing information, verification, and outreach from one workspace.</div>
+            </div>
+            <div class="toolbar-actions">
+              <button class="btn ghost small" id="onboarding-bulk-intro" type="button">Send onboarding intro</button>
+              <button class="btn ghost small" id="onboarding-bulk-reminder" type="button">Send reminder</button>
+              <button class="btn ghost small" id="onboarding-bulk-docs" type="button">Request documents</button>
+              <button class="btn ghost small" id="onboarding-bulk-verified" type="button">Send verification complete</button>
+            </div>
+          </div>
+        </div>
+        <div id="onboarding-status-strip" style="display:flex;flex-wrap:wrap;gap:10px;padding:16px"></div>
+      </section>
+
       <section class="card table-card">
         <div class="toolbar">
           <div class="toolbar-main">
@@ -760,6 +779,7 @@
       </div>
     </div>
     <div class="sec" id="dw-profile"></div>
+    <div class="sec" id="dw-onboarding"></div>
     <div class="sec" id="dw-payment"></div>
     <div class="sec" id="dw-assignments"></div>
     <div class="sec" id="dw-docs"></div>
@@ -1392,6 +1412,6 @@
   </script>
 
   <script defer src="/js/candidate-active-assignments-core.js?v=2"></script>
-  <script defer src="/admin/candidates.js?v=23"></script>
+  <script defer src="/admin/candidates.js?v=24"></script>
 </body>
 </html>

@@ -13,7 +13,7 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /identity-loader\.js\?v=3/);
   assert.match(html, /\/admin\/common\.js\?v=36/);
   assert.match(html, /\/js\/candidate-active-assignments-core\.js\?v=2/);
-  assert.match(html, /\/admin\/candidates\.js\?v=23/);
+  assert.match(html, /\/admin\/candidates\.js\?v=24/);
   assert.match(html, /id="bulk-intro-email"/);
   assert.match(html, /id="bulk-send-email"/);
   assert.match(html, /id="bulk-copy-emails"/);
@@ -38,6 +38,14 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /id="bulk-email-body"/);
   assert.match(html, /id="bulk-email-primary-action"/);
   assert.match(html, /id="bulk-email-preview-shell"/);
+  assert.match(html, /id="onboarding-module"/);
+  assert.match(html, /id="onboarding-module-summary"/);
+  assert.match(html, /id="onboarding-status-strip"/);
+  assert.match(html, /id="onboarding-bulk-intro"/);
+  assert.match(html, /id="onboarding-bulk-reminder"/);
+  assert.match(html, /id="onboarding-bulk-docs"/);
+  assert.match(html, /id="onboarding-bulk-verified"/);
+  assert.match(html, /id="dw-onboarding"/);
   assert.match(html, /id="dw-payment"/);
   assert.match(html, /id="dw-assignments"/);
   assert.match(html, /id="candidate-source-tabs"/);
@@ -48,9 +56,9 @@ test('candidates admin page uses the current shared admin bootstrap assets', () 
   assert.match(html, /data-source-tab="timesheet-portal"/);
   assert.match(html, /data-source-tab="combined"/);
   assert.match(html, />\s*Website only\s*<span class="source-tab__count" data-source-count="website">/);
-  assert.match(html, />\s*TSP active assignments\s*<span class="source-tab__count" data-source-count="timesheet-portal-active">/);
-  assert.match(html, />\s*Timesheet Portal only\s*<span class="source-tab__count" data-source-count="timesheet-portal">/);
-  assert.match(html, />\s*Combined \/ all\s*<span class="source-tab__count" data-source-count="combined">/);
+  assert.match(html, />\s*TSP active\s*<span class="source-tab__count" data-source-count="timesheet-portal-active">/);
+  assert.match(html, />\s*TSP only\s*<span class="source-tab__count" data-source-count="timesheet-portal">/);
+  assert.match(html, />\s*Combined\s*<span class="source-tab__count" data-source-count="combined">/);
 });
 
 test('candidates debug badge distinguishes cookie-backed admin auth from a missing session', () => {
@@ -137,13 +145,23 @@ test('candidate admin UI exposes onboarding reminder controls and uses the remin
   assert.match(source, /admin-candidate-onboarding-reminders/);
   assert.match(source, /data-onboarding-action="send-rtw-reminder"/);
   assert.match(source, /data-onboarding-action="send-doc-request"/);
+  assert.match(source, /data-onboarding-action="send-reminder-general"/);
+  assert.match(source, /data-onboarding-action="send-verification-complete"/);
+  assert.match(source, /data-onboarding-action="mark-verified"/);
   assert.match(source, /function selectMissingRtw/);
   assert.match(source, /function openDocumentRequestDialog/);
   assert.match(source, /function sendOnboardingRequest/);
+  assert.match(source, /function renderOnboardingModule/);
+  assert.match(source, /function renderOnboarding\(/);
+  assert.match(source, /function bindOnboardingActions\(/);
+  assert.match(source, /function runOnboardingModuleAction\(/);
   assert.match(source, /function refreshOutreachReadiness/);
   assert.match(source, /function copyCandidateUploadLink/);
   assert.match(source, /function showOutreachConfigurationError/);
   assert.match(source, /data-onboarding-action="copy-upload-link"/);
+  assert.match(source, /elements\.onboardingModule = qs\('#onboarding-module'\);/);
+  assert.match(source, /elements\.onboardingBulkIntro = qs\('#onboarding-bulk-intro'\);/);
+  assert.match(source, /elements\.dwOnboarding = qs\('#dw-onboarding'\);/);
   assert.match(source, /data-account-action="copy_access_link"/);
   assert.match(source, /recently_sent/);
 });

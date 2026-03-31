@@ -26,7 +26,7 @@ function buildCandidatesMap(rows = []) {
 async function loadCandidates(supabase, body = {}) {
   let query = supabase
     .from('candidates')
-    .select('id,ref,payroll_ref,full_name,first_name,last_name,email,status,auth_user_id,right_to_work_status,updated_at,created_at')
+    .select('id,ref,payroll_ref,full_name,first_name,last_name,email,status,auth_user_id,right_to_work_status,right_to_work_evidence_type,onboarding_mode,onboarding_status,updated_at,created_at')
     .order('updated_at', { ascending: false })
     .limit(500);
 
@@ -77,7 +77,12 @@ async function loadRecentReminderMap(supabase, candidateIds = []) {
     .from('candidate_activity')
     .select('candidate_id,activity_type,created_at,meta')
     .in('candidate_id', candidateIds.map(String))
-    .in('activity_type', ['rtw_reminder_sent', 'candidate_document_request_sent'])
+    .in('activity_type', [
+      'rtw_reminder_sent',
+      'candidate_document_request_sent',
+      'onboarding_reminder_sent',
+      'onboarding_verification_complete_sent',
+    ])
     .gte('created_at', since);
   if (error && !isMissingRelationError(error)) throw error;
   const map = new Map();
@@ -107,7 +112,64 @@ function documentListText(documentTypes = []) {
   return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
 }
 
+function requestTypeMeta(requestType, documentTypes = []) {
+  const type = trimString(requestType, 40).toLowerCase() || 'rtw';
+  if (type === 'verification_complete') {
+    return {
+      requestType: 'verification_complete',
+      heading: 'Your HMJ verification is complete',
+      subject: 'HMJ update: your onboarding verification is complete',
+      actionLabel: 'Open secure HMJ candidate access',
+      activityType: 'onboarding_verification_complete_sent',
+      description: 'Candidate verification complete email sent from admin candidates.',
+      focusTab: 'profile',
+      focusField: '',
+      successMessage: 'Accepted verification complete email',
+    };
+  }
+  if (type === 'general') {
+    return {
+      requestType: 'general',
+      heading: 'Complete your HMJ onboarding',
+      subject: 'Reminder: complete your HMJ onboarding',
+      actionLabel: 'Open secure HMJ onboarding',
+      activityType: 'onboarding_reminder_sent',
+      description: 'General onboarding reminder email sent from admin candidates.',
+      focusTab: 'documents',
+      focusField: 'documents',
+      successMessage: 'Accepted onboarding reminder email',
+    };
+  }
+  if (type === 'documents') {
+    return {
+      requestType: 'documents',
+      heading: 'Complete your HMJ onboarding documents',
+      subject: 'Action required: upload your HMJ onboarding documents',
+      actionLabel: 'Open secure HMJ uploads',
+      activityType: 'candidate_document_request_sent',
+      description: 'Candidate document request email sent from admin candidates.',
+      focusTab: 'documents',
+      focusField: 'documents',
+      documentTypes,
+      successMessage: 'Accepted onboarding document request email',
+    };
+  }
+  return {
+    requestType: 'rtw',
+    heading: 'Complete your right-to-work documents',
+    subject: 'Action required: upload your HMJ right-to-work documents',
+    actionLabel: 'Open secure right-to-work upload',
+    activityType: 'rtw_reminder_sent',
+    description: 'Right-to-work reminder email sent from admin candidates.',
+    focusTab: 'documents',
+    focusField: 'right_to_work',
+    documentTypes: ['right_to_work'],
+    successMessage: 'Accepted right-to-work reminder email',
+  };
+}
+
 function buildReminderContent(settings, candidateName, actionUrl, documentTypes = ['right_to_work'], options = {}) {
+  const meta = requestTypeMeta(options.requestType, documentTypes);
   const labelsText = documentListText(documentTypes);
   const safeCandidateName = candidateName
     .replace(/&/g, '&amp;')
@@ -121,35 +183,43 @@ function buildReminderContent(settings, candidateName, actionUrl, documentTypes 
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-  const isRightToWorkOnly = documentTypes.length === 1 && documentTypes[0] === 'right_to_work';
-  const heading = isRightToWorkOnly ? 'Complete your right-to-work documents' : 'Complete your HMJ onboarding documents';
+  const isRightToWorkOnly = meta.requestType === 'rtw';
   const secureAccessCopy = options.linkType === 'invite'
     ? 'Use the secure HMJ access button below to finish opening your candidate account and go straight to the correct upload area.'
     : 'Use the secure HMJ access button below to go straight to the correct upload area in your candidate account.';
-  const intro = isRightToWorkOnly
+  const intro = meta.requestType === 'verification_complete'
+    ? 'HMJ has completed the latest onboarding verification step. Use the secure HMJ access button below if you want to review your candidate account or upload any additional documents.'
+    : meta.requestType === 'general'
+    ? `HMJ Global still needs a few onboarding details to keep your mobilisation moving. ${secureAccessCopy}`
+    : isRightToWorkOnly
     ? `HMJ Global needs your passport or right-to-work evidence to keep your onboarding moving. ${secureAccessCopy}`
     : `HMJ Global needs your ${labelsText.toLowerCase()} to complete onboarding. ${secureAccessCopy}`;
   const html = buildEmailTemplate(settings, {
-    heading,
+    heading: meta.heading,
     intro,
-    actionLabel: isRightToWorkOnly ? 'Open secure right-to-work upload' : 'Open secure HMJ uploads',
+    actionLabel: meta.actionLabel,
     actionUrl,
     bodyHtml: `
       <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Hi ${safeCandidateName},</p>
-      <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">HMJ uses this area for onboarding documents such as passports, certificates, references, visas, and share-code evidence.</p>
-      <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">If you have not completed your online setup yet, the secure link above will guide you through access first and then open the correct HMJ upload area for this request.</p>
-      ${isRightToWorkOnly ? '' : `<p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Requested documents: <strong>${safeLabelsText}</strong>.</p>`}
-      <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Once you are inside your candidate account, upload the requested documents and HMJ will route them into the correct verification section automatically.</p>
-      <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">If you have already uploaded the right file, you can ignore this reminder.</p>
+      ${meta.requestType === 'verification_complete'
+        ? `
+          <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Your latest onboarding documents have been reviewed by HMJ.</p>
+          <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">If we need anything else, we will contact you directly. Otherwise you can use the secure link above to review your account and keep your details current.</p>
+        `
+        : `
+          <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">HMJ uses this area for onboarding documents such as passports, certificates, references, visas, and share-code evidence.</p>
+          <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">If you have not completed your online setup yet, the secure link above will guide you through access first and then open the correct HMJ upload area for this request.</p>
+          ${(meta.requestType === 'documents' && !isRightToWorkOnly) ? `<p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Requested documents: <strong>${safeLabelsText}</strong>.</p>` : ''}
+          <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Once you are inside your candidate account, upload the requested documents and HMJ will route them into the correct verification section automatically.</p>
+          <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">If you have already uploaded the right file, you can ignore this reminder.</p>
+        `}
     `,
     fallbackLinks: [
-      { label: isRightToWorkOnly ? 'Open secure right-to-work upload' : 'Open secure HMJ uploads', url: actionUrl },
+      { label: meta.actionLabel, url: actionUrl },
     ],
   });
   return {
-    subject: isRightToWorkOnly
-      ? 'Action required: upload your HMJ right-to-work documents'
-      : 'Action required: upload your HMJ onboarding documents',
+    subject: meta.subject,
     html,
   };
 }
@@ -175,9 +245,13 @@ async function recordReminderActivity(supabase, candidateId, actorEmail, activit
   await supabase.from('candidate_activity').insert({
     candidate_id: String(candidateId),
     activity_type: activityType,
-    description: activityType === 'rtw_reminder_sent'
-      ? 'Right-to-work reminder email sent from admin candidates.'
-      : 'Candidate document request email sent from admin candidates.',
+    description: requestTypeMeta(activityType === 'rtw_reminder_sent'
+      ? 'rtw'
+      : activityType === 'candidate_document_request_sent'
+      ? 'documents'
+      : activityType === 'onboarding_verification_complete_sent'
+      ? 'verification_complete'
+      : 'general').description,
     actor_role: 'admin',
     actor_identifier: actorEmail || null,
     meta: {
@@ -198,6 +272,7 @@ const baseHandler = async (event, context) => {
   const requestedDocuments = Array.isArray(body.documentTypes)
     ? body.documentTypes.map((value) => trimString(value, 80).toLowerCase()).filter(Boolean)
     : [];
+  const requestMeta = requestTypeMeta(requestType, requestedDocuments);
 
   const candidates = await loadCandidates(supabase, body);
   const candidateIds = candidates.map((row) => String(row.id));
@@ -226,7 +301,11 @@ const baseHandler = async (event, context) => {
       if (String(candidate.status || '').toLowerCase() === 'archived') return false;
       if (!onboarding) return false;
       if (requestType === 'rtw') return missingDocuments.includes('right_to_work');
-      return missingDocuments.length > 0;
+      if (requestType === 'documents') return missingDocuments.length > 0;
+      if (requestType === 'verification_complete') {
+        return onboarding.hasRightToWork === true && onboarding.hasPaymentDetails === true;
+      }
+      return onboarding.onboardingMode === true && (onboarding.onboardingComplete !== true || (onboarding.missing || []).length > 0);
     });
 
   if (action === 'preview') {
@@ -265,11 +344,15 @@ const baseHandler = async (event, context) => {
   const recentReminderMap = await loadRecentReminderMap(supabase, eligible.map(({ candidate }) => candidate.id));
   const sent = [];
   const skipped = [];
-  const actionDocuments = requestType === 'rtw' ? ['right_to_work'] : requestedDocuments;
-  const activityType = requestType === 'rtw' ? 'rtw_reminder_sent' : 'candidate_document_request_sent';
+  const actionDocuments = requestMeta.requestType === 'rtw'
+    ? ['right_to_work']
+    : requestMeta.requestType === 'documents'
+    ? requestedDocuments
+    : [];
+  const activityType = requestMeta.activityType;
   const redirectUrl = buildCandidatePortalDeepLink(event, {
-    tab: 'documents',
-    focus: requestType === 'rtw' ? 'right_to_work' : 'documents',
+    tab: requestMeta.focusTab,
+    focus: requestMeta.focusField,
     onboarding: true,
     documents: actionDocuments,
   });
@@ -292,6 +375,7 @@ const baseHandler = async (event, context) => {
     const actionUrl = accessLink?.action_link || redirectUrl;
     const content = buildReminderContent(settings, displayCandidateName(candidate), actionUrl, actionDocuments, {
       linkType: accessLink?.link_type || null,
+      requestType: requestMeta.requestType,
     });
 
     try {
@@ -325,11 +409,11 @@ const baseHandler = async (event, context) => {
       link_type: accessLink?.link_type || null,
       created_account: !!accessLink?.created_account,
     });
-    sent.push({
-      id: candidate.id,
-      email: lowerEmail(candidate.email),
-      link_type: accessLink?.link_type || null,
-    });
+      sent.push({
+        id: candidate.id,
+        email: lowerEmail(candidate.email),
+        link_type: accessLink?.link_type || null,
+      });
   }
 
   return {
@@ -344,14 +428,28 @@ const baseHandler = async (event, context) => {
       documentTypes: actionDocuments,
       actionUrl: redirectUrl,
       message: sent.length
-        ? (requestType === 'rtw'
+        ? (requestMeta.requestType === 'rtw'
           ? `Accepted ${sent.length} right-to-work reminder email${sent.length === 1 ? '' : 's'} for delivery.`
-          : `Accepted ${sent.length} onboarding document request email${sent.length === 1 ? '' : 's'} for delivery.`)
+          : requestMeta.requestType === 'documents'
+          ? `Accepted ${sent.length} onboarding document request email${sent.length === 1 ? '' : 's'} for delivery.`
+          : requestMeta.requestType === 'verification_complete'
+          ? `Accepted ${sent.length} verification complete email${sent.length === 1 ? '' : 's'} for delivery.`
+          : `Accepted ${sent.length} onboarding reminder email${sent.length === 1 ? '' : 's'} for delivery.`)
         : skipped.length
-          ? `No ${requestType === 'rtw' ? 'right-to-work reminders' : 'document requests'} were sent. ${skipped.length} candidate${skipped.length === 1 ? ' was' : 's were'} skipped${skipped.some((entry) => entry?.reason === 'recently_sent') ? ' because HMJ already emailed them in the last 24 hours' : ''}.`
-        : (requestType === 'rtw'
+          ? `No ${requestMeta.requestType === 'rtw'
+            ? 'right-to-work reminders'
+            : requestMeta.requestType === 'documents'
+            ? 'document requests'
+            : requestMeta.requestType === 'verification_complete'
+            ? 'verification complete emails'
+            : 'onboarding reminders'} were sent. ${skipped.length} candidate${skipped.length === 1 ? ' was' : 's were'} skipped${skipped.some((entry) => entry?.reason === 'recently_sent') ? ' because HMJ already emailed them in the last 24 hours' : ''}.`
+        : (requestMeta.requestType === 'rtw'
           ? 'No right-to-work reminders were sent.'
-          : 'No onboarding document requests were sent.'),
+          : requestMeta.requestType === 'documents'
+          ? 'No onboarding document requests were sent.'
+          : requestMeta.requestType === 'verification_complete'
+          ? 'No verification complete emails were sent.'
+          : 'No onboarding reminders were sent.'),
     }),
   };
 };

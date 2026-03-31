@@ -7,6 +7,10 @@ const {
   summarisePortalAuthUser,
   syncPortalAuthUserFromCandidate,
 } = require('./_candidate-account-admin.js');
+const {
+  normaliseOnboardingStatus,
+  normaliseRightToWorkEvidenceType,
+} = require('./_candidate-portal.js');
 const { stripSensitiveCandidateFields } = require('./_candidate-onboarding-admin.js');
 
 function splitFullName(value) {
@@ -26,6 +30,29 @@ function hasOwn(source, key) {
 
 function shouldRequireNameValidation(body) {
   return !body?.id || hasOwn(body, 'first_name') || hasOwn(body, 'last_name') || hasOwn(body, 'full_name');
+}
+
+function parseTextArray(value, maxLength = 160) {
+  const items = Array.isArray(value)
+    ? value
+    : String(value == null ? '' : value).split(/[\n,]/);
+  const seen = new Set();
+  const out = [];
+  items.forEach((item) => {
+    const entry = String(item == null ? '' : item).trim().slice(0, maxLength);
+    if (!entry) return;
+    const key = entry.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(entry);
+  });
+  return out;
+}
+
+function parsePositiveInteger(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 const baseHandler = async (event, context) => {
@@ -103,30 +130,63 @@ const baseHandler = async (event, context) => {
     assignTrim('postcode');
     if (hasOwn(body, 'country')) rec.country = trim(body.country) || 'United Kingdom';
     if (hasOwn(body, 'address_json')) rec.address_json = parseJson(body.address_json);
-    assignTrim('bank_name');
-    assignTrim('bank_sort');
-    assignTrim('bank_sort_code');
-    assignTrim('bank_account');
-    assignTrim('bank_iban');
-    assignTrim('bank_swift');
+    assignTrim('location');
+    assignTrim('nationality');
     assignTrim('emergency_name');
     assignTrim('emergency_phone');
     if (hasOwn(body, 'onboarding_mode')) rec.onboarding_mode = toBool(body.onboarding_mode);
+    if (hasOwn(body, 'onboarding_status')) rec.onboarding_status = normaliseOnboardingStatus(body.onboarding_status);
+    if (hasOwn(body, 'onboarding_status_updated_at')) rec.onboarding_status_updated_at = trim(body.onboarding_status_updated_at);
+    if (hasOwn(body, 'onboarding_status_updated_by')) rec.onboarding_status_updated_by = trim(body.onboarding_status_updated_by);
     assignTrim('rtw_url');
     assignTrim('contract_url');
     if (hasOwn(body, 'terms_ok')) rec.terms_ok = !!body.terms_ok;
     if (hasOwn(body, 'right_to_work') || hasOwn(body, 'rtw_ok')) rec.right_to_work = toBool(body.right_to_work ?? body.rtw_ok);
+    if (hasOwn(body, 'right_to_work_regions')) rec.right_to_work_regions = parseTextArray(body.right_to_work_regions);
+    if (hasOwn(body, 'right_to_work_status')) rec.right_to_work_status = trim(body.right_to_work_status);
+    if (hasOwn(body, 'right_to_work_evidence_type') || hasOwn(body, 'right_to_work_document_type')) {
+      rec.right_to_work_evidence_type = normaliseRightToWorkEvidenceType(
+        body.right_to_work_evidence_type ?? body.right_to_work_document_type
+      );
+    }
+    assignTrim('primary_specialism');
+    assignTrim('secondary_specialism');
+    assignTrim('current_job_title');
+    assignTrim('desired_roles');
+    assignTrim('qualifications');
+    assignTrim('sector_experience');
+    assignTrim('sector_focus');
     assignTrim('role');
     if (hasOwn(body, 'availability_on') || hasOwn(body, 'availability_date')) {
       rec.availability_date = trim(body.availability_on ?? body.availability_date);
     }
+    if (hasOwn(body, 'availability')) rec.availability = trim(body.availability);
+    if (hasOwn(body, 'relocation_preference') || hasOwn(body, 'relocation')) {
+      rec.relocation_preference = trim(body.relocation_preference ?? body.relocation);
+    }
+    if (hasOwn(body, 'salary_expectation')) rec.salary_expectation = trim(body.salary_expectation);
+    if (hasOwn(body, 'salary_expectation_unit')) rec.salary_expectation_unit = trim(body.salary_expectation_unit);
+    if (hasOwn(body, 'experience_years') || hasOwn(body, 'years_experience')) {
+      rec.experience_years = parsePositiveInteger(body.experience_years ?? body.years_experience);
+    }
+    assignTrim('linkedin_url');
+    if (hasOwn(body, 'linkedin') && !hasOwn(body, 'linkedin_url')) rec.linkedin_url = trim(body.linkedin);
+    assignTrim('summary');
+    if (hasOwn(body, 'message') && !hasOwn(body, 'summary')) rec.summary = trim(body.message);
     if (hasOwn(body, 'start_date') || hasOwn(body, 'availability_on') || hasOwn(body, 'availability_date')) {
       rec.start_date = trim(body.start_date ?? body.availability_on ?? body.availability_date);
     }
     assignTrim('end_date');
     assignTrim('timesheet_status');
-    assignTrim('tax_id');
     assignTrim('notes');
+    if (hasOwn(body, 'consent_captured') || hasOwn(body, 'consent')) {
+      rec.consent_captured = toBool(body.consent_captured ?? body.consent);
+    }
+    if (hasOwn(body, 'consent_captured_at')) {
+      rec.consent_captured_at = trim(body.consent_captured_at);
+    } else if (rec.consent_captured === true) {
+      rec.consent_captured_at = new Date().toISOString();
+    }
 
     if (hasSkills) {
       rec.skills = skillsArray.length ? skillsArray : [];
@@ -142,6 +202,11 @@ const baseHandler = async (event, context) => {
 
     if (!hasOwn(body, 'terms_ok')) {
       delete rec.terms_ok;
+    }
+
+    if (hasOwn(body, 'onboarding_status') && rec.onboarding_status) {
+      rec.onboarding_status_updated_at = rec.onboarding_status_updated_at || new Date().toISOString();
+      rec.onboarding_status_updated_by = rec.onboarding_status_updated_by || (user?.email || null);
     }
 
     const requiresNameValidation = shouldRequireNameValidation(body);
@@ -255,7 +320,7 @@ const baseHandler = async (event, context) => {
       action: rec.id ? 'candidate.update' : 'candidate.insert',
       target_type: 'candidate',
       target_id: String(savedCandidate.id),
-      meta: { ...working, id: savedCandidate.id },
+      meta: { ...stripSensitiveCandidateFields(working), id: savedCandidate.id },
     });
 
     const took_ms = Date.now() - t0;

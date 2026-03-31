@@ -209,6 +209,9 @@ const baseHandler = async (event, context) => {
           client_name: request.company || null,
           job_title: request.jobTitle || null,
           onboarding_mode: true,
+          onboarding_status: 'new',
+          onboarding_status_updated_at: new Date().toISOString(),
+          onboarding_status_updated_by: user?.email || null,
           status: 'Invited',
           created_at: new Date().toISOString(),
         };
@@ -248,7 +251,12 @@ const baseHandler = async (event, context) => {
         }
       } else if (links?.candidate) {
         // Profile exists — ensure it's flagged as a new starter
-        const updatePayload = { status: 'Invited' };
+        const updatePayload = {
+          status: 'Invited',
+          onboarding_status: 'new',
+          onboarding_status_updated_at: new Date().toISOString(),
+          onboarding_status_updated_by: user?.email || null,
+        };
         // Try to set onboarding_mode too; silently skip if column missing
         const updateRes = await supabase
           .from('candidates')
@@ -270,6 +278,13 @@ const baseHandler = async (event, context) => {
           activity_type: activityType,
           description,
           actor_role: 'admin',
+          actor_identifier: user?.email || null,
+          meta: {
+            company: request.company || null,
+            job_title: request.jobTitle || null,
+            access_link_type: message.accessLinkType || null,
+            provisional_created: provisionalCreated,
+          },
           created_at: new Date().toISOString(),
         });
         if (actRes.error) {

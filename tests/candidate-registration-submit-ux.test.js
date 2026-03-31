@@ -13,11 +13,13 @@ test('candidate registration page exposes updated skill suggestions and submit f
   assert.match(html, /id="candidateSubmitFeedback"/);
   assert.match(html, /assets\/css\/candidates\.enhanced\.css\?v=14/);
   assert.match(html, /assets\/js\/candidates\.enhanced\.js\?v=5/);
-  assert.match(html, /assets\/js\/candidates\.portal\.js\?v=14/);
+  assert.match(html, /assets\/js\/candidates\.portal\.js\?v=16/);
   assert.match(html, /id="rightToWorkStatusHidden"/);
   assert.doesNotMatch(html, /id="rightToWorkStatus"/);
   assert.match(html, /Other \/ specify below/);
   assert.match(html, /pattern="\^\[\+\(\) 0-9-\]\{7,\}\$"/);
+  assert.match(html, /id="candidateConsent"/);
+  assert.match(html, /name="consent"/);
 });
 
 test('candidate registration enhancement script includes the new 10-skill default suggestion set', () => {

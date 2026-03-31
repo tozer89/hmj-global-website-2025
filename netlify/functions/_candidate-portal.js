@@ -139,6 +139,38 @@ function normaliseBooleanFlag(value) {
   return null;
 }
 
+function normaliseOnboardingStatus(value) {
+  const raw = String(value == null ? '' : value).trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'awaiting documents' || raw === 'awaiting-documents') return 'awaiting_documents';
+  if (raw === 'awaiting verification' || raw === 'awaiting-verification') return 'awaiting_verification';
+  if (raw === 'ready for payroll' || raw === 'ready-for-payroll') return 'ready_for_payroll';
+  if (raw === 'onboarding complete' || raw === 'complete') return 'onboarding_complete';
+  if (raw === 'new') return 'new';
+  if (raw === 'archived') return 'archived';
+  return [
+    'new',
+    'awaiting_documents',
+    'awaiting_verification',
+    'ready_for_payroll',
+    'onboarding_complete',
+    'archived',
+  ].includes(raw) ? raw : null;
+}
+
+function normaliseRightToWorkEvidenceType(value) {
+  const raw = String(value == null ? '' : value).trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'passport') return 'passport';
+  if (raw === 'id_card' || raw === 'id card' || raw === 'identity_card') return 'id_card';
+  if (raw === 'visa' || raw === 'visa_permit' || raw === 'visa / permit') return 'visa';
+  if (raw === 'brp' || raw === 'biometric_residence_permit' || raw === 'biometric residence permit') return 'brp';
+  if (raw === 'share_code' || raw === 'share code' || raw === 'right_to_work' || raw === 'right to work') return 'share_code';
+  if (raw === 'settlement' || raw === 'settled_status' || raw === 'settled status') return 'settlement';
+  if (raw === 'other') return 'other';
+  return null;
+}
+
 function salaryExpectationSuffix(unit) {
   if (unit === 'hourly') return 'per hour';
   if (unit === 'daily') return 'per day';
@@ -270,6 +302,37 @@ function buildCandidateWritePayload(input = {}, options = {}) {
     normaliseBooleanFlag(pickFirst(input.onboarding_mode, input.onboardingMode)),
     { hasValue: hasOwn(input, 'onboarding_mode') || hasOwn(input, 'onboardingMode') }
   );
+  assign(
+    'onboarding_status',
+    normaliseOnboardingStatus(input.onboarding_status),
+    { hasValue: hasOwn(input, 'onboarding_status') }
+  );
+  assign(
+    'onboarding_status_updated_at',
+    trimString(input.onboarding_status_updated_at, 80),
+    { hasValue: hasOwn(input, 'onboarding_status_updated_at') }
+  );
+  assign(
+    'onboarding_status_updated_by',
+    trimString(input.onboarding_status_updated_by, 320),
+    { hasValue: hasOwn(input, 'onboarding_status_updated_by') }
+  );
+  assign(
+    'right_to_work_evidence_type',
+    normaliseRightToWorkEvidenceType(
+      pickFirst(
+        input.right_to_work_evidence_type,
+        input.right_to_work_document_type,
+        input.right_to_work_evidence,
+      )
+    ),
+    {
+      hasValue:
+        hasOwn(input, 'right_to_work_evidence_type')
+        || hasOwn(input, 'right_to_work_document_type')
+        || hasOwn(input, 'right_to_work_evidence'),
+    }
+  );
   const rightToWorkRegions = normaliseTextList(
     pickFirst(input.right_to_work_regions, input.right_to_work),
     120
@@ -381,6 +444,30 @@ function buildCandidateWritePayload(input = {}, options = {}) {
     'summary',
     trimString(pickFirst(input.summary, input.message), 4000),
     { hasValue: hasOwn(input, 'summary') || hasOwn(input, 'message') }
+  );
+  const consentCaptured = normaliseBooleanFlag(
+    pickFirst(input.consent_captured, input.terms_ok, input.consent)
+  );
+  assign(
+    'consent_captured',
+    consentCaptured,
+    {
+      hasValue:
+        hasOwn(input, 'consent_captured')
+        || hasOwn(input, 'terms_ok')
+        || hasOwn(input, 'consent'),
+    }
+  );
+  assign(
+    'consent_captured_at',
+    trimString(input.consent_captured_at, 80) || (consentCaptured === true ? now : null),
+    {
+      hasValue:
+        hasOwn(input, 'consent_captured_at')
+        || consentCaptured === true
+        || includeNulls,
+      allowNull: true,
+    }
   );
   assign(
     'headline_role',
@@ -785,6 +872,8 @@ module.exports = {
   isMissingRelationError,
   lowerEmail,
   normaliseApplicationStatus,
+  normaliseOnboardingStatus,
+  normaliseRightToWorkEvidenceType,
   normaliseDocumentType,
   normaliseSalaryExpectationUnit,
   normaliseSkillList,

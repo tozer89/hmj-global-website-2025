@@ -118,3 +118,14 @@ test('send intro email builder can switch to a secure onboarding access link for
   assert.match(message.html, /Use the HMJ buttons below/i);
   assert.match(message.html, /Open secure HMJ access/);
 });
+
+test('send intro email backend keeps intro sends inside the broader onboarding workflow', () => {
+  const source = read('netlify/functions/admin-send-intro-email.js');
+
+  assert.match(source, /onboarding_status:\s*'new'/);
+  assert.match(source, /onboarding_status_updated_at/);
+  assert.match(source, /onboarding_status_updated_by/);
+  assert.match(source, /const activityType = request\.isReminder \? 'intro_reminder_sent' : 'intro_email_sent';/);
+  assert.match(source, /access_link_type/);
+  assert.match(source, /provisional_created/);
+});

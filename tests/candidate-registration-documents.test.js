@@ -18,6 +18,10 @@ test('candidate registration page exposes a dedicated onboarding right-to-work e
 
   assert.ok(typeField);
   assert.equal(typeField.getAttribute('name'), 'right_to_work_document_type');
+  const optionValues = Array.from(typeField.querySelectorAll('option')).map((option) => option.getAttribute('value'));
+  ['passport', 'id_card', 'visa', 'brp', 'share_code', 'settlement', 'other'].forEach((value) => {
+    assert.ok(optionValues.includes(value), `expected ${value} onboarding evidence option`);
+  });
   assert.ok(fileField);
   assert.equal(fileField.getAttribute('name'), null);
   assert.match(fileField.getAttribute('accept') || '', /\.pdf/);
@@ -31,7 +35,12 @@ test('candidate registration script uploads required onboarding evidence before 
 
   assert.match(source, /candidate-registration-documents/);
   assert.match(source, /function validateRegistrationRightToWorkDocument\(/);
+  assert.match(source, /right_to_work_evidence_type/);
+  assert.match(source, /function normaliseRightToWorkEvidenceType\(/);
+  assert.match(source, /starterCvField/);
+  assert.match(source, /documentType:\s*'cv'/);
   assert.match(source, /function persistRegistrationDocuments\(/);
+  assert.match(source, /documentType,\s*evidenceType/);
   assert.match(source, /await syncRegistrationSubmissionContext\(syncResult, submissionId, registrationDocuments\)/);
   assert.match(source, /ensureHiddenField\('candidate_id', syncResult\.candidateId\)/);
   assert.match(source, /ensureHiddenField\('source_submission_id', submissionId\)/);

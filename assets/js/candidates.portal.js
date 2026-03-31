@@ -53,6 +53,7 @@ import {
   const paymentStatus = doc.getElementById('candidatePaymentStatus');
   const rightToWorkDocumentTypeField = doc.getElementById('candidateRightToWorkDocumentType');
   const rightToWorkDocumentField = doc.getElementById('candidateRightToWorkDocument');
+  const starterCvField = doc.getElementById('cvStarter');
   const rightToWorkDocumentStatus = doc.getElementById('candidateRightToWorkDocumentStatus');
   const paymentFields = {
     currency: doc.getElementById('candidatePaymentCurrency'),
@@ -92,7 +93,24 @@ import {
     if (raw === 'bank_document' || raw === 'bank document') return 'bank_document';
     if (raw === 'reference' || raw === 'references') return 'reference';
     if (raw === 'passport') return 'passport';
+    if (raw === 'id_card' || raw === 'id card' || raw === 'identity_card') return 'right_to_work';
+    if (raw === 'share_code' || raw === 'share code') return 'right_to_work';
+    if (raw === 'settlement' || raw === 'settled_status' || raw === 'settled status') return 'right_to_work';
+    if (raw === 'brp') return 'visa_permit';
     if (raw === 'cv') return 'cv';
+    return '';
+  }
+
+  function normaliseRightToWorkEvidenceType(value) {
+    const raw = trimText(value, 80).toLowerCase();
+    if (!raw) return '';
+    if (raw === 'passport') return 'passport';
+    if (raw === 'id_card' || raw === 'id card' || raw === 'identity_card') return 'id_card';
+    if (raw === 'visa') return 'visa';
+    if (raw === 'brp' || raw === 'biometric_residence_permit' || raw === 'biometric residence permit') return 'brp';
+    if (raw === 'share_code' || raw === 'share code' || raw === 'right_to_work') return 'share_code';
+    if (raw === 'settlement' || raw === 'settled_status' || raw === 'settled status') return 'settlement';
+    if (raw === 'other') return 'other';
     return '';
   }
 
@@ -136,7 +154,7 @@ import {
   const RTW_OTHER_VALUE = '__other__';
   const REGISTRATION_DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;
   const REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp']);
-  const REGISTRATION_RIGHT_TO_WORK_DOCUMENT_TYPES = new Set(['passport', 'right_to_work', 'visa_permit']);
+  const REGISTRATION_RIGHT_TO_WORK_DOCUMENT_TYPES = new Set(['passport', 'id_card', 'visa', 'brp', 'share_code', 'settlement', 'other']);
   const RTW_REGION_OPTIONS = [
     'United Kingdom',
     'European Union / EEA',
@@ -450,13 +468,23 @@ import {
 
   function registrationDocumentTypeLabel(value) {
     if (value === 'passport') return 'Passport';
-    if (value === 'visa_permit') return 'Visa / permit / BRP';
+    if (value === 'id_card') return 'National ID card';
+    if (value === 'visa') return 'Visa';
+    if (value === 'brp') return 'BRP / residence permit';
+    if (value === 'share_code') return 'Share code';
+    if (value === 'settlement') return 'Settlement / settled status evidence';
     return 'Right-to-work evidence';
+  }
+
+  function registrationStorageDocumentType(value) {
+    if (value === 'passport') return 'passport';
+    if (value === 'visa' || value === 'brp') return 'visa_permit';
+    return 'right_to_work';
   }
 
   function registrationDocumentFieldName(documentType) {
     if (documentType === 'passport') return 'passport_upload';
-    if (documentType === 'visa_permit') return 'visa_permit_upload';
+    if (documentType === 'visa' || documentType === 'brp') return 'visa_permit_upload';
     return 'right_to_work_upload';
   }
 
@@ -477,7 +505,7 @@ import {
 
   function validateRegistrationRightToWorkDocument() {
     const required = registrationRightToWorkEvidenceRequired();
-    const documentType = normaliseRequestedDocumentType(rightToWorkDocumentTypeField?.value);
+    const evidenceType = normaliseRightToWorkEvidenceType(rightToWorkDocumentTypeField?.value);
     const file = rightToWorkDocumentField?.files?.[0] || null;
 
     if (!required) {
@@ -488,6 +516,7 @@ import {
         text: '',
         focusField: null,
         documentType: '',
+        evidenceType: '',
         file: null,
         label: '',
       };
@@ -496,8 +525,8 @@ import {
     let documentTypeMessage = '';
     let fileMessage = '';
 
-    if (!REGISTRATION_RIGHT_TO_WORK_DOCUMENT_TYPES.has(documentType)) {
-      documentTypeMessage = 'Choose whether you are uploading a passport, visa / permit, or other right-to-work evidence.';
+    if (!REGISTRATION_RIGHT_TO_WORK_DOCUMENT_TYPES.has(evidenceType)) {
+      documentTypeMessage = 'Choose the right-to-work evidence type you are uploading.';
     }
 
     if (!file || !trimText(file?.name, 280)) {
@@ -521,9 +550,10 @@ import {
       valid: !documentTypeMessage && !fileMessage,
       text: documentTypeMessage || fileMessage,
       focusField: documentTypeMessage ? rightToWorkDocumentTypeField : rightToWorkDocumentField,
-      documentType,
+      documentType: registrationStorageDocumentType(evidenceType),
+      evidenceType,
       file,
-      label: registrationDocumentTypeLabel(documentType),
+      label: registrationDocumentTypeLabel(evidenceType),
     };
   }
 
@@ -561,15 +591,36 @@ import {
 
   function listRegistrationDocumentsFromForm() {
     const validation = validateRegistrationRightToWorkDocument();
-    if (!validation.required || !validation.valid || !validation.file || !validation.documentType) {
-      return [];
+    const documents = [];
+    if (validation.required && validation.valid && validation.file && validation.documentType) {
+      documents.push({
+        fieldName: registrationDocumentFieldName(validation.evidenceType),
+        file: validation.file,
+        documentType: validation.documentType,
+        evidenceType: validation.evidenceType,
+        label: validation.label,
+      });
     }
-    return [{
-      fieldName: registrationDocumentFieldName(validation.documentType),
-      file: validation.file,
-      documentType: validation.documentType,
-      label: validation.label,
-    }];
+    const starterCv = starterCvField?.files?.[0] || null;
+    if (starterCv && trimText(starterCv.name, 280)) {
+      const extension = registrationDocumentExtension(starterCv.name);
+      if (!REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS.has(extension)) {
+        throw new Error('Starter CV must be a PDF, Word document, PNG, JPG, or WEBP file.');
+      }
+      if (!Number.isFinite(Number(starterCv.size)) || Number(starterCv.size) <= 0) {
+        throw new Error('The starter CV could not be read. Please choose it again.');
+      }
+      if (Number(starterCv.size) > REGISTRATION_DOCUMENT_MAX_BYTES) {
+        throw new Error('Starter CV must be 15 MB or smaller.');
+      }
+      documents.push({
+        fieldName: 'cv_upload',
+        file: starterCv,
+        documentType: 'cv',
+        label: 'Starter CV',
+      });
+    }
+    return documents;
   }
 
   async function registrationDocumentsRequest(payload) {
@@ -582,7 +633,7 @@ import {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data?.ok === false) {
-      const error = new Error(data?.message || data?.error || 'Right-to-work document sync failed.');
+      const error = new Error(data?.message || data?.error || 'Registration document sync failed.');
       error.status = response.status;
       error.details = data;
       throw error;
@@ -603,6 +654,7 @@ import {
         field_name: documentRow.fieldName,
         document_type: documentRow.documentType,
         label: documentRow.label,
+        right_to_work_evidence_type: documentRow.evidenceType || null,
         error_message: trimText(error?.message, 500) || 'Candidate registration document ingestion failed.',
       });
     } catch (reportError) {
@@ -646,6 +698,7 @@ import {
           field_name: documentRow.fieldName,
           document_type: documentRow.documentType,
           label: documentRow.label,
+          right_to_work_evidence_type: documentRow.evidenceType || null,
         });
 
         const uploadTarget = prepared?.upload || {};
@@ -679,6 +732,7 @@ import {
           field_name: documentRow.fieldName,
           document_type: documentRow.documentType,
           label: documentRow.label,
+          right_to_work_evidence_type: documentRow.evidenceType || null,
         });
 
         if (!finalized?.document) {
@@ -2226,6 +2280,10 @@ import {
   function buildCandidateSyncPayload(formData, submissionId, paymentDetails = null) {
     const rightToWorkRegions = normaliseSkillList(formData.get('right_to_work'));
     const salaryExpectationUnit = normaliseSalaryExpectationUnit(formData.get('salary_expectation_unit'));
+    const onboardingMode = formData.has('onboarding_mode') && formData.get('onboarding_mode') !== ''
+      ? normaliseBooleanFlag(formData.get('onboarding_mode'))
+      : !!paymentDetails;
+    const consentCaptured = !!trimText(formData.get('consent'), 40);
     const candidate = {
       first_name: formData.get('first_name'),
       surname: formData.get('surname'),
@@ -2257,11 +2315,13 @@ import {
       linkedin: formData.get('linkedin'),
       message: formData.get('message'),
       skills: normaliseSkillList(formData.get('skills')),
+      right_to_work_evidence_type: formData.get('right_to_work_document_type'),
+      consent_captured: consentCaptured,
+      consent_captured_at: consentCaptured ? new Date().toISOString() : null,
       source_submission_id: submissionId,
       // Prefer the explicit hidden field set by the path chooser; fall back to presence of payment details
-      onboarding_mode: formData.has('onboarding_mode') && formData.get('onboarding_mode') !== ''
-        ? normaliseBooleanFlag(formData.get('onboarding_mode'))
-        : !!paymentDetails,
+      onboarding_mode: onboardingMode,
+      onboarding_status: onboardingMode ? 'new' : null,
     };
 
     return {
@@ -2785,7 +2845,19 @@ import {
       return;
     }
     const paymentDetails = buildRegistrationPaymentDetails();
-    const registrationDocuments = listRegistrationDocumentsFromForm();
+    let registrationDocuments;
+    try {
+      registrationDocuments = listRegistrationDocumentsFromForm();
+    } catch (error) {
+      event.preventDefault();
+      state.formMessage = {
+        tone: 'error',
+        text: error?.message || 'Please review the onboarding documents you selected before submitting.',
+      };
+      renderFormStatus();
+      syncAccountControls();
+      return;
+    }
     const requiresSecurePaymentSync = !!paymentDetails;
     const requiresAwaitedCandidateSync = requiresSecurePaymentSync || registrationDocuments.length > 0;
     const payload = buildCandidateSyncPayload(formData, submissionId, paymentDetails);
@@ -2809,7 +2881,7 @@ import {
           state.formMessage = {
             tone: 'error',
             text: error?.message || (registrationDocuments.length
-              ? 'HMJ could not finish onboarding because the right-to-work document was not attached to your candidate profile. Please try again.'
+              ? 'HMJ could not finish onboarding because the registration documents were not attached to your candidate profile. Please try again.'
               : 'Secure payment details could not be saved. Please try again or leave the payment section closed if you only need portal access today.'),
           };
           renderFormStatus();
@@ -2896,7 +2968,7 @@ import {
       state.formMessage = {
         tone: 'error',
         text: error?.message || (registrationDocuments.length
-          ? 'HMJ could not finish onboarding because the right-to-work document was not attached to your candidate profile. Please try again.'
+          ? 'HMJ could not finish onboarding because the registration documents were not attached to your candidate profile. Please try again.'
           : 'Secure payment details could not be saved. Please try again or untick the payment section if you only need a portal account today.'),
       };
       renderFormStatus();

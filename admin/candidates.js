@@ -19,10 +19,19 @@
     invited: { label: 'Invited — awaiting registration', tone: 'purple' },
     cancelled: { label: 'Cancelled', tone: 'gray' },
   };
+  const ONBOARDING_STATUS_META = {
+    new: { label: 'New', tone: 'blue' },
+    awaiting_documents: { label: 'Awaiting documents', tone: 'orange' },
+    awaiting_verification: { label: 'Awaiting verification', tone: 'orange' },
+    ready_for_payroll: { label: 'Ready for payroll', tone: 'green' },
+    onboarding_complete: { label: 'Onboarding complete', tone: 'green' },
+    archived: { label: 'Archived', tone: 'gray' },
+  };
 
   const DEFAULT_FILTERS = Object.freeze({
     query: '',
     candidateType: '',
+    onboardingStatus: '',
     status: [],
     role: '',
     region: '',
@@ -204,6 +213,27 @@
     return STATUS_META[key]?.tone || 'orange';
   }
 
+  function onboardingStatusKey(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'awaiting documents' || raw === 'awaiting-documents') return 'awaiting_documents';
+    if (raw === 'awaiting verification' || raw === 'awaiting-verification') return 'awaiting_verification';
+    if (raw === 'ready for payroll' || raw === 'ready-for-payroll') return 'ready_for_payroll';
+    if (raw === 'onboarding complete' || raw === 'complete') return 'onboarding_complete';
+    return ONBOARDING_STATUS_META[raw] ? raw : 'new';
+  }
+
+  function onboardingStatusLabel(value) {
+    return ONBOARDING_STATUS_META[onboardingStatusKey(value)]?.label || 'New';
+  }
+
+  function onboardingStatusTone(value) {
+    return ONBOARDING_STATUS_META[onboardingStatusKey(value)]?.tone || 'blue';
+  }
+
+  function onboardingViewActive() {
+    return state.filters.candidateType === 'starter';
+  }
+
   function parseSkills(value) {
     if (!value && value !== 0) return [];
     if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
@@ -374,12 +404,67 @@
     return { label: 'Stored', tone: 'gray' };
   }
 
+  function evidenceTypeLabel(value) {
+    const key = String(value || '').trim().toLowerCase();
+    if (key === 'passport') return 'Passport';
+    if (key === 'id_card') return 'ID card';
+    if (key === 'visa') return 'Visa';
+    if (key === 'brp') return 'BRP';
+    if (key === 'share_code') return 'Share code';
+    if (key === 'settlement') return 'Settlement';
+    if (key === 'other') return 'Other';
+    return 'Not set';
+  }
+
+  function humanizeMissingField(value) {
+    const key = String(value || '').trim().toLowerCase();
+    const labels = {
+      full_name: 'Name',
+      email: 'Email',
+      phone: 'Mobile',
+      address: 'Address',
+      location: 'Current location',
+      nationality: 'Nationality',
+      discipline: 'Discipline',
+      current_job_title: 'Current job title',
+      assignment_start_date: 'Assignment start date',
+      right_to_work_regions: 'Authorised work regions',
+      right_to_work_evidence_type: 'Right-to-work evidence type',
+      right_to_work_upload: 'Right-to-work upload',
+      payment_details: 'Payroll details',
+      emergency_contact: 'Emergency contact',
+      consent: 'Consent',
+      cv: 'CV',
+      qualifications: 'Qualifications',
+      linkedin: 'LinkedIn',
+      summary: 'Summary / notes',
+      right_to_work: 'Right to work',
+    };
+    return labels[key] || key.replace(/_/g, ' ');
+  }
+
+  function lastEmailSentAt(history = {}, ...keys) {
+    return keys
+      .map((key) => history?.[key] || '')
+      .filter(Boolean)
+      .sort()
+      .slice(-1)[0] || '';
+  }
+
   function formatDocumentRequestList(list) {
     const labels = (Array.isArray(list) ? list : []).map((item) => documentRequestLabel(item));
     if (!labels.length) return 'documents';
     if (labels.length === 1) return labels[0];
     if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
     return `${labels.slice(0, -1).join(', ')}, and ${labels.slice(-1)}`;
+  }
+
+  function onboardingRequestLabel(requestType, documentTypes = []) {
+    const type = String(requestType || '').trim().toLowerCase() || 'rtw';
+    if (type === 'general') return 'onboarding reminder';
+    if (type === 'verification_complete') return 'verification complete email';
+    if (type === 'documents') return `${formatDocumentRequestList(documentTypes).toLowerCase()} request`;
+    return 'right-to-work reminder';
   }
 
   function buildCandidateUploadLink({ requestType = 'documents', documentTypes = [] } = {}) {
@@ -944,8 +1029,29 @@
       hasPaymentDetails,
       onboardingComplete: onboardingMode ? (existing?.onboardingComplete === true || missing.length === 0) : false,
       missing,
+      missingCore: Array.isArray(existing?.missingCore) ? existing.missingCore : missing,
+      missingRecommended: Array.isArray(existing?.missingRecommended) ? existing.missingRecommended : [],
+      missingFlags: existing?.missingFlags && typeof existing.missingFlags === 'object' ? existing.missingFlags : {},
+      missingCount: typeof existing?.missingCount === 'number'
+        ? existing.missingCount
+        : (missing.length + (Array.isArray(existing?.missingRecommended) ? existing.missingRecommended.length : 0)),
       documentTypes: Array.isArray(existing?.documentTypes) ? existing.documentTypes : Array.from(docTypes),
       pendingVerificationCount,
+      status: onboardingStatusKey(existing?.status || row?.onboarding_status || ''),
+      statusLabel: existing?.statusLabel || onboardingStatusLabel(existing?.status || row?.onboarding_status || ''),
+      statusUpdatedAt: existing?.statusUpdatedAt || row?.onboarding_status_updated_at || '',
+      statusUpdatedBy: existing?.statusUpdatedBy || row?.onboarding_status_updated_by || '',
+      rightToWork: existing?.rightToWork && typeof existing.rightToWork === 'object' ? existing.rightToWork : {},
+      emailHistory: existing?.emailHistory && typeof existing.emailHistory === 'object' ? existing.emailHistory : {},
+      cvPresent: existing?.cvPresent === true || docTypes.has('cv'),
+      rightToWorkRegions: Array.isArray(existing?.rightToWorkRegions)
+        ? existing.rightToWorkRegions
+        : (Array.isArray(row?.right_to_work_regions) ? row.right_to_work_regions : []),
+      consentCaptured: existing?.consentCaptured === true || row?.consent_captured === true,
+      consentCapturedAt: existing?.consentCapturedAt || row?.consent_captured_at || '',
+      duplicate: existing?.duplicate && typeof existing.duplicate === 'object'
+        ? existing.duplicate
+        : { duplicateEmailCount: 0, duplicateEmails: [] },
     };
   }
 
@@ -1263,7 +1369,16 @@
       name: displayName,
       email: row.email || '',
       phone: row.phone || '',
+      address1: row.address1 || row.address_1 || row.address || '',
+      address2: row.address2 || row.address_2 || '',
+      town: row.town || row.city || '',
+      county: row.county || '',
+      postcode: row.postcode || '',
+      country: row.country || '',
       onboarding_mode: candidateOnboardingMode(row),
+      onboarding_status: row.onboarding_status || '',
+      onboarding_status_updated_at: row.onboarding_status_updated_at || '',
+      onboarding_status_updated_by: row.onboarding_status_updated_by || '',
       emergency_name: row.emergency_name || '',
       emergency_phone: row.emergency_phone || '',
       status,
@@ -1271,9 +1386,26 @@
       region: row.region || row.location || row.county || row.country || '',
       headline_role: row.headline_role || row.role || row.job_title || '',
       location: row.location || row.region || row.county || row.country || '',
+      nationality: row.nationality || '',
+      primary_specialism: row.primary_specialism || row.discipline || '',
+      secondary_specialism: row.secondary_specialism || '',
+      current_job_title: row.current_job_title || row.job_title || '',
+      desired_roles: row.desired_roles || row.role || '',
+      qualifications: row.qualifications || '',
+      sector_experience: row.sector_experience || '',
       sector_focus: row.sector_focus || '',
       salary_expectation: row.salary_expectation || '',
       salary_expectation_unit: row.salary_expectation_unit || '',
+      experience_years: row.experience_years || row.years_experience || '',
+      relocation_preference: row.relocation_preference || row.relocation || '',
+      availability: row.availability || row.availability_date || '',
+      right_to_work_status: row.right_to_work_status || '',
+      right_to_work_regions: Array.isArray(row.right_to_work_regions) ? row.right_to_work_regions.slice() : parseSkills(row.right_to_work_regions || ''),
+      right_to_work_evidence_type: row.right_to_work_evidence_type || '',
+      linkedin_url: row.linkedin_url || row.linkedin || '',
+      summary: row.summary || row.message || '',
+      consent_captured: row.consent_captured === true,
+      consent_captured_at: row.consent_captured_at || '',
       skills: skillList,
       tags,
       docs,
@@ -1483,6 +1615,7 @@
     state.filters = {
       query: elements.query.value.trim(),
       candidateType: elements.candidateType ? elements.candidateType.value : '',
+      onboardingStatus: state.filters.onboardingStatus || '',
       status: Array.from(elements.status.selectedOptions).map((opt) => opt.value.toLowerCase()),
       role: elements.role.value.trim(),
       region: elements.region.value.trim(),
@@ -1498,6 +1631,7 @@
     const f = state.filters;
     let total = 0;
     if (f.query) total += 1;
+    if (f.onboardingStatus) total += 1;
     if (f.status.length) total += 1;
     if (f.role) total += 1;
     if (f.region) total += 1;
@@ -1524,6 +1658,7 @@
     }];
     if (state.filters.query) chips.push({ key: 'query', label: `Search: ${state.filters.query}` });
     if (state.filters.candidateType) chips.push({ key: 'candidateType', label: `Type: ${state.filters.candidateType === 'starter' ? 'New starters' : 'Job seekers'}` });
+    if (state.filters.onboardingStatus) chips.push({ key: 'onboardingStatus', label: `Onboarding: ${onboardingStatusLabel(state.filters.onboardingStatus)}` });
     if (state.filters.status.length) chips.push({ key: 'status', label: `Status: ${state.filters.status.join(', ')}` });
     if (state.filters.role) chips.push({ key: 'role', label: `Role: ${state.filters.role}` });
     if (state.filters.region) chips.push({ key: 'region', label: `Region: ${state.filters.region}` });
@@ -1545,6 +1680,9 @@
         break;
       case 'candidateType':
         state.filters.candidateType = '';
+        break;
+      case 'onboardingStatus':
+        state.filters.onboardingStatus = '';
         break;
       case 'status':
         state.filters.status = [];
@@ -1609,6 +1747,7 @@
     // Requiring has_application caused the tab count to be lower than the badge, which
     // was confusing and excluded legitimate seekers who registered directly.
     if (filters.candidateType === 'seeker' && candidateOnboardingMode(candidate)) return false;
+    if (filters.onboardingStatus && onboardingStatusKey(candidate.onboarding?.status) !== filters.onboardingStatus) return false;
     if (filters.status.length && !filters.status.includes(candidate.status)) return false;
     if (filters.role && !(candidate.role || '').toLowerCase().includes(filters.role.toLowerCase())) return false;
     if (filters.region && !(candidate.region || '').toLowerCase().includes(filters.region.toLowerCase())) return false;
@@ -1665,6 +1804,7 @@
     });
     updateFilterCount();
     recomputeMetrics();
+    renderOnboardingModule();
     renderTableHeader();
     refreshRows(true);
     syncHeaderCheckbox();
@@ -1705,6 +1845,63 @@
     if (elements.blocked) elements.blocked.textContent = showWorkflowCounts ? state.metrics.blocked : '—';
   }
 
+  function onboardingRowsInView() {
+    return state.filtered.filter((row) => !isRawTimesheetPortalCandidate(row) && candidateOnboardingMode(row));
+  }
+
+  function setOnboardingStatusFilter(statusKey) {
+    state.filters.onboardingStatus = state.filters.onboardingStatus === statusKey ? '' : statusKey;
+    saveFilters(state.filters);
+    applyFilters();
+  }
+
+  function renderOnboardingModule() {
+    if (!elements.onboardingModule || !elements.onboardingStatusStrip || !elements.onboardingModuleSummary) return;
+    const active = onboardingViewActive();
+    elements.onboardingModule.hidden = !active;
+    if (!active) return;
+    const rows = onboardingRowsInView();
+    const actionableRows = rows.filter((row) => !!String(row?.email || '').trim() && !isArchived(row));
+    const selectedRows = selectedCandidates({ allowRaw: true, includeRaw: true })
+      .filter((row) => !isRawTimesheetPortalCandidate(row) && candidateOnboardingMode(row) && !!String(row?.email || '').trim() && !isArchived(row));
+    const actionCount = selectedRows.length || actionableRows.length;
+    const counts = rows.reduce((acc, row) => {
+      const key = onboardingStatusKey(row.onboarding?.status);
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const urgent = rows.filter((row) => (row.onboarding?.missingCount || 0) > 0 || (row.onboarding?.pendingVerificationCount || 0) > 0).length;
+    const lastEmail = rows
+      .map((row) => row.onboarding?.emailHistory?.lastSentAt || '')
+      .filter(Boolean)
+      .sort()
+      .slice(-1)[0] || '';
+    elements.onboardingModuleSummary.textContent = rows.length
+      ? `${rows.length} new starter record${rows.length === 1 ? '' : 's'} in this view. ${urgent} need action${lastEmail ? ` · last onboarding email ${formatDateTime(lastEmail)}` : ''}.`
+      : 'No new starter records match the current filters.';
+    const buttons = [
+      { key: '', label: 'All starters', count: rows.length, tone: 'gray' },
+    ].concat(Object.keys(ONBOARDING_STATUS_META).map((key) => ({
+      key,
+      label: ONBOARDING_STATUS_META[key].label,
+      count: counts[key] || 0,
+      tone: ONBOARDING_STATUS_META[key].tone,
+    })));
+    elements.onboardingStatusStrip.innerHTML = buttons.map((item) => `
+      <button class="btn ${state.filters.onboardingStatus === item.key || (!state.filters.onboardingStatus && !item.key) ? '' : 'ghost'} small" type="button" data-onboarding-status-filter="${item.key}" style="display:flex;align-items:center;gap:8px">
+        <span class="chip ${item.tone}">${escapeHtml(item.label)}</span>
+        <strong>${item.count}</strong>
+      </button>
+    `).join('');
+    if (elements.onboardingBulkIntro) elements.onboardingBulkIntro.disabled = actionCount === 0;
+    if (elements.onboardingBulkReminder) elements.onboardingBulkReminder.disabled = actionCount === 0;
+    if (elements.onboardingBulkDocs) elements.onboardingBulkDocs.disabled = actionCount === 0;
+    if (elements.onboardingBulkVerified) elements.onboardingBulkVerified.disabled = actionCount === 0;
+    elements.onboardingStatusStrip.querySelectorAll('[data-onboarding-status-filter]').forEach((button) => {
+      button.addEventListener('click', () => setOnboardingStatusFilter(button.dataset.onboardingStatusFilter || ''));
+    });
+  }
+
   function ensureRowsContainer() {
     if (!elements.rows.contains(rowsInner)) {
       elements.rows.innerHTML = '';
@@ -1719,6 +1916,7 @@
   function renderTableHeader() {
     if (!elements.table || !elements.thead) return;
     const assignmentsView = tableMode() === 'assignments';
+    const onboardingView = !assignmentsView && onboardingViewActive();
     elements.table.classList.toggle('assignments-view', assignmentsView);
     elements.thead.innerHTML = assignmentsView
       ? `
@@ -1737,12 +1935,22 @@
         <div>Assigned contractors</div>
         <div>Actions</div>
       `
+      : onboardingView
+      ? `
+        <div><input type="checkbox" id="chk-all"/></div>
+        <div>Ref</div>
+        <div>New starter</div>
+        <div>Assignment / contact</div>
+        <div>Onboarding</div>
+        <div>Right to work / payroll</div>
+        <div>Actions</div>
+      `
       : `
         <div><input type="checkbox" id="chk-all"/></div>
         <div>Ref</div>
         <div>Candidate</div>
         <div>Contact</div>
-        <div>Onboarding</div>
+        <div>Type / Onboarding</div>
         <div>Status</div>
         <div>Actions</div>
       `;
@@ -2066,6 +2274,9 @@
   }
 
   function buildCandidateRow(candidate, index) {
+    if (onboardingViewActive() && candidateOnboardingMode(candidate) && !isRawTimesheetPortalCandidate(candidate)) {
+      return buildStarterCandidateRow(candidate, index);
+    }
     const row = document.createElement('div');
     row.className = 'trow';
     row.dataset.id = candidate.id;
@@ -2161,6 +2372,78 @@
         <button class="btn ghost small" type="button" data-role="open" data-id="${candidate.id}">Open</button>
         <button class="btn ghost small" type="button" data-role="${archiveRole}" data-id="${candidate.id}">${archiveLabel}</button>
         <button class="btn ghost small" type="button" data-role="pdf" data-id="${candidate.id}" ${disabledActions ? 'disabled' : ''}>PDF</button>
+      </div>`;
+    return row;
+  }
+
+  function buildStarterCandidateRow(candidate, index) {
+    const row = document.createElement('div');
+    row.className = 'trow';
+    row.dataset.id = candidate.id;
+    row.style.position = 'absolute';
+    row.style.top = `${index * ROW_HEIGHT}px`;
+    const selected = selectionHas(candidate.id) ? 'checked' : '';
+    const onboarding = candidate.onboarding || {};
+    const paymentSummary = candidate.payment_summary || {};
+    const rightToWork = onboarding.rightToWork || {};
+    const emailHistory = onboarding.emailHistory || {};
+    const missingCore = Array.isArray(onboarding.missingCore) ? onboarding.missingCore : [];
+    const missingRecommended = Array.isArray(onboarding.missingRecommended) ? onboarding.missingRecommended : [];
+    const lastEmail = lastEmailSentAt(
+      emailHistory,
+      'onboardingReminderSentAt',
+      'documentRequestSentAt',
+      'rtwReminderSentAt',
+      'introReminderSentAt',
+      'introSentAt',
+      'verificationCompleteSentAt',
+    );
+    const actionNeeded = missingCore.length || onboarding.pendingVerificationCount || rightToWork.documentStatus === 'rejected';
+    const canVerify = !!rightToWork.documentId && rightToWork.documentStatus === 'present';
+    const quickReminderDisabled = !candidate.email || isArchived(candidate);
+    row.innerHTML = `
+      <div><input type="checkbox" data-role="select" data-id="${candidate.id}" ${selected}></div>
+      <div>${renderReferenceCell(candidate)}</div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(candidate.name || 'Candidate')}">${escapeHtml(candidate.name || '—')}</div>
+        <div class="row-subtle">${escapeHtml(candidate.current_job_title || candidate.role || 'Role pending')}</div>
+        <div class="row-meta">
+          <span class="type-badge type-badge--starter">New Starter</span>
+          <span class="chip ${onboardingStatusTone(onboarding.status)}">${escapeHtml(onboarding.statusLabel || onboardingStatusLabel(onboarding.status))}</span>
+          ${onboarding.duplicate?.duplicateEmailCount ? `<span class="chip red">${onboarding.duplicate.duplicateEmailCount} duplicate${onboarding.duplicate.duplicateEmailCount === 1 ? '' : 's'}</span>` : ''}
+        </div>
+      </div>
+      <div class="row-card">
+        <div class="row-title" title="${escapeHtml(candidate.email || 'No email')}">${escapeHtml(candidate.email || '—')}</div>
+        <div class="row-subtle">${escapeHtml(candidate.phone || 'Phone not added')}</div>
+        <div class="row-subtle">${escapeHtml([
+          candidate.availability || candidate.availability_on || null,
+          candidate.primary_specialism || candidate.sector_focus || null,
+          candidate.location || null,
+        ].filter(Boolean).join(' • ') || 'Assignment detail pending')}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-meta">
+          ${missingCore.slice(0, 3).map((item) => `<span class="chip orange">${escapeHtml(humanizeMissingField(item))}</span>`).join('')}
+          ${onboarding.pendingVerificationCount ? `<span class="chip orange">${onboarding.pendingVerificationCount} to verify</span>` : ''}
+          ${rightToWork.documentStatus === 'rejected' ? '<span class="chip red">Document rejected</span>' : ''}
+        </div>
+        <div class="row-subtle">${actionNeeded ? 'Action needed' : 'Operationally complete'}</div>
+        <div class="row-subtle">${lastEmail ? `Last onboarding email ${formatDateTime(lastEmail)}` : 'No onboarding email logged yet'}</div>
+      </div>
+      <div class="row-card">
+        <div class="row-meta">
+          <span class="chip ${rightToWork.documentStatus === 'approved' ? 'green' : rightToWork.documentStatus === 'rejected' ? 'red' : rightToWork.hasUpload ? 'orange' : 'gray'}">${escapeHtml(rightToWork.documentStatus === 'approved' ? 'RTW approved' : rightToWork.documentStatus === 'rejected' ? 'RTW rejected' : rightToWork.hasUpload ? 'RTW uploaded' : 'RTW missing')}</span>
+          <span class="chip ${paymentSummary.completion?.complete ? 'green' : 'orange'}">${paymentSummary.completion?.complete ? 'Payroll ready' : 'Payroll pending'}</span>
+          ${candidate.consent_captured ? '<span class="chip green">Consent captured</span>' : '<span class="chip orange">Consent missing</span>'}
+        </div>
+        <div class="row-subtle">${escapeHtml(rightToWork.evidenceTypeLabel || evidenceTypeLabel(candidate.right_to_work_evidence_type))}${rightToWork.verifiedAt ? ` • Verified ${escapeHtml(formatDateTime(rightToWork.verifiedAt))}` : ''}</div>
+        <div class="row-subtle">${paymentSummary.bankName ? `${escapeHtml(paymentSummary.bankName)} • ${escapeHtml(paymentReference(candidate))}` : 'Payment details not completed yet'}</div>
+      </div>
+      <div class="row-actions">
+        <button class="btn ghost small" type="button" data-role="open" data-id="${candidate.id}">Open</button>
+        <button class="btn ghost small" type="button" data-role="starter-reminder" data-id="${candidate.id}" ${quickReminderDisabled ? 'disabled' : ''}>Send reminder</button>
+        <button class="btn ghost small" type="button" data-role="${canVerify ? 'mark-verified' : 'starter-verified'}" data-id="${candidate.id}" ${(!canVerify && !candidate.email) || isArchived(candidate) ? 'disabled' : ''}>${canVerify ? 'Mark verified' : 'Send verified'}</button>
       </div>`;
     return row;
   }
@@ -2526,6 +2809,42 @@
       if (candidate) generatePdf(candidate);
       return;
     }
+    if (role === 'starter-reminder') {
+      const candidate = findCandidate(id);
+      if (!candidate) return;
+      void sendOnboardingRequest({
+        candidateIds: [candidate.id],
+        requestType: 'general',
+        skipConfirm: true,
+      }).catch((err) => {
+        console.error('[candidates] onboarding reminder failed', err);
+        showToast(err.message || 'Could not send onboarding reminder.', 'error', 4200);
+      });
+      return;
+    }
+    if (role === 'mark-verified') {
+      const candidate = findCandidate(id);
+      const documentId = candidate?.onboarding?.rightToWork?.documentId;
+      if (!candidate || !documentId) return;
+      void reviewCandidateDocument(candidate, documentId, 'verify').catch((err) => {
+        console.error('[candidates] quick verify failed', err);
+        showToast(err.message || 'Could not verify the right-to-work document.', 'error', 4200);
+      });
+      return;
+    }
+    if (role === 'starter-verified') {
+      const candidate = findCandidate(id);
+      if (!candidate) return;
+      void sendOnboardingRequest({
+        candidateIds: [candidate.id],
+        requestType: 'verification_complete',
+        skipConfirm: true,
+      }).catch((err) => {
+        console.error('[candidates] verification complete email failed', err);
+        showToast(err.message || 'Could not send the verification complete email.', 'error', 4200);
+      });
+      return;
+    }
     if (role === 'copy-email') {
       const candidate = state.filtered.find((row) => String(row.id) === String(id));
       copyText(candidate?.email || '').then((copied) => {
@@ -2577,6 +2896,7 @@
   function renderDrawerSkeleton() {
     elements.dwName.textContent = 'Loading…';
     elements.dwProfile.innerHTML = '<div class="skeleton-card"></div>';
+    if (elements.dwOnboarding) elements.dwOnboarding.innerHTML = '<div class="skeleton-card"></div>';
     elements.dwPayment.innerHTML = '';
     elements.dwAssignments.innerHTML = '';
     elements.dwDocs.innerHTML = '';
@@ -2620,6 +2940,10 @@
     elements.dwBlock.onclick = () => toggleBlock(candidate);
     elements.dwProfile.innerHTML = renderProfile(candidate);
     bindProfileEditors(candidate);
+    if (elements.dwOnboarding) {
+      elements.dwOnboarding.innerHTML = renderOnboarding(candidate);
+      bindOnboardingActions(candidate);
+    }
     elements.dwPayment.innerHTML = renderPayment(candidate);
     bindPaymentEditors(candidate);
     elements.dwAssignments.innerHTML = renderAssignments(candidate);
@@ -2727,6 +3051,14 @@
               <option value="true" ${onboardingMode ? 'selected' : ''}>Live assignment onboarding</option>
             </select>
           </label>
+          ${onboardingMode ? `
+            <label class="drawer-field">
+              <span>Onboarding status</span>
+              <select class="drawer-input" data-field="onboarding_status">
+                ${Object.keys(ONBOARDING_STATUS_META).map((key) => `<option value="${key}" ${onboardingStatusKey(onboarding.status || candidate.onboarding_status) === key ? 'selected' : ''}>${escapeHtml(ONBOARDING_STATUS_META[key].label)}</option>`).join('')}
+              </select>
+            </label>
+          ` : ''}
           ${editableField('First name', 'first_name', candidate.first_name)}
           ${editableField('Last name', 'last_name', candidate.last_name)}
           ${editableField('Email', 'email', candidate.email)}
@@ -2738,13 +3070,52 @@
           ${editableField('Reference', 'ref', candidateReference(candidate))}
         </div>
         <div class="profile-grid" style="margin-top:12px">
+          ${editableField('Address line 1', 'address1', candidate.address1)}
+          ${editableField('Address line 2', 'address2', candidate.address2)}
+          ${editableField('Town / city', 'town', candidate.town)}
+          ${editableField('County / region', 'county', candidate.county)}
+          ${editableField('Postcode', 'postcode', candidate.postcode)}
+          ${editableField('Country', 'country', candidate.country)}
+          ${editableField('Current location', 'location', candidate.location)}
+          ${editableField('Nationality', 'nationality', candidate.nationality)}
+        </div>
+        <div class="profile-grid" style="margin-top:12px">
+          ${editableField('Primary specialism', 'primary_specialism', candidate.primary_specialism)}
+          ${editableField('Secondary specialism', 'secondary_specialism', candidate.secondary_specialism)}
+          ${editableField('Current job title', 'current_job_title', candidate.current_job_title)}
+          ${editableField('Roles looking for / placed into', 'desired_roles', candidate.desired_roles || candidate.role)}
+          ${editableField('Years of experience', 'experience_years', candidate.experience_years, 'number')}
+          ${editableField('Sector experience', 'sector_experience', candidate.sector_experience)}
+          ${editableField('Availability / start date', 'availability', candidate.availability || candidate.availability_on)}
+          ${editableField('Relocation preference', 'relocation_preference', candidate.relocation_preference)}
+          ${editableField('Pay expectation', 'salary_expectation', candidate.salary_expectation)}
+          ${editableField('LinkedIn', 'linkedin_url', candidate.linkedin_url)}
+          ${onboardingMode ? `
+            <label class="drawer-field">
+              <span>Right-to-work evidence type</span>
+              <select class="drawer-input" data-field="right_to_work_evidence_type">
+                ${['passport', 'id_card', 'visa', 'brp', 'share_code', 'settlement', 'other'].map((key) => `<option value="${key}" ${String(candidate.right_to_work_evidence_type || '').toLowerCase() === key ? 'selected' : ''}>${escapeHtml(evidenceTypeLabel(key))}</option>`).join('')}
+              </select>
+            </label>
+          ` : ''}
+          ${onboardingMode ? `
+            <label class="drawer-field">
+              <span>Consent captured</span>
+              <select class="drawer-input" data-field="consent_captured">
+                <option value="false" ${candidate.consent_captured ? '' : 'selected'}>No</option>
+                <option value="true" ${candidate.consent_captured ? 'selected' : ''}>Yes</option>
+              </select>
+            </label>
+          ` : ''}
+        </div>
+        <div class="profile-grid" style="margin-top:12px">
           <div class="drawer-field"><span>Portal account</span><strong>${portalStatus}</strong></div>
           <div class="drawer-field"><span>Portal email</span><strong>${accountEmail}</strong></div>
           <div class="drawer-field"><span>Verification</span><strong>${confirmationStatus}</strong></div>
           <div class="drawer-field"><span>Portal last seen</span><strong>${formatDateTime(candidate.last_portal_login_at || portalAuth.last_sign_in_at)}</strong></div>
           <div class="drawer-field"><span>Portal created</span><strong>${formatDateTime(portalAuth.created_at)}</strong></div>
-          <div class="drawer-field"><span>Location</span><strong>${candidate.location || '—'}</strong></div>
-          <div class="drawer-field"><span>Sector focus</span><strong>${candidate.sector_focus || '—'}</strong></div>
+          <div class="drawer-field"><span>Sector focus</span><strong>${candidate.sector_focus || candidate.primary_specialism || '—'}</strong></div>
+          <div class="drawer-field"><span>Consent captured</span><strong>${candidate.consent_captured ? `Yes${candidate.consent_captured_at ? ` · ${formatDateTime(candidate.consent_captured_at)}` : ''}` : 'No'}</strong></div>
         </div>
         ${(onboardingMode || candidate.emergency_name || candidate.emergency_phone) ? `
           <div class="profile-grid" style="margin-top:12px">
@@ -2756,6 +3127,20 @@
         <div style="margin-top:12px">
           <label class="muted" style="display:block;margin-bottom:4px">Skills / tags</label>
           <textarea data-field="skills" rows="2" class="drawer-input">${candidate.skills.join(', ')}</textarea>
+        </div>
+        ${onboardingMode ? `
+          <div style="margin-top:12px">
+            <label class="muted" style="display:block;margin-bottom:4px">Authorised work regions</label>
+            <textarea data-field="right_to_work_regions" rows="2" class="drawer-input">${(candidate.right_to_work_regions || []).join(', ')}</textarea>
+          </div>
+        ` : ''}
+        <div style="margin-top:12px">
+          <label class="muted" style="display:block;margin-bottom:4px">Qualifications / certifications</label>
+          <textarea data-field="qualifications" rows="3" class="drawer-input">${escapeHtml(candidate.qualifications || '')}</textarea>
+        </div>
+        <div style="margin-top:12px">
+          <label class="muted" style="display:block;margin-bottom:4px">Summary / notes</label>
+          <textarea data-field="summary" rows="4" class="drawer-input">${escapeHtml(candidate.summary || '')}</textarea>
         </div>
         <div class="drawer-savebar" style="margin-top:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
           <div class="muted" data-save-status>Edit a field, then use Save changes to confirm the update.</div>
@@ -2780,6 +3165,95 @@
           <button class="btn ghost" type="button" data-account-action="resend_verification" ${!accountEmail || portalAuth.email_confirmed_at ? 'disabled' : ''}>Resend verification</button>
         </div>
         <div class="tag-row">${(candidate.tags || []).map((tag) => `<span class="chip blue">${tag.name}</span>`).join(' ')}</div>
+      </div>`;
+  }
+
+  function renderOnboarding(candidate) {
+    if (!candidateOnboardingMode(candidate)) {
+      return `
+        <div class="drawer-section">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div>
+              <h3 style="margin:0 0 4px">Onboarding</h3>
+              <div class="muted" style="font-size:13px">This section becomes active only when HMJ is onboarding the candidate for a live assignment.</div>
+            </div>
+            <span class="chip gray">Recruitment profile</span>
+          </div>
+        </div>`;
+    }
+    const onboarding = candidate.onboarding || {};
+    const rightToWork = onboarding.rightToWork || {};
+    const emailHistory = onboarding.emailHistory || {};
+    const missingCore = Array.isArray(onboarding.missingCore) ? onboarding.missingCore : [];
+    const missingRecommended = Array.isArray(onboarding.missingRecommended) ? onboarding.missingRecommended : [];
+    const recentEmailMarkup = Array.isArray(emailHistory.recent) && emailHistory.recent.length
+      ? emailHistory.recent.slice(0, 6).map((entry) => `
+          <div class="audit-row">
+            <strong>${formatDateTime(entry.created_at)}</strong>
+            <span>${escapeHtml(entry.description || entry.activity_type || 'Onboarding email sent')}</span>
+          </div>
+        `).join('')
+      : '<div class="muted">No onboarding email activity logged yet.</div>';
+    return `
+      <div class="drawer-section">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <h3 style="margin:0 0 4px">Onboarding</h3>
+            <div class="muted" style="font-size:13px">Operational view for starter onboarding, payroll readiness, document verification, and reminder outreach.</div>
+          </div>
+          <div class="tag-row">
+            <span class="chip ${onboardingStatusTone(onboarding.status)}">${escapeHtml(onboarding.statusLabel || onboardingStatusLabel(onboarding.status))}</span>
+            ${onboarding.pendingVerificationCount ? `<span class="chip orange">${onboarding.pendingVerificationCount} to verify</span>` : ''}
+            ${onboarding.duplicate?.duplicateEmailCount ? `<span class="chip red">${onboarding.duplicate.duplicateEmailCount} duplicate email${onboarding.duplicate.duplicateEmailCount === 1 ? '' : 's'}</span>` : ''}
+          </div>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-tile">
+            <span>Right-to-work document</span>
+            <strong>${escapeHtml(rightToWork.documentStatus === 'approved' ? 'Approved' : rightToWork.documentStatus === 'rejected' ? 'Rejected' : rightToWork.hasUpload ? 'Present' : 'Missing')}</strong>
+            <p>${escapeHtml(`${rightToWork.evidenceTypeLabel || evidenceTypeLabel(candidate.right_to_work_evidence_type)}${rightToWork.verifiedBy ? ` · ${rightToWork.verifiedBy}` : ''}`)}</p>
+          </article>
+          <article class="summary-tile">
+            <span>Payroll</span>
+            <strong>${candidate.payment_summary?.completion?.complete ? 'Ready' : 'Pending'}</strong>
+            <p>${candidate.payment_summary?.bankName ? `${escapeHtml(candidate.payment_summary.bankName)} · ${escapeHtml(paymentReference(candidate))}` : 'Bank details still missing.'}</p>
+          </article>
+          <article class="summary-tile">
+            <span>Missing core items</span>
+            <strong>${missingCore.length}</strong>
+            <p>${missingCore.length ? escapeHtml(missingCore.map((item) => humanizeMissingField(item)).join(', ')) : 'No core onboarding blockers.'}</p>
+          </article>
+          <article class="summary-tile">
+            <span>Last onboarding email</span>
+            <strong>${lastEmailSentAt(emailHistory, 'onboardingReminderSentAt', 'documentRequestSentAt', 'rtwReminderSentAt', 'introReminderSentAt', 'introSentAt', 'verificationCompleteSentAt') ? formatDateTime(lastEmailSentAt(emailHistory, 'onboardingReminderSentAt', 'documentRequestSentAt', 'rtwReminderSentAt', 'introReminderSentAt', 'introSentAt', 'verificationCompleteSentAt')) : 'Not sent yet'}</strong>
+            <p>${emailHistory.verificationCompleteSentAt ? 'Verification complete email logged.' : 'Use the actions below to chase missing detail quickly.'}</p>
+          </article>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn" type="button" data-onboarding-action="send-reminder-general" ${!candidate.email || isArchived(candidate) ? 'disabled' : ''}>Send reminder</button>
+          <button class="btn ghost" type="button" data-onboarding-action="send-doc-request" ${!candidate.email || isArchived(candidate) ? 'disabled' : ''}>Re-request documents</button>
+          <button class="btn ghost" type="button" data-onboarding-action="send-verification-complete" ${!candidate.email || isArchived(candidate) ? 'disabled' : ''}>Send verification complete</button>
+          <button class="btn ghost" type="button" data-onboarding-action="mark-verified" ${!rightToWork.documentId || rightToWork.documentStatus !== 'present' ? 'disabled' : ''}>Mark verified</button>
+          <button class="btn ghost" type="button" data-onboarding-action="copy-upload-link">Copy upload link</button>
+        </div>
+        <div class="profile-grid" style="margin-top:12px">
+          <div class="drawer-field"><span>Evidence type</span><strong>${escapeHtml(rightToWork.evidenceTypeLabel || evidenceTypeLabel(candidate.right_to_work_evidence_type))}</strong></div>
+          <div class="drawer-field"><span>Verified by</span><strong>${escapeHtml(rightToWork.verifiedBy || '—')}</strong></div>
+          <div class="drawer-field"><span>Verified when</span><strong>${escapeHtml(formatDateTime(rightToWork.verifiedAt))}</strong></div>
+          <div class="drawer-field"><span>Consent</span><strong>${candidate.consent_captured ? `Captured${candidate.consent_captured_at ? ` · ${formatDateTime(candidate.consent_captured_at)}` : ''}` : 'Missing'}</strong></div>
+          <div class="drawer-field"><span>Status updated</span><strong>${escapeHtml(formatDateTime(onboarding.statusUpdatedAt))}</strong></div>
+          <div class="drawer-field"><span>Status owner</span><strong>${escapeHtml(onboarding.statusUpdatedBy || '—')}</strong></div>
+          <div class="drawer-field"><span>Work regions</span><strong>${escapeHtml((onboarding.rightToWorkRegions || candidate.right_to_work_regions || []).join(', ') || '—')}</strong></div>
+          <div class="drawer-field"><span>CV</span><strong>${onboarding.cvPresent ? 'Uploaded' : 'Missing'}</strong></div>
+        </div>
+        ${rightToWork.documentLabel ? `<div class="muted" style="margin-top:8px;font-size:13px">Latest document: ${escapeHtml(rightToWork.documentLabel)}</div>` : ''}
+        ${rightToWork.verificationNotes ? `<div class="muted" style="margin-top:8px;font-size:13px">Verification note: ${escapeHtml(rightToWork.verificationNotes)}</div>` : ''}
+        ${missingCore.length ? `<div class="tag-row" style="margin-top:12px">${missingCore.map((item) => `<span class="chip orange">${escapeHtml(humanizeMissingField(item))}</span>`).join(' ')}</div>` : ''}
+        ${missingRecommended.length ? `<div class="tag-row" style="margin-top:8px">${missingRecommended.map((item) => `<span class="chip gray">${escapeHtml(humanizeMissingField(item))}</span>`).join(' ')}</div>` : ''}
+        <div style="margin-top:16px">
+          <h4 style="margin:0 0 10px">Recent onboarding emails</h4>
+          <div class="audit-list">${recentEmailMarkup}</div>
+        </div>
       </div>`;
   }
 
@@ -3140,6 +3614,7 @@
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
     refreshDrawerProfile(candidate, { preserveDirty: true });
+    refreshDrawerOnboarding(candidate);
     await refreshVerificationQueue({ silent: true });
   }
 
@@ -3163,6 +3638,7 @@
       elements.dwDocs.innerHTML = renderDocs(candidate);
       bindDocumentActions(candidate);
       refreshDrawerProfile(candidate, { preserveDirty: true });
+      refreshDrawerOnboarding(candidate);
       await refreshVerificationQueue({ silent: true });
     } else {
       await refreshCandidateDocuments(candidate);
@@ -3180,6 +3656,7 @@
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
     refreshDrawerProfile(candidate, { preserveDirty: true });
+    refreshDrawerOnboarding(candidate);
     await refreshVerificationQueue({ silent: true });
   }
 
@@ -3205,6 +3682,7 @@
     elements.dwDocs.innerHTML = renderDocs(candidate);
     bindDocumentActions(candidate);
     refreshDrawerProfile(candidate, { preserveDirty: true });
+    refreshDrawerOnboarding(candidate);
     await refreshVerificationQueue({ silent: true });
     showToast(response?.message || 'Document review updated.', 'info', 2600);
   }
@@ -3285,6 +3763,12 @@
     bindProfileEditors(candidate);
   }
 
+  function refreshDrawerOnboarding(candidate) {
+    if (!candidate || !state.drawerId || String(state.drawerId) !== String(candidate.id) || !elements.dwOnboarding) return;
+    elements.dwOnboarding.innerHTML = renderOnboarding(candidate);
+    bindOnboardingActions(candidate);
+  }
+
   function refreshDrawerPayment(candidate) {
     if (!candidate || !state.drawerId || String(state.drawerId) !== String(candidate.id)) return;
     elements.dwPayment.innerHTML = renderPayment(candidate);
@@ -3333,6 +3817,7 @@
     if (index >= 0) state.raw[index] = { ...candidate };
     refreshDrawerPayment(candidate);
     refreshDrawerProfile(candidate, { preserveDirty: true });
+    refreshDrawerOnboarding(candidate);
   }
 
   async function savePaymentDetails(candidate) {
@@ -3358,6 +3843,7 @@
     if (index >= 0) state.raw[index] = { ...candidate };
     refreshDrawerPayment(candidate);
     refreshDrawerProfile(candidate, { preserveDirty: true });
+    refreshDrawerOnboarding(candidate);
     applyFilters();
     showToast(response?.message || 'Payment details saved.', 'info', 2400);
   }
@@ -3661,6 +4147,53 @@
     updateSaveState();
   }
 
+  function bindOnboardingActions(candidate) {
+    const section = elements.dwOnboarding;
+    if (!section) return;
+    section.querySelectorAll('[data-onboarding-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.onboardingAction;
+        if (!action) return;
+        if (action === 'send-doc-request') {
+          openDocumentRequestDialog([candidate.id]);
+          return;
+        }
+        if (action === 'copy-upload-link') {
+          await copyCandidateUploadLink({
+            requestType: 'documents',
+            documentTypes: ['right_to_work', 'bank_document', 'reference'],
+          });
+          return;
+        }
+        btn.disabled = true;
+        try {
+          if (action === 'send-reminder-general') {
+            await sendOnboardingRequest({
+              candidateIds: [candidate.id],
+              requestType: 'general',
+              skipConfirm: true,
+            });
+          } else if (action === 'send-verification-complete') {
+            await sendOnboardingRequest({
+              candidateIds: [candidate.id],
+              requestType: 'verification_complete',
+              skipConfirm: true,
+            });
+          } else if (action === 'mark-verified') {
+            const documentId = candidate?.onboarding?.rightToWork?.documentId;
+            if (!documentId) return;
+            await reviewCandidateDocument(candidate, documentId, 'verify');
+          }
+        } catch (err) {
+          console.error('[candidates] onboarding section action failed', err);
+          showToast(err.message || 'Onboarding action failed.', 'error', 4200);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
   async function copyText(text) {
     const value = String(text || '').trim();
     if (!value) return false;
@@ -3808,6 +4341,14 @@
         payload.skills = parseSkills(rawValue);
         continue;
       }
+      if (field === 'right_to_work_regions') {
+        payload.right_to_work_regions = parseSkills(rawValue);
+        continue;
+      }
+      if (field === 'onboarding_mode' || field === 'consent_captured') {
+        payload[field] = String(rawValue) === 'true' || rawValue === true;
+        continue;
+      }
       payload[field] = rawValue;
     }
     if (!payload.first_name && candidate.first_name) payload.first_name = candidate.first_name;
@@ -3836,7 +4377,18 @@
     const payload = buildSavePayload(candidate, patch);
     try {
       const response = await callSave(payload);
-      const nextRecord = response?.candidate ? normalizeCandidate(response.candidate) : { ...candidate, ...payload, ...patch };
+      const nextRecord = response?.candidate
+        ? {
+            ...candidate,
+            ...normalizeCandidate(response.candidate),
+            docs: Array.isArray(candidate.docs) ? candidate.docs.slice() : [],
+            notes: Array.isArray(candidate.notes) ? candidate.notes.slice() : [],
+            audit: Array.isArray(candidate.audit) ? candidate.audit.slice() : [],
+            applications: Array.isArray(candidate.applications) ? candidate.applications.slice() : [],
+            assignments: Array.isArray(candidate.assignments) ? candidate.assignments.slice() : [],
+            assignment_options: Array.isArray(candidate.assignment_options) ? candidate.assignment_options.slice() : [],
+          }
+        : { ...candidate, ...payload, ...patch };
       if (response?.portal_auth) {
         nextRecord.portal_auth = response.portal_auth;
         nextRecord.auth_user_id = nextRecord.auth_user_id || response.portal_auth.user_id || null;
@@ -3847,6 +4399,7 @@
       const index = state.raw.findIndex((row) => String(row.id) === String(candidate.id));
       if (index >= 0) state.raw[index] = { ...candidate };
       applyFilters();
+      refreshDrawerOnboarding(candidate);
       if (!quiet) {
         showToast(response?.warning || 'Saved', response?.warning ? 'warn' : 'info', response?.warning ? 3600 : 1600);
       }
@@ -4187,24 +4740,23 @@
       documentTypes,
     });
     const eligible = Array.isArray(preview?.candidates) ? preview.candidates : [];
+    const requestLabel = onboardingRequestLabel(requestType, documentTypes);
     if (!eligible.length) {
-      showToast(
-        requestType === 'rtw'
-          ? 'No selected candidates are currently missing right-to-work documents.'
-          : 'No selected candidates are missing the requested onboarding documents.',
-        'warn',
-        3600,
-      );
+      let message = `No selected candidates currently need this ${requestLabel}.`;
+      if (requestType === 'rtw') message = 'No selected candidates are currently missing right-to-work documents.';
+      if (requestType === 'documents') message = 'No selected candidates are missing the requested onboarding documents.';
+      if (requestType === 'verification_complete') message = 'No selected candidates are currently ready for a verification complete email.';
+      if (requestType === 'general') message = 'No selected candidates currently need a general onboarding reminder.';
+      showToast(message, 'warn', 3600);
       return;
     }
     if (!skipConfirm) {
       const sampleNames = eligible.slice(0, 3).map((candidate) => candidate.full_name || candidate.email).join(', ');
       const previewText = eligible.length > 3 ? `${sampleNames}, and ${eligible.length - 3} more` : sampleNames;
-      const confirmed = window.confirm(
-        requestType === 'rtw'
-          ? `Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`
-          : `Send secure ${formatDocumentRequestList(documentTypes).toLowerCase()} requests to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`,
-      );
+      let confirmMessage = `Send ${requestLabel} to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`;
+      if (requestType === 'rtw') confirmMessage = `Send secure right-to-work reminders to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`;
+      if (requestType === 'documents') confirmMessage = `Send secure ${formatDocumentRequestList(documentTypes).toLowerCase()} requests to ${eligible.length} candidate${eligible.length === 1 ? '' : 's'}?\n\n${previewText}`;
+      const confirmed = window.confirm(confirmMessage);
       if (!confirmed) return;
     }
     let response = await state.helpers.api('admin-candidate-onboarding-reminders', 'POST', {
@@ -4248,11 +4800,23 @@
       }
     }
     pushLog({
-      action: requestType === 'rtw' ? 'rtw:reminders' : 'docs:request',
+      action: requestType === 'rtw'
+        ? 'rtw:reminders'
+        : requestType === 'documents'
+        ? 'docs:request'
+        : requestType === 'verification_complete'
+        ? 'onboarding:verified'
+        : 'onboarding:reminder',
       detail: response?.message || `Sent ${response?.sentCount || 0}`,
     });
     showToast(
-      response?.message || (requestType === 'rtw' ? 'Right-to-work reminders sent.' : 'Document requests sent.'),
+      response?.message || (requestType === 'rtw'
+        ? 'Right-to-work reminders sent.'
+        : requestType === 'documents'
+        ? 'Document requests sent.'
+        : requestType === 'verification_complete'
+        ? 'Verification complete emails sent.'
+        : 'Onboarding reminders sent.'),
       'info',
       4200,
     );
@@ -4284,6 +4848,44 @@
     } catch (err) {
       console.error('[candidates] reminder send failed', err);
       showToast(err.message || 'Right-to-work reminder send failed.', 'error', 4200);
+    }
+  }
+
+  function onboardingModuleAudience() {
+    const selectedRows = selectedCandidates({ allowRaw: true, includeRaw: true })
+      .filter((row) => !isRawTimesheetPortalCandidate(row) && candidateOnboardingMode(row) && !!String(row?.email || '').trim() && !isArchived(row));
+    if (selectedRows.length) return selectedRows;
+    return onboardingRowsInView().filter((row) => !!String(row?.email || '').trim() && !isArchived(row));
+  }
+
+  async function runOnboardingModuleAction(action) {
+    const rows = onboardingModuleAudience();
+    if (!rows.length) {
+      showToast('Select onboarding records first, or keep starter rows visible in this view.', 'warn', 3600);
+      return;
+    }
+    if (action === 'intro') {
+      await bulkIntroEmail(rows);
+      return;
+    }
+    if (action === 'documents') {
+      await bulkDocumentRequest(rows.map((row) => row.id));
+      return;
+    }
+    if (action === 'general') {
+      await sendOnboardingRequest({
+        candidateIds: rows.map((row) => row.id),
+        requestType: 'general',
+        skipConfirm: false,
+      });
+      return;
+    }
+    if (action === 'verification_complete') {
+      await sendOnboardingRequest({
+        candidateIds: rows.map((row) => row.id),
+        requestType: 'verification_complete',
+        skipConfirm: false,
+      });
     }
   }
 
@@ -4319,9 +4921,12 @@
     };
   }
 
-  async function bulkIntroEmail() {
+  async function bulkIntroEmail(rowsOverride = null) {
+    const sourceRows = Array.isArray(rowsOverride) && rowsOverride.length
+      ? rowsOverride
+      : selectedCandidates({ allowRaw: true, includeRaw: true });
     const rows = (await ensureWebsiteCandidatesForOutreach(
-      selectedCandidates({ allowRaw: true, includeRaw: true }).filter((candidate) => !!candidate?.email),
+      sourceRows.filter((candidate) => !!candidate?.email),
       { onboardingMode: true },
     )).filter((candidate) => !!candidate?.email);
     if (!rows.length) {
@@ -4790,11 +5395,19 @@
     elements.ready = qs('#t-ready');
     elements.rtwMissing = qs('#t-rtw-missing');
     elements.toVerify = qs('#t-to-verify');
+    elements.onboardingModule = qs('#onboarding-module');
+    elements.onboardingModuleSummary = qs('#onboarding-module-summary');
+    elements.onboardingStatusStrip = qs('#onboarding-status-strip');
+    elements.onboardingBulkIntro = qs('#onboarding-bulk-intro');
+    elements.onboardingBulkReminder = qs('#onboarding-bulk-reminder');
+    elements.onboardingBulkDocs = qs('#onboarding-bulk-docs');
+    elements.onboardingBulkVerified = qs('#onboarding-bulk-verified');
     elements.drawer = qs('#drawer');
     elements.dwName = qs('#dw-name');
     elements.dwTypeBadge = qs('#dw-type-badge');
     elements.dwRef = qs('#dw-ref');
     elements.dwProfile = qs('#dw-profile');
+    elements.dwOnboarding = qs('#dw-onboarding');
     elements.dwPayment = qs('#dw-payment');
     elements.dwAssignments = qs('#dw-assignments');
     elements.dwDocs = qs('#dw-docs');
@@ -4950,6 +5563,38 @@
     }
     if (elements.selectVisible) {
       elements.selectVisible.addEventListener('click', () => selectVisibleCandidates());
+    }
+    if (elements.onboardingBulkIntro) {
+      elements.onboardingBulkIntro.addEventListener('click', () => {
+        void runOnboardingModuleAction('intro').catch((err) => {
+          console.error('[candidates] onboarding intro send failed', err);
+          showToast(err.message || 'Could not send onboarding intro emails.', 'error', 4200);
+        });
+      });
+    }
+    if (elements.onboardingBulkReminder) {
+      elements.onboardingBulkReminder.addEventListener('click', () => {
+        void runOnboardingModuleAction('general').catch((err) => {
+          console.error('[candidates] onboarding reminder send failed', err);
+          showToast(err.message || 'Could not send onboarding reminders.', 'error', 4200);
+        });
+      });
+    }
+    if (elements.onboardingBulkDocs) {
+      elements.onboardingBulkDocs.addEventListener('click', () => {
+        void runOnboardingModuleAction('documents').catch((err) => {
+          console.error('[candidates] onboarding document request failed', err);
+          showToast(err.message || 'Could not request onboarding documents.', 'error', 4200);
+        });
+      });
+    }
+    if (elements.onboardingBulkVerified) {
+      elements.onboardingBulkVerified.addEventListener('click', () => {
+        void runOnboardingModuleAction('verification_complete').catch((err) => {
+          console.error('[candidates] onboarding verification complete send failed', err);
+          showToast(err.message || 'Could not send verification complete emails.', 'error', 4200);
+        });
+      });
     }
     if (elements.refreshVerify) {
       elements.refreshVerify.addEventListener('click', () => refreshVerificationQueue());
