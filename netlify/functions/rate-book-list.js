@@ -11,7 +11,7 @@ const {
 
 const HEADERS = {
   'content-type': 'application/json',
-  'cache-control': 'public, max-age=300, stale-while-revalidate=300',
+  'cache-control': 'no-store',
 };
 
 function buildSeedRows() {
@@ -75,31 +75,34 @@ function toPublicPayload(source, error = '', schema = false) {
 
   return {
     ok: true,
+    publicEnabled: hydrated.settings.publicEnabled !== false,
     settings: hydrated.settings,
     markets: hydrated.markets.filter((market) => market.isActive),
-    roles: hydrated.roles
-      .filter((role) => role.isActive && role.isPublic)
-      .map((role) => ({
-        id: role.id,
-        slug: role.slug,
-        name: role.name,
-        discipline: role.discipline,
-        sector: role.sector,
-        seniority: role.seniority,
-        notes: role.notes,
-        isFeatured: role.isFeatured,
-        updatedAt: role.updatedAt || null,
-        marketRates: role.marketRates.map((rate) => ({
-          id: rate.id,
-          marketCode: rate.marketCode,
-          marketName: rate.marketName,
-          currency: rate.currency,
-          payRate: rate.payRate,
-          chargeRate: rate.chargeRate,
-          calculatedChargeRate: rate.calculatedChargeRate,
-          rateUnit: rate.rateUnit,
+    roles: hydrated.settings.publicEnabled === false
+      ? []
+      : hydrated.roles
+        .filter((role) => role.isActive && role.isPublic)
+        .map((role) => ({
+          id: role.id,
+          slug: role.slug,
+          name: role.name,
+          discipline: role.discipline,
+          sector: role.sector,
+          seniority: role.seniority,
+          notes: role.notes,
+          isFeatured: role.isFeatured,
+          updatedAt: role.updatedAt || null,
+          marketRates: role.marketRates.map((rate) => ({
+            id: rate.id,
+            marketCode: rate.marketCode,
+            marketName: rate.marketName,
+            currency: rate.currency,
+            payRate: rate.payRate,
+            chargeRate: rate.chargeRate,
+            calculatedChargeRate: rate.calculatedChargeRate,
+            rateUnit: rate.rateUnit,
+          })),
         })),
-      })),
     source,
     error,
     schema,
@@ -159,31 +162,34 @@ exports.handler = async (event) => {
       headers: HEADERS,
       body: JSON.stringify({
         ok: true,
+        publicEnabled: hydrated.settings.publicEnabled !== false,
         settings: hydrated.settings,
         markets: hydrated.markets.filter((market) => market.isActive),
-        roles: hydrated.roles
-          .filter((role) => role.isActive && role.isPublic)
-          .map((role) => ({
-            id: role.id,
-            slug: role.slug,
-            name: role.name,
-            discipline: role.discipline,
-            sector: role.sector,
-            seniority: role.seniority,
-            notes: role.notes,
-            isFeatured: role.isFeatured,
-            updatedAt: role.updatedAt || null,
-            marketRates: role.marketRates.map((rate) => ({
-              id: rate.id,
-              marketCode: rate.marketCode,
-              marketName: rate.marketName,
-              currency: rate.currency,
-              payRate: rate.payRate,
-              chargeRate: rate.chargeRate,
-              calculatedChargeRate: rate.calculatedChargeRate,
-              rateUnit: rate.rateUnit,
+        roles: hydrated.settings.publicEnabled === false
+          ? []
+          : hydrated.roles
+            .filter((role) => role.isActive && role.isPublic)
+            .map((role) => ({
+              id: role.id,
+              slug: role.slug,
+              name: role.name,
+              discipline: role.discipline,
+              sector: role.sector,
+              seniority: role.seniority,
+              notes: role.notes,
+              isFeatured: role.isFeatured,
+              updatedAt: role.updatedAt || null,
+              marketRates: role.marketRates.map((rate) => ({
+                id: rate.id,
+                marketCode: rate.marketCode,
+                marketName: rate.marketName,
+                currency: rate.currency,
+                payRate: rate.payRate,
+                chargeRate: rate.chargeRate,
+                calculatedChargeRate: rate.calculatedChargeRate,
+                rateUnit: rate.rateUnit,
+              })),
             })),
-          })),
         source: 'supabase',
         schema: false,
         supabase: supabaseStatus(),

@@ -40,6 +40,9 @@
       'heroVisibilityLabel',
       'heroSourceChip',
       'heroSummary',
+      'publicGuideToggleBtn',
+      'printPdfBtn',
+      'publicGuideToggleMeta',
       'metricPublic',
       'metricHidden',
       'metricArchived',
@@ -180,6 +183,10 @@
     return state.roles.find((role) => String(role.id) === String(roleId)) || null;
   }
 
+  function isPublicGuideEnabled() {
+    return !state.settings || state.settings.publicEnabled !== false;
+  }
+
   function roleStatus(role) {
     if (!role) return 'archived';
     if (role.isActive === false) return 'archived';
@@ -221,10 +228,25 @@
     els.metricArchived.textContent = String(counts.archivedCount);
     els.metricMarkets.textContent = String(state.markets.length);
 
-    els.heroVisibilityLabel.textContent = counts.publicCount
-      ? `${counts.publicCount} public role${counts.publicCount === 1 ? '' : 's'} live`
-      : 'No public roles yet';
+    const publicEnabled = isPublicGuideEnabled();
+
+    els.heroVisibilityLabel.textContent = publicEnabled
+      ? (counts.publicCount
+        ? `${counts.publicCount} public role${counts.publicCount === 1 ? '' : 's'} live`
+        : 'Public guide live')
+      : 'Public guide hidden';
     els.heroSourceChip.textContent = state.source === 'supabase' ? 'Live source' : 'Preview source';
+    if (els.publicGuideToggleBtn) {
+      els.publicGuideToggleBtn.disabled = !!state.readOnly;
+      els.publicGuideToggleBtn.textContent = publicEnabled ? 'Hide from public site' : 'Show on public site';
+      els.publicGuideToggleBtn.classList.toggle('primary', publicEnabled);
+      els.publicGuideToggleBtn.classList.toggle('ghost', !publicEnabled);
+    }
+    if (els.publicGuideToggleMeta) {
+      els.publicGuideToggleMeta.textContent = publicEnabled
+        ? 'Clients can currently see the Rate Book on the live site and client resource links.'
+        : 'The public Rate Book and client resource links are currently hidden, while admin editing stays available.';
+    }
 
     if (state.readOnly && state.schema) {
       els.heroSummary.textContent = 'The Rate Book is running in seeded preview mode until the Supabase migration is applied.';
@@ -232,6 +254,9 @@
     } else if (state.readOnly) {
       els.heroSummary.textContent = 'The Rate Book is in safe preview mode because the live storage layer is unavailable.';
       updateBanner(state.error || 'This environment is currently read-only.', 'info', 'Rate Book preview');
+    } else if (!publicEnabled) {
+      els.heroSummary.textContent = 'The public Rate Book is switched off, but all role and market data remain available here for editing and branded PDF exports.';
+      updateBanner('', '', 'Rate Book');
     } else {
       els.heroSummary.textContent = counts.publicCount
         ? 'Published roles flow straight to the public Rate Book. Hidden and archived roles stay saved inside admin only.'
@@ -392,6 +417,13 @@
       loadData();
     });
 
+    if (els.publicGuideToggleBtn) {
+      els.publicGuideToggleBtn.addEventListener('click', togglePublicGuide);
+    }
+    if (els.printPdfBtn) {
+      els.printPdfBtn.addEventListener('click', printBrandedPdf);
+    }
+
     els.searchInput.addEventListener('input', renderTable);
     els.disciplineFilter.addEventListener('change', renderTable);
     els.seniorityFilter.addEventListener('change', renderTable);
@@ -541,6 +573,7 @@
       publicDisclaimer: asString(els.settingsPublicDisclaimer.value),
       ctaLabel: asString(els.settingsCtaLabel.value),
       ctaUrl: asString(els.settingsCtaUrl.value),
+      publicEnabled: isPublicGuideEnabled(),
       id: state.settings && state.settings.id ? state.settings.id : undefined,
     };
   }
@@ -551,11 +584,289 @@
         settings: collectSettingsPayload(),
       });
       state.settings = result.settings;
+      renderOverview();
       renderSettings();
       toast('Rate Book settings saved.', 'success');
     } catch (error) {
       toast(error.message || 'Unable to save settings.', 'error');
     }
+  }
+
+  async function togglePublicGuide() {
+    const nextPublicEnabled = !isPublicGuideEnabled();
+
+    try {
+      const result = await api('admin-rate-book-settings-save', 'POST', {
+        settings: {
+          ...collectSettingsPayload(),
+          publicEnabled: nextPublicEnabled,
+        },
+      });
+      state.settings = result.settings || state.settings;
+      renderOverview();
+      renderSettings();
+      renderTable();
+      toast(
+        nextPublicEnabled
+          ? 'The public Rate Book is now visible on the live site.'
+          : 'The public Rate Book is now hidden from the live site.',
+        'success'
+      );
+    } catch (error) {
+      toast(error.message || 'Unable to update public Rate Book visibility.', 'error');
+    }
+  }
+
+  function printableRoles() {
+    return state.roles
+      .filter((role) => role.isActive !== false && role.isPublic !== false)
+      .filter((role) => {
+        if (state.filters.search) {
+          const haystack = [
+            role.name,
+            role.slug,
+            role.discipline,
+            role.seniority,
+            Array.isArray(role.sector) ? role.sector.join(' ') : '',
+            role.notes,
+          ].join(' ').toLowerCase();
+          if (!haystack.includes(state.filters.search)) return false;
+        }
+        if (state.filters.discipline && role.discipline !== state.filters.discipline) return false;
+        if (state.filters.seniority && role.seniority !== state.filters.seniority) return false;
+        return true;
+      });
+  }
+
+  function printableUpdatedAt(roles) {
+    const timestamps = roles
+      .flatMap((role) => [role.updatedAt].concat((role.marketRates || []).map((rate) => rate.updatedAt)))
+      .map((value) => Date.parse(asString(value)))
+      .filter((value) => Number.isFinite(value));
+    if (!timestamps.length) return '';
+    return new Date(Math.max(...timestamps)).toISOString();
+  }
+
+  function printTimestamp(value) {
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(value instanceof Date ? value : new Date(value));
+    } catch {
+      return asString(value);
+    }
+  }
+
+  function buildPdfMarkup() {
+    const roles = printableRoles();
+    const markets = state.markets.filter((market) => market.isActive !== false);
+    const settings = state.settings || {};
+    const latest = printableUpdatedAt(roles);
+    const printedAt = new Date();
+    const filtersApplied = [
+      state.filters.search ? `Search: ${state.filters.search}` : '',
+      state.filters.discipline ? `Discipline: ${state.filters.discipline}` : '',
+      state.filters.seniority ? `Seniority: ${state.filters.seniority}` : '',
+    ].filter(Boolean);
+
+    const marketHeader = markets.map((market) => `
+      <th colspan="2">
+        <span>${escapeHtml(market.name)}</span>
+        <small>${escapeHtml(market.currency)}</small>
+      </th>
+    `).join('');
+    const marketSubhead = markets.map(() => '<th>Pay</th><th>Charge</th>').join('');
+
+    const bodyRows = roles.map((role) => `
+      <tr>
+        <td class="print-role-cell">
+          <strong>${escapeHtml(role.name)}</strong>
+          <span>${escapeHtml(role.discipline)} · ${escapeHtml(role.seniority)}</span>
+          <small>${escapeHtml((role.sector || []).join(' • ') || 'Mission-critical support')}</small>
+        </td>
+        ${markets.map((market) => {
+          const rate = role.ratesByMarket && role.ratesByMarket[market.code]
+            ? role.ratesByMarket[market.code]
+            : null;
+          return `
+            <td>${escapeHtml(formatMoney(rate && rate.payRate, market.currency))}</td>
+            <td>${escapeHtml(formatMoney(rate && rate.chargeRate, market.currency))}</td>
+          `;
+        }).join('')}
+      </tr>
+    `).join('');
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>HMJ Global Rate Book PDF</title>
+  <style>
+    @page { size: A4 landscape; margin: 14mm; }
+    :root {
+      --ink: #0f1b3f;
+      --muted: #5f6f97;
+      --line: #d9e1f4;
+      --brand: #2f4ea2;
+      --brand-soft: #eef2fb;
+      --panel: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font: 12px/1.45 "Inter", "Segoe UI", Arial, sans-serif;
+      background: #fff;
+    }
+    .print-shell { display: grid; gap: 18px; }
+    .print-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(270px, 0.7fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+    .print-panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(238, 242, 251, 0.65), #fff);
+    }
+    .print-brand { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .print-brand img { height: 32px; width: auto; }
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--brand);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    h1, p { margin: 0; }
+    h1 { font-size: 26px; line-height: 1.05; margin-bottom: 10px; }
+    .lead { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--panel);
+    }
+    .summary-card strong { display: block; font-size: 18px; margin-bottom: 3px; }
+    .summary-card span, .meta-list span, .meta-list small, .print-footer { color: var(--muted); }
+    .meta-list { display: grid; gap: 10px; }
+    .meta-list strong { display: block; margin-bottom: 3px; }
+    .filters-note {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-weight: 700;
+    }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead th {
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 10px 8px;
+      border: 1px solid var(--line);
+    }
+    thead th small { display: block; margin-top: 2px; font-size: 9px; color: var(--muted); }
+    tbody td { border: 1px solid var(--line); padding: 9px 8px; vertical-align: top; }
+    tbody tr:nth-child(even) td { background: rgba(238, 242, 251, 0.38); }
+    .print-role-cell strong { display: block; margin-bottom: 4px; }
+    .print-role-cell span, .print-role-cell small { display: block; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="print-shell">
+    <section class="print-hero">
+      <article class="print-panel">
+        <div class="print-brand">
+          <img src="${escapeHtml(`${window.location.origin}/images/logo.png`)}" alt="HMJ Global logo" />
+        </div>
+        <p class="eyebrow">Indicative commercial guide</p>
+        <h1>HMJ Global Rate Book</h1>
+        <p class="lead">Indicative pay and charge rates for mission-critical construction across the UK and Europe.</p>
+        <p>We support data centre, pharma, engineering and critical-infrastructure projects with fast access to trusted site and project talent. This printable guide mirrors the live HMJ Rate Book and can be shared directly with clients for planning and commercial review.</p>
+      </article>
+      <aside class="print-panel">
+        <div class="meta-list">
+          <div>
+            <p class="eyebrow">How our pricing works</p>
+            <strong>&pound;/&euro;${escapeHtml(String(settings.marginLowAdd ?? 3.5))} margin where pay is up to ${escapeHtml(String(settings.marginLowThreshold ?? 34))} per hour</strong>
+            <small>&pound;/&euro;${escapeHtml(String(settings.marginHighAdd ?? 5))} margin where pay is ${escapeHtml(String(settings.marginHighThreshold ?? 35))} per hour or above</small>
+          </div>
+          <div>
+            <p class="eyebrow">Issued</p>
+            <strong>${escapeHtml(printTimestamp(printedAt))}</strong>
+            <small>${latest ? `Latest live update ${escapeHtml(formatDate(latest))}` : 'Current public guide snapshot'}</small>
+          </div>
+          <div>
+            <p class="eyebrow">Disclaimer</p>
+            <small>${escapeHtml(asString(settings.publicDisclaimer) || 'These figures are indicative commercial guide rates and may vary based on project conditions.')}</small>
+          </div>
+        </div>
+      </aside>
+    </section>
+    <section class="summary-grid">
+      <article class="summary-card">
+        <strong>${roles.length}</strong>
+        <span>Public active roles included</span>
+      </article>
+      <article class="summary-card">
+        <strong>${markets.length}</strong>
+        <span>Markets covered</span>
+      </article>
+      <article class="summary-card">
+        <strong>${isPublicGuideEnabled() ? 'Live' : 'Hidden'}</strong>
+        <span>Current public guide status</span>
+      </article>
+    </section>
+    ${filtersApplied.length ? `<div class="filters-note">Filtered export: ${escapeHtml(filtersApplied.join(' · '))}</div>` : ''}
+    <section class="print-panel">
+      <table aria-label="HMJ Global rate book table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width: 24%;">Role</th>
+            ${marketHeader}
+          </tr>
+          <tr>${marketSubhead}</tr>
+        </thead>
+        <tbody>
+          ${bodyRows || `<tr><td colspan="${1 + (markets.length * 2)}">No public active roles match the current printable selection.</td></tr>`}
+        </tbody>
+      </table>
+    </section>
+    <p class="print-footer">HMJ Global Rate Book. Indicative commercial guide only. Rates may vary with scope, shift pattern, rotation, travel, accommodation, mobilisation needs, local compliance and project complexity.</p>
+  </div>
+  <script>
+    window.addEventListener('load', function () {
+      window.setTimeout(function () {
+        window.print();
+      }, 300);
+    });
+  </script>
+</body>
+</html>`;
+  }
+
+  function printBrandedPdf() {
+    const popup = window.open('', '_blank', 'noopener,noreferrer,width=1280,height=900');
+    if (!popup) {
+      toast('Please allow pop-ups to generate the branded Rate Book PDF.', 'warn');
+      return;
+    }
+    popup.document.open();
+    popup.document.write(buildPdfMarkup());
+    popup.document.close();
+    toast('Opened a branded print view for PDF export.', 'success');
   }
 
   function findRow(roleId) {

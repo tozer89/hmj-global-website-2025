@@ -9,6 +9,8 @@ const AUDIT_PAGES = [
   'index.html',
   'about.html',
   'clients.html',
+  'faq.html',
+  'insights.html',
   'rate-book.html',
   'jobs.html',
   'candidates.html',

@@ -78,8 +78,28 @@
   status = 200
 
 [[redirects]]
+  from = "/faq"
+  to = "/faq.html"
+  status = 200
+
+[[redirects]]
+  from = "/insights"
+  to = "/insights.html"
+  status = 200
+
+[[redirects]]
   from = "/rate-book"
   to = "/rate-book.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/enquiry"
+  to = "/enquiry.html"
   status = 200
 
 [[redirects]]

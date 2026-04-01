@@ -8,6 +8,8 @@ const PAGES = [
   'index.html',
   'about.html',
   'clients.html',
+  'faq.html',
+  'insights.html',
   'rate-book.html',
   'jobs.html',
   'candidates.html',
@@ -16,7 +18,7 @@ const PAGES = [
   'timesheets.html',
   path.join('jobs', 'gold-card-electrician-slough', 'index.html'),
 ];
-const EXPECTED_HOST = 'https://hmjg.netlify.app';
+const EXPECTED_HOST_RE = /^https:\/\/(www\.)?hmj-global\.com\b/i;
 
 function readDom(file) {
   const html = fs.readFileSync(path.join(process.cwd(), file), 'utf8');
@@ -57,10 +59,10 @@ test('priority public pages use the live host consistently', () => {
     const twitterImage = document.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
     const html = document.documentElement.outerHTML;
 
-    assert.ok(canonical.startsWith(EXPECTED_HOST), `${file} canonical should use the live host`);
-    assert.ok(ogUrl.startsWith(EXPECTED_HOST), `${file} og:url should use the live host`);
-    assert.ok(ogImage.startsWith(EXPECTED_HOST), `${file} og:image should use the live host`);
-    assert.ok(twitterImage.startsWith(EXPECTED_HOST), `${file} twitter:image should use the live host`);
-    assert.equal(/https:\/\/www\.hmj-global\.com/i.test(html), false, `${file} should not hardcode the dead legacy host`);
+    assert.ok(EXPECTED_HOST_RE.test(canonical), `${file} canonical should use the live host`);
+    assert.ok(EXPECTED_HOST_RE.test(ogUrl), `${file} og:url should use the live host`);
+    assert.ok(EXPECTED_HOST_RE.test(ogImage), `${file} og:image should use the live host`);
+    assert.ok(EXPECTED_HOST_RE.test(twitterImage), `${file} twitter:image should use the live host`);
+    assert.equal(/https:\/\/hmjg\.netlify\.app/i.test(html), false, `${file} should not hardcode the Netlify host`);
   });
 });

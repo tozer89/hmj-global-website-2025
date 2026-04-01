@@ -5,14 +5,21 @@ const {
   calculateChargeFromPay,
   pickCurrentRates,
   hydrateRateBook,
+  settingsFromRow,
 } = require('../netlify/functions/_rate-book-helpers.js');
 
 test('rate book seed exposes 50 roles across 5 markets', () => {
   const seed = getRateBookSeed();
   assert.equal(seed.roles.length, 50);
   assert.equal(seed.markets.length, 5);
+  assert.equal(seed.settings.publicEnabled, true);
   assert.equal(seed.roles[0].name, 'Electrician');
   assert.equal(seed.roles.at(-1).name, 'Operations Manager');
+});
+
+test('rate book settings preserve the global public visibility toggle', () => {
+  assert.equal(settingsFromRow({ public_enabled: false }).publicEnabled, false);
+  assert.equal(settingsFromRow({ publicEnabled: true }).publicEnabled, true);
 });
 
 test('rate book charge calculation follows HMJ margin rules', () => {

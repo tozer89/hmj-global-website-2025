@@ -654,6 +654,44 @@ img {
   gap: 16px;
 }
 
+#rateBookStatus[hidden],
+#rateBookLoading[hidden],
+#rateBookEmpty[hidden],
+#rateBookResults[hidden] {
+  display: none !important;
+}
+
+.rate-book-unavailable {
+  padding: 56px 0 24px;
+}
+
+.rate-book-unavailable__card {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 34px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, rgba(20, 41, 99, 0.96), rgba(47, 78, 162, 0.88));
+  color: #fff;
+  box-shadow: 0 24px 54px rgba(15, 27, 63, 0.2);
+  display: grid;
+  gap: 16px;
+}
+
+.rate-book-unavailable__card .rate-book-eyebrow {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.rate-book-unavailable__card h1,
+.rate-book-unavailable__card p {
+  margin: 0;
+}
+
+.rate-book-unavailable__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .rate-book-skeleton {
   height: 170px;
   border-radius: 26px;

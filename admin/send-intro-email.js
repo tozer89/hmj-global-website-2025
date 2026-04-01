@@ -24,7 +24,7 @@
   }
 
   function joinPreviewUrl(baseUrl, path) {
-    const base = trimString(baseUrl) || 'https://hmjg.netlify.app/';
+    const base = trimString(baseUrl) || 'https://www.hmj-global.com/';
     return `${base.replace(/\/?$/, '/')}${String(path || '').replace(/^\/+/, '')}`;
   }
 

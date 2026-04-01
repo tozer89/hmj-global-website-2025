@@ -24,6 +24,8 @@ test('rate book admin page includes market tabs, settings form, preview panel, a
   assert.match(html, /id="tableBody"/);
   assert.match(html, /id="editor"/);
   assert.match(html, /id="editorMarketGrid"/);
+  assert.match(html, /id="publicGuideToggleBtn"/);
+  assert.match(html, /id="printPdfBtn"/);
   assert.match(html, /admin\.rate-book\.css\?v=1/);
   assert.match(html, /rate-book\.js\?v=1/);
 });
@@ -42,4 +44,15 @@ test('rate book frontend calls the expected secure backend endpoints', () => {
   assert.match(source, /admin-rate-book-settings-save/);
   assert.match(source, /admin-rate-book-import/);
   assert.match(source, /admin-rate-book-recalculate/);
+  assert.match(source, /printBrandedPdf/);
+  assert.match(source, /togglePublicGuide/);
+});
+
+test('public rate book markup includes unavailable-state hooks and client CTA hooks', () => {
+  const rateBookHtml = read('rate-book.html');
+  const clientsHtml = read('clients.html');
+  assert.match(rateBookHtml, /id="rateBookUnavailable"/);
+  assert.match(rateBookHtml, /data-rate-book-public-content/);
+  assert.match(clientsHtml, /data-rate-book-public-section/);
+  assert.match(clientsHtml, /data-rate-book-public-tool/);
 });

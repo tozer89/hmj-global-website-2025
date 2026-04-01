@@ -10,6 +10,7 @@ const MAX_SLUG_LENGTH = 96;
 const DEFAULT_DISPLAY_ORDER = 100;
 
 const DEFAULT_RATE_BOOK_SETTINGS = Object.freeze({
+  publicEnabled: true,
   marginLowThreshold: 34,
   marginLowAdd: 3.5,
   marginHighThreshold: 35,
@@ -296,6 +297,7 @@ function getRateBookSeed() {
 function settingsFromRow(row = {}) {
   return {
     id: asString(row.id),
+    publicEnabled: asBoolean(row.public_enabled ?? row.publicEnabled, DEFAULT_RATE_BOOK_SETTINGS.publicEnabled),
     marginLowThreshold: asNumber(row.margin_low_threshold ?? row.marginLowThreshold, DEFAULT_RATE_BOOK_SETTINGS.marginLowThreshold),
     marginLowAdd: asNumber(row.margin_low_add ?? row.marginLowAdd, DEFAULT_RATE_BOOK_SETTINGS.marginLowAdd),
     marginHighThreshold: asNumber(row.margin_high_threshold ?? row.marginHighThreshold, DEFAULT_RATE_BOOK_SETTINGS.marginHighThreshold),
@@ -539,6 +541,7 @@ function normaliseSettingsInput(input = {}, currentRow = {}) {
   const current = settingsFromRow(currentRow);
   const next = {
     id: asNullableString(input.id || current.id),
+    public_enabled: asBoolean(input.publicEnabled ?? input.public_enabled, current.publicEnabled),
     margin_low_threshold: asNumber(input.marginLowThreshold ?? input.margin_low_threshold, current.marginLowThreshold),
     margin_low_add: asNumber(input.marginLowAdd ?? input.margin_low_add, current.marginLowAdd),
     margin_high_threshold: asNumber(input.marginHighThreshold ?? input.margin_high_threshold, current.marginHighThreshold),

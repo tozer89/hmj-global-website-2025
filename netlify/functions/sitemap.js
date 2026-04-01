@@ -3,7 +3,7 @@
 const { getSupabase, hasSupabase } = require('./_supabase.js');
 const { toPublicJob } = require('./_jobs-helpers.js');
 
-const DEFAULT_SITE_URL = 'https://hmjg.netlify.app';
+const DEFAULT_SITE_URL = 'https://www.hmj-global.com';
 
 function normaliseUrl(value) {
   if (typeof value !== 'string' || !value.trim()) return '';
@@ -34,9 +34,9 @@ function resolveSiteUrl(event = {}) {
   if (rawUrl) return rawUrl;
 
   const envCandidates = [
+    process.env.HMJ_CANONICAL_SITE_URL,
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
-    process.env.HMJ_CANONICAL_SITE_URL,
     DEFAULT_SITE_URL,
   ];
 
@@ -84,9 +84,13 @@ exports.handler = async (event) => {
     { loc: `${siteUrl}/`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/about`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/clients`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/faq`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/insights`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/rate-book`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/jobs`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/candidates`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/privacy`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/enquiry`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/contact`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/client-contact`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/timesheets`, lastmod: new Date().toISOString() },

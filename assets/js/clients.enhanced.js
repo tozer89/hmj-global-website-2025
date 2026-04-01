@@ -2602,6 +2602,28 @@
     initChecklist(grid);
   }
 
+  async function initRateBookVisibility() {
+    const rateBookSections = Array.from(doc.querySelectorAll('[data-rate-book-public-section], [data-rate-book-public-tool]'));
+    if (!rateBookSections.length || typeof win.fetch !== 'function') return;
+
+    try {
+      const response = await win.fetch('/.netlify/functions/rate-book-list', {
+        cache: 'no-store',
+        headers: { accept: 'application/json' }
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || payload.ok === false) return;
+      const publicEnabled = payload.publicEnabled !== false
+        && (!payload.settings || payload.settings.publicEnabled !== false);
+      if (publicEnabled) return;
+      rateBookSections.forEach((section) => {
+        section.hidden = true;
+      });
+    } catch (_) {
+      // Leave the static CTA in place if the status check fails.
+    }
+  }
+
   function ready(fn) {
     if (doc.readyState === 'loading') {
       doc.addEventListener('DOMContentLoaded', fn, { once: true });
@@ -2617,6 +2639,7 @@
     initTooltips();
     initHeroMotion();
     initRevealOnScroll();
+    initRateBookVisibility();
 
     const form = doc.querySelector('[data-client-form]');
     initValidation(form);

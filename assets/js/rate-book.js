@@ -38,6 +38,7 @@
       'otherCurrencyMessage',
       'rateBookDisclaimer',
       'rateBookPrimaryCta',
+      'rateBookUnavailable',
       'rateBookSearch',
       'rateBookMarket',
       'rateBookDiscipline',
@@ -123,6 +124,15 @@
     els.rateBookStatus.hidden = false;
     els.rateBookStatus.dataset.tone = tone || 'info';
     els.rateBookStatus.textContent = message;
+  }
+
+  function setPublicContentHidden(hidden) {
+    doc.querySelectorAll('[data-rate-book-public-content]').forEach((section) => {
+      section.hidden = !!hidden;
+    });
+    if (els.rateBookUnavailable) {
+      els.rateBookUnavailable.hidden = !hidden;
+    }
   }
 
   function updateSettings() {
@@ -433,6 +443,16 @@
     window.print();
   }
 
+  function renderUnavailableState() {
+    setPublicContentHidden(true);
+    if (els.rateBookLoading) els.rateBookLoading.hidden = true;
+    if (els.rateBookResults) els.rateBookResults.hidden = true;
+    if (els.rateBookEmpty) els.rateBookEmpty.hidden = true;
+    if (els.rateBookSummaryCount) els.rateBookSummaryCount.textContent = 'Rate Book unavailable';
+    if (els.rateBookSummaryUpdated) els.rateBookSummaryUpdated.textContent = 'Public view is currently switched off';
+    setStatus('', '');
+  }
+
   function bindEvents() {
     [
       'rateBookSearch',
@@ -488,6 +508,7 @@
 
   async function fetchRateBook() {
     const response = await fetch('/.netlify/functions/rate-book-list', {
+      cache: 'no-store',
       headers: {
         accept: 'application/json',
       },
@@ -519,6 +540,11 @@
       state.roles = Array.isArray(payload.roles) ? payload.roles : [];
       state.source = asString(payload.source) || 'supabase';
       updateSettings();
+      if (payload.publicEnabled === false || (state.settings && state.settings.publicEnabled === false)) {
+        renderUnavailableState();
+        return;
+      }
+      setPublicContentHidden(false);
       populateFilters();
       readFilters();
       render();

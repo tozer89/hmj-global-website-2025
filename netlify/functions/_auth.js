@@ -43,7 +43,15 @@ function resolveIdentityBase(event = {}) {
   const origin = requestOrigin(event);
   if (origin) return `${origin.replace(/\/$/, '')}/.netlify/identity`;
 
-  const siteUrl = String(process.env.URL || process.env.SITE_URL || '').trim();
+  const direct = String(process.env.HMJ_IDENTITY_BASE || '').trim();
+  if (direct) return direct.replace(/\/$/, '');
+
+  const siteUrl = String(
+    process.env.HMJ_CANONICAL_SITE_URL
+    || process.env.SITE_URL
+    || process.env.URL
+    || ''
+  ).trim();
   if (siteUrl) {
     try {
       const parsed = new URL(siteUrl);
@@ -51,7 +59,7 @@ function resolveIdentityBase(event = {}) {
     } catch {}
   }
 
-  return 'https://hmjg.netlify.app/.netlify/identity';
+  return 'https://www.hmj-global.com/.netlify/identity';
 }
 
 function hasAdminAccess(roles = []) {

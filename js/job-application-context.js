@@ -18,7 +18,7 @@
 
   function toOrigin(value) {
     const origin = cleanText(value);
-    return origin || 'https://hmjg.netlify.app';
+    return origin || 'https://www.hmj-global.com';
   }
 
   function toSearchParams(input) {

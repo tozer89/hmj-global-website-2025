@@ -224,6 +224,16 @@ textarea {
   gap: 14px;
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hero-actions__meta {
+  margin: 0;
+}
+
 .hero-chips {
   display: flex;
   flex-wrap: wrap;

@@ -3,7 +3,7 @@
 const { buildCors } = require('./_http.js');
 const { getSupabaseUrl, getSupabaseAnonKey } = require('./_supabase-env.js');
 
-const DEFAULT_CANDIDATE_SITE_URL = 'https://hmjg.netlify.app';
+const DEFAULT_CANDIDATE_SITE_URL = 'https://www.hmj-global.com';
 
 function trimString(value, maxLength) {
   const text = typeof value === 'string'

@@ -21,7 +21,8 @@ const {
 
 function currentSiteUrl() {
   return trimString(
-    process.env.URL
+    process.env.HMJ_CANONICAL_SITE_URL
+      || process.env.URL
       || process.env.DEPLOY_PRIME_URL
       || process.env.SITE_URL
       || '',

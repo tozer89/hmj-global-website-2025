@@ -158,7 +158,7 @@ test('toDbPayload trims values, converts arrays, and flattens tags to keywords s
   });
 
   const parsed = new URL(applyUrl);
-  assert.equal(parsed.origin, 'https://hmjg.netlify.app');
+  assert.equal(parsed.origin, 'https://www.hmj-global.com');
   assert.equal(parsed.pathname, '/contact.html');
   assert.equal(parsed.searchParams.get('role'), 'Project Manager');
   assert.equal(parsed.searchParams.get('job_title'), 'Project Manager');
@@ -217,13 +217,13 @@ test('toPublicJob rewrites legacy internal contact URLs to the active site host'
     published: true,
     apply_url: 'https://hmj-global.com/contact.html?role=Project%20Planner',
   }, {
-    siteUrl: 'https://hmjg.netlify.app',
+    siteUrl: 'https://www.hmj-global.com',
   });
 
-  assert.equal(job.applyUrl, 'https://hmjg.netlify.app/contact.html?role=Project%20Planner');
+  assert.equal(job.applyUrl, 'https://www.hmj-global.com/contact.html?role=Project%20Planner');
   assert.equal(
-    normaliseInternalApplyUrl('https://www.hmj-global.com/contact.html?role=Planner', 'https://hmjg.netlify.app'),
-    'https://hmjg.netlify.app/contact.html?role=Planner'
+    normaliseInternalApplyUrl('https://www.hmj-global.com/contact.html?role=Planner', 'https://www.hmj-global.com'),
+    'https://www.hmj-global.com/contact.html?role=Planner'
   );
 });
 
@@ -234,10 +234,10 @@ test('buildGeneratedApplyUrl derives an internal contact link from job title and
     locationText: 'Macclesfield, UK',
     type: 'permanent',
     payText: '£80,000 - £105,000 per year',
-  }, 'https://hmjg.netlify.app', { source: 'jobs-board' });
+  }, 'https://www.hmj-global.com', { source: 'jobs-board' });
 
   const parsed = new URL(applyUrl);
-  assert.equal(parsed.origin, 'https://hmjg.netlify.app');
+  assert.equal(parsed.origin, 'https://www.hmj-global.com');
   assert.equal(parsed.pathname, '/contact.html');
   assert.equal(parsed.searchParams.get('role'), 'Senior Planner');
   assert.equal(parsed.searchParams.get('job_title'), 'Senior Planner');

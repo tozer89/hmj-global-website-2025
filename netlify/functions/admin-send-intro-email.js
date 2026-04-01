@@ -53,7 +53,7 @@ function validateIntroEmailRequest(input = {}) {
 }
 
 function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
-  const siteUrl = trimString(settings.siteUrl, 1000) || 'https://hmjg.netlify.app/';
+  const siteUrl = trimString(settings.siteUrl, 1000) || 'https://www.hmj-global.com/';
   const registrationUrl = trimString(links.registrationUrl, 4000) || buildRedirectUrl(siteUrl, '/candidates.html');
   const timesheetsUrl = resolveCandidateTimesheetsDashboardUrl();
   const supportEmail = trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com';

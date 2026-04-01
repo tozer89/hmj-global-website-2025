@@ -12,12 +12,12 @@ test('rewriteAuthActionLink replaces loopback redirects with the canonical candi
   const input = 'https://mftwpbpwisxyaenfoizb.supabase.co/auth/v1/verify?token=abc123&type=recovery&redirect_to=http://localhost:3000';
   const output = rewriteAuthActionLink(
     input,
-    'https://hmjg.netlify.app/candidates.html?candidate_action=recovery'
+    'https://www.hmj-global.com/candidates.html?candidate_action=recovery'
   );
 
   assert.equal(
     output,
-    'https://mftwpbpwisxyaenfoizb.supabase.co/auth/v1/verify?token=abc123&type=recovery&redirect_to=https%3A%2F%2Fhmjg.netlify.app%2Fcandidates.html%3Fcandidate_action%3Drecovery'
+    'https://mftwpbpwisxyaenfoizb.supabase.co/auth/v1/verify?token=abc123&type=recovery&redirect_to=https%3A%2F%2Fwww.hmj-global.com%2Fcandidates.html%3Fcandidate_action%3Drecovery'
   );
 });
 

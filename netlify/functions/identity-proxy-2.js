@@ -1,6 +1,37 @@
 const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 
-const PRODUCTION_IDENTITY_BASE = (process.env.HMJ_IDENTITY_BASE || 'https://hmjg.netlify.app/.netlify/identity').replace(/\/$/, '');
+const DEFAULT_PRODUCTION_IDENTITY_BASE = 'https://www.hmj-global.com/.netlify/identity';
+
+function identityBaseFromSiteUrl(value = '') {
+  const siteUrl = String(value || '').trim();
+  if (!siteUrl) return '';
+
+  try {
+    const url = new URL(siteUrl);
+    return `${url.origin.replace(/\/$/, '')}/.netlify/identity`;
+  } catch {
+    return '';
+  }
+}
+
+function resolveProductionIdentityBase() {
+  const direct = String(process.env.HMJ_IDENTITY_BASE || '').trim();
+  if (direct) return direct.replace(/\/$/, '');
+
+  const candidates = [
+    process.env.HMJ_CANONICAL_SITE_URL,
+    process.env.SITE_URL,
+    process.env.URL,
+  ];
+  for (const candidate of candidates) {
+    const resolved = identityBaseFromSiteUrl(candidate);
+    if (resolved) return resolved;
+  }
+
+  return DEFAULT_PRODUCTION_IDENTITY_BASE;
+}
+
+const PRODUCTION_IDENTITY_BASE = resolveProductionIdentityBase();
 
 const FUNCTION_PREFIXES = [
   '/.netlify/functions/identity-proxy',

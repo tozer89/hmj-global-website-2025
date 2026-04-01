@@ -31,7 +31,7 @@ const PAY_TYPE_SET = new Set([
   'negotiable',
 ]);
 
-const DEFAULT_PUBLIC_SITE_URL = 'https://hmjg.netlify.app';
+const DEFAULT_PUBLIC_SITE_URL = 'https://www.hmj-global.com';
 
 const PUBLIC_PAGE_DEFAULTS = Object.freeze({
   showOverview: true,
@@ -294,9 +294,9 @@ function resolvePublicSiteUrl(event = null) {
   }
 
   const envCandidates = [
+    process.env.HMJ_CANONICAL_SITE_URL,
     process.env.URL,
     process.env.DEPLOY_PRIME_URL,
-    process.env.HMJ_CANONICAL_SITE_URL,
     DEFAULT_PUBLIC_SITE_URL,
   ];
   const fallback = envCandidates.find((value) => normalisePublicUrl(value));

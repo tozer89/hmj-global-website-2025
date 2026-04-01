@@ -5,4 +5,4 @@ Disallow: /admin/
 Disallow: /admin-v2/
 Disallow: /.netlify/
 
-Sitemap: https://hmjg.netlify.app/.netlify/functions/sitemap
+Sitemap: https://www.hmj-global.com/.netlify/functions/sitemap
