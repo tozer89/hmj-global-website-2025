@@ -5,21 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
   <title>Indicative Credit Limit Checker | HMJ Global</title>
-  <meta name="description" content="Use HMJ Global's discreet indicative credit-limit checker to get a conservative range for trade-credit follow-up." />
+  <meta name="description" content="Use HMJ Global's discreet indicative credit-limit checker to get a sensible starting range for trade-credit follow-up." />
   <link rel="canonical" href="https://www.hmj-global.com/credit-check" />
   <meta property="og:site_name" content="HMJ Global" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Indicative Credit Limit Checker | HMJ Global" />
-  <meta property="og:description" content="A discreet HMJ Global credit-check form for prospective clients seeking an indicative trade-credit range." />
+  <meta property="og:description" content="A discreet HMJ Global credit-check form for prospective clients seeking a sensible indicative trade-credit range." />
   <meta property="og:url" content="https://www.hmj-global.com/credit-check" />
   <meta property="og:image" content="https://www.hmj-global.com/images/hero.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Indicative Credit Limit Checker | HMJ Global" />
-  <meta name="twitter:description" content="A discreet HMJ Global credit-check form for prospective clients seeking an indicative trade-credit range." />
+  <meta name="twitter:description" content="A discreet HMJ Global credit-check form for prospective clients seeking a sensible indicative trade-credit range." />
   <meta name="twitter:image" content="https://www.hmj-global.com/images/hero.jpg" />
   <link rel="icon" href="/images/logo.png" type="image/png" />
-  <link rel="stylesheet" href="/assets/css/credit-checker.css?v=1" />
-  <script defer src="/assets/js/credit-checker.js?v=1"></script>
+  <link rel="stylesheet" href="/assets/css/credit-checker.css?v=2" />
+  <script defer src="/assets/js/credit-checker.js?v=2"></script>
 </head>
 <body class="credit-check-body">
   <main class="credit-check-shell">
@@ -33,9 +33,9 @@
         <div class="credit-check-hero__copy">
           <p class="credit-check-eyebrow">Finance screening tool</p>
           <h1 id="creditCheckHeading">Indicative Credit Limit Checker</h1>
-          <p id="creditCheckIntro">Answer three quick commercial questions and leave your contact details to see a realistic indicative range. HMJ can then sense-check the opportunity against live underwriter appetite.</p>
+          <p id="creditCheckIntro">Answer a few short commercial questions and leave your contact details to see a sensible indicative range. HMJ can then sense-check the opportunity against live underwriter appetite.</p>
           <div class="credit-check-pills" aria-label="Credit checker notes">
-            <span>Three business questions</span>
+            <span>Short commercial profile</span>
             <span>Indicative only</span>
             <span>HMJ follow-up included</span>
           </div>
@@ -44,9 +44,9 @@
           <p class="credit-check-eyebrow">How it works</p>
           <h2>Fast enough for a warm lead, conservative enough to stay credible</h2>
           <ul>
-            <li>Uses turnover band, trading history and sector appetite as the core indicative factors.</li>
+            <li>Uses turnover band, trading history, business structure, requested terms, latest accounts position and sector appetite.</li>
             <li>No bureau pull or insurer search is run at this stage.</li>
-            <li>Ranges are capped deliberately so the public tool does not show unrealistic outcomes.</li>
+            <li>Ranges are capped and rounded deliberately so the public tool does not show unrealistic outcomes.</li>
           </ul>
         </aside>
       </div>
@@ -56,10 +56,10 @@
       <div class="credit-check-card credit-check-card--form" id="creditCheckFormCard">
         <div class="credit-check-card__head">
           <div>
-            <p class="credit-check-eyebrow">Discreet lead check</p>
+            <p class="credit-check-eyebrow">Discreet credit check</p>
             <h2>Get an indicative range</h2>
           </div>
-          <p class="credit-check-muted">This should take under a minute.</p>
+          <p class="credit-check-muted">This should take around 90 seconds.</p>
         </div>
 
         <div class="credit-check-notice" id="creditCheckDisabled" hidden>
@@ -128,6 +128,38 @@
                 <option value="other">Other</option>
               </select>
             </label>
+            <label class="credit-check-field">
+              <span>Business structure</span>
+              <select id="creditCheckStructure" name="company_structure" required>
+                <option value="">Select structure</option>
+                <option value="sole_trader">Sole trader</option>
+                <option value="partnership">Partnership / LLP</option>
+                <option value="ltd">Limited company</option>
+                <option value="group">Subsidiary / group-backed company</option>
+                <option value="plc">PLC / quoted company</option>
+              </select>
+            </label>
+            <label class="credit-check-field">
+              <span>Payment terms needed</span>
+              <select id="creditCheckTerms" name="payment_terms_band" required>
+                <option value="">Select payment terms</option>
+                <option value="up_to_30">Up to 30 days</option>
+                <option value="31_45">31 to 45 days</option>
+                <option value="46_60">46 to 60 days</option>
+                <option value="61_90">61 to 90 days</option>
+                <option value="gt90">Over 90 days</option>
+              </select>
+            </label>
+            <label class="credit-check-field credit-check-field--full">
+              <span>Latest accounts position</span>
+              <select id="creditCheckAccounts" name="accounts_status" required>
+                <option value="">Select latest accounts position</option>
+                <option value="strong">Profitable and balance sheet looks strong</option>
+                <option value="stable">Trading steadily / around break-even</option>
+                <option value="mixed">Margins under pressure or balance sheet is thin</option>
+                <option value="pressured">Recent losses or cash-flow pressure</option>
+              </select>
+            </label>
           </div>
 
           <label class="credit-check-consent">
@@ -137,7 +169,7 @@
 
           <div class="credit-check-actions">
             <button id="creditCheckSubmit" class="credit-check-btn" type="submit">See indicative limit</button>
-            <p class="credit-check-smallprint" id="creditCheckDisclaimer">Indicative only. This is a lead-screening estimate based on turnover, trading history and sector appetite, not a formal bureau or insurer decision.</p>
+            <p class="credit-check-smallprint" id="creditCheckDisclaimer">Indicative only. We use the information you provide alongside HMJ commercial criteria to estimate a sensible starting range. Final terms remain subject to review and underwriter approval.</p>
           </div>
 
           <div class="credit-check-message" id="creditCheckMessage" aria-live="polite"></div>

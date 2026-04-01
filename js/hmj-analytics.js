@@ -42,6 +42,14 @@
     timezone: '',
   };
 
+  function analyticsOptedOut() {
+    return !!window.HMJAnalytics?.__optedOut;
+  }
+
+  function clearQueue() {
+    writeJson(safeStorage('localStorage'), KEYS.queue, []);
+  }
+
   function safeStorage(kind) {
     try {
       return window[kind];
@@ -231,20 +239,51 @@
   }
 
   function enqueue(events) {
+    if (analyticsOptedOut()) return;
     const queue = readQueue();
     const next = queue.concat(Array.isArray(events) ? events : []).slice(-CONFIG.maxQueueEvents);
     writeQueue(next);
   }
 
   function scheduleFlush(delay) {
+    if (analyticsOptedOut()) return;
     window.clearTimeout(state.flushTimer);
     state.flushTimer = window.setTimeout(() => {
       flush({ useBeacon: false });
     }, Number.isFinite(delay) ? delay : CONFIG.flushDebounceMs);
   }
 
+  async function parseResponseBody(response) {
+    if (!response || typeof response.json !== 'function') return null;
+    try {
+      if (typeof response.clone === 'function') {
+        return await response.clone().json();
+      }
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  async function shouldAcknowledgeBatch(response) {
+    if (!response) return false;
+    if (response.ok || response.status === 400 || response.status === 413) {
+      return true;
+    }
+    if (response.status !== 202) {
+      return false;
+    }
+
+    const payload = await parseResponseBody(response);
+    return !!(payload && payload.ok !== false && Number(payload.accepted) > 0);
+  }
+
   async function flush(options) {
     if (state.flushInFlight) return false;
+    if (analyticsOptedOut()) {
+      clearQueue();
+      return false;
+    }
     const queue = readQueue();
     if (!queue.length) return false;
 
@@ -272,7 +311,7 @@
         keepalive: !!options?.keepalive,
       });
 
-      if (response.ok || response.status === 202 || response.status === 400 || response.status === 413) {
+      if (await shouldAcknowledgeBatch(response)) {
         writeQueue(readQueue().slice(batch.length));
         if (readQueue().length && response.ok) {
           scheduleFlush(80);
@@ -359,6 +398,7 @@
   }
 
   function track(eventType, extra, options) {
+    if (analyticsOptedOut()) return null;
     try {
       const event = baseEvent(eventType, extra || {});
       enqueue([event]);
@@ -645,6 +685,15 @@
     window.addEventListener('beforeunload', () => finalisePage('beforeunload'));
   }
 
+  function bindConsentSignals() {
+    document.addEventListener('hmj:cookie-declined', () => {
+      window.clearTimeout(state.flushTimer);
+      window.clearInterval(state.heartbeatTimer);
+      clearQueue();
+      state.pageFinalized = true;
+    });
+  }
+
   function init() {
     state.visitorId = getVisitorId();
     state.session = initialiseSession();
@@ -661,6 +710,7 @@
     bindVisibility();
     bindActivitySignals();
     bindPageLifecycle();
+    bindConsentSignals();
     initialisePageVisit();
     startHeartbeat();
   }

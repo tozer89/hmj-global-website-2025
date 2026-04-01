@@ -36,6 +36,10 @@
   function cacheElements() {
     [
       'otherCurrencyMessage',
+      'rateBookLowMarginValue',
+      'rateBookLowMarginDescription',
+      'rateBookHighMarginValue',
+      'rateBookHighMarginDescription',
       'rateBookDisclaimer',
       'rateBookPrimaryCta',
       'rateBookUnavailable',
@@ -81,6 +85,11 @@
     return Number.isFinite(parsed) ? parsed : null;
   }
 
+  function asBoolean(value) {
+    if (typeof value === 'string') return /^(1|true|yes|on)$/i.test(value.trim());
+    return !!value;
+  }
+
   function formatDate(value) {
     const raw = asString(value);
     if (!raw) return 'Recently updated';
@@ -107,6 +116,29 @@
     } catch {
       return `${numeric.toFixed(2)} ${escapeHtml(code)}`;
     }
+  }
+
+  function formatMarginValue(value, fallback) {
+    const numeric = asNumber(value);
+    if (numeric === null) return fallback;
+    return `£/€${numeric.toFixed(2)} margin`;
+  }
+
+  function formatThresholdValue(value, fallback) {
+    const numeric = asNumber(value);
+    if (numeric === null) return fallback;
+    return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(2);
+  }
+
+  function getDisplayedChargeRate(rate) {
+    const effective = asNumber(rate && rate.effectiveChargeRate);
+    if (effective !== null) return effective;
+    if (asBoolean(rate && rate.isChargeOverridden)) {
+      return asNumber(rate && rate.chargeRate);
+    }
+    const calculated = asNumber(rate && rate.calculatedChargeRate);
+    if (calculated !== null) return calculated;
+    return asNumber(rate && rate.chargeRate);
   }
 
   function hmjTrack(eventType, detail) {
@@ -137,6 +169,18 @@
 
   function updateSettings() {
     const settings = state.settings || {};
+    if (els.rateBookLowMarginValue) {
+      els.rateBookLowMarginValue.textContent = formatMarginValue(settings.marginLowAdd, '£/€3.50 margin');
+    }
+    if (els.rateBookLowMarginDescription) {
+      els.rateBookLowMarginDescription.textContent = `Applied where pay is up to ${formatThresholdValue(settings.marginLowThreshold, '34')} per hour.`;
+    }
+    if (els.rateBookHighMarginValue) {
+      els.rateBookHighMarginValue.textContent = formatMarginValue(settings.marginHighAdd, '£/€5.00 margin');
+    }
+    if (els.rateBookHighMarginDescription) {
+      els.rateBookHighMarginDescription.textContent = `Applied where pay is ${formatThresholdValue(settings.marginHighThreshold, '35')} per hour or above.`;
+    }
     if (els.otherCurrencyMessage) {
       els.otherCurrencyMessage.textContent = asString(settings.otherCurrencyMessage) || 'Other currencies by discussion.';
     }
@@ -227,9 +271,10 @@
   function roleSortMetric(role) {
     const visibleRates = getVisibleRates(role);
     if (!visibleRates.length) return null;
-    const key = state.filters.rateType === 'pay' ? 'payRate' : 'chargeRate';
     const values = visibleRates
-      .map((rate) => asNumber(rate[key]))
+      .map((rate) => (state.filters.rateType === 'pay'
+        ? asNumber(rate.payRate)
+        : getDisplayedChargeRate(rate)))
       .filter((value) => value !== null);
     if (!values.length) return null;
     return state.filters.sort === 'highest'
@@ -303,7 +348,7 @@
         </div>
         <div class="rate-book-rate__row">
           <span>Charge</span>
-          <span>${escapeHtml(formatMoney(rate.chargeRate, rate.currency))}/hr</span>
+          <span>${escapeHtml(formatMoney(getDisplayedChargeRate(rate), rate.currency))}/hr</span>
         </div>
       </article>
     `;
@@ -405,7 +450,7 @@
           rate.marketName,
           rate.currency,
           rate.payRate != null ? Number(rate.payRate).toFixed(2) : '',
-          rate.chargeRate != null ? Number(rate.chargeRate).toFixed(2) : '',
+          getDisplayedChargeRate(rate) != null ? Number(getDisplayedChargeRate(rate)).toFixed(2) : '',
           role.updatedAt || '',
         ].map((value) => `"${String(value == null ? '' : value).replace(/"/g, '""')}"`).join(','));
       });

@@ -24,6 +24,8 @@
     sourceContext: doc.getElementById('creditCheckSourceContext'),
   };
 
+  let submitLabel = els.submit ? els.submit.textContent : 'See indicative limit';
+
   function setMessage(text, tone) {
     if (!els.message) return;
     els.message.textContent = text || '';
@@ -34,7 +36,7 @@
   function setDisabledState(disabled) {
     if (!els.submit) return;
     els.submit.disabled = !!disabled;
-    els.submit.textContent = disabled ? 'Checking…' : 'See indicative limit';
+    els.submit.textContent = disabled ? 'Checking…' : submitLabel;
   }
 
   function currentPayload(form) {
@@ -53,6 +55,7 @@
       els.intro.textContent = settings.pageIntro;
     }
     if (typeof settings.buttonLabel === 'string' && settings.buttonLabel && els.submit) {
+      submitLabel = settings.buttonLabel;
       els.submit.textContent = settings.buttonLabel;
     }
     if (typeof settings.pageDisclaimer === 'string' && settings.pageDisclaimer && els.disclaimer) {

@@ -347,13 +347,99 @@ function addDays(date, amount) {
   return next;
 }
 
-function toDateKey(value) {
-  return normaliseIsoTimestamp(value).slice(0, 10);
+function normaliseDashboardTimeZone(value) {
+  const timeZone = trimString(value, 80);
+  if (!timeZone) return 'UTC';
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric' }).format(new Date());
+    return timeZone;
+  } catch {
+    return 'UTC';
+  }
+}
+
+function formatDateKeyInTimeZone(value, timeZone) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return normaliseIsoTimestamp(value).slice(0, 10);
+  }
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: normaliseDashboardTimeZone(timeZone),
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+    const year = parts.find((part) => part.type === 'year')?.value;
+    const month = parts.find((part) => part.type === 'month')?.value;
+    const day = parts.find((part) => part.type === 'day')?.value;
+    if (year && month && day) {
+      return `${year}-${month}-${day}`;
+    }
+  } catch {}
+
+  return date.toISOString().slice(0, 10);
+}
+
+function parseTimeZoneOffsetMinutes(value) {
+  const text = trimString(value, 32).replace(/\u2212/g, '-');
+  const match = /^(?:GMT|UTC)(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/i.exec(text);
+  if (!match) return 0;
+  const sign = match[1] === '-' ? -1 : 1;
+  const hours = Number.parseInt(match[2] || '0', 10) || 0;
+  const minutes = Number.parseInt(match[3] || '0', 10) || 0;
+  return sign * ((hours * 60) + minutes);
+}
+
+function getTimeZoneOffsetMinutes(timeZone, value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: normaliseDashboardTimeZone(timeZone),
+      timeZoneName: 'shortOffset',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(date);
+    const offsetLabel = parts.find((part) => part.type === 'timeZoneName')?.value;
+    return parseTimeZoneOffsetMinutes(offsetLabel);
+  } catch {
+    return 0;
+  }
+}
+
+function zonedDateStartToIso(dateKey, timeZone) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimString(dateKey, 24));
+  if (!match) {
+    return parseDateOnly(dateKey)?.toISOString() || new Date().toISOString();
+  }
+
+  const year = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const day = Number.parseInt(match[3], 10);
+  const baseUtcMs = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
+  let candidateUtcMs = baseUtcMs;
+
+  for (let index = 0; index < 3; index += 1) {
+    const offsetMinutes = getTimeZoneOffsetMinutes(timeZone, new Date(candidateUtcMs));
+    const nextUtcMs = baseUtcMs - (offsetMinutes * 60000);
+    if (nextUtcMs === candidateUtcMs) break;
+    candidateUtcMs = nextUtcMs;
+  }
+
+  return new Date(candidateUtcMs).toISOString();
+}
+
+function toDateKey(value, timeZone) {
+  return formatDateKeyInTimeZone(value, timeZone);
 }
 
 function parseDashboardFilters(input = {}) {
+  const timeZone = normaliseDashboardTimeZone(input.timezone || input.time_zone);
   const today = new Date();
-  const defaultTo = parseDateOnly(today.toISOString().slice(0, 10));
+  const defaultTo = parseDateOnly(formatDateKeyInTimeZone(today, timeZone));
   const defaultFrom = addDays(defaultTo, -(DEFAULT_RANGE_DAYS - 1));
   const requestedFrom = parseDateOnly(input.from);
   const requestedTo = parseDateOnly(input.to);
@@ -364,14 +450,18 @@ function parseDashboardFilters(input = {}) {
   const toDate = swapped ? rawFrom : rawTo;
   const diffDays = Math.round((toDate.getTime() - fromDate.getTime()) / 86400000) + 1;
   const boundedFrom = diffDays > MAX_RANGE_DAYS ? addDays(toDate, -(MAX_RANGE_DAYS - 1)) : fromDate;
-  const fromIso = boundedFrom.toISOString();
-  const toExclusiveIso = addDays(toDate, 1).toISOString();
+  const boundedFromKey = boundedFrom.toISOString().slice(0, 10);
+  const toDateKeyValue = toDate.toISOString().slice(0, 10);
+  const nextDateKey = addDays(toDate, 1).toISOString().slice(0, 10);
+  const fromIso = zonedDateStartToIso(boundedFromKey, timeZone);
+  const toExclusiveIso = zonedDateStartToIso(nextDateKey, timeZone);
 
   return {
-    from: boundedFrom.toISOString().slice(0, 10),
-    to: toDate.toISOString().slice(0, 10),
+    from: boundedFromKey,
+    to: toDateKeyValue,
     fromIso,
     toExclusiveIso,
+    timezone: timeZone,
     pagePath: trimString(input.pagePath || input.page_path || input.path, 180),
     eventType: toSlug(input.eventType || input.event_type),
     source: trimString(input.source || input.referrer || input.referrer_domain || input.referrerDomain || input.utm_source || input.utmSource, 160).toLowerCase(),
@@ -410,6 +500,7 @@ function buildComparisonFilters(filters) {
     source: filters?.source,
     deviceType: filters?.deviceType,
     scope: filters?.scope || filters?.siteArea || 'combined',
+    timezone: filters?.timezone,
   });
 }
 
@@ -1065,6 +1156,7 @@ function buildListingIntentRows(rows) {
 
 function summariseAnalytics(rows, filters, recentRows, truncated) {
   const allRows = Array.isArray(rows) ? rows.slice() : [];
+  const reportingTimeZone = normaliseDashboardTimeZone(filters?.timezone);
   const sessions = new Map();
   const pages = new Map();
   const ctas = new Map();
@@ -1092,7 +1184,7 @@ function summariseAnalytics(rows, filters, recentRows, truncated) {
     const sessionId = trimString(row.session_id, 120);
     const occurredAt = normaliseIsoTimestamp(row.occurred_at);
     const occurredMs = new Date(occurredAt).getTime();
-    const dateKey = toDateKey(occurredAt);
+    const dateKey = toDateKey(occurredAt, reportingTimeZone);
     const pageTitle = trimString(row.page_title, 240);
     const duration = toFiniteNumber(row.duration_seconds);
     const deviceType = trimString(row.device_type, 20) || 'desktop';
@@ -1245,7 +1337,7 @@ function summariseAnalytics(rows, filters, recentRows, truncated) {
         transitions.set(transitionKey, (transitions.get(transitionKey) || 0) + 1);
       }
 
-      const sessionDateKey = toDateKey(session.firstAt);
+      const sessionDateKey = toDateKey(session.firstAt, reportingTimeZone);
       const bucket = series.get(sessionDateKey);
       if (bucket) bucket.sessions += 1;
 
@@ -1386,6 +1478,7 @@ function summariseAnalytics(rows, filters, recentRows, truncated) {
         deviceType: filters.deviceType || '',
         siteArea: filters.siteArea || '',
         scope: filters.scope || 'combined',
+        timezone: reportingTimeZone,
       },
       options: {
         pagePaths: Array.from(pageOptions).sort((a, b) => a.localeCompare(b)).slice(0, 120),

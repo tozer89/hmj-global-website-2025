@@ -11,6 +11,9 @@ const {
   TURNOVER_BANDS,
   YEARS_TRADING_BANDS,
   SECTOR_OPTIONS,
+  COMPANY_STRUCTURE_OPTIONS,
+  PAYMENT_TERMS_OPTIONS,
+  ACCOUNTS_STATUS_OPTIONS,
   buildLeadReference,
   calculateIndicativeLimit,
   formatCurrency,
@@ -57,6 +60,9 @@ function buildLeadEmailHtml(lead, settings) {
   const turnoverLabel = labelFor(TURNOVER_BANDS, lead.turnover_band);
   const yearsLabel = labelFor(YEARS_TRADING_BANDS, lead.years_trading_band);
   const sectorLabel = labelFor(SECTOR_OPTIONS, lead.sector);
+  const structureLabel = labelFor(COMPANY_STRUCTURE_OPTIONS, lead.company_structure);
+  const paymentTermsLabel = labelFor(PAYMENT_TERMS_OPTIONS, lead.payment_terms_band);
+  const accountsStatusLabel = labelFor(ACCOUNTS_STATUS_OPTIONS, lead.accounts_status);
   const detailRow = function (label, value) {
     if (!value) return '';
     return `<tr>
@@ -106,6 +112,9 @@ function buildLeadEmailHtml(lead, settings) {
                   ${detailRow('Turnover', escapeHtml(turnoverLabel))}
                   ${detailRow('Years trading', escapeHtml(yearsLabel))}
                   ${detailRow('Sector', escapeHtml(sectorLabel))}
+                  ${detailRow('Business structure', escapeHtml(structureLabel))}
+                  ${detailRow('Payment terms', escapeHtml(paymentTermsLabel))}
+                  ${detailRow('Accounts position', escapeHtml(accountsStatusLabel))}
                 </table>
               </td>
             </tr>
@@ -159,6 +168,9 @@ function buildLeadRecord(input, result, settings, event) {
     turnover_band: input.turnoverBand,
     years_trading_band: input.yearsTradingBand,
     sector: input.sector,
+    company_structure: input.companyStructure,
+    payment_terms_band: input.paymentTermsBand,
+    accounts_status: input.accountsStatus,
     consent_confirmed: true,
     status: 'new',
     source_page: input.sourcePage || '/credit-check',
@@ -172,6 +184,11 @@ function buildLeadRecord(input, result, settings, event) {
       narrative: result.narrative,
       disclaimer: result.disclaimer,
       breakdown: result.breakdown,
+      input_summary: {
+        companyStructure: input.companyStructure,
+        paymentTermsBand: input.paymentTermsBand,
+        accountsStatus: input.accountsStatus,
+      },
     },
     calculator_snapshot: safeSettings.calculator,
     storage_status: 'pending',

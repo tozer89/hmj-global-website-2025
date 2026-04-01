@@ -387,6 +387,12 @@ body.credit-check-body {
   }
 }
 
+@media (min-width: 1160px) {
+  .credit-check-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   .credit-check-shell {
     width: min(100% - 24px, 1180px);

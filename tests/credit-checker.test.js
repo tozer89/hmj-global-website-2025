@@ -16,6 +16,9 @@ test('credit checker calculation stays conservative and respects configured caps
     turnover_band: 'gt50m',
     years_trading_band: 'gt10',
     sector: 'data_centre',
+    company_structure: 'plc',
+    payment_terms_band: 'up_to_30',
+    accounts_status: 'strong',
     consent_confirmed: true,
   });
 
@@ -35,6 +38,9 @@ test('credit checker validation blocks incomplete or unconsented submissions', (
     turnover_band: 'lt500k',
     years_trading_band: 'lt2',
     sector: 'other',
+    company_structure: '',
+    payment_terms_band: '',
+    accounts_status: '',
     consent_confirmed: false,
   });
 
@@ -42,7 +48,40 @@ test('credit checker validation blocks incomplete or unconsented submissions', (
 
   assert.ok(errors.some((entry) => /company/i.test(entry)));
   assert.ok(errors.some((entry) => /valid email/i.test(entry)));
+  assert.ok(errors.some((entry) => /business structure/i.test(entry)));
+  assert.ok(errors.some((entry) => /payment terms/i.test(entry)));
+  assert.ok(errors.some((entry) => /accounts position/i.test(entry)));
   assert.ok(errors.some((entry) => /HMJ may contact you/i.test(entry)));
+});
+
+test('credit checker responds materially to stronger vs weaker underwriting signals', () => {
+  const stronger = calculateIndicativeLimit(normalisePublicSubmission({
+    full_name: 'Test User',
+    company: 'Example Ltd',
+    email: 'test@example.com',
+    turnover_band: '5m_15m',
+    years_trading_band: 'gt10',
+    sector: 'professional',
+    company_structure: 'ltd',
+    payment_terms_band: 'up_to_30',
+    accounts_status: 'strong',
+    consent_confirmed: true,
+  }), {});
+  const weaker = calculateIndicativeLimit(normalisePublicSubmission({
+    full_name: 'Test User',
+    company: 'Example Ltd',
+    email: 'test@example.com',
+    turnover_band: '5m_15m',
+    years_trading_band: 'gt10',
+    sector: 'professional',
+    company_structure: 'sole_trader',
+    payment_terms_band: 'gt90',
+    accounts_status: 'pressured',
+    consent_confirmed: true,
+  }), {});
+
+  assert.ok(stronger.mid > weaker.mid);
+  assert.ok(stronger.high > weaker.high);
 });
 
 test('public widget settings expose a safe, hidden-route friendly payload', () => {
@@ -52,4 +91,5 @@ test('public widget settings expose a safe, hidden-route friendly payload', () =
   assert.equal(widget.widgetEnabled, true);
   assert.equal(widget.href, '/credit-check');
   assert.match(widget.buttonLabel, /indicative/i);
+  assert.doesNotMatch(widget.pageDisclaimer, /lead-screening/i);
 });

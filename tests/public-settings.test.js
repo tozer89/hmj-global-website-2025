@@ -13,5 +13,6 @@ test('public settings expose live-safe testimonial configuration', async () => {
   assert.equal(payload.settings.linkedinTestimonials.items.length, 6);
   assert.equal(payload.settings.creditChecker.enabled, true);
   assert.equal(payload.settings.creditChecker.href, '/credit-check');
+  assert.doesNotMatch(payload.settings.creditChecker.pageDisclaimer, /lead-screening/i);
   assert.match(response.headers['Cache-Control'] || response.headers['cache-control'], /max-age=60/);
 });

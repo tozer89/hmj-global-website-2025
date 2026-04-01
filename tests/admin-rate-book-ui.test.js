@@ -44,15 +44,21 @@ test('rate book frontend calls the expected secure backend endpoints', () => {
   assert.match(source, /admin-rate-book-settings-save/);
   assert.match(source, /admin-rate-book-import/);
   assert.match(source, /admin-rate-book-recalculate/);
+  assert.match(source, /async function saveSettings\(\)[\s\S]*admin-rate-book-recalculate/);
   assert.match(source, /printBrandedPdf/);
   assert.match(source, /togglePublicGuide/);
 });
 
-test('public rate book markup includes unavailable-state hooks and client CTA hooks', () => {
+test('public rate book markup includes unavailable-state hooks, live margin hooks, and client CTA hooks', () => {
   const rateBookHtml = read('rate-book.html');
+  const rateBookJs = read('assets/js/rate-book.js');
   const clientsHtml = read('clients.html');
   assert.match(rateBookHtml, /id="rateBookUnavailable"/);
   assert.match(rateBookHtml, /data-rate-book-public-content/);
+  assert.match(rateBookHtml, /id="rateBookLowMarginValue"/);
+  assert.match(rateBookHtml, /id="rateBookHighMarginValue"/);
+  assert.match(rateBookJs, /rateBookLowMarginValue/);
+  assert.match(rateBookJs, /effectiveChargeRate/);
   assert.match(clientsHtml, /data-rate-book-public-section/);
   assert.match(clientsHtml, /data-rate-book-public-tool/);
 });

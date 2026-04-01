@@ -39,6 +39,9 @@
       'leadTurnoverValue',
       'leadYearsValue',
       'leadSectorValue',
+      'leadStructureValue',
+      'leadTermsValue',
+      'leadAccountsValue',
       'leadCreatedAtValue',
       'leadNarrativeValue',
       'leadStatus',
@@ -68,6 +71,9 @@
       'settingsTurnoverGrid',
       'settingsYearsGrid',
       'settingsSectorGrid',
+      'settingsStructureGrid',
+      'settingsTermsGrid',
+      'settingsAccountsGrid',
       'btnSaveSettings',
     ].forEach(function (id) {
       els[id] = $(id);
@@ -250,6 +256,9 @@
     els.leadTurnoverValue.textContent = labelFor(state.options.turnoverBands, lead.turnover_band);
     els.leadYearsValue.textContent = labelFor(state.options.yearsTradingBands, lead.years_trading_band);
     els.leadSectorValue.textContent = labelFor(state.options.sectors, lead.sector);
+    els.leadStructureValue.textContent = labelFor(state.options.companyStructures, lead.company_structure);
+    els.leadTermsValue.textContent = labelFor(state.options.paymentTerms, lead.payment_terms_band);
+    els.leadAccountsValue.textContent = labelFor(state.options.accountsStatuses, lead.accounts_status);
     els.leadCreatedAtValue.textContent = dateTime(lead.created_at);
     els.leadNarrativeValue.textContent = (lead.result_payload && lead.result_payload.narrative) || '—';
     els.leadStatus.value = lead.status || 'new';
@@ -309,6 +318,18 @@
       step: '0.01',
       suffix: 'multiplier',
     });
+    renderDynamicGrid(els.settingsStructureGrid, state.options.companyStructures, calculator.companyStructureMultipliers, {
+      step: '0.01',
+      suffix: 'multiplier',
+    });
+    renderDynamicGrid(els.settingsTermsGrid, state.options.paymentTerms, calculator.paymentTermsMultipliers, {
+      step: '0.01',
+      suffix: 'multiplier',
+    });
+    renderDynamicGrid(els.settingsAccountsGrid, state.options.accountsStatuses, calculator.accountsStatusMultipliers, {
+      step: '0.01',
+      suffix: 'multiplier',
+    });
   }
 
   function readDynamicGrid(container) {
@@ -344,6 +365,9 @@
         turnoverBandMidpoints: readDynamicGrid(els.settingsTurnoverGrid),
         yearsTradingMultipliers: readDynamicGrid(els.settingsYearsGrid),
         sectorMultipliers: readDynamicGrid(els.settingsSectorGrid),
+        companyStructureMultipliers: readDynamicGrid(els.settingsStructureGrid),
+        paymentTermsMultipliers: readDynamicGrid(els.settingsTermsGrid),
+        accountsStatusMultipliers: readDynamicGrid(els.settingsAccountsGrid),
       },
     };
   }
@@ -352,7 +376,15 @@
     const payload = await fetchJson('/.netlify/functions/admin-credit-checker');
     state.leads = Array.isArray(payload.leads) ? payload.leads : [];
     state.settings = payload.settings || null;
-    state.options = payload.options || { statuses: [], turnoverBands: [], yearsTradingBands: [], sectors: [] };
+    state.options = payload.options || {
+      statuses: [],
+      turnoverBands: [],
+      yearsTradingBands: [],
+      sectors: [],
+      companyStructures: [],
+      paymentTerms: [],
+      accountsStatuses: [],
+    };
     state.stats = payload.stats || filteredStats(state.leads);
     if (!state.currentLeadId && state.leads.length) {
       state.currentLeadId = state.leads[0].id;

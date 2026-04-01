@@ -158,6 +158,23 @@
     return Number((pay + (pay >= highThreshold ? highAdd : lowAdd)).toFixed(2));
   }
 
+  function marginSettingsChanged(previous, next) {
+    const keys = [
+      'marginLowThreshold',
+      'marginLowAdd',
+      'marginHighThreshold',
+      'marginHighAdd',
+    ];
+
+    return keys.some((key) => {
+      const before = asNumber(previous && previous[key]);
+      const after = asNumber(next && next[key]);
+      if (before === null && after === null) return false;
+      if (before === null || after === null) return true;
+      return Math.abs(before - after) > 0.0001;
+    });
+  }
+
   function formatDate(value) {
     const raw = asString(value);
     if (!raw) return '—';
@@ -579,11 +596,32 @@
   }
 
   async function saveSettings() {
+    const nextSettings = collectSettingsPayload();
+    const shouldRecalculate = marginSettingsChanged(state.settings, nextSettings);
+
     try {
       const result = await api('admin-rate-book-settings-save', 'POST', {
-        settings: collectSettingsPayload(),
+        settings: nextSettings,
       });
       state.settings = result.settings;
+      if (shouldRecalculate) {
+        try {
+          const recalculated = await api('admin-rate-book-recalculate', 'POST', {});
+          await loadData();
+          toast(
+            `Rate Book settings saved and ${recalculated.updatedCount || 0} live rate${recalculated.updatedCount === 1 ? '' : 's'} recalculated.`,
+            'success'
+          );
+        } catch (error) {
+          renderOverview();
+          renderSettings();
+          toast(
+            error.message || 'Rate Book settings saved, but the live rates could not be refreshed automatically.',
+            'warn'
+          );
+        }
+        return;
+      }
       renderOverview();
       renderSettings();
       toast('Rate Book settings saved.', 'success');

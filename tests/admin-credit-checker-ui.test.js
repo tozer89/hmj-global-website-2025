@@ -20,8 +20,11 @@ test('credit checker admin page includes lead review and settings controls', () 
   assert.match(html, /id="settingsTurnoverGrid"/);
   assert.match(html, /id="settingsYearsGrid"/);
   assert.match(html, /id="settingsSectorGrid"/);
+  assert.match(html, /id="settingsStructureGrid"/);
+  assert.match(html, /id="settingsTermsGrid"/);
+  assert.match(html, /id="settingsAccountsGrid"/);
   assert.match(html, /admin\.credit-checker\.css\?v=1/);
-  assert.match(html, /credit-checker\.js\?v=1/);
+  assert.match(html, /credit-checker\.js\?v=2/);
 });
 
 test('finance workspace links to the credit checker module and dashboard data advertises it', () => {
@@ -41,6 +44,9 @@ test('public clients page and hidden route expose the discreet credit-check entr
   assert.match(creditCheckHtml, /robots" content="noindex,nofollow"/);
   assert.match(creditCheckHtml, /id="creditCheckForm"/);
   assert.match(creditCheckHtml, /id="creditCheckResult"/);
+  assert.match(creditCheckHtml, /name="company_structure"/);
+  assert.match(creditCheckHtml, /name="payment_terms_band"/);
+  assert.match(creditCheckHtml, /name="accounts_status"/);
 });
 
 test('netlify routes protect the admin checker and rewrite the hidden public page cleanly', () => {

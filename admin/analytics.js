@@ -77,6 +77,14 @@
     return String(value == null ? '' : value).trim();
   }
 
+  function resolveBrowserTimeZone() {
+    try {
+      return trimString(Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  }
+
   function formatNumber(value) {
     const number = Number(value);
     if (!Number.isFinite(number)) return '0';
@@ -331,6 +339,7 @@
       deviceType: state.filters.deviceType,
       scope: state.filters.scope,
       compare: state.compareMode,
+      timezone: resolveBrowserTimeZone(),
     };
   }
 
@@ -346,6 +355,7 @@
       filters: {
         applied: {
           ...filters,
+          timezone: resolveBrowserTimeZone(),
           siteArea: filters.scope === 'combined' ? '' : filters.scope,
         },
         options: {
@@ -716,6 +726,7 @@
           filters.source ? `Source includes ${filters.source}` : 'All sources',
           filters.eventType ? `Event: ${filters.eventType.replace(/_/g, ' ')}` : 'All events',
           filters.deviceType ? `${filters.deviceType} traffic` : 'All devices',
+          `Timezone ${filters.timezone || resolveBrowserTimeZone()}`,
         ];
 
         if (els.filterSummary) {
@@ -746,7 +757,7 @@
           const compareText = state.compareMode && compareSummary?.previousPeriod?.from
             ? ` • vs ${compareSummary.previousPeriod.from} → ${compareSummary.previousPeriod.to}`
             : '';
-          els.rangeChip.textContent = `${filters.from || state.filters.from} → ${filters.to || state.filters.to}${compareText}`;
+          els.rangeChip.textContent = `${filters.from || state.filters.from} → ${filters.to || state.filters.to} • ${filters.timezone || resolveBrowserTimeZone()}${compareText}`;
         }
 
         if (els.volumeChip) {

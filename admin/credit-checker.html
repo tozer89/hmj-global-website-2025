@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/assets/css/admin.credit-checker.css?v=1"/>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
-  <script defer src="/admin/credit-checker.js?v=1"></script>
+  <script defer src="/admin/credit-checker.js?v=2"></script>
 </head>
 <body class="credit-checker-admin-page">
   <div class="cca-top">
@@ -144,6 +144,9 @@
                 <div><span>Turnover</span><strong id="leadTurnoverValue">—</strong></div>
                 <div><span>Years trading</span><strong id="leadYearsValue">—</strong></div>
                 <div><span>Sector</span><strong id="leadSectorValue">—</strong></div>
+                <div><span>Structure</span><strong id="leadStructureValue">—</strong></div>
+                <div><span>Payment terms</span><strong id="leadTermsValue">—</strong></div>
+                <div><span>Accounts position</span><strong id="leadAccountsValue">—</strong></div>
                 <div><span>Submitted</span><strong id="leadCreatedAtValue">—</strong></div>
               </div>
             </div>
@@ -287,6 +290,21 @@
             <section class="cca-config-card">
               <h3>Sector multipliers</h3>
               <div class="cca-dynamic-grid" id="settingsSectorGrid"></div>
+            </section>
+
+            <section class="cca-config-card">
+              <h3>Business structure multipliers</h3>
+              <div class="cca-dynamic-grid" id="settingsStructureGrid"></div>
+            </section>
+
+            <section class="cca-config-card">
+              <h3>Payment terms multipliers</h3>
+              <div class="cca-dynamic-grid" id="settingsTermsGrid"></div>
+            </section>
+
+            <section class="cca-config-card">
+              <h3>Accounts position multipliers</h3>
+              <div class="cca-dynamic-grid" id="settingsAccountsGrid"></div>
             </section>
           </div>
 

@@ -292,29 +292,36 @@ img {
 
 .client-rate-book-callout {
   padding-top: 0;
-  padding-bottom: clamp(42px, 6vw, 72px);
+  padding-bottom: clamp(34px, 5vw, 56px);
 }
 
 .client-rate-book-callout__grid {
+  width: min(1040px, 100%);
+  margin: 0 auto;
   display: grid;
-  gap: 18px;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.7fr);
+  align-items: stretch;
 }
 
 .client-rate-book-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: center;
-  padding: clamp(24px, 4vw, 30px);
-  border-radius: 28px;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "icon content"
+    "actions actions";
+  gap: 18px 18px;
+  align-content: start;
+  padding: clamp(22px, 3vw, 28px);
+  border-radius: 24px;
   border: 1px solid rgba(63, 102, 199, 0.18);
   background:
     linear-gradient(135deg, rgba(47, 78, 162, 0.11), rgba(255, 255, 255, 0.96));
-  box-shadow: 0 24px 48px rgba(15, 27, 63, 0.12);
+  box-shadow: 0 18px 36px rgba(15, 27, 63, 0.1);
 }
 
 .client-rate-book-card__icon {
+  grid-area: icon;
   width: 68px;
   height: 68px;
   border-radius: 22px;
@@ -332,8 +339,10 @@ img {
 }
 
 .client-rate-book-card__content {
+  grid-area: content;
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  align-content: start;
 }
 
 .client-rate-book-card__content h2,
@@ -341,31 +350,47 @@ img {
   margin: 0;
 }
 
+.client-rate-book-card__content h2 {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  line-height: 1.08;
+}
+
 .client-rate-book-card__content p:last-child {
   color: var(--muted);
   line-height: 1.66;
+  max-width: 54ch;
 }
 
 .client-rate-book-card__actions {
+  grid-area: actions;
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 2px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(63, 102, 199, 0.12);
 }
 
 .client-credit-check-card {
   display: grid;
-  gap: 18px;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "icon content"
+    "actions actions";
+  gap: 16px;
   align-content: start;
-  padding: clamp(24px, 4vw, 30px);
-  border-radius: 28px;
+  padding: clamp(20px, 3vw, 24px);
+  border-radius: 24px;
   border: 1px solid rgba(23, 55, 121, 0.18);
   background:
     linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(234, 241, 255, 0.92));
-  box-shadow: 0 24px 48px rgba(15, 27, 63, 0.1);
+  box-shadow: 0 18px 34px rgba(15, 27, 63, 0.08);
 }
 
 .client-credit-check-card__icon {
+  grid-area: icon;
   width: 64px;
   height: 64px;
   display: grid;
@@ -382,8 +407,10 @@ img {
 }
 
 .client-credit-check-card__content {
+  grid-area: content;
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  align-content: start;
 }
 
 .client-credit-check-card__content h2,
@@ -391,14 +418,24 @@ img {
   margin: 0;
 }
 
+.client-credit-check-card__content h2 {
+  font-size: clamp(1.2rem, 2vw, 1.45rem);
+  line-height: 1.14;
+}
+
 .client-credit-check-card__content p:last-child {
   color: var(--muted);
   line-height: 1.66;
+  max-width: 30ch;
 }
 
 .client-credit-check-card__actions {
+  grid-area: actions;
   display: flex;
   justify-content: flex-start;
+  margin-top: 2px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(23, 55, 121, 0.1);
 }
 
 .proof-grid {
@@ -1856,8 +1893,6 @@ img {
   .framework-grid,
   .tools-intro,
   .form-layout,
-  .client-rate-book-card,
-  .client-credit-check-card,
   .notes-layout {
     grid-template-columns: 1fr;
   }
@@ -1874,6 +1909,13 @@ img {
 
   .brief-sidebar {
     position: static;
+  }
+}
+
+@media (max-width: 1060px) {
+  .client-rate-book-callout__grid {
+    width: min(860px, 100%);
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1933,6 +1975,20 @@ img {
 
   .client-hero .hero-inner {
     gap: 18px;
+  }
+
+  .client-rate-book-callout__grid {
+    width: 100%;
+  }
+
+  .client-rate-book-card,
+  .client-credit-check-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "icon"
+      "content"
+      "actions";
+    gap: 16px;
   }
 
   .hero-copy h1 {
