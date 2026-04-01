@@ -3,12 +3,33 @@
 const { hasSupabase, getSupabase, supabaseStatus } = require('./_supabase.js');
 const { DEFAULT_CHATBOT_SETTINGS } = require('./_chatbot-config.js');
 
+function createDefaultLinkedinTestimonials() {
+  const placeholderText = '[Recommendation pending — Nick to copy full text from LinkedIn]';
+  return {
+    enabled: true,
+    updatedAt: null,
+    items: Array.from({ length: 6 }, (_, index) => ({
+      id: `testimonial-${String(index + 1).padStart(2, '0')}`,
+      text: placeholderText,
+      name: `LinkedIn recommender ${String(index + 1).padStart(2, '0')}`,
+      title: 'Job title pending',
+      company: 'Company pending',
+      linkedinUrl: '',
+      imageUrl: '',
+      imageStorageKey: '',
+      imageAltText: '',
+      source: 'LinkedIn Recommendation',
+    })),
+  };
+}
+
 const DEFAULT_SETTINGS = {
   fiscal_week1_ending: '2025-11-02', // Week 1 ends Sunday 2nd November 2025 by default
   fiscal_week_day: 'sunday',
   timesheet_deadline_note: 'Submit approved timesheets by Monday 10:00 (UK time) to guarantee payroll.',
   timesheet_deadline_timezone: 'Europe/London',
   noticeboard_enabled: true,
+  linkedin_testimonials: createDefaultLinkedinTestimonials(),
   team_tasks_settings: {
     dueSoonDays: 3,
     collapseDoneByDefault: true,

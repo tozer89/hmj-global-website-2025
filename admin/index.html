@@ -403,6 +403,131 @@
       </nav>
     </section>
 
+    <section class="panel linkedin-module" id="linkedinTestimonialsModule" aria-labelledby="linkedinTestimonialsHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Public social proof</p>
+          <h3 id="linkedinTestimonialsHeading">LinkedIn Recommendations</h3>
+        </div>
+        <p class="muted">Manage the live LinkedIn recommendation cards shown on the homepage slider and the social proof sections on the clients and candidates pages.</p>
+      </div>
+
+      <div class="linkedin-module__meta">
+        <div class="linkedin-chips" aria-live="polite">
+          <span class="linkedin-chip" id="linkedinTestimonialsStorageChip" data-tone="warn">Loading shared settings…</span>
+          <span class="linkedin-chip" id="linkedinTestimonialsCountChip">0 cards</span>
+          <span class="linkedin-chip" id="linkedinTestimonialsVisibilityChip">Public section live</span>
+        </div>
+        <div class="linkedin-actions">
+          <button type="button" class="btn ghost small" id="linkedinTestimonialsReload">Reload</button>
+          <button type="button" class="btn small" id="linkedinTestimonialsSave">Save testimonials</button>
+        </div>
+      </div>
+
+      <div class="linkedin-visibility">
+        <div class="linkedin-visibility__copy">
+          <strong>Public visibility</strong>
+          <span class="muted">Turn the LinkedIn recommendation module on or off across the public site without deleting the saved cards.</span>
+        </div>
+        <label class="linkedin-toggle" for="linkedinTestimonialsEnabled">
+          <input id="linkedinTestimonialsEnabled" type="checkbox" />
+          <span class="linkedin-toggle__ui" aria-hidden="true"></span>
+          <span id="linkedinTestimonialsEnabledLabel">Live on the public site</span>
+        </label>
+      </div>
+
+      <div class="linkedin-manager">
+        <aside class="linkedin-sidebar" aria-labelledby="linkedinTestimonialsListHeading">
+          <div class="linkedin-sidebar__head">
+            <div>
+              <p class="eyebrow">Saved cards</p>
+              <h4 id="linkedinTestimonialsListHeading">Card order</h4>
+            </div>
+            <button type="button" class="btn outline small" id="linkedinTestimonialsAdd">Add card</button>
+          </div>
+          <p class="linkedin-help">Each card can include a recommender name, title, company, LinkedIn profile link, recommendation text, and a manually uploaded photo.</p>
+          <div class="linkedin-list" id="linkedinTestimonialsList" aria-live="polite"></div>
+        </aside>
+
+        <section class="linkedin-editor" aria-labelledby="linkedinTestimonialsEditorHeading">
+          <div class="linkedin-editor__head">
+            <div>
+              <p class="eyebrow">Editor</p>
+              <h4 id="linkedinTestimonialsEditorHeading">Selected card</h4>
+            </div>
+            <div class="linkedin-actions">
+              <button type="button" class="btn outline small" id="linkedinTestimonialsMoveUp">Move up</button>
+              <button type="button" class="btn outline small" id="linkedinTestimonialsMoveDown">Move down</button>
+              <button type="button" class="btn outline small" id="linkedinTestimonialsDuplicate">Duplicate</button>
+              <button type="button" class="btn outline small" id="linkedinTestimonialsDelete">Delete</button>
+            </div>
+          </div>
+
+          <div id="linkedinTestimonialsEmpty" class="linkedin-empty" hidden>Select a testimonial card to edit it here.</div>
+
+          <form id="linkedinTestimonialsForm" class="linkedin-form" novalidate>
+            <div class="linkedin-form__grid">
+              <div class="linkedin-field">
+                <label for="linkedinTestimonialName">Recommender name</label>
+                <input id="linkedinTestimonialName" type="text" maxlength="120" placeholder="Jane Smith" />
+              </div>
+              <div class="linkedin-field">
+                <label for="linkedinTestimonialLinkedinUrl">LinkedIn profile URL</label>
+                <input id="linkedinTestimonialLinkedinUrl" type="url" placeholder="https://www.linkedin.com/in/..." />
+              </div>
+              <div class="linkedin-field">
+                <label for="linkedinTestimonialTitle">Job title</label>
+                <input id="linkedinTestimonialTitle" type="text" maxlength="140" placeholder="Project Director" />
+              </div>
+              <div class="linkedin-field">
+                <label for="linkedinTestimonialCompany">Company</label>
+                <input id="linkedinTestimonialCompany" type="text" maxlength="140" placeholder="Company name" />
+              </div>
+              <div class="linkedin-field linkedin-field--wide">
+                <label for="linkedinTestimonialImageUrl">Photo URL (optional)</label>
+                <input id="linkedinTestimonialImageUrl" type="url" placeholder="Paste an existing image URL or upload a file below" />
+              </div>
+              <div class="linkedin-field linkedin-field--wide">
+                <label for="linkedinTestimonialImageAlt">Photo alt text</label>
+                <input id="linkedinTestimonialImageAlt" type="text" maxlength="180" placeholder="Portrait of Jane Smith" />
+              </div>
+              <div class="linkedin-field linkedin-field--wide">
+                <label for="linkedinTestimonialText">Recommendation text</label>
+                <textarea id="linkedinTestimonialText" placeholder="[Recommendation pending — Nick to copy full text from LinkedIn]"></textarea>
+              </div>
+              <div class="linkedin-field linkedin-field--wide">
+                <label>Photo upload</label>
+                <div class="linkedin-image-shell">
+                  <div class="linkedin-image-frame" id="linkedinTestimonialsImageFrame">
+                    <img id="linkedinTestimonialsImagePreview" alt="" hidden />
+                    <span id="linkedinTestimonialsImageFallback">HM</span>
+                  </div>
+                  <div class="linkedin-image-meta">
+                    <p class="linkedin-help">If LinkedIn blocks direct image use, download the profile photo first and upload it here. Uploaded photos stay tied to this testimonial card.</p>
+                    <div class="linkedin-image-actions">
+                      <button type="button" class="btn outline small" id="linkedinTestimonialsUpload">Upload photo</button>
+                      <button type="button" class="btn outline small" id="linkedinTestimonialsRemoveImage">Remove photo</button>
+                    </div>
+                    <p class="linkedin-help" id="linkedinTestimonialsImageMeta">No uploaded photo attached.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <section class="linkedin-preview" aria-live="polite" aria-labelledby="linkedinTestimonialsPreviewHeading">
+            <div>
+              <p class="eyebrow" style="color:#aecdff;">Live preview</p>
+              <h4 id="linkedinTestimonialsPreviewHeading">Public card preview</h4>
+            </div>
+            <div class="linkedin-preview__card" id="linkedinTestimonialsPreview"></div>
+          </section>
+        </section>
+      </div>
+
+      <input id="linkedinTestimonialsImageInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden />
+    </section>
+
     <section class="panel module-shell" id="future-modules" aria-labelledby="futureModulesHeading">
       <div class="section-head">
         <div>

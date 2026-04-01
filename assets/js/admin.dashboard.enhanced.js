@@ -10,6 +10,8 @@
     view: 'hmj.admin.view:v1'
   };
   const NOTES_SETTING_KEY = 'dashboard_team_notes';
+  const LINKEDIN_TESTIMONIALS_KEY = 'linkedin_testimonials';
+  const LINKEDIN_PLACEHOLDER_TEXT = '[Recommendation pending — Nick to copy full text from LinkedIn]';
 
   const defaultView = {
     showKpis: true,
@@ -33,7 +35,8 @@
     paletteIndex: 0,
     commandsHost: null,
     shortcutsHost: null,
-    navHistory: []
+    navHistory: [],
+    linkedinTestimonials: null,
   };
 
   function safeLocalStorage(fn) {
@@ -108,6 +111,16 @@
     if (options.text) el.textContent = options.text;
     if (options.html) el.innerHTML = options.html;
     return el;
+  }
+
+  function asString(value) {
+    if (typeof value === 'string') return value.trim();
+    if (value === null || value === undefined) return '';
+    return String(value).trim();
+  }
+
+  function cloneData(value) {
+    return value == null ? value : JSON.parse(JSON.stringify(value));
   }
 
   function ensureHost(id) {
@@ -1235,6 +1248,686 @@
     });
   }
 
+  function createLinkedinSeedItem(index) {
+    const label = String(index + 1).padStart(2, '0');
+    return {
+      id: `testimonial-${label}`,
+      text: LINKEDIN_PLACEHOLDER_TEXT,
+      name: `LinkedIn recommender ${label}`,
+      title: 'Job title pending',
+      company: 'Company pending',
+      linkedinUrl: '',
+      imageUrl: '',
+      imageStorageKey: '',
+      imageAltText: '',
+      source: 'LinkedIn Recommendation'
+    };
+  }
+
+  function createDefaultLinkedinTestimonials() {
+    return {
+      enabled: true,
+      updatedAt: '',
+      items: Array.from({ length: 6 }, (_, index) => createLinkedinSeedItem(index))
+    };
+  }
+
+  function createNewLinkedinTestimonial(index) {
+    const seed = createLinkedinSeedItem(index);
+    return {
+      ...seed,
+      id: `testimonial-${now()}-${Math.random().toString(36).slice(2, 8)}`
+    };
+  }
+
+  function buildLinkedinInitials(name) {
+    const parts = asString(name).split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'HM';
+    return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('');
+  }
+
+  function sanitiseExternalUrl(value) {
+    const raw = asString(value);
+    if (!raw) return '';
+    try {
+      const parsed = new URL(raw, location.origin);
+      return /^https?:$/i.test(parsed.protocol) ? parsed.toString() : '';
+    } catch {
+      return '';
+    }
+  }
+
+  function normaliseLinkedinEntry(entry, index) {
+    const fallback = createLinkedinSeedItem(index);
+    const name = asString(entry?.name) || fallback.name;
+    const imageUrl = asString(entry?.imageUrl);
+    return {
+      id: asString(entry?.id) || fallback.id,
+      text: asString(entry?.text) || fallback.text,
+      name,
+      title: asString(entry?.title) || fallback.title,
+      company: asString(entry?.company) || fallback.company,
+      linkedinUrl: asString(entry?.linkedinUrl),
+      imageUrl,
+      imageStorageKey: asString(entry?.imageStorageKey),
+      imageAltText: asString(entry?.imageAltText) || (imageUrl ? `Portrait of ${name}` : ''),
+      source: asString(entry?.source) || fallback.source
+    };
+  }
+
+  function normaliseLinkedinSettings(raw) {
+    const fallback = createDefaultLinkedinTestimonials();
+    const sourceItems = Array.isArray(raw?.items) && raw.items.length ? raw.items : fallback.items;
+    return {
+      enabled: raw?.enabled !== false,
+      updatedAt: asString(raw?.updatedAt),
+      items: sourceItems.map(normaliseLinkedinEntry)
+    };
+  }
+
+  function serialiseLinkedinSettings(config) {
+    const data = normaliseLinkedinSettings(config);
+    return {
+      enabled: data.enabled,
+      updatedAt: new Date().toISOString(),
+      items: data.items.map((item) => {
+        const linkedinUrl = sanitiseExternalUrl(item.linkedinUrl);
+        const imageUrl = sanitiseExternalUrl(item.imageUrl);
+        return {
+          id: asString(item.id) || `testimonial-${now()}`,
+          text: asString(item.text) || LINKEDIN_PLACEHOLDER_TEXT,
+          name: asString(item.name),
+          title: asString(item.title),
+          company: asString(item.company),
+          linkedinUrl,
+          imageUrl,
+          imageStorageKey: imageUrl ? asString(item.imageStorageKey) : '',
+          imageAltText: asString(item.imageAltText) || (imageUrl ? `Portrait of ${asString(item.name) || 'LinkedIn recommender'}` : ''),
+          source: 'LinkedIn Recommendation'
+        };
+      })
+    };
+  }
+
+  function getLinkedinModule() {
+    return state.linkedinTestimonials;
+  }
+
+  function getSelectedLinkedinItem() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return null;
+    return moduleState.config.items.find((item) => item.id === moduleState.selectedId) || null;
+  }
+
+  function getOriginalLinkedinItem(id) {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return null;
+    return moduleState.original.items.find((item) => item.id === id) || null;
+  }
+
+  function setLinkedinDirty(isDirty = true) {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    moduleState.dirty = !!isDirty;
+    updateLinkedinModuleStatus();
+  }
+
+  function syncLinkedinEditorDisabled() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const selected = getSelectedLinkedinItem();
+    const disabled = !selected;
+    moduleState.refs.empty.hidden = !disabled;
+    moduleState.refs.form.hidden = disabled;
+    moduleState.refs.previewShell.hidden = disabled;
+    [
+      moduleState.refs.moveUpBtn,
+      moduleState.refs.moveDownBtn,
+      moduleState.refs.duplicateBtn,
+      moduleState.refs.deleteBtn,
+      moduleState.refs.uploadBtn,
+      moduleState.refs.removeImageBtn
+    ].forEach((node) => {
+      if (node) node.disabled = disabled || moduleState.saving;
+    });
+  }
+
+  function updateLinkedinModuleStatus() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const { refs, config } = moduleState;
+    const itemCount = config.items.length;
+    refs.countChip.textContent = `${itemCount} card${itemCount === 1 ? '' : 's'}`;
+    refs.visibilityChip.textContent = config.enabled ? 'Public section live' : 'Public section hidden';
+    refs.visibilityChip.dataset.tone = config.enabled ? 'ok' : 'warn';
+    refs.enabled.checked = !!config.enabled;
+    refs.enabledLabel.textContent = config.enabled ? 'Live on the public site' : 'Hidden on the public site';
+
+    if (moduleState.loading) {
+      refs.storageChip.textContent = 'Loading shared settings…';
+      refs.storageChip.dataset.tone = 'warn';
+    } else if (moduleState.source === 'shared') {
+      refs.storageChip.textContent = 'Shared settings live';
+      refs.storageChip.dataset.tone = 'ok';
+    } else if (moduleState.source === 'fallback') {
+      refs.storageChip.textContent = 'Fallback defaults only';
+      refs.storageChip.dataset.tone = 'warn';
+    } else {
+      refs.storageChip.textContent = 'Settings unavailable';
+      refs.storageChip.dataset.tone = 'warn';
+    }
+
+    refs.saveBtn.textContent = moduleState.saving ? 'Saving…' : (moduleState.dirty ? 'Save testimonials' : 'Saved');
+    refs.saveBtn.disabled = moduleState.loading || moduleState.saving || !moduleState.dirty;
+    refs.reloadBtn.disabled = moduleState.saving;
+  }
+
+  function renderLinkedinList() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const { list } = moduleState.refs;
+    list.innerHTML = '';
+    if (!moduleState.config.items.length) {
+      list.appendChild(createEl('div', {
+        className: 'linkedin-empty',
+        text: 'No testimonial cards yet. Add your first LinkedIn recommendation card to start the public feed.'
+      }));
+      syncLinkedinEditorDisabled();
+      return;
+    }
+
+    moduleState.config.items.forEach((item, index) => {
+      const article = createEl('article', {
+        className: `linkedin-entry${item.id === moduleState.selectedId ? ' is-active' : ''}`
+      });
+      const button = createEl('button', {
+        className: 'linkedin-entry__button',
+        attrs: { type: 'button', 'aria-pressed': item.id === moduleState.selectedId ? 'true' : 'false' }
+      });
+      const avatar = createEl('div', { className: 'linkedin-entry__avatar' });
+      const imageUrl = sanitiseExternalUrl(item.imageUrl);
+      if (imageUrl) {
+        const image = createEl('img', { attrs: { src: imageUrl, alt: item.imageAltText || `Portrait of ${item.name}` } });
+        avatar.appendChild(image);
+      } else {
+        avatar.textContent = buildLinkedinInitials(item.name);
+      }
+      const copy = createEl('div', { className: 'linkedin-entry__copy' });
+      copy.appendChild(createEl('strong', { text: item.name || `Card ${index + 1}` }));
+      copy.appendChild(createEl('span', { text: [item.title, item.company].filter(Boolean).join(', ') || 'Recommendation details pending' }));
+      copy.appendChild(createEl('small', { text: item.text || LINKEDIN_PLACEHOLDER_TEXT }));
+      button.append(avatar, copy);
+      button.addEventListener('click', () => {
+        moduleState.selectedId = item.id;
+        renderLinkedinList();
+        syncLinkedinFormFromSelection();
+      });
+      article.appendChild(button);
+      list.appendChild(article);
+    });
+    syncLinkedinEditorDisabled();
+  }
+
+  function syncLinkedinImagePreview(item) {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const imageUrl = sanitiseExternalUrl(item?.imageUrl);
+    if (imageUrl) {
+      moduleState.refs.imagePreview.src = imageUrl;
+      moduleState.refs.imagePreview.alt = item.imageAltText || `Portrait of ${item.name || 'LinkedIn recommender'}`;
+      moduleState.refs.imagePreview.hidden = false;
+      moduleState.refs.imageFallback.hidden = true;
+      moduleState.refs.imageMeta.textContent = item.imageStorageKey
+        ? 'Uploaded photo saved to shared HMJ storage.'
+        : 'Using an external photo URL for this card.';
+    } else {
+      moduleState.refs.imagePreview.removeAttribute('src');
+      moduleState.refs.imagePreview.hidden = true;
+      moduleState.refs.imageFallback.hidden = false;
+      moduleState.refs.imageFallback.textContent = buildLinkedinInitials(item?.name);
+      moduleState.refs.imageMeta.textContent = 'No uploaded photo attached.';
+    }
+  }
+
+  function renderLinkedinPreview() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const preview = moduleState.refs.preview;
+    preview.innerHTML = '';
+    const item = getSelectedLinkedinItem();
+    if (!item) return;
+
+    const head = createEl('div', { className: 'linkedin-preview__head' });
+    const avatar = createEl('div', { className: 'linkedin-preview__avatar' });
+    const imageUrl = sanitiseExternalUrl(item.imageUrl);
+    if (imageUrl) {
+      avatar.appendChild(createEl('img', {
+        attrs: {
+          src: imageUrl,
+          alt: item.imageAltText || `Portrait of ${item.name || 'LinkedIn recommender'}`
+        }
+      }));
+    } else {
+      avatar.textContent = buildLinkedinInitials(item.name);
+    }
+
+    const person = createEl('div', { className: 'linkedin-preview__person' });
+    person.appendChild(createEl('strong', { text: item.name || 'LinkedIn recommender' }));
+    person.appendChild(createEl('span', {
+      text: [item.title, item.company].filter(Boolean).join(', ') || 'Job title pending, Company pending'
+    }));
+    head.append(avatar, person);
+
+    const linkedinUrl = sanitiseExternalUrl(item.linkedinUrl);
+    if (linkedinUrl) {
+      head.appendChild(createEl('a', {
+        className: 'linkedin-preview__link',
+        text: 'View profile',
+        attrs: {
+          href: linkedinUrl,
+          target: '_blank',
+          rel: 'noopener noreferrer'
+        }
+      }));
+    } else {
+      head.appendChild(createEl('span', { className: 'linkedin-preview__link', text: 'LinkedIn link pending' }));
+    }
+
+    preview.appendChild(head);
+    preview.appendChild(createEl('p', {
+      className: 'linkedin-preview__text',
+      text: item.text || LINKEDIN_PLACEHOLDER_TEXT
+    }));
+    preview.appendChild(createEl('span', {
+      className: 'linkedin-preview__badge',
+      text: 'via LinkedIn'
+    }));
+  }
+
+  function syncLinkedinFormFromSelection() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const item = getSelectedLinkedinItem();
+    syncLinkedinEditorDisabled();
+    if (!item) return;
+
+    moduleState.refs.name.value = item.name;
+    moduleState.refs.title.value = item.title;
+    moduleState.refs.company.value = item.company;
+    moduleState.refs.linkedinUrl.value = item.linkedinUrl;
+    moduleState.refs.imageUrl.value = item.imageUrl;
+    moduleState.refs.imageAltText.value = item.imageAltText;
+    moduleState.refs.text.value = item.text;
+    syncLinkedinImagePreview(item);
+    renderLinkedinPreview();
+    updateLinkedinModuleStatus();
+  }
+
+  function addLinkedinTestimonial() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const item = createNewLinkedinTestimonial(moduleState.config.items.length);
+    moduleState.config.items.push(item);
+    moduleState.selectedId = item.id;
+    renderLinkedinList();
+    syncLinkedinFormFromSelection();
+    setLinkedinDirty(true);
+    hmjToast('Card added', 'info', 2200);
+  }
+
+  function duplicateLinkedinTestimonial() {
+    const moduleState = getLinkedinModule();
+    const selected = getSelectedLinkedinItem();
+    if (!moduleState || !selected) return;
+    const duplicate = cloneData(selected);
+    duplicate.id = `testimonial-${now()}-${Math.random().toString(36).slice(2, 8)}`;
+    duplicate.name = `${selected.name} copy`;
+    duplicate.imageUrl = '';
+    duplicate.imageStorageKey = '';
+    duplicate.imageAltText = '';
+    const index = moduleState.config.items.findIndex((item) => item.id === selected.id);
+    moduleState.config.items.splice(index + 1, 0, duplicate);
+    moduleState.selectedId = duplicate.id;
+    renderLinkedinList();
+    syncLinkedinFormFromSelection();
+    setLinkedinDirty(true);
+    hmjToast('Card duplicated', 'info', 2200);
+  }
+
+  function moveLinkedinTestimonial(direction) {
+    const moduleState = getLinkedinModule();
+    const selected = getSelectedLinkedinItem();
+    if (!moduleState || !selected) return;
+    const index = moduleState.config.items.findIndex((item) => item.id === selected.id);
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= moduleState.config.items.length) return;
+    const [item] = moduleState.config.items.splice(index, 1);
+    moduleState.config.items.splice(target, 0, item);
+    renderLinkedinList();
+    syncLinkedinFormFromSelection();
+    setLinkedinDirty(true);
+  }
+
+  function deleteLinkedinTestimonial() {
+    const moduleState = getLinkedinModule();
+    const selected = getSelectedLinkedinItem();
+    if (!moduleState || !selected) return;
+    if (!window.confirm(`Remove ${selected.name || 'this testimonial card'} from the public LinkedIn module?`)) {
+      return;
+    }
+    if (selected.imageStorageKey) {
+      moduleState.pendingDeleteKeys.add(selected.imageStorageKey);
+    }
+    const index = moduleState.config.items.findIndex((item) => item.id === selected.id);
+    moduleState.config.items = moduleState.config.items.filter((item) => item.id !== selected.id);
+    const next = moduleState.config.items[index] || moduleState.config.items[index - 1] || null;
+    moduleState.selectedId = next ? next.id : '';
+    renderLinkedinList();
+    syncLinkedinFormFromSelection();
+    setLinkedinDirty(true);
+    hmjToast('Card removed', 'warn', 2400);
+  }
+
+  function updateSelectedLinkedinField(field, value) {
+    const item = getSelectedLinkedinItem();
+    if (!item) return;
+    item[field] = value;
+    if (field === 'name' && !asString(item.imageAltText) && item.imageUrl) {
+      item.imageAltText = `Portrait of ${value || 'LinkedIn recommender'}`;
+      getLinkedinModule().refs.imageAltText.value = item.imageAltText;
+    }
+    setLinkedinDirty(true);
+    renderLinkedinList();
+    syncLinkedinImagePreview(item);
+    renderLinkedinPreview();
+  }
+
+  function handleLinkedinTextInput(event) {
+    const moduleState = getLinkedinModule();
+    if (!moduleState) return;
+    const mapping = {
+      linkedinTestimonialName: 'name',
+      linkedinTestimonialTitle: 'title',
+      linkedinTestimonialCompany: 'company',
+      linkedinTestimonialLinkedinUrl: 'linkedinUrl',
+      linkedinTestimonialImageAlt: 'imageAltText',
+      linkedinTestimonialText: 'text'
+    };
+    const field = mapping[event.target.id];
+    if (!field) return;
+    updateSelectedLinkedinField(field, asString(event.target.value));
+  }
+
+  function handleLinkedinImageUrlChange() {
+    const moduleState = getLinkedinModule();
+    const item = getSelectedLinkedinItem();
+    if (!moduleState || !item) return;
+    const nextUrl = asString(moduleState.refs.imageUrl.value);
+    if (item.imageStorageKey && nextUrl !== item.imageUrl) {
+      moduleState.pendingDeleteKeys.add(item.imageStorageKey);
+      item.imageStorageKey = '';
+    }
+    item.imageUrl = nextUrl;
+    if (!asString(item.imageAltText) && nextUrl) {
+      item.imageAltText = `Portrait of ${item.name || 'LinkedIn recommender'}`;
+      moduleState.refs.imageAltText.value = item.imageAltText;
+    }
+    setLinkedinDirty(true);
+    renderLinkedinList();
+    syncLinkedinImagePreview(item);
+    renderLinkedinPreview();
+  }
+
+  async function fileToBase64(file) {
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onerror = () => reject(new Error(`Unable to read ${file.name}.`));
+      reader.onload = () => {
+        const result = reader.result;
+        if (!(result instanceof ArrayBuffer)) {
+          reject(new Error(`Unable to read ${file.name}.`));
+          return;
+        }
+        const bytes = new Uint8Array(result);
+        const chunkSize = 0x8000;
+        let binary = '';
+        for (let index = 0; index < bytes.length; index += chunkSize) {
+          const chunk = bytes.subarray(index, index + chunkSize);
+          let segment = '';
+          for (let cursor = 0; cursor < chunk.length; cursor += 1) {
+            segment += String.fromCharCode(chunk[cursor]);
+          }
+          binary += segment;
+        }
+        resolve(window.btoa(binary));
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async function uploadLinkedinImage(file) {
+    const moduleState = getLinkedinModule();
+    const item = getSelectedLinkedinItem();
+    if (!moduleState || !item || !file) return;
+    moduleState.refs.imageMeta.textContent = 'Uploading photo…';
+    const base64 = await fileToBase64(file);
+    const originalKey = asString(getOriginalLinkedinItem(item.id)?.imageStorageKey);
+    const currentKey = asString(item.imageStorageKey);
+    const replaceStorageKey = currentKey && currentKey !== originalKey ? currentKey : '';
+    const response = await state.helpers.api('admin-team-image-upload', 'POST', {
+      name: file.name,
+      contentType: file.type,
+      data: base64,
+      replaceStorageKey
+    });
+
+    if (originalKey && originalKey !== response.imageStorageKey) {
+      moduleState.pendingDeleteKeys.add(originalKey);
+    }
+
+    item.imageUrl = response.imageUrl || '';
+    item.imageStorageKey = response.imageStorageKey || '';
+    item.imageAltText = asString(item.imageAltText) || `Portrait of ${item.name || file.name.replace(/\.[^.]+$/, '')}`;
+    moduleState.refs.imageUrl.value = item.imageUrl;
+    moduleState.refs.imageAltText.value = item.imageAltText;
+    syncLinkedinImagePreview(item);
+    renderLinkedinPreview();
+    renderLinkedinList();
+    setLinkedinDirty(true);
+    hmjToast('Photo uploaded', 'info', 2400);
+  }
+
+  function removeLinkedinImage() {
+    const moduleState = getLinkedinModule();
+    const item = getSelectedLinkedinItem();
+    if (!moduleState || !item) return;
+    if (item.imageStorageKey) {
+      moduleState.pendingDeleteKeys.add(item.imageStorageKey);
+    }
+    item.imageUrl = '';
+    item.imageStorageKey = '';
+    item.imageAltText = '';
+    moduleState.refs.imageUrl.value = '';
+    moduleState.refs.imageAltText.value = '';
+    syncLinkedinImagePreview(item);
+    renderLinkedinPreview();
+    renderLinkedinList();
+    setLinkedinDirty(true);
+  }
+
+  async function deleteLinkedinImages(keys) {
+    const failures = [];
+    for (const key of keys) {
+      try {
+        await state.helpers.api('admin-team-image-delete', 'POST', { storageKey: key });
+      } catch (error) {
+        console.warn('[HMJ]', 'image cleanup failed', key, error);
+        failures.push(key);
+      }
+    }
+    return failures;
+  }
+
+  async function saveLinkedinTestimonials() {
+    const moduleState = getLinkedinModule();
+    if (!moduleState || moduleState.saving) return;
+    moduleState.saving = true;
+    updateLinkedinModuleStatus();
+    const payload = serialiseLinkedinSettings(moduleState.config);
+    try {
+      const response = await state.helpers.api('admin-settings-save', 'POST', {
+        [LINKEDIN_TESTIMONIALS_KEY]: payload
+      });
+      const saved = normaliseLinkedinSettings(response?.settings?.[LINKEDIN_TESTIMONIALS_KEY] || payload);
+      const keysToDelete = Array.from(moduleState.pendingDeleteKeys).filter(Boolean);
+      moduleState.config = cloneData(saved);
+      moduleState.original = cloneData(saved);
+      moduleState.source = typeof response?.source === 'string' && response.source.startsWith('supabase') ? 'shared' : 'fallback';
+      moduleState.pendingDeleteKeys.clear();
+      moduleState.dirty = false;
+      if (!moduleState.config.items.some((item) => item.id === moduleState.selectedId)) {
+        moduleState.selectedId = moduleState.config.items[0]?.id || '';
+      }
+      renderLinkedinList();
+      syncLinkedinFormFromSelection();
+      if (keysToDelete.length) {
+        const failures = await deleteLinkedinImages(keysToDelete);
+        failures.forEach((key) => moduleState.pendingDeleteKeys.add(key));
+        if (failures.length) {
+          hmjToast('Testimonials saved, but one or more old photos could not be cleaned up.', 'warn', 4400);
+        }
+      }
+      hmjToast('LinkedIn testimonials saved', 'info', 2600);
+      logActivity({ label: 'LinkedIn testimonials saved', detail: `${moduleState.config.items.length} cards`, kind: 'settings' });
+    } catch (error) {
+      hmjToast(error?.message || 'Unable to save LinkedIn testimonials', 'error', 4800);
+    } finally {
+      moduleState.saving = false;
+      updateLinkedinModuleStatus();
+    }
+  }
+
+  async function loadLinkedinTestimonials(options = {}) {
+    const moduleState = getLinkedinModule();
+    if (!moduleState || (moduleState.loading && !options.force)) return;
+    if (moduleState.dirty && options.force && !window.confirm('Discard unsaved LinkedIn testimonial changes and reload the shared settings?')) {
+      return;
+    }
+    moduleState.loading = true;
+    updateLinkedinModuleStatus();
+    try {
+      const response = await state.helpers.api('admin-settings-get', 'POST', { keys: [LINKEDIN_TESTIMONIALS_KEY] });
+      const shared = typeof response?.source === 'string' && response.source.startsWith('supabase');
+      const settings = normaliseLinkedinSettings(response?.settings?.[LINKEDIN_TESTIMONIALS_KEY]);
+      moduleState.config = cloneData(settings);
+      moduleState.original = cloneData(settings);
+      moduleState.source = shared ? 'shared' : 'fallback';
+      moduleState.pendingDeleteKeys = new Set();
+      moduleState.dirty = false;
+      if (!moduleState.config.items.some((item) => item.id === moduleState.selectedId)) {
+        moduleState.selectedId = moduleState.config.items[0]?.id || '';
+      }
+      renderLinkedinList();
+      syncLinkedinFormFromSelection();
+    } catch (error) {
+      console.warn('[HMJ]', 'linkedin testimonials load failed', error);
+      moduleState.source = 'unavailable';
+      hmjToast(error?.message || 'Unable to load LinkedIn testimonials', 'warn', 4200);
+    } finally {
+      moduleState.loading = false;
+      updateLinkedinModuleStatus();
+    }
+  }
+
+  function initLinkedinTestimonialsModule() {
+    const module = document.getElementById('linkedinTestimonialsModule');
+    if (!module || !state.helpers?.api) return;
+
+    const refs = {
+      storageChip: document.getElementById('linkedinTestimonialsStorageChip'),
+      countChip: document.getElementById('linkedinTestimonialsCountChip'),
+      visibilityChip: document.getElementById('linkedinTestimonialsVisibilityChip'),
+      enabled: document.getElementById('linkedinTestimonialsEnabled'),
+      enabledLabel: document.getElementById('linkedinTestimonialsEnabledLabel'),
+      reloadBtn: document.getElementById('linkedinTestimonialsReload'),
+      saveBtn: document.getElementById('linkedinTestimonialsSave'),
+      addBtn: document.getElementById('linkedinTestimonialsAdd'),
+      list: document.getElementById('linkedinTestimonialsList'),
+      empty: document.getElementById('linkedinTestimonialsEmpty'),
+      form: document.getElementById('linkedinTestimonialsForm'),
+      name: document.getElementById('linkedinTestimonialName'),
+      linkedinUrl: document.getElementById('linkedinTestimonialLinkedinUrl'),
+      title: document.getElementById('linkedinTestimonialTitle'),
+      company: document.getElementById('linkedinTestimonialCompany'),
+      imageUrl: document.getElementById('linkedinTestimonialImageUrl'),
+      imageAltText: document.getElementById('linkedinTestimonialImageAlt'),
+      text: document.getElementById('linkedinTestimonialText'),
+      imageInput: document.getElementById('linkedinTestimonialsImageInput'),
+      imageFrame: document.getElementById('linkedinTestimonialsImageFrame'),
+      imagePreview: document.getElementById('linkedinTestimonialsImagePreview'),
+      imageFallback: document.getElementById('linkedinTestimonialsImageFallback'),
+      imageMeta: document.getElementById('linkedinTestimonialsImageMeta'),
+      uploadBtn: document.getElementById('linkedinTestimonialsUpload'),
+      removeImageBtn: document.getElementById('linkedinTestimonialsRemoveImage'),
+      moveUpBtn: document.getElementById('linkedinTestimonialsMoveUp'),
+      moveDownBtn: document.getElementById('linkedinTestimonialsMoveDown'),
+      duplicateBtn: document.getElementById('linkedinTestimonialsDuplicate'),
+      deleteBtn: document.getElementById('linkedinTestimonialsDelete'),
+      previewShell: module.querySelector('.linkedin-preview'),
+      preview: document.getElementById('linkedinTestimonialsPreview')
+    };
+
+    state.linkedinTestimonials = {
+      refs,
+      config: createDefaultLinkedinTestimonials(),
+      original: createDefaultLinkedinTestimonials(),
+      source: 'fallback',
+      selectedId: 'testimonial-01',
+      loading: false,
+      saving: false,
+      dirty: false,
+      pendingDeleteKeys: new Set()
+    };
+
+    refs.reloadBtn.addEventListener('click', () => {
+      loadLinkedinTestimonials({ force: true });
+    });
+    refs.saveBtn.addEventListener('click', saveLinkedinTestimonials);
+    refs.addBtn.addEventListener('click', addLinkedinTestimonial);
+    refs.moveUpBtn.addEventListener('click', () => moveLinkedinTestimonial('up'));
+    refs.moveDownBtn.addEventListener('click', () => moveLinkedinTestimonial('down'));
+    refs.duplicateBtn.addEventListener('click', duplicateLinkedinTestimonial);
+    refs.deleteBtn.addEventListener('click', deleteLinkedinTestimonial);
+    refs.enabled.addEventListener('change', () => {
+      const moduleState = getLinkedinModule();
+      if (!moduleState) return;
+      moduleState.config.enabled = !!refs.enabled.checked;
+      setLinkedinDirty(true);
+      updateLinkedinModuleStatus();
+    });
+    [refs.name, refs.linkedinUrl, refs.title, refs.company, refs.imageAltText, refs.text].forEach((node) => {
+      node.addEventListener('input', handleLinkedinTextInput);
+    });
+    refs.imageUrl.addEventListener('change', handleLinkedinImageUrlChange);
+    refs.uploadBtn.addEventListener('click', () => refs.imageInput.click());
+    refs.imageInput.addEventListener('change', async (event) => {
+      const [file] = event.target.files || [];
+      event.target.value = '';
+      if (!file) return;
+      try {
+        await uploadLinkedinImage(file);
+      } catch (error) {
+        hmjToast(error?.message || 'Photo upload failed', 'error', 4600);
+      }
+    });
+    refs.removeImageBtn.addEventListener('click', removeLinkedinImage);
+
+    updateLinkedinModuleStatus();
+    renderLinkedinList();
+    syncLinkedinFormFromSelection();
+    loadLinkedinTestimonials({ force: false });
+  }
+
   function init({ helpers, who }) {
     state.helpers = helpers;
     state.who = who;
@@ -1252,6 +1945,7 @@
     initNotesBoard();
     initActivityHooks();
     initKpis();
+    initLinkedinTestimonialsModule();
   }
 
   window.HMJDashboardEnhancer = { init };

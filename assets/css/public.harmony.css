@@ -5,7 +5,7 @@
   --hmj-premium-border: rgba(129, 155, 226, 0.18);
   --hmj-premium-border-strong: rgba(159, 182, 255, 0.28);
   --hmj-premium-text: #f5f8ff;
-  --hmj-premium-muted: rgba(223, 232, 255, 0.78);
+  --hmj-premium-muted: rgba(223, 232, 255, 0.88);
   --hmj-premium-muted-strong: rgba(239, 244, 255, 0.92);
   --hmj-premium-glow:
     radial-gradient(circle at top right, rgba(83, 118, 218, 0.26), transparent 34%),
@@ -500,9 +500,14 @@ body.public-page
   box-shadow: inset 0 0 0 1px rgba(189, 208, 255, 0.18);
 }
 
+:is(body.public-page, .clients-body, .rate-book-body) {
+  --muted: #4b5d7c;
+  --hmj-muted: #4b5d7c;
+}
+
 :is(body.public-page, .about-page, .clients-body)
   :is(.public-section-head__copy, .public-panel__copy, .trust-line, .faq-intro, .section-copy, .about-text, .hero-lead) {
-  color: #526891;
+  color: #445979;
 }
 
 @media (hover: hover) and (pointer: fine) {
