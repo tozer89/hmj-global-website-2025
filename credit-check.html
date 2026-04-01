@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Indicative Credit Limit Checker | HMJ Global</title>
+  <meta name="description" content="Use HMJ Global's discreet indicative credit-limit checker to get a conservative range for trade-credit follow-up." />
+  <link rel="canonical" href="https://www.hmj-global.com/credit-check" />
+  <meta property="og:site_name" content="HMJ Global" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Indicative Credit Limit Checker | HMJ Global" />
+  <meta property="og:description" content="A discreet HMJ Global credit-check form for prospective clients seeking an indicative trade-credit range." />
+  <meta property="og:url" content="https://www.hmj-global.com/credit-check" />
+  <meta property="og:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Indicative Credit Limit Checker | HMJ Global" />
+  <meta name="twitter:description" content="A discreet HMJ Global credit-check form for prospective clients seeking an indicative trade-credit range." />
+  <meta name="twitter:image" content="https://www.hmj-global.com/images/hero.jpg" />
+  <link rel="icon" href="/images/logo.png" type="image/png" />
+  <link rel="stylesheet" href="/assets/css/credit-checker.css?v=1" />
+  <script defer src="/assets/js/credit-checker.js?v=1"></script>
+</head>
+<body class="credit-check-body">
+  <main class="credit-check-shell">
+    <section class="credit-check-hero">
+      <a class="credit-check-back" href="/clients.html">Back to clients</a>
+      <div class="credit-check-brand">
+        <img src="/images/logo.png" alt="HMJ Global logo" />
+        <span>HMJ Global</span>
+      </div>
+      <div class="credit-check-hero__grid">
+        <div class="credit-check-hero__copy">
+          <p class="credit-check-eyebrow">Finance screening tool</p>
+          <h1 id="creditCheckHeading">Indicative Credit Limit Checker</h1>
+          <p id="creditCheckIntro">Answer three quick commercial questions and leave your contact details to see a realistic indicative range. HMJ can then sense-check the opportunity against live underwriter appetite.</p>
+          <div class="credit-check-pills" aria-label="Credit checker notes">
+            <span>Three business questions</span>
+            <span>Indicative only</span>
+            <span>HMJ follow-up included</span>
+          </div>
+        </div>
+        <aside class="credit-check-hero__note">
+          <p class="credit-check-eyebrow">How it works</p>
+          <h2>Fast enough for a warm lead, conservative enough to stay credible</h2>
+          <ul>
+            <li>Uses turnover band, trading history and sector appetite as the core indicative factors.</li>
+            <li>No bureau pull or insurer search is run at this stage.</li>
+            <li>Ranges are capped deliberately so the public tool does not show unrealistic outcomes.</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section class="credit-check-workspace">
+      <div class="credit-check-card credit-check-card--form" id="creditCheckFormCard">
+        <div class="credit-check-card__head">
+          <div>
+            <p class="credit-check-eyebrow">Discreet lead check</p>
+            <h2>Get an indicative range</h2>
+          </div>
+          <p class="credit-check-muted">This should take under a minute.</p>
+        </div>
+
+        <div class="credit-check-notice" id="creditCheckDisabled" hidden>
+          The indicative credit checker is temporarily unavailable. Please contact HMJ directly at <a href="mailto:info@hmj-global.com">info@hmj-global.com</a>.
+        </div>
+
+        <form id="creditCheckForm" novalidate>
+          <input type="hidden" name="source_page" value="/credit-check.html" />
+          <input type="hidden" name="source_context" id="creditCheckSourceContext" value="credit_check_page" />
+          <div class="credit-check-honeypot" aria-hidden="true">
+            <label for="creditCheckWebsite">Website</label>
+            <input id="creditCheckWebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <div class="credit-check-grid">
+            <label class="credit-check-field">
+              <span>Name</span>
+              <input id="creditCheckName" name="full_name" type="text" maxlength="120" autocomplete="name" required />
+            </label>
+            <label class="credit-check-field">
+              <span>Company</span>
+              <input id="creditCheckCompany" name="company" type="text" maxlength="160" autocomplete="organization" required />
+            </label>
+            <label class="credit-check-field">
+              <span>Email</span>
+              <input id="creditCheckEmail" name="email" type="email" maxlength="320" autocomplete="email" required />
+            </label>
+            <label class="credit-check-field">
+              <span>Phone (optional)</span>
+              <input id="creditCheckPhone" name="phone" type="tel" maxlength="40" autocomplete="tel" />
+            </label>
+            <label class="credit-check-field credit-check-field--full">
+              <span>Annual turnover</span>
+              <select id="creditCheckTurnover" name="turnover_band" required>
+                <option value="">Select turnover band</option>
+                <option value="lt500k">Under GBP 500k</option>
+                <option value="500k_2m">GBP 500k to GBP 2m</option>
+                <option value="2m_5m">GBP 2m to GBP 5m</option>
+                <option value="5m_15m">GBP 5m to GBP 15m</option>
+                <option value="15m_50m">GBP 15m to GBP 50m</option>
+                <option value="gt50m">Over GBP 50m</option>
+              </select>
+            </label>
+            <label class="credit-check-field">
+              <span>Years trading</span>
+              <select id="creditCheckYears" name="years_trading_band" required>
+                <option value="">Select trading history</option>
+                <option value="lt2">Less than 2 years</option>
+                <option value="2_5">2 to 5 years</option>
+                <option value="5_10">5 to 10 years</option>
+                <option value="gt10">Over 10 years</option>
+              </select>
+            </label>
+            <label class="credit-check-field">
+              <span>Sector</span>
+              <select id="creditCheckSector" name="sector" required>
+                <option value="">Select sector</option>
+                <option value="data_centre">Data Centre / Technology</option>
+                <option value="pharma">Pharmaceutical / Life Sciences</option>
+                <option value="professional">Professional Services</option>
+                <option value="manufacturing">Manufacturing / Engineering</option>
+                <option value="logistics">Logistics / Distribution</option>
+                <option value="construction">Construction / Infrastructure</option>
+                <option value="retail">Retail / E-commerce</option>
+                <option value="hospitality">Hospitality / Leisure</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="credit-check-consent">
+            <input id="creditCheckConsent" name="consent_confirmed" type="checkbox" value="true" required />
+            <span>I confirm these details are accurate and I’m happy for HMJ Global to contact me about this indicative credit enquiry.</span>
+          </label>
+
+          <div class="credit-check-actions">
+            <button id="creditCheckSubmit" class="credit-check-btn" type="submit">See indicative limit</button>
+            <p class="credit-check-smallprint" id="creditCheckDisclaimer">Indicative only. This is a lead-screening estimate based on turnover, trading history and sector appetite, not a formal bureau or insurer decision.</p>
+          </div>
+
+          <div class="credit-check-message" id="creditCheckMessage" aria-live="polite"></div>
+        </form>
+      </div>
+
+      <aside class="credit-check-card credit-check-card--result" id="creditCheckResult" hidden>
+        <p class="credit-check-eyebrow">Indicative result</p>
+        <h2 id="creditCheckResultRange">GBP 0 to GBP 0</h2>
+        <div class="credit-check-result__grid">
+          <div>
+            <span>Low</span>
+            <strong id="creditCheckResultLow">GBP 0</strong>
+          </div>
+          <div>
+            <span>Mid</span>
+            <strong id="creditCheckResultMid">GBP 0</strong>
+          </div>
+          <div>
+            <span>High</span>
+            <strong id="creditCheckResultHigh">GBP 0</strong>
+          </div>
+        </div>
+        <p class="credit-check-result__body" id="creditCheckResultNarrative"></p>
+        <div class="credit-check-result__footer">
+          <p id="creditCheckResultThanks"></p>
+          <p class="credit-check-smallprint" id="creditCheckResultDisclaimer"></p>
+          <p class="credit-check-reference" id="creditCheckReference" hidden></p>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

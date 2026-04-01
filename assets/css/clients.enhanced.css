@@ -297,6 +297,8 @@ img {
 
 .client-rate-book-callout__grid {
   display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .client-rate-book-card {
@@ -349,6 +351,54 @@ img {
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.client-credit-check-card {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  padding: clamp(24px, 4vw, 30px);
+  border-radius: 28px;
+  border: 1px solid rgba(23, 55, 121, 0.18);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(234, 241, 255, 0.92));
+  box-shadow: 0 24px 48px rgba(15, 27, 63, 0.1);
+}
+
+.client-credit-check-card__icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  color: #173779;
+  background: rgba(23, 55, 121, 0.08);
+  border: 1px solid rgba(23, 55, 121, 0.12);
+}
+
+.client-credit-check-card__icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.client-credit-check-card__content {
+  display: grid;
+  gap: 10px;
+}
+
+.client-credit-check-card__content h2,
+.client-credit-check-card__content p {
+  margin: 0;
+}
+
+.client-credit-check-card__content p:last-child {
+  color: var(--muted);
+  line-height: 1.66;
+}
+
+.client-credit-check-card__actions {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .proof-grid {
@@ -1807,6 +1857,7 @@ img {
   .tools-intro,
   .form-layout,
   .client-rate-book-card,
+  .client-credit-check-card,
   .notes-layout {
     grid-template-columns: 1fr;
   }
@@ -1890,6 +1941,7 @@ img {
 
   .hero-actions,
   .client-rate-book-card__actions,
+  .client-credit-check-card__actions,
   .client-cta-band__actions,
   .tool-action-row {
     flex-direction: column;

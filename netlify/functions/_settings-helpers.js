@@ -2,6 +2,7 @@
 // Centralised admin settings helper with Supabase + fallback support.
 const { hasSupabase, getSupabase, supabaseStatus } = require('./_supabase.js');
 const { DEFAULT_CHATBOT_SETTINGS } = require('./_chatbot-config.js');
+const { DEFAULT_CREDIT_CHECKER_SETTINGS } = require('../../lib/credit-limit-checker.js');
 
 function createDefaultLinkedinTestimonials() {
   const placeholderText = '[Recommendation pending — Nick to copy full text from LinkedIn]';
@@ -62,6 +63,7 @@ const DEFAULT_SETTINGS = {
     entitlementOverrides: {},
   },
   chatbot_settings: DEFAULT_CHATBOT_SETTINGS,
+  credit_checker_settings: DEFAULT_CREDIT_CHECKER_SETTINGS,
 };
 
 const MS_DAY = 86400000;

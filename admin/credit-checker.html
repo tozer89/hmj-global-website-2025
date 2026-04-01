@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Credit Checker | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script src="/admin/identity-bootstrap.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/js/identity-loader.js?v=3"></script>
+  <script defer src="/admin/common.js?v=36"></script>
+  <link rel="stylesheet" href="/assets/css/admin.credit-checker.css?v=1"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
+  <script defer src="/admin/credit-checker.js?v=1"></script>
+</head>
+<body class="credit-checker-admin-page">
+  <div class="cca-top">
+    <div class="cca-row">
+      <div class="cca-brand">
+        <strong>HMJ Global Admin</strong>
+        <span>Credit checker workspace</span>
+      </div>
+      <span class="cca-pill">Finance</span>
+      <div class="cca-spacer"></div>
+      <a class="cca-btn cca-btn--ghost" href="/admin/finance/">Finance hub</a>
+      <a class="cca-btn cca-btn--ghost" href="/credit-check">Open public checker</a>
+      <a class="cca-btn cca-btn--ghost" href="/admin/">Admin dash</a>
+      <button class="cca-btn cca-btn--ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="cca-wrap" id="gate" style="display:none">
+    <section class="cca-panel">
+      <div class="cca-panel__inner">
+        <p class="cca-eyebrow">Admin only</p>
+        <h1>Secure HMJ access required</h1>
+        <p class="cca-muted why">Checking your session…</p>
+        <div class="cca-actions">
+          <button class="cca-btn cca-btn--primary" type="button" data-admin-login>Open secure sign-in</button>
+          <a class="cca-btn cca-btn--ghost" href="/admin/">Back to dashboard</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="cca-wrap" id="app" style="display:none">
+    <section class="cca-panel">
+      <div class="cca-panel__inner cca-hero">
+        <div>
+          <p class="cca-eyebrow">Lead capture + calibration</p>
+          <h1>Credit Checker</h1>
+          <p class="cca-muted" id="creditCheckerWelcomeMeta">Loading user…</p>
+          <p class="cca-lead">Review warm leads from the discreet client-side checker, keep follow-up notes in one place, export the register when needed, and tune the public model so ranges stay commercially sensible.</p>
+        </div>
+        <div class="cca-actions">
+          <button class="cca-btn cca-btn--primary" type="button" id="btnRefreshLeads">Refresh</button>
+          <a class="cca-btn cca-btn--ghost" href="/.netlify/functions/admin-credit-checker?action=export" id="btnExportLeads">Export CSV</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="cca-stats" id="creditCheckerStatsGrid" aria-label="Credit checker lead stats"></section>
+
+    <section class="cca-panel">
+      <div class="cca-panel__inner">
+        <div class="cca-toolbar">
+          <label class="cca-field">
+            <span>Search</span>
+            <input id="leadSearch" type="search" placeholder="Search name, company, email or reference" autocomplete="off"/>
+          </label>
+          <label class="cca-field">
+            <span>Status</span>
+            <select id="leadStatusFilter">
+              <option value="">All statuses</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <div class="cca-layout">
+      <section class="cca-panel">
+        <div class="cca-panel__inner">
+          <div class="cca-section-head">
+            <div>
+              <p class="cca-eyebrow">Lead queue</p>
+              <h2>Recent submissions</h2>
+            </div>
+            <p class="cca-muted" id="leadQueueMeta">Loading leads…</p>
+          </div>
+          <div class="cca-table-wrap">
+            <table class="cca-table">
+              <thead>
+                <tr>
+                  <th>Lead</th>
+                  <th>Result</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="leadTableBody">
+                <tr><td colspan="5" class="cca-empty">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <aside class="cca-panel cca-panel--detail">
+        <div class="cca-panel__inner">
+          <div class="cca-section-head">
+            <div>
+              <p class="cca-eyebrow">Lead detail</p>
+              <h2 id="leadDetailTitle">Select a lead</h2>
+            </div>
+            <a class="cca-link" id="leadEmailLink" href="mailto:info@hmj-global.com">Email</a>
+          </div>
+
+          <div id="leadDetailEmpty" class="cca-empty">Choose a lead from the table to review the company details, indicative range and follow-up notes.</div>
+
+          <form id="leadDetailForm" class="cca-stack" hidden>
+            <div class="cca-summary-grid">
+              <article class="cca-summary-card">
+                <span>Reference</span>
+                <strong id="leadReferenceValue">—</strong>
+              </article>
+              <article class="cca-summary-card">
+                <span>Indicative range</span>
+                <strong id="leadRangeValue">—</strong>
+              </article>
+            </div>
+
+            <div class="cca-data-block">
+              <h3>Company</h3>
+              <div class="cca-info-list">
+                <div><span>Name</span><strong id="leadNameValue">—</strong></div>
+                <div><span>Company</span><strong id="leadCompanyValue">—</strong></div>
+                <div><span>Email</span><strong id="leadEmailValue">—</strong></div>
+                <div><span>Phone</span><strong id="leadPhoneValue">—</strong></div>
+                <div><span>Turnover</span><strong id="leadTurnoverValue">—</strong></div>
+                <div><span>Years trading</span><strong id="leadYearsValue">—</strong></div>
+                <div><span>Sector</span><strong id="leadSectorValue">—</strong></div>
+                <div><span>Submitted</span><strong id="leadCreatedAtValue">—</strong></div>
+              </div>
+            </div>
+
+            <div class="cca-data-block">
+              <h3>Indicative note</h3>
+              <p class="cca-muted" id="leadNarrativeValue">—</p>
+            </div>
+
+            <div class="cca-form-grid">
+              <label class="cca-field">
+                <span>Status</span>
+                <select id="leadStatus"></select>
+              </label>
+              <label class="cca-field">
+                <span>Assigned to</span>
+                <input id="leadAssignedTo" type="text" maxlength="160" />
+              </label>
+              <label class="cca-field">
+                <span>Follow-up date</span>
+                <input id="leadFollowUpDate" type="date" />
+              </label>
+            </div>
+
+            <label class="cca-field">
+              <span>Admin notes</span>
+              <textarea id="leadAdminNotes" rows="8" maxlength="4000" placeholder="Add next steps, insurer comparisons, or notes for follow-up."></textarea>
+            </label>
+
+            <div class="cca-actions">
+              <button class="cca-btn cca-btn--primary" type="submit" id="btnSaveLead">Save lead</button>
+            </div>
+          </form>
+        </div>
+      </aside>
+    </div>
+
+    <section class="cca-panel">
+      <div class="cca-panel__inner">
+        <div class="cca-section-head">
+          <div>
+            <p class="cca-eyebrow">Public model settings</p>
+            <h2>Calibration & widget control</h2>
+          </div>
+          <p class="cca-muted">These settings drive the public widget, public page copy, notification list and the server-side calculation caps.</p>
+        </div>
+
+        <form id="settingsForm" class="cca-stack">
+          <div class="cca-form-grid cca-form-grid--wide">
+            <label class="cca-toggle">
+              <input id="settingsEnabled" type="checkbox" />
+              <span>Enable public checker</span>
+            </label>
+            <label class="cca-toggle">
+              <input id="settingsWidgetEnabled" type="checkbox" />
+              <span>Show clients-page widget</span>
+            </label>
+            <label class="cca-field">
+              <span>Widget eyebrow</span>
+              <input id="settingsWidgetEyebrow" type="text" maxlength="80" />
+            </label>
+            <label class="cca-field">
+              <span>Widget title</span>
+              <input id="settingsWidgetTitle" type="text" maxlength="120" />
+            </label>
+            <label class="cca-field cca-field--full">
+              <span>Widget intro</span>
+              <textarea id="settingsWidgetIntro" rows="3" maxlength="320"></textarea>
+            </label>
+            <label class="cca-field">
+              <span>Widget button label</span>
+              <input id="settingsWidgetButtonLabel" type="text" maxlength="80" />
+            </label>
+            <label class="cca-field">
+              <span>Page heading</span>
+              <input id="settingsPageHeading" type="text" maxlength="120" />
+            </label>
+            <label class="cca-field cca-field--full">
+              <span>Page intro</span>
+              <textarea id="settingsPageIntro" rows="3" maxlength="420"></textarea>
+            </label>
+            <label class="cca-field cca-field--full">
+              <span>Public disclaimer</span>
+              <textarea id="settingsPageDisclaimer" rows="3" maxlength="420"></textarea>
+            </label>
+            <label class="cca-field cca-field--full">
+              <span>Thank-you message</span>
+              <textarea id="settingsThankYouMessage" rows="3" maxlength="320"></textarea>
+            </label>
+            <label class="cca-field cca-field--full">
+              <span>Notification recipients</span>
+              <input id="settingsNotificationRecipients" type="text" maxlength="500" placeholder="accounts@hmj-global.com, info@hmj-global.com" />
+            </label>
+          </div>
+
+          <div class="cca-config-grid">
+            <section class="cca-config-card">
+              <h3>Core caps</h3>
+              <div class="cca-form-grid">
+                <label class="cca-field">
+                  <span>Base exposure %</span>
+                  <input id="settingsBaseRatioPercent" type="number" min="0.1" max="5" step="0.1" />
+                </label>
+                <label class="cca-field">
+                  <span>Round step</span>
+                  <input id="settingsRoundStep" type="number" min="500" max="25000" step="500" />
+                </label>
+                <label class="cca-field">
+                  <span>Minimum limit</span>
+                  <input id="settingsMinLimit" type="number" min="1000" max="100000" step="500" />
+                </label>
+                <label class="cca-field">
+                  <span>Maximum mid limit</span>
+                  <input id="settingsMaxMidLimit" type="number" min="5000" max="1000000" step="2500" />
+                </label>
+                <label class="cca-field">
+                  <span>Maximum high limit</span>
+                  <input id="settingsMaxHighLimit" type="number" min="5000" max="1500000" step="2500" />
+                </label>
+                <label class="cca-field">
+                  <span>Low spread %</span>
+                  <input id="settingsLowSpreadPercent" type="number" min="10" max="100" step="1" />
+                </label>
+                <label class="cca-field">
+                  <span>High spread %</span>
+                  <input id="settingsHighSpreadPercent" type="number" min="100" max="250" step="1" />
+                </label>
+              </div>
+            </section>
+
+            <section class="cca-config-card">
+              <h3>Turnover midpoint assumptions</h3>
+              <div class="cca-dynamic-grid" id="settingsTurnoverGrid"></div>
+            </section>
+
+            <section class="cca-config-card">
+              <h3>Years trading multipliers</h3>
+              <div class="cca-dynamic-grid" id="settingsYearsGrid"></div>
+            </section>
+
+            <section class="cca-config-card">
+              <h3>Sector multipliers</h3>
+              <div class="cca-dynamic-grid" id="settingsSectorGrid"></div>
+            </section>
+          </div>
+
+          <div class="cca-actions">
+            <button class="cca-btn cca-btn--primary" type="submit" id="btnSaveSettings">Save settings</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <div id="creditCheckerToast" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

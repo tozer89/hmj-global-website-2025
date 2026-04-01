@@ -2624,6 +2624,46 @@
     }
   }
 
+  async function initCreditCheckerWidget() {
+    const widgets = Array.from(doc.querySelectorAll('[data-credit-check-public-widget]'));
+    if (!widgets.length || typeof win.fetch !== 'function') return;
+
+    try {
+      const response = await win.fetch('/.netlify/functions/public-settings', {
+        cache: 'no-store',
+        headers: { accept: 'application/json' }
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || payload.ok === false) return;
+
+      const settings = payload.settings && payload.settings.creditChecker;
+      if (!settings || settings.enabled === false || settings.widgetEnabled === false) {
+        widgets.forEach((widget) => {
+          widget.hidden = true;
+        });
+        return;
+      }
+
+      widgets.forEach((widget) => {
+        const eyebrow = widget.querySelector('[data-credit-check-eyebrow]');
+        const title = widget.querySelector('[data-credit-check-title]');
+        const intro = widget.querySelector('[data-credit-check-intro]');
+        const link = widget.querySelector('[data-credit-check-link]');
+
+        if (eyebrow && settings.eyebrow) eyebrow.textContent = settings.eyebrow;
+        if (title && settings.title) title.textContent = settings.title;
+        if (intro && settings.intro) intro.textContent = settings.intro;
+        if (link) {
+          const baseHref = settings.href || '/credit-check';
+          link.href = `${baseHref}${baseHref.includes('?') ? '&' : '?'}src=clients_rate_book`;
+          if (settings.buttonLabel) link.textContent = settings.buttonLabel;
+        }
+      });
+    } catch (_) {
+      // Keep the static widget copy in place if the settings probe fails.
+    }
+  }
+
   function ready(fn) {
     if (doc.readyState === 'loading') {
       doc.addEventListener('DOMContentLoaded', fn, { once: true });
@@ -2640,6 +2680,7 @@
     initHeroMotion();
     initRevealOnScroll();
     initRateBookVisibility();
+    initCreditCheckerWidget();
 
     const form = doc.querySelector('[data-client-form]');
     initValidation(form);

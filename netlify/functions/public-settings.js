@@ -1,6 +1,7 @@
 // netlify/functions/public-settings.js
 // Exposes a read-only subset of configuration used by public pages (no auth).
 const { fetchSettings, DEFAULT_SETTINGS } = require('./_settings-helpers.js');
+const { publicWidgetSettings, normaliseSettings } = require('../../lib/credit-limit-checker.js');
 
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -9,14 +10,24 @@ const HEADERS = {
 
 exports.handler = async (event) => {
   try {
-    const keys = ['fiscal_week1_ending', 'timesheet_deadline_note', 'timesheet_deadline_timezone', 'linkedin_testimonials'];
+    const keys = [
+      'fiscal_week1_ending',
+      'timesheet_deadline_note',
+      'timesheet_deadline_timezone',
+      'linkedin_testimonials',
+      'credit_checker_settings',
+    ];
     const { settings, source, supabase, error } = await fetchSettings(event, keys);
+    const creditCheckerSettings = normaliseSettings(
+      settings.credit_checker_settings || DEFAULT_SETTINGS.credit_checker_settings
+    );
 
     const safe = {
       week1Ending: settings.fiscal_week1_ending || DEFAULT_SETTINGS.fiscal_week1_ending,
       deadlineNote: settings.timesheet_deadline_note || DEFAULT_SETTINGS.timesheet_deadline_note,
       deadlineTimezone: settings.timesheet_deadline_timezone || DEFAULT_SETTINGS.timesheet_deadline_timezone,
       linkedinTestimonials: settings.linkedin_testimonials || DEFAULT_SETTINGS.linkedin_testimonials,
+      creditChecker: publicWidgetSettings(creditCheckerSettings),
     };
 
     return {

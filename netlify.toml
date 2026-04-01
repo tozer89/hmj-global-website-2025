@@ -93,6 +93,11 @@
   status = 200
 
 [[redirects]]
+  from = "/credit-check"
+  to = "/credit-check.html"
+  status = 200
+
+[[redirects]]
   from = "/privacy"
   to = "/privacy.html"
   status = 200
@@ -359,6 +364,17 @@
 [[redirects]]
   from = "/admin/credit-limit-forecaster.html"
   to = "/admin/?next=credit-limit-forecaster.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/credit-checker.html"
+  to = "/admin/credit-checker.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/credit-checker.html"
+  to = "/admin/?next=credit-checker.html"
   status = 302
 
 [[redirects]]

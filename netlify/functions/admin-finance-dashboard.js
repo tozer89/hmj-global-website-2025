@@ -68,6 +68,13 @@ module.exports.handler = withAdminCors(async (event, context) => {
             detail: 'Insured headroom, contractor capacity, and debtor timing planning.',
           },
           {
+            key: 'credit_checker',
+            title: 'Credit Checker Leads',
+            href: '/admin/credit-checker.html',
+            status: 'Live',
+            detail: 'Public indicative checker leads, admin follow-up notes, and calibration controls.',
+          },
+          {
             key: 'quickbooks',
             title: 'QuickBooks Connection',
             href: '/admin/finance/quickbooks.html',
