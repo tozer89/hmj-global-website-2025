@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>Rate Book | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script src="/admin/identity-bootstrap.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js?v=36"></script>
+  <script defer src="/admin/rate-book.js?v=1"></script>
+
+  <link rel="stylesheet" href="/assets/css/admin.rate-book.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
+</head>
+<body>
+  <div class="top"><div class="row">
+    <div class="brand">HMJ Global Admin</div>
+    <span class="pill">Rate Book</span>
+    <div class="sp"></div>
+    <a class="btn ghost" href="/admin/">⟵ Return to Admin Dash</a>
+    <a class="btn ghost" href="/">← Website</a>
+    <button class="btn ghost" type="button" data-admin-logout>Sign out</button>
+  </div></div>
+
+  <div class="wrap" id="gate" style="display:none">
+    <div class="panel">
+      <strong>Admin only.</strong>
+      <p class="muted why">Checking your session…</p>
+      <button class="btn ghost" type="button" data-admin-login>Log in</button>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
+    <section class="panel hero" aria-labelledby="rateBookAdminHeading">
+      <div class="hero-copy">
+        <p class="eyebrow">Client-facing commercial guide</p>
+        <h1 id="rateBookAdminHeading">Rate Book</h1>
+        <p class="muted" id="welcomeMeta">Loading user…</p>
+        <p class="muted">Manage the public Rate Book roles, markets, pay and charge rates, margin rules, disclaimers, CTA settings, and public visibility without disturbing the rest of the site.</p>
+      </div>
+      <aside class="hero-card" aria-live="polite">
+        <p class="eyebrow">Module status</p>
+        <div class="hero-chips">
+          <span class="chip"><strong id="heroVisibilityLabel">Checking public visibility…</strong></span>
+          <span class="chip" id="heroSourceChip">Loading source…</span>
+        </div>
+        <p class="muted" id="heroSummary">Loading Rate Book status…</p>
+      </aside>
+    </section>
+
+    <section class="metric-grid" aria-label="Rate Book overview">
+      <article class="panel metric">
+        <span>Public roles</span>
+        <strong id="metricPublic">0</strong>
+        <small>Visible on the public guide</small>
+      </article>
+      <article class="panel metric">
+        <span>Hidden roles</span>
+        <strong id="metricHidden">0</strong>
+        <small>Saved but not public</small>
+      </article>
+      <article class="panel metric">
+        <span>Archived roles</span>
+        <strong id="metricArchived">0</strong>
+        <small>Excluded from current use</small>
+      </article>
+      <article class="panel metric">
+        <span>Markets</span>
+        <strong id="metricMarkets">0</strong>
+        <small>Active rate locations</small>
+      </article>
+    </section>
+
+    <section class="layout-grid">
+      <div class="layout-main">
+        <section class="panel controls-panel" aria-labelledby="manageHeading">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Management</p>
+              <h2 id="manageHeading">Roles and market rates</h2>
+            </div>
+            <div class="panel-actions">
+              <button class="btn soft small" id="refreshBtn" type="button">Refresh</button>
+              <button class="btn soft small" id="downloadTemplateBtn" type="button">CSV template</button>
+              <button class="btn primary small" id="importBtn" type="button">Import CSV</button>
+              <button class="btn primary small" id="newRoleBtn" type="button">＋ Add role</button>
+            </div>
+          </div>
+
+          <div class="market-tabs" id="marketTabs" aria-label="Market tabs"></div>
+
+          <div class="filter-row">
+            <label class="search-field">
+              <span class="sr-only">Search roles</span>
+              <input id="searchInput" type="search" placeholder="Search role, discipline, sector or notes" />
+            </label>
+            <label class="filter-field">
+              <span>Discipline</span>
+              <select id="disciplineFilter">
+                <option value="">All disciplines</option>
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>Seniority</span>
+              <select id="seniorityFilter">
+                <option value="">All seniority</option>
+              </select>
+            </label>
+            <label class="filter-field">
+              <span>Visibility</span>
+              <select id="visibilityFilter">
+                <option value="">All roles</option>
+                <option value="public">Public</option>
+                <option value="hidden">Hidden</option>
+                <option value="archived">Archived</option>
+              </select>
+            </label>
+            <button class="btn soft small" id="recalculateBtn" type="button">Recalculate current market</button>
+          </div>
+
+          <div id="rateBookBanner" class="notice-banner" hidden>
+            <strong id="rateBookBannerTitle">Status</strong>
+            <p id="rateBookBannerBody" class="muted">Loading…</p>
+          </div>
+        </section>
+
+        <section class="panel table-panel" aria-labelledby="tableHeading">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Role table</p>
+              <h2 id="tableHeading">Inline rate editing</h2>
+            </div>
+            <p class="muted" id="resultMeta">Loading roles…</p>
+          </div>
+
+          <div class="table-shell">
+            <div class="table-head" id="tableHead">
+              <span>Role</span>
+              <span>Discipline</span>
+              <span>Seniority</span>
+              <span>Pay</span>
+              <span>Charge</span>
+              <span>Public</span>
+              <span>Active</span>
+              <span>Updated</span>
+              <span>Actions</span>
+            </div>
+            <div id="tableBody" class="table-body"></div>
+            <div id="emptyState" class="empty-state" hidden>
+              <strong>No matching roles</strong>
+              <p class="muted">Try clearing a filter or add a new role to start building the guide.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="layout-side">
+        <section class="panel settings-panel" aria-labelledby="settingsHeading">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Display settings</p>
+              <h2 id="settingsHeading">Public rules and copy</h2>
+            </div>
+          </div>
+
+          <form id="settingsForm" class="settings-form" novalidate>
+            <div class="settings-grid">
+              <label class="field">
+                <span>Low threshold</span>
+                <input id="settingsMarginLowThreshold" type="number" step="0.01" min="0" />
+              </label>
+              <label class="field">
+                <span>Low margin add</span>
+                <input id="settingsMarginLowAdd" type="number" step="0.01" min="0" />
+              </label>
+              <label class="field">
+                <span>High threshold</span>
+                <input id="settingsMarginHighThreshold" type="number" step="0.01" min="0" />
+              </label>
+              <label class="field">
+                <span>High margin add</span>
+                <input id="settingsMarginHighAdd" type="number" step="0.01" min="0" />
+              </label>
+              <label class="field field--wide">
+                <span>Other currency message</span>
+                <input id="settingsOtherCurrencyMessage" maxlength="180" />
+              </label>
+              <label class="field field--wide">
+                <span>Public disclaimer</span>
+                <textarea id="settingsPublicDisclaimer" rows="6"></textarea>
+              </label>
+              <label class="field">
+                <span>CTA label</span>
+                <input id="settingsCtaLabel" maxlength="80" />
+              </label>
+              <label class="field">
+                <span>CTA URL</span>
+                <input id="settingsCtaUrl" maxlength="240" />
+              </label>
+            </div>
+            <div class="settings-actions">
+              <button class="btn primary small" id="saveSettingsBtn" type="submit">Save settings</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel preview-panel" aria-labelledby="previewHeading">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Preview</p>
+              <h2 id="previewHeading">Public role card</h2>
+            </div>
+            <a class="btn ghost small" href="/rate-book.html" target="_blank" rel="noopener">Open public page</a>
+          </div>
+          <div id="previewMeta" class="muted preview-meta">Select a role to preview its public presentation.</div>
+          <div id="previewCard" class="preview-card"></div>
+        </section>
+      </aside>
+    </section>
+  </div>
+
+  <div id="editor" class="editor" aria-hidden="true">
+    <div class="editor__head">
+      <div>
+        <p class="eyebrow">Role editor</p>
+        <h2 id="editorTitle">Add role</h2>
+        <p class="muted" id="editorMeta">Set the public visibility, market rates, sectors, and notes here.</p>
+      </div>
+      <button class="btn ghost small" id="closeEditorBtn" type="button">Close</button>
+    </div>
+
+    <div class="editor__body">
+      <form id="roleForm" class="editor-form" novalidate>
+        <div class="form-grid">
+          <label class="field field--wide">
+            <span>Role name</span>
+            <input id="fieldName" required maxlength="160" />
+          </label>
+          <label class="field">
+            <span>Slug</span>
+            <input id="fieldSlug" maxlength="120" />
+          </label>
+          <label class="field">
+            <span>Display order</span>
+            <input id="fieldDisplayOrder" type="number" step="1" min="0" />
+          </label>
+          <label class="field">
+            <span>Discipline</span>
+            <select id="fieldDiscipline">
+              <option value="Electrical">Electrical</option>
+              <option value="Mechanical">Mechanical</option>
+              <option value="CSA / Civils">CSA / Civils</option>
+              <option value="Commissioning">Commissioning</option>
+              <option value="HSE / Quality">HSE / Quality</option>
+              <option value="BIM / Design">BIM / Design</option>
+              <option value="Commercial">Commercial</option>
+              <option value="Project Controls">Project Controls</option>
+              <option value="Project Delivery">Project Delivery</option>
+              <option value="Operations">Operations</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Seniority</span>
+            <select id="fieldSeniority">
+              <option value="Trades">Trades</option>
+              <option value="Technician">Technician</option>
+              <option value="Engineer">Engineer</option>
+              <option value="Lead / Senior">Lead / Senior</option>
+              <option value="Manager">Manager</option>
+              <option value="Director">Director</option>
+            </select>
+          </label>
+          <label class="field field--wide">
+            <span>Notes</span>
+            <textarea id="fieldNotes" rows="4" placeholder="Optional admin note about positioning, market conditions, or how this role should be used."></textarea>
+          </label>
+        </div>
+
+        <div class="check-grid">
+          <label class="checkline"><input id="fieldIsPublic" type="checkbox" checked /> Publicly visible</label>
+          <label class="checkline"><input id="fieldIsActive" type="checkbox" checked /> Active role</label>
+        </div>
+
+        <div class="sector-grid" aria-label="Sector tags">
+          <label class="checkline"><input id="sectorDataCentre" type="checkbox" value="Data centre" checked /> Data centre</label>
+          <label class="checkline"><input id="sectorPharma" type="checkbox" value="Pharma" /> Pharma</label>
+          <label class="checkline"><input id="sectorMissionCritical" type="checkbox" value="Mission critical" checked /> Mission critical</label>
+          <label class="checkline"><input id="sectorEngineering" type="checkbox" value="Engineering" checked /> Engineering</label>
+        </div>
+
+        <section class="market-editor-section">
+          <div class="panel-head panel-head--compact">
+            <div>
+              <p class="eyebrow">Market rates</p>
+              <h3>Pay, charge and visibility by market</h3>
+            </div>
+          </div>
+          <div id="editorMarketGrid" class="editor-market-grid"></div>
+        </section>
+      </form>
+    </div>
+
+    <div class="editor__foot">
+      <div class="editor-actions">
+        <button class="btn danger small" id="archiveRoleBtn" type="button">Archive role</button>
+        <div class="editor-actions__right">
+          <button class="btn ghost small" id="duplicateRoleBtn" type="button">Duplicate</button>
+          <button class="btn primary small" id="saveRoleBtn" type="button">Save role</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input id="importInput" type="file" accept=".csv,text/csv" hidden />
+
+  <div id="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+  (function startRateBookAdmin(){
+    if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+      return setTimeout(startRateBookAdmin, 40);
+    }
+
+    window.Admin.bootAdmin(async (helpers) => {
+      const { identity, sel, toast } = helpers;
+      try {
+        const who = await identity('admin');
+        if (who?.ok) {
+          sel('#welcomeMeta').textContent = `Signed in as ${who.email || 'admin user'}`;
+          if (window.HMJRateBookAdmin && typeof window.HMJRateBookAdmin.init === 'function') {
+            window.HMJRateBookAdmin.init({ helpers, who });
+          }
+        }
+      } catch (error) {
+        toast('Unable to load user details', 'warn', 2600);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

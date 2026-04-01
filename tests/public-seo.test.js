@@ -8,6 +8,7 @@ const PAGES = [
   'index.html',
   'about.html',
   'clients.html',
+  'rate-book.html',
   'jobs.html',
   'candidates.html',
   'contact.html',

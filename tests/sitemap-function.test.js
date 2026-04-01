@@ -15,6 +15,7 @@ test('sitemap function returns a crawlable XML sitemap with key public URLs', as
   assert.match(response.headers['cache-control'], /no-store/);
   assert.match(response.body, /<urlset/);
   assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/about/);
+  assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/rate-book/);
   assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/jobs/);
   assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/candidates/);
   assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/jobs\/gold-card-electrician-slough\//);
@@ -31,6 +32,7 @@ test('sitemap function prefers the request rawUrl host when provided', async () 
 
   assert.equal(response.statusCode, 200);
   assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/about/);
+  assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/rate-book/);
   assert.equal(/https:\/\/www\.hmj-global\.com/i.test(response.body), false);
 });
 
@@ -47,6 +49,7 @@ test('sitemap function falls back to Netlify URL before legacy canonical env val
 
     assert.equal(response.statusCode, 200);
     assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/about/);
+    assert.match(response.body, /https:\/\/hmjg\.netlify\.app\/rate-book/);
     assert.equal(/https:\/\/www\.hmj-global\.com/i.test(response.body), false);
   } finally {
     if (previousUrl === undefined) delete process.env.URL;

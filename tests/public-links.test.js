@@ -9,6 +9,7 @@ const AUDIT_PAGES = [
   'index.html',
   'about.html',
   'clients.html',
+  'rate-book.html',
   'jobs.html',
   'candidates.html',
   'contact.html',
@@ -19,6 +20,7 @@ const AUDIT_PAGES = [
   'admin/index.html',
   'admin/jobs.html',
   'admin/candidates.html',
+  'admin/rate-book.html',
   'admin/team-tasks.html',
   'admin/settings.html',
 ].filter((file) => fs.existsSync(path.join(ROOT, file)));

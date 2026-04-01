@@ -84,6 +84,7 @@ exports.handler = async (event) => {
     { loc: `${siteUrl}/`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/about`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/clients`, lastmod: new Date().toISOString() },
+    { loc: `${siteUrl}/rate-book`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/jobs`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/candidates`, lastmod: new Date().toISOString() },
     { loc: `${siteUrl}/contact`, lastmod: new Date().toISOString() },

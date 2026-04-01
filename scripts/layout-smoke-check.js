@@ -13,6 +13,8 @@ const SCENARIOS = [
   { label: 'home-laptop', route: '/index.html', width: 1280, height: 1400 },
   { label: 'home-mobile', route: '/index.html', width: 390, height: 2200 },
   { label: 'clients-desktop', route: '/clients.html', width: 1440, height: 1800 },
+  { label: 'rate-book-desktop', route: '/rate-book.html', width: 1440, height: 2200 },
+  { label: 'rate-book-mobile', route: '/rate-book.html', width: 390, height: 2400 },
   { label: 'about-tablet', route: '/about.html', width: 1024, height: 1800 },
   { label: 'jobs-laptop', route: '/jobs.html', width: 1280, height: 2200 },
   { label: 'jobs-mobile', route: '/jobs.html', width: 390, height: 2200 },

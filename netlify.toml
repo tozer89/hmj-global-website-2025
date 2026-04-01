@@ -78,6 +78,11 @@
   status = 200
 
 [[redirects]]
+  from = "/rate-book"
+  to = "/rate-book.html"
+  status = 200
+
+[[redirects]]
   from = "/contact"
   to = "/contact.html"
   status = 200
@@ -175,6 +180,17 @@
 [[redirects]]
   from = "/admin/clients.html"
   to = "/admin/?next=clients.html"
+  status = 302
+
+[[redirects]]
+  from = "/admin/rate-book.html"
+  to = "/admin/rate-book.html"
+  status = 200
+  conditions = { Role = ["admin", "owner"] }
+
+[[redirects]]
+  from = "/admin/rate-book.html"
+  to = "/admin/?next=rate-book.html"
   status = 302
 
 [[redirects]]
