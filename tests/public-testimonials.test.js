@@ -7,6 +7,7 @@ const { JSDOM } = require('jsdom');
 const SCRIPT = fs.readFileSync(path.join(process.cwd(), 'js', 'hmj-testimonials.js'), 'utf8');
 
 function createDom(settings) {
+  const requests = [];
   const dom = new JSDOM(`
     <!doctype html>
     <html>
@@ -21,14 +22,17 @@ function createDom(settings) {
     url: 'https://www.hmj-global.com/'
   });
 
-  dom.window.fetch = async () => ({
+  dom.window.fetch = async (input) => {
+    requests.push(String(input));
+    return {
     ok: true,
     json: async () => ({ settings: { linkedinTestimonials: settings } })
-  });
+    };
+  };
   dom.window.console.warn = () => {};
   dom.window.eval(SCRIPT);
   dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded', { bubbles: true }));
-  return dom;
+  return { dom, requests };
 }
 
 async function settle() {
@@ -36,7 +40,7 @@ async function settle() {
 }
 
 test('testimonial renderer outputs clickable LinkedIn profile cards', async () => {
-  const dom = createDom({
+  const { dom, requests } = createDom({
     enabled: true,
     items: [
       {
@@ -78,10 +82,11 @@ test('testimonial renderer outputs clickable LinkedIn profile cards', async () =
   assert.equal(nameLink?.getAttribute('target'), '_blank');
   assert.equal(nameLink?.getAttribute('rel'), 'noopener noreferrer');
   assert.match(profileLink?.getAttribute('href') || '', /linkedin\.com\/in\/jane-smith/i);
+  assert.match(requests[0] || '', /\/\.netlify\/functions\/public-settings\?v=\d+$/);
 });
 
 test('testimonial renderer hides public sections when disabled', async () => {
-  const dom = createDom({
+  const { dom } = createDom({
     enabled: false,
     items: [
       {
@@ -105,7 +110,7 @@ test('testimonial renderer hides public sections when disabled', async () => {
 });
 
 test('testimonial renderer filters placeholder entries from public output', async () => {
-  const dom = createDom({
+  const { dom } = createDom({
     enabled: true,
     items: [
       {
@@ -145,7 +150,7 @@ test('testimonial renderer filters placeholder entries from public output', asyn
 });
 
 test('testimonial renderer keeps real cards visible when only optional metadata is still placeholder text', async () => {
-  const dom = createDom({
+  const { dom } = createDom({
     enabled: true,
     items: [
       {

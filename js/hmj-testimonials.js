@@ -43,6 +43,12 @@
     };
   }
 
+  function buildSettingsUrl() {
+    const url = new URL(SETTINGS_ENDPOINT, window.location.origin);
+    url.searchParams.set('v', String(Date.now()));
+    return url.toString();
+  }
+
   function containsPlaceholderText(value) {
     const text = asString(value).toLowerCase();
     return !!text && PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(text));
@@ -228,7 +234,7 @@
 
   async function loadSettings() {
     try {
-      const response = await fetch(SETTINGS_ENDPOINT, {
+      const response = await fetch(buildSettingsUrl(), {
         credentials: 'same-origin',
         cache: 'no-store',
       });
