@@ -136,6 +136,7 @@
     configLoaded: false,
     schemaReady: false,
     schemaMessage: '',
+    infoMessage: '',
     emailConfigured: false,
     emailDelivery: {
       ready: false,
@@ -1761,7 +1762,8 @@
 
   function renderBanner() {
     const hasSchemaIssue = !state.schemaReady;
-    const hasGeneralMessage = !!trimText(state.schemaMessage, 600);
+    const generalMessage = trimText(state.infoMessage, 600);
+    const hasGeneralMessage = !!generalMessage;
     if (!els.schemaBanner) return;
 
     if (!hasSchemaIssue && !hasGeneralMessage) {
@@ -1778,7 +1780,7 @@
     } else {
       els.schemaBanner.dataset.tone = 'info';
       els.schemaBannerTitle.textContent = 'Team Tasks information';
-      els.schemaBannerCopy.textContent = state.schemaMessage;
+      els.schemaBannerCopy.textContent = generalMessage;
     }
 
     if (els.quickAddBtn) {
@@ -2368,6 +2370,27 @@
     return state.client;
   }
 
+  function realtimeFallbackMessage(error) {
+    const detail = trimText(error?.message, 180);
+    return detail
+      ? `Realtime updates are unavailable right now (${detail}). Team Tasks still works in refresh mode.`
+      : 'Realtime updates are unavailable right now. Team Tasks still works in refresh mode.';
+  }
+
+  function handleRealtimeUnavailable(error) {
+    state.realtimeState = 'fallback';
+    if (state.schemaReady) {
+      state.infoMessage = realtimeFallbackMessage(error);
+    }
+    console.warn('[team-tasks] realtime unavailable', {
+      message: error?.message || null,
+      code: error?.code || null,
+    });
+    renderHeroSummary();
+    renderBanner();
+    renderSettingsTab();
+  }
+
   function looksLikeMissingRelation(error) {
     const message = trimText(error?.message, 400).toLowerCase();
     return message.includes('does not exist') || message.includes('could not find') || message.includes('relation');
@@ -2438,21 +2461,41 @@
 
   async function setupRealtime() {
     if (!state.schemaReady) return;
-    const client = await ensureClient();
+    let client = null;
+    try {
+      client = await ensureClient();
+    } catch (error) {
+      handleRealtimeUnavailable(error);
+      return;
+    }
     if (!client || state.realtimeChannel) return;
 
-    const channel = client.channel('hmj-team-tasks-live');
-    ['task_items', 'task_comments', 'task_comment_mentions', 'task_watchers', 'task_attachments', 'task_reminders', 'task_audit_log'].forEach((table) => {
-      channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-        scheduleReload();
+    try {
+      const channel = client.channel('hmj-team-tasks-live');
+      ['task_items', 'task_comments', 'task_comment_mentions', 'task_watchers', 'task_attachments', 'task_reminders', 'task_audit_log'].forEach((table) => {
+        channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+          scheduleReload();
+        });
       });
-    });
 
-    channel.subscribe((status) => {
-      state.realtimeState = status;
-      renderHeroSummary();
-    });
-    state.realtimeChannel = channel;
+      channel.subscribe((status) => {
+        state.realtimeState = status;
+        if (status === 'SUBSCRIBED') {
+          if (trimText(state.infoMessage, 600).startsWith('Realtime updates are unavailable')) {
+            state.infoMessage = '';
+          }
+          renderBanner();
+          renderSettingsTab();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          handleRealtimeUnavailable(new Error(`Realtime status: ${status}`));
+          return;
+        }
+        renderHeroSummary();
+      });
+      state.realtimeChannel = channel;
+    } catch (error) {
+      handleRealtimeUnavailable(error);
+    }
   }
 
   async function quickUpdateTask(taskId, patch) {
@@ -3291,9 +3334,10 @@
     await loadCalendarStatus({ silent: false });
 
     if (state.schemaReady) {
-      await ensureClient();
-      await setupRealtime();
       await loadAllData({ silent: false });
+      if (state.schemaReady) {
+        await setupRealtime();
+      }
       window.clearInterval(state.countdownTimer);
       state.countdownTimer = window.setInterval(() => {
         renderAll();
@@ -3316,8 +3360,12 @@
       } catch (error) {
         state.helpers = helpers;
         helpers.toast.err(error?.message || 'Unable to load Team Tasks.', 5600);
-        state.schemaReady = false;
-        state.schemaMessage = error?.message || 'Team Tasks failed to load.';
+        if (state.configLoaded && state.schemaReady) {
+          state.infoMessage = error?.message || 'Team Tasks failed to load.';
+        } else {
+          state.schemaReady = false;
+          state.schemaMessage = error?.message || 'Team Tasks failed to load.';
+        }
         renderAll();
       }
     });

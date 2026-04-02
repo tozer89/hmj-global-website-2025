@@ -46,6 +46,9 @@ test('team tasks client wires assignment emails, planner interactions, and guide
   assert.match(source, /setPlannerExpansionForVisibleDays/);
   assert.match(source, /renderOperationsPanels/);
   assert.match(source, /File upload permissions were rejected/);
+  assert.match(source, /function handleRealtimeUnavailable\(error\)/);
+  assert.match(source, /Realtime updates are unavailable right now/);
+  assert.match(source, /await loadAllData\(\{ silent: false \}\);\s+if \(state\.schemaReady\) {\s+await setupRealtime\(\);/s);
   assert.doesNotMatch(source, /description:\s*trimText\(els\.quickDescription\.value,\s*5000\)/);
   assert.doesNotMatch(source, /payload\.description\s*=\s*trimText\(els\.detailDescription\.value,\s*5000\)/);
 });
