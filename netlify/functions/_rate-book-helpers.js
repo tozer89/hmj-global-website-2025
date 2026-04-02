@@ -18,7 +18,7 @@ const DEFAULT_RATE_BOOK_SETTINGS = Object.freeze({
   otherCurrencyMessage: 'Other currencies by discussion',
   publicDisclaimer: 'These figures are indicative commercial guide rates and may vary based on market conditions, shift pattern, overtime structure, local compliance, travel, lodge, accommodation and project complexity.',
   ctaLabel: 'Request tailored rates',
-  ctaUrl: '/clients.html#clientFormTitle',
+  ctaUrl: '/clients#clientFormTitle',
 });
 
 const DEFAULT_RATE_BOOK_MARKETS = Object.freeze([

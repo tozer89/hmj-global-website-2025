@@ -125,8 +125,8 @@ function deriveEmailRouteSettings(event = {}) {
   const siteUrl = resolveCandidatePortalBaseUrl(event);
   return {
     siteUrl,
-    verificationRedirectUrl: buildRedirectUrl(siteUrl, '/candidates.html?candidate_auth=verified'),
-    recoveryRedirectUrl: buildRedirectUrl(siteUrl, '/candidates.html?candidate_action=recovery'),
+    verificationRedirectUrl: buildRedirectUrl(siteUrl, '/candidates?candidate_auth=verified'),
+    recoveryRedirectUrl: buildRedirectUrl(siteUrl, '/candidates?candidate_action=recovery'),
   };
 }
 
@@ -217,10 +217,10 @@ function normaliseCandidateEmailSettings(input = {}, options = {}) {
   next.siteUrl = normaliseUrl(input.siteUrl != null ? input.siteUrl : next.siteUrl) || defaults.siteUrl;
   next.verificationRedirectUrl = normaliseUrl(
     input.verificationRedirectUrl != null ? input.verificationRedirectUrl : next.verificationRedirectUrl
-  ) || buildRedirectUrl(next.siteUrl, '/candidates.html?candidate_auth=verified');
+  ) || buildRedirectUrl(next.siteUrl, '/candidates?candidate_auth=verified');
   next.recoveryRedirectUrl = normaliseUrl(
     input.recoveryRedirectUrl != null ? input.recoveryRedirectUrl : next.recoveryRedirectUrl
-  ) || buildRedirectUrl(next.siteUrl, '/candidates.html?candidate_action=recovery');
+  ) || buildRedirectUrl(next.siteUrl, '/candidates?candidate_action=recovery');
 
   next.confirmationSubject = trimString(input.confirmationSubject != null ? input.confirmationSubject : next.confirmationSubject, 160) || defaults.confirmationSubject;
   next.recoverySubject = trimString(input.recoverySubject != null ? input.recoverySubject : next.recoverySubject, 160) || defaults.recoverySubject;
@@ -377,7 +377,7 @@ function buildCandidateEmailTemplates(settings = {}) {
 function buildSupabaseAuthPatch(settings = {}) {
   const templates = buildCandidateEmailTemplates(settings);
   const candidatePageUrl = trimString(settings.siteUrl, 1000)
-    ? buildRedirectUrl(settings.siteUrl, '/candidates.html')
+    ? buildRedirectUrl(settings.siteUrl, '/candidates')
     : '';
   const redirectUrls = Array.from(new Set([
     trimString(settings.siteUrl, 1000),

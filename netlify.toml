@@ -58,6 +58,18 @@
   status = 200
 
 [[redirects]]
+  from = "/candidates.html"
+  to = "/candidates"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/clients.html"
+  to = "/clients"
+  status = 301
+  force = true
+
+[[redirects]]
   from = "/about"
   to = "/about.html"
   status = 200

@@ -41,7 +41,7 @@
       publishAt: '2026-03-09T09:00:00.000Z',
       featured: false,
       ctaLabel: 'Register interest',
-      ctaUrl: 'candidates.html',
+      ctaUrl: '/candidates',
     },
     {
       id: 'seeded-notice-3',

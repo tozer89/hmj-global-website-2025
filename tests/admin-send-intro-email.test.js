@@ -68,7 +68,7 @@ test('send intro email backend normalises input and builds branded website links
   }, payload);
 
   assert.equal(message.subject, 'Welcome to HMJ Global – next steps for your new assignment');
-  assert.equal(message.registrationUrl, 'https://hmjg.netlify.app/candidates.html');
+  assert.equal(message.registrationUrl, 'https://hmjg.netlify.app/candidates');
   assert.equal(message.timesheetsUrl, 'https://hmjglobal.timesheetportal.com/Dashboard/');
   assert.match(message.html, /Complete HMJ registration/);
   assert.match(message.html, /Open HMJ timesheets \/ portal access/);

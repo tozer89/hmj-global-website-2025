@@ -11,7 +11,7 @@ test('general onboarding reminder copy covers the broader onboarding follow-up p
       supportEmail: 'info@hmj-global.com',
     },
     'Ava',
-    'https://www.hmj-global.com/candidates.html?candidate_onboarding=1',
+    'https://www.hmj-global.com/candidates?candidate_onboarding=1',
     ['right_to_work', 'bank_document'],
     { requestType: 'general', linkType: 'magiclink' },
   );
@@ -29,7 +29,7 @@ test('verification complete copy confirms HMJ has finished the latest check', ()
       supportEmail: 'info@hmj-global.com',
     },
     'Ava',
-    'https://www.hmj-global.com/candidates.html?candidate_onboarding=1',
+    'https://www.hmj-global.com/candidates?candidate_onboarding=1',
     [],
     { requestType: 'verification_complete', linkType: 'magiclink' },
   );

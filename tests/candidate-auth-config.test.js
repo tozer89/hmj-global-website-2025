@@ -88,8 +88,8 @@ test('candidate auth config falls back to the production site when only localhos
 
     assert.equal(baseUrl, 'https://www.hmj-global.com');
     assert.equal(
-      _buildRedirectUrl(baseUrl, '/candidates.html?candidate_auth=verified'),
-      'https://www.hmj-global.com/candidates.html?candidate_auth=verified'
+      _buildRedirectUrl(baseUrl, '/candidates?candidate_auth=verified'),
+      'https://www.hmj-global.com/candidates?candidate_auth=verified'
     );
   });
 });

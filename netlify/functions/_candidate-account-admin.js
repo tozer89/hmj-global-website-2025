@@ -28,8 +28,8 @@ function buildCandidateRedirects(event = {}) {
   const siteUrl = resolveCandidatePortalBaseUrl(event);
   return {
     siteUrl,
-    emailRedirectUrl: buildRedirectUrl(siteUrl, '/candidates.html?candidate_auth=verified'),
-    recoveryRedirectUrl: buildRedirectUrl(siteUrl, '/candidates.html?candidate_action=recovery'),
+    emailRedirectUrl: buildRedirectUrl(siteUrl, '/candidates?candidate_auth=verified'),
+    recoveryRedirectUrl: buildRedirectUrl(siteUrl, '/candidates?candidate_action=recovery'),
   };
 }
 

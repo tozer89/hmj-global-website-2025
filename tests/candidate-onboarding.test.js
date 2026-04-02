@@ -79,7 +79,7 @@ test('buildCandidatePortalDeepLink routes users back into the onboarding documen
     documents: ['passport', 'reference'],
   });
 
-  assert.match(url, /^https:\/\/preview\.hmj-global\.com\/candidates\.html\?/);
+  assert.match(url, /^https:\/\/preview\.hmj-global\.com\/candidates\?/);
   assert.match(url, /candidate_tab=documents/);
   assert.match(url, /candidate_focus=right_to_work/);
   assert.match(url, /candidate_onboarding=1/);

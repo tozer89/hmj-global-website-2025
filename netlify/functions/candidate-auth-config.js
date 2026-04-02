@@ -121,8 +121,8 @@ async function handler(event = {}) {
   }
 
   const siteUrl = resolveCandidatePortalBaseUrl(event);
-  const emailRedirectUrl = buildRedirectUrl(siteUrl, '/candidates.html?candidate_auth=verified');
-  const recoveryRedirectUrl = buildRedirectUrl(siteUrl, '/candidates.html?candidate_action=recovery');
+  const emailRedirectUrl = buildRedirectUrl(siteUrl, '/candidates?candidate_auth=verified');
+  const recoveryRedirectUrl = buildRedirectUrl(siteUrl, '/candidates?candidate_action=recovery');
 
   return respond(event, 200, {
     ok: true,
@@ -131,8 +131,8 @@ async function handler(event = {}) {
     siteUrl,
     emailRedirectUrl,
     recoveryRedirectUrl,
-    recoveryRedirectPath: '/candidates.html?candidate_action=recovery',
-    emailRedirectPath: '/candidates.html?candidate_auth=verified',
+    recoveryRedirectPath: '/candidates?candidate_action=recovery',
+    emailRedirectPath: '/candidates?candidate_auth=verified',
   });
 }
 

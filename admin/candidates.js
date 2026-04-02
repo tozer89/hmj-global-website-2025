@@ -468,7 +468,7 @@
   }
 
   function buildCandidateUploadLink({ requestType = 'documents', documentTypes = [] } = {}) {
-    const url = new URL('/candidates.html', window.location.origin);
+    const url = new URL('/candidates', window.location.origin);
     url.searchParams.set('candidate_tab', 'documents');
     url.searchParams.set('candidate_focus', requestType === 'rtw' ? 'right_to_work' : 'documents');
     url.searchParams.set('candidate_onboarding', '1');

@@ -142,10 +142,10 @@ function mockPortalConfig() {
     supabaseUrl: 'mock://candidate-portal',
     supabaseAnonKey: 'mock-anon-key',
     siteUrl: origin,
-    emailRedirectUrl: `${origin}/candidates.html?candidate_auth=verified&candidate_mock=1`,
-    recoveryRedirectUrl: `${origin}/candidates.html?candidate_action=recovery&candidate_mock=1`,
-    recoveryRedirectPath: '/candidates.html?candidate_action=recovery&candidate_mock=1',
-    emailRedirectPath: '/candidates.html?candidate_auth=verified&candidate_mock=1',
+    emailRedirectUrl: `${origin}/candidates?candidate_auth=verified&candidate_mock=1`,
+    recoveryRedirectUrl: `${origin}/candidates?candidate_action=recovery&candidate_mock=1`,
+    recoveryRedirectPath: '/candidates?candidate_action=recovery&candidate_mock=1',
+    emailRedirectPath: '/candidates?candidate_auth=verified&candidate_mock=1',
   };
 }
 

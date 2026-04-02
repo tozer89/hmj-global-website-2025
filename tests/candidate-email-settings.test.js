@@ -51,8 +51,8 @@ test('normaliseCandidateEmailSettings keeps saved SMTP password when the form le
       senderName: 'HMJ Global',
       supportEmail: 'info@hmj-global.com',
       siteUrl: 'https://www.hmj-global.com',
-      verificationRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_auth=verified',
-      recoveryRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_action=recovery',
+      verificationRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_action=recovery',
     };
     const next = mod.normaliseCandidateEmailSettings({
       smtpPassword: '',
@@ -78,8 +78,8 @@ test('normaliseCandidateEmailSettings clears saved SMTP password when requested'
       existing: {
         smtpPassword: 'existing-secret',
         siteUrl: 'https://www.hmj-global.com',
-        verificationRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_auth=verified',
-        recoveryRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_action=recovery',
+        verificationRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_auth=verified',
+        recoveryRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_action=recovery',
       },
       derived: mod.deriveEmailRouteSettings({
         headers: { host: 'www.hmj-global.com', 'x-forwarded-proto': 'https' }
@@ -102,8 +102,8 @@ test('candidateEmailDiagnostics flags incomplete SMTP as not ready for public de
       senderEmail: 'info@hmj-global.com',
       senderName: 'HMJ Global',
       siteUrl: 'https://www.hmj-global.com',
-      verificationRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_auth=verified',
-      recoveryRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_action=recovery',
+      verificationRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_action=recovery',
       confirmationSubject: 'Confirm your HMJ candidate account',
       recoverySubject: 'Reset your HMJ candidate password',
     });
@@ -128,8 +128,8 @@ test('candidateEmailDiagnostics treats a validated Resend provider as ready for 
       senderEmail: 'info@hmj-global.com',
       senderName: 'HMJ Global',
       siteUrl: 'https://hmjg.netlify.app',
-      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
-      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_action=recovery',
       confirmationSubject: 'Confirm your HMJ candidate account',
       recoverySubject: 'Reset your HMJ candidate password',
     }, {
@@ -165,8 +165,8 @@ test('candidateEmailDiagnostics surfaces invalid SMTP credentials explicitly', (
       senderEmail: 'info@hmj-global.com',
       senderName: 'HMJ Global',
       siteUrl: 'https://hmjg.netlify.app',
-      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
-      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_action=recovery',
       confirmationSubject: 'Confirm your HMJ candidate account',
       recoverySubject: 'Reset your HMJ candidate password',
     }, {
@@ -201,8 +201,8 @@ test('buildSupabaseAuthPatch includes SMTP fields only when custom SMTP is enabl
     const withoutSmtp = mod.buildSupabaseAuthPatch({
       customSmtpEnabled: false,
       siteUrl: 'https://www.hmj-global.com',
-      verificationRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_auth=verified',
-      recoveryRedirectUrl: 'https://www.hmj-global.com/candidates.html?candidate_action=recovery',
+      verificationRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://www.hmj-global.com/candidates?candidate_action=recovery',
       confirmationSubject: 'Confirm your HMJ candidate account',
       recoverySubject: 'Reset your HMJ candidate password',
       emailChangeSubject: 'Confirm your new HMJ candidate email address',
@@ -230,9 +230,9 @@ test('buildSupabaseAuthPatch includes SMTP fields only when custom SMTP is enabl
     assert.equal(Object.prototype.hasOwnProperty.call(withoutSmtp, 'smtp_host'), false);
     assert.equal(withoutSmtp.uri_allow_list, [
       'https://www.hmj-global.com',
-      'https://www.hmj-global.com/candidates.html?candidate_auth=verified',
-      'https://www.hmj-global.com/candidates.html?candidate_action=recovery',
-      'https://www.hmj-global.com/candidates.html',
+      'https://www.hmj-global.com/candidates?candidate_auth=verified',
+      'https://www.hmj-global.com/candidates?candidate_action=recovery',
+      'https://www.hmj-global.com/candidates',
     ].join(','));
     assert.equal(withSmtp.smtp_host, 'smtp.office365.com');
     assert.equal(withSmtp.smtp_port, '587');
@@ -310,8 +310,8 @@ test('applyCandidateEmailSettingsToSupabase accepts a one-time management token 
         senderName: 'HMJ Global',
         supportEmail: 'info@hmj-global.com',
         siteUrl: 'https://hmjg.netlify.app',
-        verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
-        recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+        verificationRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_auth=verified',
+        recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_action=recovery',
         confirmationSubject: 'Confirm your HMJ candidate account',
         recoverySubject: 'Reset your HMJ candidate password',
         emailChangeSubject: 'Confirm your new HMJ candidate email address',
@@ -352,8 +352,8 @@ test('buildSupabaseAuthPatch normalises smtp_port and uri_allow_list to strings 
       senderName: 'HMJ Global',
       supportEmail: 'info@hmj-global.com',
       siteUrl: 'https://hmjg.netlify.app',
-      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
-      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
+      verificationRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_auth=verified',
+      recoveryRedirectUrl: 'https://hmjg.netlify.app/candidates?candidate_action=recovery',
       confirmationSubject: 'Confirm your HMJ candidate account',
       recoverySubject: 'Reset your HMJ candidate password',
       emailChangeSubject: 'Confirm your new HMJ candidate email address',
@@ -372,9 +372,9 @@ test('buildSupabaseAuthPatch normalises smtp_port and uri_allow_list to strings 
     assert.equal(typeof patch.uri_allow_list, 'string');
     assert.equal(patch.uri_allow_list, [
       'https://hmjg.netlify.app',
-      'https://hmjg.netlify.app/candidates.html?candidate_auth=verified',
-      'https://hmjg.netlify.app/candidates.html?candidate_action=recovery',
-      'https://hmjg.netlify.app/candidates.html',
+      'https://hmjg.netlify.app/candidates?candidate_auth=verified',
+      'https://hmjg.netlify.app/candidates?candidate_action=recovery',
+      'https://hmjg.netlify.app/candidates',
     ].join(','));
   } finally {
     restore();

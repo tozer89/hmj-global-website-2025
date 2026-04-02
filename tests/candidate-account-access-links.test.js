@@ -68,16 +68,16 @@ test('generateCandidateAccessLink uses magiclink for an existing portal account'
   const result = await accountAdmin.generateCandidateAccessLink(
     supabase,
     { id: 'candidate-1', email: 'candidate@example.com', auth_user_id: 'auth-1', full_name: 'Candidate Example' },
-    'https://hmjg.netlify.app/candidates.html?candidate_tab=documents&candidate_focus=right_to_work'
+    'https://hmjg.netlify.app/candidates?candidate_tab=documents&candidate_focus=right_to_work'
   );
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].type, 'magiclink');
   assert.equal(calls[0].email, 'candidate@example.com');
-  assert.equal(calls[0].options.redirectTo, 'https://hmjg.netlify.app/candidates.html?candidate_tab=documents&candidate_focus=right_to_work');
+  assert.equal(calls[0].options.redirectTo, 'https://hmjg.netlify.app/candidates?candidate_tab=documents&candidate_focus=right_to_work');
   assert.equal(result.link_type, 'magiclink');
   assert.equal(result.created_account, false);
-  assert.match(result.action_link, /redirect_to=https%3A%2F%2Fhmjg\.netlify\.app%2Fcandidates\.html/i);
+  assert.match(result.action_link, /redirect_to=https%3A%2F%2Fhmjg\.netlify\.app%2Fcandidates/i);
 });
 
 test('generateCandidateAccessLink provisions an invite link when no portal account exists yet', async () => {
@@ -116,12 +116,12 @@ test('generateCandidateAccessLink provisions an invite link when no portal accou
   const result = await accountAdmin.generateCandidateAccessLink(
     supabase,
     store.candidate,
-    'https://hmjg.netlify.app/candidates.html?candidate_tab=documents&candidate_docs=right_to_work'
+    'https://hmjg.netlify.app/candidates?candidate_tab=documents&candidate_docs=right_to_work'
   );
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].type, 'invite');
-  assert.equal(calls[0].options.redirectTo, 'https://hmjg.netlify.app/candidates.html?candidate_tab=documents&candidate_docs=right_to_work');
+  assert.equal(calls[0].options.redirectTo, 'https://hmjg.netlify.app/candidates?candidate_tab=documents&candidate_docs=right_to_work');
   assert.equal(result.link_type, 'invite');
   assert.equal(result.created_account, true);
   assert.equal(result.user_id, 'auth-2');
@@ -140,7 +140,7 @@ test('reminder content explains the secure access path for candidates without a 
       preheader: 'Secure access to your HMJ candidate dashboard.',
     },
     'Joseph',
-    'https://hmjg.netlify.app/candidates.html?candidate_tab=documents&candidate_focus=right_to_work',
+    'https://hmjg.netlify.app/candidates?candidate_tab=documents&candidate_focus=right_to_work',
     ['right_to_work'],
     { linkType: 'invite' }
   );

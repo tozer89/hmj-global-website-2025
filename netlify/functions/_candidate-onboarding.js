@@ -259,7 +259,7 @@ function buildCandidatePortalDeepLink(event, input = {}) {
   if (input.onboarding === true) params.set('candidate_onboarding', '1');
   if (target.requestedDocuments.length) params.set('candidate_docs', target.requestedDocuments.join(','));
   const suffix = params.toString();
-  return buildRedirectUrl(baseUrl, `/candidates.html${suffix ? `?${suffix}` : ''}`);
+  return buildRedirectUrl(baseUrl, `/candidates${suffix ? `?${suffix}` : ''}`);
 }
 
 module.exports = {

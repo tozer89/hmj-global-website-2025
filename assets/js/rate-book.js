@@ -189,7 +189,7 @@
     }
     if (els.rateBookPrimaryCta) {
       els.rateBookPrimaryCta.textContent = asString(settings.ctaLabel) || 'Request tailored rates';
-      els.rateBookPrimaryCta.href = asString(settings.ctaUrl) || '/clients.html#clientFormTitle';
+      els.rateBookPrimaryCta.href = asString(settings.ctaUrl) || '/clients#clientFormTitle';
     }
   }
 
@@ -395,7 +395,7 @@
 
           <div class="rate-book-card__foot">
             <span class="rate-book-card__updated">Last updated ${escapeHtml(formatDate(role.updatedAt))}</span>
-            <a class="rate-book-card__cta" href="${escapeHtml(asString(state.settings && state.settings.ctaUrl) || '/clients.html#clientFormTitle')}" data-analytics-event="rate_book_tailored_rates_clicked" data-analytics-label="Role tailored rates: ${escapeHtml(role.name)}">Request tailored rates</a>
+            <a class="rate-book-card__cta" href="${escapeHtml(asString(state.settings && state.settings.ctaUrl) || '/clients#clientFormTitle')}" data-analytics-event="rate_book_tailored_rates_clicked" data-analytics-label="Role tailored rates: ${escapeHtml(role.name)}">Request tailored rates</a>
           </div>
         </article>
       `;

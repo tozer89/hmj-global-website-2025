@@ -179,7 +179,7 @@ function paragraphsToHtml(paragraphs = []) {
 async function resolveBulkEmailLinks(event, supabase, request = {}, settings = {}) {
   const siteUrl = trimString(settings.siteUrl, 1000) || resolveCandidatePortalBaseUrl(event);
   const candidate = await loadCandidateRecord(supabase, request.candidateId, request?.recipient?.email);
-  const portalUrl = buildRedirectUrl(siteUrl, '/candidates.html');
+  const portalUrl = buildRedirectUrl(siteUrl, '/candidates');
   const documentsUrl = buildCandidatePortalDeepLink(event, {
     tab: 'documents',
     onboarding: candidate?.onboarding_mode === true || request?.template?.primaryAction === 'documents_upload',
