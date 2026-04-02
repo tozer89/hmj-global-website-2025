@@ -103,3 +103,43 @@ test('testimonial renderer hides public sections when disabled', async () => {
   const section = dom.window.document.querySelector('[data-testimonials-section]');
   assert.equal(section.hidden, true);
 });
+
+test('testimonial renderer filters placeholder entries from public output', async () => {
+  const dom = createDom({
+    enabled: true,
+    items: [
+      {
+        id: 'placeholder',
+        text: '[Recommendation pending — Nick to copy full text from LinkedIn]',
+        name: 'LinkedIn recommender 01',
+        title: 'Job title pending',
+        company: 'Company pending',
+        linkedinUrl: '',
+        imageUrl: '',
+        imageAltText: '',
+        source: 'LinkedIn Recommendation'
+      },
+      {
+        id: 'real',
+        text: 'HMJ kept communication clear and delivery practical throughout the programme.',
+        name: 'Jane Smith',
+        title: 'Programme Director',
+        company: 'Example Build',
+        linkedinUrl: 'https://www.linkedin.com/in/jane-smith/',
+        imageUrl: '',
+        imageAltText: '',
+        source: 'LinkedIn Recommendation'
+      }
+    ]
+  });
+
+  await settle();
+
+  const document = dom.window.document;
+  const section = document.querySelector('[data-testimonials-section]');
+  const cards = document.querySelectorAll('.testimonial-card');
+
+  assert.equal(section.hidden, false);
+  assert.equal(cards.length, 1);
+  assert.doesNotMatch(document.body.textContent, /recommendation pending|job title pending|company pending|linkedin recommender/i);
+});

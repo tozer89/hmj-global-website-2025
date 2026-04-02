@@ -595,7 +595,7 @@
       render();
 
       if (state.source !== 'supabase') {
-        setStatus('The Rate Book is showing seeded preview data while the live data source is unavailable.', 'info');
+        setStatus('The Rate Book is showing temporary market data while the live data source is unavailable.', 'info');
       } else {
         setStatus('', '');
       }

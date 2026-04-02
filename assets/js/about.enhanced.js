@@ -329,9 +329,9 @@
       emptyState.innerHTML = `
         <div class="about-team__fallback">
           <div class="about-team__fallback-copy">
-            <span class="about-team__fallback-label">Leadership profiles coming soon</span>
+            <span class="about-team__fallback-label">Leadership & support</span>
             <h3>HMJ still supports programmes through connected delivery, mobilisation and payroll functions.</h3>
-            <p>When live team profiles have not yet been published, the About page switches to an intentional fallback rather than leaving this area blank. The model remains the same: specialist recruitment supported by practical onboarding, compliance coordination and contractor care.</p>
+            <p>HMJ supports specialist recruitment with practical onboarding, compliance coordination and contractor care across every assignment.</p>
           </div>
           <div class="about-team__fallback-grid" aria-label="HMJ leadership fallback roles">
             ${TEAM_FALLBACK_CARDS.map((card) => `

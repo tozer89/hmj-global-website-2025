@@ -1,8 +1,14 @@
 (function () {
   'use strict';
 
-  const PLACEHOLDER_TEXT = '[Recommendation pending — Nick to copy full text from LinkedIn]';
   const SETTINGS_ENDPOINT = '/.netlify/functions/public-settings';
+  const PLACEHOLDER_PATTERNS = [
+    /recommendation pending/i,
+    /nick to copy/i,
+    /job title pending/i,
+    /company pending/i,
+    /^linkedin recommender\b/i,
+  ];
 
   function asString(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -33,44 +39,43 @@
   function createDefaultSettings() {
     return {
       enabled: true,
-      items: Array.from({ length: 6 }, (_, index) => ({
-        id: `testimonial-${String(index + 1).padStart(2, '0')}`,
-        text: PLACEHOLDER_TEXT,
-        name: `LinkedIn recommender ${String(index + 1).padStart(2, '0')}`,
-        title: 'Job title pending',
-        company: 'Company pending',
-        linkedinUrl: '',
-        imageUrl: '',
-        imageStorageKey: '',
-        imageAltText: '',
-        source: 'LinkedIn Recommendation',
-      })),
+      items: [],
     };
+  }
+
+  function containsPlaceholderText(value) {
+    const text = asString(value).toLowerCase();
+    return !!text && PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(text));
   }
 
   function normaliseEntry(entry, index) {
     const order = index + 1;
-    const name = asString(entry?.name) || `LinkedIn recommender ${String(order).padStart(2, '0')}`;
+    const name = asString(entry?.name);
     return {
       id: asString(entry?.id) || `testimonial-${String(order).padStart(2, '0')}`,
-      text: asString(entry?.text) || PLACEHOLDER_TEXT,
+      text: asString(entry?.text),
       name,
-      title: asString(entry?.title) || 'Job title pending',
-      company: asString(entry?.company) || 'Company pending',
+      title: asString(entry?.title),
+      company: asString(entry?.company),
       linkedinUrl: sanitiseUrl(entry?.linkedinUrl),
       imageUrl: sanitiseUrl(entry?.imageUrl),
       imageStorageKey: asString(entry?.imageStorageKey),
-      imageAltText: asString(entry?.imageAltText) || (name ? `Portrait of ${name}` : 'LinkedIn recommender'),
+      imageAltText: asString(entry?.imageAltText) || (name ? `Portrait of ${name}` : 'HMJ recommendation'),
       source: asString(entry?.source) || 'LinkedIn Recommendation',
     };
   }
 
+  function isRenderableEntry(entry) {
+    if (!entry || !entry.text || !entry.name) return false;
+    return ![entry.text, entry.name, entry.title, entry.company].some(containsPlaceholderText);
+  }
+
   function normaliseSettings(raw) {
     const fallback = createDefaultSettings();
-    const sourceItems = Array.isArray(raw?.items) && raw.items.length ? raw.items : fallback.items;
+    const sourceItems = Array.isArray(raw?.items) ? raw.items : fallback.items;
     return {
       enabled: raw?.enabled !== false,
-      items: sourceItems.map(normaliseEntry).filter(Boolean),
+      items: sourceItems.map(normaliseEntry).filter(isRenderableEntry),
     };
   }
 

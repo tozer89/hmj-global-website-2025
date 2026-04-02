@@ -370,7 +370,7 @@
 
     const badge = doc.createElement('span');
     badge.className = 'c-preview__badge';
-    badge.innerHTML = '<svg width="14" height="14" aria-hidden="true" focusable="false" viewBox="0 0 20 20"><path d="M2 11l4 4 12-12" fill="none" stroke="currentColor" stroke-width="2"/></svg> Local preview only';
+    badge.innerHTML = '<svg width="14" height="14" aria-hidden="true" focusable="false" viewBox="0 0 20 20"><path d="M2 11l4 4 12-12" fill="none" stroke="currentColor" stroke-width="2"/></svg> For your review';
 
     const copy = doc.createElement('button');
     copy.type = 'button';

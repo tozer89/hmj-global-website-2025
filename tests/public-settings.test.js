@@ -10,7 +10,10 @@ test('public settings expose live-safe testimonial configuration', async () => {
   assert.equal(payload.ok, true);
   assert.equal(payload.settings.linkedinTestimonials.enabled, true);
   assert.equal(Array.isArray(payload.settings.linkedinTestimonials.items), true);
-  assert.equal(payload.settings.linkedinTestimonials.items.length, 6);
+  assert.doesNotMatch(
+    JSON.stringify(payload.settings.linkedinTestimonials),
+    /recommendation pending|nick to copy|job title pending|company pending|linkedin recommender/i
+  );
   assert.equal(payload.settings.creditChecker.enabled, true);
   assert.equal(payload.settings.creditChecker.href, '/credit-check');
   assert.doesNotMatch(payload.settings.creditChecker.pageDisclaimer, /lead-screening/i);

@@ -44,13 +44,13 @@
     if (!resultCopy) return;
 
     if (activeFilter === 'all') {
-      resultCopy.textContent = `Showing all ${insightCards.length} briefings in the preview grid.`;
+      resultCopy.textContent = `Showing all ${insightCards.length} briefings.`;
       return;
     }
 
     const visibleCount = insightCards.filter((card) => !card.hidden).length;
     const label = (filterLabels.get(activeFilter) || 'Selected').toLowerCase();
-    resultCopy.textContent = `Showing ${visibleCount} ${label} briefing${visibleCount === 1 ? '' : 's'} in the preview grid.`;
+    resultCopy.textContent = `Showing ${visibleCount} ${label} briefing${visibleCount === 1 ? '' : 's'}.`;
   }
 
   function setCurrentArticle(article) {
