@@ -143,3 +143,33 @@ test('testimonial renderer filters placeholder entries from public output', asyn
   assert.equal(cards.length, 1);
   assert.doesNotMatch(document.body.textContent, /recommendation pending|job title pending|company pending|linkedin recommender/i);
 });
+
+test('testimonial renderer keeps real cards visible when only optional metadata is still placeholder text', async () => {
+  const dom = createDom({
+    enabled: true,
+    items: [
+      {
+        id: 'real-but-partial',
+        text: 'HMJ kept communication clear and delivery practical throughout the programme.',
+        name: 'Lewis Fowler',
+        title: 'Electrical Senior Authorised Person',
+        company: 'Company pending',
+        linkedinUrl: 'https://www.linkedin.com/in/lewis-fowler/',
+        imageUrl: '',
+        imageAltText: '',
+        source: 'LinkedIn Recommendation'
+      }
+    ]
+  });
+
+  await settle();
+
+  const document = dom.window.document;
+  const section = document.querySelector('[data-testimonials-section]');
+  const cards = document.querySelectorAll('.testimonial-card');
+
+  assert.equal(section.hidden, false);
+  assert.equal(cards.length, 1);
+  assert.doesNotMatch(document.body.textContent, /company pending/i);
+  assert.match(document.body.textContent, /Electrical Senior Authorised Person/i);
+});

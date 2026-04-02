@@ -48,6 +48,11 @@
     return !!text && PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(text));
   }
 
+  function safeOptionalText(value) {
+    const text = asString(value);
+    return containsPlaceholderText(text) ? '' : text;
+  }
+
   function normaliseEntry(entry, index) {
     const order = index + 1;
     const name = asString(entry?.name);
@@ -55,8 +60,8 @@
       id: asString(entry?.id) || `testimonial-${String(order).padStart(2, '0')}`,
       text: asString(entry?.text),
       name,
-      title: asString(entry?.title),
-      company: asString(entry?.company),
+      title: safeOptionalText(entry?.title),
+      company: safeOptionalText(entry?.company),
       linkedinUrl: sanitiseUrl(entry?.linkedinUrl),
       imageUrl: sanitiseUrl(entry?.imageUrl),
       imageStorageKey: asString(entry?.imageStorageKey),
@@ -67,7 +72,7 @@
 
   function isRenderableEntry(entry) {
     if (!entry || !entry.text || !entry.name) return false;
-    return ![entry.text, entry.name, entry.title, entry.company].some(containsPlaceholderText);
+    return ![entry.text, entry.name].some(containsPlaceholderText);
   }
 
   function normaliseSettings(raw) {

@@ -26,6 +26,11 @@ function containsPlaceholderText(value) {
   return !!text && TESTIMONIAL_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+function safeOptionalText(value, maxLength = 160) {
+  const text = trimText(value, maxLength);
+  return containsPlaceholderText(text) ? '' : text;
+}
+
 function sanitisePublicTestimonials(raw) {
   const input = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const items = Array.isArray(input.items) ? input.items : [];
@@ -37,8 +42,8 @@ function sanitisePublicTestimonials(raw) {
         id: trimText(item?.id, 120) || `testimonial-${index + 1}`,
         text: trimText(item?.text, 4000),
         name: trimText(item?.name, 160),
-        title: trimText(item?.title, 160),
-        company: trimText(item?.company, 160),
+        title: safeOptionalText(item?.title, 160),
+        company: safeOptionalText(item?.company, 160),
         linkedinUrl: trimText(item?.linkedinUrl, 2000),
         imageUrl: trimText(item?.imageUrl, 2000),
         imageStorageKey: trimText(item?.imageStorageKey, 500),
@@ -46,7 +51,7 @@ function sanitisePublicTestimonials(raw) {
         source: trimText(item?.source, 120) || 'LinkedIn Recommendation',
       }))
       .filter((item) => item.text && item.name)
-      .filter((item) => ![item.text, item.name, item.title, item.company].some(containsPlaceholderText)),
+      .filter((item) => ![item.text, item.name].some(containsPlaceholderText)),
   };
 }
 
