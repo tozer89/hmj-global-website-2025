@@ -326,7 +326,7 @@ a {
 .insight-grid,
 .testimonial-grid {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .insight-grid {
@@ -404,10 +404,13 @@ a {
 .testimonial-card {
   position: relative;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   min-height: auto;
-  padding: 22px 18px 16px;
-  background: linear-gradient(180deg, rgba(26, 37, 66, 0.98), rgba(15, 19, 34, 0.98));
+  padding: 18px 16px 14px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(103, 154, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(26, 37, 66, 0.98), rgba(15, 19, 34, 0.98));
   border: 1px solid rgba(139, 164, 224, 0.18);
   box-shadow: 0 18px 34px rgba(6, 10, 20, 0.22);
   color: #f4f7ff;
@@ -416,33 +419,33 @@ a {
 
 .testimonial-mark {
   position: absolute;
-  top: 10px;
-  left: 18px;
+  top: 8px;
+  left: 16px;
   color: rgba(206, 220, 255, 0.52);
-  font-size: 2.35rem;
+  font-size: 1.95rem;
   line-height: 1;
   font-weight: 800;
-  opacity: 0.42;
+  opacity: 0.34;
   pointer-events: none;
 }
 
 .testimonial-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 9px;
   align-items: center;
 }
 
 .testimonial-avatar {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
   overflow: hidden;
   display: grid;
   place-items: center;
   flex-shrink: 0;
   text-decoration: none;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -464,18 +467,24 @@ a {
 .testimonial-person {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .testimonial-text {
   margin: 0;
   color: rgba(244, 247, 255, 0.94);
-  line-height: 1.58;
+  font-size: 0.94rem;
+  line-height: 1.52;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .testimonial-name {
   color: #ffffff;
   font-weight: 700;
+  line-height: 1.2;
   text-decoration: none;
 }
 
@@ -487,8 +496,8 @@ a.testimonial-name:focus-visible {
 
 .testimonial-title {
   color: rgba(214, 224, 255, 0.86);
-  font-size: 0.94rem;
-  line-height: 1.32;
+  font-size: 0.88rem;
+  line-height: 1.28;
 }
 
 .testimonial-profile-link {
@@ -496,12 +505,12 @@ a.testimonial-name:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 7px 11px;
+  padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid rgba(125, 179, 255, 0.26);
   background: rgba(10, 102, 194, 0.16);
   color: #e9f3ff;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
@@ -520,25 +529,34 @@ a.testimonial-name:focus-visible {
   align-items: center;
   gap: 10px;
   justify-content: flex-start;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .linkedin-badge {
   color: #7fc4ff;
-  font-size: 0.8rem;
-  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(127, 196, 255, 0.08);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .testimonial-card.light {
-  background: #fff;
+  background:
+    radial-gradient(circle at top right, rgba(115, 164, 255, 0.12), transparent 36%),
+    linear-gradient(180deg, #ffffff, #f7faff);
   color: #0f1b3f;
   border: 1px solid rgba(58, 102, 179, 0.15);
-  box-shadow: 0 10px 24px rgba(15, 27, 63, 0.1);
+  box-shadow: 0 12px 28px rgba(15, 27, 63, 0.08);
 }
 
 .testimonial-card.light .testimonial-mark {
   color: var(--accent);
-  opacity: 0.24;
+  opacity: 0.18;
 }
 
 .testimonial-card.light .testimonial-header,
@@ -548,11 +566,11 @@ a.testimonial-name:focus-visible {
 }
 
 .testimonial-card.light .testimonial-text {
-  color: #26395f;
+  color: #203458;
 }
 
 .testimonial-card.light .testimonial-name {
-  color: #0f1b3f;
+  color: #10204a;
 }
 
 .testimonial-card.light a.testimonial-name:hover,
@@ -561,13 +579,12 @@ a.testimonial-name:focus-visible {
 }
 
 .testimonial-card.light .testimonial-title {
-  color: #41567d;
+  color: #425984;
 }
 
 .testimonial-card.light .linkedin-badge {
   color: #0a66c2;
-  font-style: normal;
-  font-weight: 700;
+  background: rgba(10, 102, 194, 0.08);
 }
 
 .testimonial-card.light .testimonial-avatar {
@@ -580,17 +597,17 @@ a.testimonial-name:focus-visible {
 }
 
 .testimonial-card.light .testimonial-profile-link {
-  background: rgba(10, 102, 194, 0.12);
-  border-color: rgba(10, 102, 194, 0.22);
-  color: #084f97;
-  box-shadow: 0 6px 14px rgba(10, 102, 194, 0.08);
+  background: #eaf3ff;
+  border-color: rgba(10, 102, 194, 0.2);
+  color: #073f7b;
+  box-shadow: 0 6px 14px rgba(10, 102, 194, 0.06);
 }
 
 .testimonial-card.light .testimonial-profile-link:hover,
 .testimonial-card.light .testimonial-profile-link:focus-visible {
-  background: rgba(10, 102, 194, 0.18);
+  background: #dcecff;
   border-color: rgba(10, 102, 194, 0.3);
-  color: #063b72;
+  color: #052f60;
 }
 
 .testimonial-slider {
@@ -600,7 +617,7 @@ a.testimonial-name:focus-visible {
 }
 
 .testimonial-slider .feed-track {
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .feed-track--static {
@@ -608,10 +625,47 @@ a.testimonial-name:focus-visible {
   justify-content: center;
 }
 
+.testimonial-grid .testimonial-card {
+  align-content: start;
+}
+
+.testimonial-grid .testimonial-text {
+  -webkit-line-clamp: 4;
+}
+
+.testimonial-slider .testimonial-text {
+  -webkit-line-clamp: 5;
+}
+
 .testimonial-slider .testimonial-card {
-  min-width: 280px;
-  max-width: 320px;
-  flex: 0 0 320px;
+  min-width: 296px;
+  max-width: 296px;
+  flex: 0 0 296px;
+}
+
+.home-page [data-testimonials-section].section {
+  padding-top: 42px;
+  padding-bottom: 48px;
+}
+
+.candidates-page [data-testimonials-section].section {
+  padding-top: 42px;
+  padding-bottom: 52px;
+}
+
+.clients-body [data-testimonials-section].client-section {
+  padding-top: 46px;
+  padding-bottom: 58px;
+}
+
+[data-testimonials-section] :is(.public-section-head, .section-heading) {
+  margin-bottom: 16px;
+}
+
+.testimonial-card :is(.testimonial-name, .testimonial-title, .testimonial-text, .testimonial-profile-link) {
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: none;
 }
 
 @media (max-width: 900px) {
