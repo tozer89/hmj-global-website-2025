@@ -74,6 +74,7 @@ test('testimonial renderer outputs clickable LinkedIn profile cards', async () =
 
   assert.equal(section.hidden, false);
   assert.equal(cards.length, 2);
+  assert.equal(cards[0].classList.contains('light'), true);
   assert.equal(nameLink?.getAttribute('target'), '_blank');
   assert.equal(nameLink?.getAttribute('rel'), 'noopener noreferrer');
   assert.match(profileLink?.getAttribute('href') || '', /linkedin\.com\/in\/jane-smith/i);

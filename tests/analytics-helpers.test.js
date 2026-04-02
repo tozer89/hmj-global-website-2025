@@ -105,12 +105,25 @@ test('parseDashboardFilters clamps very large ranges to the supported analytics 
   assert.ok(diffDays <= 120, 'date range should be capped to 120 days');
 });
 
+test('parseDashboardFilters respects the supplied reporting timezone for day boundaries', () => {
+  const filters = parseDashboardFilters({
+    from: '2026-04-02',
+    to: '2026-04-02',
+    timezone: 'Europe/London',
+  });
+
+  assert.equal(filters.timezone, 'Europe/London');
+  assert.equal(filters.fromIso, '2026-04-01T23:00:00.000Z');
+  assert.equal(filters.toExclusiveIso, '2026-04-02T23:00:00.000Z');
+});
+
 test('buildComparisonFilters mirrors the previous equivalent period', () => {
   const filters = parseDashboardFilters({
     from: '2026-03-10',
     to: '2026-03-16',
     source: 'linkedin',
     scope: 'admin',
+    timezone: 'Europe/London',
   });
   const previous = buildComparisonFilters(filters);
 
@@ -118,6 +131,7 @@ test('buildComparisonFilters mirrors the previous equivalent period', () => {
   assert.equal(previous.to, '2026-03-09');
   assert.equal(previous.source, 'linkedin');
   assert.equal(previous.scope, 'admin');
+  assert.equal(previous.timezone, 'Europe/London');
 });
 
 test('analytics schema helpers detect missing event_id correctly', () => {
@@ -300,6 +314,44 @@ test('summariseAnalytics builds KPI, page, click, and path insights from raw eve
 
   const csv = createCsv(summary.recentActivity.slice(0, 2));
   assert.match(csv, /"timestamp","page_path","page_title","event_type","detail","session_id","source","device_type"/);
+});
+
+test('summariseAnalytics buckets page views into the reporting timezone day', () => {
+  const filters = parseDashboardFilters({
+    from: '2026-04-02',
+    to: '2026-04-02',
+    timezone: 'Europe/London',
+  });
+
+  const rows = [
+    {
+      occurred_at: '2026-04-01T23:30:00.000Z',
+      visitor_id: 'visitor-1',
+      session_id: 'session-1',
+      page_visit_id: 'visit-1',
+      event_type: 'page_view',
+      page_path: '/',
+      page_title: 'Home',
+      referrer_domain: 'linkedin.com',
+      device_type: 'desktop',
+      payload: {},
+    },
+  ];
+
+  const summary = summariseAnalytics(rows, filters, [], false);
+
+  assert.deepEqual(summary.trend, [
+    {
+      date: '2026-04-02',
+      pageViews: 1,
+      sessions: 1,
+      uniqueVisitors: 1,
+      ctaClicks: 0,
+    },
+  ]);
+  assert.equal(summary.kpis.totalPageViews, 1);
+  assert.equal(summary.kpis.sessions, 1);
+  assert.equal(summary.kpis.uniqueVisitors, 1);
 });
 
 test('buildComparisonSummary calculates KPI deltas against the previous period', () => {
