@@ -253,14 +253,48 @@
     return `/.netlify/functions/${path}`;
   }
 
+  async function resolveAuthHeaders(options) {
+    const headers = {
+      accept: 'application/json',
+      ...(options?.body ? { 'content-type': 'application/json' } : {}),
+      ...(options?.headers || {}),
+    };
+
+    const hasAuthorization = Object.keys(headers).some((key) => key.toLowerCase() === 'authorization');
+    if (hasAuthorization) return headers;
+
+    const cachedToken = typeof state.viewer?.token === 'string' ? state.viewer.token.trim() : '';
+    if (cachedToken) {
+      headers.Authorization = /^bearer\s+/i.test(cachedToken) ? cachedToken : `Bearer ${cachedToken}`;
+      return headers;
+    }
+
+    if (state.helpers && typeof state.helpers.identity === 'function') {
+      const snapshot = await state.helpers.identity({
+        requiredRole: 'admin',
+        forceFresh: true,
+        cacheTtlMs: 0,
+      });
+      const liveToken = typeof snapshot?.token === 'string' ? snapshot.token.trim() : '';
+      if (liveToken) {
+        headers.Authorization = /^bearer\s+/i.test(liveToken) ? liveToken : `Bearer ${liveToken}`;
+        state.viewer = {
+          ...(state.viewer || {}),
+          ...(snapshot || {}),
+          token: liveToken,
+        };
+      }
+    }
+
+    return headers;
+  }
+
   async function fetchJson(url, options) {
+    const headers = await resolveAuthHeaders(options);
     const response = await fetch(url, {
       credentials: 'include',
-      headers: {
-        accept: 'application/json',
-        ...(options?.body ? { 'content-type': 'application/json' } : {}),
-      },
       ...options,
+      headers,
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
