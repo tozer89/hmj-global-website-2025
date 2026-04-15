@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const RESEND_DOMAINS_URL = 'https://api.resend.com/domains';
+const SIMPLE_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let resendProbeCache = null;
 let smtpProbeCache = null;
 
@@ -16,9 +17,22 @@ function trimString(value, maxLength) {
   return text.slice(0, maxLength);
 }
 
+function stripHeaderBreaks(value) {
+  return String(value == null ? '' : value).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function sanitiseHeaderText(value, maxLength) {
+  return trimString(stripHeaderBreaks(value), maxLength);
+}
+
 function lowerEmail(value) {
-  const email = trimString(value, 320);
+  const email = sanitiseHeaderText(value, 320);
   return email ? email.toLowerCase() : '';
+}
+
+function normaliseEmailAddress(value) {
+  const email = lowerEmail(value);
+  return SIMPLE_EMAIL_RE.test(email) ? email : '';
 }
 
 function plainTextFromHtml(value) {
@@ -31,8 +45,8 @@ function plainTextFromHtml(value) {
 }
 
 function senderAddress(fromEmail, fromName) {
-  const email = lowerEmail(fromEmail);
-  const name = trimString(fromName, 160);
+  const email = normaliseEmailAddress(fromEmail);
+  const name = sanitiseHeaderText(fromName, 160);
   if (!email) return '';
   return name ? `"${name.replace(/"/g, '\\"')}" <${email}>` : email;
 }
@@ -238,9 +252,10 @@ async function sendViaSmtp(message) {
 }
 
 async function sendTransactionalEmail(message = {}) {
-  const toEmail = lowerEmail(message.toEmail);
-  const fromEmail = lowerEmail(message.fromEmail);
-  const subject = trimString(message.subject, 200);
+  const toEmail = normaliseEmailAddress(message.toEmail);
+  const fromEmail = normaliseEmailAddress(message.fromEmail);
+  const replyTo = normaliseEmailAddress(message.replyTo);
+  const subject = sanitiseHeaderText(message.subject, 200);
   if (!toEmail || !fromEmail || !subject || !trimString(message.html, 20000)) {
     const error = new Error('Email message is incomplete.');
     error.code = 'email_message_invalid';
@@ -251,14 +266,14 @@ async function sendTransactionalEmail(message = {}) {
   let smtpError = null;
 
   try {
-    const resendResult = await sendViaResend({ ...message, toEmail, fromEmail, subject });
+    const resendResult = await sendViaResend({ ...message, toEmail, fromEmail, replyTo, subject });
     if (resendResult) return resendResult;
   } catch (error) {
     resendError = error;
   }
 
   try {
-    const smtpResult = await sendViaSmtp({ ...message, toEmail, fromEmail, subject });
+    const smtpResult = await sendViaSmtp({ ...message, toEmail, fromEmail, replyTo, subject });
     if (smtpResult) return smtpResult;
   } catch (error) {
     smtpError = error;

@@ -5,7 +5,7 @@ const adminHtml = fs.readFileSync(path.join(__dirname, '..', 'admin', 'candidate
 const publicHtml = fs.readFileSync(path.join(__dirname, '..', 'candidates.html'), 'utf8');
 
 const hasToolbar = /class="toolbar"/.test(adminHtml);
-const hasFilters = /id="filters"/.test(adminHtml);
+const hasFilters = /id="filter-bar"/.test(adminHtml) || /id="filters"/.test(adminHtml);
 const hasRows = /id="rows"/.test(adminHtml);
 const hasPortalAuthRoot = /id="candidatePortalAuthRoot"/.test(publicHtml);
 const hasDashboardRoot = /id="candidateDashboardRoot"/.test(publicHtml);

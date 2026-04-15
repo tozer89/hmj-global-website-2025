@@ -99,3 +99,67 @@ test('probeSmtpProvider reports invalid SMTP credentials clearly', async () => {
     restore();
   }
 });
+
+test('sendTransactionalEmail strips header line breaks before SMTP delivery', async () => {
+  const originalCreateTransport = nodemailer.createTransport;
+  let captured = null;
+  nodemailer.createTransport = () => ({
+    sendMail: async (payload) => {
+      captured = payload;
+      return { messageId: 'smtp-header-test', accepted: ['candidate@example.com'], rejected: [], pending: [] };
+    },
+  });
+
+  const { mod, restore } = loadModule({});
+
+  try {
+    const result = await mod.sendTransactionalEmail({
+      toEmail: 'candidate@example.com',
+      fromEmail: 'info@hmj-global.com',
+      fromName: 'HMJ Global\r\nBCC: hidden@example.com',
+      replyTo: 'reply@hmj-global.com',
+      subject: 'Welcome\r\nBCC: hidden@example.com',
+      html: '<p>Welcome</p>',
+      smtpSettings: {
+        smtpHost: 'smtp.office365.com',
+        smtpPort: 587,
+        smtpEncryption: 'starttls',
+        smtpUser: 'info@hmj-global.com',
+        smtpPassword: 'smtp-secret',
+      },
+    });
+
+    assert.equal(result.provider, 'smtp');
+    assert.equal(captured.from, '"HMJ Global BCC: hidden@example.com" <info@hmj-global.com>');
+    assert.equal(captured.subject, 'Welcome BCC: hidden@example.com');
+  } finally {
+    nodemailer.createTransport = originalCreateTransport;
+    restore();
+  }
+});
+
+test('sendTransactionalEmail rejects invalid email addresses after sanitisation', async () => {
+  const { mod, restore } = loadModule({});
+
+  try {
+    await assert.rejects(
+      () => mod.sendTransactionalEmail({
+        toEmail: 'candidate@example.com\r\nbcc: hidden@example.com',
+        fromEmail: 'info@hmj-global.com',
+        fromName: 'HMJ Global',
+        subject: 'Invalid recipient',
+        html: '<p>Test</p>',
+        smtpSettings: {
+          smtpHost: 'smtp.office365.com',
+          smtpPort: 587,
+          smtpEncryption: 'starttls',
+          smtpUser: 'info@hmj-global.com',
+          smtpPassword: 'smtp-secret',
+        },
+      }),
+      /Email message is incomplete\./
+    );
+  } finally {
+    restore();
+  }
+});

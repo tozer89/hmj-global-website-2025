@@ -246,12 +246,30 @@
     const chip = doc.createElement('span');
     chip.className = 'c-chip';
     chip.setAttribute('data-index', String(index));
-    chip.innerHTML = `${value}<button type="button" aria-label="Remove ${value}">×</button>`;
-    chip.querySelector('button').addEventListener('click', () => {
+    const label = doc.createElement('span');
+    label.textContent = value;
+    const button = doc.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-label', `Remove ${value}`);
+    button.textContent = '×';
+    button.addEventListener('click', () => {
       state.skills.splice(index, 1);
       syncSkills();
     });
+    chip.appendChild(label);
+    chip.appendChild(button);
     return chip;
+  }
+
+  function setIconText(node, iconMarkup, text) {
+    if (!node) return;
+    node.textContent = '';
+    if (iconMarkup) {
+      node.insertAdjacentHTML('beforeend', iconMarkup);
+      node.appendChild(doc.createTextNode(` ${text}`));
+      return;
+    }
+    node.textContent = text;
   }
 
   function syncSkills() {
@@ -458,7 +476,11 @@
     if (state.fileMeta) {
       const fileRow = doc.createElement('p');
       fileRow.className = 'c-preview__file';
-      fileRow.innerHTML = `<svg width="18" height="18" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/></svg>${state.fileMeta}`;
+      setIconText(
+        fileRow,
+        '<svg width="18" height="18" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/></svg>',
+        state.fileMeta
+      );
       metaContainer.appendChild(fileRow);
     }
     const existingPreview = els.preview?.querySelector('.c-preview__pdf');
@@ -784,12 +806,20 @@
 
     const warn = (message) => {
       meta.className = 'c-fileMeta c-fileMeta--warn';
-      meta.innerHTML = `<svg width="16" height="16" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 2l10 18H2z"/><circle cx="12" cy="17" r="1" fill="currentColor"/><path d="M12 10v4" stroke="currentColor" stroke-width="2"/></svg>${message}`;
+      setIconText(
+        meta,
+        '<svg width="16" height="16" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 2l10 18H2z"/><circle cx="12" cy="17" r="1" fill="currentColor"/><path d="M12 10v4" stroke="currentColor" stroke-width="2"/></svg>',
+        message
+      );
     };
 
     const ok = (message) => {
       meta.className = 'c-fileMeta';
-      meta.innerHTML = `<svg width="16" height="16" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 12l5 5 11-11"/></svg>${message}`;
+      setIconText(
+        meta,
+        '<svg width="16" height="16" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 12l5 5 11-11"/></svg>',
+        message
+      );
     };
 
     const reset = () => {

@@ -17,6 +17,20 @@ test('candidate import template workbook includes csv and xlsx outputs', () => {
   assert.match(template.csv, /candidate@example\.com/);
 });
 
+test('candidate import parser can read the generated xlsx template', () => {
+  const template = buildTemplateWorkbook();
+  const preview = parseImportFile({
+    fileName: 'hmj-candidates-import-template.xlsx',
+    buffer: template.xlsxBuffer,
+  });
+
+  assert.equal(preview.sheetName, 'Candidates');
+  assert.ok(preview.headers.includes('Email'));
+  assert.equal(preview.totalRows, 1);
+  assert.equal(preview.validRows, 1);
+  assert.equal(preview.rows[0].payload.email, 'candidate@example.com');
+});
+
 test('candidate import parser maps common headers into HMJ candidate fields', () => {
   const csv = [
     'Email,Name,Phone,Skills,Payroll Ref,Right To Work Status',

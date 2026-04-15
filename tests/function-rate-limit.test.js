@@ -7,6 +7,7 @@ const MODULES_TO_CLEAR = [
   '../netlify/functions/jobs-list.js',
   '../netlify/functions/analytics-ingest.js',
   '../netlify/functions/public-contact-enquiry.js',
+  '../netlify/functions/contact-application-documents.js',
   '../netlify/functions/chatbot-chat.js',
 ];
 
@@ -17,6 +18,8 @@ const ORIGINAL_ENV = {
   ANALYTICS_INGEST_RATE_LIMIT_WINDOW_SECONDS: process.env.ANALYTICS_INGEST_RATE_LIMIT_WINDOW_SECONDS,
   CONTACT_ENQUIRY_RATE_LIMIT_MAX: process.env.CONTACT_ENQUIRY_RATE_LIMIT_MAX,
   CONTACT_ENQUIRY_RATE_LIMIT_WINDOW_SECONDS: process.env.CONTACT_ENQUIRY_RATE_LIMIT_WINDOW_SECONDS,
+  PUBLIC_DOCUMENT_RATE_LIMIT_MAX: process.env.PUBLIC_DOCUMENT_RATE_LIMIT_MAX,
+  PUBLIC_DOCUMENT_RATE_LIMIT_WINDOW_SECONDS: process.env.PUBLIC_DOCUMENT_RATE_LIMIT_WINDOW_SECONDS,
   CHATBOT_RATE_LIMIT_MAX: process.env.CHATBOT_RATE_LIMIT_MAX,
   CHATBOT_RATE_LIMIT_WINDOW_SECONDS: process.env.CHATBOT_RATE_LIMIT_WINDOW_SECONDS,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
@@ -107,6 +110,36 @@ test('public-contact-enquiry uses the shared limiter across repeated requests', 
   assert.equal(first.statusCode, 400);
   assert.equal(second.statusCode, 429);
   assert.match(JSON.parse(second.body).error, /too many requests/i);
+});
+
+test('contact-application-documents rate limits repeated public upload requests before the Supabase check', async () => {
+  process.env.PUBLIC_DOCUMENT_RATE_LIMIT_MAX = '1';
+  process.env.PUBLIC_DOCUMENT_RATE_LIMIT_WINDOW_SECONDS = '60';
+
+  const publicDocuments = fresh('../netlify/functions/contact-application-documents.js');
+  const event = {
+    httpMethod: 'POST',
+    path: '/.netlify/functions/contact-application-documents',
+    headers: {
+      origin: 'https://hmj-global.com',
+      'x-nf-client-connection-ip': '203.0.113.14',
+    },
+    body: JSON.stringify({
+      action: 'prepare_upload',
+      candidate_id: 'cand-1',
+      submission_id: 'submission-1',
+      file_name: 'cv.pdf',
+      mime_type: 'application/pdf',
+      size_bytes: 1024,
+    }),
+  };
+
+  const first = await publicDocuments.handler(event);
+  const second = await publicDocuments.handler(event);
+
+  assert.equal(first.statusCode, 503);
+  assert.equal(second.statusCode, 429);
+  assert.equal(JSON.parse(second.body).code, 'rate_limited');
 });
 
 test('chatbot-chat rate limits repeated requests before attempting a second OpenAI call', async () => {

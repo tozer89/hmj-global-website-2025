@@ -11,8 +11,6 @@ module.exports = {
     console.log(`[#hmjg] Active functions directory → ${functionsDir}`);
 
     const payload = {
-      ALWAYS_ADMIN_EMAILS: safeString(process.env.ALWAYS_ADMIN_EMAILS || process.env.HMJ_ALWAYS_ADMIN_EMAILS || ''),
-      FORCE_ADMIN_KEY: safeString(process.env.FORCE_ADMIN_KEY || process.env.HMJ_FORCE_ADMIN_KEY || ''),
       ADMIN_IDENTITY_URL: safeString(process.env.ADMIN_IDENTITY_URL || process.env.HMJ_ADMIN_IDENTITY_URL || ''),
     };
 
@@ -21,8 +19,6 @@ module.exports = {
       '(function(){',
       '  var env = ' + JSON.stringify(payload) + ';',
       '  window.__HMJ_ADMIN_ENV = env;',
-      '  if (typeof env.ALWAYS_ADMIN_EMAILS === "string") { window.ALWAYS_ADMIN_EMAILS = env.ALWAYS_ADMIN_EMAILS; }',
-      '  if (typeof env.FORCE_ADMIN_KEY === "string") { window.FORCE_ADMIN_KEY = env.FORCE_ADMIN_KEY; }',
       '  if (env.ADMIN_IDENTITY_URL) { window.ADMIN_IDENTITY_URL = env.ADMIN_IDENTITY_URL; }',
       '})();',
       '',

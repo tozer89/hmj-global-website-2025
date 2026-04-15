@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('node:crypto');
 const { buildCors } = require('./_http.js');
+const { buildRateLimitHeaders, enforceRateLimit } = require('./_rate-limit.js');
 const { getSupabase, hasSupabase, supabaseStatus } = require('./_supabase.js');
 const {
   isMissingColumnError,
@@ -58,13 +59,23 @@ const PUBLIC_DOCUMENT_CONTEXTS = {
   },
 };
 
-function respond(event, statusCode, body) {
+const PUBLIC_DOCUMENT_RATE_LIMIT_WINDOW_SECONDS = Math.max(
+  Number.parseInt(process.env.PUBLIC_DOCUMENT_RATE_LIMIT_WINDOW_SECONDS || '60', 10) || 60,
+  1
+);
+const PUBLIC_DOCUMENT_RATE_LIMIT_MAX = Math.max(
+  Number.parseInt(process.env.PUBLIC_DOCUMENT_RATE_LIMIT_MAX || '12', 10) || 12,
+  1
+);
+
+function respond(event, statusCode, body, extraHeaders = null) {
   return {
     statusCode,
     headers: {
       ...buildCors(event),
       'content-type': 'application/json',
       'cache-control': 'no-store',
+      ...(extraHeaders || {}),
     },
     body: JSON.stringify(body),
   };
@@ -619,12 +630,31 @@ async function baseHandler(event = {}) {
     return respond(event, 405, { ok: false, code: 'method_not_allowed' });
   }
 
+  const limit = await enforceRateLimit({
+    event,
+    bucket: 'public_candidate_documents',
+    max: PUBLIC_DOCUMENT_RATE_LIMIT_MAX,
+    windowSeconds: PUBLIC_DOCUMENT_RATE_LIMIT_WINDOW_SECONDS,
+    metadata: {
+      path: event?.path || '/.netlify/functions/contact-application-documents',
+    },
+  });
+  const rateLimitHeaders = buildRateLimitHeaders(limit);
+  if (!limit.allowed) {
+    return respond(event, 429, {
+      ok: false,
+      code: 'rate_limited',
+      message: 'Too many upload attempts. Please wait a moment and try again.',
+      retryAfterMs: limit.retryAfterMs,
+    }, rateLimitHeaders);
+  }
+
   if (!hasSupabase()) {
     return respond(event, 503, {
       ok: false,
       code: 'supabase_unavailable',
       message: supabaseStatus().error || 'Supabase client unavailable',
-    });
+    }, rateLimitHeaders);
   }
 
   try {
@@ -634,27 +664,27 @@ async function baseHandler(event = {}) {
     const supabase = getSupabase(event);
 
     if (action === 'prepare_upload') {
-      return respond(event, 200, await createPrepareUploadResponse(supabase, body));
+      return respond(event, 200, await createPrepareUploadResponse(supabase, body), rateLimitHeaders);
     }
     if (action === 'finalize_upload') {
-      return respond(event, 200, await createFinalizeUploadResponse(supabase, body));
+      return respond(event, 200, await createFinalizeUploadResponse(supabase, body), rateLimitHeaders);
     }
     if (action === 'report_failure') {
-      return respond(event, 200, await createFailureReportResponse(supabase, body));
+      return respond(event, 200, await createFailureReportResponse(supabase, body), rateLimitHeaders);
     }
 
     return respond(event, 400, {
       ok: false,
       code: context.invalidActionCode,
       message: context.invalidActionMessage,
-    });
+    }, rateLimitHeaders);
   } catch (error) {
     console.warn('[contact-application-documents] failed', error?.message || error);
     return respond(event, Number(error?.statusCode) || 500, {
       ok: false,
       code: error?.code || 'application_document_failed',
       message: error?.message || 'Public document request failed.',
-    });
+    }, rateLimitHeaders);
   }
 }
 
