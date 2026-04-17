@@ -853,9 +853,13 @@ import {
     }
 
     if (errorCode === 'otp_expired' || /invalid|expired/i.test(errorDescription)) {
+      const onboardingFallback = params.get('candidate_onboarding') === '1'
+        || parseRequestedDocumentList(params.get('candidate_docs')).length > 0;
       return {
         tone: 'warn',
-        text: 'That email link is no longer valid. Use the newest email only. If you already confirmed the account, sign in below. Otherwise create the account again and we will send a fresh email.',
+        text: onboardingFallback
+          ? 'That secure email link is no longer valid. If you still need to create your profile, use the new starter registration form below. If you already have an HMJ account, sign in below or request a fresh email.'
+          : 'That email link is no longer valid. Use the newest email only. If you already confirmed the account, sign in below. Otherwise create the account again and we will send a fresh email.',
       };
     }
 
@@ -1382,12 +1386,16 @@ import {
     if (!state.authAvailable) {
       accountToggle.checked = false;
       accountToggle.disabled = true;
-      accountModeText.textContent = 'Candidate account tools are temporarily unavailable. You can still send your profile and CV to HMJ today.';
+      if (accountModeText) {
+        accountModeText.textContent = 'Candidate account tools are temporarily unavailable. You can still send your profile and CV to HMJ today.';
+      }
     } else {
       accountToggle.disabled = false;
-      accountModeText.textContent = accountToggle.checked
-        ? 'You will set a password now, receive a verification email after submit, and then sign in once you confirm it.'
-        : 'Your details will still go to HMJ without creating a password or login.';
+      if (accountModeText) {
+        accountModeText.textContent = accountToggle.checked
+          ? 'You will set a password now, receive a verification email after submit, and then sign in once you confirm it.'
+          : 'Your details will still go to HMJ without creating a password or login.';
+      }
     }
 
     const accountEnabled = accountToggle.checked && state.authAvailable;
@@ -1440,6 +1448,11 @@ import {
       : '';
     const isBusy = state.authBusy ? 'disabled' : '';
     const prefillEmail = escapeHtml(state.pendingEmail || '');
+    const onboardingEntry = state.onboardingPrompt || state.requestedDocuments.length > 0;
+    const registerPrompt = onboardingEntry
+      ? 'New starter onboarding? Use the registration form below as your main setup form.'
+      : 'New here? Use the form below as your main registration and profile form.';
+    const registerButtonLabel = onboardingEntry ? 'Open new starter registration' : 'Register account';
 
     authRoot.innerHTML = `
       <div class="candidate-portal-shell">
@@ -1448,7 +1461,7 @@ import {
           <h2>Sign in to your HMJ candidate account</h2>
           <p>Create an HMJ candidate account to save your profile, track applications, and upload documents.</p>
           ${message}
-          <p class="candidate-portal-note candidate-portal-note--strong">New here? Use the form below as your main registration and profile form.</p>
+          <p class="candidate-portal-note candidate-portal-note--strong">${escapeHtml(registerPrompt)}</p>
           <div class="candidate-portal-panel ${mode === 'signin' ? 'is-active' : ''}" data-auth-panel="signin">
             <form class="candidate-portal-form" data-auth-form="signin">
               <label>Email
@@ -1463,7 +1476,7 @@ import {
               </div>
               <div class="candidate-dashboard-actions">
                 <button class="candidate-portal-btn candidate-portal-btn--subtle" type="button" data-auth-mode="reset">Forgot password</button>
-                <button class="candidate-portal-btn candidate-portal-btn--ghost" type="button" data-scroll-to-register="true">Register account</button>
+                <button class="candidate-portal-btn candidate-portal-btn--ghost" type="button" data-scroll-to-register="true">${escapeHtml(registerButtonLabel)}</button>
               </div>
               <p class="candidate-field-help">If your verification email has expired, enter the same email address here and resend a fresh one.</p>
             </form>

@@ -13,12 +13,18 @@ test('general onboarding reminder copy covers the broader onboarding follow-up p
     'Ava',
     'https://www.hmj-global.com/candidates?candidate_onboarding=1',
     ['right_to_work', 'bank_document'],
-    { requestType: 'general', linkType: 'magiclink' },
+    {
+      requestType: 'general',
+      linkType: 'magiclink',
+      fallbackRegistrationUrl: 'https://www.hmj-global.com/candidates?path=starter&candidate_onboarding=1',
+    },
   );
 
   assert.match(message.subject, /complete your HMJ onboarding/i);
   assert.match(message.html, /still needs a few onboarding details/i);
   assert.match(message.html, /secure HMJ access button/i);
+  assert.match(message.html, /onboarding registration fallback/i);
+  assert.match(message.html, /Open HMJ onboarding registration/i);
 });
 
 test('verification complete copy confirms HMJ has finished the latest check', () => {

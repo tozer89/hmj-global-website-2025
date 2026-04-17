@@ -44,6 +44,14 @@ test('candidate registration enhancement script includes the new 10-skill defaul
   assert.match(source, /maxLength = 40/);
 });
 
+test('candidate page keeps the selected registration path in the URL and auto-opens starter onboarding deep links', () => {
+  const html = read('candidates.html');
+
+  assert.match(html, /url\.searchParams\.set\('path', key\)/);
+  assert.match(html, /params\.get\('candidate_onboarding'\) === '1'/);
+  assert.match(html, /if \(params\.get\('candidate_docs'\)\) return true;/);
+});
+
 test('candidate portal submit flow surfaces invalid-state feedback and signed-in success handling', () => {
   const source = read('assets/js/candidates.portal.js');
 
@@ -55,4 +63,7 @@ test('candidate portal submit flow surfaces invalid-state feedback and signed-in
   assert.match(source, /name="right_to_work_other"/);
   assert.match(source, /Awaiting HMJ verification/);
   assert.match(source, /Not yet submitted/);
+  assert.match(source, /use the new starter registration form below/i);
+  assert.match(source, /Open new starter registration/);
+  assert.match(source, /if \(accountModeText\) \{/);
 });

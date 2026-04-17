@@ -254,6 +254,7 @@ function buildCandidatePortalDeepLink(event, input = {}) {
   const baseUrl = resolveCandidatePortalBaseUrl(event);
   const target = normaliseCandidatePortalTarget(input);
   const params = new URLSearchParams();
+  if (input.onboarding === true) params.set('path', 'starter');
   if (target.tab) params.set('candidate_tab', target.tab);
   if (target.focus) params.set('candidate_focus', target.focus);
   if (input.onboarding === true) params.set('candidate_onboarding', '1');

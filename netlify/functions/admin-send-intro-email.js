@@ -12,7 +12,7 @@ const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-deli
 const { recordAudit } = require('./_audit.js');
 const { _buildRedirectUrl: buildRedirectUrl } = require('./candidate-auth-config.js');
 const { buildCandidatePortalDeepLink } = require('./_candidate-onboarding.js');
-const { loadCandidateRecord, generateCandidateAccessLink } = require('./_candidate-account-admin.js');
+const { loadCandidateRecord } = require('./_candidate-account-admin.js');
 
 function parseBody(event) {
   try {
@@ -52,9 +52,16 @@ function validateIntroEmailRequest(input = {}) {
   if (!trimString(input.company, 180)) throw coded(400, 'Company / client is required.');
 }
 
+function buildStarterRegistrationUrl(siteUrl) {
+  return buildRedirectUrl(
+    siteUrl,
+    '/candidates?path=starter&candidate_tab=documents&candidate_focus=right_to_work&candidate_onboarding=1&candidate_docs=right_to_work,passport,qualification_certificate,reference,bank_document'
+  );
+}
+
 function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
   const siteUrl = trimString(settings.siteUrl, 1000) || 'https://www.hmj-global.com/';
-  const registrationUrl = trimString(links.registrationUrl, 4000) || buildRedirectUrl(siteUrl, '/candidates');
+  const registrationUrl = trimString(links.registrationUrl, 4000) || buildStarterRegistrationUrl(siteUrl);
   const timesheetsUrl = resolveCandidateTimesheetsDashboardUrl();
   const supportEmail = trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com';
   const senderName = trimString(settings.senderName, 160) || 'HMJ Global';
@@ -66,13 +73,13 @@ function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
   const usesSecureAccess = !!accessLinkType || links?.secureAccess === true;
   const primaryActionLabel = usesSecureAccess
     ? (accessLinkType === 'invite' ? 'Open secure HMJ account and onboarding' : 'Open secure HMJ onboarding')
-    : 'Complete HMJ registration';
+    : 'Start HMJ new starter registration';
   const primaryActionIntro = usesSecureAccess
     ? (accessLinkType === 'invite'
       ? 'Use the secure HMJ button below to finish opening your candidate account and go straight into your onboarding area.'
       : 'Use the secure HMJ button below to open your candidate account and go straight into your onboarding area.')
-    : 'Please complete your HMJ website registration so we can progress your onboarding, right to work checks, supporting documents, and payment setup where applicable.';
-  const fallbackRegistrationLabel = usesSecureAccess ? 'Open secure HMJ access' : 'Open HMJ registration';
+    : 'Use the HMJ button below to open the new starter registration page already pointed at the correct onboarding route.';
+  const fallbackRegistrationLabel = usesSecureAccess ? 'Open secure HMJ access' : 'Open HMJ new starter registration';
   const subject = isReminder
     ? (jobTitle ? `Reminder – HMJ onboarding steps for your ${jobTitle} assignment` : 'Reminder – please complete your HMJ registration')
     : (jobTitle
@@ -102,6 +109,7 @@ function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
       <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">Hi ${escapeHtml(firstName)},</p>
       <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">${escapeHtml(primaryActionIntro)}</p>
       <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">HMJ needs your profile, right-to-work, onboarding, and payment details where relevant so we can move your setup forward properly.</p>
+      <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">The registration link opens the HMJ candidate page with the new starter route selected for you, so you land in the correct onboarding form rather than the general sign-in area.</p>
       <p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">We will also use this information to help get you set up on the HMJ Timesheet Portal dashboard so you can submit hours once your setup is underway.</p>
       <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">Use the HMJ buttons below rather than saving direct system links. They will take you to the correct HMJ access path.</p>
     `,
@@ -126,24 +134,11 @@ async function resolveIntroEmailLinks(event, supabase, request = {}) {
     documents: ['right_to_work', 'passport', 'qualification_certificate', 'reference', 'bank_document'],
   });
 
-  if (!candidate?.id) {
-    return {
-      candidate: null,
-      registrationUrl: null,
-      accessLinkType: null,
-      secureAccess: false,
-      onboardingUrl,
-    };
-  }
-
-  const accessLink = await generateCandidateAccessLink(supabase, candidate, onboardingUrl, {
-    email: request.email,
-  });
   return {
-    candidate,
-    registrationUrl: trimString(accessLink?.action_link, 4000) || onboardingUrl,
-    accessLinkType: trimString(accessLink?.link_type, 40).toLowerCase() || null,
-    secureAccess: true,
+    candidate: candidate || null,
+    registrationUrl: onboardingUrl,
+    accessLinkType: null,
+    secureAccess: false,
     onboardingUrl,
   };
 }

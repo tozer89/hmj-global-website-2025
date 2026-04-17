@@ -95,7 +95,7 @@
         <li><strong>Recipient</strong><span>${escapeHtml([firstName, lastName].filter(Boolean).join(' ') || '—')} ${email ? `· ${escapeHtml(email)}` : ''}</span></li>
         <li><strong>Role / client</strong><span>${escapeHtml(jobTitle || 'Role pending')} · ${escapeHtml(clientCompany || 'Client pending')}</span></li>
         <li><strong>Sender</strong><span>${escapeHtml(sender)}</span></li>
-        <li><strong>Registration path</strong><span>${escapeHtml(joinPreviewUrl(siteUrl, '/candidates'))}</span></li>
+        <li><strong>Registration path</strong><span>${escapeHtml(joinPreviewUrl(siteUrl, '/candidates?path=starter'))}</span></li>
         <li><strong>Timesheets path</strong><span>${escapeHtml(candidateTimesheetsDashboardUrl())}${phone ? ` · phone logged: ${escapeHtml(phone)}` : ''}</span></li>
       `;
     }

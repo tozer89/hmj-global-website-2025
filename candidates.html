@@ -1136,6 +1136,29 @@
     /* ── Elements ────────────────────────────────────────────────── */
     function el(id) { return document.getElementById(id); }
 
+    function syncPathQuery(key) {
+      if (!window.history || typeof window.history.replaceState !== 'function') return;
+      try {
+        var url = new URL(window.location.href);
+        if (key) {
+          url.searchParams.set('path', key);
+        } else {
+          url.searchParams.delete('path');
+        }
+        window.history.replaceState({}, '', url.toString());
+      } catch (err) {
+        /* no-op */
+      }
+    }
+
+    function shouldAutoOpenStarter(params) {
+      if (!params) return false;
+      if (params.get('candidate_onboarding') === '1') return true;
+      if (params.get('candidate_docs')) return true;
+      var focus = String(params.get('candidate_focus') || '').toLowerCase();
+      return focus === 'right_to_work' || focus === 'payment_details';
+    }
+
     /* ── Reveal form with CSS transition ────────────────────────── */
     function revealFormSection() {
       var section = el('candidateFormSection');
@@ -1192,9 +1215,10 @@
     }
 
     /* ── Apply path ──────────────────────────────────────────────── */
-    function applyPath(key) {
+    function applyPath(key, options) {
       var cfg  = PATHS[key];
       var form = el('candForm');
+      var shouldScroll = !options || options.scroll !== false;
       if (!cfg || !form) return;
       currentPath = key;
 
@@ -1219,15 +1243,18 @@
 
       // 4. Collapse chooser to banner
       collapseChooser(cfg);
+      syncPathQuery(key);
 
       // 5. Reveal form section
       revealFormSection();
 
       // 6. Smooth scroll to form (slight delay for transition to start)
-      setTimeout(function () {
-        var anchor = el('candidateRegisterAnchor');
-        if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      if (shouldScroll) {
+        setTimeout(function () {
+          var anchor = el('candidateRegisterAnchor');
+          if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
     }
 
     /* ── Upgrade: seeker → starter ───────────────────────────────── */
@@ -1242,6 +1269,7 @@
       if (form) form.classList.remove('mode-seeker', 'mode-starter');
       hideFormSection();
       restoreChooser();
+      syncPathQuery('');
       // Scroll back to chooser
       setTimeout(function () {
         var chooser = el('pathChooser');
@@ -1287,6 +1315,8 @@
         applyPath('starter');
       } else if (pathParam === 'seeker' || pathParam === 'register') {
         applyPath('seeker');
+      } else if (shouldAutoOpenStarter(params)) {
+        applyPath('starter');
       }
     }
 

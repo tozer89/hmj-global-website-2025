@@ -171,6 +171,7 @@ function requestTypeMeta(requestType, documentTypes = []) {
 function buildReminderContent(settings, candidateName, actionUrl, documentTypes = ['right_to_work'], options = {}) {
   const meta = requestTypeMeta(options.requestType, documentTypes);
   const labelsText = documentListText(documentTypes);
+  const fallbackRegistrationUrl = trimString(options.fallbackRegistrationUrl, 4000);
   const safeCandidateName = candidateName
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -209,6 +210,7 @@ function buildReminderContent(settings, candidateName, actionUrl, documentTypes 
         : `
           <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">HMJ uses this area for onboarding documents such as passports, certificates, references, visas, and share-code evidence.</p>
           <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">If you have not completed your online setup yet, the secure link above will guide you through access first and then open the correct HMJ upload area for this request.</p>
+          ${fallbackRegistrationUrl && fallbackRegistrationUrl !== actionUrl ? '<p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">If that secure access button has expired, use the HMJ onboarding registration fallback below to reopen the candidate page and continue from the correct new starter route.</p>' : ''}
           ${(meta.requestType === 'documents' && !isRightToWorkOnly) ? `<p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Requested documents: <strong>${safeLabelsText}</strong>.</p>` : ''}
           <p style="margin:0 0 12px;color:#42557f;font-size:15px;line-height:1.7">Once you are inside your candidate account, upload the requested documents and HMJ will route them into the correct verification section automatically.</p>
           <p style="margin:0;color:#42557f;font-size:15px;line-height:1.7">If you have already uploaded the right file, you can ignore this reminder.</p>
@@ -216,6 +218,9 @@ function buildReminderContent(settings, candidateName, actionUrl, documentTypes 
     `,
     fallbackLinks: [
       { label: meta.actionLabel, url: actionUrl },
+      ...(fallbackRegistrationUrl && fallbackRegistrationUrl !== actionUrl
+        ? [{ label: 'Open HMJ onboarding registration', url: fallbackRegistrationUrl }]
+        : []),
     ],
   });
   return {
@@ -376,6 +381,7 @@ const baseHandler = async (event, context) => {
     const content = buildReminderContent(settings, displayCandidateName(candidate), actionUrl, actionDocuments, {
       linkType: accessLink?.link_type || null,
       requestType: requestMeta.requestType,
+      fallbackRegistrationUrl: redirectUrl,
     });
 
     try {

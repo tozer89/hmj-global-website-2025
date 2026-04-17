@@ -68,13 +68,15 @@ test('send intro email backend normalises input and builds branded website links
   }, payload);
 
   assert.equal(message.subject, 'Welcome to HMJ Global – next steps for your new assignment');
-  assert.equal(message.registrationUrl, 'https://hmjg.netlify.app/candidates');
+  assert.match(message.registrationUrl, /^https:\/\/hmjg\.netlify\.app\/candidates\?/);
+  assert.match(message.registrationUrl, /path=starter/);
   assert.equal(message.timesheetsUrl, 'https://hmjglobal.timesheetportal.com/Dashboard/');
-  assert.match(message.html, /Complete HMJ registration/);
+  assert.match(message.html, /Start HMJ new starter registration/);
   assert.match(message.html, /Open HMJ timesheets \/ portal access/);
   assert.match(message.html, /ACME Pharma/);
   assert.match(message.html, /Senior Planner/);
-  assert.match(message.html, /Open HMJ registration/);
+  assert.match(message.html, /new starter route selected for you/i);
+  assert.match(message.html, /Open HMJ new starter registration/);
   assert.match(message.html, /background:#173779/);
 });
 
