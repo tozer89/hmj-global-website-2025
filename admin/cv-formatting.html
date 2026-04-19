@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow"/>
+  <title>CV Formatting | HMJ Global Admin</title>
+
+  <script src="/admin/__env.js"></script>
+  <script src="/admin/identity-bootstrap.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="../js/identity-loader.js"></script>
+  <script defer src="/admin/common.js?v=36"></script>
+  <script defer src="/admin/cv-formatting.js?v=2"></script>
+
+  <link rel="stylesheet" href="/assets/css/admin.cv-formatting.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
+</head>
+<body>
+  <div class="cvf-top">
+    <div class="cvf-row">
+      <div class="cvf-brand">HMJ Global Admin</div>
+      <span class="cvf-pill">Recruitment</span>
+      <div class="cvf-spacer"></div>
+      <a class="cvf-btn cvf-btn-ghost" href="/admin/">Return to dashboard</a>
+      <a class="cvf-btn cvf-btn-ghost" href="/admin/settings.html">Settings</a>
+      <a class="cvf-btn cvf-btn-ghost" href="/">Website</a>
+      <button class="cvf-btn cvf-btn-ghost" type="button" data-admin-logout>Sign out</button>
+    </div>
+  </div>
+
+  <div class="cvf-wrap" id="gate" style="display:none">
+    <section class="cvf-panel">
+      <strong>Admin only.</strong>
+      <p class="cvf-muted why">Checking your session…</p>
+      <button class="cvf-btn cvf-btn-primary" type="button" data-admin-login>Open secure sign-in</button>
+    </section>
+  </div>
+
+  <div class="cvf-wrap" id="app" style="display:none">
+    <section class="cvf-panel cvf-hero">
+      <div class="cvf-hero-copy">
+        <div>
+          <p class="cvf-eyebrow">CV Formatting</p>
+          <h1>Format, anonymise, and tailor CVs into a client-ready HMJ Word document.</h1>
+        </div>
+        <p class="cvf-muted">Upload a candidate CV, optionally attach the role brief, and generate a structured output that strips personal identifiers, sharpens the presentation, and downloads as a finished `.docx`. The settings below let recruiters decide how aggressive the anonymisation should be, how much the job spec should influence the output, and what HMJ presentation style to use.</p>
+        <div class="cvf-chip-row">
+          <span class="cvf-chip">PDF / DOC / DOCX intake</span>
+          <span class="cvf-chip">Optional job-spec upload</span>
+          <span class="cvf-chip">Recruiter presets</span>
+          <span class="cvf-chip">Word download</span>
+        </div>
+      </div>
+      <aside class="cvf-hero-card">
+        <p class="cvf-eyebrow">Workflow</p>
+        <div class="cvf-summary-grid">
+          <div class="cvf-metric">
+            <span>Step 1</span>
+            <strong>Upload source</strong>
+            <small class="cvf-muted">Candidate CV is required</small>
+          </div>
+          <div class="cvf-metric">
+            <span>Step 2</span>
+            <strong>Set output mode</strong>
+            <small class="cvf-muted">Template, cover page, and naming</small>
+          </div>
+          <div class="cvf-metric">
+            <span>Step 3</span>
+            <strong>Tailor for role</strong>
+            <small class="cvf-muted">Optional job brief and role override</small>
+          </div>
+          <div class="cvf-metric">
+            <span>Step 4</span>
+            <strong>Download DOCX</strong>
+            <small class="cvf-muted">Browser saves it to Downloads</small>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="cvf-workspace">
+      <div class="cvf-stack">
+        <section class="cvf-panel">
+          <div class="cvf-section-head">
+            <div>
+              <p class="cvf-eyebrow">Upload</p>
+              <h2>Choose the candidate and role documents</h2>
+              <p class="cvf-muted">The candidate CV is mandatory. Add a job spec when you want the output reordered and tightened for a live brief.</p>
+            </div>
+          </div>
+
+          <div class="cvf-drop-grid">
+            <label class="cvf-drop-zone" id="candidateDropZone">
+              <div class="cvf-drop-mark">CV</div>
+              <div>
+                <strong>Candidate CV</strong>
+                <p>Drag a PDF or Word CV here, or click to choose.</p>
+                <small>Required. Supports `.pdf`, `.doc`, `.docx`.</small>
+              </div>
+              <input class="cvf-hidden-input" id="candidateInput" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"/>
+            </label>
+
+            <label class="cvf-drop-zone" id="jobSpecDropZone">
+              <div class="cvf-drop-mark">JOB</div>
+              <div>
+                <strong>Job spec</strong>
+                <p>Attach the role brief if you want the CV tailored.</p>
+                <small>Optional. Supports `.pdf`, `.doc`, `.docx`.</small>
+              </div>
+              <input class="cvf-hidden-input" id="jobSpecInput" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"/>
+            </label>
+          </div>
+        </section>
+
+        <section class="cvf-panel">
+          <div class="cvf-section-head">
+            <div>
+              <p class="cvf-eyebrow">Configuration</p>
+              <h2>Recruiter controls</h2>
+              <p class="cvf-muted">These settings change the finished document, not just the upload flow. Save your preferred defaults if you want the module to reopen in the same mode each time.</p>
+            </div>
+          </div>
+
+          <div class="cvf-settings-grid">
+            <label class="cvf-field">
+              <span>Template preset</span>
+              <select id="templatePresetSelect">
+                <option value="recruiter_standard">Recruiter standard</option>
+                <option value="data_centre_priority">Data centre priority</option>
+                <option value="executive_summary">Executive summary</option>
+              </select>
+              <small>Controls section order and emphasis in the final document.</small>
+            </label>
+
+            <label class="cvf-field">
+              <span>Anonymisation mode</span>
+              <select id="anonymiseModeSelect">
+                <option value="balanced">Balanced</option>
+                <option value="light">Light</option>
+                <option value="strict">Strict</option>
+              </select>
+              <small>Choose how aggressively the output should generalise identity markers.</small>
+            </label>
+
+            <label class="cvf-field">
+              <span>Tailoring mode</span>
+              <select id="tailoringModeSelect">
+                <option value="balanced">Balanced</option>
+                <option value="job_first">Job-first</option>
+                <option value="cv_only">CV only</option>
+              </select>
+              <small>Decides how strongly the uploaded job spec should steer the output.</small>
+            </label>
+
+            <label class="cvf-field">
+              <span>Cover page mode</span>
+              <select id="coverPageModeSelect">
+                <option value="full">Full cover page</option>
+                <option value="condensed">Condensed cover page</option>
+                <option value="skip">Skip cover page</option>
+              </select>
+              <small>Sets whether the output begins with a full HMJ summary page.</small>
+            </label>
+
+            <label class="cvf-field">
+              <span>Output file naming</span>
+              <select id="outputNameModeSelect">
+                <option value="role_reference">Role + reference</option>
+                <option value="reference_only">Reference only</option>
+                <option value="source_reference">Source + reference</option>
+              </select>
+              <small>Controls the downloaded Word filename.</small>
+            </label>
+
+            <label class="cvf-field">
+              <span>Target role override</span>
+              <input id="targetRoleOverrideInput" type="text" maxlength="140" placeholder="Optional role title for the output"/>
+              <small>Useful when the CV title or job spec title is messy and you want a clean client-facing heading.</small>
+            </label>
+
+            <label class="cvf-field cvf-field--full">
+              <span>Recruiter instructions</span>
+              <textarea id="recruiterInstructionsInput" rows="4" maxlength="400" placeholder="Optional recruiter notes, for example: keep this senior and delivery-led, emphasise brownfield experience, avoid overplaying pure design ownership."></textarea>
+              <small>Optional. These notes guide the structuring and wording, but the output should still stay faithful to the uploaded CV evidence.</small>
+            </label>
+          </div>
+
+          <div class="cvf-options-grid">
+            <label class="cvf-toggle">
+              <input id="includeRoleAlignmentToggle" type="checkbox" checked>
+              <div>
+                <strong>Include role alignment section</strong>
+                <span>Add a job-fit section when a role brief is available or the structuring logic can support one.</span>
+              </div>
+            </label>
+
+            <label class="cvf-toggle">
+              <input id="includeFormattingNotesToggle" type="checkbox" checked>
+              <div>
+                <strong>Include formatting notes</strong>
+                <span>Keep a short recruiter-facing note on the anonymisation and cleanup applied.</span>
+              </div>
+            </label>
+
+            <label class="cvf-toggle">
+              <input id="includeWarningsToggle" type="checkbox" checked>
+              <div>
+                <strong>Include warnings</strong>
+                <span>Show extraction or confidence caveats at the end of the generated document.</span>
+              </div>
+            </label>
+
+            <label class="cvf-toggle">
+              <input id="includeAdditionalInformationToggle" type="checkbox" checked>
+              <div>
+                <strong>Include additional information</strong>
+                <span>Keep extra CV information when it remains useful in the client-facing version.</span>
+              </div>
+            </label>
+
+            <label class="cvf-toggle">
+              <input id="aiToggle" type="checkbox" checked>
+              <div>
+                <strong>Use AI structuring and tailoring</strong>
+                <span>Recommended. Falls back to deterministic formatting if AI is unavailable or rejected.</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="cvf-action-row cvf-action-row--split">
+            <div class="cvf-action-row">
+              <button class="cvf-btn cvf-btn-soft" id="saveDefaultsBtn" type="button">Save defaults</button>
+              <button class="cvf-btn cvf-btn-soft" id="restoreDefaultsBtn" type="button">Load saved defaults</button>
+              <button class="cvf-btn cvf-btn-soft" id="recommendedBtn" type="button">Use recommended</button>
+            </div>
+            <div class="cvf-action-row">
+              <button class="cvf-btn cvf-btn-primary" id="generateBtn" type="button">Generate client-ready CV</button>
+              <button class="cvf-btn cvf-btn-soft" id="clearBtn" type="button">Clear files</button>
+            </div>
+          </div>
+
+          <div class="cvf-status" id="statusCard" data-tone="warn">
+            <strong id="statusTitle">Waiting for source files</strong>
+            <p id="statusBody">Upload a candidate CV to begin.</p>
+          </div>
+        </section>
+      </div>
+
+      <div class="cvf-stack">
+        <section class="cvf-panel">
+          <div class="cvf-section-head">
+            <div>
+              <p class="cvf-eyebrow">Selected files</p>
+              <h2>Current intake</h2>
+            </div>
+          </div>
+          <div class="cvf-stack">
+            <div id="candidateFileHost" class="cvf-empty">No candidate CV selected yet.</div>
+            <div id="jobSpecFileHost" class="cvf-empty">No job spec selected yet.</div>
+          </div>
+        </section>
+
+        <section class="cvf-list-card">
+          <h3>Current configuration</h3>
+          <p class="cvf-muted">This is the setup that will be sent with the next generation run.</p>
+          <div class="cvf-chip-row" id="configSummaryChips">
+            <span class="cvf-chip">Recommended defaults loaded</span>
+          </div>
+        </section>
+
+        <section class="cvf-download-card" id="downloadCard">
+          <p class="cvf-eyebrow">Output</p>
+          <h3>Client-ready Word document</h3>
+          <p id="downloadSummary">Generate a CV and the finished `.docx` will be downloaded automatically. You can also re-download it from here.</p>
+          <div class="cvf-action-row">
+            <a class="cvf-btn cvf-btn-primary" id="downloadBtn" href="#" download hidden>Download formatted CV</a>
+          </div>
+        </section>
+
+        <section class="cvf-list-card">
+          <h3>Run summary</h3>
+          <div class="cvf-summary-grid cvf-summary-grid--triple">
+            <div class="cvf-metric">
+              <span>Target role</span>
+              <strong id="targetRoleValue">Not generated yet</strong>
+            </div>
+            <div class="cvf-metric">
+              <span>Candidate reference</span>
+              <strong id="candidateReferenceValue">Not generated yet</strong>
+            </div>
+            <div class="cvf-metric">
+              <span>Delivery mode</span>
+              <strong id="deliveryModeValue">Not generated yet</strong>
+            </div>
+          </div>
+          <div class="cvf-chip-row" id="resultChips">
+            <span class="cvf-chip">No run yet</span>
+          </div>
+        </section>
+
+        <section class="cvf-list-card">
+          <h3>Redactions applied</h3>
+          <ul class="cvf-list cvf-list--muted" id="redactionsList">
+            <li>Redaction details will appear after generation.</li>
+          </ul>
+        </section>
+
+        <section class="cvf-list-card">
+          <h3>Warnings</h3>
+          <ul class="cvf-list cvf-list--muted" id="warningsList">
+            <li>No warnings yet.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
