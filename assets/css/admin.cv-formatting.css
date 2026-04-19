@@ -24,8 +24,13 @@ button,input,select,textarea{font:inherit}
 .cvf-spacer{flex:1}
 .cvf-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 
-.cvf-btn{appearance:none;border:1px solid rgba(40,74,153,.18);background:linear-gradient(180deg,rgba(40,74,153,.12),rgba(40,74,153,.05));color:var(--cvf-ink);padding:10px 15px;border-radius:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease}
+.cvf-btn{appearance:none;border:1px solid rgba(40,74,153,.18);background:linear-gradient(180deg,rgba(40,74,153,.12),rgba(40,74,153,.05));color:var(--cvf-ink);padding:10px 15px;border-radius:12px;font-weight:800;cursor:pointer;transition:transform .16s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease}
 .cvf-btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(40,74,153,.16);border-color:rgba(40,74,153,.34)}
+.cvf-btn:focus-visible,
+.cvf-drop-zone:focus-within,
+.cvf-field input:focus,
+.cvf-field select:focus,
+.cvf-field textarea:focus{outline:none;box-shadow:0 0 0 4px rgba(40,74,153,.13)}
 .cvf-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
 .cvf-btn-primary{background:linear-gradient(180deg,#3458b5,#264491);color:#fff;border-color:rgba(255,255,255,.18)}
 .cvf-btn-ghost{background:#fff;color:var(--cvf-primary)}
@@ -43,16 +48,18 @@ button,input,select,textarea{font:inherit}
 .cvf-hero-card,.cvf-list-card,.cvf-download-card{padding:18px;border-radius:18px;border:1px solid rgba(40,74,153,.12);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(247,249,255,.96));display:grid;gap:12px}
 
 .cvf-chip-row,.cvf-action-row{display:flex;flex-wrap:wrap;gap:10px}
+.cvf-chip-row--dense{gap:8px}
 .cvf-action-row--split{justify-content:space-between;align-items:center}
 .cvf-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;border:1px solid rgba(40,74,153,.14);background:var(--cvf-panel-soft);font-size:12px;font-weight:800;letter-spacing:.04em}
 .cvf-chip[data-tone="ok"]{background:rgba(21,115,71,.10);border-color:rgba(21,115,71,.18);color:var(--cvf-ok)}
 .cvf-chip[data-tone="warn"]{background:rgba(154,103,0,.10);border-color:rgba(154,103,0,.18);color:var(--cvf-warn)}
 .cvf-chip[data-tone="bad"]{background:rgba(180,35,24,.10);border-color:rgba(180,35,24,.16);color:var(--cvf-bad)}
 
-.cvf-workspace{display:grid;grid-template-columns:minmax(0,1.16fr) minmax(340px,.84fr);gap:18px;align-items:start}
+.cvf-workspace{display:grid;grid-template-columns:minmax(0,1.16fr) minmax(360px,.84fr);gap:18px;align-items:start}
 .cvf-stack{display:grid;gap:18px}
 
 .cvf-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.cvf-section-head--compact{align-items:flex-start}
 .cvf-section-head h2,.cvf-section-head h3{margin:4px 0 0;line-height:1.14}
 .cvf-section-head p{margin:0;max-width:58ch}
 
@@ -74,7 +81,7 @@ button,input,select,textarea{font:inherit}
 .cvf-field{display:grid;gap:6px}
 .cvf-field--full{grid-column:1/-1}
 .cvf-field span{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--cvf-primary)}
-.cvf-field input,.cvf-field select,.cvf-field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--cvf-border);background:#fff;color:var(--cvf-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+.cvf-field input,.cvf-field select,.cvf-field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--cvf-border);background:#fff;color:var(--cvf-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.65);transition:border-color .16s ease,box-shadow .16s ease}
 .cvf-field textarea{resize:vertical;min-height:110px}
 .cvf-field small{color:var(--cvf-muted);font-size:13px;line-height:1.55}
 
@@ -105,6 +112,27 @@ button,input,select,textarea{font:inherit}
 .cvf-list li{line-height:1.5}
 .cvf-list--muted li{color:var(--cvf-muted)}
 
+.cvf-inline-notice{padding:12px 14px;border-radius:14px;border:1px solid rgba(154,103,0,.16);background:rgba(154,103,0,.08);color:var(--cvf-warn)}
+.cvf-inline-notice strong{display:block;margin-bottom:4px}
+
+.cvf-history-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cvf-history-list{display:grid;gap:12px}
+.cvf-history-card{padding:16px;border-radius:18px;border:1px solid rgba(40,74,153,.12);background:#fff;display:grid;gap:12px}
+.cvf-history-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.cvf-history-head strong{display:block;font-size:16px;line-height:1.25}
+.cvf-history-subtitle{margin:4px 0 0;color:var(--cvf-muted);font-size:13px}
+.cvf-history-grid{display:grid;gap:10px 12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cvf-history-stat{padding:10px 12px;border-radius:14px;background:var(--cvf-panel-soft);border:1px solid rgba(40,74,153,.10)}
+.cvf-history-stat span{display:block;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--cvf-primary);margin-bottom:4px}
+.cvf-history-stat strong{display:block;font-size:14px;line-height:1.35;word-break:break-word}
+.cvf-history-actions{display:flex;flex-wrap:wrap;gap:8px}
+.cvf-history-actions .cvf-btn{padding:8px 12px}
+.cvf-history-error{padding:12px 14px;border-radius:14px;background:rgba(180,35,24,.08);border:1px solid rgba(180,35,24,.14);color:var(--cvf-bad)}
+.cvf-history-files{display:grid;gap:8px}
+.cvf-history-file{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;background:linear-gradient(180deg,#fff,#f7f9ff);border:1px solid rgba(40,74,153,.10)}
+.cvf-history-file strong{font-size:13px}
+.cvf-history-file span{color:var(--cvf-muted);font-size:13px;text-align:right;word-break:break-word}
+
 @media (max-width:1100px){
   .cvf-hero,.cvf-workspace{grid-template-columns:1fr}
 }
@@ -120,4 +148,6 @@ button,input,select,textarea{font:inherit}
   .cvf-settings-grid{grid-template-columns:1fr}
   .cvf-action-row--split{align-items:stretch}
   .cvf-action-row .cvf-btn{width:100%}
+  .cvf-history-file{flex-direction:column}
+  .cvf-history-file span{text-align:left}
 }

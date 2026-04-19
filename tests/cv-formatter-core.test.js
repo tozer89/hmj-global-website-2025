@@ -7,8 +7,32 @@ const {
   buildClientReadyDocx,
   buildFallbackProfile,
   buildOutputFileName,
+  callOpenAiFormatter,
   sanitiseStructuredProfile,
 } = require('../lib/cv-formatter-core.js');
+
+async function withPatchedEnv(patch, fn) {
+  const previous = {};
+  Object.keys(patch).forEach((key) => {
+    previous[key] = process.env[key];
+    if (patch[key] == null) {
+      delete process.env[key];
+    } else {
+      process.env[key] = patch[key];
+    }
+  });
+  try {
+    return await fn();
+  } finally {
+    Object.keys(patch).forEach((key) => {
+      if (previous[key] == null) {
+        delete process.env[key];
+      } else {
+        process.env[key] = previous[key];
+      }
+    });
+  }
+}
 
 test('sanitiseStructuredProfile redacts direct identifiers', () => {
   const profile = sanitiseStructuredProfile({
@@ -163,4 +187,81 @@ test('buildOutputFileName supports the configured naming modes', () => {
     buildOutputFileName(profile, { outputNameMode: 'source_reference' }, 'Harry Watts.docx'),
     'Harry Watts - HMJ-TEST1234.docx'
   );
+});
+
+test('callOpenAiFormatter retries on transient errors and succeeds on a backup model', async () => {
+  const calls = [];
+
+  const result = await withPatchedEnv({
+    OPENAI_API_KEY: 'test-key',
+    OPENAI_CV_FORMAT_MODEL: 'primary-model',
+    OPENAI_CV_FORMAT_FALLBACK_MODELS: 'backup-model-1, backup-model-2',
+  }, async () => callOpenAiFormatter({
+    candidateFileName: 'Candidate CV.docx',
+    candidateText: 'Experienced electrical project manager with mission-critical delivery background.',
+    jobSpecText: 'Electrical Project Manager required for data centre delivery.',
+    candidateReference: 'HMJ-TEST1234',
+    requestFetch: async (_url, request) => {
+      const body = JSON.parse(String(request.body || '{}'));
+      calls.push(body.model);
+      if (calls.length === 1) {
+        return {
+          ok: false,
+          status: 429,
+          text: async () => JSON.stringify({
+            error: { message: 'rate limit reached' },
+          }),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          output_text: JSON.stringify({
+            target_role: 'Electrical Project Manager',
+            profile: 'Structured summary from backup model.',
+            key_skills: ['Electrical project delivery', 'Mission-critical coordination'],
+          }),
+        }),
+      };
+    },
+  }));
+
+  assert.equal(result.ok, true);
+  assert.equal(result.model, 'backup-model-1');
+  assert.deepEqual(calls, ['primary-model', 'backup-model-1']);
+  assert.equal(result.attempts.length, 2);
+  assert.equal(result.attempts[0].ok, false);
+  assert.equal(result.attempts[1].ok, true);
+});
+
+test('callOpenAiFormatter stops retrying when the API rejects the key', async () => {
+  const calls = [];
+
+  const result = await withPatchedEnv({
+    OPENAI_API_KEY: 'test-key',
+    OPENAI_CV_FORMAT_MODEL: 'primary-model',
+    OPENAI_CV_FORMAT_FALLBACK_MODELS: 'backup-model-1, backup-model-2',
+  }, async () => callOpenAiFormatter({
+    candidateFileName: 'Candidate CV.docx',
+    candidateText: 'Experienced electrical project manager with mission-critical delivery background.',
+    jobSpecText: 'Electrical Project Manager required for data centre delivery.',
+    candidateReference: 'HMJ-TEST1234',
+    requestFetch: async (_url, request) => {
+      const body = JSON.parse(String(request.body || '{}'));
+      calls.push(body.model);
+      return {
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({
+          error: { message: 'Incorrect API key provided' },
+        }),
+      };
+    },
+  }));
+
+  assert.equal(result.ok, false);
+  assert.equal(calls.length, 1);
+  assert.equal(result.attempts.length, 1);
+  assert.match(result.error, /authentication failed/i);
 });

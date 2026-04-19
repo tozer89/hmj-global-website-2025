@@ -11,9 +11,9 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js"></script>
   <script defer src="/admin/common.js?v=36"></script>
-  <script defer src="/admin/cv-formatting.js?v=2"></script>
+  <script defer src="/admin/cv-formatting.js?v=3"></script>
 
-  <link rel="stylesheet" href="/assets/css/admin.cv-formatting.css?v=2"/>
+  <link rel="stylesheet" href="/assets/css/admin.cv-formatting.css?v=3"/>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2"/>
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1"/>
 </head>
@@ -43,14 +43,14 @@
       <div class="cvf-hero-copy">
         <div>
           <p class="cvf-eyebrow">CV Formatting</p>
-          <h1>Format, anonymise, and tailor CVs into a client-ready HMJ Word document.</h1>
+          <h1>Format, anonymise, tailor, and archive CVs into a client-ready HMJ Word document.</h1>
         </div>
-        <p class="cvf-muted">Upload a candidate CV, optionally attach the role brief, and generate a structured output that strips personal identifiers, sharpens the presentation, and downloads as a finished `.docx`. The settings below let recruiters decide how aggressive the anonymisation should be, how much the job spec should influence the output, and what HMJ presentation style to use.</p>
+        <p class="cvf-muted">Upload a candidate CV, optionally attach the role brief, and generate a structured output that strips personal identifiers, sharpens the presentation, and downloads as a finished `.docx`. The module now also keeps a recruiter-accessible history of submitted files and generated outputs so you can re-download them later without rerunning the workflow.</p>
         <div class="cvf-chip-row">
           <span class="cvf-chip">PDF / DOC / DOCX intake</span>
           <span class="cvf-chip">Optional job-spec upload</span>
-          <span class="cvf-chip">Recruiter presets</span>
-          <span class="cvf-chip">Word download</span>
+          <span class="cvf-chip">AI with safe fallback</span>
+          <span class="cvf-chip">Run history &amp; re-downloads</span>
         </div>
       </div>
       <aside class="cvf-hero-card">
@@ -64,17 +64,17 @@
           <div class="cvf-metric">
             <span>Step 2</span>
             <strong>Set output mode</strong>
-            <small class="cvf-muted">Template, cover page, and naming</small>
+            <small class="cvf-muted">Template, cover page, naming, archive</small>
           </div>
           <div class="cvf-metric">
             <span>Step 3</span>
             <strong>Tailor for role</strong>
-            <small class="cvf-muted">Optional job brief and role override</small>
+            <small class="cvf-muted">Optional brief, override, recruiter notes</small>
           </div>
           <div class="cvf-metric">
             <span>Step 4</span>
-            <strong>Download DOCX</strong>
-            <small class="cvf-muted">Browser saves it to Downloads</small>
+            <strong>Download and reuse</strong>
+            <small class="cvf-muted">DOCX output plus recent-run history</small>
           </div>
         </div>
       </aside>
@@ -227,6 +227,14 @@
                 <span>Recommended. Falls back to deterministic formatting if AI is unavailable or rejected.</span>
               </div>
             </label>
+
+            <label class="cvf-toggle">
+              <input id="saveRunHistoryToggle" type="checkbox" checked>
+              <div>
+                <strong>Save run history</strong>
+                <span>Archive the submitted files and generated output so they can be re-downloaded from this module later.</span>
+              </div>
+            </label>
           </div>
 
           <div class="cvf-action-row cvf-action-row--split">
@@ -297,6 +305,24 @@
           </div>
           <div class="cvf-chip-row" id="resultChips">
             <span class="cvf-chip">No run yet</span>
+          </div>
+        </section>
+
+        <section class="cvf-list-card">
+          <div class="cvf-section-head cvf-section-head--compact">
+            <div>
+              <p class="cvf-eyebrow">History</p>
+              <h3>Recent formatting runs</h3>
+              <p class="cvf-muted">Review prior submissions, inspect warnings, and re-download candidate, brief, or output files.</p>
+            </div>
+            <div class="cvf-history-head-actions">
+              <span class="cvf-chip" id="historyStatusChip" data-tone="warn">Loading history…</span>
+              <button class="cvf-btn cvf-btn-soft" id="historyRefreshBtn" type="button">Refresh</button>
+            </div>
+          </div>
+          <div class="cvf-inline-notice" id="historyWarningsHost" hidden></div>
+          <div class="cvf-history-list" id="historyListHost">
+            <div class="cvf-empty">Loading recent formatting runs…</div>
           </div>
         </section>
 

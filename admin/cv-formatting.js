@@ -2,7 +2,8 @@
   'use strict';
 
   const ACCEPTED_EXTENSIONS = new Set(['pdf', 'doc', 'docx']);
-  const STORAGE_KEY = 'hmj.admin.cvFormatting.defaults.v2';
+  const STORAGE_KEY = 'hmj.admin.cvFormatting.defaults.v3';
+  const HISTORY_LIMIT = 10;
   const RECOMMENDED_OPTIONS = Object.freeze({
     templatePreset: 'recruiter_standard',
     anonymiseMode: 'balanced',
@@ -16,6 +17,7 @@
     includeWarnings: true,
     includeAdditionalInformation: true,
     preferAiAssist: true,
+    saveRunHistory: true,
   });
   const LABELS = Object.freeze({
     templatePreset: {
@@ -68,6 +70,32 @@
     if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
     if (value >= 1024) return `${Math.round(value / 1024)} KB`;
     return `${value} B`;
+  }
+
+  function formatDateTime(value) {
+    if (!value) return 'Unknown time';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
+  function uniqueStrings(values) {
+    const seen = new Set();
+    const output = [];
+    (Array.isArray(values) ? values : []).forEach((value) => {
+      const text = String(value || '').trim();
+      const key = text.toLowerCase();
+      if (!text || seen.has(key)) return;
+      seen.add(key);
+      output.push(text);
+    });
+    return output;
   }
 
   function fileToBase64(file) {
@@ -137,6 +165,7 @@
       includeWarnings: merged.includeWarnings !== false,
       includeAdditionalInformation: merged.includeAdditionalInformation !== false,
       preferAiAssist: merged.preferAiAssist !== false,
+      saveRunHistory: merged.saveRunHistory !== false,
     };
   }
 
@@ -161,6 +190,53 @@
     return `${chipLabel('coverPageMode', safeOptions.coverPageMode)} · ${chipLabel('outputNameMode', safeOptions.outputNameMode)}`;
   }
 
+  function historyTone(history) {
+    if (!history || typeof history !== 'object') return 'warn';
+    if (history.saved) return 'ok';
+    if (Array.isArray(history.warnings) && history.warnings.length) return 'warn';
+    if (history.requested === false) return 'warn';
+    return history.enabled ? 'ok' : 'warn';
+  }
+
+  function formatHistoryHeadline(state) {
+    if (state.historyLoading) return { label: 'Loading history...', tone: 'warn' };
+    if (state.historyEnabled === false) return { label: 'History unavailable', tone: 'warn' };
+    if (state.historyRuns.length) return { label: `${state.historyRuns.length} recent runs`, tone: 'ok' };
+    return { label: 'No stored runs yet', tone: 'warn' };
+  }
+
+  function startCase(value) {
+    return String(value || '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b([a-z])/g, function (match) {
+        return match.toUpperCase();
+      });
+  }
+
+  function summariseSource(run) {
+    const source = String(run && run.source || '').toLowerCase();
+    if (source === 'openai') return 'AI-assisted';
+    if (source === 'fallback') return 'Deterministic fallback';
+    if (source === 'pending') return 'Preparing';
+    return source ? startCase(source) : 'Unknown source';
+  }
+
+  function summariseStatus(run) {
+    const status = String(run && run.status || '').toLowerCase();
+    if (status === 'completed') return { label: 'Completed', tone: 'ok' };
+    if (status === 'failed') return { label: 'Failed', tone: 'bad' };
+    return { label: 'Processing', tone: 'warn' };
+  }
+
+  function renderDownloadAction(label, file) {
+    if (!file || !file.download_url) {
+      return `<span class="cvf-chip">${escapeHtml(label)} unavailable</span>`;
+    }
+    return `<a class="cvf-btn cvf-btn-soft" href="${escapeHtml(file.download_url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
+  }
+
   function boot() {
     if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
       window.setTimeout(boot, 40);
@@ -175,6 +251,10 @@
         result: null,
         downloadUrl: '',
         userEmail: '',
+        historyRuns: [],
+        historyEnabled: null,
+        historyWarnings: [],
+        historyLoading: false,
       };
 
       const els = {
@@ -194,6 +274,7 @@
         includeWarningsToggle: sel('#includeWarningsToggle'),
         includeAdditionalInformationToggle: sel('#includeAdditionalInformationToggle'),
         aiToggle: sel('#aiToggle'),
+        saveRunHistoryToggle: sel('#saveRunHistoryToggle'),
         saveDefaultsBtn: sel('#saveDefaultsBtn'),
         restoreDefaultsBtn: sel('#restoreDefaultsBtn'),
         recommendedBtn: sel('#recommendedBtn'),
@@ -213,6 +294,10 @@
         resultChips: sel('#resultChips'),
         redactionsList: sel('#redactionsList'),
         warningsList: sel('#warningsList'),
+        historyStatusChip: sel('#historyStatusChip'),
+        historyRefreshBtn: sel('#historyRefreshBtn'),
+        historyWarningsHost: sel('#historyWarningsHost'),
+        historyListHost: sel('#historyListHost'),
       };
 
       const settingControls = [
@@ -230,6 +315,7 @@
         els.includeWarningsToggle,
         els.includeAdditionalInformationToggle,
         els.aiToggle,
+        els.saveRunHistoryToggle,
         els.saveDefaultsBtn,
         els.restoreDefaultsBtn,
         els.recommendedBtn,
@@ -255,8 +341,11 @@
         settingControls.forEach((control) => {
           control.disabled = !!isBusy;
         });
+        if (els.historyRefreshBtn) {
+          els.historyRefreshBtn.disabled = !!isBusy || state.historyLoading;
+        }
         if (els.generateBtn) {
-          els.generateBtn.textContent = isBusy ? 'Generating…' : 'Generate client-ready CV';
+          els.generateBtn.textContent = isBusy ? 'Generating...' : 'Generate client-ready CV';
         }
       }
 
@@ -274,6 +363,7 @@
           includeWarnings: !!(els.includeWarningsToggle && els.includeWarningsToggle.checked),
           includeAdditionalInformation: !!(els.includeAdditionalInformationToggle && els.includeAdditionalInformationToggle.checked),
           preferAiAssist: !!(els.aiToggle && els.aiToggle.checked),
+          saveRunHistory: !!(els.saveRunHistoryToggle && els.saveRunHistoryToggle.checked),
         });
       }
 
@@ -291,6 +381,7 @@
         if (els.includeWarningsToggle) els.includeWarningsToggle.checked = !!options.includeWarnings;
         if (els.includeAdditionalInformationToggle) els.includeAdditionalInformationToggle.checked = !!options.includeAdditionalInformation;
         if (els.aiToggle) els.aiToggle.checked = !!options.preferAiAssist;
+        if (els.saveRunHistoryToggle) els.saveRunHistoryToggle.checked = !!options.saveRunHistory;
         renderConfigurationSummary();
       }
 
@@ -305,6 +396,7 @@
           options.preferAiAssist ? 'AI assist enabled' : 'Fallback only',
           options.includeRoleAlignment ? 'Role alignment on' : 'Role alignment off',
           options.includeWarnings ? 'Warnings on' : 'Warnings off',
+          options.saveRunHistory ? 'Run history on' : 'Run history off',
           options.targetRoleOverride ? `Role override: ${options.targetRoleOverride}` : '',
           options.recruiterInstructions ? 'Recruiter notes included' : '',
         ].filter(Boolean);
@@ -369,8 +461,12 @@
         const profile = result.profile || {};
         const analysis = result.analysis || {};
         const optionsUsed = normaliseOptions(analysis.optionsUsed || collectOptions());
-        const warnings = Array.isArray(analysis.warnings) ? analysis.warnings : [];
+        const history = result.history || {};
+        const aiAttempts = Array.isArray(analysis.aiAttempts) ? analysis.aiAttempts : [];
+        const historyWarnings = Array.isArray(analysis.historyWarnings) ? analysis.historyWarnings : [];
+        const warnings = uniqueStrings((Array.isArray(analysis.warnings) ? analysis.warnings : []).concat(historyWarnings));
         const redactions = Array.isArray(analysis.redactionsApplied) ? analysis.redactionsApplied : [];
+        const backupModelUsed = aiAttempts.length > 1 && result.model && aiAttempts[0] && aiAttempts[0].model !== result.model;
 
         if (els.targetRoleValue) {
           els.targetRoleValue.textContent = profile.targetRole || analysis.targetRole || 'Untitled';
@@ -389,6 +485,13 @@
             `<span class="cvf-chip">${escapeHtml(chipLabel('anonymiseMode', optionsUsed.anonymiseMode))}</span>`,
             result.model ? `<span class="cvf-chip">${escapeHtml(result.model)}</span>` : '',
             analysis.candidateFile && analysis.candidateFile.parser ? `<span class="cvf-chip">${escapeHtml(analysis.candidateFile.parser)}</span>` : '',
+            aiAttempts.length > 1 ? `<span class="cvf-chip">${escapeHtml(`${aiAttempts.length} AI attempts`)}</span>` : '',
+            backupModelUsed ? '<span class="cvf-chip" data-tone="warn">Backup AI model used</span>' : '',
+            history.saved ? '<span class="cvf-chip" data-tone="ok">History saved</span>' : '',
+            history.requested === false ? '<span class="cvf-chip">History off</span>' : '',
+            history.requested !== false && !history.saved && Array.isArray(history.warnings) && history.warnings.length
+              ? '<span class="cvf-chip" data-tone="warn">History needs attention</span>'
+              : '',
           ].filter(Boolean);
           els.resultChips.innerHTML = chips.join('');
         }
@@ -401,6 +504,18 @@
           els.warningsList.innerHTML = warnings.length
             ? warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
             : '<li>No warnings reported for this run.</li>';
+        }
+        if (els.downloadSummary) {
+          const fileName = result.file && result.file.name ? result.file.name : 'client-ready-cv.docx';
+          if (history.saved) {
+            els.downloadSummary.textContent = `${fileName} is ready and this run has been archived in Recent formatting runs.`;
+          } else if (history.requested === false) {
+            els.downloadSummary.textContent = `${fileName} is ready. Run history was disabled for this generation.`;
+          } else if (Array.isArray(history.warnings) && history.warnings.length) {
+            els.downloadSummary.textContent = `${fileName} is ready, but the run history needs attention. Review the warnings below.`;
+          } else {
+            els.downloadSummary.textContent = `${fileName} is ready. The browser will usually place it in Downloads.`;
+          }
         }
       }
 
@@ -423,9 +538,6 @@
           els.downloadBtn.href = state.downloadUrl;
           els.downloadBtn.download = file.name || 'client-ready-cv.docx';
           els.downloadBtn.hidden = false;
-        }
-        if (els.downloadSummary) {
-          els.downloadSummary.textContent = `${file.name || 'client-ready-cv.docx'} is ready. The browser will usually place it in Downloads.`;
         }
       }
 
@@ -500,6 +612,118 @@
         });
       }
 
+      function renderHistoryWarnings() {
+        if (!els.historyWarningsHost) return;
+        const warnings = uniqueStrings(state.historyWarnings);
+        if (!warnings.length) {
+          els.historyWarningsHost.hidden = true;
+          els.historyWarningsHost.textContent = '';
+          return;
+        }
+        els.historyWarningsHost.hidden = false;
+        els.historyWarningsHost.innerHTML = `<strong>History notices</strong>${warnings.map((item) => `<div>${escapeHtml(item)}</div>`).join('')}`;
+      }
+
+      function renderHistory() {
+        const historyState = formatHistoryHeadline(state);
+        if (els.historyStatusChip) {
+          els.historyStatusChip.textContent = historyState.label;
+          els.historyStatusChip.dataset.tone = historyState.tone;
+        }
+        if (els.historyRefreshBtn) {
+          els.historyRefreshBtn.disabled = state.historyLoading || state.busy;
+          els.historyRefreshBtn.textContent = state.historyLoading ? 'Refreshing...' : 'Refresh';
+        }
+
+        renderHistoryWarnings();
+
+        if (!els.historyListHost) return;
+        if (state.historyLoading && !state.historyRuns.length) {
+          els.historyListHost.innerHTML = '<div class="cvf-empty">Loading recent formatting runs...</div>';
+          return;
+        }
+        if (!state.historyRuns.length) {
+          els.historyListHost.innerHTML = '<div class="cvf-empty">No stored formatting runs yet.</div>';
+          return;
+        }
+
+        els.historyListHost.innerHTML = state.historyRuns.map((run) => {
+          const status = summariseStatus(run);
+          const downloads = run.downloads || {};
+          const warningCount = Number(run.warning_count) || 0;
+          const fileRows = [
+            run.candidate_file_name ? `<div class="cvf-history-file"><strong>Candidate CV</strong><span>${escapeHtml(run.candidate_file_name)}</span></div>` : '',
+            run.job_spec_file_name ? `<div class="cvf-history-file"><strong>Job spec</strong><span>${escapeHtml(run.job_spec_file_name)}</span></div>` : '',
+            run.output_file_name ? `<div class="cvf-history-file"><strong>Formatted output</strong><span>${escapeHtml(run.output_file_name)}</span></div>` : '',
+          ].filter(Boolean).join('');
+          const chips = [
+            `<span class="cvf-chip">${escapeHtml(summariseSource(run))}</span>`,
+            run.model ? `<span class="cvf-chip">${escapeHtml(run.model)}</span>` : '',
+            run.candidate_reference ? `<span class="cvf-chip">${escapeHtml(run.candidate_reference)}</span>` : '',
+            warningCount ? `<span class="cvf-chip" data-tone="warn">${escapeHtml(`${warningCount} warning${warningCount === 1 ? '' : 's'}`)}</span>` : '',
+          ].filter(Boolean).join('');
+
+          return `
+            <article class="cvf-history-card">
+              <div class="cvf-history-head">
+                <div>
+                  <strong>${escapeHtml(run.target_role || run.candidate_reference || 'Recent formatting run')}</strong>
+                  <p class="cvf-history-subtitle">${escapeHtml(formatDateTime(run.created_at))}${run.actor_email ? ` · ${escapeHtml(run.actor_email)}` : ''}</p>
+                </div>
+                <span class="cvf-chip" data-tone="${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
+              </div>
+              <div class="cvf-chip-row cvf-chip-row--dense">${chips || '<span class="cvf-chip">Run metadata available</span>'}</div>
+              <div class="cvf-history-grid">
+                <div class="cvf-history-stat">
+                  <span>Reference</span>
+                  <strong>${escapeHtml(run.candidate_reference || 'Not captured')}</strong>
+                </div>
+                <div class="cvf-history-stat">
+                  <span>Output</span>
+                  <strong>${escapeHtml(run.output_file_name || 'Not generated')}</strong>
+                </div>
+                <div class="cvf-history-stat">
+                  <span>Tailored role</span>
+                  <strong>${escapeHtml(run.target_role || 'Not captured')}</strong>
+                </div>
+              </div>
+              ${fileRows ? `<div class="cvf-history-files">${fileRows}</div>` : ''}
+              ${run.error_message ? `<div class="cvf-history-error">${escapeHtml(run.error_message)}</div>` : ''}
+              <div class="cvf-history-actions">
+                ${renderDownloadAction('Candidate CV', downloads.candidate_cv)}
+                ${renderDownloadAction('Job spec', downloads.job_spec)}
+                ${renderDownloadAction('Formatted output', downloads.formatted_output)}
+              </div>
+            </article>
+          `;
+        }).join('');
+      }
+
+      async function loadHistory(options) {
+        const settings = options || {};
+        state.historyLoading = true;
+        renderHistory();
+        try {
+          const response = await api('/admin-cv-formatting-history-list', 'POST', { limit: HISTORY_LIMIT });
+          state.historyRuns = Array.isArray(response.runs) ? response.runs : [];
+          state.historyEnabled = response.history_enabled !== false;
+          state.historyWarnings = Array.isArray(response.warnings) ? response.warnings : [];
+        } catch (error) {
+          state.historyEnabled = false;
+          state.historyWarnings = [
+            error && error.message
+              ? `Recent runs could not be loaded: ${error.message}`
+              : 'Recent runs could not be loaded right now.',
+          ];
+          if (!settings.silent) {
+            toast('Could not refresh CV formatting history.', 'error', 3400);
+          }
+        } finally {
+          state.historyLoading = false;
+          renderHistory();
+        }
+      }
+
       async function buildPayload(file) {
         return {
           name: file.name,
@@ -512,11 +736,17 @@
       async function runFormatter() {
         if (!state.candidateFile || state.busy) return;
 
+        const options = collectOptions();
         setBusy(true);
-        setStatus('Formatting client-ready CV', 'Extracting the uploaded document and building the Word output…', 'warn');
+        setStatus(
+          'Formatting client-ready CV',
+          options.preferAiAssist
+            ? 'Extracting the uploaded document, attempting AI structuring, and falling back safely if needed...'
+            : 'Extracting the uploaded document and building the Word output...',
+          'warn'
+        );
 
         try {
-          const options = collectOptions();
           const payload = {
             candidateFile: await buildPayload(state.candidateFile),
             jobSpecFile: state.jobSpecFile ? await buildPayload(state.jobSpecFile) : null,
@@ -528,16 +758,34 @@
           setDownloadFile(response.file);
           renderConfigurationSummary(response.analysis && response.analysis.optionsUsed);
           renderResult();
+
+          const history = response.history || {};
+          const tailoredMessage = response.analysis && response.analysis.tailoredToJobSpec
+            ? 'The Word document has been tailored to the uploaded job spec and downloaded.'
+            : 'The Word document has been generated and downloaded.';
+          const historyMessage = history.saved
+            ? 'The submitted files and output have been added to Recent formatting runs.'
+            : history.requested === false
+              ? 'Run history was disabled for this generation.'
+              : Array.isArray(history.warnings) && history.warnings.length
+                ? 'The document is ready, but run history was only partially available.'
+                : '';
+
           setStatus(
             'Client-ready CV generated',
-            response.analysis && response.analysis.tailoredToJobSpec
-              ? 'The Word document has been tailored to the uploaded job spec and downloaded.'
-              : 'The Word document has been generated and downloaded.',
-            'ok'
+            `${tailoredMessage}${historyMessage ? ` ${historyMessage}` : ''}`.trim(),
+            history.saved || !historyMessage ? 'ok' : 'warn'
           );
           autoDownload();
+          await loadHistory({ silent: true });
           toast('Client-ready CV generated.', 'ok', 3600);
         } catch (error) {
+          const history = error && error.details && error.details.history;
+          if (history && Array.isArray(history.warnings)) {
+            state.historyWarnings = history.warnings;
+            renderHistory();
+          }
+          await loadHistory({ silent: true });
           setStatus(
             'Formatting failed',
             error && error.message ? error.message : 'The formatter could not complete this request.',
@@ -598,6 +846,7 @@
         els.includeWarningsToggle,
         els.includeAdditionalInformationToggle,
         els.aiToggle,
+        els.saveRunHistoryToggle,
       ].forEach((control) => {
         if (control) control.addEventListener('change', markConfigurationDirty);
       });
@@ -642,6 +891,11 @@
       if (els.clearBtn) {
         els.clearBtn.addEventListener('click', clearFiles);
       }
+      if (els.historyRefreshBtn) {
+        els.historyRefreshBtn.addEventListener('click', function () {
+          loadHistory();
+        });
+      }
 
       try {
         const who = await identity('admin', { verbose: false });
@@ -655,6 +909,7 @@
       applyOptions(readStoredDefaults() || RECOMMENDED_OPTIONS);
       renderIntake();
       resetResultSummary();
+      renderHistory();
       setStatus(
         'Waiting for source files',
         state.userEmail
@@ -664,6 +919,7 @@
       );
       setBusy(false);
 
+      loadHistory({ silent: true });
       window.addEventListener('beforeunload', revokeDownload);
     });
   }
