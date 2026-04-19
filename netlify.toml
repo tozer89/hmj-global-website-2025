@@ -190,6 +190,15 @@
   to = "/.netlify/functions/quickbooks-callback-bridge"
   status = 200
 
+# Bullhorn OAuth callback:
+# - Public callback path: /api/connectors/bullhorn/callback
+# - Required Netlify env vars: BULLHORN_CLIENT_ID, BULLHORN_CLIENT_SECRET, BULLHORN_REDIRECT_URI, BULLHORN_API_USERNAME
+# - Bullhorn redirect URI must be: https://hmj-global.com/api/connectors/bullhorn/callback
+[[redirects]]
+  from = "/api/connectors/bullhorn/callback"
+  to = "/.netlify/functions/admin-bullhorn-callback"
+  status = 200
+
 [functions."admin-team-tasks-reminders-run"]
   schedule = "@hourly"
 

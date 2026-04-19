@@ -1294,9 +1294,12 @@
     }
 
     /* ── Bullhorn / Push-to-TSP workflow ────────────────────────── */
-    var BULLHORN_URL = 'https://auth-emea.bullhornstaffing.com/oauth/authorize?response_type=code&client_id=889ac3e3-51da-42eb-b6d7-d029e6bb0b5e&source=Caldera&redirect_uri=https://m-emea.bullhorn.com/core/oauth/callback&state=https://em.bullhorn.com/&callingContext=okemo';
     var pushTspCandidateId = null;
     var pushTspCandidateName = '';
+
+    function buildBullhornConnectUrl() {
+      return '/.netlify/functions/admin-bullhorn-connect?returnTo=' + encodeURIComponent(window.location.href);
+    }
 
     function openPushTspDialog(candidateId, candidateName) {
       pushTspCandidateId = candidateId;
@@ -1332,7 +1335,7 @@
     if (pushTspYes) pushTspYes.addEventListener('click', function () { setStep('step2'); });
 
     if (pushTspNo) pushTspNo.addEventListener('click', function () {
-      window.open(BULLHORN_URL, '_blank', 'noopener,noreferrer');
+      window.open(buildBullhornConnectUrl(), '_blank', 'noopener,noreferrer');
       var dialog = document.getElementById('push-tsp-dialog');
       if (dialog && typeof dialog.close === 'function') dialog.close();
     });
