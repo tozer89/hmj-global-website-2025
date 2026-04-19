@@ -8,6 +8,7 @@ const {
   buildFallbackProfile,
   buildOutputFileName,
   callOpenAiFormatter,
+  guessCandidateName,
   sanitiseStructuredProfile,
 } = require('../lib/cv-formatter-core.js');
 
@@ -112,6 +113,34 @@ test('buildFallbackProfile derives recruiter-friendly sections', () => {
   assert.ok(profile.profile.length > 40);
   assert.ok(profile.keySkills.length >= 2);
   assert.ok(profile.qualifications.length >= 1);
+});
+
+test('guessCandidateName prefers the CV text name over a generic exported filename', () => {
+  const candidateName = guessCandidateName(
+    'candidate-exported.pdf',
+    'Jane Candidate\nElectrical Project Manager\nLondon\nHV commissioning and site delivery'
+  );
+
+  assert.equal(candidateName, 'Jane Candidate');
+});
+
+test('buildFallbackProfile redacts the candidate name from generic PDF filenames and avoids using the role title as project evidence', () => {
+  const profile = buildFallbackProfile({
+    candidateText: [
+      'Jane Candidate',
+      'Electrical Project Manager',
+      'London',
+      'HV commissioning and site delivery',
+    ].join('\n'),
+    jobSpecText: 'Electrical Project Manager - Mission Critical',
+    candidateFileName: 'candidate-exported.pdf',
+  });
+
+  assert.equal(profile.location, 'London');
+  assert.doesNotMatch(profile.profile, /Jane Candidate/i);
+  assert.match(profile.profile, /Electrical Project Manager/i);
+  assert.match(profile.profile, /HV commissioning and site delivery/i);
+  assert.deepEqual(profile.relevantProjects, ['HV commissioning and site delivery']);
 });
 
 test('buildClientReadyDocx returns a docx buffer', async () => {

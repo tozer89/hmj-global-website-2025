@@ -96,7 +96,9 @@
     .shortlink-item__url{font-size:13px;color:var(--ink);word-break:break-all}
     .shortlink-empty{padding:14px;border-radius:14px;border:1px dashed rgba(47,78,162,.2);background:linear-gradient(180deg,rgba(247,249,255,.95),rgba(255,255,255,.95));color:var(--muted)}
 
-    .quick-strip-panel,.module-shell{display:grid;gap:18px}
+    .workspace-hub,.quick-strip-panel,.module-shell{display:grid;gap:18px}
+    .workspace-hub__blocks{display:grid;gap:18px}
+    .workspace-hub__block{display:grid;gap:16px;padding:18px;border-radius:18px;border:1px solid rgba(47,78,162,.14);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,247,255,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.78)}
     .quick-grid,.module-grid{display:grid;gap:16px}
     .quick-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
     .module-grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
@@ -145,7 +147,7 @@
     }
 
     @media (min-width:1100px){
-      .quick-strip-panel,.module-shell{grid-column:1 / 2}
+      .workspace-hub,.quick-strip-panel,.module-shell{grid-column:1 / 2}
     }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
@@ -321,91 +323,151 @@
       </div>
     </section>
 
-    <section class="panel quick-strip-panel" aria-labelledby="quickAccessHeading">
+    <section class="panel workspace-hub" id="workspaceHub" aria-labelledby="workspaceHubHeading">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Quick access</p>
-          <h3 id="quickAccessHeading">Active admin modules</h3>
+          <p class="eyebrow">Admin workspaces</p>
+          <h3 id="workspaceHubHeading">All module cards in one place</h3>
         </div>
-        <p class="muted">Jump straight into the core admin areas without digging through the full dashboard.</p>
+        <p class="muted">Keep the live admin modules and the day-to-day operational workspaces together in one consolidated dashboard area, with social proof tooling moved further down the page.</p>
       </div>
-      <nav class="quick-grid" aria-label="Quick admin links">
-        <a class="quick-link" href="/admin/clients.html" aria-label="Open Clients quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Clients</strong>
-          <span>Manage live client records, billing context, and linked commercial activity.</span>
-        </a>
-        <a class="quick-link" href="/admin/assignments.html" aria-label="Open Assignments quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Assignments</strong>
-          <span>Manage live placements, link assignments to candidate profiles, and track assignment status.</span>
-        </a>
-        <a class="quick-link" href="/admin/jobs.html" aria-label="Open Jobs quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Jobs</strong>
-          <span>Manage live roles, specs, and vacancy publishing.</span>
-        </a>
-        <a class="quick-link" href="/admin/job-applications.html" aria-label="Open Job applications quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Job applications</strong>
-          <span>Review website-submitted applications, update workflow status, and jump to the linked candidate or role.</span>
-        </a>
-        <a class="quick-link" href="/admin/finance/" aria-label="Open Finance quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Finance</strong>
-          <span>Open cashflow forecasting, QuickBooks sync, and the finance planning workspace.</span>
-        </a>
-        <a class="quick-link" href="/admin/rate-book.html" aria-label="Open Rate Book quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Rate Book</strong>
-          <span>Manage public role rates, market comparisons, margin rules, and client-facing rate-guide settings.</span>
-        </a>
-        <a class="quick-link" href="/admin/annual-leave.html" aria-label="Open Annual Leave quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Annual Leave</strong>
-          <span>Manage team leave, calendar visibility, reminders, and annual summaries.</span>
-        </a>
-        <a class="quick-link" href="/admin/candidate-matcher.html" aria-label="Open Candidate Matcher quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Candidate Matcher</strong>
-          <span>Upload CVs privately and compare candidates against live HMJ roles.</span>
-        </a>
-        <a class="quick-link" href="/admin/cv-formatting.html" aria-label="Open CV Formatting quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>CV Formatting</strong>
-          <span>Turn raw CVs into client-ready Word documents with recruiter presets, anonymisation, and optional job-spec tailoring.</span>
-        </a>
-        <a class="quick-link" href="/admin/noticeboard.html" aria-label="Open Noticeboard quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Noticeboard</strong>
-          <span>Publish premium About Us updates with scheduling, imagery, and public visibility control.</span>
-        </a>
-        <a class="quick-link" href="/admin/candidates.html" aria-label="Open Candidates quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Candidates</strong>
-          <span>Review portal records, account status, profile detail, and candidate activity in one place.</span>
-        </a>
-        <a class="quick-link" href="/admin/team-tasks.html" aria-label="Open Team Tasks quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Team Tasks</strong>
-          <span>Manage internal to-dos, due dates, comments, reminders, and audit history in one shared workspace.</span>
-        </a>
-        <a class="quick-link" href="/admin/team.html" aria-label="Open Team quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Team</strong>
-          <span>Manage the live About Us team cards, image uploads, ordering, and publish state without editing code.</span>
-        </a>
-        <a class="quick-link" href="/admin/analytics.html" aria-label="Open Website Analytics quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Website Analytics</strong>
-          <span>Review live page views, visitor journeys, time on page, landing and exit behaviour, and CTA engagement.</span>
-        </a>
-        <a class="quick-link" href="/admin/chatbot.html" aria-label="Open Website Assistant quick access">
-          <span class="quick-link__eyebrow">Live module</span>
-          <strong>Website Assistant</strong>
-          <span>Control the live website chatbot, quick replies, GPT instructions, and stored visitor conversations.</span>
-        </a>
-      </nav>
+
+      <div class="workspace-hub__blocks">
+        <section class="workspace-hub__block quick-strip-panel" aria-labelledby="quickAccessHeading">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Quick access</p>
+              <h3 id="quickAccessHeading">Active admin modules</h3>
+            </div>
+            <p class="muted">Jump straight into the core admin areas without digging through the full dashboard.</p>
+          </div>
+          <nav class="quick-grid" aria-label="Quick admin links">
+            <a class="quick-link" href="/admin/clients.html" aria-label="Open Clients quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Clients</strong>
+              <span>Manage live client records, billing context, and linked commercial activity.</span>
+            </a>
+            <a class="quick-link" href="/admin/assignments.html" aria-label="Open Assignments quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Assignments</strong>
+              <span>Manage live placements, link assignments to candidate profiles, and track assignment status.</span>
+            </a>
+            <a class="quick-link" href="/admin/jobs.html" aria-label="Open Jobs quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Jobs</strong>
+              <span>Manage live roles, specs, and vacancy publishing.</span>
+            </a>
+            <a class="quick-link" href="/admin/job-applications.html" aria-label="Open Job applications quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Job applications</strong>
+              <span>Review website-submitted applications, update workflow status, and jump to the linked candidate or role.</span>
+            </a>
+            <a class="quick-link" href="/admin/finance/" aria-label="Open Finance quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Finance</strong>
+              <span>Open cashflow forecasting, QuickBooks sync, and the finance planning workspace.</span>
+            </a>
+            <a class="quick-link" href="/admin/rate-book.html" aria-label="Open Rate Book quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Rate Book</strong>
+              <span>Manage public role rates, market comparisons, margin rules, and client-facing rate-guide settings.</span>
+            </a>
+            <a class="quick-link" href="/admin/annual-leave.html" aria-label="Open Annual Leave quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Annual Leave</strong>
+              <span>Manage team leave, calendar visibility, reminders, and annual summaries.</span>
+            </a>
+            <a class="quick-link" href="/admin/candidate-matcher.html" aria-label="Open Candidate Matcher quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Candidate Matcher</strong>
+              <span>Upload CVs privately and compare candidates against live HMJ roles.</span>
+            </a>
+            <a class="quick-link" href="/admin/cv-formatting.html" aria-label="Open CV Formatting quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>CV Formatting</strong>
+              <span>Turn raw CVs into client-ready Word documents with recruiter presets, anonymisation, and optional job-spec tailoring.</span>
+            </a>
+            <a class="quick-link" href="/admin/noticeboard.html" aria-label="Open Noticeboard quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Noticeboard</strong>
+              <span>Publish premium About Us updates with scheduling, imagery, and public visibility control.</span>
+            </a>
+            <a class="quick-link" href="/admin/candidates.html" aria-label="Open Candidates quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Candidates</strong>
+              <span>Review portal records, account status, profile detail, and candidate activity in one place.</span>
+            </a>
+            <a class="quick-link" href="/admin/team-tasks.html" aria-label="Open Team Tasks quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Team Tasks</strong>
+              <span>Manage internal to-dos, due dates, comments, reminders, and audit history in one shared workspace.</span>
+            </a>
+            <a class="quick-link" href="/admin/team.html" aria-label="Open Team quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Team</strong>
+              <span>Manage the live About Us team cards, image uploads, ordering, and publish state without editing code.</span>
+            </a>
+            <a class="quick-link" href="/admin/analytics.html" aria-label="Open Website Analytics quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Website Analytics</strong>
+              <span>Review live page views, visitor journeys, time on page, landing and exit behaviour, and CTA engagement.</span>
+            </a>
+            <a class="quick-link" href="/admin/chatbot.html" aria-label="Open Website Assistant quick access">
+              <span class="quick-link__eyebrow">Live module</span>
+              <strong>Website Assistant</strong>
+              <span>Control the live website chatbot, quick replies, GPT instructions, and stored visitor conversations.</span>
+            </a>
+          </nav>
+        </section>
+
+        <section class="workspace-hub__block module-shell" id="future-modules" aria-labelledby="futureModulesHeading">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Operations workspaces</p>
+              <h3 id="futureModulesHeading">More Admin Areas</h3>
+            </div>
+            <p class="muted">Use these direct workspace links for day-to-day client, candidate, assignment, payroll, and reporting work without going through a generic CRM landing page.</p>
+          </div>
+          <section class="module-grid grid" aria-label="Admin modules" data-tile-order>
+            <a class="card card--primary" id="placeholder-4" href="/admin/payroll.html" data-status="Live" aria-labelledby="placeholder4Title" aria-describedby="placeholder4Desc">
+              <span class="card-mark" aria-hidden="true">PY</span>
+              <div class="card-copy">
+                <h3 id="placeholder4Title">Payroll</h3>
+                <p id="placeholder4Desc">Open the payroll console for reconciliation, week numbering, timesheet-linked margin checks, and payroll admin tasks.</p>
+              </div>
+            </a>
+            <a class="card card--primary" id="placeholder-4b" href="/admin/timesheets.html" data-status="Live" aria-labelledby="placeholder4bTitle" aria-describedby="placeholder4bDesc">
+              <span class="card-mark" aria-hidden="true">TS</span>
+              <div class="card-copy">
+                <h3 id="placeholder4bTitle">Timesheets</h3>
+                <p id="placeholder4bDesc">Review live timesheet-management rows mirrored from Timesheet Portal and confirm candidate and assignment matching.</p>
+              </div>
+            </a>
+            <a class="card card--primary" id="placeholder-4c" href="/admin/send-intro-email.html" data-status="Live" aria-labelledby="placeholder4cTitle" aria-describedby="placeholder4cDesc">
+              <span class="card-mark" aria-hidden="true">IN</span>
+              <div class="card-copy">
+                <h3 id="placeholder4cTitle">Send intro email</h3>
+                <p id="placeholder4cDesc">Send a branded HMJ starter email with registration and Timesheet Portal next steps when you only have the core new-starter details.</p>
+              </div>
+            </a>
+            <a class="card card--primary" id="placeholder-5" href="/admin/reports.html" data-status="Live" aria-labelledby="placeholder5Title" aria-describedby="placeholder5Desc">
+              <span class="card-mark" aria-hidden="true">RP</span>
+              <div class="card-copy">
+                <h3 id="placeholder5Title">Reports</h3>
+                <p id="placeholder5Desc">Go straight to reporting, week configuration, reconciliation tools, and cross-module operational checks.</p>
+              </div>
+            </a>
+            <a class="card card--primary" id="placeholder-6" href="/admin/settings.html" data-status="Live" aria-labelledby="placeholder6Title" aria-describedby="placeholder6Desc">
+              <span class="card-mark" aria-hidden="true">ST</span>
+              <div class="card-copy">
+                <h3 id="placeholder6Title">Settings</h3>
+                <p id="placeholder6Desc">Open platform tools, recent activity, deploy health, and useful admin and public website links from one settings workspace.</p>
+              </div>
+            </a>
+          </section>
+          <p class="section-note muted" id="settings-placeholder">The cards above keep the headline modules and specialist operations tools together, while LinkedIn recommendations now sit lower on the dashboard as a separate publishing workflow.</p>
+        </section>
+      </div>
     </section>
 
     <section class="panel linkedin-module" id="linkedinTestimonialsModule" aria-labelledby="linkedinTestimonialsHeading">
@@ -531,61 +593,6 @@
       </div>
 
       <input id="linkedinTestimonialsImageInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden />
-    </section>
-
-    <section class="panel module-shell" id="future-modules" aria-labelledby="futureModulesHeading">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Operations workspaces</p>
-          <h3 id="futureModulesHeading">More Admin Areas</h3>
-        </div>
-        <p class="muted">Use these direct workspace links for day-to-day client, candidate, assignment, payroll, and reporting work without going through a generic CRM landing page.</p>
-      </div>
-      <section class="module-grid grid" aria-label="Admin modules" data-tile-order>
-        <a class="card card--primary" id="placeholder-4" href="/admin/payroll.html" data-status="Live" aria-labelledby="placeholder4Title" aria-describedby="placeholder4Desc">
-          <span class="card-mark" aria-hidden="true">PY</span>
-          <div class="card-copy">
-            <h3 id="placeholder4Title">Payroll</h3>
-            <p id="placeholder4Desc">Open the payroll console for reconciliation, week numbering, timesheet-linked margin checks, and payroll admin tasks.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-4b" href="/admin/timesheets.html" data-status="Live" aria-labelledby="placeholder4bTitle" aria-describedby="placeholder4bDesc">
-          <span class="card-mark" aria-hidden="true">TS</span>
-          <div class="card-copy">
-            <h3 id="placeholder4bTitle">Timesheets</h3>
-            <p id="placeholder4bDesc">Review live timesheet-management rows mirrored from Timesheet Portal and confirm candidate and assignment matching.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-4c" href="/admin/send-intro-email.html" data-status="Live" aria-labelledby="placeholder4cTitle" aria-describedby="placeholder4cDesc">
-          <span class="card-mark" aria-hidden="true">IN</span>
-          <div class="card-copy">
-            <h3 id="placeholder4cTitle">Send intro email</h3>
-            <p id="placeholder4cDesc">Send a branded HMJ starter email with registration and Timesheet Portal next steps when you only have the core new-starter details.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-5" href="/admin/reports.html" data-status="Live" aria-labelledby="placeholder5Title" aria-describedby="placeholder5Desc">
-          <span class="card-mark" aria-hidden="true">RP</span>
-          <div class="card-copy">
-            <h3 id="placeholder5Title">Reports</h3>
-            <p id="placeholder5Desc">Go straight to reporting, week configuration, reconciliation tools, and cross-module operational checks.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-6" href="/admin/settings.html" data-status="Live" aria-labelledby="placeholder6Title" aria-describedby="placeholder6Desc">
-          <span class="card-mark" aria-hidden="true">ST</span>
-          <div class="card-copy">
-            <h3 id="placeholder6Title">Settings</h3>
-            <p id="placeholder6Desc">Open platform tools, recent activity, deploy health, and useful admin and public website links from one settings workspace.</p>
-          </div>
-        </a>
-        <a class="card card--primary" id="placeholder-6b" href="/admin/rate-book.html" data-status="Live" aria-labelledby="placeholder6bTitle" aria-describedby="placeholder6bDesc">
-          <span class="card-mark" aria-hidden="true">RB</span>
-          <div class="card-copy">
-            <h3 id="placeholder6bTitle">Rate Book</h3>
-            <p id="placeholder6bDesc">Maintain the public Rate Book with editable roles, market pay and charge levels, CSV import, and margin-driven recalculation.</p>
-          </div>
-        </a>
-      </section>
-      <p class="section-note muted" id="settings-placeholder">The quick access strip above covers the headline modules. This section now avoids duplicates, while Settings holds the platform tools and recent activity that no longer need to dominate the dashboard.</p>
     </section>
 
     <!-- Short links utilities — moved here to keep hero lean -->
