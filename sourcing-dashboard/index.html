@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HMJ Sourcing Assistant</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <p class="eyebrow">HMJ Global</p>
+        <h1>Sourcing Assistant</h1>
+        <p class="subtle">Thin launcher over the file-based sourcing workflow.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Roles</h2>
+          <button id="refreshRolesButton" class="ghost-button" type="button">Refresh</button>
+        </div>
+        <div id="roleList" class="role-list"></div>
+      </div>
+      <div class="panel">
+        <h2>Quick Actions</h2>
+        <div class="stack">
+          <button id="initRoleButton" class="secondary-button" type="button">Init Role Folder</button>
+          <button id="openWorkflowButton" class="ghost-button" type="button">Open Workflow Folder</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Operator View</p>
+          <h2 id="roleTitle">Select a role</h2>
+          <p id="roleMeta" class="subtle">Role metrics, outputs, and run actions appear here.</p>
+        </div>
+        <div class="hero-actions">
+          <button data-action="generate_search_pack" class="primary-button" type="button">Generate Search Pack</button>
+          <button data-action="run_preview_triage" class="secondary-button" type="button">Run Preview Triage</button>
+          <button data-action="review_downloaded_cvs" class="secondary-button" type="button">Review CVs</button>
+          <button data-action="generate_outreach_drafts" class="secondary-button" type="button">Prepare Drafts</button>
+          <button data-action="refresh_metrics" class="ghost-button" type="button">Refresh Outputs</button>
+        </div>
+      </section>
+
+      <section class="metrics-grid" id="metricCards"></section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Overview</h2>
+          </div>
+          <div id="overviewBlock" class="info-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Next Actions</h2>
+          </div>
+          <ul id="nextActions" class="bulleted-list"></ul>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Artifacts</h2>
+          </div>
+          <div id="artifactLinks" class="artifact-grid"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Candidate Snapshot</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Lifecycle</th>
+                  <th>Preview</th>
+                  <th>Shortlist</th>
+                  <th>Next Action</th>
+                </tr>
+              </thead>
+              <tbody id="candidateRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Status</h2>
+        </div>
+        <pre id="statusBox" class="status-box">Ready.</pre>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

@@ -103,9 +103,114 @@ test('end-to-end role run writes records, drafts, metrics, and summaries', async
   assert.equal(metrics.shortlist_counts.strong, 1);
   assert.equal(metrics.shortlist_counts.possible, 1);
   assert.equal(metrics.viable_outreach_candidates, 2);
+  assert.equal(metrics.outreach_drafts_prepared, 2);
+  assert.equal(metrics.lifecycle_counts.outreach_drafted, 2);
   assert.equal(records.length, 4);
   assert.ok(fs.existsSync(path.join(roleDir, 'drafts', 'cvl-strong-001.md')));
   assert.ok(fs.existsSync(path.join(roleDir, 'outputs', 'search-pack.md')));
   assert.ok(fs.existsSync(path.join(roleDir, 'outputs', 'metrics-summary.md')));
+  assert.ok(fs.existsSync(path.join(roleDir, 'outputs', 'candidate-review-export.csv')));
   assert.ok(fs.existsSync(path.join(roleDir, 'records', 'cvl-possible-002.json')));
+});
+
+test('operator updates persist cleanly and drive lifecycle changes', async () => {
+  const workspaceRoot = makeWorkspace();
+  await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    action: 'run_all',
+  });
+
+  const update = await core.updateCandidateOperatorState({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    candidateId: 'cvl-possible-002',
+    patch: {
+      decision: 'manual_screened',
+      shortlist_status: 'possible_shortlist',
+      lifecycle_stage: 'awaiting_reply',
+      manual_notes: 'Spoke briefly and he is open to a Leeds discussion.',
+      concerns: ['Rate still to confirm'],
+      follow_up_questions: ['Can he be in Leeds 4 days a week?'],
+      override_reason: 'Manual review after phone conversation',
+    },
+  });
+
+  const roleDir = path.join(workspaceRoot, 'roles', 'demo-electrical-site-manager');
+  const record = JSON.parse(fs.readFileSync(path.join(roleDir, 'records', 'cvl-possible-002.json'), 'utf8'));
+  const metrics = JSON.parse(fs.readFileSync(path.join(roleDir, 'outputs', 'metrics.json'), 'utf8'));
+
+  assert.deepEqual(update.changedFields.sort(), [
+    'concerns',
+    'decision',
+    'follow_up_questions',
+    'lifecycle_stage',
+    'manual_notes',
+    'override_reason',
+    'shortlist_status',
+  ]);
+  assert.equal(record.operator_review.decision, 'manual_screened');
+  assert.equal(record.lifecycle.current_stage, 'awaiting_reply');
+  assert.equal(record.status.needs_operator_review, false);
+  assert.equal(record.operator_review.history.length, 1);
+  assert.equal(metrics.lifecycle_counts.awaiting_reply, 1);
+  assert.equal(metrics.operator_overrides, 1);
+});
+
+test('CSV import and export support recruiter-friendly review flows', async () => {
+  const workspaceRoot = makeWorkspace();
+  const roleId = 'csv-import-role';
+  const created = core.scaffoldRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId,
+    roleTitle: 'Electrical Site Manager',
+  });
+  const sourceRoleDir = path.join(fixtureRoot, 'roles', 'demo-electrical-site-manager');
+  fs.copyFileSync(
+    path.join(sourceRoleDir, 'inputs', 'job-spec.yaml'),
+    path.join(created.roleDir, 'inputs', 'job-spec.yaml'),
+  );
+  fs.cpSync(path.join(sourceRoleDir, 'cvs'), path.join(created.roleDir, 'cvs'), { recursive: true });
+
+  const importResult = core.importPreviewCandidates({
+    workflowRoot: workspaceRoot,
+    roleId,
+    inputPath: path.join(fixtureRoot, 'samples', 'candidate-previews.csv'),
+  });
+
+  assert.equal(importResult.importedCount, 2);
+
+  await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId,
+    action: 'run_all',
+  });
+
+  const exportResult = core.exportCandidateReviewsCsv({
+    workflowRoot: workspaceRoot,
+    roleId,
+  });
+  const exportText = fs.readFileSync(exportResult.outputPath, 'utf8');
+
+  assert.equal(exportResult.exportedCount, 2);
+  assert.match(exportText, /lifecycle_stage/);
+  assert.match(exportText, /cvl-strong-001/);
+});
+
+test('role index gives an at-a-glance operational summary', async () => {
+  const workspaceRoot = makeWorkspace();
+  await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    action: 'run_all',
+  });
+
+  const index = core.listRoleIndex(workspaceRoot);
+  assert.equal(index.length, 1);
+  assert.equal(index[0].role_title, 'Electrical Site Manager');
+  assert.equal(index[0].previews_processed, 4);
+  assert.equal(index[0].cvs_reviewed, 2);
+  assert.equal(index[0].shortlist_count, 2);
+  assert.equal(index[0].outreach_drafts_prepared, 2);
+  assert.equal(index[0].current_kpi, 2);
 });

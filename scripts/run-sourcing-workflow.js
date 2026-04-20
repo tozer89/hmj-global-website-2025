@@ -30,9 +30,64 @@ function usage() {
     '  node scripts/run-sourcing-workflow.js triage-previews --workflow-root <path> --role-id <slug>',
     '  node scripts/run-sourcing-workflow.js review-cvs --workflow-root <path> --role-id <slug>',
     '  node scripts/run-sourcing-workflow.js prepare-drafts --workflow-root <path> --role-id <slug>',
+    '  node scripts/run-sourcing-workflow.js import-previews --workflow-root <path> --role-id <slug> --input <file.csv|file.json>',
+    '  node scripts/run-sourcing-workflow.js export-candidates --workflow-root <path> --role-id <slug> [--output <file.csv>]',
+    '  node scripts/run-sourcing-workflow.js update-candidate --workflow-root <path> --role-id <slug> --candidate-id <id> [--operator-decision ...] [--shortlist-status ...] [--lifecycle-stage ...]',
     '  node scripts/run-sourcing-workflow.js summarize-role --workflow-root <path> --role-id <slug>',
+    '  node scripts/run-sourcing-workflow.js health-check --workflow-root <path>',
+    '  node scripts/run-sourcing-workflow.js role-index --workflow-root <path> [--format table|json]',
     '  node scripts/run-sourcing-workflow.js list-roles --workflow-root <path>',
   ].join('\n');
+}
+
+function createUpdatePatch(args) {
+  const patch = {};
+  const mappings = [
+    ['classification', 'classification'],
+    ['operator-decision', 'decision'],
+    ['shortlist-status', 'shortlist_status'],
+    ['outreach-ready', 'outreach_ready_override'],
+    ['lifecycle-stage', 'lifecycle_stage'],
+    ['manual-notes', 'manual_notes'],
+    ['strengths', 'strengths'],
+    ['concerns', 'concerns'],
+    ['follow-up-questions', 'follow_up_questions'],
+    ['override-reason', 'override_reason'],
+    ['availability-notes', 'availability_notes'],
+    ['appetite-notes', 'appetite_notes'],
+    ['compensation-notes', 'compensation_notes'],
+  ];
+
+  mappings.forEach(([argKey, patchKey]) => {
+    if (Object.prototype.hasOwnProperty.call(args, argKey)) {
+      patch[patchKey] = args[argKey];
+    }
+  });
+
+  return patch;
+}
+
+function renderRoleIndexTable(rows) {
+  const columns = [
+    ['Role', 28, (row) => row.role_title || row.role_id],
+    ['Updated', 20, (row) => row.last_updated || ''],
+    ['Previews', 9, (row) => String(row.previews_processed ?? 0)],
+    ['CVs', 5, (row) => String(row.cvs_reviewed ?? 0)],
+    ['Shortlist', 10, (row) => String(row.shortlist_count ?? 0)],
+    ['Drafts', 7, (row) => String(row.outreach_drafts_prepared ?? 0)],
+    ['KPI', 8, (row) => row.current_kpi == null ? 'n/a' : String(row.current_kpi)],
+    ['Review?', 8, (row) => row.error ? 'error' : row.operator_review_needed ? 'yes' : 'no'],
+  ];
+
+  const lines = [
+    columns.map(([label, width]) => label.padEnd(width)).join('  '),
+    columns.map(([, width]) => '-'.repeat(width)).join('  '),
+    ...rows.map((row) => columns.map(([, width, render]) => {
+      const value = String(render(row) || '');
+      return value.length > width ? `${value.slice(0, width - 1)}…` : value.padEnd(width);
+    }).join('  ')),
+  ];
+  return `${lines.join('\n')}\n`;
 }
 
 async function main() {
@@ -68,6 +123,42 @@ async function main() {
     return;
   }
 
+  if (command === 'import-previews') {
+    const roleId = args['role-id'] || args.id || args.slug;
+    const result = core.importPreviewCandidates({
+      workflowRoot,
+      roleId,
+      inputPath: args.input || args.file,
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'export-candidates') {
+    const roleId = args['role-id'] || args.id || args.slug;
+    const result = core.exportCandidateReviewsCsv({
+      workflowRoot,
+      roleId,
+      outputPath: args.output || '',
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'update-candidate') {
+    const roleId = args['role-id'] || args.id || args.slug;
+    const candidateId = args['candidate-id'] || args.candidate;
+    const result = await core.updateCandidateOperatorState({
+      workflowRoot,
+      roleId,
+      candidateId,
+      actor: args.actor || 'operator',
+      patch: createUpdatePatch(args),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
   const actionMap = {
     'generate-search-pack': 'generate_search_pack',
     'triage-previews': 'run_preview_triage',
@@ -92,6 +183,21 @@ async function main() {
     return;
   }
 
+  if (command === 'role-index') {
+    const rows = core.listRoleIndex(workflowRoot);
+    if ((args.format || 'table') === 'json') {
+      console.log(JSON.stringify(rows, null, 2));
+    } else {
+      process.stdout.write(renderRoleIndexTable(rows));
+    }
+    return;
+  }
+
+  if (command === 'health-check') {
+    console.log(JSON.stringify(core.runHealthCheck(workflowRoot), null, 2));
+    return;
+  }
+
   if (command === 'list-roles') {
     console.log(JSON.stringify(core.listRoles(workflowRoot), null, 2));
     return;
@@ -102,6 +208,11 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error?.stack || error?.message || error);
+  console.error(error?.message || error);
+  if (error?.details) {
+    console.error(JSON.stringify(error.details, null, 2));
+  } else if (error?.stack) {
+    console.error(error.stack);
+  }
   process.exitCode = 1;
 });
