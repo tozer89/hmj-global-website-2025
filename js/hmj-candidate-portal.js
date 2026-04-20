@@ -6,7 +6,7 @@ const PAYMENT_DETAILS_ENDPOINT = '/.netlify/functions/candidate-payment-details'
 const STORAGE_PREFIX = 'portal';
 const CANDIDATE_DOCS_BUCKET = 'candidate-docs';
 const MAX_DOCUMENT_SIZE_BYTES = 15 * 1024 * 1024;
-const ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp'];
+const ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'tif', 'tiff'];
 
 function getGlobalState() {
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -739,7 +739,7 @@ function validateCandidateDocument(file) {
   }
   const extension = fileExtensionFromName(file.name);
   if (!ALLOWED_DOCUMENT_EXTENSIONS.includes(extension)) {
-    throw new Error('Upload a PDF, Word document, or image file.');
+    throw new Error('Upload a PDF, Word document, or supported image file such as JPG, PNG, WEBP, HEIC, or TIFF.');
   }
   if (Number(file.size || 0) > MAX_DOCUMENT_SIZE_BYTES) {
     throw new Error('Files must be 15 MB or smaller.');

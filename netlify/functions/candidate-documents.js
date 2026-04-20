@@ -108,7 +108,7 @@ function validateDocumentRequest({ fileName, mimeType, sizeBytes }) {
 
   const extension = fileExtensionFromName(cleanName);
   if (!ALLOWED_DOCUMENT_EXTENSIONS.includes(extension)) {
-    throw coded(400, 'Upload a PDF, Word document, or image file.', 'candidate_document_type_invalid');
+    throw coded(400, 'Upload a PDF, Word document, or supported image file such as JPG, PNG, WEBP, HEIC, or TIFF.', 'candidate_document_type_invalid');
   }
 
   const bytes = Number(sizeBytes || 0);

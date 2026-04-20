@@ -33,12 +33,27 @@ test('candidate document endpoint validates supported upload metadata', () => {
   });
 });
 
+test('candidate document endpoint accepts common phone and scanner image formats', () => {
+  const metadata = _validateDocumentRequest({
+    fileName: 'Passport.heic',
+    mimeType: 'image/heic',
+    sizeBytes: 2048,
+  });
+
+  assert.deepEqual(metadata, {
+    fileName: 'Passport.heic',
+    mimeType: 'image/heic',
+    sizeBytes: 2048,
+    extension: 'heic',
+  });
+});
+
 test('candidate document endpoint rejects unsupported upload types', () => {
   assert.throws(() => _validateDocumentRequest({
     fileName: 'passport.exe',
     mimeType: 'application/octet-stream',
     sizeBytes: 2048,
-  }), /Upload a PDF, Word document, or image file/i);
+  }), /Upload a PDF, Word document, or supported image file/i);
 });
 
 test('candidate document endpoint keeps storage paths inside the candidate portal namespace', () => {

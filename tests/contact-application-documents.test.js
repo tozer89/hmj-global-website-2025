@@ -51,6 +51,21 @@ test('public application document endpoint validates upload metadata with the sh
   });
 });
 
+test('public document upload validation accepts HEIC and TIFF evidence files', () => {
+  const metadata = _validateApplicationDocumentRequest({
+    fileName: 'passport-scan.tiff',
+    mimeType: 'image/tiff',
+    sizeBytes: 4096,
+  });
+
+  assert.deepEqual(metadata, {
+    fileName: 'passport-scan.tiff',
+    mimeType: 'image/tiff',
+    sizeBytes: 4096,
+    extension: 'tiff',
+  });
+});
+
 test('public application document endpoint builds candidate document rows with contact-form linkage metadata', () => {
   const payload = _buildApplicationDocumentPayload(
     {

@@ -155,7 +155,7 @@ import {
 
   const RTW_OTHER_VALUE = '__other__';
   const REGISTRATION_DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;
-  const REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp']);
+  const REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'tif', 'tiff']);
   const REGISTRATION_RIGHT_TO_WORK_DOCUMENT_TYPES = new Set(['passport', 'id_card', 'visa', 'brp', 'share_code', 'settlement', 'other']);
   const RTW_REGION_OPTIONS = [
     'United Kingdom',
@@ -524,7 +524,7 @@ import {
     } else {
       const extension = registrationDocumentExtension(file.name);
       if (!REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS.has(extension)) {
-        fileMessage = 'Upload a PDF, Word document, PNG, JPG, or WEBP file.';
+        fileMessage = 'Upload a PDF, Word document, or supported image file such as JPG, PNG, WEBP, HEIC, or TIFF.';
       } else if (!Number.isFinite(Number(file.size)) || Number(file.size) <= 0) {
         fileMessage = 'The selected document could not be read. Please choose it again.';
       } else if (Number(file.size) > REGISTRATION_DOCUMENT_MAX_BYTES) {
@@ -595,7 +595,7 @@ import {
     if (starterCv && trimText(starterCv.name, 280)) {
       const extension = registrationDocumentExtension(starterCv.name);
       if (!REGISTRATION_ALLOWED_DOCUMENT_EXTENSIONS.has(extension)) {
-        throw new Error('Starter CV must be a PDF, Word document, PNG, JPG, or WEBP file.');
+        throw new Error('Starter CV must be a PDF, Word document, or supported image file such as JPG, PNG, WEBP, HEIC, or TIFF.');
       }
       if (!Number.isFinite(Number(starterCv.size)) || Number(starterCv.size) <= 0) {
         throw new Error('The starter CV could not be read. Please choose it again.');
@@ -1931,7 +1931,7 @@ import {
           </div>
           <div class="candidate-inline-panel candidate-inline-panel--subtle">
             <strong>Accepted files</strong>
-            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, and WEBP files up to 15 MB.</p>
+            <p>PDF, DOC, DOCX, PNG, JPG, JPEG, WEBP, HEIC, HEIF, TIF, and TIFF files up to 15 MB.</p>
           </div>
           <form class="candidate-dashboard-form candidate-dashboard-form--documents" data-dashboard-form="documents">
             <label>Document type
@@ -1945,7 +1945,7 @@ import {
               <input type="text" name="label" placeholder="Passport, share code, March CV">
             </label>
             <label class="candidate-dashboard-form__full">File
-              <input type="file" name="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" required>
+              <input type="file" name="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic,.heif,.tif,.tiff,image/heic,image/heif,image/tiff" required>
               <span class="candidate-field-help">The file will be linked to your candidate record and stored in HMJ's private candidate document area.</span>
             </label>
             <div class="candidate-dashboard-actions candidate-dashboard-form__full">

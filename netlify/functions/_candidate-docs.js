@@ -3,7 +3,7 @@
 const CANDIDATE_DOCS_BUCKET = 'candidate-docs';
 const CANDIDATE_DOCS_STORAGE_PREFIX = 'portal';
 const MAX_DOCUMENT_SIZE_BYTES = 15 * 1024 * 1024;
-const ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp'];
+const ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'heic', 'heif', 'tif', 'tiff'];
 const VERIFICATION_REQUIRED_DOCUMENT_TYPES = new Set([
   'passport',
   'right_to_work',

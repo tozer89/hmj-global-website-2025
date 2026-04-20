@@ -26,6 +26,8 @@ test('candidate registration page exposes a dedicated onboarding right-to-work e
   assert.equal(fileField.getAttribute('name'), null);
   assert.match(fileField.getAttribute('accept') || '', /\.pdf/);
   assert.match(fileField.getAttribute('accept') || '', /\.webp/);
+  assert.match(fileField.getAttribute('accept') || '', /\.heic/);
+  assert.match(fileField.getAttribute('accept') || '', /\.tiff/);
   assert.ok(status);
   assert.match(status.textContent || '', /Required for onboarding/i);
 });

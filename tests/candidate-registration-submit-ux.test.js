@@ -13,7 +13,7 @@ test('candidate registration page exposes updated skill suggestions and submit f
   assert.match(html, /id="candidateSubmitFeedback"/);
   assert.match(html, /assets\/css\/candidates\.enhanced\.css\?v=14/);
   assert.match(html, /assets\/js\/candidates\.enhanced\.js\?v=5/);
-  assert.match(html, /assets\/js\/candidates\.portal\.js\?v=17/);
+  assert.match(html, /assets\/js\/candidates\.portal\.js\?v=18/);
   assert.match(html, /id="rightToWorkStatusHidden"/);
   assert.doesNotMatch(html, /id="rightToWorkStatus"/);
   assert.match(html, /Other \/ specify below/);
