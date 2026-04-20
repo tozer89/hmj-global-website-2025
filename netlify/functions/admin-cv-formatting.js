@@ -187,6 +187,8 @@ function buildAuditMeta({ candidateFile, jobSpecFile, options, result, history, 
     history_warning_count: Array.isArray(history?.warnings) ? history.warnings.length : 0,
     options: safeObject(options),
     ai_attempts: Array.isArray(result?.analysis?.aiAttempts) ? result.analysis.aiAttempts : [],
+    ai_failure_code: trimString(result?.analysis?.ai?.failureCode),
+    ai_failure_message: trimString(result?.analysis?.ai?.failureMessage, 240),
     error: trimString(error?.message, 240),
   };
 }

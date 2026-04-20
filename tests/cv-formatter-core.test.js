@@ -107,7 +107,7 @@ test('buildFallbackProfile derives recruiter-friendly sections', () => {
     candidateFileName: 'Harry Watts.docx',
   });
 
-  assert.equal(profile.targetRole, 'Senior Electrician required for a mission-critical data centre project.');
+  assert.equal(profile.targetRole, 'Senior Electrician');
   assert.equal(profile.location, 'Hull');
   assert.match(profile.candidateReference, /^HMJ-/);
   assert.ok(profile.profile.length > 40);
@@ -248,8 +248,19 @@ test('callOpenAiFormatter retries on transient errors and succeeds on a backup m
         text: async () => JSON.stringify({
           output_text: JSON.stringify({
             target_role: 'Electrical Project Manager',
+            sanitized_location: 'London',
+            interview_availability: '',
+            languages: ['English'],
             profile: 'Structured summary from backup model.',
+            role_alignment: ['Aligned to data centre delivery requirements.'],
+            relevant_projects: ['Mission-critical delivery'],
             key_skills: ['Electrical project delivery', 'Mission-critical coordination'],
+            qualifications: ['HNC Electrical Engineering'],
+            accreditations: ['SMSTS'],
+            employment_history: [],
+            additional_information: [],
+            redactions_applied: ['Name removed'],
+            warnings: [],
           }),
         }),
       };
@@ -262,6 +273,80 @@ test('callOpenAiFormatter retries on transient errors and succeeds on a backup m
   assert.equal(result.attempts.length, 2);
   assert.equal(result.attempts[0].ok, false);
   assert.equal(result.attempts[1].ok, true);
+});
+
+test('callOpenAiFormatter retries a repair attempt on the same model after incomplete structured output', async () => {
+  const calls = [];
+
+  const result = await withPatchedEnv({
+    OPENAI_API_KEY: 'test-key',
+    OPENAI_CV_FORMAT_MODEL: 'primary-model',
+    OPENAI_CV_FORMAT_FALLBACK_MODELS: 'backup-model-1',
+  }, async () => callOpenAiFormatter({
+    candidateFileName: 'Candidate CV.docx',
+    candidateText: 'Experienced electrical project manager with mission-critical delivery background.',
+    jobSpecText: 'Electrical Project Manager required for data centre delivery.',
+    candidateReference: 'HMJ-TEST1234',
+    requestFetch: async (_url, request) => {
+      const body = JSON.parse(String(request.body || '{}'));
+      calls.push({
+        model: body.model,
+        max_output_tokens: body.max_output_tokens,
+      });
+      if (calls.length === 1) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify({
+            status: 'incomplete',
+            incomplete_details: { reason: 'max_output_tokens' },
+            output: [],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          output: [
+            {
+              content: [
+                {
+                  type: 'output_text',
+                  text: JSON.stringify({
+                    target_role: 'Electrical Project Manager',
+                    sanitized_location: 'London',
+                    interview_availability: '',
+                    languages: ['English'],
+                    profile: 'Structured summary from repair attempt.',
+                    role_alignment: ['Aligned to electrical delivery requirements.'],
+                    relevant_projects: ['Mission-critical delivery'],
+                    key_skills: ['Electrical delivery', 'Commissioning'],
+                    qualifications: ['HNC Electrical Engineering'],
+                    accreditations: ['SMSTS'],
+                    employment_history: [],
+                    additional_information: [],
+                    redactions_applied: ['Name removed'],
+                    warnings: [],
+                  }),
+                },
+              ],
+            },
+          ],
+        }),
+      };
+    },
+  }));
+
+  assert.equal(result.ok, true);
+  assert.equal(result.model, 'primary-model');
+  assert.equal(result.attempts.length, 2);
+  assert.equal(result.attempts[0].code, 'openai_incomplete_output');
+  assert.equal(result.attempts[1].ok, true);
+  assert.deepEqual(calls, [
+    { model: 'primary-model', max_output_tokens: 2400 },
+    { model: 'primary-model', max_output_tokens: 3400 },
+  ]);
 });
 
 test('callOpenAiFormatter stops retrying when the API rejects the key', async () => {
@@ -290,7 +375,9 @@ test('callOpenAiFormatter stops retrying when the API rejects the key', async ()
   }));
 
   assert.equal(result.ok, false);
+  assert.equal(result.code, 'openai_authentication_failed');
   assert.equal(calls.length, 1);
   assert.equal(result.attempts.length, 1);
+  assert.equal(result.attempts[0].code, 'openai_authentication_failed');
   assert.match(result.error, /authentication failed/i);
 });

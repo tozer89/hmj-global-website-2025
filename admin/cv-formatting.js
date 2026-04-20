@@ -223,6 +223,74 @@
     return source ? startCase(source) : 'Unknown source';
   }
 
+  function summariseAiState(result) {
+    const analysis = result && result.analysis || {};
+    const ai = analysis.ai || {};
+    const failureCode = String(ai.failureCode || '').toLowerCase();
+    const failureMessage = String(ai.failureMessage || '').trim();
+
+    if (ai.requested === false) {
+      return {
+        label: 'Fallback only',
+        tone: 'warn',
+        detail: 'AI assist was switched off for this run.',
+        blocking: false,
+      };
+    }
+
+    if (String(result && result.source || '').toLowerCase() === 'openai') {
+      return {
+        label: 'AI-assisted output',
+        tone: 'ok',
+        detail: '',
+        blocking: false,
+      };
+    }
+
+    if (failureCode === 'openai_key_missing') {
+      return {
+        label: 'AI key missing',
+        tone: 'bad',
+        detail: 'The server does not have a working OpenAI API key for CV formatting.',
+        blocking: true,
+      };
+    }
+
+    if (failureCode === 'openai_authentication_failed') {
+      return {
+        label: 'AI auth failed',
+        tone: 'bad',
+        detail: 'The configured OpenAI API key was rejected by the API, so the formatter used the deterministic backup.',
+        blocking: true,
+      };
+    }
+
+    if (failureCode === 'openai_timeout') {
+      return {
+        label: 'AI timed out',
+        tone: 'warn',
+        detail: 'The model did not finish in time, so the formatter used the deterministic backup.',
+        blocking: false,
+      };
+    }
+
+    if (failureCode) {
+      return {
+        label: 'AI fallback used',
+        tone: 'warn',
+        detail: failureMessage || 'The AI formatter did not complete cleanly, so the deterministic backup was used.',
+        blocking: false,
+      };
+    }
+
+    return {
+      label: String(result && result.source || '').toLowerCase() === 'openai' ? 'AI-assisted output' : 'Fallback output',
+      tone: String(result && result.source || '').toLowerCase() === 'openai' ? 'ok' : 'warn',
+      detail: '',
+      blocking: false,
+    };
+  }
+
   function summariseStatus(run) {
     const status = String(run && run.status || '').toLowerCase();
     if (status === 'completed') return { label: 'Completed', tone: 'ok' };
@@ -460,6 +528,7 @@
 
         const profile = result.profile || {};
         const analysis = result.analysis || {};
+        const aiState = summariseAiState(result);
         const optionsUsed = normaliseOptions(analysis.optionsUsed || collectOptions());
         const history = result.history || {};
         const aiAttempts = Array.isArray(analysis.aiAttempts) ? analysis.aiAttempts : [];
@@ -479,7 +548,7 @@
         }
         if (els.resultChips) {
           const chips = [
-            `<span class="cvf-chip" data-tone="ok">${escapeHtml(result.source === 'openai' ? 'AI-assisted output' : 'Fallback output')}</span>`,
+            `<span class="cvf-chip" data-tone="${escapeHtml(aiState.tone)}">${escapeHtml(aiState.label)}</span>`,
             `<span class="cvf-chip">${escapeHtml(analysis.tailoredToJobSpec ? 'Job spec applied' : 'CV-led output')}</span>`,
             `<span class="cvf-chip">${escapeHtml(chipLabel('templatePreset', optionsUsed.templatePreset))}</span>`,
             `<span class="cvf-chip">${escapeHtml(chipLabel('anonymiseMode', optionsUsed.anonymiseMode))}</span>`,
@@ -507,7 +576,9 @@
         }
         if (els.downloadSummary) {
           const fileName = result.file && result.file.name ? result.file.name : 'client-ready-cv.docx';
-          if (history.saved) {
+          if (aiState.detail) {
+            els.downloadSummary.textContent = `${fileName} is ready. ${aiState.detail}`;
+          } else if (history.saved) {
             els.downloadSummary.textContent = `${fileName} is ready and this run has been archived in Recent formatting runs.`;
           } else if (history.requested === false) {
             els.downloadSummary.textContent = `${fileName} is ready. Run history was disabled for this generation.`;
@@ -755,6 +826,7 @@
 
           const response = await api('/admin-cv-formatting', 'POST', payload);
           state.result = response;
+          const aiState = summariseAiState(response);
           setDownloadFile(response.file);
           renderConfigurationSummary(response.analysis && response.analysis.optionsUsed);
           renderResult();
@@ -770,15 +842,16 @@
               : Array.isArray(history.warnings) && history.warnings.length
                 ? 'The document is ready, but run history was only partially available.'
                 : '';
+          const aiMessage = aiState.detail || '';
 
           setStatus(
-            'Client-ready CV generated',
-            `${tailoredMessage}${historyMessage ? ` ${historyMessage}` : ''}`.trim(),
-            history.saved || !historyMessage ? 'ok' : 'warn'
+            aiState.blocking ? 'Client-ready CV generated with fallback' : 'Client-ready CV generated',
+            `${tailoredMessage}${aiMessage ? ` ${aiMessage}` : ''}${historyMessage ? ` ${historyMessage}` : ''}`.trim(),
+            aiState.blocking || (!history.saved && !!historyMessage) ? 'warn' : 'ok'
           );
           autoDownload();
           await loadHistory({ silent: true });
-          toast('Client-ready CV generated.', 'ok', 3600);
+          toast(aiState.blocking ? 'CV generated using deterministic fallback.' : 'Client-ready CV generated.', aiState.blocking ? 'warn' : 'ok', 3600);
         } catch (error) {
           const history = error && error.details && error.details.history;
           if (history && Array.isArray(history.warnings)) {
