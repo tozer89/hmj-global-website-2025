@@ -33,11 +33,19 @@ function usage() {
     '  node scripts/run-sourcing-workflow.js import-previews --workflow-root <path> --role-id <slug> --input <file.csv|file.json>',
     '  node scripts/run-sourcing-workflow.js export-candidates --workflow-root <path> --role-id <slug> [--output <file.csv>]',
     '  node scripts/run-sourcing-workflow.js update-candidate --workflow-root <path> --role-id <slug> --candidate-id <id> [--operator-decision ...] [--shortlist-status ...] [--lifecycle-stage ...]',
+    '  node scripts/run-sourcing-workflow.js update-role-config --workflow-root <path> --role-id <slug> [--shortlist-target-size 10] [--shortlist-mode strict|balanced|broad] [...]',
+    '  node scripts/run-sourcing-workflow.js log-contact --workflow-root <path> --role-id <slug> --candidate-id <id> --stage contacted|awaiting_reply|closed [--date 2026-04-20] [--note "..."] [--message-summary "..."]',
     '  node scripts/run-sourcing-workflow.js summarize-role --workflow-root <path> --role-id <slug>',
     '  node scripts/run-sourcing-workflow.js health-check --workflow-root <path>',
     '  node scripts/run-sourcing-workflow.js role-index --workflow-root <path> [--format table|json]',
     '  node scripts/run-sourcing-workflow.js list-roles --workflow-root <path>',
   ].join('\n');
+}
+
+function parseBooleanFlag(value) {
+  if (value === 'true' || value === true) return true;
+  if (value === 'false' || value === false) return false;
+  return value;
 }
 
 function createUpdatePatch(args) {
@@ -61,6 +69,33 @@ function createUpdatePatch(args) {
   mappings.forEach(([argKey, patchKey]) => {
     if (Object.prototype.hasOwnProperty.call(args, argKey)) {
       patch[patchKey] = args[argKey];
+    }
+  });
+
+  return patch;
+}
+
+function createRoleConfigPatch(args) {
+  const patch = {};
+  const mappings = [
+    ['shortlist-target-size', 'shortlist_target_size'],
+    ['max-previews-per-run', 'max_previews_per_run'],
+    ['max-cv-reviews-per-run', 'max_cv_reviews_per_run'],
+    ['shortlist-mode', 'shortlist_mode'],
+    ['minimum-shortlist-score', 'minimum_shortlist_score'],
+    ['minimum-draft-score', 'minimum_draft_score'],
+    ['must-have-weighting', 'must_have_weighting'],
+    ['preferred-weighting', 'preferred_weighting'],
+    ['reject-on-missing-must-have', 'reject_on_missing_must_have'],
+    ['location-strictness', 'location_strictness'],
+    ['adjacent-title-looseness', 'adjacent_title_looseness'],
+    ['sector-strictness', 'sector_strictness'],
+    ['continue-until-target-reached', 'continue_until_target_reached'],
+  ];
+
+  mappings.forEach(([argKey, patchKey]) => {
+    if (Object.prototype.hasOwnProperty.call(args, argKey)) {
+      patch[patchKey] = parseBooleanFlag(args[argKey]);
     }
   });
 
@@ -154,6 +189,35 @@ async function main() {
       candidateId,
       actor: args.actor || 'operator',
       patch: createUpdatePatch(args),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'update-role-config') {
+    const roleId = args['role-id'] || args.id || args.slug;
+    const result = await core.updateRoleConfig({
+      workflowRoot,
+      roleId,
+      actor: args.actor || 'operator',
+      patch: createRoleConfigPatch(args),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'log-contact') {
+    const roleId = args['role-id'] || args.id || args.slug;
+    const candidateId = args['candidate-id'] || args.candidate;
+    const result = await core.logCandidateContactState({
+      workflowRoot,
+      roleId,
+      candidateId,
+      stage: args.stage,
+      date: args.date || '',
+      note: args.note || '',
+      messageSummary: args['message-summary'] || '',
+      actor: args.actor || 'operator',
     });
     console.log(JSON.stringify(result, null, 2));
     return;

@@ -128,8 +128,8 @@ test('operator updates persist cleanly and drive lifecycle changes', async () =>
     patch: {
       decision: 'manual_screened',
       shortlist_status: 'possible_shortlist',
-      lifecycle_stage: 'awaiting_reply',
-      manual_notes: 'Spoke briefly and he is open to a Leeds discussion.',
+      lifecycle_stage: 'contacted',
+      manual_notes: 'Spoke briefly and sent the outline for a Leeds discussion.',
       concerns: ['Rate still to confirm'],
       follow_up_questions: ['Can he be in Leeds 4 days a week?'],
       override_reason: 'Manual review after phone conversation',
@@ -150,10 +150,10 @@ test('operator updates persist cleanly and drive lifecycle changes', async () =>
     'shortlist_status',
   ]);
   assert.equal(record.operator_review.decision, 'manual_screened');
-  assert.equal(record.lifecycle.current_stage, 'awaiting_reply');
+  assert.equal(record.lifecycle.current_stage, 'contacted');
   assert.equal(record.status.needs_operator_review, false);
   assert.equal(record.operator_review.history.length, 1);
-  assert.equal(metrics.lifecycle_counts.awaiting_reply, 1);
+  assert.equal(metrics.lifecycle_counts.contacted, 1);
   assert.equal(metrics.operator_overrides, 1);
 });
 
