@@ -1,0 +1,100 @@
+role_id: HMJ-ROLE-ESM-001
+client_name: "Confidential pharma contractor"
+consultant: Joe
+date_opened: "2026-04-20"
+
+role_summary:
+  canonical_title: "Electrical Site Manager"
+  hiring_reason: "Project delivery support on a live life sciences build"
+  employment_type: "Contract"
+  salary_min: 350
+  salary_max: 450
+  salary_notes: "Day-rate or equivalent contract package depending on travel pattern"
+  location_base: "Leeds"
+  radius_miles: 60
+  remote_hybrid_onsite: "On site"
+  relocation_considered: false
+  driving_licence_required: true
+
+title_mapping:
+  direct_titles:
+    - "Electrical Site Manager"
+    - "Electrical Construction Manager"
+  adjacent_titles:
+    - "Electrical Supervisor"
+    - "Site Manager"
+    - "Construction Manager"
+  seniority_variants:
+    - "Lead Electrical Site Manager"
+    - "Senior Electrical Site Manager"
+  misleading_titles_to_exclude:
+    - "Assistant Site Manager"
+
+must_have:
+  skills:
+    - "site delivery"
+    - "electrical package management"
+    - "subcontractor coordination"
+  tools_or_qualifications:
+    - "SSSTS"
+    - "ECS"
+  sector_or_project_context:
+    - "pharma"
+    - "cleanroom"
+    - "life sciences"
+
+nice_to_have:
+  skills:
+    - "QA/QC"
+    - "commissioning interface"
+  sectors:
+    - "data centre"
+  qualifications:
+    - "SMSTS"
+
+rejection_rules:
+  hard_disqualifiers:
+    - "Clearly wrong function for a site-delivery brief"
+  excluded_titles:
+    - "Assistant Site Manager"
+  excluded_contexts:
+    - "maintenance only"
+  excluded_sectors:
+    - "domestic"
+  unacceptable_location_patterns:
+    - "Scotland only"
+
+quality_signals:
+  preferred_employers_or_project_types:
+    - "Tier 1 contractor"
+    - "Pharma fit-out contractor"
+  evidence_of_scale:
+    - "multi-package coordination"
+  evidence_of_outcomes:
+    - "handover"
+    - "programme recovery"
+  stability_expectations:
+    - "Multiple project-delivery roles with clear date ranges"
+
+candidate_judgment_areas:
+  direct_match_definition: "Electrical site delivery ownership on live major projects."
+  transferable_match_definition: "Strong electrical supervisor or construction manager ready to step into broader site ownership."
+  location_mobility_definition: "Leeds or realistic travel into Yorkshire / North Midlands."
+  work_history_definition: "Enough chronology to judge continuity and project depth."
+  appetite_relevance_signals:
+    - "Available quickly"
+    - "Open to travel"
+  follow_up_questions_needed:
+    - "Availability and notice period"
+    - "Travel pattern into Leeds"
+
+outreach:
+  role_hook: "Live electrical site leadership on a regulated life sciences project."
+  likely_motivators:
+    - "Project stability"
+    - "Regulated-build experience"
+  draft_questions:
+    - "Is the Leeds location workable on your current travel pattern?"
+    - "Would you consider another pharma or cleanroom environment?"
+
+notes: "Fixture role for MVP tests."

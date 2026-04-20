@@ -1,0 +1,98 @@
+[
+  {
+    "candidate_id": "cvl-strong-001",
+    "source": "CV-Library",
+    "search_variant": "medium",
+    "search_name": "Electrical Site Manager - Leeds - pharma",
+    "candidate_name": "Andrei Popescu",
+    "current_title": "Electrical Site Manager",
+    "headline": "Electrical Site Manager | Pharma and cleanroom projects",
+    "location": "Leeds",
+    "mobility": "Open to Yorkshire and North Midlands travel",
+    "salary_text": "£420/day",
+    "sector_tags": ["Pharma", "Cleanroom", "Life Sciences"],
+    "summary_text": "Electrical site manager with 12 years in regulated-build delivery, subcontractor coordination, QA/QC, and handover across live pharma and cleanroom projects. Available in four weeks.",
+    "last_updated": "2026-04-18",
+    "opened_profile": true,
+    "cv_file": "cvs/andrei-popescu.txt",
+    "preview_notes": "Strong sector signal from the redacted preview.",
+    "audit_notes": "",
+    "operator_override": {
+      "classification": "",
+      "reason": ""
+    },
+    "operator_decision": ""
+  },
+  {
+    "candidate_id": "cvl-possible-002",
+    "source": "CV-Library",
+    "search_variant": "broad",
+    "search_name": "Electrical site delivery broad",
+    "candidate_name": "James Byrne",
+    "current_title": "Electrical Supervisor",
+    "headline": "Electrical Supervisor | Cleanrooms and mission critical",
+    "location": "Bradford",
+    "mobility": "Can travel across West Yorkshire",
+    "salary_text": "£360/day",
+    "sector_tags": ["Cleanroom", "Data Centre"],
+    "summary_text": "Electrical supervisor leading subcontractors, QA close-out and package coordination on cleanroom and data centre projects. Looking for a step up into broader site ownership.",
+    "last_updated": "2026-04-17",
+    "opened_profile": true,
+    "cv_file": "cvs/james-byrne.txt",
+    "preview_notes": "Worth testing as an adjacent-title step-up candidate.",
+    "audit_notes": "",
+    "operator_override": {
+      "classification": "",
+      "reason": ""
+    },
+    "operator_decision": ""
+  },
+  {
+    "candidate_id": "cvl-low-003",
+    "source": "CV-Library",
+    "search_variant": "medium",
+    "search_name": "Electrical Site Manager - Leeds - pharma",
+    "candidate_name": "Radu Ionescu",
+    "current_title": "Project Engineer",
+    "headline": "Project Engineer | General building services",
+    "location": "Manchester",
+    "mobility": "North West only",
+    "salary_text": "£300/day",
+    "sector_tags": ["Commercial"],
+    "summary_text": "Project engineer with general MEP coordination experience on commercial projects and some site reporting support.",
+    "last_updated": "2026-04-16",
+    "opened_profile": false,
+    "cv_file": "",
+    "preview_notes": "",
+    "audit_notes": "",
+    "operator_override": {
+      "classification": "",
+      "reason": ""
+    },
+    "operator_decision": ""
+  },
+  {
+    "candidate_id": "cvl-reject-004",
+    "source": "CV-Library",
+    "search_variant": "broad",
+    "search_name": "Electrical site delivery broad",
+    "candidate_name": "Chris Nolan",
+    "current_title": "Assistant Site Manager",
+    "headline": "Assistant Site Manager | Domestic and housing",
+    "location": "Leeds",
+    "mobility": "Leeds only",
+    "salary_text": "£280/day",
+    "sector_tags": ["Domestic"],
+    "summary_text": "Assistant site manager supporting domestic housing schemes, snags, and maintenance coordination.",
+    "last_updated": "2026-04-15",
+    "opened_profile": false,
+    "cv_file": "",
+    "preview_notes": "",
+    "audit_notes": "",
+    "operator_override": {
+      "classification": "",
+      "reason": ""
+    },
+    "operator_decision": ""
+  }
+]

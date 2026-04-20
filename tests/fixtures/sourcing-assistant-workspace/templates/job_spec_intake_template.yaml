@@ -1,0 +1,61 @@
+role_id: HMJ-ROLE-001
+client_name: ""
+consultant: Joe
+date_opened: "2026-04-20"
+
+role_summary:
+  canonical_title: ""
+  hiring_reason: ""
+  employment_type: ""
+  salary_min: null
+  salary_max: null
+  salary_notes: ""
+  location_base: ""
+  radius_miles: null
+  remote_hybrid_onsite: ""
+  relocation_considered: false
+  driving_licence_required: false
+
+title_mapping:
+  direct_titles: []
+  adjacent_titles: []
+  seniority_variants: []
+  misleading_titles_to_exclude: []
+
+must_have:
+  skills: []
+  tools_or_qualifications: []
+  sector_or_project_context: []
+
+nice_to_have:
+  skills: []
+  sectors: []
+  qualifications: []
+
+rejection_rules:
+  hard_disqualifiers: []
+  excluded_titles: []
+  excluded_contexts: []
+  excluded_sectors: []
+  unacceptable_location_patterns: []
+
+quality_signals:
+  preferred_employers_or_project_types: []
+  evidence_of_scale: []
+  evidence_of_outcomes: []
+  stability_expectations: []
+
+candidate_judgment_areas:
+  direct_match_definition: ""
+  transferable_match_definition: ""
+  location_mobility_definition: ""
+  work_history_definition: ""
+  appetite_relevance_signals: []
+  follow_up_questions_needed: []
+
+outreach:
+  role_hook: ""
+  likely_motivators: []
+  draft_questions: []
+
+notes: ""

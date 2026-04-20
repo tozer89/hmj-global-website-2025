@@ -1,0 +1,26 @@
+[
+  {
+    "candidate_id": "cvl-001",
+    "source": "CV-Library",
+    "search_variant": "medium",
+    "search_name": "",
+    "candidate_name": "",
+    "current_title": "",
+    "headline": "",
+    "location": "",
+    "mobility": "",
+    "salary_text": "",
+    "sector_tags": [],
+    "summary_text": "",
+    "last_updated": "",
+    "opened_profile": false,
+    "cv_file": "",
+    "preview_notes": "",
+    "audit_notes": "",
+    "operator_override": {
+      "classification": "",
+      "reason": ""
+    },
+    "operator_decision": ""
+  }
+]
