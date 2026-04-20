@@ -25,8 +25,10 @@ import {
 } from '../../js/hmj-candidate-portal.js?v=5';
 import {
   classifyCandidateSignupResult,
+  normaliseCandidateRegistrationPaymentMethod,
+  validateCandidateRegistrationPayment,
   validateCandidatePassword,
-} from '../../js/hmj-candidate-auth-utils.mjs?v=1';
+} from '../../js/hmj-candidate-auth-utils.mjs?v=2';
 
 (function () {
   const doc = document;
@@ -360,16 +362,6 @@ import {
     return `${formatted} ${salaryExpectationSuffix(normalisedUnit)}`;
   }
 
-  function digitsOnly(value, maxLength = 32) {
-    return trimText(value, maxLength).replace(/\D+/g, '');
-  }
-
-  function normaliseRegistrationPaymentMethod(currency, method) {
-    const raw = trimText(method, 40).toLowerCase();
-    if (raw === 'gbp_local' || raw === 'iban_swift') return raw;
-    return trimText(currency, 12).toUpperCase() === 'GBP' ? 'gbp_local' : 'iban_swift';
-  }
-
   function registrationPaymentEnabled() {
     // New starter mode (path chooser flow): check the hidden onboarding_mode field
     const modeHidden = doc.getElementById('onboardingModeHidden');
@@ -384,70 +376,68 @@ import {
     paymentStatus.textContent = text;
   }
 
-  function paymentValidationState() {
-    if (!paymentToggle || !paymentPanel) {
-      return { active: false, valid: true, tone: 'info', text: '' };
-    }
+  function paymentFieldByKey(key) {
+    if (key === 'accountHolderName') return paymentFields.accountHolderName;
+    if (key === 'bankName') return paymentFields.bankName;
+    if (key === 'bankLocationOrCountry') return paymentFields.bankLocationOrCountry;
+    if (key === 'sortCode') return paymentFields.sortCode;
+    if (key === 'accountNumber') return paymentFields.accountNumber;
+    if (key === 'iban') return paymentFields.iban;
+    if (key === 'swiftBic') return paymentFields.swiftBic;
+    return null;
+  }
 
+  function paymentValidationState() {
     if (!registrationPaymentEnabled()) {
       return {
         active: false,
         valid: true,
         tone: 'info',
-        text: 'Optional secure payroll setup. Open this only if HMJ has already confirmed a new assignment and needs your bank details for onboarding.',
+        text: '',
+        focusField: null,
       };
     }
 
-    const accountCurrency = trimText(paymentFields.currency?.value, 12).toUpperCase() || 'GBP';
-    const paymentMethod = normaliseRegistrationPaymentMethod(accountCurrency, paymentFields.method?.value);
-    const errors = [];
-    const firstMissingField = (field) => field instanceof HTMLElement ? field : null;
-    let focusField = null;
-
-    function flag(field, test, message) {
-      if (test) return;
-      errors.push(message);
-      if (!focusField) focusField = firstMissingField(field);
-    }
-
-    flag(paymentFields.accountHolderName, trimText(paymentFields.accountHolderName?.value, 160), 'Enter the account holder name before you submit.');
-    flag(paymentFields.bankName, trimText(paymentFields.bankName?.value, 160), 'Enter the bank name before you submit.');
-    flag(paymentFields.bankLocationOrCountry, trimText(paymentFields.bankLocationOrCountry?.value, 160), 'Enter the bank location or country before you submit.');
-
-    if (paymentMethod === 'gbp_local') {
-      flag(paymentFields.sortCode, digitsOnly(paymentFields.sortCode?.value, 16).length === 6, 'Enter a valid 6-digit sort code.');
-      const accountNumberDigits = digitsOnly(paymentFields.accountNumber?.value, 16);
-      flag(paymentFields.accountNumber, accountNumberDigits.length >= 6 && accountNumberDigits.length <= 10, 'Enter a valid account number.');
-    } else {
-      const iban = trimText(paymentFields.iban?.value, 64).toUpperCase().replace(/\s+/g, '');
-      const swiftBic = trimText(paymentFields.swiftBic?.value, 32).toUpperCase().replace(/\s+/g, '');
-      flag(paymentFields.iban, /^[A-Z]{2}[A-Z0-9]{13,32}$/.test(iban), 'Enter a valid IBAN.');
-      flag(paymentFields.swiftBic, /^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(swiftBic), 'Enter a valid SWIFT / BIC code.');
-    }
-
-    if (errors.length) {
+    const requiredFieldsPresent = paymentFields.currency
+      && paymentFields.method
+      && paymentFields.accountHolderName
+      && paymentFields.bankName
+      && paymentFields.bankLocationOrCountry;
+    if (!requiredFieldsPresent) {
       return {
         active: true,
         valid: false,
         tone: 'error',
-        text: errors[0],
-        focusField,
+        text: 'HMJ could not load the secure payroll fields. Refresh the page and try again.',
+        focusField: null,
       };
     }
 
-    return {
+    const validation = validateCandidateRegistrationPayment({
       active: true,
-      valid: true,
-      tone: 'success',
-      text: 'Secure payment details will be sent separately for onboarding and payroll setup.',
-      focusField: null,
+      accountCurrency: paymentFields.currency?.value,
+      paymentMethod: paymentFields.method?.value,
+      accountHolderName: paymentFields.accountHolderName?.value,
+      bankName: paymentFields.bankName?.value,
+      bankLocationOrCountry: paymentFields.bankLocationOrCountry?.value,
+      sortCode: paymentFields.sortCode?.value,
+      accountNumber: paymentFields.accountNumber?.value,
+      iban: paymentFields.iban?.value,
+      swiftBic: paymentFields.swiftBic?.value,
+    });
+    return {
+      ...validation,
+      focusField: paymentFieldByKey(validation.focusKey),
     };
   }
 
   function buildRegistrationPaymentDetails() {
     if (!registrationPaymentEnabled()) return null;
     const accountCurrency = trimText(paymentFields.currency?.value, 12).toUpperCase() || 'GBP';
-    const paymentMethod = normaliseRegistrationPaymentMethod(accountCurrency, paymentFields.method?.value);
+    const paymentMethod = normaliseCandidateRegistrationPaymentMethod({
+      accountCurrency,
+      paymentMethod: paymentFields.method?.value,
+    });
     return {
       account_currency: accountCurrency,
       payment_method: paymentMethod,
@@ -755,10 +745,10 @@ import {
     // If no legacy gate elements exist, just sync payment method groups and return
     if (!paymentToggle || !paymentPanel || !paymentGate) {
       if (enabled && paymentFields.method) {
-        const paymentMethod = normaliseRegistrationPaymentMethod(
-          (paymentFields.currency?.value || 'GBP').toUpperCase(),
-          paymentFields.method.value
-        );
+        const paymentMethod = normaliseCandidateRegistrationPaymentMethod({
+          accountCurrency: (paymentFields.currency?.value || 'GBP').toUpperCase(),
+          paymentMethod: paymentFields.method.value,
+        });
         document.querySelectorAll('.candidate-payment-group').forEach((g) => {
           g.style.display = g.dataset.paymentGroup === paymentMethod ? '' : 'none';
         });
@@ -766,7 +756,10 @@ import {
       return;
     }
     const accountCurrency = trimText(paymentFields.currency?.value, 12).toUpperCase() || 'GBP';
-    const paymentMethod = normaliseRegistrationPaymentMethod(accountCurrency, paymentFields.method?.value);
+    const paymentMethod = normaliseCandidateRegistrationPaymentMethod({
+      accountCurrency,
+      paymentMethod: paymentFields.method?.value,
+    });
 
     if (paymentFields.currency && paymentFields.currency.value !== accountCurrency) {
       paymentFields.currency.value = accountCurrency;
@@ -874,10 +867,17 @@ import {
       return null;
     }
 
+    const path = trimText(params.get('path'), 40).toLowerCase();
+    const onboardingSubmission = path === 'starter'
+      || path === 'onboarding'
+      || params.get('candidate_onboarding') === '1';
+
     if (params.get('candidate_signed_in') === '1') {
       return {
         tone: 'success',
-        text: 'Success. Your profile has been sent to HMJ and you are now signed into your candidate dashboard.',
+        text: onboardingSubmission
+          ? 'Success. Your onboarding registration has been sent to HMJ and you are now signed into your candidate dashboard.'
+          : 'Success. Your profile has been sent to HMJ and you are now signed into your candidate dashboard.',
         showResend: false,
       };
     }
@@ -886,7 +886,9 @@ import {
     if (accountState === 'created') {
       return {
         tone: 'success',
-        text: 'Your profile has been sent to HMJ and your candidate account is nearly ready. Check your inbox and junk folder for the verification email, then sign in above once it is confirmed.',
+        text: onboardingSubmission
+          ? 'Your onboarding registration has been sent to HMJ and your candidate account is nearly ready. Check your inbox and junk folder for the verification email, then sign in above once it is confirmed.'
+          : 'Your profile has been sent to HMJ and your candidate account is nearly ready. Check your inbox and junk folder for the verification email, then sign in above once it is confirmed.',
         showResend: true,
       };
     }
@@ -894,7 +896,9 @@ import {
     if (accountState === 'existing') {
       return {
         tone: 'warn',
-        text: 'Your profile has been sent to HMJ. That email already has an HMJ candidate account, so please sign in above or reset your password to access it.',
+        text: onboardingSubmission
+          ? 'Your onboarding registration has been sent to HMJ. That email already has an HMJ candidate account, so please sign in above or reset your password to access it.'
+          : 'Your profile has been sent to HMJ. That email already has an HMJ candidate account, so please sign in above or reset your password to access it.',
         showResend: false,
       };
     }
@@ -902,14 +906,18 @@ import {
     if (accountState === 'failed') {
       return {
         tone: 'warn',
-        text: 'Your profile has still been sent to HMJ, but we could not create the candidate account on this attempt. You can submit again later with the account box ticked, or contact HMJ if the issue continues.',
+        text: onboardingSubmission
+          ? 'Your onboarding registration has still been sent to HMJ, but we could not create the candidate account on this attempt. You can submit again later with the account box ticked, or contact HMJ if the issue continues.'
+          : 'Your profile has still been sent to HMJ, but we could not create the candidate account on this attempt. You can submit again later with the account box ticked, or contact HMJ if the issue continues.',
         showResend: false,
       };
     }
 
     return {
       tone: 'success',
-      text: 'Your profile has been sent to HMJ. We will review it and come back to you with suitable opportunities.',
+      text: onboardingSubmission
+        ? 'Your onboarding registration has been sent to HMJ. We will review it and confirm the remaining onboarding steps.'
+        : 'Your profile has been sent to HMJ. We will review it and come back to you with suitable opportunities.',
       showResend: false,
     };
   }
@@ -979,6 +987,7 @@ import {
     allowNativeSubmit: false,
     pendingEmail: getPendingCandidateEmail(),
     formJustSubmitted: params.get('submitted') === '1',
+    lastSubmissionToastText: '',
   };
 
   const STATUS_COPY = {
@@ -1325,11 +1334,21 @@ import {
         </div>
       </div>
     `;
+    if (state.formJustSubmitted && state.formMessage.tone === 'success' && state.lastSubmissionToastText !== state.formMessage.text) {
+      state.lastSubmissionToastText = state.formMessage.text;
+      showSubmissionToast(state.formMessage.text);
+    }
     syncSubmitFeedback();
   }
 
   function submitFeedbackText() {
+    const onboardingRegistration = registrationPaymentEnabled();
     if (state.formBusy) {
+      if (onboardingRegistration) {
+        return createAccountRequested()
+          ? 'Submitting your onboarding registration and setting up your candidate account now. If sign-in is immediately available, we will open your dashboard automatically.'
+          : 'Submitting your onboarding registration to HMJ now. Please keep this page open until the confirmation appears.';
+      }
       return createAccountRequested()
         ? 'Submitting your profile and setting up your candidate account now. If sign-in is immediately available, we will open your dashboard automatically.'
         : 'Submitting your profile to HMJ now. Please keep this page open until the confirmation appears.';
@@ -1339,6 +1358,11 @@ import {
     }
     if (state.formJustSubmitted && !state.user) {
       return 'Success.';
+    }
+    if (onboardingRegistration) {
+      return createAccountRequested()
+        ? 'Create the account and submit your onboarding registration in one step.'
+        : 'Submit your onboarding registration without creating a login today.';
     }
     return createAccountRequested()
       ? 'Create the account and send your profile in one step.'
@@ -1358,8 +1382,29 @@ import {
     submitFeedback.dataset.tone = submitFeedbackTone();
   }
 
+  function showSubmissionToast(message) {
+    const text = trimText(message, 400);
+    if (!text) return;
+    const existing = doc.getElementById('candidateSubmissionToast');
+    if (existing) {
+      existing.remove();
+    }
+    const toast = doc.createElement('div');
+    toast.id = 'candidateSubmissionToast';
+    toast.className = 'c-toast';
+    toast.setAttribute('role', 'status');
+    toast.textContent = text;
+    doc.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('c-toast--show'));
+    window.setTimeout(() => {
+      toast.classList.remove('c-toast--show');
+      window.setTimeout(() => toast.remove(), 220);
+    }, 4200);
+  }
+
   function syncPrimarySubmitLabel() {
     const creatingAccount = accountToggle.checked && state.authAvailable;
+    const onboardingRegistration = registrationPaymentEnabled();
     if (accountRequestedInput) {
       accountRequestedInput.value = creatingAccount ? 'yes' : 'no';
     }
@@ -1368,9 +1413,15 @@ import {
       syncSubmitFeedback();
       return;
     }
-    submitButton.textContent = state.formBusy
-      ? (creatingAccount ? 'Creating account and sending profile…' : 'Sending profile…')
-      : (creatingAccount ? 'Create account and send profile' : 'Send profile');
+    if (state.formBusy) {
+      submitButton.textContent = onboardingRegistration
+        ? (creatingAccount ? 'Creating account and submitting onboarding…' : 'Submitting onboarding…')
+        : (creatingAccount ? 'Creating account and sending profile…' : 'Sending profile…');
+    } else {
+      submitButton.textContent = onboardingRegistration
+        ? (creatingAccount ? 'Create account and submit onboarding' : 'Submit onboarding registration')
+        : (creatingAccount ? 'Create account and send profile' : 'Send profile');
+    }
     syncSubmitFeedback();
   }
 

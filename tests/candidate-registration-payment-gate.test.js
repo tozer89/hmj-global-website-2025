@@ -30,8 +30,9 @@ test('candidate registration script only sends payment details through the backg
   assert.match(source, /function buildRegistrationPaymentDetails\(/);
   assert.match(source, /payment_details:\s*paymentDetails/);
   assert.match(source, /await backgroundSyncCandidatePayload\(payload,\s*\{\s*awaitResponse:\s*true\s*\}\)/);
-  assert.match(source, /candidatePaymentOptIn/);
-  assert.match(source, /candidatePaymentPanel/);
+  assert.match(source, /validateCandidateRegistrationPayment/);
+  assert.match(source, /registrationPaymentEnabled\(\)/);
+  assert.match(source, /paymentFieldByKey/);
 });
 
 test('shared candidate sync helper supports awaited secure sync responses', () => {

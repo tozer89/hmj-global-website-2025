@@ -790,23 +790,24 @@
                   <span class="payroll-section-head__lock" aria-hidden="true">🔒</span>
                   <div>
                     <p class="payroll-section-head__title">Bank payment details</p>
-                    <p class="payroll-section-head__copy small">Your bank details are stored encrypted and used only for payroll processing once your assignment starts.</p>
+                    <p class="payroll-section-head__copy small">Your bank details are stored encrypted and used only for payroll processing once your assignment starts. Use IBAN / SWIFT / BIC for SEPA and international accounts.</p>
                   </div>
                 </div>
                 <div class="candidate-form__grid candidate-form__grid--two">
                   <div class="candidate-field">
-                    <label for="candidatePaymentCurrency">Account currency</label>
+                    <label for="candidatePaymentCurrency">Account currency *</label>
                     <select id="candidatePaymentCurrency" data-payment-input autocomplete="off">
                       <option value="GBP" selected>GBP</option>
                       <option value="EUR">EUR</option>
                     </select>
                   </div>
                   <div class="candidate-field">
-                    <label for="candidatePaymentMethod">Payment method</label>
+                    <label for="candidatePaymentMethod">Payment method *</label>
                     <select id="candidatePaymentMethod" data-payment-input autocomplete="off">
                       <option value="gbp_local" selected>Sort code / account number</option>
-                      <option value="iban_swift">IBAN / SWIFT</option>
+                      <option value="iban_swift">IBAN / SWIFT / BIC (SEPA / international)</option>
                     </select>
+                    <p class="small">Choose IBAN / SWIFT / BIC when HMJ should pay a SEPA or other international account.</p>
                   </div>
                   <div class="candidate-field">
                     <label for="candidatePaymentAccountHolder">Account holder name *</label>
@@ -817,7 +818,7 @@
                     <input id="candidatePaymentBankName" data-payment-input type="text" autocomplete="organization" placeholder="e.g. Barclays">
                   </div>
                   <div class="candidate-field">
-                    <label for="candidatePaymentBankLocation">Bank location / country</label>
+                    <label for="candidatePaymentBankLocation">Bank location / country *</label>
                     <input id="candidatePaymentBankLocation" data-payment-input type="text" autocomplete="country-name" placeholder="e.g. United Kingdom">
                   </div>
                   <div class="candidate-field">
@@ -1097,7 +1098,7 @@
   </script>
   <link rel="stylesheet" href="assets/css/candidates.enhanced.css?v=14">
   <script defer src="assets/js/candidates.enhanced.js?v=5"></script>
-  <script type="module" src="assets/js/candidates.portal.js?v=16"></script>
+  <script type="module" src="assets/js/candidates.portal.js?v=17"></script>
   <script defer src="/js/hmj-testimonials.js"></script>
   <script defer src="/js/hmj-cookie-consent.js"></script>
 

@@ -128,3 +128,60 @@ test('classifyCandidateSignupResult marks live session signups as auto-signed-in
     }
   );
 });
+
+test('validateCandidateRegistrationPayment enforces onboarding bank details for local and IBAN flows', async () => {
+  const {
+    normaliseCandidateRegistrationPaymentMethod,
+    validateCandidateRegistrationPayment,
+  } = await loadAuthUtils();
+
+  assert.equal(
+    normaliseCandidateRegistrationPaymentMethod({
+      accountCurrency: 'EUR',
+      paymentMethod: '',
+    }),
+    'iban_swift'
+  );
+
+  assert.deepEqual(
+    validateCandidateRegistrationPayment({
+      active: true,
+      accountCurrency: 'GBP',
+      paymentMethod: 'gbp_local',
+      accountHolderName: 'Jamie Bennett',
+      bankName: 'Barclays',
+      bankLocationOrCountry: '',
+      sortCode: '12-34-56',
+      accountNumber: '12345678',
+    }),
+    {
+      active: true,
+      valid: false,
+      tone: 'error',
+      text: 'Enter the bank location or country before you submit onboarding.',
+      paymentMethod: 'gbp_local',
+      focusKey: 'bankLocationOrCountry',
+    }
+  );
+
+  assert.deepEqual(
+    validateCandidateRegistrationPayment({
+      active: true,
+      accountCurrency: 'EUR',
+      paymentMethod: '',
+      accountHolderName: 'Jamie Bennett',
+      bankName: 'AIB',
+      bankLocationOrCountry: 'Ireland',
+      iban: 'IE29AIBK93115212345678',
+      swiftBic: 'AIBKIE2D',
+    }),
+    {
+      active: true,
+      valid: true,
+      tone: 'success',
+      text: 'Secure payment details are ready for encrypted HMJ payroll storage.',
+      paymentMethod: 'iban_swift',
+      focusKey: '',
+    }
+  );
+});
