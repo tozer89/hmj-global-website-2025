@@ -95,3 +95,33 @@ test('CLI import-previews, export-candidates, and role-index support daily opera
   assert.match(indexResult.stdout, /csv-role|Electrical Site Manager/);
   assert.ok(fs.existsSync(path.join(createdRoleDir, 'outputs', 'candidate-review-export.csv')));
 });
+
+test('CLI update-role-config and log-contact support review-console operations', () => {
+  const workspaceRoot = makeWorkspace();
+  const roleDir = path.join(workspaceRoot, 'roles', 'demo-electrical-site-manager');
+
+  const configResult = runCli(workspaceRoot, [
+    'update-role-config',
+    '--role-id', 'demo-electrical-site-manager',
+    '--shortlist-target-size', '6',
+    '--shortlist-mode', 'strict',
+    '--minimum-shortlist-score', '55',
+    '--minimum-draft-score', '70',
+  ]);
+  assert.equal(configResult.status, 0, configResult.stderr);
+
+  const contactResult = runCli(workspaceRoot, [
+    'log-contact',
+    '--role-id', 'demo-electrical-site-manager',
+    '--candidate-id', 'cvl-strong-001',
+    '--stage', 'contacted',
+    '--date', '2026-04-20',
+    '--note', 'Manual outreach sent',
+    '--message-summary', 'Shared role outline',
+  ]);
+  assert.equal(contactResult.status, 0, contactResult.stderr);
+
+  const summary = JSON.parse(fs.readFileSync(path.join(roleDir, 'outputs', 'dashboard-summary.json'), 'utf8'));
+  assert.equal(summary.shortlistProgress.target, 6);
+  assert.equal(summary.candidateDetails.find((entry) => entry.candidate_id === 'cvl-strong-001').lifecycle.current_stage, 'contacted');
+});

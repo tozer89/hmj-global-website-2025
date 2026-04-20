@@ -177,7 +177,7 @@ test('missing CV files become warnings instead of crashing the whole run', async
   assert.match(record.full_cv.error_message, /not found/i);
 });
 
-test('repeat imports dedupe cleanly and reruns remove stale records and drafts', async () => {
+test('repeat imports dedupe cleanly, merge into a cumulative pool, and reruns remove stale records and drafts', async () => {
   const workspaceRoot = makeWorkspace();
   const roleId = 'csv-role';
   const role = core.scaffoldRoleWorkspace({
@@ -205,7 +205,9 @@ test('repeat imports dedupe cleanly and reruns remove stale records and drafts',
   });
 
   assert.equal(firstImport.unchanged, false);
+  assert.equal(firstImport.mode, 'merge_upsert');
   assert.equal(secondImport.unchanged, true);
+  assert.equal(secondImport.totalCandidates, 2);
 
   await core.runRoleWorkspace({
     workflowRoot: workspaceRoot,

@@ -253,3 +253,50 @@ test('launcher surfaces the dashboard URL clearly when browser open fails', asyn
     await new Promise((resolve) => dashboardProcess.once('exit', resolve));
   }
 });
+
+test('dashboard API exposes role config updates and contact logging for operator review flows', async () => {
+  const workspaceRoot = makeWorkspace();
+  const started = await startDashboardServer({
+    workflowRoot: workspaceRoot,
+    host: '127.0.0.1',
+    port: 0,
+  });
+
+  try {
+    const configUpdate = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/config`,
+      body: JSON.stringify({
+        patch: {
+          shortlist_target_size: 6,
+          shortlist_mode: 'strict',
+        },
+      }),
+    });
+
+    const contactUpdate = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/candidates/cvl-strong-001/contact`,
+      body: JSON.stringify({
+        stage: 'contacted',
+        date: '2026-04-20',
+        note: 'Manual outreach sent.',
+        messageSummary: 'Shared role outline.',
+      }),
+    });
+
+    const roleSummary = await requestJson({
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager`,
+    });
+
+    assert.equal(configUpdate.statusCode, 200);
+    assert.equal(configUpdate.payload.result.roleConfig.shortlist_target_size, 6);
+    assert.equal(contactUpdate.statusCode, 200);
+    assert.equal(contactUpdate.payload.result.contactEvent.stage, 'contacted');
+    assert.equal(roleSummary.statusCode, 200);
+    assert.equal(roleSummary.payload.role.shortlistProgress.target, 6);
+    assert.equal(roleSummary.payload.role.candidateDetails.find((entry) => entry.candidate_id === 'cvl-strong-001').lifecycle.current_stage, 'contacted');
+  } finally {
+    await closeServer(started.server);
+  }
+});

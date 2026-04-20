@@ -194,6 +194,7 @@ test('CSV import and export support recruiter-friendly review flows', async () =
 
   assert.equal(exportResult.exportedCount, 2);
   assert.match(exportText, /lifecycle_stage/);
+  assert.match(exportText, /source_url/);
   assert.match(exportText, /cvl-strong-001/);
 });
 
@@ -213,4 +214,71 @@ test('role index gives an at-a-glance operational summary', async () => {
   assert.equal(index[0].shortlist_count, 2);
   assert.equal(index[0].outreach_drafts_prepared, 2);
   assert.equal(index[0].current_kpi, 2);
+});
+
+test('dashboard summary exposes ranked candidate detail, outreach draft visibility, and source audit fields', async () => {
+  const workspaceRoot = makeWorkspace();
+  await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    action: 'run_all',
+  });
+
+  const summary = core.summariseRoleFromDisk(workspaceRoot, 'demo-electrical-site-manager');
+  const candidate = summary.candidateDetails.find((entry) => entry.candidate_id === 'cvl-strong-001');
+
+  assert.equal(summary.shortlistProgress.target, 10);
+  assert.ok(candidate.ranking.position >= 1);
+  assert.equal(candidate.identity.email, 'andrei.popescu@example.com');
+  assert.equal(candidate.sourceAudit.source_reference_id, 'CVL-STRONG-001');
+  assert.match(candidate.sourceAudit.display, /CV-Library/i);
+  assert.match(candidate.outreach.subject, /Electrical Site Manager/i);
+  assert.ok(candidate.artifacts.candidateRecord.exists);
+  assert.ok(candidate.artifacts.outreachDraft.exists);
+});
+
+test('role config updates feed through to summary and shortlist thresholds', async () => {
+  const workspaceRoot = makeWorkspace();
+  const update = await core.updateRoleConfig({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    patch: {
+      shortlist_target_size: 6,
+      shortlist_mode: 'strict',
+      minimum_shortlist_score: 55,
+      minimum_draft_score: 70,
+    },
+  });
+
+  assert.equal(update.role.roleConfig.shortlist_target_size, 6);
+  assert.equal(update.role.shortlistProgress.target, 6);
+  assert.equal(update.role.roleConfig.shortlist_mode, 'strict');
+  assert.equal(update.role.runSummary.role_config.minimum_draft_score, 70);
+});
+
+test('contact logging updates candidate lifecycle and preserves audit events', async () => {
+  const workspaceRoot = makeWorkspace();
+  await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    action: 'run_all',
+  });
+
+  const result = await core.logCandidateContactState({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    candidateId: 'cvl-strong-001',
+    stage: 'contacted',
+    date: '2026-04-20',
+    note: 'Sent initial outreach manually.',
+    messageSummary: 'Shared role summary and asked for availability.',
+  });
+
+  const summary = core.summariseRoleFromDisk(workspaceRoot, 'demo-electrical-site-manager');
+  const candidate = summary.candidateDetails.find((entry) => entry.candidate_id === 'cvl-strong-001');
+
+  assert.equal(result.contactEvent.stage, 'contacted');
+  assert.equal(candidate.lifecycle.current_stage, 'contacted');
+  assert.equal(candidate.operatorReview.contact_log.length, 1);
+  assert.ok(candidate.auditTrail.some((entry) => entry.stage === 'contacted'));
 });
