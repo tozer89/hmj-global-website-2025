@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const JSZip = require('jszip');
 
 const {
   buildClientReadyDocx,
@@ -33,6 +34,16 @@ async function withPatchedEnv(patch, fn) {
       }
     });
   }
+}
+
+async function readDocxEntries(buffer) {
+  const zip = await JSZip.loadAsync(buffer);
+  const names = Object.keys(zip.files);
+  const textByName = {};
+  await Promise.all(names.map(async (name) => {
+    textByName[name] = await zip.files[name].async('string');
+  }));
+  return textByName;
 }
 
 test('sanitiseStructuredProfile redacts direct identifiers', () => {
@@ -143,6 +154,72 @@ test('buildFallbackProfile redacts the candidate name from generic PDF filenames
   assert.deepEqual(profile.relevantProjects, ['HV commissioning and site delivery']);
 });
 
+test('buildFallbackProfile resolves conflicting role evidence into one client-facing quantity surveying profile', () => {
+  const sourceText = [
+    'Position',
+    'Electrical Mate / Electrical Improver (Pharmaceutical Construction Project)',
+    'Candidate ID',
+    'HMJ-39556E44',
+    'Location',
+    'Scope & Role',
+    'Relevant Data Centre Projects / Experience',
+    'Senior Quantity Surveyor - CSA / MEP (Data Centres)Irish passport | Eligible to work freely across EU & UK | Open to relocation/travel across Europe.',
+    'Profile',
+    'Electrical Mate / Electrical Improver (Pharmaceutical Construction Project) with Senior Quantity Surveyor - CSA / MEP (Data Centres) experience.',
+    'Role Alignment',
+    'Content emphasis has been tuned and all statements remain grounded in the source material.',
+    'Key Skills',
+    'Pre-construction & cost planning (MEP & CSA), Procurement & tendering, package strategy, bid analysis, negotiation',
+    'Qualifications & Accreditations',
+    'BSc (Hons) Quantity Surveying & Construction Economics - Ireland (2000)',
+    'Employment History',
+    'Senior Quantity Surveyor - Data Centre Projects | Apr 2023 - Nov 2023',
+    'Commercial lead across Stockholm, Frankfurt and Amsterdam for global cloud providers.',
+    'Senior Quantity Surveyor - Data Centre Projects | 2021 - 2023',
+    'Led procurement, package management, change control, and final accounts for mission-critical projects.',
+  ].join('\n');
+
+  const profile = buildFallbackProfile({
+    candidateText: sourceText,
+    jobSpecText: '',
+    candidateFileName: 'Doc1.docx',
+  });
+
+  assert.equal(profile.targetRole, 'Senior Quantity Surveyor');
+  assert.doesNotMatch(profile.profile, /Electrical Mate/i);
+  assert.doesNotMatch(JSON.stringify(profile), /content emphasis has been tuned|all statements remain grounded/i);
+  assert.ok(profile.keySkills.some((item) => /procurement/i.test(item)));
+  assert.ok(profile.relevantProjects.every((item) => !/Electrical Mate|BSc \(Hons\)/i.test(item)));
+  assert.ok(profile.employmentHistory.every((entry) => !entry.title || /Quantity Surveyor/i.test(entry.title)));
+});
+
+test('buildFallbackProfile keeps the most recent five years of employment history when available', () => {
+  const sourceText = [
+    'Position',
+    'Commercial Manager',
+    'Employment History',
+    'Commercial Manager | 2025 - Present',
+    'Leads commercial strategy and reporting for hyperscale delivery programmes.',
+    'Senior Quantity Surveyor | 2023 - 2025',
+    'Managed procurement, package buyout, and change control on mission-critical projects.',
+    'Quantity Surveyor | 2021 - 2023',
+    'Supported cost planning and final accounts across electrical and CSA packages.',
+    'Assistant Quantity Surveyor | 2017 - 2021',
+    'Earlier-career commercial support across regional projects.',
+  ].join('\n');
+
+  const profile = buildFallbackProfile({
+    candidateText: sourceText,
+    jobSpecText: 'Commercial Manager required for data centre delivery.',
+    candidateFileName: 'Commercial Manager CV.docx',
+  });
+
+  assert.deepEqual(
+    profile.employmentHistory.map((entry) => entry.dates),
+    ['2025 - Present', '2023 - 2025', '2021 - 2023']
+  );
+});
+
 test('buildClientReadyDocx returns a docx buffer', async () => {
   const buffer = await buildClientReadyDocx({
     candidateReference: 'HMJ-TEST1234',
@@ -200,6 +277,68 @@ test('buildClientReadyDocx supports option-driven layouts', async () => {
 
   assert.ok(Buffer.isBuffer(buffer));
   assert.ok(buffer.length > 800);
+});
+
+test('buildClientReadyDocx includes branded footer contact details and a client-only document structure', async () => {
+  const buffer = await buildClientReadyDocx({
+    candidateReference: 'HMJ-TEST1234',
+    targetRole: 'Electrical Project Manager',
+    location: 'Birmingham',
+    interviewAvailability: 'Available with short notice',
+    languages: ['English'],
+    profile: 'Client-ready summary paragraph for a delivery-focused electrical project manager supporting mission-critical projects.',
+    roleAlignment: ['Aligned to data centre delivery requirements.'],
+    relevantProjects: ['Hyperscale data centre fit-out delivery'],
+    keySkills: ['Programme delivery', 'Stakeholder management', 'MEP coordination'],
+    qualifications: ['HNC Electrical Engineering'],
+    accreditations: ['SMSTS'],
+    employmentHistory: [],
+    additionalInformation: ['Open to travel'],
+    redactionsApplied: ['Direct contact details removed'],
+    warnings: ['This should not render in the client document.'],
+  }, {
+    coverPageMode: 'full',
+  });
+
+  const entries = await readDocxEntries(buffer);
+  const footerNames = Object.keys(entries).filter((name) => /^word\/footer\d+\.xml$/.test(name));
+  const footerRelNames = Object.keys(entries).filter((name) => /^word\/_rels\/footer\d+\.xml\.rels$/.test(name));
+  const footerXml = Object.entries(entries)
+    .filter(([name]) => /^word\/footer\d+\.xml$/.test(name))
+    .map(([, xml]) => xml)
+    .join('\n');
+  const footerRels = Object.entries(entries)
+    .filter(([name]) => /^word\/_rels\/footer\d+\.xml\.rels$/.test(name))
+    .map(([, xml]) => xml)
+    .join('\n');
+  const documentXml = entries['word/document.xml'] || '';
+  const stylesXml = entries['word/styles.xml'] || '';
+  const contentTypesXml = entries['[Content_Types].xml'] || '';
+  const mediaNames = Object.keys(entries).filter((name) => name.startsWith('word/media/') && !name.endsWith('/'));
+  const documentRelsXml = entries['word/_rels/document.xml.rels'] || '';
+  const footerRelationshipIds = Array.from(footerXml.matchAll(/r:id="([^"]+)"/g)).map((match) => match[1]);
+
+  assert.deepEqual(footerNames, ['word/footer1.xml']);
+  assert.deepEqual(footerRelNames, ['word/_rels/footer1.xml.rels']);
+  assert.match(footerXml, /info@hmj-global\.com/);
+  assert.match(footerXml, /0800 861 1230/);
+  assert.match(footerXml, /www\.HMJ-Global\.com/);
+  assert.match(footerRels, /mailto:info@hmj-global\.com/);
+  assert.match(footerRels, /https:\/\/www\.HMJ-Global\.com/);
+  footerRelationshipIds.forEach((id) => assert.match(footerRels, new RegExp(`Id="${id}"`)));
+  assert.match(documentXml, />Profile Summary</);
+  assert.match(documentXml, />Key Skills</);
+  assert.match(documentXml, />Project Experience</);
+  assert.match(documentXml, />Qualifications</);
+  assert.doesNotMatch(documentXml, /<w:tblGrid>/);
+  assert.doesNotMatch(documentXml, /w:type="page"/);
+  assert.doesNotMatch(documentRelsXml, /footer2\.xml/);
+  assert.equal((stylesXml.match(/<w:docDefaults>/g) || []).length, 1);
+  assert.ok(mediaNames.every((name) => /\.png$/i.test(name)));
+  assert.doesNotMatch(contentTypesXml, /\.undefined/);
+  assert.doesNotMatch(documentXml, /Formatting Notes/);
+  assert.doesNotMatch(documentXml, />Warnings</);
+  assert.doesNotMatch(documentXml, />Role Alignment</);
 });
 
 test('buildOutputFileName supports the configured naming modes', () => {

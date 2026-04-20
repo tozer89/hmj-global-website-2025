@@ -1,0 +1,45 @@
+{
+  "candidateReference": "HMJ-AD0A1027",
+  "targetRole": "Senior Quantity Surveyor",
+  "location": "",
+  "interviewAvailability": "",
+  "languages": [],
+  "profile": "The candidate is an experienced Senior Quantity Surveyor with 2+ years of relevant experience. Experience spans data centre, pharma, and commercial environments. Recent project exposure includes Pre-construction & cost planning (MEP & CSA), Procurement & tendering, Package strategy, Bid analysis, Negotiation. Qualifications include BSc (Hons) Quantity Surveying & Construction Economics.",
+  "roleAlignment": [],
+  "relevantProjects": [
+    "Pre-construction & cost planning (MEP & CSA), Procurement & tendering, Package strategy, Bid analysis, Negotiation"
+  ],
+  "keySkills": [
+    "Pre-construction & cost planning (MEP & CSA), Procurement & tendering, Package strategy, Bid analysis, Negotiation"
+  ],
+  "qualifications": [
+    "BSc (Hons) Quantity Surveying & Construction Economics"
+  ],
+  "accreditations": [],
+  "employmentHistory": [
+    {
+      "dates": "Apr 2023 - Nov 2023",
+      "title": "Senior Quantity Surveyor",
+      "company": "",
+      "summary": "Commercial lead across Stockholm, Frankfurt and Amsterdam for global cloud providers.",
+      "bullets": []
+    },
+    {
+      "dates": "2021 - 2023",
+      "title": "Senior Quantity Surveyor",
+      "company": "",
+      "summary": "Led procurement, package management, change control, and final accounts for mission-critical projects.",
+      "bullets": []
+    }
+  ],
+  "additionalInformation": [],
+  "redactionsApplied": [
+    "Full name replaced with HMJ candidate reference.",
+    "Direct contact details removed.",
+    "DOB and precise postcode removed where detected."
+  ],
+  "warnings": [
+    "Fallback formatting was used, so section ordering and wording were derived from extracted text rather than structured AI output.",
+    "No job spec was uploaded, so the output was tuned from the CV alone."
+  ]
+}

@@ -45,11 +45,12 @@
           <p class="cvf-eyebrow">CV Formatting</p>
           <h1>Format, anonymise, tailor, and archive CVs into a client-ready HMJ Word document.</h1>
         </div>
-        <p class="cvf-muted">Upload a candidate CV, optionally attach the role brief, and generate a structured output that strips personal identifiers, sharpens the presentation, and downloads as a finished `.docx`. The module now also keeps a recruiter-accessible history of submitted files and generated outputs so you can re-download them later without rerunning the workflow.</p>
+        <p class="cvf-muted">Upload a candidate CV, optionally attach the role brief, and generate a structured output that strips personal identifiers, sharpens the presentation, prioritises the most recent five years of usable history, and downloads as a finished `.docx`. The module also keeps a recruiter-accessible history of submitted files and generated outputs so you can re-download them later without rerunning the workflow.</p>
         <div class="cvf-chip-row">
           <span class="cvf-chip">PDF / DOC / DOCX intake</span>
           <span class="cvf-chip">Optional job-spec upload</span>
           <span class="cvf-chip">AI with safe fallback</span>
+          <span class="cvf-chip">Branded HMJ shell</span>
           <span class="cvf-chip">Run history &amp; re-downloads</span>
         </div>
       </div>
@@ -189,26 +190,10 @@
 
           <div class="cvf-options-grid">
             <label class="cvf-toggle">
-              <input id="includeRoleAlignmentToggle" type="checkbox" checked>
+              <input type="checkbox" checked disabled>
               <div>
-                <strong>Include role alignment section</strong>
-                <span>Add a job-fit section when a role brief is available or the structuring logic can support one.</span>
-              </div>
-            </label>
-
-            <label class="cvf-toggle">
-              <input id="includeFormattingNotesToggle" type="checkbox" checked>
-              <div>
-                <strong>Include formatting notes</strong>
-                <span>Keep a short recruiter-facing note on the anonymisation and cleanup applied.</span>
-              </div>
-            </label>
-
-            <label class="cvf-toggle">
-              <input id="includeWarningsToggle" type="checkbox" checked>
-              <div>
-                <strong>Include warnings</strong>
-                <span>Show extraction or confidence caveats at the end of the generated document.</span>
+                <strong>Client-only wording</strong>
+                <span>Internal formatting notes and system commentary are excluded, and the output is shaped for direct client submission.</span>
               </div>
             </label>
 

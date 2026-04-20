@@ -8,13 +8,12 @@
     templatePreset: 'recruiter_standard',
     anonymiseMode: 'balanced',
     tailoringMode: 'balanced',
-    coverPageMode: 'full',
+    coverPageMode: 'condensed',
     outputNameMode: 'role_reference',
     targetRoleOverride: '',
     recruiterInstructions: '',
-    includeRoleAlignment: true,
-    includeFormattingNotes: true,
-    includeWarnings: true,
+    includeFormattingNotes: false,
+    includeWarnings: false,
     includeAdditionalInformation: true,
     preferAiAssist: true,
     saveRunHistory: true,
@@ -160,7 +159,6 @@
       outputNameMode: String(merged.outputNameMode || RECOMMENDED_OPTIONS.outputNameMode),
       targetRoleOverride: String(merged.targetRoleOverride || '').slice(0, 140),
       recruiterInstructions: String(merged.recruiterInstructions || '').slice(0, 400),
-      includeRoleAlignment: merged.includeRoleAlignment !== false,
       includeFormattingNotes: merged.includeFormattingNotes !== false,
       includeWarnings: merged.includeWarnings !== false,
       includeAdditionalInformation: merged.includeAdditionalInformation !== false,
@@ -337,7 +335,6 @@
         outputNameModeSelect: sel('#outputNameModeSelect'),
         targetRoleOverrideInput: sel('#targetRoleOverrideInput'),
         recruiterInstructionsInput: sel('#recruiterInstructionsInput'),
-        includeRoleAlignmentToggle: sel('#includeRoleAlignmentToggle'),
         includeFormattingNotesToggle: sel('#includeFormattingNotesToggle'),
         includeWarningsToggle: sel('#includeWarningsToggle'),
         includeAdditionalInformationToggle: sel('#includeAdditionalInformationToggle'),
@@ -378,7 +375,6 @@
         els.outputNameModeSelect,
         els.targetRoleOverrideInput,
         els.recruiterInstructionsInput,
-        els.includeRoleAlignmentToggle,
         els.includeFormattingNotesToggle,
         els.includeWarningsToggle,
         els.includeAdditionalInformationToggle,
@@ -426,7 +422,6 @@
           outputNameMode: els.outputNameModeSelect && els.outputNameModeSelect.value,
           targetRoleOverride: els.targetRoleOverrideInput && els.targetRoleOverrideInput.value,
           recruiterInstructions: els.recruiterInstructionsInput && els.recruiterInstructionsInput.value,
-          includeRoleAlignment: !!(els.includeRoleAlignmentToggle && els.includeRoleAlignmentToggle.checked),
           includeFormattingNotes: !!(els.includeFormattingNotesToggle && els.includeFormattingNotesToggle.checked),
           includeWarnings: !!(els.includeWarningsToggle && els.includeWarningsToggle.checked),
           includeAdditionalInformation: !!(els.includeAdditionalInformationToggle && els.includeAdditionalInformationToggle.checked),
@@ -444,7 +439,6 @@
         if (els.outputNameModeSelect) els.outputNameModeSelect.value = options.outputNameMode;
         if (els.targetRoleOverrideInput) els.targetRoleOverrideInput.value = options.targetRoleOverride;
         if (els.recruiterInstructionsInput) els.recruiterInstructionsInput.value = options.recruiterInstructions;
-        if (els.includeRoleAlignmentToggle) els.includeRoleAlignmentToggle.checked = !!options.includeRoleAlignment;
         if (els.includeFormattingNotesToggle) els.includeFormattingNotesToggle.checked = !!options.includeFormattingNotes;
         if (els.includeWarningsToggle) els.includeWarningsToggle.checked = !!options.includeWarnings;
         if (els.includeAdditionalInformationToggle) els.includeAdditionalInformationToggle.checked = !!options.includeAdditionalInformation;
@@ -462,8 +456,8 @@
           chipLabel('coverPageMode', options.coverPageMode),
           chipLabel('outputNameMode', options.outputNameMode),
           options.preferAiAssist ? 'AI assist enabled' : 'Fallback only',
-          options.includeRoleAlignment ? 'Role alignment on' : 'Role alignment off',
-          options.includeWarnings ? 'Warnings on' : 'Warnings off',
+          'Client-only output',
+          'Recent five-year history prioritised',
           options.saveRunHistory ? 'Run history on' : 'Run history off',
           options.targetRoleOverride ? `Role override: ${options.targetRoleOverride}` : '',
           options.recruiterInstructions ? 'Recruiter notes included' : '',
@@ -914,7 +908,6 @@
         els.tailoringModeSelect,
         els.coverPageModeSelect,
         els.outputNameModeSelect,
-        els.includeRoleAlignmentToggle,
         els.includeFormattingNotesToggle,
         els.includeWarningsToggle,
         els.includeAdditionalInformationToggle,
