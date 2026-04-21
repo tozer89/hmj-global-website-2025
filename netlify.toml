@@ -180,6 +180,13 @@
   node_bundler = "esbuild"
   included_files = ["data/*.json", "netlify/functions/_data/*.json"]
 
+[functions."admin-cv-formatting"]
+  included_files = [
+    "assets/templates/cv-formatting/media/*",
+    "data/*.json",
+    "netlify/functions/_data/*.json",
+  ]
+
 # QuickBooks OAuth callback bridge:
 # - Public callback path: /api/connectors/quickbooks/callback
 # - Required Netlify env var: HMJ_ASSISTANT_QBO_CALLBACK_TARGET
