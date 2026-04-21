@@ -416,10 +416,16 @@ test('bulk CV import records unreadable or unsupported files without creating ba
     roleId,
     files: [
       {
-        name: 'legacy-profile.doc',
-        contentType: 'application/msword',
-        size: 6,
-        data: Buffer.from('legacy', 'utf8').toString('base64'),
+        name: 'broken-export.pdf',
+        contentType: 'application/pdf',
+        size: Buffer.byteLength('%PDF-1.4\nthis is not a valid pdf body', 'utf8'),
+        data: Buffer.from('%PDF-1.4\nthis is not a valid pdf body', 'utf8').toString('base64'),
+      },
+      {
+        name: 'notes.xls',
+        contentType: 'application/vnd.ms-excel',
+        size: 12,
+        data: Buffer.from('spreadsheet?', 'utf8').toString('base64'),
       },
     ],
   });
@@ -428,9 +434,10 @@ test('bulk CV import records unreadable or unsupported files without creating ba
   const bulkHistory = JSON.parse(fs.readFileSync(path.join(created.roleDir, 'outputs', core.DEFAULT_BULK_CV_IMPORT_HISTORY_FILE), 'utf8'));
 
   assert.equal(uploadResult.successfulCount, 0);
-  assert.equal(uploadResult.failedCount, 1);
+  assert.equal(uploadResult.failedCount, 2);
   assert.equal(uploadResult.importResult, null);
   assert.equal(candidates.length, 0);
-  assert.equal(bulkHistory[0].failed, 1);
-  assert.match(bulkHistory[0].files[0].error, /legacy DOC|automatic text extraction is not configured/i);
+  assert.equal(bulkHistory[0].failed, 2);
+  assert.match(bulkHistory[0].files[0].failure_code, /pdf_parse_failed|bulk_cv_no_usable_text|pdf_ocr_failed/i);
+  assert.match(bulkHistory[0].files[1].error, /PDF, DOCX, and legacy DOC/i);
 });

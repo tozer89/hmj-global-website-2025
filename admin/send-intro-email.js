@@ -1,65 +1,18 @@
 (function bootOnboardingWorkspace() {
-  if (!window.Admin || typeof window.Admin.bootAdmin !== 'function') {
+  if (!window.Admin || typeof window.Admin.bootAdmin !== 'function' || !window.HMJOnboardingEmailCopy) {
     return setTimeout(bootOnboardingWorkspace, 40);
   }
 
-  const DEFAULT_CONFIRMATION_SUBJECT = 'Welcome to HMJ Global - your onboarding details for <COMPANY_NAME>';
-  const DEFAULT_CONFIRMATION_HEADING = 'Welcome to HMJ Global';
-  const DEFAULT_CONFIRMATION_BODY = [
-    'Hi <FIRST_NAME>,',
-    '',
-    'Welcome to HMJ Global, and congratulations on securing your role with <PLACEMENT_CONTEXT>.',
-    '',
-    "We're pleased to have you on board. Before you start, please take a few moments to review the below and confirm everything is in order.",
-    '',
-    '1. Timesheet Portal - Login Check (Important)',
-    'You should have received an email to set up your Timesheet Portal login.',
-    '',
-    'Please log in and ensure you have access.',
-    'Check your details are correct.',
-    'If you have not received this email, please let us know as soon as possible and we will resend it.',
-    '',
-    '2. Timesheet & Payment Process',
-    '',
-    'Your timesheet is completed online each week.',
-    '',
-    'Your e-timesheet is released in the early hours of Monday and relates to the working week ahead.',
-    'Enter your hours directly into the system during the week - there is no need to send anything back.',
-    'Please ensure your timesheet is fully completed by the end of the working week.',
-    '',
-    'Payments are typically processed on the following Wednesday, subject to timesheet approval and submission within the required timeframe.',
-    '',
-    '3. Contact & Support',
-    '',
-    'If you need any help at any stage, you can contact us:',
-    '',
-    "Joe Tozer-O'Sullivan - joe@hmj-global.com",
-    'General support - info@hmj-global.com',
-    '',
-    'We aim to respond quickly and resolve any issues without delay.',
-    '',
-    '4. Contract & Onboarding',
-    '',
-    'Your contract will be issued separately via email.',
-    'Please review, sign, and return promptly to avoid any delays in onboarding and payment setup.',
-    '',
-    'If you have any questions at all, just reach out.',
-    '',
-    'Welcome onboard - we look forward to working with you.',
-    '',
-    'Best regards,',
-    '',
-    "Joe Tozer-O'Sullivan",
-    'Director | HMJ Global',
-    '07842 550187',
-    'HMJ-Global.com - Media City, Manchester',
-    '',
-    'HMJ Global is a limited company registered in the United Kingdom',
-    'Registered number: 16029938',
-    'Registered office: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
-    '',
-    'This message contains confidential information and is intended only for the intended recipients. If you are not an intended recipient you should not disseminate, distribute, or copy this e-mail. Please notify info@hmj-global.com immediately if received in error and delete it from your system.',
-  ].join('\n');
+  const {
+    DEFAULT_CONFIRMATION_LANGUAGE,
+    buildConfirmationContext: buildSharedConfirmationContext,
+    buildConfirmationDefaults,
+    buildPlacementContext,
+    languageLabel,
+    normaliseConfirmationLanguage,
+    renderConfirmationBodyHtml,
+    renderMergeTokens,
+  } = window.HMJOnboardingEmailCopy;
 
   function trimString(value) {
     return String(value == null ? '' : value).trim();
@@ -88,62 +41,6 @@
 
   function candidateTimesheetsDashboardUrl() {
     return 'https://hmjglobal.timesheetportal.com/Dashboard/';
-  }
-
-  function buildPlacementContext(company, projectLocation) {
-    const clientName = trimString(company) || 'your new client';
-    const location = trimString(projectLocation);
-    return location ? `${clientName} on ${location}` : clientName;
-  }
-
-  function onboardingTokenValue(rawToken, context = {}) {
-    const normalized = String(rawToken || '')
-      .trim()
-      .replace(/[^A-Za-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .toUpperCase();
-
-    const key = {
-      FIRST_NAME: 'first_name',
-      LAST_NAME: 'last_name',
-      FULL_NAME: 'full_name',
-      COMPANY: 'company_name',
-      COMPANY_NAME: 'company_name',
-      CLIENT: 'company_name',
-      CLIENT_NAME: 'company_name',
-      PROJECT: 'project_location',
-      PROJECT_LOCATION: 'project_location',
-      LOCATION: 'project_location',
-      PLACEMENT_CONTEXT: 'placement_context',
-      SUPPORT_EMAIL: 'support_email',
-    }[normalized];
-
-    if (!key) return null;
-    return String(context[key] || '').trim();
-  }
-
-  function renderMergeTokens(text, context = {}) {
-    const source = String(text == null ? '' : text);
-    const replacer = (match, token) => {
-      const value = onboardingTokenValue(token, context);
-      return value == null ? match : value;
-    };
-    return source
-      .replace(/<\s*([A-Za-z0-9 _-]+?)\s*>/g, replacer)
-      .replace(/\{\{\s*([A-Za-z0-9 _-]+?)\s*\}\}/g, replacer);
-  }
-
-  function splitParagraphs(text) {
-    return String(text || '')
-      .split(/\n{2,}/)
-      .map((paragraph) => paragraph.trim())
-      .filter(Boolean);
-  }
-
-  function paragraphsToHtml(paragraphs = []) {
-    return (Array.isArray(paragraphs) ? paragraphs : [])
-      .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
-      .join('');
   }
 
   function deliverySourceLabel(diagnostics = {}) {
@@ -204,6 +101,7 @@
       projectLocation: sel('#introProjectLocation'),
       phone: sel('#introPhone'),
       jobTitle: sel('#introJobTitle'),
+      confirmationLanguage: sel('#confirmationLanguage'),
       confirmationSubject: sel('#confirmationSubject'),
       confirmationHeading: sel('#confirmationHeading'),
       confirmationBody: sel('#confirmationBody'),
@@ -219,12 +117,12 @@
       activeTemplateField: null,
     };
 
-    function confirmationDefaults() {
-      return {
-        subject: DEFAULT_CONFIRMATION_SUBJECT,
-        heading: DEFAULT_CONFIRMATION_HEADING,
-        body: DEFAULT_CONFIRMATION_BODY,
-      };
+    function selectedConfirmationLanguage() {
+      return normaliseConfirmationLanguage(fieldValue(els.confirmationLanguage) || DEFAULT_CONFIRMATION_LANGUAGE);
+    }
+
+    function confirmationDefaults(language = selectedConfirmationLanguage()) {
+      return buildConfirmationDefaults(language);
     }
 
     function setStatus(tone, text) {
@@ -254,25 +152,19 @@
     }
 
     function buildConfirmationContext() {
-      const firstName = fieldValue(els.firstName) || 'there';
-      const lastName = fieldValue(els.lastName);
-      const fullName = trimString([firstName, lastName].filter(Boolean).join(' ')) || firstName;
-      const companyName = fieldValue(els.clientCompany) || 'your new client';
-      const projectLocation = fieldValue(els.projectLocation);
-      const supportEmail = trimString(state.emailSettings?.supportEmail || state.emailSettings?.senderEmail || 'info@hmj-global.com') || 'info@hmj-global.com';
-      return {
-        first_name: firstName,
-        last_name: lastName,
-        full_name: fullName,
-        company_name: companyName,
-        project_location: projectLocation,
-        placement_context: buildPlacementContext(companyName, projectLocation),
-        support_email: supportEmail,
-      };
+      return buildSharedConfirmationContext({
+        first_name: fieldValue(els.firstName),
+        last_name: fieldValue(els.lastName),
+        company: fieldValue(els.clientCompany),
+        project_location: fieldValue(els.projectLocation),
+        support_email: trimString(state.emailSettings?.supportEmail || state.emailSettings?.senderEmail || 'info@hmj-global.com') || 'info@hmj-global.com',
+        language: selectedConfirmationLanguage(),
+      });
     }
 
-    function applyConfirmationDefaults(force = false) {
-      const defaults = confirmationDefaults();
+    function applyConfirmationDefaults(force = false, language = selectedConfirmationLanguage()) {
+      const defaults = confirmationDefaults(language);
+      if (els.confirmationLanguage) els.confirmationLanguage.value = defaults.language;
       if (els.confirmationSubject && (force || !fieldValue(els.confirmationSubject))) els.confirmationSubject.value = defaults.subject;
       if (els.confirmationHeading && (force || !fieldValue(els.confirmationHeading))) els.confirmationHeading.value = defaults.heading;
       if (els.confirmationBody && (force || !fieldValue(els.confirmationBody))) els.confirmationBody.value = defaults.body;
@@ -315,21 +207,23 @@
       const sender = formatSender(state.emailSettings || {});
       const siteUrl = trimString(state.emailSettings?.siteUrl);
       const context = buildConfirmationContext();
+      const confirmationLanguage = selectedConfirmationLanguage();
+      const confirmationTemplate = confirmationDefaults(confirmationLanguage);
 
       let stageLabel = 'Stage 1 · Intro email';
       let subject = jobTitle
         ? 'Welcome to HMJ Global - next steps for your new assignment'
         : 'Welcome to HMJ Global - complete your registration';
       let heading = 'Welcome to HMJ Global';
-      let bodyHtml = paragraphsToHtml([
-        `Hi ${firstName},`,
-        `Congratulations on starting your new role${jobTitle ? ` as ${jobTitle}` : ''} with ${company || 'your new client'}.`,
-        'Use the HMJ access button below to open the new starter registration page already pointed at the correct onboarding route.',
-        'HMJ needs your profile, right-to-work, onboarding, and payment details where relevant so we can move your setup forward properly.',
-        'The registration path opens the HMJ candidate page with the new starter route selected for you, so you land in the correct onboarding form rather than the general sign-in area.',
-        'We will also use this information to help get you set up on the HMJ Timesheet Portal dashboard so you can submit hours once your setup is underway.',
-        'Use the HMJ buttons below rather than saving direct system links. They will take you to the correct HMJ access path.',
-      ]);
+      let bodyHtml = [
+        `<p>Hi ${escapeHtml(firstName)},</p>`,
+        `<p>Congratulations on starting your new role${jobTitle ? ` as ${escapeHtml(jobTitle)}` : ''} with ${escapeHtml(company || 'your new client')}.</p>`,
+        '<p>Use the HMJ access button below to open the new starter registration page already pointed at the correct onboarding route.</p>',
+        '<p>HMJ needs your profile, right-to-work, onboarding, and payment details where relevant so we can move your setup forward properly.</p>',
+        '<p>The registration path opens the HMJ candidate page with the new starter route selected for you, so you land in the correct onboarding form rather than the general sign-in area.</p>',
+        '<p>We will also use this information to help get you set up on the HMJ Timesheet Portal dashboard so you can submit hours once your setup is underway.</p>',
+        '<p>Use the HMJ buttons below rather than saving direct system links. They will take you to the correct HMJ access path.</p>',
+      ].join('');
       let actionsHtml = [
         '<span class="preview-btn">Open HMJ onboarding access</span>',
         '<span class="preview-btn secondary">Open HMJ timesheets / portal access</span>',
@@ -341,16 +235,19 @@
       ].join('');
 
       if (state.previewMode === 'confirmation') {
-        stageLabel = 'Stage 2 · Onboarding confirmation';
-        subject = trimString(renderMergeTokens(fieldValue(els.confirmationSubject) || DEFAULT_CONFIRMATION_SUBJECT, context)) || 'Welcome to HMJ Global';
-        heading = trimString(renderMergeTokens(fieldValue(els.confirmationHeading) || DEFAULT_CONFIRMATION_HEADING, context)) || 'Welcome to HMJ Global';
-        bodyHtml = paragraphsToHtml(
-          splitParagraphs(renderMergeTokens(fieldValue(els.confirmationBody) || DEFAULT_CONFIRMATION_BODY, context))
-        );
-        actionsHtml = '<span class="preview-btn">Open HMJ timesheets / portal access</span>';
+        stageLabel = `Stage 2 · Onboarding confirmation · ${languageLabel(confirmationLanguage)}`;
+        subject = trimString(renderMergeTokens(fieldValue(els.confirmationSubject) || confirmationTemplate.subject, context)) || confirmationTemplate.heading;
+        heading = trimString(renderMergeTokens(fieldValue(els.confirmationHeading) || confirmationTemplate.heading, context)) || confirmationTemplate.heading;
+        bodyHtml = [
+          `<p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.75;">${escapeHtml(renderMergeTokens(confirmationTemplate.intro, context))}</p>`,
+          `<p style="margin:0 0 18px;color:#5f74a8;font-size:14px;line-height:1.7;font-weight:700;">${escapeHtml(renderMergeTokens(confirmationTemplate.contextNote, context))}</p>`,
+          renderConfirmationBodyHtml(fieldValue(els.confirmationBody) || confirmationTemplate.body, context),
+        ].join('');
+        actionsHtml = `<span class="preview-btn">${escapeHtml(confirmationTemplate.actionLabel)}</span>`;
         footerHtml = [
           `<div><strong>Sender</strong><div>${escapeHtml(sender)}</div></div>`,
-          `<div><strong>Placement</strong><div>${escapeHtml(buildPlacementContext(company, projectLocation))}</div></div>`,
+          `<div><strong>Placement</strong><div>${escapeHtml(buildPlacementContext(company, projectLocation, confirmationLanguage))}</div></div>`,
+          `<div><strong>Language</strong><div>${escapeHtml(languageLabel(confirmationLanguage))}</div></div>`,
           `<div><strong>Timesheets path</strong><div>${escapeHtml(candidateTimesheetsDashboardUrl())}</div></div>`,
         ].join('');
       }
@@ -410,12 +307,14 @@
     }
 
     function buildConfirmationPayload() {
+      const defaults = confirmationDefaults();
       return {
         ...buildSharedPayload(),
         email_type: 'confirmation',
-        subject: fieldValue(els.confirmationSubject) || DEFAULT_CONFIRMATION_SUBJECT,
-        heading: fieldValue(els.confirmationHeading) || DEFAULT_CONFIRMATION_HEADING,
-        body: fieldValue(els.confirmationBody) || DEFAULT_CONFIRMATION_BODY,
+        language: selectedConfirmationLanguage(),
+        subject: fieldValue(els.confirmationSubject) || defaults.subject,
+        heading: fieldValue(els.confirmationHeading) || defaults.heading,
+        body: fieldValue(els.confirmationBody) || defaults.body,
       };
     }
 
@@ -554,6 +453,11 @@
     els.clear?.addEventListener('click', handleClear);
     els.confirmationReset?.addEventListener('click', () => {
       applyConfirmationDefaults(true);
+      setPreviewMode('confirmation');
+      renderPreview();
+    });
+    els.confirmationLanguage?.addEventListener('change', () => {
+      applyConfirmationDefaults(true, selectedConfirmationLanguage());
       setPreviewMode('confirmation');
       renderPreview();
     });

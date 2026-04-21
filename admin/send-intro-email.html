@@ -11,6 +11,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="../js/identity-loader.js?v=3"></script>
   <script defer src="/admin/common.js?v=36"></script>
+  <script defer src="/assets/js/onboarding-email-copy.js?v=1"></script>
 
   <style>
     :root{
@@ -45,9 +46,9 @@
     .field{display:grid;gap:6px}
     .field--full{grid-column:1 / -1}
     .field label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-    .field input,.field textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(47,78,162,.22);background:#fff;color:var(--ink);font:inherit}
+    .field input,.field textarea,.field select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(47,78,162,.22);background:#fff;color:var(--ink);font:inherit}
     .field textarea{min-height:360px;resize:vertical}
-    .field input:focus,.field textarea:focus{outline:none;border-color:rgba(47,78,162,.5);box-shadow:0 0 0 3px rgba(47,78,162,.14)}
+    .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:rgba(47,78,162,.5);box-shadow:0 0 0 3px rgba(47,78,162,.14)}
     .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .stage-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
     .stage-card{display:grid;gap:16px}
@@ -186,6 +187,16 @@
               </div>
 
               <div class="form-grid">
+                <div class="field">
+                  <label for="confirmationLanguage">Confirmation email language</label>
+                  <select id="confirmationLanguage">
+                    <option value="en">English</option>
+                    <option value="ro">Romanian</option>
+                    <option value="lt">Lithuanian</option>
+                    <option value="de">German</option>
+                    <option value="es">Spanish</option>
+                  </select>
+                </div>
                 <div class="field field--full">
                   <label for="confirmationSubject">Email subject</label>
                   <input id="confirmationSubject" maxlength="160" autocomplete="off">
@@ -210,7 +221,7 @@
                 <button class="token" type="button" data-template-token="<SUPPORT_EMAIL>">Support email</button>
               </div>
 
-              <p class="summary-note">Use <strong>&lt;PLACEMENT_CONTEXT&gt;</strong> when you want the company and optional project/location line to stay natural even if the project field is blank.</p>
+              <p class="summary-note">Use <strong>&lt;PLACEMENT_CONTEXT&gt;</strong> when you want the company and optional project/location line to stay natural even if the project field is blank. Changing language refreshes the default subject, heading, and message into that language.</p>
 
               <div class="actions">
                 <button class="btn primary" id="sendConfirmationSubmit" type="button">Send stage 2 confirmation</button>
@@ -269,6 +280,6 @@
     </div>
   </div>
 
-  <script src="/admin/send-intro-email.js?v=4"></script>
+  <script src="/admin/send-intro-email.js?v=5"></script>
 </body>
 </html>

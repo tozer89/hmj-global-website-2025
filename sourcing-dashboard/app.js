@@ -345,7 +345,7 @@ function renderImportPanel(role) {
     const latestBulk = role?.roleHistory?.latestBulkCvImport || null;
     bulkCvSummary.textContent = latestBulk
       ? `Latest bulk CV batch: ${latestBulk.files_received || 0} file(s) · ${latestBulk.parsed_successfully || 0} parsed · ${latestBulk.failed || 0} failed · OCR ${latestBulk.ocr_enabled ? 'enabled' : 'disabled'}`
-      : 'Choose up to 20 PDF or DOCX CVs for the selected role. Legacy DOC remains manual for now.';
+      : 'Choose up to 20 PDF, DOCX, or legacy DOC CVs for the selected role.';
   }
 }
 
@@ -929,7 +929,7 @@ function render() {
     warningBanner.classList.add('hidden');
     renderImportPanel(null);
     if (bulkCvSummary) {
-      bulkCvSummary.textContent = 'Choose up to 20 PDF or DOCX CVs for the selected role. Legacy DOC remains manual for now.';
+      bulkCvSummary.textContent = 'Choose up to 20 PDF, DOCX, or legacy DOC CVs for the selected role.';
     }
     return;
   }
@@ -1064,16 +1064,16 @@ async function uploadBulkCvBatch() {
   }
   const files = Array.from(bulkCvFileInput?.files || []);
   if (!files.length) {
-    setStatus('Choose one or more PDF or DOCX CVs before uploading.', 'error');
+    setStatus('Choose one or more PDF, DOCX, or legacy DOC CVs before uploading.', 'error');
     return;
   }
   if (files.length > 20) {
     setStatus('Upload up to 20 CV files at a time.', 'error');
     return;
   }
-  const allowed = files.every((file) => /\.(pdf|docx|doc|txt)$/i.test(file.name || ''));
+  const allowed = files.every((file) => /\.(pdf|docx|doc)$/i.test(file.name || ''));
   if (!allowed) {
-    setStatus('Bulk CV upload currently supports PDF and DOCX reliably. TXT is allowed for manual recovery; legacy DOC remains limited.', 'error');
+    setStatus('Bulk CV upload currently supports PDF, DOCX, and legacy DOC files.', 'error');
     return;
   }
 

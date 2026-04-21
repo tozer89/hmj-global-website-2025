@@ -13,6 +13,15 @@ const { recordAudit } = require('./_audit.js');
 const { _buildRedirectUrl: buildRedirectUrl } = require('./candidate-auth-config.js');
 const { buildCandidatePortalDeepLink } = require('./_candidate-onboarding.js');
 const { loadCandidateRecord, generateCandidateAccessLink } = require('./_candidate-account-admin.js');
+const {
+  DEFAULT_CONFIRMATION_LANGUAGE,
+  buildConfirmationContext,
+  buildConfirmationDefaults,
+  buildPlacementContext,
+  normaliseConfirmationLanguage,
+  renderConfirmationBodyHtml,
+  renderMergeTokens,
+} = require('../../assets/js/onboarding-email-copy.js');
 
 function parseBody(event) {
   try {
@@ -32,63 +41,9 @@ function response(statusCode, body) {
 
 const INTRO_EMAIL_TYPE = 'intro';
 const CONFIRMATION_EMAIL_TYPE = 'confirmation';
-const DEFAULT_CONFIRMATION_SUBJECT = 'Welcome to HMJ Global - your onboarding details for <COMPANY_NAME>';
-const DEFAULT_CONFIRMATION_HEADING = 'Welcome to HMJ Global';
-const DEFAULT_CONFIRMATION_BODY = [
-  'Hi <FIRST_NAME>,',
-  '',
-  'Welcome to HMJ Global, and congratulations on securing your role with <PLACEMENT_CONTEXT>.',
-  '',
-  "We're pleased to have you on board. Before you start, please take a few moments to review the below and confirm everything is in order.",
-  '',
-  '1. Timesheet Portal - Login Check (Important)',
-  'You should have received an email to set up your Timesheet Portal login.',
-  '',
-  'Please log in and ensure you have access.',
-  'Check your details are correct.',
-  'If you have not received this email, please let us know as soon as possible and we will resend it.',
-  '',
-  '2. Timesheet & Payment Process',
-  '',
-  'Your timesheet is completed online each week.',
-  '',
-  'Your e-timesheet is released in the early hours of Monday and relates to the working week ahead.',
-  'Enter your hours directly into the system during the week - there is no need to send anything back.',
-  'Please ensure your timesheet is fully completed by the end of the working week.',
-  '',
-  'Payments are typically processed on the following Wednesday, subject to timesheet approval and submission within the required timeframe.',
-  '',
-  '3. Contact & Support',
-  '',
-  'If you need any help at any stage, you can contact us:',
-  '',
-  "Joe Tozer-O'Sullivan - joe@hmj-global.com",
-  'General support - info@hmj-global.com',
-  '',
-  'We aim to respond quickly and resolve any issues without delay.',
-  '',
-  '4. Contract & Onboarding',
-  '',
-  'Your contract will be issued separately via email.',
-  'Please review, sign, and return promptly to avoid any delays in onboarding and payment setup.',
-  '',
-  'If you have any questions at all, just reach out.',
-  '',
-  'Welcome onboard - we look forward to working with you.',
-  '',
-  'Best regards,',
-  '',
-  "Joe Tozer-O'Sullivan",
-  'Director | HMJ Global',
-  '07842 550187',
-  'HMJ-Global.com - Media City, Manchester',
-  '',
-  'HMJ Global is a limited company registered in the United Kingdom',
-  'Registered number: 16029938',
-  'Registered office: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
-  '',
-  'This message contains confidential information and is intended only for the intended recipients. If you are not an intended recipient you should not disseminate, distribute, or copy this e-mail. Please notify info@hmj-global.com immediately if received in error and delete it from your system.',
-].join('\n');
+const DEFAULT_CONFIRMATION_SUBJECT = buildConfirmationDefaults(DEFAULT_CONFIRMATION_LANGUAGE).subject;
+const DEFAULT_CONFIRMATION_HEADING = buildConfirmationDefaults(DEFAULT_CONFIRMATION_LANGUAGE).heading;
+const DEFAULT_CONFIRMATION_BODY = buildConfirmationDefaults(DEFAULT_CONFIRMATION_LANGUAGE).body;
 
 function normaliseEmailType(value) {
   return trimString(value, 40).toLowerCase() === CONFIRMATION_EMAIL_TYPE
@@ -100,6 +55,7 @@ function normaliseIntroEmailRequest(input = {}) {
   const candidateId = input.candidate_id || input.candidateId || null;
   const isReminder = !!(input.is_reminder || input.isReminder);
   const emailType = normaliseEmailType(input.email_type != null ? input.email_type : input.emailType);
+  const language = normaliseConfirmationLanguage(input.language);
   return {
     firstName: trimString(input.first_name != null ? input.first_name : input.firstName, 120),
     lastName: trimString(input.last_name != null ? input.last_name : input.lastName, 120),
@@ -111,6 +67,7 @@ function normaliseIntroEmailRequest(input = {}) {
     subject: trimString(input.subject, 160),
     heading: trimString(input.heading, 160),
     body: trimString(input.body, 12000),
+    language,
     emailType,
     ...(isReminder ? { isReminder: true } : {}),
     ...(candidateId ? { candidateId } : {}),
@@ -123,9 +80,10 @@ function validateIntroEmailRequest(input = {}) {
   if (!lowerEmail(input.email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) throw coded(400, 'Enter a valid email address.');
   if (!trimString(input.company, 180)) throw coded(400, 'Company / client is required.');
   if (normaliseEmailType(input.emailType) === CONFIRMATION_EMAIL_TYPE) {
-    if (!trimString(input.subject || DEFAULT_CONFIRMATION_SUBJECT, 160)) throw coded(400, 'Confirmation email subject is required.');
-    if (!trimString(input.heading || DEFAULT_CONFIRMATION_HEADING, 160)) throw coded(400, 'Confirmation email heading is required.');
-    if (!trimString(input.body || DEFAULT_CONFIRMATION_BODY, 12000)) throw coded(400, 'Confirmation email body is required.');
+    const defaults = buildConfirmationDefaults(input.language);
+    if (!trimString(input.subject || defaults.subject, 160)) throw coded(400, 'Confirmation email subject is required.');
+    if (!trimString(input.heading || defaults.heading, 160)) throw coded(400, 'Confirmation email heading is required.');
+    if (!trimString(input.body || defaults.body, 12000)) throw coded(400, 'Confirmation email body is required.');
   }
 }
 
@@ -134,82 +92,6 @@ function buildStarterRegistrationUrl(siteUrl) {
     siteUrl,
     '/candidates?path=starter&candidate_tab=documents&candidate_focus=right_to_work&candidate_onboarding=1&candidate_docs=right_to_work,passport,qualification_certificate,reference,bank_document'
   );
-}
-
-function buildPlacementContext(company, projectLocation) {
-  const clientName = trimString(company, 180) || 'your new client';
-  const location = trimString(projectLocation, 180);
-  return location ? `${clientName} on ${location}` : clientName;
-}
-
-function onboardingConfirmationContext(request = {}, settings = {}) {
-  const firstName = trimString(request.firstName, 120) || 'there';
-  const lastName = trimString(request.lastName, 120);
-  const fullName = trimString([firstName, lastName].filter(Boolean).join(' '), 240) || firstName;
-  const companyName = trimString(request.company, 180) || 'your new client';
-  const projectLocation = trimString(request.projectLocation, 180);
-  const supportEmail = trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com';
-  return {
-    first_name: firstName,
-    last_name: lastName,
-    full_name: fullName,
-    company_name: companyName,
-    client_name: companyName,
-    project_location: projectLocation,
-    placement_context: buildPlacementContext(companyName, projectLocation),
-    support_email: supportEmail,
-  };
-}
-
-function onboardingTokenValue(rawToken, context = {}) {
-  const normalized = String(rawToken || '')
-    .trim()
-    .replace(/[^A-Za-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toUpperCase();
-
-  const key = {
-    FIRST_NAME: 'first_name',
-    LAST_NAME: 'last_name',
-    FULL_NAME: 'full_name',
-    COMPANY: 'company_name',
-    COMPANY_NAME: 'company_name',
-    CLIENT: 'company_name',
-    CLIENT_NAME: 'company_name',
-    PROJECT: 'project_location',
-    PROJECT_LOCATION: 'project_location',
-    LOCATION: 'project_location',
-    PLACEMENT_CONTEXT: 'placement_context',
-    SUPPORT_EMAIL: 'support_email',
-  }[normalized];
-
-  if (!key) return null;
-  return String(context[key] || '').trim();
-}
-
-function renderOnboardingMergeTokens(text, context = {}) {
-  const source = String(text == null ? '' : text);
-  const replacer = (match, token) => {
-    const value = onboardingTokenValue(token, context);
-    return value == null ? match : value;
-  };
-  return source
-    .replace(/<\s*([A-Za-z0-9 _-]+?)\s*>/g, replacer)
-    .replace(/\{\{\s*([A-Za-z0-9 _-]+?)\s*\}\}/g, replacer);
-}
-
-function splitParagraphs(text) {
-  return String(text || '')
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean);
-}
-
-function paragraphsToHtml(paragraphs = []) {
-  return (Array.isArray(paragraphs) ? paragraphs : [])
-    .filter(Boolean)
-    .map((paragraph) => `<p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">${escapeHtml(String(paragraph)).replace(/\n/g, '<br>')}</p>`)
-    .join('');
 }
 
 function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
@@ -279,17 +161,24 @@ function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
 }
 
 function buildOnboardingConfirmationMessage(settings = {}, request = {}, links = {}) {
-  const context = onboardingConfirmationContext(request, settings);
+  const defaults = buildConfirmationDefaults(request.language);
+  const context = buildConfirmationContext({
+    first_name: request.firstName,
+    last_name: request.lastName,
+    company: request.company,
+    project_location: request.projectLocation,
+    support_email: trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com',
+    language: request.language,
+  });
   const subject = trimString(
-    renderOnboardingMergeTokens(request.subject || DEFAULT_CONFIRMATION_SUBJECT, context),
+    renderMergeTokens(request.subject || defaults.subject, context),
     160,
-  ) || 'Welcome to HMJ Global';
+  ) || defaults.heading;
   const heading = trimString(
-    renderOnboardingMergeTokens(request.heading || DEFAULT_CONFIRMATION_HEADING, context),
+    renderMergeTokens(request.heading || defaults.heading, context),
     160,
-  ) || 'Welcome to HMJ Global';
-  const renderedBody = renderOnboardingMergeTokens(request.body || DEFAULT_CONFIRMATION_BODY, context);
-  const bodyHtml = paragraphsToHtml(splitParagraphs(renderedBody));
+  ) || defaults.heading;
+  const bodyHtml = renderConfirmationBodyHtml(request.body || defaults.body, context);
   const timesheetsUrl = trimString(links.timesheetsUrl, 4000) || resolveCandidateTimesheetsDashboardUrl();
   const html = buildEmailTemplate({
     ...settings,
@@ -297,18 +186,18 @@ function buildOnboardingConfirmationMessage(settings = {}, request = {}, links =
     supportEmail: settings.supportEmail || settings.senderEmail || 'info@hmj-global.com',
   }, {
     heading,
-    intro: `Review your HMJ timesheet, payment, contract, and support details before you start with ${context.placement_context}.`,
-    contextNote: 'Keep this onboarding summary for reference and use the HMJ button below whenever you need Timesheet Portal access.',
-    actionLabel: 'Open HMJ timesheets / portal access',
+    intro: renderMergeTokens(defaults.intro, context),
+    contextNote: renderMergeTokens(defaults.contextNote, context),
+    actionLabel: defaults.actionLabel,
     actionUrl: timesheetsUrl,
     actions: [
-      { label: 'Open HMJ timesheets / portal access', url: timesheetsUrl, tone: 'primary' },
+      { label: defaults.actionLabel, url: timesheetsUrl, tone: 'primary' },
     ],
     fallbackLinks: [
-      { label: 'Open HMJ timesheets / portal access', url: timesheetsUrl },
+      { label: defaults.actionLabel, url: timesheetsUrl },
     ],
     bodyHtml,
-    preheader: trimString(`HMJ onboarding details for ${context.placement_context}.`, 220) || heading,
+    preheader: trimString(renderMergeTokens(defaults.intro, context), 220) || heading,
   });
 
   return {
@@ -317,6 +206,7 @@ function buildOnboardingConfirmationMessage(settings = {}, request = {}, links =
     heading,
     timesheetsUrl,
     context,
+    language: defaults.language,
     accessLinkType: null,
   };
 }
@@ -528,6 +418,7 @@ const baseHandler = async (event, context) => {
           project_location: request.projectLocation || null,
           job_title: request.jobTitle || null,
           email_type: request.emailType,
+          language: request.language || DEFAULT_CONFIRMATION_LANGUAGE,
         },
         created_at: new Date().toISOString(),
       });
@@ -558,6 +449,7 @@ const baseHandler = async (event, context) => {
       delivery_provider: delivery?.provider || null,
       candidate_id: candidateId,
       email_type: request.emailType,
+      language: request.language || DEFAULT_CONFIRMATION_LANGUAGE,
       access_link_type: message.accessLinkType || null,
       provisional_created: provisionalCreated,
       is_reminder: request.isReminder,
@@ -568,6 +460,7 @@ const baseHandler = async (event, context) => {
     ok: true,
     recipient: request.email,
     subject: message.subject,
+    language: request.language || DEFAULT_CONFIRMATION_LANGUAGE,
     registrationUrl: message.registrationUrl,
     timesheetsUrl: message.timesheetsUrl,
     accessLinkType: message.accessLinkType,
@@ -587,6 +480,7 @@ const baseHandler = async (event, context) => {
 
 module.exports = {
   CONFIRMATION_EMAIL_TYPE,
+  DEFAULT_CONFIRMATION_LANGUAGE,
   DEFAULT_CONFIRMATION_BODY,
   DEFAULT_CONFIRMATION_HEADING,
   DEFAULT_CONFIRMATION_SUBJECT,
@@ -595,7 +489,7 @@ module.exports = {
   buildPlacementContext,
   buildIntroEmailMessage,
   normaliseIntroEmailRequest,
-  renderOnboardingMergeTokens,
+  renderOnboardingMergeTokens: renderMergeTokens,
   resolveIntroEmailLinks,
   validateIntroEmailRequest,
   handler: withAdminCors(baseHandler, { requireToken: false }),

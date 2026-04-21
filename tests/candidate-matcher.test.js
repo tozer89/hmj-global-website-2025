@@ -1,5 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const core = require('../lib/candidate-matcher-core.js');
 const { PRINT_TO_PDF_BASE64 } = require('./fixtures/print-to-pdf.fixture.js');
@@ -84,6 +88,26 @@ startxref
 258
 %%EOF`;
   return Buffer.from(pdf, 'utf8');
+}
+
+function buildLegacyDocBuffer() {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hmj-legacy-doc-test-'));
+  const rtfPath = path.join(tempDir, 'candidate.rtf');
+  const docPath = path.join(tempDir, 'candidate.doc');
+  const rtf = String.raw`{\rtf1\ansi\deff0
+{\fonttbl{\f0 Helvetica;}}
+\f0\fs24 Claire Legacy\par
+Electrical Package Manager\par
+Leeds\par
+Mission critical commissioning and subcontractor coordination.\par
+}`;
+  try {
+    fs.writeFileSync(rtfPath, rtf, 'utf8');
+    execFileSync('/usr/bin/textutil', ['-convert', 'doc', '-output', docPath, rtfPath]);
+    return fs.readFileSync(docPath);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 }
 
 test('prepareCandidateFiles marks unsupported extensions without crashing the run', () => {
@@ -436,6 +460,35 @@ test('extractCandidateDocuments reads text from a readable DOCX buffer', async (
   assert.equal(result.failureCount, 0);
   assert.equal(result.documents[0].status, 'ok');
   assert.match(result.combinedText, /Readable HMJ DOCX text/);
+});
+
+test('extractCandidateDocuments reads text from a legacy DOC buffer via textutil fallback', async (t) => {
+  if (!fs.existsSync('/usr/bin/textutil')) {
+    t.skip('textutil is not available on this machine.');
+    return;
+  }
+
+  const buffer = buildLegacyDocBuffer();
+  const result = await core.extractCandidateDocuments([{
+    id: 'doc-legacy',
+    name: 'Legacy CV.doc',
+    extension: 'doc',
+    contentType: 'application/msword',
+    size: buffer.byteLength,
+    status: 'ready',
+    buffer,
+    storageKey: '',
+    extractedText: '',
+    extractedTextLength: 0,
+    error: '',
+  }]);
+
+  assert.equal(result.successCount, 1);
+  assert.equal(result.failureCount, 0);
+  assert.equal(result.documents[0].status, 'ok');
+  assert.match(result.combinedText, /Claire Legacy/);
+  assert.match(result.combinedText, /Electrical Package Manager/);
+  assert.equal(result.documents[0].extractionDiagnostics.parser, 'textutil');
 });
 
 test('extractCandidateDocuments keeps image evidence without crashing the run', async () => {
