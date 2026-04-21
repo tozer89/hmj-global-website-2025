@@ -6,9 +6,11 @@ const path = require('node:path');
 
 const core = require('../lib/sourcing-assistant-core.js');
 const { parseYaml } = require('../lib/simple-yaml.js');
+const { PRINT_TO_PDF_BASE64 } = require('./fixtures/print-to-pdf.fixture.js');
 
 const fixtureRoot = path.join(__dirname, 'fixtures', 'sourcing-assistant-workspace');
 const fixtureRoleDir = path.join(fixtureRoot, 'roles', 'demo-electrical-site-manager');
+const READABLE_DOCX_BASE64 = 'UEsDBBQAAAAIAIBybVzXeYTq8QAAALgBAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbH2QzU7DMBCE730Ky9cqccoBIZSkB36OwKE8wMreJFb9J69b2rdn00KREOVozXwz62nXB+/EHjPZGDq5qhspMOhobBg7+b55ru6koALBgIsBO3lEkut+0W6OCUkwHKiTUynpXinSE3qgOiYMrAwxeyj8zKNKoLcworppmlulYygYSlXmDNkvhGgfcYCdK+LpwMr5loyOpHg4e+e6TkJKzmoorKt9ML+Kqq+SmsmThyabaMkGqa6VzOL1jh/0lSfK1qB4g1xewLNRfcRslIl65xmu/0/649o4DFbjhZ/TUo4aiXh77+qL4sGG71+06jR8/wlQSwMEFAAAAAgAgHJtXCAbhuqyAAAALgEAAAsAAABfcmVscy8ucmVsc43Puw6CMBQG4J2naM4uBQdjDIXFmLAafICmPZRGeklbL7y9HRzEODie23fyN93TzOSOIWpnGdRlBQStcFJbxeAynDZ7IDFxK/nsLDJYMELXFs0ZZ57yTZy0jyQjNjKYUvIHSqOY0PBYOo82T0YXDE+5DIp6Lq5cId1W1Y6GTwPagpAVS3rJIPSyBjIsHv/h3ThqgUcnbgZt+vHlayPLPChMDB4uSCrf7TKzQHNKuorZvgBQSwMEFAAAAAgAgHJtXEjS6NmyAAAA7AAAABEAAAB3b3JkL2RvY3VtZW50LnhtbDWOwQrCMBBE737FkrumehApbXpQRAQRRMFrbFYtNLshiVb/3qTg5THDwNutmo/t4Y0+dEy1mM8KAUgtm44etbict9OVgBA1Gd0zYS2+GESjJtVQGm5fFilCMlAoh1o8Y3SllKF9otVhxg4pbXf2VsdU/UMO7I3z3GII6YDt5aIoltLqjoSaACTrjc03x7E4leAzojqhNvrWI+wOe9gc11eI+ImVzFumH+lGjfx7cvr/qX5QSwECFAMUAAAACACAcm1c13mE6vEAAAC4AQAAEwAAAAAAAAAAAAAAgAEAAAAAW0NvbnRlbnRfVHlwZXNdLnhtbFBLAQIUAxQAAAAIAIBybVwgG4bqsgAAAC4BAAALAAAAAAAAAAAAAACAASIBAABfcmVscy8ucmVsc1BLAQIUAxQAAAAIAIBybVxI0ujZsgAAAOwAAAARAAAAAAAAAAAAAACAAf0BAAB3b3JkL2RvY3VtZW50LnhtbFBLBQYAAAAAAwADALkAAADeAgAAAAA=';
 
 function makeWorkspace() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hmj-sourcing-'));
@@ -338,4 +340,97 @@ test('contact logging updates candidate lifecycle and preserves audit events', a
   assert.equal(candidate.lifecycle.current_stage, 'contacted');
   assert.equal(candidate.operatorReview.contact_log.length, 1);
   assert.ok(candidate.auditTrail.some((entry) => entry.stage === 'contacted'));
+});
+
+test('bulk CV import parses readable PDF and DOCX files into the sourcing workflow', async () => {
+  const workspaceRoot = makeWorkspace();
+  const roleId = 'bulk-cv-role';
+  const created = core.scaffoldRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId,
+    roleTitle: 'Electrical Site Manager',
+  });
+  fs.copyFileSync(
+    path.join(fixtureRoleDir, 'inputs', 'job-spec.yaml'),
+    path.join(created.roleDir, 'inputs', 'job-spec.yaml'),
+  );
+
+  const uploadResult = await core.importBulkCvFiles({
+    workflowRoot: workspaceRoot,
+    roleId,
+    files: [
+      {
+        name: 'jane-candidate.pdf',
+        contentType: 'application/pdf',
+        size: Buffer.byteLength(Buffer.from(PRINT_TO_PDF_BASE64, 'base64')),
+        data: PRINT_TO_PDF_BASE64,
+      },
+      {
+        name: 'readable-docx.docx',
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        size: Buffer.byteLength(Buffer.from(READABLE_DOCX_BASE64, 'base64')),
+        data: READABLE_DOCX_BASE64,
+      },
+    ],
+  });
+
+  assert.equal(uploadResult.successfulCount, 2);
+  assert.equal(uploadResult.failedCount, 0);
+  assert.equal(uploadResult.importResult.importedCount, 2);
+
+  const summary = await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId,
+    action: 'review_downloaded_cvs',
+  });
+  const candidates = JSON.parse(fs.readFileSync(path.join(created.roleDir, 'inputs', 'candidates.json'), 'utf8'));
+  const bulkHistory = JSON.parse(fs.readFileSync(path.join(created.roleDir, 'outputs', core.DEFAULT_BULK_CV_IMPORT_HISTORY_FILE), 'utf8'));
+  const jane = summary.candidateDetails.find((entry) => /Jane Candidate/i.test(entry.identity?.name || ''));
+
+  assert.equal(candidates.length, 2);
+  assert.equal(bulkHistory[0].parsed_successfully, 2);
+  assert.equal(bulkHistory[0].failed, 0);
+  assert.ok(candidates.every((candidate) => candidate.import_method === 'bulk_cv_upload'));
+  assert.ok(candidates.every((candidate) => String(candidate.cv_file || '').includes('cvs/bulk-upload/')));
+  assert.equal(summary.metrics.cvs_downloaded, 2);
+  assert.ok(jane);
+  assert.match(jane.fullCv.extraction_summary, /bulk CV batch|inline CV text/i);
+  assert.equal(jane.sourceAudit.import_method, 'bulk_cv_upload');
+});
+
+test('bulk CV import records unreadable or unsupported files without creating bad candidates', async () => {
+  const workspaceRoot = makeWorkspace();
+  const roleId = 'bulk-cv-failure-role';
+  const created = core.scaffoldRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId,
+    roleTitle: 'Electrical Site Manager',
+  });
+  fs.copyFileSync(
+    path.join(fixtureRoleDir, 'inputs', 'job-spec.yaml'),
+    path.join(created.roleDir, 'inputs', 'job-spec.yaml'),
+  );
+
+  const uploadResult = await core.importBulkCvFiles({
+    workflowRoot: workspaceRoot,
+    roleId,
+    files: [
+      {
+        name: 'legacy-profile.doc',
+        contentType: 'application/msword',
+        size: 6,
+        data: Buffer.from('legacy', 'utf8').toString('base64'),
+      },
+    ],
+  });
+
+  const candidates = JSON.parse(fs.readFileSync(path.join(created.roleDir, 'inputs', 'candidates.json'), 'utf8'));
+  const bulkHistory = JSON.parse(fs.readFileSync(path.join(created.roleDir, 'outputs', core.DEFAULT_BULK_CV_IMPORT_HISTORY_FILE), 'utf8'));
+
+  assert.equal(uploadResult.successfulCount, 0);
+  assert.equal(uploadResult.failedCount, 1);
+  assert.equal(uploadResult.importResult, null);
+  assert.equal(candidates.length, 0);
+  assert.equal(bulkHistory[0].failed, 1);
+  assert.match(bulkHistory[0].files[0].error, /legacy DOC|automatic text extraction is not configured/i);
 });

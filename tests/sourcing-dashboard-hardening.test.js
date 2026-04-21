@@ -8,11 +8,13 @@ const http = require('node:http');
 const { spawn, spawnSync } = require('node:child_process');
 
 const { startDashboardServer } = require('../lib/sourcing-dashboard-server.js');
+const { PRINT_TO_PDF_BASE64 } = require('./fixtures/print-to-pdf.fixture.js');
 
 const fixtureRoot = path.join(__dirname, 'fixtures', 'sourcing-assistant-workspace');
 const websiteRepoPath = path.join(__dirname, '..');
 const launchScript = path.join(websiteRepoPath, 'scripts', 'launch-sourcing-assistant.js');
 const startDashboardScript = path.join(websiteRepoPath, 'scripts', 'start-sourcing-dashboard.js');
+const READABLE_DOCX_BASE64 = 'UEsDBBQAAAAIAIBybVzXeYTq8QAAALgBAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbH2QzU7DMBCE730Ky9cqccoBIZSkB36OwKE8wMreJFb9J69b2rdn00KREOVozXwz62nXB+/EHjPZGDq5qhspMOhobBg7+b55ru6koALBgIsBO3lEkut+0W6OCUkwHKiTUynpXinSE3qgOiYMrAwxeyj8zKNKoLcworppmlulYygYSlXmDNkvhGgfcYCdK+LpwMr5loyOpHg4e+e6TkJKzmoorKt9ML+Kqq+SmsmThyabaMkGqa6VzOL1jh/0lSfK1qB4g1xewLNRfcRslIl65xmu/0/649o4DFbjhZ/TUo4aiXh77+qL4sGG71+06jR8/wlQSwMEFAAAAAgAgHJtXCAbhuqyAAAALgEAAAsAAABfcmVscy8ucmVsc43Puw6CMBQG4J2naM4uBQdjDIXFmLAafICmPZRGeklbL7y9HRzEODie23fyN93TzOSOIWpnGdRlBQStcFJbxeAynDZ7IDFxK/nsLDJYMELXFs0ZZ57yTZy0jyQjNjKYUvIHSqOY0PBYOo82T0YXDE+5DIp6Lq5cId1W1Y6GTwPagpAVS3rJIPSyBjIsHv/h3ThqgUcnbgZt+vHlayPLPChMDB4uSCrf7TKzQHNKuorZvgBQSwMEFAAAAAgAgHJtXEjS6NmyAAAA7AAAABEAAAB3b3JkL2RvY3VtZW50LnhtbDWOwQrCMBBE737FkrumehApbXpQRAQRRMFrbFYtNLshiVb/3qTg5THDwNutmo/t4Y0+dEy1mM8KAUgtm44etbict9OVgBA1Gd0zYS2+GESjJtVQGm5fFilCMlAoh1o8Y3SllKF9otVhxg4pbXf2VsdU/UMO7I3z3GII6YDt5aIoltLqjoSaACTrjc03x7E4leAzojqhNvrWI+wOe9gc11eI+ImVzFumH+lGjfx7cvr/qX5QSwECFAMUAAAACACAcm1c13mE6vEAAAC4AQAAEwAAAAAAAAAAAAAAgAEAAAAAW0NvbnRlbnRfVHlwZXNdLnhtbFBLAQIUAxQAAAAIAIBybVwgG4bqsgAAAC4BAAALAAAAAAAAAAAAAACAASIBAABfcmVscy8ucmVsc1BLAQIUAxQAAAAIAIBybVxI0ujZsgAAAOwAAAARAAAAAAAAAAAAAACAAf0BAAB3b3JkL2RvY3VtZW50LnhtbFBLBQYAAAAAAwADALkAAADeAgAAAAA=';
 
 function makeWorkspace() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hmj-sourcing-dashboard-'));
@@ -385,6 +387,73 @@ test('dashboard import endpoint returns readable errors for malformed uploads', 
     assert.equal(malformed.statusCode, 400);
     assert.equal(malformed.payload.code, 'invalid_candidate_csv');
     assert.match(malformed.payload.error, /missing required column/i);
+  } finally {
+    await closeServer(started.server);
+  }
+});
+
+test('dashboard bulk CV upload endpoint parses readable files and refreshes the role summary', async () => {
+  const workspaceRoot = makeWorkspace();
+  const started = await startDashboardServer({
+    workflowRoot: workspaceRoot,
+    host: '127.0.0.1',
+    port: 0,
+  });
+
+  try {
+    const response = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/bulk-cv-upload`,
+      body: JSON.stringify({
+        files: [
+          {
+            name: 'jane-candidate.pdf',
+            contentType: 'application/pdf',
+            size: Buffer.byteLength(Buffer.from(PRINT_TO_PDF_BASE64, 'base64')),
+            data: PRINT_TO_PDF_BASE64,
+          },
+          {
+            name: 'readable-docx.docx',
+            contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            size: Buffer.byteLength(Buffer.from(READABLE_DOCX_BASE64, 'base64')),
+            data: READABLE_DOCX_BASE64,
+          },
+        ],
+        postImportAction: 'review_downloaded_cvs',
+      }),
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.payload.bulkImportResult.successfulCount, 2);
+    assert.equal(response.payload.bulkImportResult.failedCount, 0);
+    assert.ok(response.payload.role.roleHistory.latestBulkCvImport);
+    assert.ok(response.payload.role.artifacts.bulkCvImportHistory.exists);
+    assert.ok(response.payload.role.candidateDetails.some((entry) => entry.sourceAudit.import_method === 'bulk_cv_upload'));
+  } finally {
+    await closeServer(started.server);
+  }
+});
+
+test('dashboard bulk CV upload endpoint surfaces empty uploads clearly', async () => {
+  const workspaceRoot = makeWorkspace();
+  const started = await startDashboardServer({
+    workflowRoot: workspaceRoot,
+    host: '127.0.0.1',
+    port: 0,
+  });
+
+  try {
+    const response = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/bulk-cv-upload`,
+      body: JSON.stringify({
+        files: [],
+        postImportAction: 'review_downloaded_cvs',
+      }),
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(response.payload.code, 'empty_bulk_cv_upload');
   } finally {
     await closeServer(started.server);
   }

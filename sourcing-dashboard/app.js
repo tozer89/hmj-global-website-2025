@@ -31,6 +31,10 @@ const importFileInput = document.getElementById('importFileInput');
 const importPostAction = document.getElementById('importPostAction');
 const importBatchButton = document.getElementById('importBatchButton');
 const importSummary = document.getElementById('importSummary');
+const bulkCvFileInput = document.getElementById('bulkCvFileInput');
+const bulkCvPostAction = document.getElementById('bulkCvPostAction');
+const bulkCvUploadButton = document.getElementById('bulkCvUploadButton');
+const bulkCvSummary = document.getElementById('bulkCvSummary');
 const actionButtons = Array.from(document.querySelectorAll('[data-action]'));
 
 const FILTER_OPTIONS = [
@@ -75,11 +79,13 @@ function setStatus(message, tone = 'info') {
 
 function setBusy(busy, message = '') {
   state.busy = busy;
-  [...actionButtons, refreshRolesButton, initRoleButton, openWorkflowButton, importBatchButton].forEach((button) => {
+  [...actionButtons, refreshRolesButton, initRoleButton, openWorkflowButton, importBatchButton, bulkCvUploadButton].forEach((button) => {
     button.disabled = busy;
   });
   if (importFileInput) importFileInput.disabled = busy;
   if (importPostAction) importPostAction.disabled = busy;
+  if (bulkCvFileInput) bulkCvFileInput.disabled = busy;
+  if (bulkCvPostAction) bulkCvPostAction.disabled = busy;
   document.querySelectorAll('.role-item, .candidate-card, .filter-pill, .artifact-button, .tiny-button').forEach((node) => {
     node.disabled = busy;
   });
@@ -150,6 +156,18 @@ function summariseImportResult(result) {
     `${entry.updated?.count || 0} updated`,
     `${entry.preview_text_changed?.count || 0} preview text change(s)`,
     `${result.totalCandidates || 0} total candidate(s) in role`,
+  ].join(' · ');
+}
+
+function summariseBulkCvResult(result) {
+  if (!result) return 'No bulk CV upload result yet.';
+  const entry = result.batchHistoryEntry || {};
+  return [
+    `${result.filesReceived || entry.files_received || 0} file(s) received`,
+    `${result.successfulCount || entry.parsed_successfully || 0} parsed`,
+    `${result.failedCount || entry.failed || 0} failed`,
+    `${entry.ocr_used_count || 0} OCR fallback`,
+    entry.ocr_enabled ? 'OCR enabled' : 'OCR disabled',
   ].join(' · ');
 }
 
@@ -292,6 +310,12 @@ function renderRoleHistory(role) {
       time: entry.at,
       summary: `Added ${entry.added?.count || 0}, updated ${entry.updated?.count || 0}, preview text changed ${entry.preview_text_changed?.count || 0}, total ${entry.total_candidates_after_import || 0}.`,
     })))
+    .concat((role.roleHistory?.bulkCvHistory || []).slice(0, 3).map((entry) => ({
+      kind: 'Bulk CV',
+      title: `${entry.files_received || 0} file(s) · ${entry.parsed_successfully || 0} parsed`,
+      time: entry.at,
+      summary: `Failed ${entry.failed || 0}, OCR ${entry.ocr_enabled ? 'enabled' : 'disabled'}, OCR used ${entry.ocr_used_count || 0}.`,
+    })))
     .concat((role.roleHistory?.runHistory || []).slice(0, 3).map((entry) => ({
       kind: 'Run',
       title: `${entry.action || 'run'} · ${entry.status || 'completed'}`,
@@ -317,6 +341,12 @@ function renderImportPanel(role) {
   importSummary.textContent = latestImport
     ? `Latest import: ${latestImport.imported_count || 0} row(s) · ${latestImport.added?.count || 0} added · ${latestImport.updated?.count || 0} updated · ${latestImport.preview_text_changed?.count || 0} preview text change(s)`
     : 'Choose a CSV or JSON batch for the selected role.';
+  if (bulkCvSummary) {
+    const latestBulk = role?.roleHistory?.latestBulkCvImport || null;
+    bulkCvSummary.textContent = latestBulk
+      ? `Latest bulk CV batch: ${latestBulk.files_received || 0} file(s) · ${latestBulk.parsed_successfully || 0} parsed · ${latestBulk.failed || 0} failed · OCR ${latestBulk.ocr_enabled ? 'enabled' : 'disabled'}`
+      : 'Choose up to 20 PDF or DOCX CVs for the selected role. Legacy DOC remains manual for now.';
+  }
 }
 
 function renderMetricCards(role) {
@@ -367,7 +397,7 @@ function renderCandidateList(role) {
     const warnings = [];
     if (!candidate.fullCv?.downloaded) warnings.push('No CV');
     if (!candidate.outreach?.email || candidate.outreach.email.endsWith('@unknown.local')) warnings.push('Email missing');
-    if (!candidate.sourceAudit?.source_url) warnings.push('Source URL missing');
+    if (!candidate.sourceAudit?.source_url && candidate.sourceAudit?.import_method !== 'bulk_cv_upload') warnings.push('Source URL missing');
     if (candidate.sessionFlags?.new_since_last_review) warnings.push('New');
     if (candidate.sessionFlags?.changed_since_last_import) warnings.push('Changed');
     button.innerHTML = [
@@ -429,7 +459,7 @@ function buildWarnings(candidate) {
   const warnings = [];
   if (!candidate?.fullCv?.downloaded) warnings.push('CV file has not been downloaded for this candidate yet.');
   if (!candidate?.outreach?.email || candidate.outreach.email.endsWith('@unknown.local')) warnings.push('Candidate email is missing, so the draft is not yet send-ready.');
-  if (!candidate?.sourceAudit?.source_url) warnings.push('Source URL is missing, so source evidence relies on the stored audit string only.');
+  if (!candidate?.sourceAudit?.source_url && candidate?.sourceAudit?.import_method !== 'bulk_cv_upload') warnings.push('Source URL is missing, so source evidence relies on the stored audit string only.');
   if (!candidate?.preview?.summary_text) warnings.push('Preview text is missing, so preview-level evidence is limited.');
   return warnings;
 }
@@ -898,6 +928,9 @@ function render() {
     detailActions.innerHTML = '';
     warningBanner.classList.add('hidden');
     renderImportPanel(null);
+    if (bulkCvSummary) {
+      bulkCvSummary.textContent = 'Choose up to 20 PDF or DOCX CVs for the selected role. Legacy DOC remains manual for now.';
+    }
     return;
   }
 
@@ -963,6 +996,15 @@ function readFileAsText(file) {
   });
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Could not read ${file?.name || 'the selected file'}.`));
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function importBatch() {
   if (!state.selectedRoleId) {
     setStatus('Select a role before importing a preview batch.', 'error');
@@ -1008,6 +1050,65 @@ async function importBatch() {
     await loadRoleIndex();
     setStatus(`Imported ${file.name}. ${summariseImportResult(result.importResult)}.`, 'success');
     if (importFileInput) importFileInput.value = '';
+  } catch (error) {
+    setStatus(error.message || String(error), 'error');
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function uploadBulkCvBatch() {
+  if (!state.selectedRoleId) {
+    setStatus('Select a role before uploading CVs.', 'error');
+    return;
+  }
+  const files = Array.from(bulkCvFileInput?.files || []);
+  if (!files.length) {
+    setStatus('Choose one or more PDF or DOCX CVs before uploading.', 'error');
+    return;
+  }
+  if (files.length > 20) {
+    setStatus('Upload up to 20 CV files at a time.', 'error');
+    return;
+  }
+  const allowed = files.every((file) => /\.(pdf|docx|doc|txt)$/i.test(file.name || ''));
+  if (!allowed) {
+    setStatus('Bulk CV upload currently supports PDF and DOCX reliably. TXT is allowed for manual recovery; legacy DOC remains limited.', 'error');
+    return;
+  }
+
+  setBusy(true, `Uploading ${files.length} CV file(s) into ${state.selectedRoleId}...`);
+  try {
+    const encodedFiles = await Promise.all(files.map(async (file) => ({
+      name: file.name,
+      size: file.size,
+      contentType: file.type || '',
+      data: await readFileAsDataUrl(file),
+    })));
+    const postImportActionValue = bulkCvPostAction?.value || 'review_downloaded_cvs';
+    const result = await api(`/api/roles/${encodeURIComponent(state.selectedRoleId)}/bulk-cv-upload`, {
+      method: 'POST',
+      body: JSON.stringify({
+        files: encodedFiles,
+        postImportAction: postImportActionValue,
+      }),
+    });
+    state.selectedRole = result.role;
+    if (bulkCvSummary) {
+      bulkCvSummary.textContent = summariseBulkCvResult(result.bulkImportResult);
+    }
+    const importEntry = result.bulkImportResult?.importResult?.importHistoryEntry || {};
+    state.candidateFilter = (importEntry.updated?.count || 0) > 0
+      ? 'changed_since_last_import'
+      : (importEntry.added?.count || 0) > 0
+        ? 'new_since_last_review'
+        : 'all';
+    const visibleCandidates = filteredCandidates(result.role);
+    state.selectedCandidateId = visibleCandidates[0]?.candidate_id || getSelectedCandidate(result.role)?.candidate_id || '';
+    render();
+    await loadRoleIndex();
+    setStatus(`Bulk CV upload completed. ${summariseBulkCvResult(result.bulkImportResult)}.`, 'success');
+    if (bulkCvFileInput) bulkCvFileInput.value = '';
   } catch (error) {
     setStatus(error.message || String(error), 'error');
   } finally {
@@ -1128,6 +1229,11 @@ openWorkflowButton.addEventListener('click', () => {
 importBatchButton.addEventListener('click', () => {
   if (state.busy) return;
   importBatch().catch((error) => setStatus(error.message || String(error), 'error'));
+});
+
+bulkCvUploadButton?.addEventListener('click', () => {
+  if (state.busy) return;
+  uploadBulkCvBatch().catch((error) => setStatus(error.message || String(error), 'error'));
 });
 
 roleConfigForm.addEventListener('submit', (event) => {
