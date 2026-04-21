@@ -14,7 +14,9 @@ const { _buildRedirectUrl: buildRedirectUrl } = require('./candidate-auth-config
 const { buildCandidatePortalDeepLink } = require('./_candidate-onboarding.js');
 const { loadCandidateRecord, generateCandidateAccessLink } = require('./_candidate-account-admin.js');
 const {
+  ACCOUNTS_SUPPORT_EMAIL,
   DEFAULT_CONFIRMATION_LANGUAGE,
+  GENERAL_SUPPORT_EMAIL,
   buildConfirmationContext,
   buildConfirmationDefaults,
   buildPlacementContext,
@@ -167,7 +169,9 @@ function buildOnboardingConfirmationMessage(settings = {}, request = {}, links =
     last_name: request.lastName,
     company: request.company,
     project_location: request.projectLocation,
-    support_email: trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com',
+    support_email: GENERAL_SUPPORT_EMAIL,
+    info_email: GENERAL_SUPPORT_EMAIL,
+    accounts_email: ACCOUNTS_SUPPORT_EMAIL,
     language: request.language,
   });
   const subject = trimString(
@@ -183,7 +187,7 @@ function buildOnboardingConfirmationMessage(settings = {}, request = {}, links =
   const html = buildEmailTemplate({
     ...settings,
     senderName: settings.senderName || 'HMJ Global',
-    supportEmail: settings.supportEmail || settings.senderEmail || 'info@hmj-global.com',
+    supportEmail: GENERAL_SUPPORT_EMAIL,
   }, {
     heading,
     intro: renderMergeTokens(defaults.intro, context),

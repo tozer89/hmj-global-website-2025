@@ -4,7 +4,9 @@
   }
 
   const {
+    ACCOUNTS_SUPPORT_EMAIL,
     DEFAULT_CONFIRMATION_LANGUAGE,
+    GENERAL_SUPPORT_EMAIL,
     buildConfirmationContext: buildSharedConfirmationContext,
     buildConfirmationDefaults,
     buildPlacementContext,
@@ -157,7 +159,9 @@
         last_name: fieldValue(els.lastName),
         company: fieldValue(els.clientCompany),
         project_location: fieldValue(els.projectLocation),
-        support_email: trimString(state.emailSettings?.supportEmail || state.emailSettings?.senderEmail || 'info@hmj-global.com') || 'info@hmj-global.com',
+        support_email: GENERAL_SUPPORT_EMAIL,
+        info_email: GENERAL_SUPPORT_EMAIL,
+        accounts_email: ACCOUNTS_SUPPORT_EMAIL,
         language: selectedConfirmationLanguage(),
       });
     }

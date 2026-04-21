@@ -131,6 +131,14 @@ test('onboarding confirmation builder renders editable HMJ onboarding copy with 
   assert.match(message.html, /following Wednesday/i);
   assert.match(message.html, /<strong>1\. Timesheet Portal - Login Check \(Important\)<\/strong>/);
   assert.match(message.html, /<ul style=/);
+  assert.match(message.html, /info@hmj-global\.com/);
+  assert.match(message.html, /accounts@hmj-global\.com/);
+  assert.match(message.html, /Best regards,/);
+  assert.match(message.html, /HMJ Global Team/);
+  assert.doesNotMatch(message.html, /Joe Tozer/i);
+  assert.doesNotMatch(message.html, /07842 550187/);
+  assert.doesNotMatch(message.html, /Registered number/i);
+  assert.doesNotMatch(message.html, /confidential information/i);
   assert.match(message.html, /Open HMJ timesheets \/ portal access/);
   assert.match(message.html, /Keep this onboarding summary for reference/i);
 });
@@ -162,6 +170,9 @@ test('onboarding confirmation builder can switch to a translated language templa
   assert.match(message.subject, /Willkommen bei HMJ Global/);
   assert.match(message.html, /Zeiterfassung/);
   assert.match(message.html, /Login-Prufung|Login-Prüfung/);
+  assert.match(message.html, /HMJ Global Team/);
+  assert.match(message.html, /accounts@hmj-global\.com/);
+  assert.doesNotMatch(message.html, /sociedad limitada|räspundere limitată|Limited Company/i);
 });
 
 test('send intro email backend validates required starter details', () => {
