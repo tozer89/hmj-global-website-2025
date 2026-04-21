@@ -12,7 +12,7 @@ const { sendTransactionalEmail, lowerEmail, trimString } = require('./_mail-deli
 const { recordAudit } = require('./_audit.js');
 const { _buildRedirectUrl: buildRedirectUrl } = require('./candidate-auth-config.js');
 const { buildCandidatePortalDeepLink } = require('./_candidate-onboarding.js');
-const { loadCandidateRecord } = require('./_candidate-account-admin.js');
+const { loadCandidateRecord, generateCandidateAccessLink } = require('./_candidate-account-admin.js');
 
 function parseBody(event) {
   try {
@@ -30,16 +30,88 @@ function response(statusCode, body) {
   };
 }
 
+const INTRO_EMAIL_TYPE = 'intro';
+const CONFIRMATION_EMAIL_TYPE = 'confirmation';
+const DEFAULT_CONFIRMATION_SUBJECT = 'Welcome to HMJ Global - your onboarding details for <COMPANY_NAME>';
+const DEFAULT_CONFIRMATION_HEADING = 'Welcome to HMJ Global';
+const DEFAULT_CONFIRMATION_BODY = [
+  'Hi <FIRST_NAME>,',
+  '',
+  'Welcome to HMJ Global, and congratulations on securing your role with <PLACEMENT_CONTEXT>.',
+  '',
+  "We're pleased to have you on board. Before you start, please take a few moments to review the below and confirm everything is in order.",
+  '',
+  '1. Timesheet Portal - Login Check (Important)',
+  'You should have received an email to set up your Timesheet Portal login.',
+  '',
+  'Please log in and ensure you have access.',
+  'Check your details are correct.',
+  'If you have not received this email, please let us know as soon as possible and we will resend it.',
+  '',
+  '2. Timesheet & Payment Process',
+  '',
+  'Your timesheet is completed online each week.',
+  '',
+  'Your e-timesheet is released in the early hours of Monday and relates to the working week ahead.',
+  'Enter your hours directly into the system during the week - there is no need to send anything back.',
+  'Please ensure your timesheet is fully completed by the end of the working week.',
+  '',
+  'Payments are typically processed on the following Wednesday, subject to timesheet approval and submission within the required timeframe.',
+  '',
+  '3. Contact & Support',
+  '',
+  'If you need any help at any stage, you can contact us:',
+  '',
+  "Joe Tozer-O'Sullivan - joe@hmj-global.com",
+  'General support - info@hmj-global.com',
+  '',
+  'We aim to respond quickly and resolve any issues without delay.',
+  '',
+  '4. Contract & Onboarding',
+  '',
+  'Your contract will be issued separately via email.',
+  'Please review, sign, and return promptly to avoid any delays in onboarding and payment setup.',
+  '',
+  'If you have any questions at all, just reach out.',
+  '',
+  'Welcome onboard - we look forward to working with you.',
+  '',
+  'Best regards,',
+  '',
+  "Joe Tozer-O'Sullivan",
+  'Director | HMJ Global',
+  '07842 550187',
+  'HMJ-Global.com - Media City, Manchester',
+  '',
+  'HMJ Global is a limited company registered in the United Kingdom',
+  'Registered number: 16029938',
+  'Registered office: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
+  '',
+  'This message contains confidential information and is intended only for the intended recipients. If you are not an intended recipient you should not disseminate, distribute, or copy this e-mail. Please notify info@hmj-global.com immediately if received in error and delete it from your system.',
+].join('\n');
+
+function normaliseEmailType(value) {
+  return trimString(value, 40).toLowerCase() === CONFIRMATION_EMAIL_TYPE
+    ? CONFIRMATION_EMAIL_TYPE
+    : INTRO_EMAIL_TYPE;
+}
+
 function normaliseIntroEmailRequest(input = {}) {
   const candidateId = input.candidate_id || input.candidateId || null;
   const isReminder = !!(input.is_reminder || input.isReminder);
+  const emailType = normaliseEmailType(input.email_type != null ? input.email_type : input.emailType);
   return {
     firstName: trimString(input.first_name != null ? input.first_name : input.firstName, 120),
     lastName: trimString(input.last_name != null ? input.last_name : input.lastName, 120),
     email: lowerEmail(input.email),
     company: trimString(input.company != null ? input.company : input.client_company, 180),
+    projectLocation: trimString(input.project_location != null ? input.project_location : input.projectLocation, 180),
     phone: trimString(input.phone, 80),
     jobTitle: trimString(input.job_title != null ? input.job_title : input.jobTitle, 180),
+    subject: trimString(input.subject, 160),
+    heading: trimString(input.heading, 160),
+    body: trimString(input.body, 12000),
+    emailType,
     ...(isReminder ? { isReminder: true } : {}),
     ...(candidateId ? { candidateId } : {}),
   };
@@ -50,6 +122,11 @@ function validateIntroEmailRequest(input = {}) {
   if (!trimString(input.lastName, 120)) throw coded(400, 'Last name is required.');
   if (!lowerEmail(input.email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) throw coded(400, 'Enter a valid email address.');
   if (!trimString(input.company, 180)) throw coded(400, 'Company / client is required.');
+  if (normaliseEmailType(input.emailType) === CONFIRMATION_EMAIL_TYPE) {
+    if (!trimString(input.subject || DEFAULT_CONFIRMATION_SUBJECT, 160)) throw coded(400, 'Confirmation email subject is required.');
+    if (!trimString(input.heading || DEFAULT_CONFIRMATION_HEADING, 160)) throw coded(400, 'Confirmation email heading is required.');
+    if (!trimString(input.body || DEFAULT_CONFIRMATION_BODY, 12000)) throw coded(400, 'Confirmation email body is required.');
+  }
 }
 
 function buildStarterRegistrationUrl(siteUrl) {
@@ -59,10 +136,86 @@ function buildStarterRegistrationUrl(siteUrl) {
   );
 }
 
+function buildPlacementContext(company, projectLocation) {
+  const clientName = trimString(company, 180) || 'your new client';
+  const location = trimString(projectLocation, 180);
+  return location ? `${clientName} on ${location}` : clientName;
+}
+
+function onboardingConfirmationContext(request = {}, settings = {}) {
+  const firstName = trimString(request.firstName, 120) || 'there';
+  const lastName = trimString(request.lastName, 120);
+  const fullName = trimString([firstName, lastName].filter(Boolean).join(' '), 240) || firstName;
+  const companyName = trimString(request.company, 180) || 'your new client';
+  const projectLocation = trimString(request.projectLocation, 180);
+  const supportEmail = trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com';
+  return {
+    first_name: firstName,
+    last_name: lastName,
+    full_name: fullName,
+    company_name: companyName,
+    client_name: companyName,
+    project_location: projectLocation,
+    placement_context: buildPlacementContext(companyName, projectLocation),
+    support_email: supportEmail,
+  };
+}
+
+function onboardingTokenValue(rawToken, context = {}) {
+  const normalized = String(rawToken || '')
+    .trim()
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+
+  const key = {
+    FIRST_NAME: 'first_name',
+    LAST_NAME: 'last_name',
+    FULL_NAME: 'full_name',
+    COMPANY: 'company_name',
+    COMPANY_NAME: 'company_name',
+    CLIENT: 'company_name',
+    CLIENT_NAME: 'company_name',
+    PROJECT: 'project_location',
+    PROJECT_LOCATION: 'project_location',
+    LOCATION: 'project_location',
+    PLACEMENT_CONTEXT: 'placement_context',
+    SUPPORT_EMAIL: 'support_email',
+  }[normalized];
+
+  if (!key) return null;
+  return String(context[key] || '').trim();
+}
+
+function renderOnboardingMergeTokens(text, context = {}) {
+  const source = String(text == null ? '' : text);
+  const replacer = (match, token) => {
+    const value = onboardingTokenValue(token, context);
+    return value == null ? match : value;
+  };
+  return source
+    .replace(/<\s*([A-Za-z0-9 _-]+?)\s*>/g, replacer)
+    .replace(/\{\{\s*([A-Za-z0-9 _-]+?)\s*\}\}/g, replacer);
+}
+
+function splitParagraphs(text) {
+  return String(text || '')
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+function paragraphsToHtml(paragraphs = []) {
+  return (Array.isArray(paragraphs) ? paragraphs : [])
+    .filter(Boolean)
+    .map((paragraph) => `<p style="margin:0 0 14px;color:#42557f;font-size:15px;line-height:1.7">${escapeHtml(String(paragraph)).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
 function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
   const siteUrl = trimString(settings.siteUrl, 1000) || 'https://www.hmj-global.com/';
   const registrationUrl = trimString(links.registrationUrl, 4000) || buildStarterRegistrationUrl(siteUrl);
-  const timesheetsUrl = resolveCandidateTimesheetsDashboardUrl();
+  const timesheetsUrl = trimString(links.timesheetsUrl, 4000) || resolveCandidateTimesheetsDashboardUrl();
   const supportEmail = trimString(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com', 320) || 'info@hmj-global.com';
   const senderName = trimString(settings.senderName, 160) || 'HMJ Global';
   const firstName = trimString(request.firstName, 120) || 'there';
@@ -125,21 +278,83 @@ function buildIntroEmailMessage(settings = {}, request = {}, links = {}) {
   };
 }
 
+function buildOnboardingConfirmationMessage(settings = {}, request = {}, links = {}) {
+  const context = onboardingConfirmationContext(request, settings);
+  const subject = trimString(
+    renderOnboardingMergeTokens(request.subject || DEFAULT_CONFIRMATION_SUBJECT, context),
+    160,
+  ) || 'Welcome to HMJ Global';
+  const heading = trimString(
+    renderOnboardingMergeTokens(request.heading || DEFAULT_CONFIRMATION_HEADING, context),
+    160,
+  ) || 'Welcome to HMJ Global';
+  const renderedBody = renderOnboardingMergeTokens(request.body || DEFAULT_CONFIRMATION_BODY, context);
+  const bodyHtml = paragraphsToHtml(splitParagraphs(renderedBody));
+  const timesheetsUrl = trimString(links.timesheetsUrl, 4000) || resolveCandidateTimesheetsDashboardUrl();
+  const html = buildEmailTemplate({
+    ...settings,
+    senderName: settings.senderName || 'HMJ Global',
+    supportEmail: settings.supportEmail || settings.senderEmail || 'info@hmj-global.com',
+  }, {
+    heading,
+    intro: `Review your HMJ timesheet, payment, contract, and support details before you start with ${context.placement_context}.`,
+    contextNote: 'Keep this onboarding summary for reference and use the HMJ button below whenever you need Timesheet Portal access.',
+    actionLabel: 'Open HMJ timesheets / portal access',
+    actionUrl: timesheetsUrl,
+    actions: [
+      { label: 'Open HMJ timesheets / portal access', url: timesheetsUrl, tone: 'primary' },
+    ],
+    fallbackLinks: [
+      { label: 'Open HMJ timesheets / portal access', url: timesheetsUrl },
+    ],
+    bodyHtml,
+    preheader: trimString(`HMJ onboarding details for ${context.placement_context}.`, 220) || heading,
+  });
+
+  return {
+    subject,
+    html,
+    heading,
+    timesheetsUrl,
+    context,
+    accessLinkType: null,
+  };
+}
+
 async function resolveIntroEmailLinks(event, supabase, request = {}) {
-  const candidate = await loadCandidateRecord(supabase, null, request.email);
+  let candidate = await loadCandidateRecord(supabase, request.candidateId, request.email);
   const onboardingUrl = buildCandidatePortalDeepLink(event, {
     tab: 'documents',
     focus: 'right_to_work',
     onboarding: true,
     documents: ['right_to_work', 'passport', 'qualification_certificate', 'reference', 'bank_document'],
   });
+  let accessLink = null;
+
+  try {
+    accessLink = await generateCandidateAccessLink(
+      supabase,
+      candidate || {
+        email: request.email,
+        first_name: request.firstName,
+        last_name: request.lastName,
+        full_name: [request.firstName, request.lastName].filter(Boolean).join(' '),
+      },
+      onboardingUrl,
+      { email: request.email },
+    );
+    candidate = await loadCandidateRecord(supabase, request.candidateId || candidate?.id || null, request.email);
+  } catch (error) {
+    console.warn('[send-intro-email] could not generate secure access link (%s)', error?.message || error);
+  }
 
   return {
     candidate: candidate || null,
-    registrationUrl: onboardingUrl,
-    accessLinkType: null,
-    secureAccess: false,
+    registrationUrl: trimString(accessLink?.action_link, 4000) || onboardingUrl,
+    accessLinkType: trimString(accessLink?.link_type, 40).toLowerCase() || null,
+    secureAccess: !!trimString(accessLink?.action_link, 4000),
     onboardingUrl,
+    timesheetsUrl: resolveCandidateTimesheetsDashboardUrl(),
   };
 }
 
@@ -167,8 +382,15 @@ const baseHandler = async (event, context) => {
     throw error;
   }
 
-  const links = await resolveIntroEmailLinks(event, supabase, request);
-  const message = buildIntroEmailMessage(settings, request, links);
+  const links = request.emailType === CONFIRMATION_EMAIL_TYPE
+    ? {
+        candidate: await loadCandidateRecord(supabase, request.candidateId, request.email),
+        timesheetsUrl: resolveCandidateTimesheetsDashboardUrl(),
+      }
+    : await resolveIntroEmailLinks(event, supabase, request);
+  const message = request.emailType === CONFIRMATION_EMAIL_TYPE
+    ? buildOnboardingConfirmationMessage(settings, request, links)
+    : buildIntroEmailMessage(settings, request, links);
   const delivery = await sendTransactionalEmail({
     toEmail: request.email,
     fromEmail: settings.senderEmail || settings.supportEmail || 'info@hmj-global.com',
@@ -188,7 +410,7 @@ const baseHandler = async (event, context) => {
 
   let provisionalError = null;
 
-  if (supabase) {
+  if (supabase && request.emailType === INTRO_EMAIL_TYPE) {
     try {
       if (!candidateId) {
         // No existing profile — create a provisional new-starter record.
@@ -267,7 +489,7 @@ const baseHandler = async (event, context) => {
         const activityType = request.isReminder ? 'intro_reminder_sent' : 'intro_email_sent';
         const description = request.isReminder
           ? `Reminder email sent by ${user?.email || 'admin'}${request.jobTitle ? ` for ${request.jobTitle}` : ''}${request.company ? ` at ${request.company}` : ''}.`
-          : `Intro/welcome email sent by ${user?.email || 'admin'}${request.jobTitle ? ` for ${request.jobTitle}` : ''}${request.company ? ` at ${request.company}` : ''}. Profile provisionally created.`;
+          : `Intro/welcome email sent by ${user?.email || 'admin'}${request.jobTitle ? ` for ${request.jobTitle}` : ''}${request.company ? ` at ${request.company}` : ''}.${provisionalCreated ? ' Profile provisionally created.' : ''}`;
         const actRes = await supabase.from('candidate_activity').insert({
           candidate_id: candidateId,
           activity_type: activityType,
@@ -293,19 +515,49 @@ const baseHandler = async (event, context) => {
     }
   }
 
+  if (supabase && request.emailType === CONFIRMATION_EMAIL_TYPE && candidateId) {
+    try {
+      const actRes = await supabase.from('candidate_activity').insert({
+        candidate_id: candidateId,
+        activity_type: 'onboarding_confirmation_sent',
+        description: `Onboarding confirmation email sent by ${user?.email || 'admin'}${request.company ? ` for ${request.company}` : ''}${request.projectLocation ? ` on ${request.projectLocation}` : ''}.`,
+        actor_role: 'admin',
+        actor_identifier: user?.email || null,
+        meta: {
+          company: request.company || null,
+          project_location: request.projectLocation || null,
+          job_title: request.jobTitle || null,
+          email_type: request.emailType,
+        },
+        created_at: new Date().toISOString(),
+      });
+      if (actRes.error) {
+        console.warn('[send-intro-email] onboarding confirmation activity insert failed', actRes.error.message);
+      }
+    } catch (activityError) {
+      console.warn('[send-intro-email] onboarding confirmation activity step failed', activityError?.message || activityError);
+    }
+  }
+
   await recordAudit({
     actor: user,
-    action: request.isReminder ? 'send_intro_reminder' : 'send_intro_email',
-    targetType: 'starter_intro_email',
+    action: request.emailType === CONFIRMATION_EMAIL_TYPE
+      ? 'send_onboarding_confirmation_email'
+      : request.isReminder
+        ? 'send_intro_reminder'
+        : 'send_intro_email',
+    targetType: request.emailType === CONFIRMATION_EMAIL_TYPE ? 'starter_onboarding_email' : 'starter_intro_email',
     targetId: request.email,
     meta: {
       first_name: request.firstName,
       last_name: request.lastName,
       company: request.company,
+      project_location: request.projectLocation || null,
       job_title: request.jobTitle || null,
       phone: request.phone || null,
       delivery_provider: delivery?.provider || null,
       candidate_id: candidateId,
+      email_type: request.emailType,
       access_link_type: message.accessLinkType || null,
       provisional_created: provisionalCreated,
       is_reminder: request.isReminder,
@@ -323,17 +575,27 @@ const baseHandler = async (event, context) => {
     candidateId,
     provisionalCreated,
     provisionalError: provisionalError || null,
-    message: provisionalCreated
-      ? 'Intro email sent and provisional new-starter profile created.'
-      : provisionalError
-        ? `Intro email sent, but provisional profile creation failed: ${provisionalError}`
-        : 'Intro email accepted for delivery.',
+    message: request.emailType === CONFIRMATION_EMAIL_TYPE
+      ? 'Onboarding confirmation email accepted for delivery.'
+      : provisionalCreated
+        ? 'Intro email sent and provisional new-starter profile created.'
+        : provisionalError
+          ? `Intro email sent, but provisional profile creation failed: ${provisionalError}`
+          : 'Intro email accepted for delivery.',
   });
 };
 
 module.exports = {
+  CONFIRMATION_EMAIL_TYPE,
+  DEFAULT_CONFIRMATION_BODY,
+  DEFAULT_CONFIRMATION_HEADING,
+  DEFAULT_CONFIRMATION_SUBJECT,
+  INTRO_EMAIL_TYPE,
+  buildOnboardingConfirmationMessage,
+  buildPlacementContext,
   buildIntroEmailMessage,
   normaliseIntroEmailRequest,
+  renderOnboardingMergeTokens,
   resolveIntroEmailLinks,
   validateIntroEmailRequest,
   handler: withAdminCors(baseHandler, { requireToken: false }),

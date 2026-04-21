@@ -255,11 +255,14 @@ function buildEmailTemplate(settings, options = {}) {
   const actionUrlRaw = trimString(options.actionUrl || '{{ .ConfirmationURL }}', 4000) || '{{ .ConfirmationURL }}';
   const actionUrl = escapeHtml(actionUrlRaw);
   const helpCopy = escapeHtml(settings.helpCopy || '');
+  const contextNote = escapeHtml(
+    options.contextNote || 'This link is tied to your HMJ candidate account and should only be used by you.'
+  );
   const senderName = escapeHtml(settings.senderName || 'HMJ Global');
   const supportEmail = escapeHtml(settings.supportEmail || settings.senderEmail || 'info@hmj-global.com');
   const footerTagline = escapeHtml(settings.footerTagline || '');
   const preheader = escapeHtml(settings.preheader || '');
-  const bodyHtml = trimString(options.bodyHtml || '', 4000);
+  const bodyHtml = trimString(options.bodyHtml || '', 14000);
   const actions = Array.isArray(options.actions) && options.actions.length
     ? options.actions
     : [{ label: options.actionLabel || 'Open secure link', url: actionUrlRaw, tone: 'primary' }];
@@ -329,7 +332,7 @@ function buildEmailTemplate(settings, options = {}) {
             <tr>
               <td style="padding:28px 32px 18px;">
                 <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334a7e;">${intro}</p>
-                <p style="margin:0 0 22px;font-size:14px;line-height:1.7;color:#5f74a8;">This link is tied to your HMJ candidate account and should only be used by you.</p>
+                <p style="margin:0 0 22px;font-size:14px;line-height:1.7;color:#5f74a8;">${contextNote}</p>
                 ${bodyHtml}
                 ${buttonTable}
                 <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#5f74a8;">${escapeHtml(settings.helpCopy || '')}</p>

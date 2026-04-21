@@ -5,11 +5,12 @@
   const STORAGE_KEY = 'hmj.admin.cvFormatting.defaults.v3';
   const HISTORY_LIMIT = 10;
   const RECOMMENDED_OPTIONS = Object.freeze({
-    templatePreset: 'recruiter_standard',
+    templatePreset: 'premium_candidate_pack',
     anonymiseMode: 'balanced',
     tailoringMode: 'balanced',
-    coverPageMode: 'condensed',
+    coverPageMode: 'skip',
     outputNameMode: 'role_reference',
+    candidateDisplayName: '',
     targetRoleOverride: '',
     recruiterInstructions: '',
     includeFormattingNotes: false,
@@ -20,6 +21,7 @@
   });
   const LABELS = Object.freeze({
     templatePreset: {
+      premium_candidate_pack: 'Premium candidate pack',
       recruiter_standard: 'Recruiter standard',
       data_centre_priority: 'Data centre priority',
       executive_summary: 'Executive summary',
@@ -157,6 +159,7 @@
       tailoringMode: String(merged.tailoringMode || RECOMMENDED_OPTIONS.tailoringMode),
       coverPageMode: String(merged.coverPageMode || RECOMMENDED_OPTIONS.coverPageMode),
       outputNameMode: String(merged.outputNameMode || RECOMMENDED_OPTIONS.outputNameMode),
+      candidateDisplayName: String(merged.candidateDisplayName || '').slice(0, 120),
       targetRoleOverride: String(merged.targetRoleOverride || '').slice(0, 140),
       recruiterInstructions: String(merged.recruiterInstructions || '').slice(0, 400),
       includeFormattingNotes: merged.includeFormattingNotes !== false,
@@ -185,6 +188,9 @@
 
   function formatDeliveryMode(options) {
     const safeOptions = normaliseOptions(options);
+    if (safeOptions.templatePreset === 'premium_candidate_pack') {
+      return `Premium branded opening · ${chipLabel('outputNameMode', safeOptions.outputNameMode)}`;
+    }
     return `${chipLabel('coverPageMode', safeOptions.coverPageMode)} · ${chipLabel('outputNameMode', safeOptions.outputNameMode)}`;
   }
 
@@ -289,6 +295,42 @@
     };
   }
 
+  function summariseVerificationState(result) {
+    const verification = result && result.analysis && result.analysis.verification || {};
+    const deterministic = verification.deterministic || {};
+    const ai = verification.ai || {};
+
+    if (!verification || verification.passed == null) {
+      return {
+        label: 'Verification pending',
+        tone: 'warn',
+        detail: '',
+      };
+    }
+
+    if (verification.passed) {
+      if (ai.status === 'completed') {
+        return {
+          label: 'Premium QA passed',
+          tone: 'ok',
+          detail: 'Deterministic and AI quality checks both passed.',
+        };
+      }
+      return {
+        label: 'Premium QA passed',
+        tone: 'ok',
+        detail: deterministic.reasons && deterministic.reasons[0] ? deterministic.reasons[0] : '',
+      };
+    }
+
+    const reason = (deterministic.reasons && deterministic.reasons[0]) || (ai.reasons && ai.reasons[0]) || 'The premium output checks did not pass.';
+    return {
+      label: 'Premium QA failed',
+      tone: 'bad',
+      detail: reason,
+    };
+  }
+
   function summariseStatus(run) {
     const status = String(run && run.status || '').toLowerCase();
     if (status === 'completed') return { label: 'Completed', tone: 'ok' };
@@ -333,6 +375,7 @@
         tailoringModeSelect: sel('#tailoringModeSelect'),
         coverPageModeSelect: sel('#coverPageModeSelect'),
         outputNameModeSelect: sel('#outputNameModeSelect'),
+        candidateDisplayNameInput: sel('#candidateDisplayNameInput'),
         targetRoleOverrideInput: sel('#targetRoleOverrideInput'),
         recruiterInstructionsInput: sel('#recruiterInstructionsInput'),
         includeFormattingNotesToggle: sel('#includeFormattingNotesToggle'),
@@ -373,6 +416,7 @@
         els.tailoringModeSelect,
         els.coverPageModeSelect,
         els.outputNameModeSelect,
+        els.candidateDisplayNameInput,
         els.targetRoleOverrideInput,
         els.recruiterInstructionsInput,
         els.includeFormattingNotesToggle,
@@ -420,6 +464,7 @@
           tailoringMode: els.tailoringModeSelect && els.tailoringModeSelect.value,
           coverPageMode: els.coverPageModeSelect && els.coverPageModeSelect.value,
           outputNameMode: els.outputNameModeSelect && els.outputNameModeSelect.value,
+          candidateDisplayName: els.candidateDisplayNameInput && els.candidateDisplayNameInput.value,
           targetRoleOverride: els.targetRoleOverrideInput && els.targetRoleOverrideInput.value,
           recruiterInstructions: els.recruiterInstructionsInput && els.recruiterInstructionsInput.value,
           includeFormattingNotes: !!(els.includeFormattingNotesToggle && els.includeFormattingNotesToggle.checked),
@@ -437,6 +482,7 @@
         if (els.tailoringModeSelect) els.tailoringModeSelect.value = options.tailoringMode;
         if (els.coverPageModeSelect) els.coverPageModeSelect.value = options.coverPageMode;
         if (els.outputNameModeSelect) els.outputNameModeSelect.value = options.outputNameMode;
+        if (els.candidateDisplayNameInput) els.candidateDisplayNameInput.value = options.candidateDisplayName;
         if (els.targetRoleOverrideInput) els.targetRoleOverrideInput.value = options.targetRoleOverride;
         if (els.recruiterInstructionsInput) els.recruiterInstructionsInput.value = options.recruiterInstructions;
         if (els.includeFormattingNotesToggle) els.includeFormattingNotesToggle.checked = !!options.includeFormattingNotes;
@@ -455,6 +501,7 @@
           chipLabel('tailoringMode', options.tailoringMode),
           chipLabel('coverPageMode', options.coverPageMode),
           chipLabel('outputNameMode', options.outputNameMode),
+          options.candidateDisplayName ? `Candidate name: ${options.candidateDisplayName}` : '',
           options.preferAiAssist ? 'AI assist enabled' : 'Fallback only',
           'Client-only output',
           'Recent five-year history prioritised',
@@ -523,6 +570,7 @@
         const profile = result.profile || {};
         const analysis = result.analysis || {};
         const aiState = summariseAiState(result);
+        const verificationState = summariseVerificationState(result);
         const optionsUsed = normaliseOptions(analysis.optionsUsed || collectOptions());
         const history = result.history || {};
         const aiAttempts = Array.isArray(analysis.aiAttempts) ? analysis.aiAttempts : [];
@@ -543,6 +591,7 @@
         if (els.resultChips) {
           const chips = [
             `<span class="cvf-chip" data-tone="${escapeHtml(aiState.tone)}">${escapeHtml(aiState.label)}</span>`,
+            `<span class="cvf-chip" data-tone="${escapeHtml(verificationState.tone)}">${escapeHtml(verificationState.label)}</span>`,
             `<span class="cvf-chip">${escapeHtml(analysis.tailoredToJobSpec ? 'Job spec applied' : 'CV-led output')}</span>`,
             `<span class="cvf-chip">${escapeHtml(chipLabel('templatePreset', optionsUsed.templatePreset))}</span>`,
             `<span class="cvf-chip">${escapeHtml(chipLabel('anonymiseMode', optionsUsed.anonymiseMode))}</span>`,
@@ -570,7 +619,9 @@
         }
         if (els.downloadSummary) {
           const fileName = result.file && result.file.name ? result.file.name : 'client-ready-cv.docx';
-          if (aiState.detail) {
+          if (verificationState.detail) {
+            els.downloadSummary.textContent = `${fileName} is ready. ${verificationState.detail}`;
+          } else if (aiState.detail) {
             els.downloadSummary.textContent = `${fileName} is ready. ${aiState.detail}`;
           } else if (history.saved) {
             els.downloadSummary.textContent = `${fileName} is ready and this run has been archived in Recent formatting runs.`;
@@ -837,11 +888,13 @@
                 ? 'The document is ready, but run history was only partially available.'
                 : '';
           const aiMessage = aiState.detail || '';
+          const verificationState = summariseVerificationState(response);
+          const verificationMessage = verificationState.detail || '';
 
           setStatus(
             aiState.blocking ? 'Client-ready CV generated with fallback' : 'Client-ready CV generated',
-            `${tailoredMessage}${aiMessage ? ` ${aiMessage}` : ''}${historyMessage ? ` ${historyMessage}` : ''}`.trim(),
-            aiState.blocking || (!history.saved && !!historyMessage) ? 'warn' : 'ok'
+            `${tailoredMessage}${verificationMessage ? ` ${verificationMessage}` : ''}${aiMessage ? ` ${aiMessage}` : ''}${historyMessage ? ` ${historyMessage}` : ''}`.trim(),
+            aiState.blocking || verificationState.tone === 'bad' || (!history.saved && !!historyMessage) ? 'warn' : 'ok'
           );
           autoDownload();
           await loadHistory({ silent: true });
@@ -917,7 +970,7 @@
         if (control) control.addEventListener('change', markConfigurationDirty);
       });
 
-      [els.targetRoleOverrideInput, els.recruiterInstructionsInput].forEach((control) => {
+      [els.candidateDisplayNameInput, els.targetRoleOverrideInput, els.recruiterInstructionsInput].forEach((control) => {
         if (control) control.addEventListener('input', markConfigurationDirty);
       });
 

@@ -2391,6 +2391,7 @@
     const missingRecommended = Array.isArray(onboarding.missingRecommended) ? onboarding.missingRecommended : [];
     const lastEmail = lastEmailSentAt(
       emailHistory,
+      'onboardingConfirmationSentAt',
       'onboardingReminderSentAt',
       'documentRequestSentAt',
       'rtwReminderSentAt',
@@ -3225,8 +3226,8 @@
           </article>
           <article class="summary-tile">
             <span>Last onboarding email</span>
-            <strong>${lastEmailSentAt(emailHistory, 'onboardingReminderSentAt', 'documentRequestSentAt', 'rtwReminderSentAt', 'introReminderSentAt', 'introSentAt', 'verificationCompleteSentAt') ? formatDateTime(lastEmailSentAt(emailHistory, 'onboardingReminderSentAt', 'documentRequestSentAt', 'rtwReminderSentAt', 'introReminderSentAt', 'introSentAt', 'verificationCompleteSentAt')) : 'Not sent yet'}</strong>
-            <p>${emailHistory.verificationCompleteSentAt ? 'Verification complete email logged.' : 'Use the actions below to chase missing detail quickly.'}</p>
+            <strong>${lastEmailSentAt(emailHistory, 'onboardingConfirmationSentAt', 'onboardingReminderSentAt', 'documentRequestSentAt', 'rtwReminderSentAt', 'introReminderSentAt', 'introSentAt', 'verificationCompleteSentAt') ? formatDateTime(lastEmailSentAt(emailHistory, 'onboardingConfirmationSentAt', 'onboardingReminderSentAt', 'documentRequestSentAt', 'rtwReminderSentAt', 'introReminderSentAt', 'introSentAt', 'verificationCompleteSentAt')) : 'Not sent yet'}</strong>
+            <p>${emailHistory.onboardingConfirmationSentAt ? 'Onboarding confirmation email logged.' : emailHistory.verificationCompleteSentAt ? 'Verification complete email logged.' : 'Use the actions below to chase missing detail quickly.'}</p>
           </article>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">

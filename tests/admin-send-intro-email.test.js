@@ -11,10 +11,10 @@ test('admin dashboard exposes the send intro email module card', () => {
   const html = read('admin/index.html');
 
   assert.match(html, /send-intro-email\.html/);
-  assert.match(html, /Send intro email/);
+  assert.match(html, /Onboarding/);
 });
 
-test('send intro email page uses the shared admin bootstrap and expected operational fields', () => {
+test('onboarding page uses the shared admin bootstrap and expected operational fields', () => {
   const html = read('admin/send-intro-email.html');
 
   assert.match(html, /identity-loader\.js\?v=3/);
@@ -23,19 +23,26 @@ test('send intro email page uses the shared admin bootstrap and expected operati
   assert.match(html, /id="introLastName"/);
   assert.match(html, /id="introEmail"/);
   assert.match(html, /id="introClientCompany"/);
+  assert.match(html, /id="introProjectLocation"/);
   assert.match(html, /id="introPhone"/);
   assert.match(html, /id="introJobTitle"/);
-  assert.match(html, /id="sendIntroStatus"/);
-  assert.match(html, /send-intro-email\.js\?v=3/);
+  assert.match(html, /id="confirmationSubject"/);
+  assert.match(html, /id="confirmationHeading"/);
+  assert.match(html, /id="confirmationBody"/);
+  assert.match(html, /id="onboardingStatus"/);
+  assert.match(html, /id="sendConfirmationSubmit"/);
+  assert.match(html, /send-intro-email\.js\?v=4/);
 });
 
-test('send intro email page reuses candidate email diagnostics and the dedicated send endpoint', () => {
+test('onboarding page reuses candidate email diagnostics and the dedicated send endpoint', () => {
   const source = read('admin/send-intro-email.js');
 
   assert.match(source, /admin-candidate-email-settings/);
   assert.match(source, /admin-send-intro-email/);
   assert.match(source, /publicDeliveryReady/);
-  assert.match(source, /state\.sending/);
+  assert.match(source, /state\.sendingIntro/);
+  assert.match(source, /state\.sendingConfirmation/);
+  assert.match(source, /DEFAULT_CONFIRMATION_BODY/);
 });
 
 test('send intro email backend normalises input and builds branded website links', () => {
@@ -55,8 +62,13 @@ test('send intro email backend normalises input and builds branded website links
     lastName: 'Miles',
     email: 'ava.miles@example.com',
     company: 'ACME Pharma',
+    projectLocation: '',
     phone: '+44 7700 900123',
     jobTitle: 'Senior Planner',
+    subject: '',
+    heading: '',
+    body: '',
+    emailType: 'intro',
   });
 
   const message = mod.buildIntroEmailMessage({
@@ -78,6 +90,40 @@ test('send intro email backend normalises input and builds branded website links
   assert.match(message.html, /new starter route selected for you/i);
   assert.match(message.html, /Open HMJ new starter registration/);
   assert.match(message.html, /background:#173779/);
+});
+
+test('onboarding confirmation builder renders editable HMJ onboarding copy with the Monday release wording', () => {
+  const mod = require('../netlify/functions/admin-send-intro-email.js');
+
+  const payload = mod.normaliseIntroEmailRequest({
+    email_type: 'confirmation',
+    first_name: 'Ava',
+    last_name: 'Miles',
+    email: 'ava@example.com',
+    company: 'SA3 Group',
+    project_location: 'Media City',
+  });
+
+  assert.equal(payload.emailType, 'confirmation');
+  assert.equal(payload.projectLocation, 'Media City');
+
+  const message = mod.buildOnboardingConfirmationMessage({
+    siteUrl: 'https://hmjg.netlify.app/',
+    senderName: 'HMJ Global',
+    senderEmail: 'info@hmj-global.com',
+    supportEmail: 'info@hmj-global.com',
+  }, payload, {
+    timesheetsUrl: 'https://hmjglobal.timesheetportal.com/Dashboard/',
+  });
+
+  assert.equal(message.subject, 'Welcome to HMJ Global - your onboarding details for SA3 Group');
+  assert.equal(message.timesheetsUrl, 'https://hmjglobal.timesheetportal.com/Dashboard/');
+  assert.match(message.html, /SA3 Group on Media City/);
+  assert.match(message.html, /released in the early hours of Monday/i);
+  assert.match(message.html, /working week ahead/i);
+  assert.match(message.html, /following Wednesday/i);
+  assert.match(message.html, /Open HMJ timesheets \/ portal access/);
+  assert.match(message.html, /Keep this onboarding summary for reference/i);
 });
 
 test('send intro email backend validates required starter details', () => {
@@ -128,6 +174,8 @@ test('send intro email backend keeps intro sends inside the broader onboarding w
   assert.match(source, /onboarding_status_updated_at/);
   assert.match(source, /onboarding_status_updated_by/);
   assert.match(source, /const activityType = request\.isReminder \? 'intro_reminder_sent' : 'intro_email_sent';/);
+  assert.match(source, /onboarding_confirmation_sent/);
+  assert.match(source, /generateCandidateAccessLink/);
   assert.match(source, /access_link_type/);
   assert.match(source, /provisional_created/);
 });

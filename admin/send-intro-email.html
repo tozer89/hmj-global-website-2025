@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="robots" content="noindex,nofollow"/>
-  <title>Send Intro Email — Admin | HMJ Global</title>
+  <title>Onboarding - Admin | HMJ Global</title>
 
   <script src="/admin/__env.js"></script>
   <script src="/admin/identity-bootstrap.js"></script>
@@ -21,21 +21,22 @@
     html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
     a{color:inherit;text-decoration:none}
     .top{position:sticky;top:0;z-index:90;background:linear-gradient(180deg,var(--highlight),#284190);color:#fff;border-bottom:1px solid rgba(255,255,255,.2);box-shadow:0 10px 28px rgba(15,27,63,.18)}
-    .row{max-width:1320px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
+    .row{max-width:1380px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
     .brand{font-weight:800;letter-spacing:.02em}
     .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
     .sp{flex:1}
-    .btn{background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.04));color:var(--ink);border:1px solid rgba(47,78,162,.25);padding:9px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
+    .btn{background:linear-gradient(180deg,rgba(47,78,162,.12),rgba(47,78,162,.04));color:var(--ink);border:1px solid rgba(47,78,162,.25);padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .16s ease,box-shadow .2s ease,border-color .2s ease}
     .btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(47,78,162,.18);border-color:rgba(47,78,162,.45)}
     .btn.ghost{background:#fff;border-color:rgba(47,78,162,.18);color:var(--highlight)}
     .btn.primary{background:linear-gradient(180deg,#3657b3,#29489e);border-color:rgba(41,72,158,.48);color:#fff}
     .btn:disabled{cursor:not-allowed;opacity:.6;transform:none;box-shadow:none}
-    .wrap{max-width:1320px;margin:24px auto;padding:0 22px;display:grid;gap:18px}
+    .wrap{max-width:1380px;margin:24px auto;padding:0 22px;display:grid;gap:18px}
     .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(15,27,63,.12)}
-    .muted{color:var(--muted)}
-    .lead{margin:0 0 8px;font-size:30px;line-height:1.1}
-    .layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:18px;align-items:start}
     .stack{display:grid;gap:18px}
+    .layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:18px;align-items:start}
+    .muted{color:var(--muted)}
+    .eyebrow{margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--highlight);font-size:12px}
+    .lead{margin:0 0 10px;font-size:32px;line-height:1.08}
     .status{padding:14px 16px;border-radius:14px;border:1px solid rgba(47,78,162,.16);background:#f8faff}
     .status[data-tone="success"]{border-color:rgba(19,135,84,.2);background:rgba(19,135,84,.08);color:#0f6a42}
     .status[data-tone="warn"]{border-color:rgba(183,129,31,.2);background:rgba(183,129,31,.08);color:#915f10}
@@ -44,17 +45,43 @@
     .field{display:grid;gap:6px}
     .field--full{grid-column:1 / -1}
     .field label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-    .field input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(47,78,162,.22);background:#fff;color:var(--ink);font:inherit}
-    .field input:focus{outline:none;border-color:rgba(47,78,162,.5);box-shadow:0 0 0 3px rgba(47,78,162,.14)}
+    .field input,.field textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(47,78,162,.22);background:#fff;color:var(--ink);font:inherit}
+    .field textarea{min-height:360px;resize:vertical}
+    .field input:focus,.field textarea:focus{outline:none;border-color:rgba(47,78,162,.5);box-shadow:0 0 0 3px rgba(47,78,162,.14)}
     .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .summary-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
-    .summary-list li{padding:12px 14px;border-radius:14px;border:1px solid rgba(47,78,162,.12);background:#f8faff}
-    .summary-list strong{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+    .stage-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+    .stage-card{display:grid;gap:16px}
+    .stage-card--rich{align-content:start}
+    .stage-badge{display:inline-flex;align-items:center;justify-content:center;width:max-content;padding:5px 10px;border-radius:999px;background:rgba(47,78,162,.08);border:1px solid rgba(47,78,162,.14);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--highlight)}
+    .stage-badge--alt{background:rgba(15,27,63,.06);color:#173779}
+    .detail-list,.summary-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+    .detail-list li,.summary-list li{padding:12px 14px;border-radius:14px;border:1px solid rgba(47,78,162,.12);background:#f8faff}
+    .detail-list strong,.summary-list strong{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
     .summary-note{margin:0;padding:14px 16px;border-radius:14px;border:1px solid rgba(47,78,162,.12);background:linear-gradient(180deg,rgba(247,249,255,.98),rgba(255,255,255,.98))}
-    .preview-card{display:grid;gap:12px}
+    .token-palette{display:flex;gap:8px;flex-wrap:wrap}
+    .token{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--highlight);font-size:12px;font-weight:800;cursor:pointer}
+    .token:hover{background:#eef4ff;border-color:rgba(47,78,162,.34)}
+    .preview-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .preview-toggle{display:flex;gap:8px;flex-wrap:wrap}
+    .preview-toggle button{padding:8px 12px;border-radius:999px;border:1px solid rgba(47,78,162,.18);background:#fff;color:var(--highlight);font-weight:800;cursor:pointer}
+    .preview-toggle button.active{background:#173779;color:#fff;border-color:#173779}
+    .preview-card{display:grid;gap:16px;padding:18px;border-radius:22px;background:linear-gradient(180deg,#173779,#244999 58%,#f4f7fb 58%,#f4f7fb 100%);box-shadow:0 22px 48px rgba(15,23,42,.18)}
+    .preview-meta{display:grid;gap:8px;color:#dbe6ff}
+    .preview-meta strong{font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+    .preview-subject{font-size:22px;line-height:1.2;color:#fff;font-weight:800}
+    .preview-recipient{font-size:14px;color:#dbe6ff}
+    .preview-shell{display:grid;gap:16px;padding:22px;border-radius:22px;background:#fff;border:1px solid #d7e0f5}
+    .preview-hero{display:grid;gap:10px;padding:22px;border-radius:20px;background:#173779;color:#fff}
+    .preview-hero span{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#dbe6ff}
+    .preview-hero strong{font-size:28px;line-height:1.16}
+    .preview-body{display:grid;gap:12px;color:#42557f;font-size:15px;line-height:1.7}
+    .preview-body p{margin:0}
     .preview-actions{display:flex;gap:10px;flex-wrap:wrap}
-    @media (max-width:980px){ .layout{grid-template-columns:1fr} }
-    @media (max-width:720px){ .form-grid{grid-template-columns:1fr} }
+    .preview-btn{display:inline-flex;align-items:center;justify-content:center;padding:13px 18px;border-radius:14px;border:1px solid #3154b3;background:#3154b3;color:#fff;font-weight:800;font-size:14px;text-decoration:none}
+    .preview-btn.secondary{background:#fff;color:#3154b3;border-color:#cfdaf6}
+    .preview-footer{display:grid;gap:6px;padding-top:12px;border-top:1px solid #e6ecfb;font-size:13px;color:#5f74a8}
+    @media (max-width:1040px){ .layout{grid-template-columns:1fr} }
+    @media (max-width:720px){ .form-grid{grid-template-columns:1fr}.field textarea{min-height:300px}.lead{font-size:28px} }
   </style>
   <link rel="stylesheet" href="/assets/css/admin.responsive.css?v=2" />
   <link rel="stylesheet" href="/assets/css/admin.harmony.css?v=1" />
@@ -62,7 +89,7 @@
 <body>
   <div class="top"><div class="row">
     <div class="brand">HMJ Global Admin</div>
-    <span class="pill">Send intro email</span>
+    <span class="pill">Onboarding</span>
     <div class="sp"></div>
     <a class="btn ghost" href="/">← Website</a>
     <a class="btn ghost" href="/admin/">⟵ Return to Admin Dash</a>
@@ -79,81 +106,169 @@
 
   <div class="wrap" id="app" style="display:none">
     <section class="panel">
-      <p class="muted" style="margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;">Starter outreach</p>
-      <h1 class="lead">Send intro email</h1>
-      <p class="muted" style="margin:0;max-width:72ch">Send a branded HMJ welcome email to a new starter with a direct registration link and a Timesheet Portal access path. This is designed for the point where you only have the essential starter details and need to get onboarding moving.</p>
+      <p class="eyebrow">Two-stage contractor workflow</p>
+      <h1 class="lead">Onboarding</h1>
+      <p class="muted" style="margin:0;max-width:78ch">Use one shared contractor record to send the HMJ intro email first, then the branded onboarding confirmation email once the role is live. The page also audits the active sender and delivery path so you can see whether emails will go from the correct HMJ setup before pressing send.</p>
     </section>
 
     <div class="layout">
-      <section class="panel stack">
-        <div id="sendIntroStatus" class="status" data-tone="info">Checking current candidate email delivery settings…</div>
+      <section class="stack">
+        <form id="onboardingForm" class="stack" novalidate>
+          <section class="panel stack">
+            <div>
+              <p class="eyebrow">Shared contractor details</p>
+              <h2 style="margin:0 0 8px;font-size:22px">Starter details</h2>
+              <p class="muted" style="margin:0">These details feed both stages. Project / location is optional and the confirmation email is built to read cleanly when it is left blank.</p>
+            </div>
 
-        <form id="sendIntroForm" class="stack" novalidate>
-          <div class="form-grid">
-            <div class="field">
-              <label for="introFirstName">First name</label>
-              <input id="introFirstName" name="first_name" type="text" autocomplete="given-name" required>
+            <div id="onboardingStatus" class="status" data-tone="info">Checking current candidate email delivery settings…</div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="introFirstName">First name</label>
+                <input id="introFirstName" name="first_name" type="text" autocomplete="given-name" required>
+              </div>
+              <div class="field">
+                <label for="introLastName">Last name</label>
+                <input id="introLastName" name="last_name" type="text" autocomplete="family-name" required>
+              </div>
+              <div class="field">
+                <label for="introEmail">Email address</label>
+                <input id="introEmail" name="email" type="email" autocomplete="email" required>
+              </div>
+              <div class="field">
+                <label for="introClientCompany">Company / client</label>
+                <input id="introClientCompany" name="company" type="text" autocomplete="organization" required>
+              </div>
+              <div class="field">
+                <label for="introProjectLocation">Project / location (optional)</label>
+                <input id="introProjectLocation" name="project_location" type="text" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="introPhone">Phone number (optional)</label>
+                <input id="introPhone" name="phone" type="tel" autocomplete="tel">
+              </div>
+              <div class="field field--full">
+                <label for="introJobTitle">Job title (optional)</label>
+                <input id="introJobTitle" name="job_title" type="text" autocomplete="organization-title">
+              </div>
             </div>
-            <div class="field">
-              <label for="introLastName">Last name</label>
-              <input id="introLastName" name="last_name" type="text" autocomplete="family-name" required>
+
+            <div class="actions">
+              <button class="btn ghost" id="onboardingClear" type="button">Clear details</button>
+              <a class="btn ghost" href="/admin/settings.html">Open email settings</a>
             </div>
-            <div class="field">
-              <label for="introEmail">Email address</label>
-              <input id="introEmail" name="email" type="email" autocomplete="email" required>
-            </div>
-            <div class="field">
-              <label for="introClientCompany">Company / client</label>
-              <input id="introClientCompany" name="company" type="text" autocomplete="organization" required>
-            </div>
-            <div class="field">
-              <label for="introPhone">Phone number</label>
-              <input id="introPhone" name="phone" type="tel" autocomplete="tel">
-            </div>
-            <div class="field">
-              <label for="introJobTitle">Job title</label>
-              <input id="introJobTitle" name="job_title" type="text" autocomplete="organization-title">
-            </div>
-          </div>
-          <div class="actions">
-            <button class="btn primary" id="sendIntroSubmit" type="submit">Send intro email</button>
-            <button class="btn ghost" id="sendIntroReset" type="button">Clear form</button>
-            <a class="btn ghost" href="/admin/settings.html">Open email settings</a>
+          </section>
+
+          <div class="stage-grid">
+            <section class="panel stage-card">
+              <span class="stage-badge">Stage 1</span>
+              <div>
+                <h2 style="margin:0 0 8px;font-size:22px">Intro email</h2>
+                <p class="muted" style="margin:0">Send the HMJ access and registration email with secure onboarding access and Timesheet Portal links. This is the first operational email in the workflow.</p>
+              </div>
+              <ul class="detail-list">
+                <li><strong>Use when</strong><span>The contractor is ready for HMJ account access and new-starter registration.</span></li>
+                <li><strong>What it sends</strong><span>Secure onboarding access, the HMJ registration route, and Timesheet Portal access in one branded email.</span></li>
+                <li><strong>Operational outcome</strong><span>Creates or refreshes the onboarding trail so reminders and document chasing stay connected to the candidate record.</span></li>
+              </ul>
+              <div class="actions">
+                <button class="btn primary" id="sendIntroSubmit" type="button">Send stage 1 intro email</button>
+                <button class="btn ghost" id="previewIntroButton" type="button">Preview stage 1</button>
+              </div>
+            </section>
+
+            <section class="panel stage-card stage-card--rich">
+              <span class="stage-badge stage-badge--alt">Stage 2</span>
+              <div>
+                <h2 style="margin:0 0 8px;font-size:22px">Onboarding confirmation</h2>
+                <p class="muted" style="margin:0">Editable HMJ-branded onboarding copy covering timesheets, payment timing, support contacts, and contract follow-up once the contractor has been placed.</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="field field--full">
+                  <label for="confirmationSubject">Email subject</label>
+                  <input id="confirmationSubject" maxlength="160" autocomplete="off">
+                </div>
+                <div class="field field--full">
+                  <label for="confirmationHeading">Email heading</label>
+                  <input id="confirmationHeading" maxlength="160" autocomplete="off">
+                </div>
+                <div class="field field--full">
+                  <label for="confirmationBody">Editable message</label>
+                  <textarea id="confirmationBody" spellcheck="true"></textarea>
+                </div>
+              </div>
+
+              <div class="token-palette" id="confirmationTokenPalette">
+                <button class="token" type="button" data-template-token="<FIRST_NAME>">First name</button>
+                <button class="token" type="button" data-template-token="<LAST_NAME>">Last name</button>
+                <button class="token" type="button" data-template-token="<FULL_NAME>">Full name</button>
+                <button class="token" type="button" data-template-token="<COMPANY_NAME>">Company</button>
+                <button class="token" type="button" data-template-token="<PROJECT_LOCATION>">Project / location</button>
+                <button class="token" type="button" data-template-token="<PLACEMENT_CONTEXT>">Company + project</button>
+                <button class="token" type="button" data-template-token="<SUPPORT_EMAIL>">Support email</button>
+              </div>
+
+              <p class="summary-note">Use <strong>&lt;PLACEMENT_CONTEXT&gt;</strong> when you want the company and optional project/location line to stay natural even if the project field is blank.</p>
+
+              <div class="actions">
+                <button class="btn primary" id="sendConfirmationSubmit" type="button">Send stage 2 confirmation</button>
+                <button class="btn ghost" id="resetConfirmationTemplate" type="button">Reset email copy</button>
+                <button class="btn ghost" id="previewConfirmationButton" type="button">Preview stage 2</button>
+              </div>
+            </section>
           </div>
         </form>
       </section>
 
       <aside class="stack">
-        <section class="panel preview-card">
+        <section class="panel stack">
           <div>
-            <p class="muted" style="margin:0 0 6px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;">Live summary</p>
-            <h2 style="margin:0 0 8px;font-size:20px">Email preview</h2>
-            <p class="muted" style="margin:0">This module sends a welcome email with HMJ registration steps, onboarding context, and the Timesheet Portal dashboard link.</p>
+            <p class="eyebrow">Delivery audit</p>
+            <h2 style="margin:0 0 8px;font-size:22px">Current email sending setup</h2>
+            <p class="muted" style="margin:0">This module reuses the live candidate email sender, provider, support inbox, and Timesheet Portal configuration already stored in Admin Settings.</p>
           </div>
-          <ul class="summary-list" id="sendIntroPreview">
-            <li><strong>Recipient</strong><span>—</span></li>
-            <li><strong>Role / client</strong><span>—</span></li>
-            <li><strong>Sender</strong><span>Loading current settings…</span></li>
-            <li><strong>Registration path</strong><span>/candidates</span></li>
-            <li><strong>Timesheets path</strong><span>https://hmjglobal.timesheetportal.com/Dashboard/</span></li>
+          <ul class="summary-list" id="onboardingAudit">
+            <li><strong>Status</strong><span>Checking current email delivery setup…</span></li>
           </ul>
+          <p class="summary-note" id="onboardingSenderNote">Emails should normally send from the configured HMJ sender. If you need them to come from info@hmj-global.com specifically, confirm that sender in Candidate email settings.</p>
         </section>
 
         <section class="panel stack">
-          <div>
-            <p class="muted" style="margin:0 0 6px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;">How it works</p>
-            <h2 style="margin:0 0 8px;font-size:20px">Operational notes</h2>
+          <div class="preview-head">
+            <div>
+              <p class="eyebrow">Live preview</p>
+              <h2 style="margin:0 0 8px;font-size:22px">Email preview</h2>
+              <p class="muted" style="margin:0">Switch between the two stages to preview the branded HMJ email before sending.</p>
+            </div>
+            <div class="preview-toggle">
+              <button id="previewModeIntro" type="button" data-preview-mode="intro" class="active">Stage 1</button>
+              <button id="previewModeConfirmation" type="button" data-preview-mode="confirmation">Stage 2</button>
+            </div>
           </div>
-          <p class="summary-note">The intro email uses the sender and delivery configuration already managed in Candidate account email settings. If delivery is not ready, this page will block sending and show the exact issue instead of failing silently.</p>
-          <div class="preview-actions">
-            <a class="btn ghost" href="/candidates" target="_blank" rel="noreferrer">Open candidate page</a>
-            <a class="btn ghost" href="https://hmjglobal.timesheetportal.com/Dashboard/" target="_blank" rel="noreferrer">Open Timesheet Portal</a>
+
+          <div class="preview-card">
+            <div class="preview-meta">
+              <strong id="previewModeLabel">Stage 1 · Intro email</strong>
+              <div class="preview-subject" id="onboardingPreviewSubject">HMJ email preview</div>
+              <div class="preview-recipient" id="onboardingPreviewRecipient">Previewing recipient</div>
+            </div>
+            <div class="preview-shell">
+              <div class="preview-hero">
+                <span>HMJ Global</span>
+                <strong id="onboardingPreviewHeading">Welcome to HMJ Global</strong>
+              </div>
+              <div class="preview-body" id="onboardingPreviewBody"></div>
+              <div class="preview-actions" id="onboardingPreviewActions"></div>
+              <div class="preview-footer" id="onboardingPreviewFooter"></div>
+            </div>
           </div>
         </section>
       </aside>
     </div>
   </div>
 
-  <script src="/admin/send-intro-email.js?v=3"></script>
+  <script src="/admin/send-intro-email.js?v=4"></script>
 </body>
 </html>

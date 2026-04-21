@@ -8,9 +8,11 @@ const {
   buildClientReadyDocx,
   buildFallbackProfile,
   buildOutputFileName,
+  callOpenAiCandidatePackVerifier,
   callOpenAiFormatter,
   guessCandidateName,
   sanitiseStructuredProfile,
+  verifyPremiumCandidatePack,
 } = require('../lib/cv-formatter-core.js');
 
 async function withPatchedEnv(patch, fn) {
@@ -77,7 +79,8 @@ test('sanitiseStructuredProfile redacts direct identifiers', () => {
 
   const serialised = JSON.stringify(profile);
   assert.equal(profile.candidateReference, 'HMJ-ABCD1234');
-  assert.doesNotMatch(serialised, /George Syngros/i);
+  assert.equal(profile.candidateName, 'George Syngros');
+  assert.doesNotMatch(serialised.replace('George Syngros', ''), /George Syngros/i);
   assert.doesNotMatch(serialised, /george@example\.com/i);
   assert.doesNotMatch(serialised, /\+44 7800 123456/i);
   assert.doesNotMatch(serialised, /HU13 9AZ/i);
@@ -220,6 +223,77 @@ test('buildFallbackProfile keeps the most recent five years of employment histor
   );
 });
 
+test('buildFallbackProfile promotes a person-name location into the candidate title and clears the location field', () => {
+  const sourceText = [
+    'QAQC Lead',
+    'Candidate ID',
+    'HMJ-TEST1234',
+    'Location',
+    'David Castle',
+    'Employment History',
+    'QAQC Lead',
+    'Exyte, Tnuvot 01/23-07/23',
+    'Carry out W1 and W2 walkdowns on electrical equipment.',
+  ].join('\n');
+
+  const profile = buildFallbackProfile({
+    candidateText: sourceText,
+    jobSpecText: '',
+    candidateFileName: 'QAQC Lead - HMJ-TEST1234.docx',
+  });
+
+  assert.equal(profile.candidateName, 'David Castle');
+  assert.equal(profile.location, '');
+});
+
+test('buildFallbackProfile reconstructs recent QAQC employment history from a previously formatted source document', () => {
+  const sourceText = [
+    'Candidate profile',
+    'QAQC Lead',
+    'Candidate ID: HMJ-3B7A1F33   |   Location: David Castle',
+    'Employment History',
+    'LV SENIOR AUTHORISED PERSON',
+    'WINTHROP, ARN060 AWS 09/25-01/26',
+    'QA/QC HV/LV Authorised Person Exyte, Frankfurt FR16 (Equinix) 02/25-05/25 commissioning, to ensure client specification has been met.',
+    'Managing and maintaining SSOW',
+    'LOTO on all LV Equipment',
+    'Electrical Construction Manager',
+    'Exyte, Frankfurt FR16 (Equinix) 03/24-12/24',
+    'commissioning electrical equipment',
+    'Commissioning Engineer',
+    'Exyte, Cyberjaya KUL03 Malaysia (Microsoft) 07/23-03/24',
+    'systems, Busbars, Switchboards and ATS',
+    'QAQC Lead',
+    'Exyte, Tnuvot (North of Tel Aviv) Amazon 01/23- 07/23',
+    'QAQC Lead SUIR Engineering, Eskilstuna Sweden, (Microsoft) 09/22-01/23 design commissioning authority LV Senior Authorised Person Dornans, Hillerod, Denmark, (FUJI Pharmaceutical) 05/22-09/22',
+  ].join('\n');
+
+  const profile = buildFallbackProfile({
+    candidateText: sourceText,
+    jobSpecText: '',
+    candidateFileName: 'QAQC Lead - HMJ-3B7A1F33.docx',
+    options: {
+      templatePreset: 'premium_candidate_pack',
+      candidateDisplayName: 'David Castle',
+      targetRoleOverride: 'QAQC Lead',
+    },
+  });
+
+  assert.equal(profile.candidateName, 'David Castle');
+  assert.equal(profile.targetRole, 'QA/QC Lead');
+  assert.equal(profile.location, '');
+  assert.ok(profile.employmentHistory.length >= 5);
+  assert.deepEqual(
+    profile.employmentHistory.slice(0, 3).map((entry) => [entry.title, entry.company, entry.dates]),
+    [
+      ['LV Senior Authorised Person', 'WINTHROP, ARN060 AWS', '09/25-01/26'],
+      ['QA/QC HV/LV Authorised Person', 'Exyte, Frankfurt FR16 (Equinix)', '02/25-05/25'],
+      ['Electrical Construction Manager', 'Exyte, Frankfurt FR16 (Equinix)', '03/24-12/24'],
+    ]
+  );
+  assert.ok(profile.relevantProjects.every((item) => !/\b(?:hnc|hnd|bsc|msc|edition|training)\b/i.test(item)));
+});
+
 test('buildClientReadyDocx returns a docx buffer', async () => {
   const buffer = await buildClientReadyDocx({
     candidateReference: 'HMJ-TEST1234',
@@ -281,6 +355,7 @@ test('buildClientReadyDocx supports option-driven layouts', async () => {
 
 test('buildClientReadyDocx includes branded footer contact details and a client-only document structure', async () => {
   const buffer = await buildClientReadyDocx({
+    candidateName: 'David Castle',
     candidateReference: 'HMJ-TEST1234',
     targetRole: 'Electrical Project Manager',
     location: 'Birmingham',
@@ -326,19 +401,23 @@ test('buildClientReadyDocx includes branded footer contact details and a client-
   assert.match(footerRels, /mailto:info@hmj-global\.com/);
   assert.match(footerRels, /https:\/\/www\.HMJ-Global\.com/);
   footerRelationshipIds.forEach((id) => assert.match(footerRels, new RegExp(`Id="${id}"`)));
-  assert.match(documentXml, />Profile Summary</);
-  assert.match(documentXml, />Key Skills</);
-  assert.match(documentXml, />Project Experience</);
-  assert.match(documentXml, />Qualifications</);
+  assert.match(documentXml, />DAVID CASTLE</);
+  assert.match(documentXml, />Executive Summary</);
+  assert.match(documentXml, />Core Strengths</);
+  assert.match(documentXml, />Key Project Experience</);
+  assert.match(documentXml, />Qualifications &amp; Certifications</);
   assert.doesNotMatch(documentXml, /<w:tblGrid>/);
   assert.doesNotMatch(documentXml, /w:type="page"/);
   assert.doesNotMatch(documentRelsXml, /footer2\.xml/);
   assert.equal((stylesXml.match(/<w:docDefaults>/g) || []).length, 1);
   assert.ok(mediaNames.every((name) => /\.png$/i.test(name)));
+  assert.ok(mediaNames.length >= 1);
   assert.doesNotMatch(contentTypesXml, /\.undefined/);
   assert.doesNotMatch(documentXml, /Formatting Notes/);
   assert.doesNotMatch(documentXml, />Warnings</);
   assert.doesNotMatch(documentXml, />Role Alignment</);
+  assert.doesNotMatch(documentXml, />Candidate profile</);
+  assert.doesNotMatch(documentXml, />Client-ready candidate profile</);
 });
 
 test('buildOutputFileName supports the configured naming modes', () => {
@@ -355,6 +434,87 @@ test('buildOutputFileName supports the configured naming modes', () => {
     buildOutputFileName(profile, { outputNameMode: 'source_reference' }, 'Harry Watts.docx'),
     'Harry Watts - HMJ-TEST1234.docx'
   );
+});
+
+test('verifyPremiumCandidatePack passes a well-formed premium candidate pack deterministically', async () => {
+  const profile = {
+    candidateName: 'David Castle',
+    candidateReference: 'HMJ-TEST1234',
+    targetRole: 'QAQC Lead',
+    location: '',
+    interviewAvailability: 'Available with short notice',
+    languages: ['English'],
+    profile: 'Experienced QAQC lead with data centre and pharmaceutical delivery exposure across electrical quality, commissioning readiness, and structured walkdown processes.',
+    roleAlignment: [],
+    relevantProjects: ['Data centre QA walkdowns and commissioning readiness'],
+    keySkills: ['Electrical QA/QC', 'Commissioning', 'Punch-list closeout'],
+    qualifications: ['C&G 2391 Electrical Test and Inspection'],
+    accreditations: ['IPAF'],
+    employmentHistory: [
+      {
+        dates: '01/23-07/23',
+        title: 'QAQC Lead',
+        company: 'Exyte, Tnuvot',
+        summary: 'Led electrical QA and commissioning closeout activities.',
+        bullets: ['Managed walkdowns and handover packs'],
+      },
+    ],
+    additionalInformation: [],
+    redactionsApplied: [],
+    warnings: [],
+  };
+
+  const buffer = await buildClientReadyDocx(profile, { templatePreset: 'premium_candidate_pack' });
+  const verification = await verifyPremiumCandidatePack({
+    profile,
+    buffer,
+    options: { templatePreset: 'premium_candidate_pack' },
+  });
+
+  assert.equal(verification.passed, true);
+  assert.equal(verification.blockingFailure, false);
+  assert.equal(verification.deterministic.passed, true);
+});
+
+test('verifyPremiumCandidatePack blocks malformed premium output when employment entries remain incomplete', async () => {
+  const profile = {
+    candidateName: 'David Castle',
+    candidateReference: 'HMJ-TEST1234',
+    targetRole: 'QA/QC Lead',
+    location: '',
+    interviewAvailability: '',
+    languages: [],
+    profile: 'Experienced QA/QC lead with client-facing delivery exposure.',
+    roleAlignment: [],
+    relevantProjects: ['Professional Training and HNC summary fragment'],
+    keySkills: ['Electrical QA/QC'],
+    qualifications: ['C&G 2391 Electrical Test and Inspection'],
+    accreditations: [],
+    employmentHistory: [
+      {
+        dates: '',
+        title: 'QA/QC Lead',
+        company: '',
+        summary: '',
+        bullets: [],
+      },
+    ],
+    additionalInformation: [],
+    redactionsApplied: [],
+    warnings: [],
+  };
+
+  const buffer = await buildClientReadyDocx(profile, { templatePreset: 'premium_candidate_pack' });
+  const verification = await verifyPremiumCandidatePack({
+    profile,
+    buffer,
+    options: { templatePreset: 'premium_candidate_pack' },
+  });
+
+  assert.equal(verification.passed, false);
+  assert.equal(verification.blockingFailure, true);
+  assert.equal(verification.deterministic.passed, false);
+  assert.match(verification.deterministic.reasons.join(' '), /incomplete|weak or non-project/i);
 });
 
 test('callOpenAiFormatter retries on transient errors and succeeds on a backup model', async () => {
@@ -386,6 +546,7 @@ test('callOpenAiFormatter retries on transient errors and succeeds on a backup m
         status: 200,
         text: async () => JSON.stringify({
           output_text: JSON.stringify({
+            candidate_name: 'Jane Candidate',
             target_role: 'Electrical Project Manager',
             sanitized_location: 'London',
             interview_availability: '',
@@ -453,6 +614,7 @@ test('callOpenAiFormatter retries a repair attempt on the same model after incom
                 {
                   type: 'output_text',
                   text: JSON.stringify({
+                    candidate_name: 'Jane Candidate',
                     target_role: 'Electrical Project Manager',
                     sanitized_location: 'London',
                     interview_availability: '',
@@ -519,4 +681,47 @@ test('callOpenAiFormatter stops retrying when the API rejects the key', async ()
   assert.equal(result.attempts.length, 1);
   assert.equal(result.attempts[0].code, 'openai_authentication_failed');
   assert.match(result.error, /authentication failed/i);
+});
+
+test('callOpenAiCandidatePackVerifier accepts a passing review response', async () => {
+  const result = await withPatchedEnv({
+    OPENAI_API_KEY: 'test-key',
+    OPENAI_CV_VERIFY_MODEL: 'verify-model',
+  }, async () => callOpenAiCandidatePackVerifier({
+    profile: {
+      candidateName: 'David Castle',
+      targetRole: 'QAQC Lead',
+      profile: 'Premium candidate summary.',
+      keySkills: ['Electrical QA/QC'],
+      relevantProjects: ['Data centre QA/QC delivery'],
+      employmentHistory: [],
+      qualifications: [],
+      accreditations: [],
+    },
+    snapshot: {
+      documentText: 'DAVID CASTLE QAQC Lead Executive Summary Core Strengths Key Project Experience Employment History Qualifications & Certifications',
+      headerText: '',
+      footerText: 'info@hmj-global.com | 0800 861 1230 | www.HMJ-Global.com',
+      headingSequence: ['Executive Summary', 'Core Strengths', 'Key Project Experience', 'Employment History', 'Qualifications & Certifications'],
+      mediaNames: ['word/media/image1.png'],
+      hasPremiumHeaderBand: true,
+      hasLogoImage: true,
+    },
+    requestFetch: async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        output_text: JSON.stringify({
+          outcome: 'pass',
+          confidence_score: 0.93,
+          professionalism_score: 0.95,
+          reasons: ['The pack is branded and client-ready.'],
+          remediation_suggestions: [],
+        }),
+      }),
+    }),
+  }));
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.outcome, 'pass');
 });

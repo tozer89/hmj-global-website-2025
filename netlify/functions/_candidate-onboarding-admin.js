@@ -24,6 +24,7 @@ const ONBOARDING_STATUSES = [
 const EMAIL_ACTIVITY_TYPES = new Set([
   'intro_email_sent',
   'intro_reminder_sent',
+  'onboarding_confirmation_sent',
   'rtw_reminder_sent',
   'candidate_document_request_sent',
   'onboarding_reminder_sent',
@@ -236,6 +237,7 @@ function summariseEmailHistory(rows = []) {
   return {
     introSentAt: byType('intro_email_sent'),
     introReminderSentAt: byType('intro_reminder_sent'),
+    onboardingConfirmationSentAt: byType('onboarding_confirmation_sent'),
     onboardingReminderSentAt: byType('onboarding_reminder_sent'),
     rtwReminderSentAt: byType('rtw_reminder_sent'),
     documentRequestSentAt: byType('candidate_document_request_sent'),
@@ -347,6 +349,7 @@ async function loadActivitiesByCandidateId(supabase, candidateIds = []) {
     .in('activity_type', [
       'intro_email_sent',
       'intro_reminder_sent',
+      'onboarding_confirmation_sent',
       'rtw_reminder_sent',
       'candidate_document_request_sent',
       'onboarding_reminder_sent',

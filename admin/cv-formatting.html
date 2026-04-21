@@ -128,11 +128,12 @@
             <label class="cvf-field">
               <span>Template preset</span>
               <select id="templatePresetSelect">
+                <option value="premium_candidate_pack">Premium candidate pack</option>
                 <option value="recruiter_standard">Recruiter standard</option>
                 <option value="data_centre_priority">Data centre priority</option>
                 <option value="executive_summary">Executive summary</option>
               </select>
-              <small>Controls section order and emphasis in the final document.</small>
+              <small>Controls the branded layout, section order, and overall presentation of the final document.</small>
             </label>
 
             <label class="cvf-field">
@@ -156,13 +157,13 @@
             </label>
 
             <label class="cvf-field">
-              <span>Cover page mode</span>
+              <span>Opening layout</span>
               <select id="coverPageModeSelect">
                 <option value="full">Full cover page</option>
                 <option value="condensed">Condensed cover page</option>
                 <option value="skip">Skip cover page</option>
               </select>
-              <small>Sets whether the output begins with a full HMJ summary page.</small>
+              <small>Legacy setting. Premium candidate pack uses the branded HMJ opening block automatically.</small>
             </label>
 
             <label class="cvf-field">
@@ -173,6 +174,12 @@
                 <option value="source_reference">Source + reference</option>
               </select>
               <small>Controls the downloaded Word filename.</small>
+            </label>
+
+            <label class="cvf-field">
+              <span>Candidate name override</span>
+              <input id="candidateDisplayNameInput" type="text" maxlength="120" placeholder="Optional display name for the title page"/>
+              <small>Use this if the source CV is messy and you want to force the candidate name shown at the top of page 1.</small>
             </label>
 
             <label class="cvf-field">
