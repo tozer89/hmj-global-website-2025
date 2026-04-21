@@ -4,6 +4,8 @@
   if (root) root.HMJOnboardingEmailCopy = api;
 }(typeof globalThis !== 'undefined' ? globalThis : this, function buildOnboardingEmailCopy() {
   const DEFAULT_CONFIRMATION_LANGUAGE = 'en';
+  const GENERAL_SUPPORT_EMAIL = 'info@hmj-global.com';
+  const ACCOUNTS_SUPPORT_EMAIL = 'accounts@hmj-global.com';
   const LANGUAGE_OPTIONS = [
     { value: 'en', label: 'English' },
     { value: 'ro', label: 'Romanian' },
@@ -66,7 +68,9 @@
     ) || firstName;
     const companyName = trimString(input.companyName || input.company || input.company_name || input.client_name, 180) || 'your new client';
     const projectLocation = trimString(input.projectLocation || input.project_location, 180);
-    const supportEmail = trimString(input.supportEmail || input.support_email, 320) || 'info@hmj-global.com';
+    const supportEmail = trimString(input.supportEmail || input.support_email, 320) || GENERAL_SUPPORT_EMAIL;
+    const infoEmail = trimString(input.infoEmail || input.info_email, 320) || GENERAL_SUPPORT_EMAIL;
+    const accountsEmail = trimString(input.accountsEmail || input.accounts_email, 320) || ACCOUNTS_SUPPORT_EMAIL;
     return {
       language,
       first_name: firstName,
@@ -77,6 +81,8 @@
       project_location: projectLocation,
       placement_context: buildPlacementContext(companyName, projectLocation, language),
       support_email: supportEmail,
+      info_email: infoEmail,
+      accounts_email: accountsEmail,
     };
   }
 
@@ -109,8 +115,8 @@
         '',
         '3. Contact & Support',
         'If you need any help at any stage, you can contact us:',
-        "- Joe Tozer-O'Sullivan - joe@hmj-global.com",
-        '- General support - info@hmj-global.com',
+        '- Timesheet or general queries - <INFO_EMAIL>',
+        '- Payment queries or bank detail updates - <ACCOUNTS_EMAIL>',
         'We aim to respond quickly and resolve any issues without delay.',
         '',
         '4. Onboarding & Next Steps',
@@ -122,16 +128,7 @@
         '',
         'Best regards,',
         '',
-        "Joe Tozer-O'Sullivan",
-        'Director | HMJ Global',
-        '07842 550187',
-        'HMJ-Global.com - Media City, Manchester',
-        '',
-        'HMJ Global is a limited company registered in the United Kingdom',
-        'Registered number: 16029938',
-        'Registered office: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
-        '',
-        'This message contains confidential information and is intended only for the intended recipients. If you are not an intended recipient you should not disseminate, distribute, or copy this e-mail. Please notify info@hmj-global.com immediately if received in error and delete it from your system.',
+        'HMJ Global Team',
       ].join('\n'),
     },
     ro: {
@@ -162,8 +159,8 @@
         '',
         '3. Contact și suport',
         'Dacă aveți nevoie de ajutor în orice etapă, ne puteți contacta:',
-        "- Joe Tozer-O'Sullivan - joe@hmj-global.com",
-        '- Suport general - info@hmj-global.com',
+        '- Întrebări despre pontaj sau solicitări generale - <INFO_EMAIL>',
+        '- Întrebări despre plăți sau actualizarea datelor bancare - <ACCOUNTS_EMAIL>',
         'Ne propunem să răspundem rapid și să rezolvăm orice problemă fără întârziere.',
         '',
         '4. Administrare onboarding și pașii următori',
@@ -173,18 +170,9 @@
         '',
         'Bine ați venit la bord - așteptăm cu plăcere să lucrăm împreună.',
         '',
-        'Cu stimă,',
+        'Best regards,',
         '',
-        "Joe Tozer-O'Sullivan",
-        'Director | HMJ Global',
-        '07842 550187',
-        'HMJ-Global.com - Media City, Manchester',
-        '',
-        'HMJ Global este o societate cu răspundere limitată înregistrată în Regatul Unit',
-        'Număr de înregistrare: 16029938',
-        'Sediu social: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
-        '',
-        'Acest mesaj conține informații confidențiale și este destinat exclusiv destinatarilor vizați. Dacă nu sunteți un destinatar vizat, nu trebuie să divulgați, să distribuiți sau să copiați acest e-mail. Vă rugăm să anunțați imediat info@hmj-global.com dacă l-ați primit din eroare și să îl ștergeți din sistemul dumneavoastră.',
+        'HMJ Global Team',
       ].join('\n'),
     },
     lt: {
@@ -215,8 +203,8 @@
         '',
         '3. Kontaktai ir pagalba',
         'Jei bet kuriame etape prireiktų pagalbos, galite susisiekti su mumis:',
-        "- Joe Tozer-O'Sullivan - joe@hmj-global.com",
-        '- Bendroji pagalba - info@hmj-global.com',
+        '- Klausimai dėl darbo laiko apskaitos ar bendros užklausos - <INFO_EMAIL>',
+        '- Klausimai dėl apmokėjimo ar banko duomenų atnaujinimo - <ACCOUNTS_EMAIL>',
         'Siekiame atsakyti greitai ir be delsimo išspręsti bet kokias problemas.',
         '',
         '4. Onboarding administravimas ir kiti žingsniai',
@@ -226,18 +214,9 @@
         '',
         'Sveiki prisijungę - laukiame galimybės dirbti kartu.',
         '',
-        'Pagarbiai,',
+        'Best regards,',
         '',
-        "Joe Tozer-O'Sullivan",
-        'Director | HMJ Global',
-        '07842 550187',
-        'HMJ-Global.com - Media City, Manchester',
-        '',
-        'HMJ Global yra ribotos atsakomybės bendrovė, registruota Jungtinėje Karalystėje',
-        'Registracijos numeris: 16029938',
-        'Registruotos buveinės adresas: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
-        '',
-        'Šiame pranešime pateikiama konfidenciali informacija ir jis skirtas tik numatytiems gavėjams. Jei nesate numatytas gavėjas, negalite šio el. laiško atskleisti, platinti ar kopijuoti. Jei gavote jį per klaidą, nedelsdami praneškite info@hmj-global.com ir ištrinkite jį iš savo sistemos.',
+        'HMJ Global Team',
       ].join('\n'),
     },
     de: {
@@ -268,8 +247,8 @@
         '',
         '3. Kontakt und Support',
         'Wenn Sie in irgendeiner Phase Hilfe benötigen, können Sie uns kontaktieren:',
-        "- Joe Tozer-O'Sullivan - joe@hmj-global.com",
-        '- Allgemeiner Support - info@hmj-global.com',
+        '- Fragen zu Zeiterfassung oder allgemeine Anfragen - <INFO_EMAIL>',
+        '- Fragen zu Zahlungen oder zur Aktualisierung von Bankdaten - <ACCOUNTS_EMAIL>',
         'Wir bemühen uns, schnell zu antworten und alle Probleme ohne Verzögerung zu lösen.',
         '',
         '4. Onboarding-Verwaltung und nächste Schritte',
@@ -279,18 +258,9 @@
         '',
         'Willkommen an Bord - wir freuen uns auf die Zusammenarbeit.',
         '',
-        'Mit freundlichen Grüßen,',
+        'Best regards,',
         '',
-        "Joe Tozer-O'Sullivan",
-        'Director | HMJ Global',
-        '07842 550187',
-        'HMJ-Global.com - Media City, Manchester',
-        '',
-        'HMJ Global ist eine im Vereinigten Königreich eingetragene Limited Company',
-        'Handelsregisternummer: 16029938',
-        'Eingetragener Sitz: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
-        '',
-        'Diese Nachricht enthält vertrauliche Informationen und ist nur für die vorgesehenen Empfänger bestimmt. Wenn Sie nicht zu den vorgesehenen Empfängern gehören, dürfen Sie diese E-Mail weder weitergeben noch verteilen oder kopieren. Bitte informieren Sie umgehend info@hmj-global.com, falls Sie diese Nachricht irrtümlich erhalten haben, und löschen Sie sie aus Ihrem System.',
+        'HMJ Global Team',
       ].join('\n'),
     },
     es: {
@@ -321,8 +291,8 @@
         '',
         '3. Contacto y soporte',
         'Si necesita ayuda en cualquier momento, puede ponerse en contacto con nosotros:',
-        "- Joe Tozer-O'Sullivan - joe@hmj-global.com",
-        '- Soporte general - info@hmj-global.com',
+        '- Consultas sobre partes de horas o consultas generales - <INFO_EMAIL>',
+        '- Consultas sobre pagos o actualizacion de datos bancarios - <ACCOUNTS_EMAIL>',
         'Nuestro objetivo es responder con rapidez y resolver cualquier incidencia sin demora.',
         '',
         '4. Administracion del onboarding y siguientes pasos',
@@ -332,18 +302,9 @@
         '',
         'Bienvenido a bordo - esperamos trabajar con usted.',
         '',
-        'Atentamente,',
+        'Best regards,',
         '',
-        "Joe Tozer-O'Sullivan",
-        'Director | HMJ Global',
-        '07842 550187',
-        'HMJ-Global.com - Media City, Manchester',
-        '',
-        'HMJ Global es una sociedad limitada registrada en el Reino Unido',
-        'Numero de registro: 16029938',
-        'Domicilio social: 905 Lightbox Blue, Media City, Manchester, M50 2AE',
-        '',
-        'Este mensaje contiene informacion confidencial y esta destinado unicamente a los destinatarios previstos. Si usted no es uno de ellos, no debe divulgar, distribuir ni copiar este correo electronico. Por favor, notifique de inmediato a info@hmj-global.com si lo ha recibido por error y eliminelo de su sistema.',
+        'HMJ Global Team',
       ].join('\n'),
     },
   };
@@ -376,6 +337,10 @@
       LOCATION: 'project_location',
       PLACEMENT_CONTEXT: 'placement_context',
       SUPPORT_EMAIL: 'support_email',
+      INFO_EMAIL: 'info_email',
+      GENERAL_SUPPORT_EMAIL: 'info_email',
+      ACCOUNTS_EMAIL: 'accounts_email',
+      PAYMENTS_EMAIL: 'accounts_email',
     }[normalized];
 
     if (!key) return null;
@@ -456,7 +421,9 @@
   }
 
   return {
+    ACCOUNTS_SUPPORT_EMAIL,
     DEFAULT_CONFIRMATION_LANGUAGE,
+    GENERAL_SUPPORT_EMAIL,
     LANGUAGE_OPTIONS,
     buildConfirmationContext,
     buildConfirmationDefaults,
