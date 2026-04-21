@@ -263,6 +263,19 @@ test('dashboard API exposes role config updates and contact logging for operator
   });
 
   try {
+    const importUpload = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/import`,
+      body: JSON.stringify({
+        fileName: 'batch-update.csv',
+        text: [
+          'candidate_id,source,source_reference_id,search_variant,candidate_name,current_title,location,summary_text,email',
+          'cvl-possible-002,CV-Library,CVL-POSSIBLE-002,medium,James Byrne,Electrical Supervisor,Bradford,Updated preview text for dashboard import,james.byrne@example.com',
+        ].join('\n'),
+        postImportAction: 'run_preview_triage',
+      }),
+    });
+
     const configUpdate = await requestJson({
       method: 'POST',
       url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/config`,
@@ -270,6 +283,21 @@ test('dashboard API exposes role config updates and contact logging for operator
         patch: {
           shortlist_target_size: 6,
           shortlist_mode: 'strict',
+        },
+      }),
+    });
+
+    const candidateUpdate = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/candidates/cvl-possible-002/update`,
+      body: JSON.stringify({
+        patch: {
+          decision: 'manual_screened',
+          shortlist_status: 'possible_shortlist',
+          shortlist_bucket: 'backup',
+          ranking_pin: true,
+          manual_screening_summary: 'Dashboard update captured a fuller recruiter review.',
+          recruiter_confidence: 'high',
         },
       }),
     });
@@ -289,13 +317,74 @@ test('dashboard API exposes role config updates and contact logging for operator
       url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager`,
     });
 
+    assert.equal(importUpload.statusCode, 200);
+    assert.equal(importUpload.payload.importResult.importHistoryEntry.updated.count, 1);
     assert.equal(configUpdate.statusCode, 200);
     assert.equal(configUpdate.payload.result.roleConfig.shortlist_target_size, 6);
+    assert.equal(candidateUpdate.statusCode, 200);
+    assert.equal(candidateUpdate.payload.result.operatorReview.shortlist_bucket, 'backup');
+    assert.equal(candidateUpdate.payload.result.operatorReview.ranking_pin, true);
     assert.equal(contactUpdate.statusCode, 200);
     assert.equal(contactUpdate.payload.result.contactEvent.stage, 'contacted');
     assert.equal(roleSummary.statusCode, 200);
     assert.equal(roleSummary.payload.role.shortlistProgress.target, 6);
     assert.equal(roleSummary.payload.role.candidateDetails.find((entry) => entry.candidate_id === 'cvl-strong-001').lifecycle.current_stage, 'contacted');
+    assert.equal(roleSummary.payload.role.candidateDetails.find((entry) => entry.candidate_id === 'cvl-possible-002').operatorReview.shortlist_bucket, 'backup');
+  } finally {
+    await closeServer(started.server);
+  }
+});
+
+test('dashboard import endpoint surfaces empty uploads clearly', async () => {
+  const workspaceRoot = makeWorkspace();
+  const started = await startDashboardServer({
+    workflowRoot: workspaceRoot,
+    host: '127.0.0.1',
+    port: 0,
+  });
+
+  try {
+    const response = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/import`,
+      body: JSON.stringify({
+        fileName: 'empty.csv',
+        text: '',
+      }),
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(response.payload.code, 'empty_candidate_upload');
+  } finally {
+    await closeServer(started.server);
+  }
+});
+
+test('dashboard import endpoint returns readable errors for malformed uploads', async () => {
+  const workspaceRoot = makeWorkspace();
+  const started = await startDashboardServer({
+    workflowRoot: workspaceRoot,
+    host: '127.0.0.1',
+    port: 0,
+  });
+
+  try {
+    const malformed = await requestJson({
+      method: 'POST',
+      url: `http://${started.host}:${started.port}/api/roles/demo-electrical-site-manager/import`,
+      body: JSON.stringify({
+        fileName: 'bad-batch.csv',
+        text: [
+          'candidate_id,candidate_name,current_title',
+          'cvl-bad-001,Broken Candidate,Site Manager',
+        ].join('\n'),
+        postImportAction: 'run_preview_triage',
+      }),
+    });
+
+    assert.equal(malformed.statusCode, 400);
+    assert.equal(malformed.payload.code, 'invalid_candidate_csv');
+    assert.match(malformed.payload.error, /missing required column/i);
   } finally {
     await closeServer(started.server);
   }

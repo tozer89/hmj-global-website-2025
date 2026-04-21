@@ -78,6 +78,7 @@ button {
 .hero-actions,
 .stack,
 .artifact-grid,
+.history-stack,
 .metrics-grid,
 .content-grid,
 .review-grid,
@@ -198,7 +199,8 @@ button:disabled {
 .reason-pill,
 .filter-pill,
 .artifact-status,
-.warning-pill {
+.warning-pill,
+.bucket-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -218,6 +220,31 @@ button:disabled {
 .filter-pill.active {
   background: rgba(23, 59, 97, 0.14);
   color: var(--brand);
+}
+
+.bucket-pill {
+  background: rgba(240, 197, 73, 0.2);
+  color: #6d4d00;
+}
+
+.bucket-pill.primary {
+  background: rgba(21, 93, 59, 0.14);
+  color: var(--success);
+}
+
+.bucket-pill.backup {
+  background: rgba(34, 91, 143, 0.14);
+  color: var(--brand);
+}
+
+.bucket-pill.hold {
+  background: rgba(154, 90, 0, 0.14);
+  color: var(--warning);
+}
+
+.bucket-pill.do_not_progress {
+  background: rgba(139, 30, 63, 0.14);
+  color: var(--danger);
 }
 
 .panel-head {
@@ -243,7 +270,8 @@ button:disabled {
 
 .info-list,
 .detail-stack,
-.stacked-list {
+.stacked-list,
+.history-stack {
   display: grid;
   gap: 10px;
 }
@@ -259,6 +287,10 @@ button:disabled {
 
 .detail-section h3 {
   margin: 0 0 8px;
+}
+
+.detail-section p {
+  margin: 0 0 10px;
 }
 
 .detail-grid {
@@ -282,6 +314,37 @@ button:disabled {
 .artifact-card strong {
   display: block;
   margin-bottom: 6px;
+}
+
+.history-card {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(20, 35, 60, 0.04);
+}
+
+.history-card strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.history-card .subtle {
+  margin-top: 2px;
+}
+
+.queue-card {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(20, 35, 60, 0.04);
+}
+
+.stacked-block {
+  display: grid;
+  gap: 8px;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-word;
 }
 
 .warning-banner {

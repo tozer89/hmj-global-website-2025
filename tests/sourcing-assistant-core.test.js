@@ -111,6 +111,7 @@ test('end-to-end role run writes records, drafts, metrics, and summaries', async
   assert.ok(fs.existsSync(path.join(roleDir, 'outputs', 'metrics-summary.md')));
   assert.ok(fs.existsSync(path.join(roleDir, 'outputs', 'candidate-review-export.csv')));
   assert.ok(fs.existsSync(path.join(roleDir, 'records', 'cvl-possible-002.json')));
+  assert.ok(summary.artifacts.dashboardSummary.last_updated);
 });
 
 test('operator updates persist cleanly and drive lifecycle changes', async () => {
@@ -128,10 +129,21 @@ test('operator updates persist cleanly and drive lifecycle changes', async () =>
     patch: {
       decision: 'manual_screened',
       shortlist_status: 'possible_shortlist',
+      shortlist_bucket: 'backup',
+      ranking_pin: true,
       lifecycle_stage: 'contacted',
       manual_notes: 'Spoke briefly and sent the outline for a Leeds discussion.',
+      strengths: ['Strong electrical package delivery background'],
       concerns: ['Rate still to confirm'],
       follow_up_questions: ['Can he be in Leeds 4 days a week?'],
+      appetite_notes: 'Open to hearing about a move from current project.',
+      availability_notes: 'Could interview next week.',
+      compensation_notes: 'Current rate still to confirm.',
+      location_mobility_notes: 'Comfortable with Leeds-based travel.',
+      manual_screening_summary: 'Manual screen completed after reviewing the CV and speaking briefly.',
+      recommended_next_step: 'Book formal screening call',
+      recruiter_confidence: 'high',
+      final_manual_rationale: 'Worth keeping warm as a credible backup shortlist option.',
       override_reason: 'Manual review after phone conversation',
     },
   });
@@ -141,18 +153,33 @@ test('operator updates persist cleanly and drive lifecycle changes', async () =>
   const metrics = JSON.parse(fs.readFileSync(path.join(roleDir, 'outputs', 'metrics.json'), 'utf8'));
 
   assert.deepEqual(update.changedFields.sort(), [
+    'appetite_notes',
+    'availability_notes',
+    'compensation_notes',
     'concerns',
     'decision',
+    'final_manual_rationale',
     'follow_up_questions',
     'lifecycle_stage',
+    'location_mobility_notes',
     'manual_notes',
+    'manual_screening_summary',
+    'ranking_pin',
+    'recommended_next_step',
+    'recruiter_confidence',
     'override_reason',
+    'shortlist_bucket',
     'shortlist_status',
-  ]);
+    'strengths',
+  ].sort());
   assert.equal(record.operator_review.decision, 'manual_screened');
   assert.equal(record.lifecycle.current_stage, 'contacted');
   assert.equal(record.status.needs_operator_review, false);
   assert.equal(record.operator_review.history.length, 1);
+  assert.equal(record.operator_review.shortlist_bucket, 'backup');
+  assert.equal(record.operator_review.ranking_pin, true);
+  assert.equal(record.operator_review.recruiter_confidence, 'high');
+  assert.equal(record.ranking.pinned, true);
   assert.equal(metrics.lifecycle_counts.contacted, 1);
   assert.equal(metrics.operator_overrides, 1);
 });
@@ -218,6 +245,25 @@ test('role index gives an at-a-glance operational summary', async () => {
 
 test('dashboard summary exposes ranked candidate detail, outreach draft visibility, and source audit fields', async () => {
   const workspaceRoot = makeWorkspace();
+  const updatedBatchPath = path.join(workspaceRoot, 'updated-previews.json');
+  fs.writeFileSync(updatedBatchPath, `${JSON.stringify([
+    {
+      candidate_id: 'cvl-possible-002',
+      source: 'CV-Library',
+      source_reference_id: 'CVL-POSSIBLE-002',
+      search_variant: 'medium',
+      candidate_name: 'Tom Gallagher',
+      current_title: 'Electrical Construction Manager',
+      location: 'Leeds',
+      summary_text: 'Updated preview text for Tom Gallagher with clearer data centre delivery evidence.',
+      email: 'tom.gallagher@example.com',
+    },
+  ], null, 2)}\n`, 'utf8');
+  core.importPreviewCandidates({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    inputPath: updatedBatchPath,
+  });
   await core.runRoleWorkspace({
     workflowRoot: workspaceRoot,
     roleId: 'demo-electrical-site-manager',
@@ -226,8 +272,10 @@ test('dashboard summary exposes ranked candidate detail, outreach draft visibili
 
   const summary = core.summariseRoleFromDisk(workspaceRoot, 'demo-electrical-site-manager');
   const candidate = summary.candidateDetails.find((entry) => entry.candidate_id === 'cvl-strong-001');
+  const changedCandidate = summary.candidateDetails.find((entry) => entry.candidate_id === 'cvl-possible-002');
 
   assert.equal(summary.shortlistProgress.target, 10);
+  assert.equal(summary.roleState, 'outreach_ready');
   assert.ok(candidate.ranking.position >= 1);
   assert.equal(candidate.identity.email, 'andrei.popescu@example.com');
   assert.equal(candidate.sourceAudit.source_reference_id, 'CVL-STRONG-001');
@@ -235,6 +283,15 @@ test('dashboard summary exposes ranked candidate detail, outreach draft visibili
   assert.match(candidate.outreach.subject, /Electrical Site Manager/i);
   assert.ok(candidate.artifacts.candidateRecord.exists);
   assert.ok(candidate.artifacts.outreachDraft.exists);
+  assert.ok(summary.roleHistory.importHistory.length >= 1);
+  assert.ok(summary.roleHistory.runHistory.length >= 1);
+  assert.equal(changedCandidate.sessionFlags.changed_since_last_import, true);
+  assert.equal(changedCandidate.changeReview.import_change.change_type, 'updated');
+  assert.ok(changedCandidate.changeReview.import_change.changed_fields.includes('summary_text'));
+  assert.ok(!changedCandidate.changeReview.import_change.changed_fields.includes('source_url'));
+  assert.match(changedCandidate.sourceAudit.source_url, /cv-library/i);
+  assert.match(changedCandidate.changeReview.import_change.current_preview_excerpt, /Updated preview text/i);
+  assert.ok((summary.roleHistory.recentActivity || []).length >= 2);
 });
 
 test('role config updates feed through to summary and shortlist thresholds', async () => {

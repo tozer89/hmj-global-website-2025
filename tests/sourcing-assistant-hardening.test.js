@@ -208,12 +208,19 @@ test('repeat imports dedupe cleanly, merge into a cumulative pool, and reruns re
   assert.equal(firstImport.mode, 'merge_upsert');
   assert.equal(secondImport.unchanged, true);
   assert.equal(secondImport.totalCandidates, 2);
+  const importHistory = readJson(path.join(role.roleDir, 'outputs', 'import-history.json'));
+  assert.equal(importHistory.length, 2);
+  assert.equal(importHistory[0].added.count, 2);
+  assert.equal(importHistory[1].unchanged, true);
 
   await core.runRoleWorkspace({
     workflowRoot: workspaceRoot,
     roleId,
     action: 'run_all',
   });
+  const firstRunHistory = readJson(path.join(role.roleDir, 'outputs', 'run-history.json'));
+  assert.equal(firstRunHistory.length, 1);
+  assert.equal(firstRunHistory[0].changes.added.count, 2);
 
   const candidatesPath = path.join(role.roleDir, 'inputs', 'candidates.json');
   const remainingCandidate = readJson(candidatesPath).slice(0, 1);
@@ -228,6 +235,34 @@ test('repeat imports dedupe cleanly, merge into a cumulative pool, and reruns re
   assert.equal(rerun.metrics.profiles_reviewed, 1);
   assert.equal(fs.existsSync(path.join(role.roleDir, 'records', 'cvl-possible-002.json')), false);
   assert.equal(fs.existsSync(path.join(role.roleDir, 'drafts', 'cvl-possible-002.md')), false);
+  const secondRunHistory = readJson(path.join(role.roleDir, 'outputs', 'run-history.json'));
+  assert.equal(secondRunHistory.length, 2);
+  assert.equal(secondRunHistory[1].changes.removed.count, 1);
+});
+
+test('partial imports preserve existing source evidence when updated rows omit optional fields', () => {
+  const workspaceRoot = makeWorkspace();
+  const result = core.importPreviewCandidatesFromText({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    fileName: 'partial-update.csv',
+    text: [
+      'candidate_id,source,source_reference_id,search_variant,candidate_name,current_title,location,summary_text,email',
+      'cvl-possible-002,CV-Library,CVL-POSSIBLE-002,medium,James Byrne,Electrical Supervisor,Bradford,Updated preview text only,james.byrne@example.com',
+    ].join('\n'),
+  });
+
+  const candidates = readJson(path.join(workspaceRoot, 'roles', 'demo-electrical-site-manager', 'inputs', 'candidates.json'));
+  const updated = candidates.find((entry) => entry.candidate_id === 'cvl-possible-002');
+  const latestHistory = readJson(path.join(workspaceRoot, 'roles', 'demo-electrical-site-manager', 'outputs', 'import-history.json')).slice(-1)[0];
+  const change = latestHistory.candidate_changes.find((entry) => entry.candidate_id === 'cvl-possible-002');
+
+  assert.equal(result.importHistoryEntry.updated.count, 1);
+  assert.match(updated.source_url, /cv-library/i);
+  assert.match(updated.boolean_used, /Electrical Site Manager/i);
+  assert.equal(updated.summary_text, 'Updated preview text only');
+  assert.ok(!change.changed_fields.includes('source_url'));
+  assert.ok(!change.changed_fields.includes('boolean_used'));
 });
 
 test('operator updates are idempotent when the same patch is applied twice', async () => {
@@ -270,6 +305,27 @@ test('operator updates are idempotent when the same patch is applied twice', asy
   assert.equal(record.operator_review.history.length, 1);
 });
 
+test('triage-only reruns preserve previous CV review and outreach state for existing candidates', async () => {
+  const workspaceRoot = makeWorkspace();
+  const roleId = 'demo-electrical-site-manager';
+  await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId,
+    action: 'run_all',
+  });
+
+  const summary = await core.runRoleWorkspace({
+    workflowRoot: workspaceRoot,
+    roleId,
+    action: 'run_preview_triage',
+  });
+
+  const candidate = summary.candidateDetails.find((entry) => entry.candidate_id === 'cvl-strong-001');
+  assert.equal(candidate.fullCv.review_status, 'completed');
+  assert.equal(candidate.outreach.ready, true);
+  assert.equal(candidate.artifacts.outreachDraft.exists, true);
+});
+
 test('dashboard summaries recover from corrupted output files', async () => {
   const workspaceRoot = makeWorkspace();
   const roleId = 'demo-electrical-site-manager';
@@ -302,6 +358,20 @@ test('health checks surface broken launcher-config files without throwing', () =
 test('repeated smoke usage over one role keeps outputs stable and current', async () => {
   const workspaceRoot = makeWorkspace();
   const roleDir = path.join(workspaceRoot, 'roles', 'demo-electrical-site-manager');
+  const secondBatchPath = path.join(workspaceRoot, 'batch-2.json');
+  fs.writeFileSync(secondBatchPath, `${JSON.stringify([
+    {
+      candidate_id: 'cvl-possible-002',
+      source: 'CV-Library',
+      source_reference_id: 'CVL-POSSIBLE-002',
+      search_variant: 'medium',
+      candidate_name: 'Tom Gallagher',
+      current_title: 'Electrical Construction Manager',
+      location: 'Leeds',
+      summary_text: 'Tom Gallagher updated preview text with stronger mission critical evidence and clearer relocation flexibility.',
+      email: 'tom.gallagher@example.com',
+    },
+  ], null, 2)}\n`, 'utf8');
 
   await core.runRoleWorkspace({
     workflowRoot: workspaceRoot,
@@ -315,10 +385,17 @@ test('repeated smoke usage over one role keeps outputs stable and current', asyn
     patch: {
       decision: 'manual_screened',
       shortlist_status: 'possible_shortlist',
+      shortlist_bucket: 'backup',
       lifecycle_stage: 'contacted',
       manual_notes: 'Operator reviewed and made contact.',
+      manual_screening_summary: 'Manual screen completed inside repeated smoke test.',
       override_reason: 'Smoke test update',
     },
+  });
+  core.importPreviewCandidates({
+    workflowRoot: workspaceRoot,
+    roleId: 'demo-electrical-site-manager',
+    inputPath: secondBatchPath,
   });
   core.exportCandidateReviewsCsv({
     workflowRoot: workspaceRoot,
@@ -333,10 +410,18 @@ test('repeated smoke usage over one role keeps outputs stable and current', asyn
   const runSummary = readJson(path.join(roleDir, 'outputs', core.DEFAULT_RUN_SUMMARY_FILE));
   const metrics = readJson(path.join(roleDir, 'outputs', 'metrics.json'));
   const record = readJson(path.join(roleDir, 'records', 'cvl-possible-002.json'));
+  const importHistory = readJson(path.join(roleDir, 'outputs', 'import-history.json'));
+  const runHistory = readJson(path.join(roleDir, 'outputs', 'run-history.json'));
+  const dashboardSummary = core.summariseRoleFromDisk(workspaceRoot, 'demo-electrical-site-manager');
 
   assert.equal(rerun.runSummary.status, 'completed');
   assert.equal(runSummary.status, 'completed');
   assert.equal(metrics.lifecycle_counts.contacted, 1);
   assert.equal(record.lifecycle.current_stage, 'contacted');
+  assert.equal(record.operator_review.shortlist_bucket, 'backup');
+  assert.equal(record.operator_review.manual_screening_summary, 'Manual screen completed inside repeated smoke test.');
+  assert.ok(importHistory.length >= 1);
+  assert.ok(runHistory.length >= 2);
+  assert.equal(dashboardSummary.candidateDetails.find((entry) => entry.candidate_id === 'cvl-possible-002').sessionFlags.changed_since_last_import, true);
   assert.ok(fs.existsSync(path.join(roleDir, 'outputs', 'candidate-review-export.csv')));
 });

@@ -56,8 +56,12 @@ test('CLI update-candidate refreshes records without manual JSON editing', () =>
     '--candidate-id', 'cvl-possible-002',
     '--operator-decision', 'manual_screened',
     '--shortlist-status', 'possible_shortlist',
+    '--shortlist-bucket', 'backup',
+    '--ranking-pin', 'true',
     '--lifecycle-stage', 'contacted',
     '--manual-notes', 'Called and sent brief outline.',
+    '--manual-screening-summary', 'Manual screen captured from CLI.',
+    '--recruiter-confidence', 'high',
     '--override-reason', 'Manual review',
   ]);
   assert.equal(updateResult.status, 0, updateResult.stderr);
@@ -65,6 +69,9 @@ test('CLI update-candidate refreshes records without manual JSON editing', () =>
   const updatedRecord = JSON.parse(fs.readFileSync(path.join(roleDir, 'records', 'cvl-possible-002.json'), 'utf8'));
   assert.equal(updatedRecord.lifecycle.current_stage, 'contacted');
   assert.equal(updatedRecord.operator_review.decision, 'manual_screened');
+  assert.equal(updatedRecord.operator_review.shortlist_bucket, 'backup');
+  assert.equal(updatedRecord.operator_review.ranking_pin, true);
+  assert.equal(updatedRecord.operator_review.recruiter_confidence, 'high');
 });
 
 test('CLI import-previews, export-candidates, and role-index support daily operator flow', () => {

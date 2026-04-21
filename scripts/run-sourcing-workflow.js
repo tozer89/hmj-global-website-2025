@@ -32,7 +32,7 @@ function usage() {
     '  node scripts/run-sourcing-workflow.js prepare-drafts --workflow-root <path> --role-id <slug>',
     '  node scripts/run-sourcing-workflow.js import-previews --workflow-root <path> --role-id <slug> --input <file.csv|file.json>',
     '  node scripts/run-sourcing-workflow.js export-candidates --workflow-root <path> --role-id <slug> [--output <file.csv>]',
-    '  node scripts/run-sourcing-workflow.js update-candidate --workflow-root <path> --role-id <slug> --candidate-id <id> [--operator-decision ...] [--shortlist-status ...] [--lifecycle-stage ...]',
+    '  node scripts/run-sourcing-workflow.js update-candidate --workflow-root <path> --role-id <slug> --candidate-id <id> [--operator-decision ...] [--shortlist-status ...] [--shortlist-bucket primary|backup|hold|do_not_progress] [...]',
     '  node scripts/run-sourcing-workflow.js update-role-config --workflow-root <path> --role-id <slug> [--shortlist-target-size 10] [--shortlist-mode strict|balanced|broad] [...]',
     '  node scripts/run-sourcing-workflow.js log-contact --workflow-root <path> --role-id <slug> --candidate-id <id> --stage contacted|awaiting_reply|closed [--date 2026-04-20] [--note "..."] [--message-summary "..."]',
     '  node scripts/run-sourcing-workflow.js summarize-role --workflow-root <path> --role-id <slug>',
@@ -54,6 +54,8 @@ function createUpdatePatch(args) {
     ['classification', 'classification'],
     ['operator-decision', 'decision'],
     ['shortlist-status', 'shortlist_status'],
+    ['shortlist-bucket', 'shortlist_bucket'],
+    ['ranking-pin', 'ranking_pin'],
     ['outreach-ready', 'outreach_ready_override'],
     ['lifecycle-stage', 'lifecycle_stage'],
     ['manual-notes', 'manual_notes'],
@@ -64,11 +66,16 @@ function createUpdatePatch(args) {
     ['availability-notes', 'availability_notes'],
     ['appetite-notes', 'appetite_notes'],
     ['compensation-notes', 'compensation_notes'],
+    ['location-mobility-notes', 'location_mobility_notes'],
+    ['manual-screening-summary', 'manual_screening_summary'],
+    ['recommended-next-step', 'recommended_next_step'],
+    ['recruiter-confidence', 'recruiter_confidence'],
+    ['final-manual-rationale', 'final_manual_rationale'],
   ];
 
   mappings.forEach(([argKey, patchKey]) => {
     if (Object.prototype.hasOwnProperty.call(args, argKey)) {
-      patch[patchKey] = args[argKey];
+      patch[patchKey] = patchKey === 'ranking_pin' ? parseBooleanFlag(args[argKey]) : args[argKey];
     }
   });
 

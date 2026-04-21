@@ -30,6 +30,21 @@
           <button id="openWorkflowButton" class="ghost-button" type="button">Open Workflow Folder</button>
         </div>
       </div>
+
+      <div class="panel">
+        <h2>Import Batch</h2>
+        <div class="stack">
+          <input id="importFileInput" type="file" accept=".csv,.json,application/json,text/csv">
+          <label for="importPostAction" class="subtle">After import</label>
+          <select id="importPostAction">
+            <option value="run_preview_triage">Import and triage previews</option>
+            <option value="run_all">Import and run full workflow</option>
+            <option value="import_only">Import only</option>
+          </select>
+          <button id="importBatchButton" class="primary-button" type="button">Import Preview Batch</button>
+          <div id="importSummary" class="subtle">Choose a CSV or JSON batch for the selected role.</div>
+        </div>
+      </div>
     </aside>
 
     <main class="main">
@@ -64,6 +79,22 @@
           </div>
           <div id="progressBlock" class="info-list"></div>
           <ul id="nextActions" class="bulleted-list"></ul>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Review Queues</h2>
+          </div>
+          <div id="reviewQueues" class="info-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Role History</h2>
+          </div>
+          <div id="roleHistory" class="history-stack"></div>
         </div>
       </section>
 

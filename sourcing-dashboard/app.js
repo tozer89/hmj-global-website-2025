@@ -14,6 +14,8 @@ const metricCards = document.getElementById('metricCards');
 const overviewBlock = document.getElementById('overviewBlock');
 const progressBlock = document.getElementById('progressBlock');
 const nextActions = document.getElementById('nextActions');
+const reviewQueues = document.getElementById('reviewQueues');
+const roleHistory = document.getElementById('roleHistory');
 const candidateFilters = document.getElementById('candidateFilters');
 const candidateList = document.getElementById('candidateList');
 const candidateDetail = document.getElementById('candidateDetail');
@@ -25,14 +27,26 @@ const statusBox = document.getElementById('statusBox');
 const refreshRolesButton = document.getElementById('refreshRolesButton');
 const initRoleButton = document.getElementById('initRoleButton');
 const openWorkflowButton = document.getElementById('openWorkflowButton');
+const importFileInput = document.getElementById('importFileInput');
+const importPostAction = document.getElementById('importPostAction');
+const importBatchButton = document.getElementById('importBatchButton');
+const importSummary = document.getElementById('importSummary');
 const actionButtons = Array.from(document.querySelectorAll('[data-action]'));
 
 const FILTER_OPTIONS = [
   { key: 'all', label: 'All' },
+  { key: 'awaiting_manual_screening', label: 'Awaiting Review' },
+  { key: 'new_since_last_review', label: 'New Since Review' },
+  { key: 'changed_since_last_import', label: 'Changed Since Import' },
+  { key: 'newly_shortlist_ready', label: 'Newly Shortlist-Ready' },
   { key: 'strong_shortlist', label: 'Strong' },
   { key: 'possible_shortlist', label: 'Possible' },
+  { key: 'primary', label: 'Primary' },
+  { key: 'backup', label: 'Backup' },
+  { key: 'hold', label: 'Hold' },
   { key: 'reject', label: 'Reject' },
   { key: 'outreach_ready', label: 'Outreach Ready' },
+  { key: 'draft_ready_not_contacted', label: 'Draft Ready' },
   { key: 'contacted', label: 'Contacted' },
   { key: 'awaiting_reply', label: 'Awaiting Reply' },
   { key: 'closed', label: 'Closed' },
@@ -61,9 +75,11 @@ function setStatus(message, tone = 'info') {
 
 function setBusy(busy, message = '') {
   state.busy = busy;
-  [...actionButtons, refreshRolesButton, initRoleButton, openWorkflowButton].forEach((button) => {
+  [...actionButtons, refreshRolesButton, initRoleButton, openWorkflowButton, importBatchButton].forEach((button) => {
     button.disabled = busy;
   });
+  if (importFileInput) importFileInput.disabled = busy;
+  if (importPostAction) importPostAction.disabled = busy;
   document.querySelectorAll('.role-item, .candidate-card, .filter-pill, .artifact-button, .tiny-button').forEach((node) => {
     node.disabled = busy;
   });
@@ -100,6 +116,43 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function arrayText(value) {
+  return Array.isArray(value) ? value.join('\n') : '';
+}
+
+function listMarkup(values, emptyText = 'None recorded yet.') {
+  const items = Array.isArray(values) ? values.filter(Boolean) : [];
+  return items.length
+    ? items.map((item) => `<div>${escapeHtml(item)}</div>`).join('')
+    : `<div class="subtle">${escapeHtml(emptyText)}</div>`;
+}
+
+function formatDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
+function summariseImportResult(result) {
+  if (!result) return 'No import result yet.';
+  const entry = result.importHistoryEntry || {};
+  return [
+    `${result.importedCount || 0} row(s) imported`,
+    `${entry.added?.count || 0} added`,
+    `${entry.updated?.count || 0} updated`,
+    `${entry.preview_text_changed?.count || 0} preview text change(s)`,
+    `${result.totalCandidates || 0} total candidate(s) in role`,
+  ].join(' · ');
+}
+
 function metricCard(label, value) {
   const card = document.createElement('div');
   card.className = 'metric-card';
@@ -115,6 +168,10 @@ function artifactUrl(roleId, relativePath, download = false) {
   return `/api/roles/${encodeURIComponent(roleId)}/artifact?${params.toString()}`;
 }
 
+function roleKeyForRole(role) {
+  return role?.roleSlug || role?.role_slug || state.selectedRoleId || role?.roleId || '';
+}
+
 function candidateListForRole(role) {
   return Array.isArray(role?.candidateDetails) ? role.candidateDetails : [];
 }
@@ -128,9 +185,17 @@ function getSelectedCandidate(role) {
 function matchesFilter(candidate, filterKey) {
   if (!candidate) return false;
   if (filterKey === 'all') return true;
+  if (['awaiting_manual_screening', 'new_since_last_review', 'changed_since_last_import', 'newly_shortlist_ready', 'draft_ready_not_contacted'].includes(filterKey)) {
+    return candidate.sessionFlags?.[filterKey] === true;
+  }
+  if (['primary', 'backup', 'hold'].includes(filterKey)) {
+    return candidate.operatorReview?.shortlist_bucket === filterKey;
+  }
   if (filterKey === 'outreach_ready') return candidate.outreach?.ready === true;
   if (filterKey === 'reject') {
-    return ['reject', 'do_not_progress'].includes(candidate.lifecycle?.current_stage) || candidate.status?.shortlist_stage === 'do_not_progress';
+    return ['reject', 'do_not_progress'].includes(candidate.lifecycle?.current_stage)
+      || candidate.status?.shortlist_stage === 'do_not_progress'
+      || candidate.operatorReview?.shortlist_bucket === 'do_not_progress';
   }
   if (filterKey === 'strong_shortlist' || filterKey === 'possible_shortlist') {
     return candidate.status?.shortlist_stage === filterKey || candidate.lifecycle?.current_stage === filterKey;
@@ -147,18 +212,21 @@ function filteredCandidates(role) {
 function renderRoleList() {
   roleList.innerHTML = '';
   state.roleIndex.forEach((role) => {
+    const roleKey = role.role_slug || role.role_id;
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `role-item${role.role_id === state.selectedRoleId ? ' active' : ''}`;
+    button.className = `role-item${roleKey === state.selectedRoleId ? ' active' : ''}`;
+    button.dataset.roleId = roleKey;
     button.innerHTML = [
       `<strong>${escapeHtml(role.role_title || role.role_id)}</strong>`,
       `<div class="subtle">${escapeHtml(`${role.previews_processed || 0} previews · ${role.cvs_reviewed || 0} CVs · target ${role.shortlist_target || 0}`)}</div>`,
-      `<div class="subtle">${escapeHtml(role.shortlist_progress_status || 'awaiting_inputs')}</div>`,
+      `<div class="subtle">${escapeHtml(role.role_id || roleKey)}</div>`,
+      `<div class="subtle">${escapeHtml((role.role_state || role.shortlist_progress_status || 'awaiting_inputs').replace(/_/g, ' '))}</div>`,
     ].join('');
     button.addEventListener('click', () => {
       if (state.busy) return;
-      state.selectedRoleId = role.role_id;
-      loadRoleDetail(role.role_id).catch((error) => setStatus(error.message || String(error), 'error'));
+      state.selectedRoleId = roleKey;
+      loadRoleDetail(roleKey).catch((error) => setStatus(error.message || String(error), 'error'));
     });
     roleList.appendChild(button);
   });
@@ -173,6 +241,7 @@ function renderOverview(role) {
     ['Function', role.overview?.functionFamily || 'Not set'],
     ['Must-Haves', (role.overview?.mustHaveSkills || []).join(', ') || 'Not set'],
     ['Shortlist Target', summary.target || role.roleConfig?.shortlist_target_size || 'Not set'],
+    ['Role State', (role.roleState || role.metrics?.role_workflow_state || 'gathering_candidates').replace(/_/g, ' ')],
   ];
   overviewBlock.innerHTML = overviewItems
     .map(([label, value]) => `<div><strong>${escapeHtml(label)}</strong><br>${escapeHtml(value)}</div>`)
@@ -186,7 +255,7 @@ function renderProgress(role) {
     ['Strong / Possible', `${progress.strong_count || 0} / ${progress.possible_count || 0}`],
     ['Remaining Strong', progress.remaining_strong_needed ?? 'n/a'],
     ['Remaining Viable', progress.remaining_viable_needed ?? 'n/a'],
-    ['Status', progress.status || 'awaiting_inputs'],
+    ['Status', (progress.status || 'awaiting_inputs').replace(/_/g, ' ')],
   ];
   progressBlock.innerHTML = blocks
     .map(([label, value]) => `<div><strong>${escapeHtml(label)}</strong><br>${escapeHtml(value)}</div>`)
@@ -198,6 +267,56 @@ function renderProgress(role) {
     item.textContent = entry;
     nextActions.appendChild(item);
   });
+}
+
+function renderReviewQueues(role) {
+  const queues = role.reviewQueues || {};
+  const items = [
+    ['New Since Review', queues.new_since_last_review || 0],
+    ['Awaiting Manual Screening', queues.awaiting_manual_screening || 0],
+    ['Newly Shortlist-Ready', queues.newly_shortlist_ready || 0],
+    ['Draft Ready, Not Contacted', queues.draft_ready_not_contacted || 0],
+    ['Contacted / Awaiting Reply', queues.contacted_awaiting_reply || 0],
+    ['Changed Since Last Import', queues.changed_since_last_import || 0],
+  ];
+  reviewQueues.innerHTML = items
+    .map(([label, value]) => `<div class="queue-card"><strong>${escapeHtml(label)}</strong><br>${escapeHtml(value)}</div>`)
+    .join('');
+}
+
+function renderRoleHistory(role) {
+  const latestEntries = []
+    .concat((role.roleHistory?.importHistory || []).slice(0, 3).map((entry) => ({
+      kind: 'Import',
+      title: `${entry.method || 'import'} · ${entry.imported_count || 0} row(s)`,
+      time: entry.at,
+      summary: `Added ${entry.added?.count || 0}, updated ${entry.updated?.count || 0}, preview text changed ${entry.preview_text_changed?.count || 0}, total ${entry.total_candidates_after_import || 0}.`,
+    })))
+    .concat((role.roleHistory?.runHistory || []).slice(0, 3).map((entry) => ({
+      kind: 'Run',
+      title: `${entry.action || 'run'} · ${entry.status || 'completed'}`,
+      time: entry.completed_at || entry.at,
+      summary: `Processed ${entry.processed_candidate_count || 0}, drafts ${entry.changes?.drafts_added?.count || 0}, shortlist-ready ${entry.changes?.shortlist_ready?.count || 0}, gap ${entry.shortlist_gap_before ?? 'n/a'} -> ${entry.shortlist_gap_after ?? 'n/a'}.`,
+    })))
+    .sort((left, right) => String(right.time || '').localeCompare(String(left.time || '')));
+
+  roleHistory.innerHTML = latestEntries.length
+    ? latestEntries.map((entry) => `
+      <div class="history-card">
+        <strong>${escapeHtml(entry.kind)} · ${escapeHtml(entry.title)}</strong>
+        <div class="subtle">${escapeHtml(formatDateTime(entry.time) || 'Unknown time')}</div>
+        <div>${escapeHtml(entry.summary)}</div>
+      </div>
+    `).join('')
+    : '<div class="empty-state">No import or run history has been recorded for this role yet.</div>';
+}
+
+function renderImportPanel(role) {
+  if (!importSummary) return;
+  const latestImport = role?.roleHistory?.latestImport || null;
+  importSummary.textContent = latestImport
+    ? `Latest import: ${latestImport.imported_count || 0} row(s) · ${latestImport.added?.count || 0} added · ${latestImport.updated?.count || 0} updated · ${latestImport.preview_text_changed?.count || 0} preview text change(s)`
+    : 'Choose a CSV or JSON batch for the selected role.';
 }
 
 function renderMetricCards(role) {
@@ -216,6 +335,7 @@ function renderCandidateFilters(role) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `filter-pill${state.candidateFilter === filter.key ? ' active' : ''}`;
+    button.dataset.filterKey = filter.key;
     button.textContent = filter.label;
     button.addEventListener('click', () => {
       state.candidateFilter = filter.key;
@@ -241,16 +361,23 @@ function renderCandidateList(role) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `candidate-card${candidate.candidate_id === state.selectedCandidateId ? ' active' : ''}`;
+    button.dataset.candidateId = candidate.candidate_id;
     const previewClass = candidate.preview?.triage?.finalClassification || candidate.status?.preview_stage || '';
+    const shortlistBucket = candidate.operatorReview?.shortlist_bucket || '';
     const warnings = [];
     if (!candidate.fullCv?.downloaded) warnings.push('No CV');
     if (!candidate.outreach?.email || candidate.outreach.email.endsWith('@unknown.local')) warnings.push('Email missing');
     if (!candidate.sourceAudit?.source_url) warnings.push('Source URL missing');
+    if (candidate.sessionFlags?.new_since_last_review) warnings.push('New');
+    if (candidate.sessionFlags?.changed_since_last_import) warnings.push('Changed');
     button.innerHTML = [
       `<strong>#${escapeHtml(candidate.ranking?.position || '')} ${escapeHtml(candidate.identity?.name || candidate.candidate_id)}</strong>`,
       `<div class="subtle">${escapeHtml(candidate.identity?.title || 'No title')} · ${escapeHtml(candidate.lifecycle?.current_stage || 'preview_only')}</div>`,
       `<div class="subtle">Score ${escapeHtml(candidate.ranking?.total_score || candidate.preview?.triage?.totalScore || 0)} · ${escapeHtml(previewClass)}</div>`,
       `<div class="reason-list">${(candidate.ranking?.reasons || []).map((reason) => `<span class="reason-pill">${escapeHtml(reason)}</span>`).join('')}</div>`,
+      shortlistBucket
+        ? `<div class="reason-list"><span class="bucket-pill ${escapeAttribute(shortlistBucket)}">${escapeHtml(shortlistBucket)}</span></div>`
+        : '',
       warnings.length ? `<div class="reason-list">${warnings.map((warning) => `<span class="warning-pill">${escapeHtml(warning)}</span>`).join('')}</div>` : '',
     ].join('');
     button.addEventListener('click', () => {
@@ -270,7 +397,8 @@ function renderArtifacts(role) {
     card.innerHTML = [
       `<strong>${escapeHtml(artifact.label || artifact.path || 'Artifact')}</strong>`,
       `<div class="subtle">${escapeHtml(artifact.path || '')}</div>`,
-      `<div class="artifact-status">${escapeHtml(artifact.status || 'missing')} · ${artifact.last_updated ? escapeHtml(artifact.last_updated) : 'Not generated yet'}</div>`,
+      `<div class="artifact-status">${escapeHtml(artifact.status || 'missing')} · ${artifact.last_updated ? escapeHtml(formatDateTime(artifact.last_updated)) : escapeHtml(artifact.empty_state || 'Not generated yet')}</div>`,
+      `<div class="subtle">Group: ${escapeHtml((artifact.group || 'role').replace(/_/g, ' '))} · Source of truth: ${escapeHtml(artifact.source_of_truth || 'filesystem')}</div>`,
       '<div class="artifact-actions"></div>',
     ].join('');
     const actionRow = card.querySelector('.artifact-actions');
@@ -328,11 +456,13 @@ function candidateLifecycleOptions() {
 function renderDetailActions(role, candidate) {
   detailActions.innerHTML = '';
   if (!candidate) return;
+  const roleKey = roleKeyForRole(role);
   const actions = [
-    ['Open Record', () => openArtifact(role.roleId, candidate.artifacts?.candidateRecord?.path)],
-    ['Open CV', () => openArtifact(role.roleId, candidate.artifacts?.cvFile?.path), !candidate.artifacts?.cvFile?.exists],
-    ['Download CV', () => window.open(artifactUrl(role.roleId, candidate.artifacts?.cvFile?.path, true), '_blank', 'noopener'), !candidate.artifacts?.cvFile?.exists],
-    ['Open Draft', () => openArtifact(role.roleId, candidate.artifacts?.outreachDraft?.path), !candidate.artifacts?.outreachDraft?.exists],
+    ['Open Record', () => openArtifact(roleKey, candidate.artifacts?.candidateRecord?.path)],
+    ['Open CV', () => openArtifact(roleKey, candidate.artifacts?.cvFile?.path), !candidate.artifacts?.cvFile?.exists],
+    ['Download CV', () => window.open(artifactUrl(roleKey, candidate.artifacts?.cvFile?.path, true), '_blank', 'noopener'), !candidate.artifacts?.cvFile?.exists],
+    ['Open Draft', () => openArtifact(roleKey, candidate.artifacts?.outreachDraft?.path), !candidate.artifacts?.outreachDraft?.exists],
+    ['Copy Email', () => copyToClipboard(candidate.outreach?.email || candidate.identity?.email || '', 'Email copied.'), !(candidate.outreach?.email || candidate.identity?.email)],
     ['Copy Subject', () => copyToClipboard(candidate.outreach?.subject || '', 'Subject copied.'), !candidate.outreach?.subject],
     ['Copy Body', () => copyToClipboard(candidate.outreach?.body || '', 'Draft body copied.'), !candidate.outreach?.body],
   ];
@@ -349,6 +479,8 @@ function renderDetailActions(role, candidate) {
 
 function renderCandidateDetail(role) {
   const candidate = getSelectedCandidate(role);
+  const roleKey = roleKeyForRole(role);
+  candidateDetail.dataset.candidateId = candidate?.candidate_id || '';
   renderDetailActions(role, candidate);
   const warnings = buildWarnings(candidate);
   warningBanner.classList.toggle('hidden', warnings.length === 0);
@@ -359,9 +491,14 @@ function renderCandidateDetail(role) {
   }
 
   const latestContact = candidate.operatorReview?.contact_log?.slice(-1)[0];
+  const changeReview = candidate.changeReview || {};
   const auditRows = (candidate.auditTrail || [])
-    .map((entry) => `<div><strong>${escapeHtml(entry.stage || 'event')}</strong><br>${escapeHtml(entry.at || '')}<br>${escapeHtml(entry.note || entry.reason || '')}</div>`)
+    .map((entry) => `<div><strong>${escapeHtml(entry.stage || 'event')}</strong><br>${escapeHtml(formatDateTime(entry.at) || '')}<br>${escapeHtml(entry.note || entry.reason || '')}</div>`)
     .join('');
+  const bucketLabel = candidate.operatorReview?.shortlist_bucket
+    ? `<span class="bucket-pill ${escapeAttribute(candidate.operatorReview.shortlist_bucket)}">${escapeHtml(candidate.operatorReview.shortlist_bucket)}</span>`
+    : '<span class="subtle">No shortlist bucket set.</span>';
+  const candidateArtifacts = Object.values(candidate.artifacts || {});
 
   candidateDetail.innerHTML = `
     <div class="detail-section">
@@ -372,22 +509,67 @@ function renderCandidateDetail(role) {
         <div class="key-value"><strong>Lifecycle</strong><span>${escapeHtml(candidate.lifecycle?.current_stage || 'preview_only')}</span></div>
         <div class="key-value"><strong>Shortlist</strong><span>${escapeHtml(candidate.status?.shortlist_stage || 'pending')}</span></div>
         <div class="key-value"><strong>Email</strong><span>${escapeHtml(candidate.outreach?.email || candidate.identity?.email || 'Missing')}</span></div>
+        <div class="key-value"><strong>Bucket</strong><span>${bucketLabel}</span></div>
+        <div class="key-value"><strong>Recruiter Confidence</strong><span>${escapeHtml(candidate.operatorReview?.recruiter_confidence || 'Not set')}</span></div>
+        <div class="key-value"><strong>Pinned</strong><span>${candidate.operatorReview?.ranking_pin ? 'Yes' : 'No'}</span></div>
+        <div class="key-value"><strong>Last Reviewed</strong><span>${escapeHtml(formatDateTime(candidate.operatorReview?.updated_at) || 'Not reviewed yet')}</span></div>
       </div>
     </div>
 
     <div class="detail-section">
-      <h3>Profile / Preview Evidence</h3>
+      <h3>Source Audit</h3>
       <div class="detail-grid">
         <div class="key-value"><strong>Source</strong><span>${escapeHtml(candidate.sourceAudit?.source_name || '')}</span></div>
         <div class="key-value"><strong>Search Variant</strong><span>${escapeHtml(candidate.preview?.structured_fields?.search_variant || '')}</span></div>
         <div class="key-value"><strong>Boolean Used</strong><span>${escapeHtml(candidate.preview?.structured_fields?.boolean_used || role.searchPack?.primaryBoolean || 'Not stored')}</span></div>
-        <div class="key-value"><strong>Found / Imported</strong><span>${escapeHtml(candidate.preview?.structured_fields?.found_at || 'Unknown')} · ${escapeHtml(candidate.preview?.structured_fields?.imported_at || 'Unknown')}</span></div>
-        <div class="key-value"><strong>Source URL</strong><span>${escapeHtml(candidate.sourceAudit?.source_url || 'Not stored')}</span></div>
+        <div class="key-value"><strong>Found / Imported</strong><span>${escapeHtml(formatDateTime(candidate.preview?.structured_fields?.found_at) || 'Unknown')} · ${escapeHtml(formatDateTime(candidate.preview?.structured_fields?.imported_at) || 'Unknown')}</span></div>
+        <div class="key-value"><strong>Source URL</strong><span>${candidate.sourceAudit?.source_url ? `<a href="${escapeAttribute(candidate.sourceAudit.source_url)}" target="_blank" rel="noopener">${escapeHtml(candidate.sourceAudit.source_url)}</a>` : 'Not stored'}</span></div>
+        <div class="key-value"><strong>Import Method</strong><span>${escapeHtml(candidate.sourceAudit?.import_method || 'manual_entry')}</span></div>
+        <div class="key-value"><strong>Reference ID</strong><span>${escapeHtml(candidate.sourceAudit?.source_reference_id || 'Not stored')}</span></div>
       </div>
       <div class="detail-section">
         <strong>Audit String</strong>
         <div>${escapeHtml(candidate.sourceAudit?.display || '')}</div>
       </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>Change Since Last Import</h3>
+      ${changeReview.changed ? `
+        <div class="detail-grid">
+          <div class="key-value"><strong>Changed</strong><span>${changeReview.import_change?.change_type || 'run_update'}</span></div>
+          <div class="key-value"><strong>Rank Movement</strong><span>${changeReview.rank_change ? `${changeReview.rank_change.from || 'unranked'} -> ${changeReview.rank_change.to || 'unranked'}` : 'No change'}</span></div>
+          <div class="key-value"><strong>Status Movement</strong><span>${changeReview.status_change ? `${changeReview.status_change.from_stage || 'none'} -> ${changeReview.status_change.to_stage || 'none'}` : 'No change'}</span></div>
+          <div class="key-value"><strong>Draft / Shortlist Change</strong><span>${changeReview.draft_added ? 'New draft created' : 'No new draft'}${changeReview.shortlist_ready_changed ? ' · shortlist-ready changed' : ''}</span></div>
+        </div>
+        <div class="stacked-list">
+          ${(changeReview.summaries || []).map((summary) => `<span class="reason-pill">${escapeHtml(summary)}</span>`).join('')}
+        </div>
+        <div class="detail-grid">
+          <div>
+            <strong>Changed Fields</strong>
+            ${listMarkup(changeReview.import_change?.field_changes?.map((entry) => `${entry.label}: ${entry.previous || 'blank'} -> ${entry.current || 'blank'}`), 'No field-level changes recorded.')}
+          </div>
+          <div>
+            <strong>Source Evidence Changes</strong>
+            ${listMarkup(changeReview.import_change?.source_changes?.map((entry) => `${entry.label}: ${entry.previous || 'blank'} -> ${entry.current || 'blank'}`), 'No source evidence changes recorded.')}
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div>
+            <strong>Previous Preview</strong>
+            <div>${escapeHtml(changeReview.import_change?.previous_preview_excerpt || 'No previous preview excerpt stored.')}</div>
+          </div>
+          <div>
+            <strong>Latest Preview</strong>
+            <div>${escapeHtml(changeReview.import_change?.current_preview_excerpt || 'No latest preview excerpt stored.')}</div>
+          </div>
+        </div>
+      ` : '<div class="subtle">No candidate-level change was recorded in the latest import or run.</div>'}
+    </div>
+
+    <div class="detail-section">
+      <h3>Imported Preview / Profile Evidence</h3>
       <div class="detail-section">
         <strong>Imported Preview Text</strong>
         <div>${escapeHtml(candidate.preview?.summary_text || 'No preview text stored.')}</div>
@@ -398,30 +580,63 @@ function renderCandidateDetail(role) {
         <div class="key-value"><strong>Sector Tags</strong><span>${escapeHtml((candidate.preview?.structured_fields?.sector_tags || []).join(', ') || 'None')}</span></div>
         <div class="key-value"><strong>Preview Score</strong><span>${escapeHtml(candidate.preview?.triage?.totalScore || 0)}</span></div>
       </div>
-      <div class="stacked-list">
-        ${(candidate.preview?.triage?.reasons || []).map((reason) => `<span class="reason-pill">${escapeHtml(reason)}</span>`).join('') || '<span class="subtle">No triage reasons stored.</span>'}
+      <div class="detail-grid">
+        <div><strong>Preview Reasons</strong>${listMarkup(candidate.preview?.triage?.reasons, 'No preview reasons stored yet.')}</div>
+        <div><strong>Missing Critical Info</strong>${listMarkup(candidate.machineAssessment?.preview_missing_info, 'No missing critical info flagged.')}</div>
+        <div><strong>Hard Reject Reasons</strong>${listMarkup(candidate.machineAssessment?.preview_hard_reject_reasons, 'No hard reject reasons flagged.')}</div>
       </div>
     </div>
 
     <div class="detail-section">
-      <h3>CV Review</h3>
+      <h3>Extracted CV Evidence</h3>
       <div class="detail-grid">
         <div class="key-value"><strong>Downloaded</strong><span>${candidate.fullCv?.downloaded ? 'Yes' : 'No'}</span></div>
         <div class="key-value"><strong>Review Status</strong><span>${escapeHtml(candidate.fullCv?.review_status || 'not_reviewed')}</span></div>
         <div class="key-value"><strong>Shortlist Recommendation</strong><span>${escapeHtml(candidate.fullCv?.shortlist_recommendation || 'Pending')}</span></div>
-        <div class="key-value"><strong>Reviewed At</strong><span>${escapeHtml(candidate.fullCv?.reviewed_at || 'Not reviewed')}</span></div>
+        <div class="key-value"><strong>Reviewed At</strong><span>${escapeHtml(formatDateTime(candidate.fullCv?.reviewed_at) || 'Not reviewed')}</span></div>
       </div>
       <div class="detail-section"><strong>Extraction Summary</strong><div>${escapeHtml(candidate.fullCv?.extraction_summary || 'No CV extraction summary yet.')}</div></div>
       <div class="detail-grid">
-        <div><strong>Highlights</strong>${(candidate.fullCv?.highlights || []).map((item) => `<div>${escapeHtml(item)}</div>`).join('') || '<div class="subtle">No highlights yet.</div>'}</div>
-        <div><strong>Strengths</strong>${(candidate.fullCv?.strengths || []).map((item) => `<div>${escapeHtml(item)}</div>`).join('') || '<div class="subtle">No strengths yet.</div>'}</div>
-        <div><strong>Concerns</strong>${(candidate.fullCv?.concerns || []).map((item) => `<div>${escapeHtml(item)}</div>`).join('') || '<div class="subtle">No concerns yet.</div>'}</div>
-        <div><strong>Follow-Up Questions</strong>${(candidate.fullCv?.follow_up_questions || []).map((item) => `<div>${escapeHtml(item)}</div>`).join('') || '<div class="subtle">No follow-up questions yet.</div>'}</div>
+        <div><strong>Highlights</strong>${listMarkup(candidate.fullCv?.highlights, 'No highlights yet.')}</div>
+        <div><strong>Strengths</strong>${listMarkup(candidate.fullCv?.strengths, 'No strengths yet.')}</div>
+        <div><strong>Concerns</strong>${listMarkup(candidate.fullCv?.concerns, 'No concerns yet.')}</div>
+        <div><strong>Follow-Up Questions</strong>${listMarkup(candidate.fullCv?.follow_up_questions, 'No follow-up questions yet.')}</div>
+      </div>
+      <div class="detail-section"><strong>Uncertainty Notes</strong><div>${listMarkup(candidate.fullCv?.uncertainty_notes, 'No uncertainty notes recorded.')}</div></div>
+    </div>
+
+    <div class="detail-section">
+      <h3>Machine Assessment</h3>
+      <div class="detail-grid">
+        <div class="key-value"><strong>Preview Classification</strong><span>${escapeHtml(candidate.machineAssessment?.preview_classification || 'Not assessed')}</span></div>
+        <div class="key-value"><strong>CV Score</strong><span>${escapeHtml(candidate.machineAssessment?.cv_score || 0)}</span></div>
+        <div class="key-value"><strong>Shortlist Recommendation</strong><span>${escapeHtml(candidate.machineAssessment?.shortlist_recommendation || 'Pending')}</span></div>
+        <div class="key-value"><strong>Outreach Ready</strong><span>${candidate.outreach?.ready ? 'Yes' : 'No'}</span></div>
+      </div>
+      <div class="detail-section"><strong>Suitability Summary</strong><div>${escapeHtml(candidate.machineAssessment?.suitability_summary || 'No machine suitability summary yet.')}</div></div>
+      <div class="detail-grid">
+        <div class="key-value"><strong>Rank Breakdown</strong><span>Base ${escapeHtml(candidate.ranking?.breakdown?.base_score || 0)} · Stage ${escapeHtml(candidate.ranking?.breakdown?.stage_boost || 0)} · Bucket ${escapeHtml(candidate.ranking?.breakdown?.bucket_boost || 0)} · Pin ${escapeHtml(candidate.ranking?.breakdown?.pin_boost || 0)}</span></div>
+        <div class="key-value"><strong>Why Ranked Here</strong><span>${escapeHtml((candidate.ranking?.reasons || []).join(', ') || 'No ranking reasons stored yet.')}</span></div>
       </div>
     </div>
 
     <div class="detail-section">
-      <h3>Outreach Draft</h3>
+      <h3>Candidate Artifacts</h3>
+      <div class="detail-grid">
+        ${candidateArtifacts.map((artifact) => `
+          <div class="stacked-block">
+            <strong>${escapeHtml(artifact.label || artifact.path || 'Artifact')}</strong>
+            <div>${escapeHtml(artifact.exists ? 'Available' : artifact.empty_state || 'Missing')}</div>
+            <div class="subtle">${escapeHtml(artifact.path || '')}</div>
+            <div class="subtle">Updated ${escapeHtml(formatDateTime(artifact.last_updated) || 'Not yet')}</div>
+            <div class="subtle">Source of truth: ${escapeHtml(artifact.source_of_truth || 'filesystem')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>Outreach Data</h3>
       <div class="detail-grid">
         <div class="key-value"><strong>Email</strong><span>${escapeHtml(candidate.outreach?.email || 'Missing')}</span></div>
         <div class="key-value"><strong>Subject</strong><span>${escapeHtml(candidate.outreach?.subject || 'Not prepared')}</span></div>
@@ -432,7 +647,13 @@ function renderCandidateDetail(role) {
     </div>
 
     <div class="detail-section">
-      <h3>Operator Review</h3>
+      <h3>Operator Assessment</h3>
+      <div class="detail-grid">
+        <div><strong>Operator Strengths</strong>${listMarkup(candidate.operatorReview?.strengths, 'No operator strengths recorded yet.')}</div>
+        <div><strong>Operator Concerns</strong>${listMarkup(candidate.operatorReview?.concerns, 'No operator concerns recorded yet.')}</div>
+        <div><strong>Follow-Up Questions</strong>${listMarkup(candidate.operatorReview?.follow_up_questions, 'No follow-up questions recorded yet.')}</div>
+        <div><strong>Final Manual Rationale</strong><div>${escapeHtml(candidate.operatorReview?.final_manual_rationale || 'No final manual rationale yet.')}</div></div>
+      </div>
       <form id="candidateReviewForm" class="form-grid">
         <div class="field">
           <label for="operatorDecision">Operator Decision</label>
@@ -451,6 +672,14 @@ function renderCandidateDetail(role) {
           </select>
         </div>
         <div class="field">
+          <label for="shortlistBucket">Shortlist Bucket</label>
+          <select id="shortlistBucket" name="shortlistBucket">
+            <option value="">No bucket</option>
+            ${['primary', 'backup', 'hold', 'do_not_progress']
+              .map((option) => `<option value="${escapeHtml(option)}" ${candidate.operatorReview?.shortlist_bucket === option ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
           <label for="lifecycleStage">Lifecycle Stage</label>
           <select id="lifecycleStage" name="lifecycleStage">
             ${candidateLifecycleOptions()
@@ -465,9 +694,64 @@ function renderCandidateDetail(role) {
             <option value="false" ${candidate.operatorReview?.outreach_ready_override === false ? 'selected' : ''}>false</option>
           </select>
         </div>
+        <div class="field">
+          <label for="rankingPin">Manual Pin</label>
+          <select id="rankingPin" name="rankingPin">
+            <option value="false" ${candidate.operatorReview?.ranking_pin === true ? '' : 'selected'}>false</option>
+            <option value="true" ${candidate.operatorReview?.ranking_pin === true ? 'selected' : ''}>true</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="recruiterConfidence">Recruiter Confidence</label>
+          <select id="recruiterConfidence" name="recruiterConfidence">
+            <option value="">Not set</option>
+            ${['low', 'medium', 'high']
+              .map((option) => `<option value="${escapeHtml(option)}" ${candidate.operatorReview?.recruiter_confidence === option ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label for="recommendedNextStep">Recommended Next Step</label>
+          <input id="recommendedNextStep" name="recommendedNextStep" value="${escapeAttribute(candidate.operatorReview?.recommended_next_step || '')}">
+        </div>
         <div class="field full-span">
           <label for="manualNotes">Manual Notes</label>
           <textarea id="manualNotes" name="manualNotes">${escapeHtml(candidate.operatorReview?.manual_notes || '')}</textarea>
+        </div>
+        <div class="field full-span">
+          <label for="manualScreeningSummary">Manual Screening Summary</label>
+          <textarea id="manualScreeningSummary" name="manualScreeningSummary">${escapeHtml(candidate.operatorReview?.manual_screening_summary || '')}</textarea>
+        </div>
+        <div class="field full-span">
+          <label for="strengths">Operator Strengths</label>
+          <textarea id="strengths" name="strengths">${escapeHtml(arrayText(candidate.operatorReview?.strengths))}</textarea>
+        </div>
+        <div class="field full-span">
+          <label for="concerns">Operator Concerns</label>
+          <textarea id="concerns" name="concerns">${escapeHtml(arrayText(candidate.operatorReview?.concerns))}</textarea>
+        </div>
+        <div class="field full-span">
+          <label for="followUpQuestions">Follow-Up Questions</label>
+          <textarea id="followUpQuestions" name="followUpQuestions">${escapeHtml(arrayText(candidate.operatorReview?.follow_up_questions))}</textarea>
+        </div>
+        <div class="field">
+          <label for="appetiteNotes">Appetite / Interest Notes</label>
+          <textarea id="appetiteNotes" name="appetiteNotes">${escapeHtml(candidate.operatorReview?.appetite_notes || '')}</textarea>
+        </div>
+        <div class="field">
+          <label for="availabilityNotes">Availability Notes</label>
+          <textarea id="availabilityNotes" name="availabilityNotes">${escapeHtml(candidate.operatorReview?.availability_notes || '')}</textarea>
+        </div>
+        <div class="field">
+          <label for="compensationNotes">Compensation / Rate Notes</label>
+          <textarea id="compensationNotes" name="compensationNotes">${escapeHtml(candidate.operatorReview?.compensation_notes || '')}</textarea>
+        </div>
+        <div class="field">
+          <label for="locationMobilityNotes">Location / Mobility Notes</label>
+          <textarea id="locationMobilityNotes" name="locationMobilityNotes">${escapeHtml(candidate.operatorReview?.location_mobility_notes || '')}</textarea>
+        </div>
+        <div class="field full-span">
+          <label for="finalManualRationale">Final Manual Rationale</label>
+          <textarea id="finalManualRationale" name="finalManualRationale">${escapeHtml(candidate.operatorReview?.final_manual_rationale || '')}</textarea>
         </div>
         <div class="field full-span">
           <label for="overrideReason">Override Reason</label>
@@ -481,10 +765,12 @@ function renderCandidateDetail(role) {
         </div>
       </form>
       <div class="detail-grid">
-        <div><strong>Latest Contact</strong><div>${escapeHtml(latestContact?.stage || 'No contact logged')}</div><div class="subtle">${escapeHtml(latestContact?.at || '')}</div></div>
+        <div><strong>Latest Contact</strong><div>${escapeHtml(latestContact?.stage || 'No contact logged')}</div><div class="subtle">${escapeHtml(formatDateTime(latestContact?.at) || '')}</div></div>
         <div><strong>Availability Notes</strong><div>${escapeHtml(candidate.operatorReview?.availability_notes || 'None')}</div></div>
         <div><strong>Appetite Notes</strong><div>${escapeHtml(candidate.operatorReview?.appetite_notes || 'None')}</div></div>
         <div><strong>Compensation Notes</strong><div>${escapeHtml(candidate.operatorReview?.compensation_notes || 'None')}</div></div>
+        <div><strong>Location / Mobility Notes</strong><div>${escapeHtml(candidate.operatorReview?.location_mobility_notes || 'None')}</div></div>
+        <div><strong>Recommended Next Step</strong><div>${escapeHtml(candidate.operatorReview?.recommended_next_step || 'Not set')}</div></div>
       </div>
     </div>
 
@@ -497,11 +783,11 @@ function renderCandidateDetail(role) {
   const reviewForm = document.getElementById('candidateReviewForm');
   reviewForm?.addEventListener('submit', (event) => {
     event.preventDefault();
-    saveCandidateReview(role.roleId, candidate.candidate_id).catch((error) => setStatus(error.message || String(error), 'error'));
+    saveCandidateReview(roleKey, candidate.candidate_id).catch((error) => setStatus(error.message || String(error), 'error'));
   });
-  document.getElementById('markContactedButton')?.addEventListener('click', () => logContact(role.roleId, candidate.candidate_id, 'contacted'));
-  document.getElementById('markAwaitingReplyButton')?.addEventListener('click', () => logContact(role.roleId, candidate.candidate_id, 'awaiting_reply'));
-  document.getElementById('markClosedButton')?.addEventListener('click', () => logContact(role.roleId, candidate.candidate_id, 'closed'));
+  document.getElementById('markContactedButton')?.addEventListener('click', () => logContact(roleKey, candidate.candidate_id, 'contacted'));
+  document.getElementById('markAwaitingReplyButton')?.addEventListener('click', () => logContact(roleKey, candidate.candidate_id, 'awaiting_reply'));
+  document.getElementById('markClosedButton')?.addEventListener('click', () => logContact(roleKey, candidate.candidate_id, 'closed'));
 }
 
 function renderRoleConfigForm(role) {
@@ -566,7 +852,7 @@ async function loadRoleIndex() {
   const result = await api('/api/role-index');
   state.roleIndex = result.roles || [];
   if (!state.selectedRoleId && state.roleIndex.length) {
-    state.selectedRoleId = state.roleIndex[0].role_id;
+    state.selectedRoleId = state.roleIndex[0].role_slug || state.roleIndex[0].role_id;
   }
   renderRoleList();
 }
@@ -602,6 +888,8 @@ function render() {
     overviewBlock.innerHTML = '<div><strong>Status</strong><br>No role selected.</div>';
     progressBlock.innerHTML = '<div><strong>Status</strong><br>No role selected.</div>';
     nextActions.innerHTML = '<li>Initialise a role folder or refresh the workflow.</li>';
+    reviewQueues.innerHTML = '<div class="empty-state">No review queues yet.</div>';
+    roleHistory.innerHTML = '<div class="empty-state">No role history yet.</div>';
     candidateFilters.innerHTML = '';
     candidateList.innerHTML = '<div class="empty-state">No candidates yet.</div>';
     candidateDetail.innerHTML = '<div class="empty-state">Select a role to review shortlisted candidates.</div>';
@@ -609,14 +897,18 @@ function render() {
     roleConfigForm.innerHTML = '';
     detailActions.innerHTML = '';
     warningBanner.classList.add('hidden');
+    renderImportPanel(null);
     return;
   }
 
   roleTitle.textContent = role.roleTitle || role.roleId;
-  roleMeta.textContent = `${role.roleId} · Updated ${role.updatedAt || 'not yet run'} · ${role.shortlistProgress?.message || ''}`;
+  roleMeta.textContent = `${role.roleId} · ${(role.roleState || role.metrics?.role_workflow_state || 'gathering_candidates').replace(/_/g, ' ')} · Updated ${formatDateTime(role.updatedAt) || 'not yet run'} · ${role.shortlistProgress?.message || ''}`;
   renderMetricCards(role);
   renderOverview(role);
   renderProgress(role);
+  renderReviewQueues(role);
+  renderRoleHistory(role);
+  renderImportPanel(role);
   renderCandidateFilters(role);
   renderCandidateList(role);
   renderCandidateDetail(role);
@@ -662,6 +954,67 @@ async function initRole() {
   }
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Could not read ${file?.name || 'the selected file'}.`));
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.readAsText(file);
+  });
+}
+
+async function importBatch() {
+  if (!state.selectedRoleId) {
+    setStatus('Select a role before importing a preview batch.', 'error');
+    return;
+  }
+  const file = importFileInput?.files?.[0];
+  if (!file) {
+    setStatus('Choose a CSV or JSON batch before importing.', 'error');
+    return;
+  }
+  if (!/\.(csv|json)$/i.test(file.name)) {
+    setStatus('Upload must be a CSV or JSON preview batch.', 'error');
+    return;
+  }
+  if (file.size === 0) {
+    setStatus(`The selected file ${file.name} is empty.`, 'error');
+    return;
+  }
+
+  const text = await readFileAsText(file);
+  const postImportActionValue = importPostAction?.value || 'run_preview_triage';
+  setBusy(true, `Importing ${file.name} into ${state.selectedRoleId}...`);
+  try {
+    const result = await api(`/api/roles/${encodeURIComponent(state.selectedRoleId)}/import`, {
+      method: 'POST',
+      body: JSON.stringify({
+        fileName: file.name,
+        text,
+        postImportAction: postImportActionValue,
+      }),
+    });
+    state.selectedRole = result.role;
+    importSummary.textContent = summariseImportResult(result.importResult);
+    const entry = result.importResult?.importHistoryEntry || {};
+    state.candidateFilter = (entry.updated?.count || 0) > 0
+      ? 'changed_since_last_import'
+      : (entry.added?.count || 0) > 0
+        ? 'new_since_last_review'
+        : 'all';
+    const visibleCandidates = filteredCandidates(result.role);
+    state.selectedCandidateId = visibleCandidates[0]?.candidate_id || getSelectedCandidate(result.role)?.candidate_id || '';
+    render();
+    await loadRoleIndex();
+    setStatus(`Imported ${file.name}. ${summariseImportResult(result.importResult)}.`, 'success');
+    if (importFileInput) importFileInput.value = '';
+  } catch (error) {
+    setStatus(error.message || String(error), 'error');
+  } finally {
+    setBusy(false);
+  }
+}
+
 async function saveRoleConfig() {
   if (!state.selectedRoleId) return;
   const patch = {};
@@ -694,9 +1047,22 @@ async function saveCandidateReview(roleId, candidateId) {
   const patch = {
     decision: document.getElementById('operatorDecision')?.value || '',
     shortlist_status: document.getElementById('shortlistStatus')?.value || '',
+    shortlist_bucket: document.getElementById('shortlistBucket')?.value || '',
+    ranking_pin: document.getElementById('rankingPin')?.value || 'false',
     lifecycle_stage: document.getElementById('lifecycleStage')?.value || '',
     outreach_ready_override: document.getElementById('outreachReady')?.value || '',
     manual_notes: document.getElementById('manualNotes')?.value || '',
+    strengths: document.getElementById('strengths')?.value || '',
+    concerns: document.getElementById('concerns')?.value || '',
+    follow_up_questions: document.getElementById('followUpQuestions')?.value || '',
+    appetite_notes: document.getElementById('appetiteNotes')?.value || '',
+    availability_notes: document.getElementById('availabilityNotes')?.value || '',
+    compensation_notes: document.getElementById('compensationNotes')?.value || '',
+    location_mobility_notes: document.getElementById('locationMobilityNotes')?.value || '',
+    manual_screening_summary: document.getElementById('manualScreeningSummary')?.value || '',
+    recommended_next_step: document.getElementById('recommendedNextStep')?.value || '',
+    recruiter_confidence: document.getElementById('recruiterConfidence')?.value || '',
+    final_manual_rationale: document.getElementById('finalManualRationale')?.value || '',
     override_reason: document.getElementById('overrideReason')?.value || '',
   };
   if (patch.outreach_ready_override === '') delete patch.outreach_ready_override;
@@ -757,6 +1123,11 @@ initRoleButton.addEventListener('click', () => {
 openWorkflowButton.addEventListener('click', () => {
   if (state.busy) return;
   openArtifact(state.selectedRoleId || '', '.').catch((error) => setStatus(error.message || String(error), 'error'));
+});
+
+importBatchButton.addEventListener('click', () => {
+  if (state.busy) return;
+  importBatch().catch((error) => setStatus(error.message || String(error), 'error'));
 });
 
 roleConfigForm.addEventListener('submit', (event) => {
