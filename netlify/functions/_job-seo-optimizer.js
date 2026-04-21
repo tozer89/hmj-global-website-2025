@@ -1,6 +1,7 @@
 'use strict';
 
 const { isMissingTableError, isSchemaError, slugify } = require('./_jobs-helpers.js');
+const { hasUsableOpenAiApiKey } = require('../../lib/openai-env.js');
 
 const fetchImpl = typeof fetch === 'function'
   ? fetch.bind(globalThis)
@@ -324,7 +325,7 @@ async function optimiseJobSeo(job = {}, options = {}) {
     generatedAt: new Date().toISOString(),
   }, job);
   const apiKey = trimString(process.env.OPENAI_API_KEY, 240);
-  if (!apiKey) {
+  if (!hasUsableOpenAiApiKey(apiKey)) {
     return {
       ok: true,
       source: 'heuristic',

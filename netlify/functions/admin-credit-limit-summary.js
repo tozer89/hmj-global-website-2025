@@ -9,6 +9,7 @@ const {
   generateFallbackSummary,
   formatCurrency,
 } = require('../../lib/credit-limit-forecast.js');
+const { hasUsableOpenAiApiKey } = require('../../lib/openai-env.js');
 
 const fetchImpl = typeof fetch === 'function'
   ? fetch.bind(globalThis)
@@ -78,7 +79,7 @@ function buildPromptContext(assumptions, forecast, capacity) {
 
 async function callOpenAI(promptText) {
   const apiKey = trimString(process.env.OPENAI_API_KEY);
-  if (!apiKey) {
+  if (!hasUsableOpenAiApiKey(apiKey)) {
     return {
       ok: false,
       error: 'openai_key_missing',

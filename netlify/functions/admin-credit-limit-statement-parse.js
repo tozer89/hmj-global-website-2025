@@ -4,6 +4,7 @@ const { withAdminCors } = require('./_http.js');
 const { getContext } = require('./_auth.js');
 const matcherCore = require('../../lib/candidate-matcher-core.js');
 const statementImport = require('../../lib/credit-limit-statement-import.js');
+const { hasUsableOpenAiApiKey } = require('../../lib/openai-env.js');
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const AI_STATEMENT_SCHEMA = {
@@ -110,12 +111,12 @@ function extractOutputText(payload) {
 
 function hasAiAssistConfigured() {
   const apiKey = trimString(process.env.OPENAI_API_KEY);
-  return !!apiKey && !/^YOUR_OPENAI_API_KEY$/i.test(apiKey);
+  return hasUsableOpenAiApiKey(apiKey);
 }
 
 async function callOpenAIStatementAssist(extractedText, options, overrides) {
   const apiKey = trimString(process.env.OPENAI_API_KEY);
-  if (!apiKey || /^YOUR_OPENAI_API_KEY$/i.test(apiKey)) {
+  if (!hasUsableOpenAiApiKey(apiKey)) {
     return {
       ok: false,
       error: 'openai_key_missing',

@@ -1,5 +1,7 @@
 'use strict';
 
+const { hasUsableOpenAiApiKey } = require('../../lib/openai-env.js');
+
 const fetchImpl = typeof fetch === 'function'
   ? fetch.bind(globalThis)
   : (...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args));
@@ -161,7 +163,7 @@ async function enrichJobSpec(job = {}, options = {}) {
   }
 
   const apiKey = trimString(process.env.OPENAI_API_KEY, 240);
-  if (!apiKey) {
+  if (!hasUsableOpenAiApiKey(apiKey)) {
     return {
       ok: false,
       error: 'openai_key_missing',

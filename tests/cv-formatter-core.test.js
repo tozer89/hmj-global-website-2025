@@ -294,6 +294,53 @@ test('buildFallbackProfile reconstructs recent QAQC employment history from a pr
   assert.ok(profile.relevantProjects.every((item) => !/\b(?:hnc|hnd|bsc|msc|edition|training)\b/i.test(item)));
 });
 
+test('buildFallbackProfile recovers the candidate name and compact work-experience rows from uppercase PDF-style CV text', () => {
+  const sourceText = [
+    'ABOUT ME',
+    'Steve Ferrier',
+    'Electrical Foreman/Supervisor',
+    'WORK EXPERIENCE',
+    'BCR    Jul2023-pres   Supervisor',
+    'Cobec Engineering Nov2022-Jul2023  Foreman',
+    'Sherlock/BCR  Oct2020 - Nov2023   Supervisor',
+    'Self-employed             Aug2019-Oct2022',
+    'Silverback Staffing  July 2016-Aug  2019        Electrician',
+    'MULTIPLE RELEVANT REFERENCES AVAILABLE ON REQUEST',
+    'CONTACT',
+    'RELEVANT EDUCATION',
+    'Angus College:',
+    'NC Electrical & Electronic Engineering',
+    'AREAS OF EXPERIENCE AND EXPERTESE',
+    '⚫ Small and large (£30million plus) project management',
+    'engagement',
+    '⚫ BMS installation and fault finding.',
+  ].join('\n');
+
+  const profile = buildFallbackProfile({
+    candidateText: sourceText,
+    jobSpecText: '',
+    candidateFileName: 'Steve Ferrier CV 23.pdf',
+    options: {
+      templatePreset: 'premium_candidate_pack',
+      tailoringMode: 'cv_only',
+      includeAdditionalInformation: false,
+    },
+  });
+
+  assert.equal(profile.candidateName, 'Steve Ferrier');
+  assert.equal(profile.location, '');
+  assert.equal(profile.targetRole, 'Supervisor');
+  assert.deepEqual(
+    profile.employmentHistory.slice(0, 4).map((entry) => [entry.company, entry.dates, entry.title]),
+    [
+      ['BCR', 'Jul2023-pres', 'Supervisor'],
+      ['Cobec Engineering', 'Nov2022-Jul2023', 'Foreman'],
+      ['Sherlock/BCR', 'Oct2020 - Nov2023', 'Supervisor'],
+      ['Self-employed', 'Aug2019-Oct2022', 'Supervisor'],
+    ]
+  );
+});
+
 test('buildClientReadyDocx returns a docx buffer', async () => {
   const buffer = await buildClientReadyDocx({
     candidateReference: 'HMJ-TEST1234',

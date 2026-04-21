@@ -1,6 +1,7 @@
 'use strict';
 
 const { createHash } = require('node:crypto');
+const { hasUsableOpenAiApiKey } = require('../../lib/openai-env.js');
 const { buildActionCatalog, resolveChatbotSettings } = require('./_chatbot-config.js');
 const {
   INTENT_OPTIONS,
@@ -650,7 +651,7 @@ async function callOpenAIForChat(params = {}) {
   }
 
   const apiKey = trimString(process.env.OPENAI_API_KEY, 200);
-  if (!apiKey) {
+  if (!hasUsableOpenAiApiKey(apiKey)) {
     throw coded(503, 'OpenAI API key missing on the server.', 'openai_key_missing');
   }
 
