@@ -1,0 +1,292 @@
+{
+  "preparedAt": "2026-05-18",
+  "notes": [
+    "Public adverts avoid client names, tenant names, and exact project identifiers.",
+    "Content below uses verified employer context plus role-safe industry-standard wording.",
+    "No salary has been set for Vacancy #65 because the supplied salary value is ambiguous.",
+    "No public location has been set for Vacancy #64 because the supplied details do not confirm a project location."
+  ],
+  "sources": [
+    {
+      "company": "Grucon",
+      "url": "https://www.gruconco.com/",
+      "factsUsed": [
+        "Project management and commercial advisory services for large-scale data centre and infrastructure developments",
+        "Support across feasibility, design, construction, commissioning, and operations",
+        "Acts on behalf of owners / developers and interfaces with contractors and specialist vendors"
+      ]
+    },
+    {
+      "company": "Grucon",
+      "url": "https://www.gruconco.com/company",
+      "factsUsed": [
+        "Trusted by data centre developers, investors, and operators across Europe, APAC, and AMERS",
+        "Supports hyperscale, colocation, and AI-enabled facility developments through commissioning and operations"
+      ]
+    },
+    {
+      "company": "MSL Cabling",
+      "url": "https://mslcabling.com/",
+      "factsUsed": [
+        "Specialises in installation of HV and LV cables, data, and fiber-optic systems",
+        "Works across UK and Europe in data centre and infrastructure-related sectors",
+        "Positions itself as an electrical and data fibre installation company"
+      ]
+    },
+    {
+      "company": "MSL Cabling",
+      "url": "https://find-and-update.company-information.service.gov.uk/company/11913117",
+      "factsUsed": [
+        "Company status active",
+        "Nature of business listed as electrical installation",
+        "Incorporated on 29 March 2019"
+      ]
+    },
+    {
+      "company": "Critical Testing Services Ltd",
+      "url": "https://ie.linkedin.com/company/critical-testing-services-ltd",
+      "factsUsed": [
+        "Electrical Testing & Inspection Specialists",
+        "Construction sector company",
+        "Website listed as criticaltestingservices.com"
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "vacancyNumber": 67,
+      "title": "Electrical Commissioning Manager — Data Centre — Frankfurt",
+      "status": "live",
+      "published": true,
+      "section": "ICT & Commissioning",
+      "discipline": "Electrical Commissioning",
+      "type": "temporary",
+      "locationText": "Frankfurt, Germany",
+      "locationCode": "frankfurt",
+      "internalClientName": "Grucon",
+      "customer": "",
+      "payType": "day_rate",
+      "currency": "GBP",
+      "dayRateMin": 900,
+      "dayRateMax": 900,
+      "benefits": [],
+      "tags": [
+        "electrical commissioning",
+        "commissioning manager",
+        "data centre",
+        "L1-L5",
+        "client-side",
+        "mission critical",
+        "handover",
+        "Frankfurt"
+      ],
+      "overview": "Electrical Commissioning Manager required for a client-side data centre programme in Frankfurt. The role focuses on electrical commissioning delivery across L1-L5 activities, coordinating stakeholders through pre-energisation, testing, systems interface, documentation close-out, and handover. This position suits someone confident leading commissioning workflows in mission-critical environments, maintaining strong safety, quality, and reporting standards while driving programme milestones and turnover readiness.",
+      "responsibilities": [
+        "Lead electrical commissioning activities across L1-L5 delivery stages on a client-side programme.",
+        "Coordinate contractors, vendors, and delivery teams through inspections, testing, issue resolution, and turnover.",
+        "Manage commissioning trackers, witness points, progress reporting, and close-out actions.",
+        "Review documentation, test packs, red-lines, and handover records for completeness and quality.",
+        "Support interface management between construction, commissioning, and operational stakeholders.",
+        "Promote safe systems of work and consistent quality standards through energisation and handover."
+      ],
+      "requirements": [
+        "Strong experience in electrical commissioning within data centre or mission-critical environments.",
+        "Working knowledge of structured L1-L5 commissioning activities and close-out processes.",
+        "Confident coordinating multiple stakeholders in a client-side or owner’s representative setting.",
+        "Able to manage commissioning documentation, issue tracking, and reporting.",
+        "Strong communication skills with a practical, delivery-focused approach."
+      ],
+      "publicPageConfig": {
+        "showOverview": true,
+        "showPay": true,
+        "showCustomer": false,
+        "showBenefits": true,
+        "showResponsibilities": true,
+        "showRequirements": true,
+        "showTags": true,
+        "showRoleHighlights": true,
+        "showApplyPanel": true,
+        "showSecondaryCta": false,
+        "showPageMeta": false,
+        "showReference": false
+      }
+    },
+    {
+      "vacancyNumber": 66,
+      "title": "Electrical Commissioning Manager — Data Centre — Paris",
+      "status": "live",
+      "published": true,
+      "section": "ICT & Commissioning",
+      "discipline": "Electrical Commissioning",
+      "type": "contract",
+      "locationText": "Paris, France",
+      "locationCode": "paris",
+      "internalClientName": "Grucon",
+      "customer": "",
+      "payType": "day_rate",
+      "currency": "GBP",
+      "dayRateMin": 900,
+      "dayRateMax": 900,
+      "benefits": [],
+      "tags": [
+        "electrical commissioning",
+        "commissioning manager",
+        "data centre",
+        "L1-L5",
+        "client-side",
+        "mission critical",
+        "handover",
+        "Paris"
+      ],
+      "overview": "Electrical Commissioning Manager required for a client-side data centre programme in Paris. The role centres on electrical commissioning delivery across L1-L5 activities, helping drive testing, stakeholder coordination, documentation close-out, and handover readiness. It will suit a commissioning professional who can maintain momentum across multiple interfaces while keeping safety, quality, reporting, and close-out standards under control in a mission-critical setting.",
+      "responsibilities": [
+        "Lead electrical commissioning delivery across L1-L5 activities on a live client-side programme.",
+        "Coordinate contractors, specialist vendors, and delivery teams through testing and close-out phases.",
+        "Monitor commissioning progress, issue resolution, and turnover actions against project milestones.",
+        "Review test documentation, commissioning records, and handover packs for completeness and accuracy.",
+        "Support clear interface management between construction, commissioning, and operational teams.",
+        "Maintain strong safety and quality standards throughout energisation, testing, and final handover."
+      ],
+      "requirements": [
+        "Strong experience in electrical commissioning on data centre or mission-critical projects.",
+        "Practical understanding of structured L1-L5 commissioning activities.",
+        "Able to manage documentation, issue tracking, and progress reporting in a live project environment.",
+        "Comfortable working across multiple stakeholder groups in a client-side setting.",
+        "Clear communication skills and a delivery-led approach to commissioning close-out."
+      ],
+      "publicPageConfig": {
+        "showOverview": true,
+        "showPay": true,
+        "showCustomer": false,
+        "showBenefits": true,
+        "showResponsibilities": true,
+        "showRequirements": true,
+        "showTags": true,
+        "showRoleHighlights": true,
+        "showApplyPanel": true,
+        "showSecondaryCta": false,
+        "showPageMeta": false,
+        "showReference": false
+      }
+    },
+    {
+      "vacancyNumber": 65,
+      "title": "Quantity Surveyor — Data Centre Cabling",
+      "status": "live",
+      "published": true,
+      "section": "Commercial",
+      "discipline": "Quantity Surveying",
+      "type": "permanent",
+      "locationText": "United Kingdom",
+      "locationCode": "uk",
+      "internalClientName": "MSL Cabling",
+      "customer": "",
+      "payType": "",
+      "currency": "",
+      "benefits": [],
+      "tags": [
+        "quantity surveyor",
+        "data centre",
+        "cabling",
+        "HV",
+        "LV",
+        "fibre",
+        "commercial",
+        "valuations"
+      ],
+      "overview": "Quantity Surveyor required to support commercial oversight across data centre cabling projects for a specialist contractor working across HV, LV, data, and fibre installation scopes. The role will suit someone comfortable managing commercial processes across technically led electrical packages, with a focus on cost control, subcontract administration, valuations, variations, and project reporting. This is a strong fit for a QS who understands delivery risk, package change, and the commercial detail needed to support specialist installation teams.",
+      "responsibilities": [
+        "Support commercial management across data centre cabling and electrical installation packages.",
+        "Prepare and review valuations, variations, cost reports, and payment applications.",
+        "Track subcontractor accounts, change control, and project commercial performance.",
+        "Work closely with operations and delivery teams on procurement, scope alignment, and package forecasting.",
+        "Maintain accurate commercial records and support final account close-out.",
+        "Provide clear reporting on cost movement, risk, and opportunity across live projects."
+      ],
+      "requirements": [
+        "Quantity Surveying experience within electrical, MEP, cabling, or infrastructure packages.",
+        "Strong commercial administration, reporting, and change control capability.",
+        "Comfortable working across specialist installation scopes in live project environments.",
+        "Good stakeholder communication with operational and commercial teams.",
+        "Organised approach to records, valuations, and forecast accuracy."
+      ],
+      "publicPageConfig": {
+        "showOverview": true,
+        "showPay": false,
+        "showCustomer": false,
+        "showBenefits": true,
+        "showResponsibilities": true,
+        "showRequirements": true,
+        "showTags": true,
+        "showRoleHighlights": true,
+        "showApplyPanel": true,
+        "showSecondaryCta": false,
+        "showPageMeta": false,
+        "showReference": false
+      }
+    },
+    {
+      "vacancyNumber": 64,
+      "title": "Electrical Testing Engineer — Data Centre",
+      "status": "live",
+      "published": true,
+      "section": "ICT & Commissioning",
+      "discipline": "Electrical Testing",
+      "type": "permanent",
+      "locationText": "",
+      "locationCode": "",
+      "internalClientName": "Critical Testing Services",
+      "customer": "",
+      "payType": "salary_range",
+      "currency": "GBP",
+      "salaryMin": 70000,
+      "salaryMax": 70000,
+      "benefits": [
+        "Accommodation provided",
+        "Travel support"
+      ],
+      "tags": [
+        "electrical testing",
+        "inspection and testing",
+        "data centre",
+        "mission critical",
+        "site coordination",
+        "handover"
+      ],
+      "overview": "Electrical Testing Engineer required to support electrical inspection and testing activities on mission-critical data centre programmes. This permanent opportunity includes accommodation and travel support and will suit someone able to coordinate electricians and engineers on site while maintaining safe, organised, and high-quality testing delivery. The role combines hands-on technical oversight with team coordination, reporting, and close-out support across fast-paced critical infrastructure environments.",
+      "responsibilities": [
+        "Oversee electrical inspection and testing activities across live mission-critical projects.",
+        "Coordinate site electricians and engineers to ensure testing works are planned and executed safely.",
+        "Review progress, testing records, and close-out actions to support timely completion.",
+        "Maintain clear communication with site management and wider delivery stakeholders.",
+        "Support quality, compliance, and structured handover of tested systems.",
+        "Promote strong safety standards and orderly workface coordination across testing phases."
+      ],
+      "requirements": [
+        "Electrical testing or inspection experience on complex commercial or industrial projects.",
+        "Confident leading or coordinating site teams during live testing activities.",
+        "Strong understanding of safe electrical work practices and documentation close-out.",
+        "Able to communicate clearly with site teams and project stakeholders.",
+        "Mission-critical or data centre experience is advantageous."
+      ],
+      "publicPageConfig": {
+        "showOverview": true,
+        "showPay": true,
+        "showCustomer": false,
+        "showBenefits": true,
+        "showResponsibilities": true,
+        "showRequirements": true,
+        "showTags": true,
+        "showRoleHighlights": true,
+        "showApplyPanel": true,
+        "showSecondaryCta": false,
+        "showPageMeta": false,
+        "showReference": false
+      }
+    }
+  ],
+  "publishBlocker": {
+    "status": "blocked",
+    "reason": "HMJ admin sign-in is required in the browser session before these live records can be edited and published."
+  }
+}
