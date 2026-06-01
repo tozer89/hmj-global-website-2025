@@ -398,7 +398,7 @@ values
     '2025-01-10T09:05:00.000Z',
     'Joe Tozer-O''Sullivan',
     'joe-tozer-osullivan',
-    'Co-founder & Finance Partner',
+    'Finance Partner',
     'Keeps commercial visibility, payroll compliance and contractor care aligned across every HMJ jurisdiction.',
     'Ensures commercial transparency and compliant payroll across all jurisdictions, aligning HMJ invoicing, insurance and contractor care.',
     '/images/director2.jpg',

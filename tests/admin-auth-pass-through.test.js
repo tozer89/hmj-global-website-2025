@@ -155,7 +155,7 @@ function createAdminHarness({ url, width, whoamiResponses = [], adminRoleCheckRe
   return { dom, window, state, identity, calls, navigation };
 }
 
-test('forceFresh identity checks refetch whoami after an empty cookie-based snapshot', async () => {
+test('forceFresh identity checks refetch whoami after an empty cookie-based snapshot', async (t) => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/',
     width: 390,
@@ -164,6 +164,7 @@ test('forceFresh identity checks refetch whoami after an empty cookie-based snap
       { ok: true, identityEmail: 'admin@hmj-global.com', roles: ['admin'] },
     ],
   });
+  t.after(() => harness.window.close());
 
   harness.state.currentUser = createIdentityUser({
     email: 'admin@hmj-global.com',
@@ -179,7 +180,7 @@ test('forceFresh identity checks refetch whoami after an empty cookie-based snap
   assert.equal(harness.calls.whoami, 2);
 });
 
-test('admin identity falls back to the server-side admin check when the browser-side role list is empty', async () => {
+test('admin identity falls back to the server-side admin check when the browser-side role list is empty', async (t) => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/',
     width: 390,
@@ -190,6 +191,7 @@ test('admin identity falls back to the server-side admin check when the browser-
       { ok: true, email: 'owner@hmj-global.com', roles: ['owner', 'admin'] },
     ],
   });
+  t.after(() => harness.window.close());
 
   harness.state.currentUser = createIdentityUser({
     email: 'owner@hmj-global.com',
@@ -205,7 +207,7 @@ test('admin identity falls back to the server-side admin check when the browser-
   assert.equal(harness.calls.adminRoleCheck, 1);
 });
 
-test('successful login waits for admin session verification before routing to the requested admin page', async () => {
+test('successful login waits for admin session verification before routing to the requested admin page', async (t) => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/?next=jobs.html',
     width: 390,
@@ -215,6 +217,7 @@ test('successful login waits for admin session verification before routing to th
       { ok: true, identityEmail: 'admin@hmj-global.com', roles: ['admin'] },
     ],
   });
+  t.after(() => harness.window.close());
 
   let mainRan = false;
   await harness.window.Admin.bootAdmin(async () => {
@@ -238,11 +241,12 @@ test('successful login waits for admin session verification before routing to th
   ]);
 });
 
-test('preview hosts resolve admin identity to the same-host netlify identity endpoint', () => {
+test('preview hosts resolve admin identity to the same-host netlify identity endpoint', (t) => {
   const harness = createAdminHarness({
     url: 'https://deploy-preview-105--hmjg.netlify.app/admin/',
     width: 390,
   });
+  t.after(() => harness.window.close());
 
   assert.equal(
     harness.window.ADMIN_IDENTITY_URL,
@@ -250,11 +254,12 @@ test('preview hosts resolve admin identity to the same-host netlify identity end
   );
 });
 
-test('custom production hosts resolve admin identity to the same-host identity proxy', () => {
+test('custom production hosts resolve admin identity to the same-host identity proxy', (t) => {
   const harness = createAdminHarness({
     url: 'https://hmj-global.com/admin/',
     width: 390,
   });
+  t.after(() => harness.window.close());
 
   assert.equal(
     harness.window.ADMIN_IDENTITY_URL,
@@ -262,7 +267,7 @@ test('custom production hosts resolve admin identity to the same-host identity p
   );
 });
 
-test('unauthenticated protected admin routes redirect back to the admin entry gate', async () => {
+test('unauthenticated protected admin routes redirect back to the admin entry gate', async (t) => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/jobs.html',
     width: 1280,
@@ -270,6 +275,7 @@ test('unauthenticated protected admin routes redirect back to the admin entry ga
       { ok: true, identityEmail: null, roles: [] },
     ],
   });
+  t.after(() => harness.window.close());
 
   let mainRan = false;
   await harness.window.Admin.bootAdmin(async () => {
@@ -280,6 +286,36 @@ test('unauthenticated protected admin routes redirect back to the admin entry ga
   assert.deepEqual(plainNavigation(harness.navigation), [
     { mode: 'replace', target: '/admin/?next=jobs.html' },
   ]);
+});
+
+test('protected admin routes wait briefly for a delayed verified session before redirecting away', async (t) => {
+  const harness = createAdminHarness({
+    url: 'https://example.com/admin/finance/cashflow.html',
+    width: 1280,
+    whoamiResponses: [
+      { ok: true, identityEmail: null, roles: [] },
+      { ok: true, identityEmail: 'admin@hmj-global.com', roles: ['admin'] },
+      { ok: true, identityEmail: 'admin@hmj-global.com', roles: ['admin'] },
+    ],
+  });
+  t.after(() => harness.window.close());
+
+  harness.state.currentUser = createIdentityUser({
+    email: 'admin@hmj-global.com',
+    roles: ['admin'],
+    token: '',
+  });
+
+  let mainRan = false;
+  await harness.window.Admin.bootAdmin(async () => {
+    mainRan = true;
+  });
+
+  assert.equal(mainRan, true);
+  assert.deepEqual(plainNavigation(harness.navigation), []);
+  assert.equal(harness.calls.whoami >= 2, true);
+  assert.equal(harness.window.document.getElementById('gate').style.display, 'none');
+  assert.equal(harness.window.document.getElementById('app').style.display, '');
 });
 
 test('authenticated admin landing renders cleanly across small, mobile, tablet, and desktop widths', async (t) => {
@@ -309,11 +345,12 @@ test('authenticated admin landing renders cleanly across small, mobile, tablet, 
   }
 });
 
-test('owner-role sessions are allowed through the admin landing gate', async () => {
+test('owner-role sessions are allowed through the admin landing gate', async (t) => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/',
     width: 1280,
   });
+  t.after(() => harness.window.close());
 
   harness.state.currentUser = createIdentityUser({
     email: 'owner@hmj-global.com',
@@ -332,11 +369,12 @@ test('owner-role sessions are allowed through the admin landing gate', async () 
   assert.equal(harness.window.document.getElementById('app').style.display, '');
 });
 
-test('logout transition returns the user to the admin entry page with a signed-out notice', () => {
+test('logout transition returns the user to the admin entry page with a signed-out notice', (t) => {
   const harness = createAdminHarness({
     url: 'https://example.com/admin/',
     width: 390,
   });
+  t.after(() => harness.window.close());
 
   harness.window.Admin.finishLogoutTransition();
 

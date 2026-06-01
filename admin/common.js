@@ -1888,21 +1888,35 @@
         });
       }
 
-      const who = await helpers.gate({ adminOnly: true });
+      let who = await helpers.gate({ adminOnly: true });
       if (!who) {
         if (!entryPage) {
-          const target = getAdminEntryUrl(currentPath);
-          if (target && target !== `${window.location.pathname}${window.location.search}`) {
-            try {
-              navigateWindow('replace', target);
-              return;
-            } catch (err) {
-              Debug.warn('redirect to admin entry failed', err);
-            }
+          const targetLabel = adminTargetLabel(currentPath);
+          setAdminGatePendingState(`Checking your HMJ admin session before opening ${targetLabel}…`);
+          const recovered = await waitForAdminAccess('admin', {
+            timeoutMs: 2600,
+            intervalMs: 260
+          });
+          clearAdminGatePendingState();
+          if (recovered?.ok) {
+            who = await helpers.gate({ adminOnly: true });
           }
         }
-        Debug.warn('Gate blocked: no session / no admin role');
-        return;
+        if (!who) {
+          if (!entryPage) {
+            const target = getAdminEntryUrl(currentPath);
+            if (target && target !== `${window.location.pathname}${window.location.search}`) {
+              try {
+                navigateWindow('replace', target);
+                return;
+              } catch (err) {
+                Debug.warn('redirect to admin entry failed', err);
+              }
+            }
+          }
+          Debug.warn('Gate blocked: no session / no admin role');
+          return;
+        }
       }
 
       if (entryPage) {

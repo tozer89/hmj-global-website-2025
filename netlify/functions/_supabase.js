@@ -4,6 +4,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { withAdminCors } = require('./_http.js');
 const { getSupabaseUrl, getSupabaseServiceKey } = require('./_supabase-env.js');
+const { getContext } = require('./_auth.js');
 
 // ---- ENV ----
 // Prefer the service role key server-side (RLS bypassed in functions).
@@ -131,18 +132,21 @@ function withSupabase(handler) {
   // });
   const runner = async (event, context) => {
     const trace = traceFrom(event);
-    if (!hasSupabase()) {
-      const reason = supabaseError ? supabaseError.message : 'Supabase client unavailable';
-      console.warn('[supa][%s] fallback: %s', trace, reason);
-      return jsonError(503, 'supabase_unavailable', reason, { trace });
-    }
     try {
+      const auth = await getContext(event, context, { requireAdmin: true });
+      if (!hasSupabase()) {
+        const reason = supabaseError ? supabaseError.message : 'Supabase client unavailable';
+        console.warn('[supa][%s] fallback: %s', trace, reason);
+        return jsonError(503, 'supabase_unavailable', reason, { trace });
+      }
       const s = getSupabase(event);
       debugLog(event, 'handler start');
       const res = await handler({
         event,
         context,
         supabase: s,
+        user: auth.user,
+        roles: auth.roles,
         trace,
         debug: (...a) => debugLog(event, ...a),
       });
@@ -153,7 +157,12 @@ function withSupabase(handler) {
       const code = e?.code || 'unhandled';
       const message = e?.message || String(e);
       console.error('[supa][%s] ERROR %s: %s', trace, code, message);
-      return jsonError(500, code, message, { trace });
+      const rawStatus = e?.statusCode ?? e?.status ?? e?.code;
+      const parsedStatus = Number.parseInt(String(rawStatus ?? ''), 10);
+      const statusCode = Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
+        ? parsedStatus
+        : 500;
+      return jsonError(statusCode, code, message, { trace });
     }
   };
 

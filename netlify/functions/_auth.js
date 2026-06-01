@@ -1,6 +1,7 @@
 // netlify/functions/_auth.js
 const { createClient } = require('@supabase/supabase-js');
 const { getSupabaseUrl, getSupabaseServiceKey } = require('./_supabase-env.js');
+const { buildAllowedOrigins, isAllowedOrigin } = require('./_http.js');
 
 function coded(status, message) { const e = new Error(message); e.code = status; return e; }
 
@@ -41,7 +42,10 @@ function requestOrigin(event = {}) {
 
 function resolveIdentityBase(event = {}) {
   const origin = requestOrigin(event);
-  if (origin) return `${origin.replace(/\/$/, '')}/.netlify/identity`;
+  const allowedOrigins = buildAllowedOrigins();
+  if (origin && isAllowedOrigin(origin, allowedOrigins)) {
+    return `${origin.replace(/\/$/, '')}/.netlify/identity`;
+  }
 
   const direct = String(process.env.HMJ_IDENTITY_BASE || '').trim();
   if (direct) return direct.replace(/\/$/, '');
@@ -251,3 +255,5 @@ exports.getSupabaseAdmin = getSupabaseAdmin;
 exports.hasAdminAccess = hasAdminAccess;
 exports.rolesFromClaims = rolesFromClaims;
 exports.verifyIdentityToken = verifyIdentityToken;
+exports.requestOrigin = requestOrigin;
+exports.resolveIdentityBase = resolveIdentityBase;

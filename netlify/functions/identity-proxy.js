@@ -1,4 +1,5 @@
 const fetchImpl = typeof fetch === 'function' ? fetch : (...args) => import('node-fetch').then(({ default: f }) => f(...args));
+const { buildAllowedOrigins, isAllowedOrigin } = require('./_http.js');
 
 const DEFAULT_PRODUCTION_IDENTITY_BASE = 'https://www.hmj-global.com/.netlify/identity';
 
@@ -136,16 +137,24 @@ function requestOrigin(event) {
 
 function corsHeaders(event) {
   const origin = requestOrigin(event) || '*';
+  const allowedOrigins = buildAllowedOrigins();
+  const allowedOrigin = isAllowedOrigin(origin, allowedOrigins) ? origin : '';
   const requestedHeaders = event.headers?.['access-control-request-headers'] || event.headers?.['Access-Control-Request-Headers'];
   const allowHeaders = requestedHeaders || 'Content-Type, Authorization, x-trace, X-Nf-Client-Id, X-Nf-Session-Id, X-Nf-Client-Token';
-  return {
+  const headers = {
     'Access-Control-Allow-Origin': origin,
     'Vary': 'Origin',
-    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Headers': allowHeaders,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Expose-Headers': 'set-cookie, Set-Cookie, Location, location'
   };
+  if (allowedOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowedOrigin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  } else {
+    delete headers['Access-Control-Allow-Origin'];
+  }
+  return headers;
 }
 
 function detectIncomingPrefix(event) {

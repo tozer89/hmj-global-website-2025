@@ -16,15 +16,26 @@ function buildAllowedOrigins() {
     'https://www.hmj-global.com',
     'https://hmjg.netlify.app',
   ]);
-  // Include the Netlify-injected deploy URL so branch/preview deploys work.
-  const deployUrl = (process.env.URL || process.env.DEPLOY_URL || '').trim().replace(/\/$/, '');
-  if (deployUrl && /^https?:\/\//i.test(deployUrl)) {
-    staticOrigins.add(deployUrl.toLowerCase());
-  }
+  [
+    process.env.HMJ_CANONICAL_SITE_URL,
+    process.env.SITE_URL,
+    process.env.URL,
+    process.env.DEPLOY_URL,
+  ].forEach((candidate) => {
+    const deployUrl = String(candidate || '').trim().replace(/\/$/, '');
+    if (deployUrl && /^https?:\/\//i.test(deployUrl)) {
+      staticOrigins.add(deployUrl.toLowerCase());
+    }
+  });
   return staticOrigins;
 }
 
 const ALLOWED_ORIGINS = buildAllowedOrigins();
+
+function isAllowedOrigin(value, allowedOrigins = ALLOWED_ORIGINS) {
+  const origin = String(value || '').trim().toLowerCase().replace(/\/$/, '');
+  return !!(origin && allowedOrigins.has(origin));
+}
 
 function header(event, name) {
   if (!event || !event.headers) return '';
@@ -42,7 +53,7 @@ function buildCors(event) {
   // Only grant credentialed CORS to origins on the allowlist.
   // Unrecognised origins receive no ACAO header, which causes the browser to
   // block the response — correct and intentional behaviour.
-  const allowedOrigin = requestOrigin && ALLOWED_ORIGINS.has(requestOrigin)
+  const allowedOrigin = isAllowedOrigin(requestOrigin)
     ? requestOrigin
     : null;
 
@@ -131,4 +142,4 @@ function withAdminCors(handler, options = {}) {
   };
 }
 
-module.exports = { withAdminCors, buildCors };
+module.exports = { withAdminCors, buildCors, buildAllowedOrigins, isAllowedOrigin };
